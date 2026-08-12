@@ -111,54 +111,6 @@
     .sv-master-page .programme-dt-footer .paginate_button.next .page-link { font-size: 0; }
     .sv-master-page .programme-dt-footer .paginate_button.previous .page-link::before { content: "\2039"; font-size: 1.1rem; }
     .sv-master-page .programme-dt-footer .paginate_button.next .page-link::before { content: "\203A"; font-size: 1.1rem; }
-
-    /* ── Clean modern Add / Edit / View / Return SV modals (reskin legacy chrome) ── */
-    #addSellingVoucherModal .modal-content, #editSellingVoucherModal .modal-content,
-    #viewSellingVoucherModal .modal-content, #returnItemModal .modal-content {
-        border-radius: 16px !important; border: 0 !important; box-shadow: 0 24px 48px rgba(16, 24, 40, .18) !important;
-    }
-    #addSellingVoucherModal .modal-header, #editSellingVoucherModal .modal-header,
-    #viewSellingVoucherModal .modal-header, #returnItemModal .modal-header {
-        background: #fff !important; background-image: none !important; border-top: 0 !important;
-        border-bottom: 1px solid var(--ds-line, #eef2f6) !important; padding: 1.15rem 1.5rem !important;
-    }
-    #addSellingVoucherModal .modal-title, #editSellingVoucherModal .modal-title,
-    #viewSellingVoucherModal .modal-title, #returnItemModal .modal-title {
-        color: var(--ds-ink, #1f2937) !important; font-size: 1.4rem !important; font-weight: 700 !important;
-    }
-    #addSellingVoucherModal .modal-body, #editSellingVoucherModal .modal-body,
-    #viewSellingVoucherModal .modal-body, #returnItemModal .modal-body {
-        background: #fff !important; background-image: none !important;
-    }
-    #addSellingVoucherModal .modal-body .card, #editSellingVoucherModal .modal-body .card,
-    #viewSellingVoucherModal .modal-body .card, #returnItemModal .modal-body .card {
-        border: 1px solid var(--ds-line, #eef2f6) !important; border-radius: 12px !important; box-shadow: none !important;
-    }
-    #addSellingVoucherModal .modal-body .card-header, #editSellingVoucherModal .modal-body .card-header,
-    #viewSellingVoucherModal .modal-body .card-header, #returnItemModal .modal-body .card-header,
-    #addSellingVoucherModal .modal-body .card-footer, #editSellingVoucherModal .modal-body .card-footer,
-    #viewSellingVoucherModal .modal-body .card-footer, #returnItemModal .modal-body .card-footer {
-        background: #fff !important; background-image: none !important; border-color: var(--ds-line, #eef2f6) !important;
-    }
-    #addSellingVoucherModal .modal-body .card-header [class*="bg-"], #editSellingVoucherModal .modal-body .card-header [class*="bg-"],
-    #viewSellingVoucherModal .modal-body .card-header [class*="bg-"], #returnItemModal .modal-body .card-header [class*="bg-"] {
-        background: rgba(0, 74, 147, .1) !important; color: var(--ds-primary, #004a93) !important;
-    }
-    #addSellingVoucherModal .modal-footer, #editSellingVoucherModal .modal-footer,
-    #viewSellingVoucherModal .modal-footer, #returnItemModal .modal-footer {
-        background: #fff !important; background-image: none !important;
-        border-top: 1px solid var(--ds-line, #eef2f6) !important; padding: 1rem 1.5rem 1.25rem !important;
-    }
-    #addSellingVoucherModal .modal-footer .btn[type="submit"], #editSellingVoucherModal .modal-footer .btn[type="submit"],
-    #returnItemModal .modal-footer .btn[type="submit"] {
-        background: var(--ds-primary, #004a93) !important; border: 1px solid var(--ds-primary, #004a93) !important;
-        color: #fff !important; border-radius: 8px !important; font-weight: 600 !important;
-    }
-    #addSellingVoucherModal .modal-footer .btn[data-bs-dismiss="modal"], #editSellingVoucherModal .modal-footer .btn[data-bs-dismiss="modal"],
-    #returnItemModal .modal-footer .btn[data-bs-dismiss="modal"] {
-        color: var(--ds-secondary, #d92d20) !important; border: 1px solid var(--ds-secondary, #d92d20) !important;
-        background: #fff !important; border-radius: 8px !important; font-weight: 600 !important;
-    }
 </style>
 @endpush
 
@@ -840,6 +792,750 @@
     max-height: min(280px, 42vh) !important;
 }
 </style>
+<style>
+/* ══ Add / Edit Selling Voucher — compact spec design ══
+   Same visual language as the Purchase Order modals. Selectors are ID-grouped so
+   they outrank the older ID-scoped rules above (notably the Choices sizing).
+   Never write a literal Blade directive in a comment here — Blade compiles it
+   even inside a comment, which opens a stray output buffer and blanks the page. */
+#addSellingVoucherModal .modal-content,
+#editSellingVoucherModal .modal-content {
+    border: 0;
+    border-radius: 8px;
+    box-shadow: 0 16px 40px rgba(16, 24, 40, .16);
+}
+
+#addSellingVoucherModal .modal-header,
+#editSellingVoucherModal .modal-header {
+    align-items: center;
+    padding: .875rem 1.25rem;
+    background: #fff !important;
+    border-bottom: 1px solid #e9ecef;
+}
+
+#addSellingVoucherModal .modal-title,
+#editSellingVoucherModal .modal-title {
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: #212529;
+}
+
+#addSellingVoucherModal .btn-close,
+#editSellingVoucherModal .btn-close {
+    padding: .5rem;
+    font-size: .8rem;
+    opacity: .55;
+}
+
+#addSellingVoucherModal .modal-body,
+#editSellingVoucherModal .modal-body {
+    padding: 1.125rem 1.25rem 1.25rem;
+    background: #fff;
+}
+
+/* ── Labels ── */
+#addSellingVoucherModal .sv-label,
+#editSellingVoucherModal .sv-label {
+    display: block;
+    margin-bottom: .25rem;
+    font-size: .75rem;
+    font-weight: 400;
+    line-height: 1.2;
+    color: #212529;
+}
+
+#addSellingVoucherModal .sv-req,
+#editSellingVoucherModal .sv-req {
+    color: #dc3545;
+}
+
+/* ── Client-type radio row ── */
+#addSellingVoucherModal .sv-radio-row,
+#editSellingVoucherModal .sv-radio-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    align-items: center;
+    min-height: 32px;
+}
+
+#addSellingVoucherModal .sv-radio-row .form-check,
+#editSellingVoucherModal .sv-radio-row .form-check {
+    display: flex;
+    align-items: center;
+    gap: .375rem;
+    margin: 0;
+    padding: 0;
+    min-height: 0;
+}
+
+#addSellingVoucherModal .sv-radio-row .form-check-input,
+#editSellingVoucherModal .sv-radio-row .form-check-input {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    float: none;
+    border-color: #adb5bd;
+}
+
+#addSellingVoucherModal .sv-radio-row .form-check-input:checked,
+#editSellingVoucherModal .sv-radio-row .form-check-input:checked {
+    background-color: var(--ds-primary, #004384);
+    border-color: var(--ds-primary, #004384);
+}
+
+#addSellingVoucherModal .sv-radio-row .form-check-input:focus,
+#editSellingVoucherModal .sv-radio-row .form-check-input:focus {
+    border-color: var(--ds-primary, #004384);
+    box-shadow: 0 0 0 .15rem rgba(0, 67, 132, .12);
+}
+
+#addSellingVoucherModal .sv-radio-row .form-check-label,
+#editSellingVoucherModal .sv-radio-row .form-check-label {
+    font-size: .78125rem;
+    line-height: 1.2;
+    color: #212529;
+    cursor: pointer;
+}
+
+/* ── Controls ── */
+#addSellingVoucherModal .form-control,
+#addSellingVoucherModal .form-select,
+#editSellingVoucherModal .form-control,
+#editSellingVoucherModal .form-select {
+    height: 32px;
+    min-height: 32px;
+    padding: .25rem .5rem;
+    font-size: .78125rem;
+    line-height: 1.4;
+    color: #212529;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    box-shadow: none;
+}
+
+#addSellingVoucherModal .form-select,
+#editSellingVoucherModal .form-select {
+    padding-right: 1.75rem;
+    background-size: 12px 9px;
+    background-position: right .5rem center;
+}
+
+#addSellingVoucherModal .form-control::placeholder,
+#editSellingVoucherModal .form-control::placeholder {
+    color: #adb5bd;
+    opacity: 1;
+}
+
+#addSellingVoucherModal .form-control:focus,
+#addSellingVoucherModal .form-select:focus,
+#editSellingVoucherModal .form-control:focus,
+#editSellingVoucherModal .form-select:focus {
+    border-color: var(--ds-primary, #004384) !important;
+    box-shadow: 0 0 0 .15rem rgba(0, 67, 132, .12) !important;
+}
+
+#addSellingVoucherModal input[type="date"]::-webkit-calendar-picker-indicator,
+#editSellingVoucherModal input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: .5;
+    cursor: pointer;
+}
+
+/* Choices.js controls → same box as a native select (double-ID beats the
+   #modalItemsBody .ts-wrapper.choices sizing rules defined above) */
+#addSellingVoucherModal .choices,
+#editSellingVoucherModal .choices {
+    margin-bottom: 0;
+}
+
+#addSellingVoucherModal .ts-wrapper.choices .choices__inner,
+#editSellingVoucherModal .ts-wrapper.choices .choices__inner,
+#addSellingVoucherModal #modalItemsBody .ts-wrapper.choices .choices__inner,
+#editSellingVoucherModal #editModalItemsBody .ts-wrapper.choices .choices__inner {
+    display: flex;
+    align-items: center;
+    height: 32px;
+    min-height: 32px;
+    padding: 0 1.75rem 0 .5rem;
+    font-size: .78125rem;
+    background: #fff;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    box-shadow: none;
+}
+
+#addSellingVoucherModal #modalItemsBody .ts-wrapper.choices .choices__inner,
+#editSellingVoucherModal #editModalItemsBody .ts-wrapper.choices .choices__inner {
+    height: 28px;
+    min-height: 28px;
+    padding: 0 1.5rem 0 .375rem;
+    font-size: .71875rem;
+}
+
+#addSellingVoucherModal .ts-wrapper.choices.is-open .choices__inner,
+#addSellingVoucherModal .ts-wrapper.choices.is-focused .choices__inner,
+#editSellingVoucherModal .ts-wrapper.choices.is-open .choices__inner,
+#editSellingVoucherModal .ts-wrapper.choices.is-focused .choices__inner {
+    border-color: var(--ds-primary, #004384);
+    box-shadow: 0 0 0 .15rem rgba(0, 67, 132, .12);
+}
+
+#addSellingVoucherModal .choices__list--single .choices__item,
+#editSellingVoucherModal .choices__list--single .choices__item {
+    font-size: .78125rem;
+    line-height: 1.4;
+    color: #212529;
+}
+
+#addSellingVoucherModal #modalItemsBody .choices__list--single .choices__item,
+#editSellingVoucherModal #editModalItemsBody .choices__list--single .choices__item {
+    font-size: .71875rem;
+}
+
+#addSellingVoucherModal .choices__placeholder,
+#editSellingVoucherModal .choices__placeholder {
+    color: #adb5bd;
+    opacity: 1;
+}
+
+#addSellingVoucherModal .choices[data-type*="select-one"]::after,
+#editSellingVoucherModal .choices[data-type*="select-one"]::after {
+    right: .625rem;
+    border-width: 4px;
+    border-top-color: #6c757d;
+}
+
+#addSellingVoucherModal .choices__list--dropdown .choices__item,
+#editSellingVoucherModal .choices__list--dropdown .choices__item {
+    font-size: .78125rem;
+}
+
+/* ── Item table ── */
+#addSellingVoucherModal .sv-items-box,
+#editSellingVoucherModal .sv-items-box {
+    margin-top: 1.125rem;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+#addSellingVoucherModal .sv-items-table,
+#editSellingVoucherModal .sv-items-table {
+    margin: 0;
+    font-size: .75rem;
+}
+
+#addSellingVoucherModal .sv-items-table>thead>tr>th,
+#editSellingVoucherModal .sv-items-table>thead>tr>th {
+    padding: .5rem;
+    font-size: .71875rem;
+    font-weight: 600;
+    color: #212529;
+    white-space: nowrap;
+    vertical-align: middle;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+#addSellingVoucherModal .sv-items-table>tbody>tr>td,
+#editSellingVoucherModal .sv-items-table>tbody>tr>td {
+    padding: .3125rem .375rem;
+    vertical-align: middle;
+    background: #fff;
+    border-bottom: 1px solid #f1f3f5;
+}
+
+#addSellingVoucherModal .sv-items-table>tbody>tr:last-child>td,
+#editSellingVoucherModal .sv-items-table>tbody>tr:last-child>td {
+    border-bottom: 0;
+}
+
+#addSellingVoucherModal .sv-items-table th:first-child,
+#addSellingVoucherModal .sv-items-table td:first-child,
+#editSellingVoucherModal .sv-items-table th:first-child,
+#editSellingVoucherModal .sv-items-table td:first-child {
+    padding-left: .625rem;
+}
+
+#addSellingVoucherModal .sv-items-table th:last-child,
+#addSellingVoucherModal .sv-items-table td:last-child,
+#editSellingVoucherModal .sv-items-table th:last-child,
+#editSellingVoucherModal .sv-items-table td:last-child {
+    padding-right: .625rem;
+}
+
+#addSellingVoucherModal .sv-items-table .form-control,
+#addSellingVoucherModal .sv-items-table .form-select,
+#editSellingVoucherModal .sv-items-table .form-control,
+#editSellingVoucherModal .sv-items-table .form-select {
+    height: 28px;
+    min-height: 28px;
+    padding: .1875rem .375rem;
+    font-size: .71875rem;
+}
+
+/* readonly cells stay white — nothing in this table is a greyed-out field */
+#addSellingVoucherModal .sv-items-table input[readonly],
+#editSellingVoucherModal .sv-items-table input[readonly],
+#addSellingVoucherModal .sv-items-table input[readonly].bg-light,
+#editSellingVoucherModal .sv-items-table input[readonly].bg-light {
+    background-color: #fff !important;
+    color: #495057;
+}
+
+#addSellingVoucherModal .sv-items-table .invalid-feedback,
+#editSellingVoucherModal .sv-items-table .invalid-feedback {
+    font-size: .65rem;
+}
+
+/* Row actions — remove on every row, add on the last row only */
+#addSellingVoucherModal .sv-act-cell,
+#editSellingVoucherModal .sv-act-cell {
+    white-space: nowrap;
+}
+
+#addSellingVoucherModal .sv-icon-btn,
+#editSellingVoucherModal .sv-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1;
+    color: #fff;
+    border: 0;
+    border-radius: 4px;
+}
+
+#addSellingVoucherModal .sv-icon-btn+.sv-icon-btn,
+#editSellingVoucherModal .sv-icon-btn+.sv-icon-btn {
+    margin-left: .375rem;
+}
+
+#addSellingVoucherModal .sv-icon-btn--remove,
+#editSellingVoucherModal .sv-icon-btn--remove {
+    background: #dc3545;
+}
+
+#addSellingVoucherModal .sv-icon-btn--remove:hover:not(:disabled),
+#editSellingVoucherModal .sv-icon-btn--remove:hover:not(:disabled) {
+    background: #bb2d3b;
+}
+
+#addSellingVoucherModal .sv-icon-btn--remove:disabled,
+#editSellingVoucherModal .sv-icon-btn--remove:disabled {
+    opacity: .45;
+}
+
+#addSellingVoucherModal .sv-icon-btn--add,
+#editSellingVoucherModal .sv-icon-btn--add {
+    background: #0d6efd;
+}
+
+#addSellingVoucherModal .sv-icon-btn--add:hover,
+#editSellingVoucherModal .sv-icon-btn--add:hover {
+    background: #0b5ed7;
+}
+
+#addSellingVoucherModal #modalItemsBody tr:not(:last-child) .sv-add-row,
+#editSellingVoucherModal #editModalItemsBody tr:not(:last-child) .sv-add-row {
+    visibility: hidden;
+}
+
+/* Total strip */
+#addSellingVoucherModal .sv-total-bar,
+#editSellingVoucherModal .sv-total-bar {
+    padding: .4375rem .75rem;
+    font-size: .78125rem;
+    font-weight: 600;
+    text-align: right;
+    color: var(--ds-primary, #004384);
+    background: #e7f0fb;
+    border-top: 1px solid #dee2e6;
+}
+
+#modalGrandTotal,
+#editModalGrandTotal {
+    font-weight: 700;
+    color: var(--ds-primary, #004384);
+}
+
+/* ── Footer ── */
+#addSellingVoucherModal .modal-footer,
+#editSellingVoucherModal .modal-footer {
+    gap: .5rem;
+    padding: .75rem 1.25rem;
+    background: #fff;
+    border-top: 1px solid #e9ecef;
+}
+
+#addSellingVoucherModal .modal-footer>*,
+#editSellingVoucherModal .modal-footer>* {
+    margin: 0;
+}
+
+#addSellingVoucherModal .modal-footer .btn,
+#editSellingVoucherModal .modal-footer .btn {
+    padding: .375rem 1.125rem;
+    font-size: .8125rem;
+    font-weight: 500;
+    border-radius: 4px;
+}
+
+#addSellingVoucherModal .modal-footer .sv-btn-primary,
+#editSellingVoucherModal .modal-footer .sv-btn-primary {
+    color: #fff;
+    background: var(--ds-primary, #004384);
+    border: 1px solid var(--ds-primary, #004384);
+}
+
+#addSellingVoucherModal .modal-footer .sv-btn-cancel,
+#editSellingVoucherModal .modal-footer .sv-btn-cancel {
+    color: #dc3545;
+    background: #fff;
+    border: 1px solid #dc3545;
+}
+
+/* ══ View Selling Voucher — read-only twin of the Add / Edit design ══ */
+#viewSellingVoucherModal .modal-content {
+    border: 0;
+    border-radius: 8px;
+    box-shadow: 0 16px 40px rgba(16, 24, 40, .16);
+}
+
+#viewSellingVoucherModal .modal-header {
+    align-items: center;
+    padding: .875rem 1.25rem;
+    background: #fff !important;
+    border-bottom: 1px solid #e9ecef;
+}
+
+#viewSellingVoucherModal .modal-title {
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    line-height: 1.3;
+    color: #212529 !important;
+}
+
+#viewSellingVoucherModal .btn-close {
+    padding: .5rem;
+    font-size: .8rem;
+    opacity: .55;
+}
+
+#viewSellingVoucherModal .modal-body {
+    padding: 1.125rem 1.25rem 1.25rem;
+    background: #fff;
+}
+
+#viewSellingVoucherModal .sv-label {
+    display: block;
+    margin-bottom: .25rem;
+    font-size: .75rem;
+    font-weight: 400;
+    line-height: 1.2;
+    color: #212529;
+}
+
+#viewSellingVoucherModal .sv-value {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+    padding: .25rem .5rem;
+    font-size: .78125rem;
+    line-height: 1.4;
+    color: #212529;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+}
+
+#viewSellingVoucherModal .sv-status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: .1875rem .625rem;
+    font-size: .71875rem;
+    font-weight: 600;
+    border-radius: 999px;
+}
+
+#viewSellingVoucherModal .sv-status-pill--approved {
+    color: #067647;
+    background: #ecfdf3;
+}
+
+#viewSellingVoucherModal .sv-status-pill--completed {
+    color: var(--ds-primary, #004384);
+    background: #e7f0fb;
+}
+
+#viewSellingVoucherModal .sv-status-pill--pending {
+    color: #b54708;
+    background: #fffaeb;
+}
+
+#viewSellingVoucherModal .sv-status-pill--other {
+    color: #475467;
+    background: #f2f4f7;
+}
+
+#viewSellingVoucherModal .sv-items-box {
+    margin-top: 1.125rem;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+#viewSellingVoucherModal .sv-items-table {
+    margin: 0;
+    font-size: .75rem;
+}
+
+#viewSellingVoucherModal .sv-items-table>thead>tr>th {
+    padding: .5rem;
+    font-size: .71875rem;
+    font-weight: 600;
+    color: #212529 !important;
+    white-space: nowrap;
+    vertical-align: middle;
+    background: #f8f9fa !important;
+    border-bottom: 1px solid #dee2e6;
+}
+
+#viewSellingVoucherModal .sv-items-table>tbody>tr>td {
+    padding: .4375rem .375rem;
+    font-size: .75rem;
+    color: #212529 !important;
+    vertical-align: middle;
+    background: #fff !important;
+    border-bottom: 1px solid #f1f3f5;
+}
+
+#viewSellingVoucherModal .sv-items-table>tbody>tr:last-child>td {
+    border-bottom: 0;
+}
+
+#viewSellingVoucherModal .sv-items-table th:first-child,
+#viewSellingVoucherModal .sv-items-table td:first-child {
+    padding-left: .625rem;
+}
+
+#viewSellingVoucherModal .sv-items-table th:last-child,
+#viewSellingVoucherModal .sv-items-table td:last-child {
+    padding-right: .625rem;
+}
+
+#viewSellingVoucherModal .sv-total-bar {
+    padding: .4375rem .75rem;
+    font-size: .78125rem;
+    font-weight: 600;
+    text-align: right;
+    color: var(--ds-primary, #004384) !important;
+    background: #e7f0fb !important;
+    border-top: 1px solid #dee2e6;
+}
+
+#viewModalGrandTotal {
+    font-weight: 700;
+    color: var(--ds-primary, #004384) !important;
+}
+
+#viewSellingVoucherModal .sv-meta {
+    margin-top: .875rem;
+    font-size: .71875rem;
+    color: #6c757d;
+}
+
+#viewSellingVoucherModal .modal-footer {
+    gap: .5rem;
+    padding: .75rem 1.25rem;
+    background: #fff;
+    border-top: 1px solid #e9ecef;
+}
+
+#viewSellingVoucherModal .modal-footer>* {
+    margin: 0;
+}
+
+#viewSellingVoucherModal .modal-footer .btn {
+    padding: .375rem 1.125rem;
+    font-size: .8125rem;
+    font-weight: 500;
+    border-radius: 4px;
+}
+
+#viewSellingVoucherModal .modal-footer .sv-btn-primary {
+    color: #fff;
+    background: var(--ds-primary, #004384);
+    border: 1px solid var(--ds-primary, #004384);
+}
+
+#viewSellingVoucherModal .modal-footer .sv-btn-cancel {
+    color: #dc3545;
+    background: #fff;
+    border: 1px solid #dc3545;
+}
+
+/* ══ Transfer To (return items) — same spec design as Add / Edit / View ══ */
+#returnItemModal .modal-content {
+    border: 0;
+    border-radius: 8px;
+    box-shadow: 0 16px 40px rgba(16, 24, 40, .16);
+}
+
+#returnItemModal .modal-header {
+    align-items: center;
+    padding: .875rem 1.25rem;
+    background: #fff !important;
+    border-bottom: 1px solid #e9ecef;
+}
+
+#returnItemModal .modal-title {
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: #212529;
+}
+
+#returnItemModal .btn-close {
+    padding: .5rem;
+    font-size: .8rem;
+    opacity: .55;
+}
+
+#returnItemModal .modal-body {
+    padding: 1.125rem 1.25rem 1.25rem;
+    background: #fff;
+}
+
+#returnItemModal .sv-label {
+    display: block;
+    margin-bottom: .25rem;
+    font-size: .75rem;
+    font-weight: 400;
+    line-height: 1.2;
+    color: #212529;
+}
+
+#returnItemModal .sv-value {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+    padding: .25rem .5rem;
+    font-size: .78125rem;
+    line-height: 1.4;
+    color: #212529;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+}
+
+#returnItemModal .sv-items-box {
+    margin-top: 1.125rem;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+#returnItemModal .sv-items-table {
+    margin: 0;
+    font-size: .75rem;
+}
+
+#returnItemModal .sv-items-table>thead>tr>th {
+    padding: .5rem;
+    font-size: .71875rem;
+    font-weight: 600;
+    color: #212529;
+    white-space: nowrap;
+    vertical-align: middle;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+#returnItemModal .sv-items-table>tbody>tr>td {
+    padding: .3125rem .375rem;
+    font-size: .75rem;
+    color: #212529;
+    vertical-align: middle;
+    background: #fff;
+    border-bottom: 1px solid #f1f3f5;
+}
+
+#returnItemModal .sv-items-table>tbody>tr:last-child>td {
+    border-bottom: 0;
+}
+
+#returnItemModal .sv-items-table th:first-child,
+#returnItemModal .sv-items-table td:first-child {
+    padding-left: .625rem;
+}
+
+#returnItemModal .sv-items-table th:last-child,
+#returnItemModal .sv-items-table td:last-child {
+    padding-right: .625rem;
+}
+
+#returnItemModal .sv-items-table .form-control {
+    height: 28px;
+    min-height: 28px;
+    padding: .1875rem .375rem;
+    font-size: .71875rem;
+    line-height: 1.4;
+    color: #212529;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    box-shadow: none;
+}
+
+#returnItemModal .sv-items-table .form-control:focus {
+    border-color: var(--ds-primary, #004384);
+    box-shadow: 0 0 0 .15rem rgba(0, 67, 132, .12);
+}
+
+#returnItemModal .sv-items-table input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: .5;
+    cursor: pointer;
+}
+
+#returnItemModal .sv-items-table .invalid-feedback {
+    font-size: .65rem;
+}
+
+#returnItemModal .modal-footer {
+    gap: .5rem;
+    padding: .75rem 1.25rem;
+    background: #fff;
+    border-top: 1px solid #e9ecef;
+}
+
+#returnItemModal .modal-footer>* {
+    margin: 0;
+}
+
+#returnItemModal .modal-footer .btn {
+    padding: .375rem 1.125rem;
+    font-size: .8125rem;
+    font-weight: 500;
+    border-radius: 4px;
+}
+
+#returnItemModal .modal-footer .sv-btn-primary {
+    color: #fff;
+    background: var(--ds-primary, #004384);
+    border: 1px solid var(--ds-primary, #004384);
+}
+
+#returnItemModal .modal-footer .sv-btn-cancel {
+    color: #dc3545;
+    background: #fff;
+    border: 1px solid #dc3545;
+}
+</style>
 <div class="modal fade" id="addSellingVoucherModal" tabindex="-1" aria-labelledby="addSellingVoucherModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content">
@@ -848,11 +1544,11 @@
                 {{-- Forces JSON response from store() so the modal can reset without a full page redirect --}}
                 <input type="hidden" name="respond_json" value="1">
                 <input type="hidden" name="client_id" id="modalClientId" value="{{ old('client_id') }}">
-                <div class="modal-header border-bottom bg-light">
-                    <h5 class="modal-title fw-semibold" id="addSellingVoucherModalLabel">Add Selling Voucher</h5>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addSellingVoucherModalLabel">Add Selling Voucher</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body" >
+                <div class="modal-body">
                     @if($errors->any())
                         <div class="alert alert-danger alert-dismissible fade show py-2" role="alert">
                             <ul class="mb-0 small">
@@ -864,171 +1560,149 @@
                         </div>
                     @endif
 
-                    {{-- Voucher Details (same pattern as Order Details) --}}
-                    <div class="card mb-4">
-                        <div class="card-header bg-white p-1">
-                            <h6 class="mb-0 fw-semibold text-primary">Voucher Details</h6>
-                        </div>
-                        <div class="card-body p-1">
-                            <div class="row g-3">
-                                <div class="col-md-12">
-                                    <label class="form-label">Client Type <span class="text-danger">*</span></label>
-                                    <div class="d-flex flex-wrap gap-3 pt-1">
-                                        @foreach($clientTypes as $slug => $label)
-                                            <div class="form-check">
-                                                <input class="form-check-input client-type-radio" type="radio" name="client_type_slug" id="modal_ct_{{ $slug }}" value="{{ $slug }}" {{ old('client_type_slug', 'employee') === $slug ? 'checked' : '' }} required>
-                                                <label class="form-check-label" for="modal_ct_{{ $slug }}">{{ $label }}</label>
-                                            </div>
-                                        @endforeach
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="sv-label">Client Type<span class="sv-req">*</span></label>
+                            <div class="sv-radio-row">
+                                @foreach($clientTypes as $slug => $label)
+                                    <div class="form-check">
+                                        <input class="form-check-input client-type-radio" type="radio" name="client_type_slug" id="modal_ct_{{ $slug }}" value="{{ $slug }}" {{ old('client_type_slug', 'employee') === $slug ? 'checked' : '' }} required>
+                                        <label class="form-check-label" for="modal_ct_{{ $slug }}">{{ $label }}</label>
                                     </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Payment Type <span class="text-danger">*</span></label>
-                                    <select name="payment_type" class="form-select" required>
-                                        <option value="1" {{ old('payment_type', '1') == '1' ? 'selected' : '' }}>Credit</option>
-                                        <option value="0" {{ old('payment_type') == '0' ? 'selected' : '' }}>Cash</option>
-                                        <option value="2" {{ old('payment_type') == '2' ? 'selected' : '' }}>UPI</option>
-                                    </select>
-                                    <small class="text-muted" id="modalPaymentTypeHint">Cash / UPI / Credit</small>
-                                </div>
-                                <div class="col-md-4" id="modalClientNameWrap">
-                                    <label class="form-label">Client Name <span class="text-danger">*</span></label>
-                                    <select name="client_type_pk" class="form-select" id="modalClientNameSelect">
-                                        <option value="">Select Client Name</option>
-                                        @foreach($clientNamesByType as $type => $list)
-                                            @foreach($list as $c)
-                                                <option value="{{ $c->id }}" data-type="{{ $c->client_type }}" data-client-name="{{ strtolower($c->client_name ?? '') }}">{{ $c->client_name }}</option>
-                                            @endforeach
-                                        @endforeach
-                                    </select>
-                                    <select id="modalOtCourseSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Course</option>
-                                        @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="modalCourseSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Course</option>
-                                        @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-4" id="modalNameFieldWrap">
-                                    <label class="form-label">Name <span class="text-danger">*</span></label>
-                                    <input type="text" name="client_name" id="modalClientNameInput" class="form-control" value="{{ old('client_name') }}" placeholder="Client / section / role name" required>
-                                    <datalist id="modalCourseBuyerNames"></datalist>
-                                    <datalist id="modalGenericBuyerNames"></datalist>
-                                    <select id="modalFacultySelect" class="form-select" style="display:none;">
-                                        <option value="">Select Faculty</option>
-                                        @foreach($faculties ?? [] as $f)
-                                            <option value="{{ e($f->full_name) }}" data-pk="{{ $f->pk }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="modalAcademyStaffSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Academy Staff</option>
-                                        @foreach($employees ?? [] as $e)
-                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}" data-pk="{{ $e->pk }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="modalMessStaffSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Mess Staff</option>
-                                        @foreach($messStaff ?? [] as $e)
-                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}" data-pk="{{ $e->pk }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="modalOtStudentSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Student</option>
-                                    </select>
-                                    <select id="modalCourseNameSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Course</option>
-                                        @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Issue Date <span class="text-danger">*</span></label>
-                                    <input type="date" name="issue_date" class="form-control" value="{{ old('issue_date', date('Y-m-d')) }}" required>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Transfer From Store <span class="text-danger">*</span></label>
-                                    <select name="store_id" class="form-select" required>
-                                        <option value="">Select Store</option>
-                                        @foreach($stores as $store)
-                                            <option value="{{ $store['id'] }}" {{ old('store_id') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Remarks / Reference Number / Order By</label>
-                                    <input type="text" name="remarks" class="form-control" value="{{ old('remarks') }}" placeholder="Remarks / Reference Number / Order By (optional)">
-                                </div>
+                                @endforeach
                             </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="sv-label">Payment Type<span class="sv-req">*</span></label>
+                            <select name="payment_type" class="form-select" required>
+                                <option value="1" {{ old('payment_type', '1') == '1' ? 'selected' : '' }}>Credit</option>
+                                <option value="0" {{ old('payment_type') == '0' ? 'selected' : '' }}>Cash</option>
+                                <option value="2" {{ old('payment_type') == '2' ? 'selected' : '' }}>UPI</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4" id="modalClientNameWrap">
+                            <label class="sv-label">Client Name<span class="sv-req">*</span></label>
+                            <select name="client_type_pk" class="form-select" id="modalClientNameSelect">
+                                <option value="">Select Client</option>
+                                @foreach($clientNamesByType as $type => $list)
+                                    @foreach($list as $c)
+                                        <option value="{{ $c->id }}" data-type="{{ $c->client_type }}" data-client-name="{{ strtolower($c->client_name ?? '') }}">{{ $c->client_name }}</option>
+                                    @endforeach
+                                @endforeach
+                            </select>
+                            <select id="modalOtCourseSelect" class="form-select" style="display:none;">
+                                <option value="">Select Course</option>
+                                @foreach($otCourses ?? [] as $course)
+                                    <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
+                                @endforeach
+                            </select>
+                            <select id="modalCourseSelect" class="form-select" style="display:none;">
+                                <option value="">Select Course</option>
+                                @foreach($otCourses ?? [] as $course)
+                                    <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4" id="modalNameFieldWrap">
+                            <label class="sv-label">Name<span class="sv-req">*</span></label>
+                            <input type="text" name="client_name" id="modalClientNameInput" class="form-control" value="{{ old('client_name') }}" placeholder="e.g. John Doe" required>
+                            <datalist id="modalCourseBuyerNames"></datalist>
+                            <datalist id="modalGenericBuyerNames"></datalist>
+                            <select id="modalFacultySelect" class="form-select" style="display:none;">
+                                <option value="">Select Faculty</option>
+                                @foreach($faculties ?? [] as $f)
+                                    <option value="{{ e($f->full_name) }}" data-pk="{{ $f->pk }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
+                                @endforeach
+                            </select>
+                            <select id="modalAcademyStaffSelect" class="form-select" style="display:none;">
+                                <option value="">Select Academy Staff</option>
+                                @foreach($employees ?? [] as $e)
+                                    <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}" data-pk="{{ $e->pk }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
+                                @endforeach
+                            </select>
+                            <select id="modalMessStaffSelect" class="form-select" style="display:none;">
+                                <option value="">Select Mess Staff</option>
+                                @foreach($messStaff ?? [] as $e)
+                                    <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}" data-pk="{{ $e->pk }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
+                                @endforeach
+                            </select>
+                            <select id="modalOtStudentSelect" class="form-select" style="display:none;">
+                                <option value="">Select Student</option>
+                            </select>
+                            <select id="modalCourseNameSelect" class="form-select" style="display:none;">
+                                <option value="">Select Course</option>
+                                @foreach($otCourses ?? [] as $course)
+                                    <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="sv-label">Issue Date</label>
+                            <input type="date" name="issue_date" class="form-control" value="{{ old('issue_date', date('Y-m-d')) }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="sv-label">Transfer from Store<span class="sv-req">*</span></label>
+                            <select name="store_id" class="form-select" required>
+                                <option value="">Select Store</option>
+                                @foreach($stores as $store)
+                                    <option value="{{ $store['id'] }}" {{ old('store_id') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="sv-label">Remarks/ Reference Number/ Order By</label>
+                            <input type="text" name="remarks" class="form-control" value="{{ old('remarks') }}" placeholder="e.g. Reference number, order by, etc.">
                         </div>
                     </div>
 
-                    {{-- Bill upload removed as per requirement --}}
-
-                    {{-- Item Details (same pattern as Purchase Order Item Details) --}}
-                    <div class="card mb-4">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="modalAddItemRow">
-                                + Add Item
-                            </button>
+                    <div class="sv-items-box">
+                        <div class="sv-item-details-table-wrap">
+                            <table class="table sv-items-table" id="svItemsTable">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width: 220px;">Item<span class="sv-req">*</span></th>
+                                        <th style="min-width: 80px;">Unit</th>
+                                        <th style="min-width: 110px;">Available Qty</th>
+                                        <th style="min-width: 100px;">Issue Qty</th>
+                                        <th style="min-width: 100px;">Left Qty</th>
+                                        <th style="min-width: 100px;">Rate<span class="sv-req">*</span></th>
+                                        <th style="min-width: 110px;">Line Total</th>
+                                        <th style="min-width: 86px;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="modalItemsBody">
+                                    <tr class="sv-item-row">
+                                        <td>
+                                            <select name="items[0][item_subcategory_id]" class="form-select sv-item-select" required>
+                                                <option value="">Item</option>
+                                                @foreach($itemSubcategories as $s)
+                                                    <option value="{{ $s['id'] }}" data-unit="{{ e($s['unit_measurement'] ?? '') }}" data-rate="{{ e($s['standard_cost'] ?? 0) }}">{{ e($s['item_name'] ?? '-') }}</option>
+                                                @endforeach
+                                            </select>
+                                        </td>
+                                        <td><input type="text" name="items[0][unit]" class="form-control sv-unit" readonly placeholder="-"></td>
+                                        <td><input type="text" name="items[0][available_quantity]" class="form-control sv-avail bg-light" readonly placeholder="-"></td>
+                                        <td>
+                                            <input type="text" name="items[0][quantity]" class="form-control sv-qty" placeholder="-" required>
+                                            <div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div>
+                                        </td>
+                                        <td><input type="text" class="form-control sv-left bg-light" readonly placeholder="-"></td>
+                                        <td><input type="text" name="items[0][rate]" class="form-control sv-rate" placeholder="-" required></td>
+                                        <td><input type="text" class="form-control sv-total" readonly placeholder="-"></td>
+                                        <td class="sv-act-cell">
+                                            <button type="button" class="sv-icon-btn sv-icon-btn--remove sv-remove-row" disabled title="Remove line" aria-label="Remove line">&minus;</button>
+                                            <button type="button" class="sv-icon-btn sv-icon-btn--add sv-add-row" title="Add line" aria-label="Add line">+</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="card-body p-0">
-                            <div class="sv-item-details-table-wrap">
-                                <table class="table align-middle mb-0" id="svItemsTable">
-                                    <thead>
-                                        <tr>
-                                            <th style="min-width: 280px;">Item Name <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px;">Unit</th>
-                                            <th style="min-width: 100px;">Available Qty</th>
-                                            <th style="min-width: 100px;">Issue Qty <span class="text-white">*</span></th>
-                                            <th style="min-width: 100px;">Left Qty</th>
-                                            <th style="min-width: 100px;">Rate <span class="text-white">*</span></th>
-                                            <th style="min-width: 100px;">Total Amount</th>
-                                            <th style="min-width: 50px;"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="modalItemsBody">
-                                        <tr class="sv-item-row">
-                                            <td>
-                                                <select name="items[0][item_subcategory_id]" class="form-select sv-item-select" required>
-                                                    <option value="">Select Item</option>
-                                                    @foreach($itemSubcategories as $s)
-                                                        <option value="{{ $s['id'] }}" data-unit="{{ e($s['unit_measurement'] ?? '') }}" data-rate="{{ e($s['standard_cost'] ?? 0) }}">{{ e($s['item_name'] ?? '—') }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </td>
-                                            <td><input type="text" name="items[0][unit]" class="form-control  sv-unit" readonly></td>
-                                            <td><input type="text" name="items[0][available_quantity]" class="form-control  sv-avail bg-light" readonly></td>
-                                            <td>
-                                                <input type="text" name="items[0][quantity]" class="form-control  sv-qty" required>
-                                                <div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div>
-                                            </td>
-                                            <td><input type="text" class="form-control  sv-left bg-light" readonly></td>
-                                            <td><input type="text" name="items[0][rate]" class="form-control  sv-rate" required></td>
-                                            <td><input type="text" class="form-control  sv-total" readonly></td>
-                                            <td><button type="button" class="btn btn-sm btn-outline-danger sv-remove-row" disabled title="Remove">×</button></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <div class="card-footer bg-light d-flex justify-content-end align-items-center">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="fw-semibold">Grand Total:</span>
-                                <span class="fs-5 text-primary fw-bold" id="modalGrandTotal">₹0.00</span>
-                            </div>
-                        </div>
+                        <div class="sv-total-bar">Total: <span id="modalGrandTotal">0.00</span>/-</div>
                     </div>
                 </div>
-                <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Selling Voucher</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn sv-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn sv-btn-primary">Add Selling Voucher</button>
                 </div>
             </form>
         </div>
@@ -1047,247 +1721,220 @@
                 @csrf
                 @method('PUT')
                 <input type="hidden" name="client_id" id="editModalClientId" value="">
-                <div class="modal-header border-bottom bg-light">
-                    <h5 class="modal-title fw-semibold" id="editSellingVoucherModalLabel">Edit Selling Voucher</h5>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editSellingVoucherModalLabel">Edit Selling Voucher</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="card mb-4">
-                        <div class="card-header bg-white py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Voucher Details</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row g-3">
-                                <div class="col-md-12">
-                                    <label class="form-label">Client Type <span class="text-danger">*</span></label>
-                                    <div class="d-flex flex-wrap gap-3 pt-1">
-                                        @foreach($clientTypes as $slug => $label)
-                                            <div class="form-check">
-                                                <input class="form-check-input edit-client-type-radio" type="radio" name="client_type_slug" id="edit_ct_{{ $slug }}" value="{{ $slug }}" required>
-                                                <label class="form-check-label" for="edit_ct_{{ $slug }}">{{ $label }}</label>
-                                            </div>
-                                        @endforeach
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="sv-label">Client Type<span class="sv-req">*</span></label>
+                            <div class="sv-radio-row">
+                                @foreach($clientTypes as $slug => $label)
+                                    <div class="form-check">
+                                        <input class="form-check-input edit-client-type-radio" type="radio" name="client_type_slug" id="edit_ct_{{ $slug }}" value="{{ $slug }}" required>
+                                        <label class="form-check-label" for="edit_ct_{{ $slug }}">{{ $label }}</label>
                                     </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Payment Type <span class="text-danger">*</span></label>
-                                    <select name="payment_type" class="form-select edit-payment-type" required>
-                                        <option value="1">Credit</option>
-                                        <option value="0">Cash</option>
-                                        <option value="2">UPI</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4" id="editModalClientNameWrap">
-                                    <label class="form-label">Client Name <span class="text-danger">*</span></label>
-                                    <select name="client_type_pk" class="form-select" id="editClientNameSelect">
-                                        <option value="">Select Client Name</option>
-                                        @foreach($clientNamesByType as $type => $list)
-                                            @foreach($list as $c)
-                                                <option value="{{ $c->id }}" data-type="{{ $c->client_type }}" data-client-name="{{ strtolower($c->client_name ?? '') }}">{{ $c->client_name }}</option>
-                                            @endforeach
-                                        @endforeach
-                                    </select>
-                                    <select id="editModalOtCourseSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Course</option>
-                                        @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="editModalCourseSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Course</option>
-                                        @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-4" id="editModalNameFieldWrap">
-                                    <label class="form-label">Name <span class="text-danger">*</span></label>
-                                    <input type="text" name="client_name" class="form-control edit-client-name" id="editModalClientNameInput" placeholder="Client / section / role name" required>
-                                    <datalist id="editCourseBuyerNames"></datalist>
-                                    <datalist id="editGenericBuyerNames"></datalist>
-                                    <select id="editModalFacultySelect" class="form-select" style="display:none;">
-                                        <option value="">Select Faculty</option>
-                                        @foreach($faculties ?? [] as $f)
-                                            <option value="{{ e($f->full_name) }}" data-pk="{{ $f->pk }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="editModalAcademyStaffSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Academy Staff</option>
-                                        @foreach($employees ?? [] as $e)
-                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}" data-pk="{{ $e->pk }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="editModalMessStaffSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Mess Staff</option>
-                                        @foreach($messStaff ?? [] as $e)
-                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}" data-pk="{{ $e->pk }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="editModalCourseNameSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Course</option>
-                                        @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Issue Date <span class="text-danger">*</span></label>
-                                    <input type="date" name="issue_date" class="form-control edit-issue-date" required>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Transfer From Store <span class="text-danger">*</span></label>
-                                    <select name="store_id" class="form-select edit-store" required>
-                                        <option value="">Select Store</option>
-                                        @foreach($stores as $store)
-                                            <option value="{{ $store['id'] }}">{{ $store['store_name'] }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Remarks / Reference Number / Order By</label>
-                                    <input type="text" name="remarks" class="form-control edit-remarks" placeholder="Remarks / Reference Number / Order By (optional)">
-                                </div>
+                                @endforeach
                             </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="sv-label">Payment Type<span class="sv-req">*</span></label>
+                            <select name="payment_type" class="form-select edit-payment-type" required>
+                                <option value="1">Credit</option>
+                                <option value="0">Cash</option>
+                                <option value="2">UPI</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4" id="editModalClientNameWrap">
+                            <label class="sv-label">Client Name<span class="sv-req">*</span></label>
+                            <select name="client_type_pk" class="form-select" id="editClientNameSelect">
+                                <option value="">Select Client</option>
+                                @foreach($clientNamesByType as $type => $list)
+                                    @foreach($list as $c)
+                                        <option value="{{ $c->id }}" data-type="{{ $c->client_type }}" data-client-name="{{ strtolower($c->client_name ?? '') }}">{{ $c->client_name }}</option>
+                                    @endforeach
+                                @endforeach
+                            </select>
+                            <select id="editModalOtCourseSelect" class="form-select" style="display:none;">
+                                <option value="">Select Course</option>
+                                @foreach($otCourses ?? [] as $course)
+                                    <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
+                                @endforeach
+                            </select>
+                            <select id="editModalCourseSelect" class="form-select" style="display:none;">
+                                <option value="">Select Course</option>
+                                @foreach($otCourses ?? [] as $course)
+                                    <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4" id="editModalNameFieldWrap">
+                            <label class="sv-label">Name<span class="sv-req">*</span></label>
+                            <input type="text" name="client_name" class="form-control edit-client-name" id="editModalClientNameInput" placeholder="e.g. John Doe" required>
+                            <datalist id="editCourseBuyerNames"></datalist>
+                            <datalist id="editGenericBuyerNames"></datalist>
+                            <select id="editModalFacultySelect" class="form-select" style="display:none;">
+                                <option value="">Select Faculty</option>
+                                @foreach($faculties ?? [] as $f)
+                                    <option value="{{ e($f->full_name) }}" data-pk="{{ $f->pk }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
+                                @endforeach
+                            </select>
+                            <select id="editModalAcademyStaffSelect" class="form-select" style="display:none;">
+                                <option value="">Select Academy Staff</option>
+                                @foreach($employees ?? [] as $e)
+                                    <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}" data-pk="{{ $e->pk }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
+                                @endforeach
+                            </select>
+                            <select id="editModalMessStaffSelect" class="form-select" style="display:none;">
+                                <option value="">Select Mess Staff</option>
+                                @foreach($messStaff ?? [] as $e)
+                                    <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}" data-pk="{{ $e->pk }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
+                                @endforeach
+                            </select>
+                            <select id="editModalOtStudentSelect" class="form-select" style="display:none;">
+                                <option value="">Select Student</option>
+                            </select>
+                            <select id="editModalCourseNameSelect" class="form-select" style="display:none;">
+                                <option value="">Select Course</option>
+                                @foreach($otCourses ?? [] as $course)
+                                    <option value="{{ $course->pk }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="sv-label">Issue Date</label>
+                            <input type="date" name="issue_date" class="form-control edit-issue-date" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="sv-label">Transfer from Store<span class="sv-req">*</span></label>
+                            <select name="store_id" class="form-select edit-store" required>
+                                <option value="">Select Store</option>
+                                @foreach($stores as $store)
+                                    <option value="{{ $store['id'] }}">{{ $store['store_name'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="sv-label">Remarks/ Reference Number/ Order By</label>
+                            <input type="text" name="remarks" class="form-control edit-remarks" placeholder="e.g. Reference number, order by, etc.">
                         </div>
                     </div>
-                    {{-- Bill upload removed as per requirement --}}
-                    <div class="card mb-4">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="editModalAddItemRow">+ Add Item</button>
+
+                    <div class="sv-items-box">
+                        <div class="sv-item-details-table-wrap">
+                            <table class="table sv-items-table" id="editSvItemsTable">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width: 220px;">Item<span class="sv-req">*</span></th>
+                                        <th style="min-width: 80px;">Unit</th>
+                                        <th style="min-width: 110px;">Available Qty</th>
+                                        <th style="min-width: 100px;">Issue Qty</th>
+                                        <th style="min-width: 100px;">Left Qty</th>
+                                        <th style="min-width: 100px;">Rate<span class="sv-req">*</span></th>
+                                        <th style="min-width: 110px;">Line Total</th>
+                                        <th style="min-width: 86px;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="editModalItemsBody"></tbody>
+                            </table>
                         </div>
-                        <div class="card-body p-0">
-                            <div class="sv-item-details-table-wrap">
-                                <table class="table align-middle mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th style="min-width: 280px;">Item Name <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px;">Unit</th>
-                                            <th style="min-width: 100px;">Available Qty</th>
-                                            <th style="min-width: 100px;">Issue Qty <span class="text-white">*</span></th>
-                                            <th style="min-width: 100px;">Left Qty</th>
-                                            <th style="min-width: 100px;">Rate <span class="text-white">*</span></th>
-                                            <th style="min-width: 100px;">Total Amount</th>
-                                            <th style="min-width: 50px;"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="editModalItemsBody"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <div class="card-footer bg-light d-flex justify-content-end align-items-center">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="fw-semibold">Grand Total:</span>
-                                <span class="fs-5 text-primary fw-bold" id="editModalGrandTotal">₹0.00</span>
-                            </div>
-                        </div>
+                        <div class="sv-total-bar">Total: <span id="editModalGrandTotal">0.00</span>/-</div>
                     </div>
                 </div>
-                <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update Selling Voucher</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn sv-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn sv-btn-primary">Update Selling Voucher</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-{{-- View Selling Voucher Modal - ensure all text is visible (high contrast) --}}
+{{-- View Selling Voucher Modal (read-only twin of the Add / Edit design) --}}
 <style>
 #viewSellingVoucherModal .modal-dialog { max-height: calc(100dvh - 2rem); margin: 1rem auto; }
-#viewSellingVoucherModal .modal-content { max-height: calc(100dvh - 2rem); display: flex; flex-direction: column; background: #fff; color: #212529; }
-#viewSellingVoucherModal .modal-header { background: #f8f9fa !important; color: #212529 !important; }
-#viewSellingVoucherModal .modal-header * { color: #212529 !important; }
-#viewSellingVoucherModal .modal-title { color: #212529 !important; }
-#viewSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100dvh - 10rem); background: #fff; color: #212529 !important; }
-#viewSellingVoucherModal .modal-body *, #viewSellingVoucherModal .modal-body p, #viewSellingVoucherModal .modal-body span { color: inherit; }
-#viewSellingVoucherModal .card { background: #fff; color: #212529; }
-#viewSellingVoucherModal .card-header { background: #fff !important; color: #212529 !important; border-color: #dee2e6; }
-#viewSellingVoucherModal .card-header h6 { color: #0d6efd !important; }
-#viewSellingVoucherModal .card-body { background: #fff !important; color: #212529 !important; }
-#viewSellingVoucherModal .card-body table th { color: #495057 !important; font-weight: 600; }
-#viewSellingVoucherModal .card-body table td { color: #212529 !important; }
-#viewSellingVoucherModal .card-body .table-borderless th { background: transparent !important; }
-#viewSellingVoucherModal .card-body .table-borderless td { background: transparent !important; }
-#viewSellingVoucherModal #viewItemsCard .table thead th { color: #fff !important; background: #af2910 !important; border-color: #af2910; }
-#viewSellingVoucherModal #viewItemsCard .table tbody td { color: #212529 !important; background: #fff !important; }
-#viewSellingVoucherModal #viewModalGrandTotal { color: #212529 !important; }
-#viewSellingVoucherModal .text-muted { color: #495057 !important; }
-#viewSellingVoucherModal .card-footer { background: #f8f9fa !important; color: #212529 !important; }
-#viewSellingVoucherModal .card-footer strong { color: #212529 !important; }
-#viewSellingVoucherModal .badge { color: #212529 !important; }
-#viewSellingVoucherModal .modal-footer { background: #fff; border-color: #dee2e6; }
+#viewSellingVoucherModal .modal-content { max-height: calc(100dvh - 2rem); display: flex; flex-direction: column; }
+#viewSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100dvh - 10rem); }
 </style>
 <div class="modal fade" id="viewSellingVoucherModal" tabindex="-1" aria-labelledby="viewSellingVoucherModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header border-bottom bg-light">
-                <h5 class="modal-title fw-semibold" id="viewSellingVoucherModalLabel" style="color: #212529;">View Selling Voucher</h5>
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewSellingVoucherModalLabel">View Selling Voucher</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="card mb-4">
-                    <div class="card-header bg-white py-2">
-                        <h6 class="mb-0 fw-semibold text-primary">Voucher Details</h6>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="sv-label">Client Type</label>
+                        <p class="sv-value mb-0" id="viewClientType">-</p>
                     </div>
-                    <div class="card-body" style="color: #212529;">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <table class="table table-borderless table-sm">
-                                    <tr><th width="40%" style="color: #495057;">Request Date:</th><td id="viewRequestDate" style="color: #212529;">—</td></tr>
-                                    <tr><th style="color: #495057;">Issue Date:</th><td id="viewIssueDate" style="color: #212529;">—</td></tr>
-                                    <tr><th style="color: #495057;">Transfer From Store:</th><td id="viewStoreName" style="color: #212529;">—</td></tr>
-                                    <tr><th style="color: #495057;">Reference Number:</th><td id="viewReferenceNumber" style="color: #212529;">—</td></tr>
-                                    <tr><th style="color: #495057;">Order By:</th><td id="viewOrderBy" style="color: #212529;">—</td></tr>
-                                </table>
-                            </div>
-                            <div class="col-md-6">
-                                <table class="table table-borderless table-sm">
-                                    <tr><th width="40%" style="color: #495057;">Client Type:</th><td id="viewClientType" style="color: #212529;">—</td></tr>
-                                    <tr><th style="color: #495057;">Client Name:</th><td id="viewClientName" style="color: #212529;">—</td></tr>
-                                    <tr><th style="color: #495057;">Payment Type:</th><td id="viewPaymentType" style="color: #212529;">—</td></tr>
-                                    <tr><th style="color: #495057;">Status:</th><td id="viewStatus" style="color: #212529;">—</td></tr>
-                                </table>
-                            </div>
-                        </div>
-                        <p class="mb-0 mt-2" id="viewRemarksWrap" style="display:none; color: #212529;"><strong>Remarks:</strong> <span id="viewRemarks"></span></p>
+                    <div class="col-md-4">
+                        <label class="sv-label">Client Name</label>
+                        <p class="sv-value mb-0" id="viewClientName">-</p>
                     </div>
-                </div>
-                <div class="card mb-4" id="viewItemsCard">
-                    <div class="card-header bg-white py-2">
-                        <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
+                    <div class="col-md-4">
+                        <label class="sv-label">Payment Type</label>
+                        <p class="sv-value mb-0" id="viewPaymentType">-</p>
                     </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>Item Name</th>
-                                        <th>Unit</th>
-                                        <th>Issue Qty</th>
-                                        <th>Return Qty</th>
-                                        <th>Rate</th>
-                                        <th>Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="viewModalItemsBody"></tbody>
-                            </table>
-                        </div>
+                    <div class="col-md-4">
+                        <label class="sv-label">Request Date</label>
+                        <p class="sv-value mb-0" id="viewRequestDate">-</p>
                     </div>
-                    <div class="card-footer bg-light d-flex justify-content-end" style="color: #212529;">
-                        <strong>Grand Total: ₹<span id="viewModalGrandTotal">0.00</span></strong>
+                    <div class="col-md-4">
+                        <label class="sv-label">Issue Date</label>
+                        <p class="sv-value mb-0" id="viewIssueDate">-</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="sv-label">Transfer from Store</label>
+                        <p class="sv-value mb-0" id="viewStoreName">-</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="sv-label">Reference Number</label>
+                        <p class="sv-value mb-0" id="viewReferenceNumber">-</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="sv-label">Order By</label>
+                        <p class="sv-value mb-0" id="viewOrderBy">-</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="sv-label">Status</label>
+                        <p class="mb-0"><span class="sv-status-pill sv-status-pill--pending" id="viewStatus">-</span></p>
+                    </div>
+                    <div class="col-12" id="viewRemarksWrap" style="display:none;">
+                        <label class="sv-label">Remarks</label>
+                        <p class="sv-value mb-0" id="viewRemarks"></p>
                     </div>
                 </div>
-                <div class="small" style="color: #495057;">
-                    Created: <span id="viewCreatedAt" style="color: #212529;">—</span>
-                    <span class="ms-3" id="viewUpdatedAtWrap" style="display:none;">Last Updated: <span id="viewUpdatedAt" style="color: #212529;"></span></span>
+
+                <div class="sv-items-box" id="viewItemsCard">
+                    <div class="table-responsive">
+                        <table class="table sv-items-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:26%;">Item</th>
+                                    <th style="width:10%;">Unit</th>
+                                    <th style="width:14%;">Issue Qty</th>
+                                    <th style="width:14%;">Return Qty</th>
+                                    <th style="width:16%;">Rate</th>
+                                    <th style="width:20%;">Line Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="viewModalItemsBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="sv-total-bar">Total: <span id="viewModalGrandTotal">0.00</span>/-</div>
+                </div>
+
+                <div class="sv-meta">
+                    Created: <span id="viewCreatedAt">-</span>
+                    <span class="ms-3" id="viewUpdatedAtWrap" style="display:none;">Last Updated: <span id="viewUpdatedAt"></span></span>
                 </div>
             </div>
-            <div class="modal-footer border-top">
-                <button type="button" class="btn btn-outline-primary btn-print-view-modal" data-print-target="#viewSellingVoucherModal" title="Print">
-                    <i class="ti ti-printer"></i> Print
-                </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <div class="modal-footer">
+                <button type="button" class="btn sv-btn-cancel" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn sv-btn-primary btn-print-view-modal" data-print-target="#viewSellingVoucherModal" title="Print">Print</button>
             </div>
         </div>
     </div>
@@ -1300,41 +1947,39 @@
             <form id="returnItemForm" method="POST" action="">
                 @csrf
                 @method('PUT')
-                <div class="modal-header border-bottom bg-light">
-                    <h5 class="modal-title fw-semibold" id="returnItemModalLabel">Transfer To</h5>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="returnItemModalLabel">Transfer To</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Transfer From Store</label>
-                        <p class="mb-0 form-control-plaintext" id="returnTransferFromStore">—</p>
-                    </div>
-                    <div class="card">
-                        <div class="card-header bg-white py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="sv-label">Transfer From Store</label>
+                            <p class="sv-value mb-0" id="returnTransferFromStore">-</p>
                         </div>
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-bordered mb-0">
-                                    <thead style="background-color: #af2910;">
-                                        <tr>
-                                            <th style="color: #fff;">Item Name</th>
-                                            <th style="color: #fff;">Issued Quantity</th>
-                                            <th style="color: #fff;">Item Unit</th>
-                                            <th style="color: #fff;">Item Issue Date</th>
-                                            <th style="color: #fff;">Return Quantity</th>
-                                            <th style="color: #fff;">Return Date</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="returnItemModalBody"></tbody>
-                                </table>
-                            </div>
+                    </div>
+
+                    <div class="sv-items-box">
+                        <div class="table-responsive">
+                            <table class="table sv-items-table">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width: 160px;">Item</th>
+                                        <th style="min-width: 90px;">Issued Qty</th>
+                                        <th style="min-width: 70px;">Unit</th>
+                                        <th style="min-width: 100px;">Issue Date</th>
+                                        <th style="min-width: 110px;">Return Qty</th>
+                                        <th style="min-width: 140px;">Return Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="returnItemModalBody"></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn sv-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn sv-btn-primary">Update</button>
                 </div>
             </form>
         </div>
@@ -1757,7 +2402,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function createItemSelectConfig() {
         return createBlankSearchConfig({
-            placeholder: 'Select Item',
+            placeholder: 'Item',
             maxOptions: null,
             clearOnOpen: false
         });
@@ -1817,7 +2462,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (selectEl.id === 'modalClientNameSelect') addModalTomSelectInstances.client = null;
         if (selectEl.id === 'editClientNameSelect') editModalTomSelectInstances.client = null;
 
-        selectEl.innerHTML = '<option value="">Select Client Name</option>';
+        selectEl.innerHTML = '<option value="">Select Client</option>';
         filtered.forEach(function(o) {
             var opt = document.createElement('option');
             opt.value = o.value;
@@ -1830,7 +2475,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var inst = null;
         if (typeof Choices !== 'undefined') {
             inst = createChoicesInstance(selectEl, createBlankSearchConfig({
-                placeholder: 'Select Client Name',
+                placeholder: 'Select Client',
                 clearOnOpen: true
             }));
             if (selectEl.id === 'modalClientNameSelect') addModalTomSelectInstances.client = inst;
@@ -2317,7 +2962,7 @@ document.addEventListener('DOMContentLoaded', function() {
             rebuildClientNameSelect(clientSel, clientNameOptionsAdd, addSlug);
         } else if (clientSel && !clientSel.tomselect) {
             addModalTomSelectInstances.client = createChoicesInstance(clientSel, createBlankSearchConfig({
-                placeholder: 'Select Client Name',
+                placeholder: 'Select Client',
                 clearOnOpen: true
             }));
         }
@@ -2385,7 +3030,7 @@ document.addEventListener('DOMContentLoaded', function() {
             rebuildClientNameSelect(clientSel, clientNameOptionsEdit, editSlug);
         } else if (clientSel && !clientSel.tomselect) {
             editModalTomSelectInstances.client = createChoicesInstance(clientSel, createBlankSearchConfig({
-                placeholder: 'Select Client Name',
+                placeholder: 'Select Client',
                 clearOnOpen: true
             }));
         }
@@ -2529,7 +3174,7 @@ document.addEventListener('DOMContentLoaded', function() {
             updateRemoveButtons();
         }
         var grandTotalEl = document.getElementById('modalGrandTotal');
-        if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
+        if (grandTotalEl) grandTotalEl.textContent = '0.00';
 
         if (skipDeferredReinit) {
             return;
@@ -2768,6 +3413,13 @@ document.addEventListener('DOMContentLoaded', function() {
     let filteredItems = itemSubcategories;
     const editSvBaseUrl = "{{ url('admin/mess/material-management') }}";
     const viewSvBaseUrl = "{{ url('admin/mess/material-management') }}";
+
+    // View modal rows are built with insertAdjacentHTML from DB values — escape them.
+    function escapeSvHtml(value) {
+        const div = document.createElement('div');
+        div.textContent = value == null ? '' : String(value);
+        return div.innerHTML;
+    }
     const returnSvBaseUrl = "{{ url('admin/mess/material-management') }}";
     let rowIndex = 1;
     let editRowIndex = 0;
@@ -2882,7 +3534,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 select.tomselect.destroy();
             }
             const currentValue = select.value;
-            select.innerHTML = '<option value="">Select Item</option>';
+            select.innerHTML = '<option value="">Item</option>';
             filteredItems.forEach(item => {
                 const option = document.createElement('option');
                 option.value = item.id;
@@ -2905,6 +3557,26 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Add and Edit share one action cell: remove on every row, add on the last
+    // (CSS hides the + on every row but the last).
+    function svActionCell(extraRemoveClass) {
+        return '<td class="sv-act-cell">' +
+            '<button type="button" class="sv-icon-btn sv-icon-btn--remove sv-remove-row' +
+            (extraRemoveClass || '') + '" title="Remove line" aria-label="Remove line">&minus;</button>' +
+            '<button type="button" class="sv-icon-btn sv-icon-btn--add sv-add-row" title="Add line" aria-label="Add line">+</button>' +
+            '</td>';
+    }
+
+    // Add and Edit share one action cell: remove on every row, add on the last
+    // (CSS hides the + on every row but the last).
+    function svActionCell(extraRemoveClass) {
+        return '<td class="sv-act-cell">' +
+            '<button type="button" class="sv-icon-btn sv-icon-btn--remove sv-remove-row' +
+            (extraRemoveClass || '') + '" title="Remove line" aria-label="Remove line">&minus;</button>' +
+            '<button type="button" class="sv-icon-btn sv-icon-btn--add sv-add-row" title="Add line" aria-label="Add line">+</button>' +
+            '</td>';
+    }
+
     function getRowHtml(index) {
         const options = filteredItems.map(s => {
             let attrs = 'data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '" data-rate="' + (s.standard_cost || 0) + '" data-available="' + (s.available_quantity || 0) + '"';
@@ -2914,14 +3586,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return '<option value="' + s.id + '" ' + attrs + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>';
         }).join('');
         return '<tr class="sv-item-row">' +
-            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
-            '<td><input type="text" name="items[' + index + '][unit]" class="form-control  sv-unit" readonly placeholder="—"></td>' +
-            '<td><input type="text" name="items[' + index + '][available_quantity]" class="form-control  sv-avail bg-light" readonly></td>' +
-            '<td><input type="text" name="items[' + index + '][quantity]" class="form-control  sv-qty" step="0.01" min="0.01" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
-            '<td><input type="text" class="form-control  sv-left bg-light" readonly></td>' +
-            '<td><input type="text" name="items[' + index + '][rate]" class="form-control  sv-rate" step="0.01" min="0" required></td>' +
-            '<td><input type="text" class="form-control  sv-total bg-light" readonly placeholder="0.00"></td>' +
-            '<td><button type="button" class="btn btn-sm btn-outline-danger sv-remove-row" title="Remove">×</button></td>' +
+            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select sv-item-select" required><option value="">Item</option>' + options + '</select></td>' +
+            '<td><input type="text" name="items[' + index + '][unit]" class="form-control sv-unit" readonly placeholder="-"></td>' +
+            '<td><input type="text" name="items[' + index + '][available_quantity]" class="form-control sv-avail bg-light" readonly placeholder="-"></td>' +
+            '<td><input type="text" name="items[' + index + '][quantity]" class="form-control sv-qty" step="0.01" min="0.01" placeholder="-" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
+            '<td><input type="text" class="form-control sv-left bg-light" readonly placeholder="-"></td>' +
+            '<td><input type="text" name="items[' + index + '][rate]" class="form-control sv-rate" step="0.01" min="0" placeholder="-" required></td>' +
+            '<td><input type="text" class="form-control sv-total bg-light" readonly placeholder="-"></td>' +
+            svActionCell() +
             '</tr>';
     }
 
@@ -2994,7 +3666,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (t && t.value) sum += parseFloat(t.value) || 0;
         });
         const el = document.getElementById('modalGrandTotal');
-        if (el) el.textContent = '₹' + sum.toFixed(2);
+        // Rendered as "Total: 0.00/-" — label and /- suffix live in the markup.
+        if (el) el.textContent = sum.toFixed(2);
     }
 
     function updateRemoveButtons() {
@@ -3059,6 +3732,11 @@ document.addEventListener('DOMContentLoaded', function() {
         updateEditGrandTotal();
     }
 
+    // Neither modal has a toolbar "Add Item" button any more — the last row's
+    // blue + adds the next line, via the delegated handlers on each tbody.
+    window.svAddItemRow = appendModalItemRow;
+    window.svAddEditItemRow = appendEditModalItemRow;
+
     /** Enter appends item row everywhere in modal except Choices dropdowns, buttons/links, and submit controls. */
     function svEnterShouldAppendItemRow(modalEl, activeEl) {
         if (!modalEl || !activeEl || !modalEl.contains(activeEl)) return false;
@@ -3113,7 +3791,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         modalItemsBody.addEventListener('click', function(e) {
-            if (e.target.classList.contains('sv-remove-row')) {
+            if (e.target.closest('.sv-add-row')) {
+                if (typeof window.svAddItemRow === 'function') window.svAddItemRow();
+                return;
+            }
+            // closest() (not e.target) so a click on the glyph inside the button still counts
+            if (e.target.closest('.sv-remove-row')) {
                 const row = e.target.closest('.sv-item-row');
                 if (row && document.querySelectorAll('#modalItemsBody .sv-item-row').length > 1) {
                     row.remove();
@@ -3309,7 +3992,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 if (nameInput) {
                     nameInput.style.display = 'block';
-                    nameInput.placeholder = 'Client / section / role name';
+                    nameInput.placeholder = 'e.g. John Doe';
                     nameInput.setAttribute('required', 'required');
                     nameInput.removeAttribute('list');
                 }
@@ -3585,7 +4268,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (nameInput) {
                     nameInput.style.display = 'block';
                     nameInput.readOnly = false;
-                    nameInput.placeholder = 'Client / section / role name';
+                    nameInput.placeholder = 'e.g. John Doe';
                     nameInput.setAttribute('required', 'required');
                     nameInput.removeAttribute('list');
                 }
@@ -3709,15 +4392,15 @@ document.addEventListener('DOMContentLoaded', function() {
         // original-qty = net issued (stock currently held by this voucher line)
         const originalQtyAttr = item ? (' data-original-qty="' + (parseFloat(qty) || 0) + '" data-return-qty="' + returnQty + '"') : '';
         return '<tr class="sv-item-row edit-sv-item-row"' + originalQtyAttr + '>' +
-            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select sv-item-select" required><option value="">Select Item</option>' + options + '</select>' +
+            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select sv-item-select" required><option value="">Item</option>' + options + '</select>' +
             '<input type="hidden" name="items[' + index + '][return_quantity]" class="sv-return-qty-hidden" value="' + returnQty + '"></td>' +
-            '<td><input type="text" name="items[' + index + '][unit]" class="form-control  sv-unit" readonly placeholder="—" value="' + (unit || '') + '"></td>' +
-            '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  sv-avail bg-light" step="0.01" min="0" value="' + avail + '" placeholder="0" readonly></td>' +
-            '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  sv-qty" step="0.01" min="0.01" placeholder="0" value="' + qty + '" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
-            '<td><input type="text" class="form-control  sv-left bg-light" readonly placeholder="0" value="' + left + '"></td>' +
-            '<td><input type="number" name="items[' + index + '][rate]" class="form-control  sv-rate" step="0.01" min="0" placeholder="0" value="' + rate + '" required></td>' +
-            '<td><input type="text" class="form-control  sv-total bg-light" readonly placeholder="0.00" value="' + (total !== '' ? Number(total).toFixed(2) : '') + '"></td>' +
-            '<td><button type="button" class="btn btn-sm btn-outline-danger sv-remove-row edit-sv-remove-row" title="Remove">×</button></td>' +
+            '<td><input type="text" name="items[' + index + '][unit]" class="form-control sv-unit" readonly placeholder="-" value="' + (unit || '') + '"></td>' +
+            '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control sv-avail bg-light" step="0.01" min="0" value="' + avail + '" placeholder="-" readonly></td>' +
+            '<td><input type="number" name="items[' + index + '][quantity]" class="form-control sv-qty" step="0.01" min="0.01" placeholder="-" value="' + qty + '" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
+            '<td><input type="text" class="form-control sv-left bg-light" readonly placeholder="-" value="' + left + '"></td>' +
+            '<td><input type="number" name="items[' + index + '][rate]" class="form-control sv-rate" step="0.01" min="0" placeholder="-" value="' + rate + '" required></td>' +
+            '<td><input type="text" class="form-control sv-total bg-light" readonly placeholder="-" value="' + (total !== '' ? Number(total).toFixed(2) : '') + '"></td>' +
+            svActionCell(' edit-sv-remove-row') +
             '</tr>';
     }
 
@@ -3728,7 +4411,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (t && t.value) sum += parseFloat(t.value) || 0;
         });
         const el = document.getElementById('editModalGrandTotal');
-        if (el) el.textContent = '₹' + sum.toFixed(2);
+        // Rendered as "Total: 0.00/-" — label and /- suffix live in the markup.
+        if (el) el.textContent = sum.toFixed(2);
     }
 
     function updateEditRemoveButtons() {
@@ -3791,7 +4475,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!select) return;
 
             const currentValue = select.value;
-            select.innerHTML = '<option value="">Select Item</option>';
+            select.innerHTML = '<option value="">Item</option>';
 
             const sourceItems = Array.isArray(filteredItems) && filteredItems.length > 0 ? filteredItems.slice() : (itemSubcategories || []).slice();
             if (currentValue && !sourceItems.some(function(s) { return String(s.id) === String(currentValue); })) {
@@ -3887,16 +4571,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     const v = data.voucher;
                     const items = data.items || [];
                     document.getElementById('viewSellingVoucherModalLabel').textContent = 'View Selling Voucher #' + (v.pk || voucherId);
-                    document.getElementById('viewRequestDate').textContent = v.request_date || '—';
-                    document.getElementById('viewIssueDate').textContent = v.issue_date || '—';
-                    document.getElementById('viewStoreName').textContent = v.store_name || '—';
-                    document.getElementById('viewReferenceNumber').textContent = v.reference_number || '—';
-                    document.getElementById('viewOrderBy').textContent = v.order_by || '—';
-                    document.getElementById('viewClientType').textContent = v.client_type || '—';
-                    document.getElementById('viewClientName').textContent = v.client_name || '—';
-                    document.getElementById('viewPaymentType').textContent = v.payment_type || '—';
+                    document.getElementById('viewRequestDate').textContent = v.request_date || '-';
+                    document.getElementById('viewIssueDate').textContent = v.issue_date || '-';
+                    document.getElementById('viewStoreName').textContent = v.store_name || '-';
+                    document.getElementById('viewReferenceNumber').textContent = v.reference_number || '-';
+                    document.getElementById('viewOrderBy').textContent = v.order_by || '-';
+                    document.getElementById('viewClientType').textContent = v.client_type || '-';
+                    document.getElementById('viewClientName').textContent = v.client_name || '-';
+                    document.getElementById('viewPaymentType').textContent = v.payment_type || '-';
                     const statusEl = document.getElementById('viewStatus');
-                    statusEl.innerHTML = v.status === 0 ? '<span class="badge bg-warning">Pending</span>' : (v.status === 2 ? '<span class="badge bg-success">Approved</span>' : (v.status === 4 ? '<span class="badge bg-primary">Completed</span>' : '<span class="badge bg-secondary">' + (v.status_label || v.status) + '</span>'));
+                    const statusMap = { 0: ['pending', 'Pending'], 2: ['approved', 'Approved'], 4: ['completed', 'Completed'] };
+                    const statusInfo = statusMap[v.status] || ['other', String(v.status_label || v.status || '-')];
+                    statusEl.className = 'sv-status-pill sv-status-pill--' + statusInfo[0];
+                    statusEl.textContent = statusInfo[1];
                     if (v.remarks) {
                         document.getElementById('viewRemarksWrap').style.display = 'block';
                         document.getElementById('viewRemarks').textContent = v.remarks;
@@ -3907,15 +4594,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     const tbody = document.getElementById('viewModalItemsBody');
                     tbody.innerHTML = '';
                     if (data.has_items && items.length > 0) {
-                        document.getElementById('viewItemsCard').style.display = 'block';
+                        document.getElementById('viewItemsCard').style.display = '';
                         items.forEach(function(item) {
-                            tbody.insertAdjacentHTML('beforeend', '<tr><td>' + (item.item_name || '—') + '</td><td>' + (item.unit || '—') + '</td><td>' + item.quantity + '</td><td>' + (item.return_quantity || 0) + '</td><td>₹' + item.rate + '</td><td>₹' + item.amount + '</td></tr>');
+                            tbody.insertAdjacentHTML('beforeend', '<tr><td>' + escapeSvHtml(item.item_name || '-') + '</td><td>' + escapeSvHtml(item.unit || '-') + '</td><td>' + escapeSvHtml(item.quantity) + '</td><td>' + escapeSvHtml(item.return_quantity || 0) + '</td><td>' + escapeSvHtml(item.rate) + '</td><td>' + escapeSvHtml(item.amount) + '</td></tr>');
                         });
                         document.getElementById('viewModalGrandTotal').textContent = data.grand_total || '0.00';
                     } else {
                         document.getElementById('viewItemsCard').style.display = 'none';
                     }
-                    document.getElementById('viewCreatedAt').textContent = v.created_at || '—';
+                    document.getElementById('viewCreatedAt').textContent = v.created_at || '-';
                     if (v.updated_at) {
                         document.getElementById('viewUpdatedAtWrap').style.display = 'inline';
                         document.getElementById('viewUpdatedAt').textContent = v.updated_at;
@@ -3951,22 +4638,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .then(data => {
                     console.log('Return data:', data);
-                    document.getElementById('returnTransferFromStore').textContent = data.store_name || '—';
+                    document.getElementById('returnTransferFromStore').textContent = data.store_name || '-';
                     const issueDate = data.issue_date || '';
                     const todayYmd = new Date().toISOString().slice(0, 10);
                     const tbody = document.getElementById('returnItemModalBody');
                     tbody.innerHTML = '';
                     function ymdToDmY(ymd) {
-                        if (!ymd) return '—';
+                        if (!ymd) return '-';
                         var p = String(ymd).split('-');
                         if (p.length !== 3) return ymd;
                         return p[2] + '/' + p[1] + '/' + p[0];
                     }
                     (data.items || []).forEach(function(item, i) {
                         const id = (item.id != null) ? item.id : '';
-                        const name = (item.item_name || '—').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+                        const name = (item.item_name || '-').replace(/</g, '&lt;').replace(/"/g, '&quot;');
                         const qty = item.quantity != null ? item.quantity : '';
-                        const unit = (item.unit || '—').replace(/</g, '&lt;');
+                        const unit = (item.unit || '-').replace(/</g, '&lt;');
                         const retQty = item.return_quantity != null ? item.return_quantity : 0;
                         const retDate = item.return_date || '';
                         const issuedQty = parseFloat(qty) || 0;
@@ -3974,8 +4661,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         const issueDisp = ymdToDmY(rowIssueYmd);
                         tbody.insertAdjacentHTML('beforeend',
                             '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td><td class="text-nowrap">' + issueDisp + '</td>' +
-                            '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control  sv-return-qty" step="0.01" min="0" max="' + issuedQty + '" data-issued="' + issuedQty + '" value="' + retQty + '"><div class="invalid-feedback">Return Qty cannot exceed Issued Qty.</div></td>' +
-                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  sv-return-date" max="' + todayYmd + '" ' + (rowIssueYmd ? ('min="' + rowIssueYmd + '" data-issue-date="' + rowIssueYmd + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date must be between issue date and today.</div></td></tr>');
+                            '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control sv-return-qty" step="0.01" min="0" max="' + issuedQty + '" data-issued="' + issuedQty + '" value="' + retQty + '"><div class="invalid-feedback">Return Qty cannot exceed Issued Qty.</div></td>' +
+                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control sv-return-date" max="' + todayYmd + '" ' + (rowIssueYmd ? ('min="' + rowIssueYmd + '" data-issue-date="' + rowIssueYmd + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date must be between issue date and today.</div></td></tr>');
                     });
                     document.getElementById('returnItemForm').action = returnSvBaseUrl + '/' + voucherId + '/return';
                     const modal = new bootstrap.Modal(document.getElementById('returnItemModal'));
@@ -4187,7 +4874,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
                             if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
                             if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
-                            if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = false; editNameInp.placeholder = 'Client / section / role name'; editNameInp.setAttribute('required', 'required'); }
+                            if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = false; editNameInp.placeholder = 'e.g. John Doe'; editNameInp.setAttribute('required', 'required'); }
                         }
                     })();
 
@@ -4324,7 +5011,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         editModalItemsBody.addEventListener('click', function(e) {
-            if (e.target.classList.contains('sv-remove-row')) {
+            if (e.target.closest('.sv-add-row')) {
+                if (typeof window.svAddEditItemRow === 'function') window.svAddEditItemRow();
+                return;
+            }
+            // closest() (not e.target) so a click on the glyph inside the button still counts
+            if (e.target.closest('.sv-remove-row')) {
                 const row = e.target.closest('.sv-item-row');
                 if (row && document.querySelectorAll('#editModalItemsBody .sv-item-row').length > 1) {
                     row.remove();
@@ -4403,7 +5095,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateRemoveButtons();
             }
             const grandTotalEl = document.getElementById('modalGrandTotal');
-            if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
+            if (grandTotalEl) grandTotalEl.textContent = '0.00';
         });
 
         var editSellingVoucherModalEl = document.getElementById('editSellingVoucherModal');
@@ -4487,7 +5179,7 @@ document.addEventListener('DOMContentLoaded', function() {
     })();
     @endif
 
-    // Print View modal content (Selling Voucher) – correct design with standard header
+    // Print View modal content (Selling Voucher) - branded header + spec-design body
     document.addEventListener('click', function(e) {
         var btn = e.target.closest('.btn-print-view-modal');
         if (!btn) return;
@@ -4495,23 +5187,137 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!sel) return;
         var modalEl = document.querySelector(sel);
         if (!modalEl) return;
-        var content = modalEl.querySelector('.modal-content');
-        if (!content) return;
-        var win = window.open('', '_blank', 'width=900,height=700');
-        if (!win) { alert('Please allow popups to print.'); return; }
+        var bodyEl = modalEl.querySelector('.modal-body');
+        if (!bodyEl) return;
+
         var title = (modalEl.querySelector('.modal-title') || {}).textContent || 'Selling Voucher';
         var printedOn = new Date();
-        var dateStr = printedOn.getDate().toString().padStart(2,'0') + '/' + (printedOn.getMonth()+1).toString().padStart(2,'0') + '/' + printedOn.getFullYear() + ', ' + printedOn.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-        var bodyContent = content.innerHTML.replace(/<button[^>]*btn-close[^>]*>[\s\S]*?<\/button>/gi, '');
-        var printHeader = '<div class="print-doc-header" style="text-align:center;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #2c3e50;">' +
-            '<div style="font-size:16px;font-weight:700;color:#1a1a1a;margin-bottom:4px;">OFFICER\'S MESS LBSNAA MUSSOORIE</div>' +
-            '<div style="background:#495057;color:#fff;padding:6px 12px;font-size:13px;display:inline-block;margin:4px 0;">Selling Voucher</div>' +
-            '<div style="font-size:11px;color:#6c757d;margin-top:6px;">Printed on ' + dateStr + '</div></div>';
-        var printCss = '<style>@page{size:A4;margin:14mm;}body{font-family:Arial,sans-serif;font-size:12px;color:#212529;padding:0 12px;margin:0;background:#fff;}.print-doc-header{-webkit-print-color-adjust:exact;print-color-adjust:exact;}.modal-header{border-bottom:1px solid #dee2e6;padding-bottom:8px;margin-bottom:12px;}.modal-body{color:#212529;}.card{margin-bottom:14px;page-break-inside:avoid;}.card-header{font-weight:600;font-size:12px;margin-bottom:8px;}.card-body table th,.card-body table td{border:1px solid #adb5bd;padding:6px 8px;}table{width:100%;border-collapse:collapse;font-size:11px;}thead th{background:#af2910!important;color:#fff!important;border-color:#8b2009;font-weight:600;-webkit-print-color-adjust:exact;print-color-adjust:exact;}.card-footer{font-weight:600;padding-top:8px;}.btn-close,.modal-footer{display:none!important;}@media print{body{padding:0;}}</style>';
-        win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + title.replace(/</g, '&lt;') + '</title>' + printCss + '</head><body>' + printHeader + '<div class="modal-content-wrap">' + bodyContent + '</div></body></html>');
-        win.document.close();
-        win.focus();
-        setTimeout(function() { win.print(); win.close(); }, 350);
+        var dateStr = printedOn.getDate().toString().padStart(2, '0') + '/' +
+            (printedOn.getMonth() + 1).toString().padStart(2, '0') + '/' + printedOn.getFullYear() +
+            ', ' + printedOn.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+        var wrap = document.createElement('div');
+        wrap.innerHTML = bodyEl.innerHTML;
+        wrap.querySelectorAll('button, .btn-close').forEach(function(el) { el.remove(); });
+        // The screen layout drops section headings; print reads better with them.
+        var firstRow = wrap.querySelector('.row');
+        if (firstRow) {
+            var h = document.createElement('div');
+            h.className = 'sv-print-title';
+            h.textContent = 'Voucher Details';
+            firstRow.parentNode.insertBefore(h, firstRow);
+        }
+        var itemsBox = wrap.querySelector('.sv-items-box');
+        if (itemsBox) {
+            var h2 = document.createElement('div');
+            h2.className = 'sv-print-title';
+            h2.textContent = 'Item Details';
+            itemsBox.parentNode.insertBefore(h2, itemsBox);
+        }
+
+        var logoUrl = @json(asset('images/lbsnaa_logo.jpg'));
+        var printHeader =
+            '<div class="print-doc-header" style="text-align:center;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #2c3e50;">' +
+            '<div style="margin-bottom:10px;"><img src="' + logoUrl + '" alt="LBSNAA Logo" style="height:60px;width:auto;"></div>' +
+            '<div style="font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">OFFICER\'S MESS LBSNAA MUSSOORIE</div>' +
+            '<div style="background:#004384;color:#fff;padding:8px 16px;font-size:14px;display:inline-block;margin:4px 0;border-radius:4px;-webkit-print-color-adjust:exact;print-color-adjust:exact;">Selling Voucher</div>' +
+            '<div style="font-size:11px;color:#6c757d;margin-top:8px;">' +
+            (title ? title.replace(/</g, '&lt;') + ' &nbsp;|&nbsp; ' : '') + 'Printed on ' + dateStr +
+            '</div></div>';
+
+        var ink = ' -webkit-print-color-adjust: exact; print-color-adjust: exact;';
+        // Mirrors the on-screen View classes (.sv-label/.sv-value/.sv-items-table/.sv-total-bar).
+        var printCss = '<style>' +
+            '@page { size: A4; margin: 14mm; }' +
+            'body { font-family: Arial, sans-serif; font-size: 12px; color: #212529; margin: 0; padding: 0; background: #fff; }' +
+            '.print-doc-header {' + ink + ' }' +
+            '.print-doc-header img {' + ink + ' }' +
+            '.modal-header, .modal-footer, .btn-close { display: none !important; }' +
+            '.sv-print-title { margin: 16px 0 8px; font-size: 13px; font-weight: 700; color: #004384;' +
+            ' border-bottom: 1px solid #dee2e6; padding-bottom: 4px; }' +
+            '.sv-print-title:first-child { margin-top: 0; }' +
+            '.row { display: flex; flex-wrap: wrap; margin: 0 -6px; }' +
+            '.row > [class*="col-"] { box-sizing: border-box; padding: 0 6px 10px; width: 33.33%; }' +
+            '.row > .col-12 { width: 100%; }' +
+            '.sv-label { display: block; margin-bottom: 2px; font-size: 10px; font-weight: 600;' +
+            ' color: #6c757d; text-transform: uppercase; letter-spacing: .02em; }' +
+            '.sv-value { margin: 0; padding: 4px 8px; font-size: 12px; color: #212529; background: #f8f9fa;' +
+            ' border: 1px solid #e9ecef; border-radius: 3px; min-height: 20px;' + ink + ' }' +
+            '.sv-status-pill { display: inline-block; padding: 3px 10px; font-size: 10px; font-weight: 700;' +
+            ' border-radius: 999px;' + ink + ' }' +
+            '.sv-status-pill--approved { color: #067647 !important; background: #d7f5e5 !important; }' +
+            '.sv-status-pill--completed { color: #004384 !important; background: #dbe9f8 !important; }' +
+            '.sv-status-pill--pending { color: #b54708 !important; background: #fdf0d5 !important; }' +
+            '.sv-status-pill--other { color: #475467 !important; background: #eceff3 !important; }' +
+            '.sv-items-box { border: 1px solid #adb5bd; border-radius: 3px; overflow: hidden; }' +
+            'table { width: 100%; border-collapse: collapse; font-size: 11px; page-break-inside: auto; }' +
+            'th, td { border: 1px solid #adb5bd; padding: 5px 8px; text-align: left; }' +
+            'thead th { background: #004384 !important; color: #fff !important; border-color: #003468;' +
+            ' font-weight: 600;' + ink + ' }' +
+            'thead { display: table-header-group; }' +
+            'tbody tr { page-break-inside: avoid; }' +
+            'tbody tr:nth-child(even) td { background-color: #f4f6f8 !important;' + ink + ' }' +
+            /* Issue Qty / Return Qty / Rate / Line Total read as numbers */
+            'th:nth-child(n+3), td:nth-child(n+3) { text-align: right; }' +
+            '.sv-total-bar { padding: 7px 10px; font-size: 12px; font-weight: 700; text-align: right;' +
+            ' color: #004384 !important; background: #dbe9f8 !important; border-top: 1px solid #adb5bd;' +
+            ' page-break-inside: avoid;' + ink + ' }' +
+            '.sv-meta { margin-top: 12px; font-size: 10px; color: #6c757d; }' +
+            '@media print { .print-doc-header { margin-bottom: 16px; } }' +
+            '</style>';
+
+        var docHtml = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' +
+            title.replace(/</g, '&lt;') + '</title>' + printCss + '</head><body>' + printHeader +
+            '<div class="modal-content-wrap">' + wrap.innerHTML + '</div></body></html>';
+
+        // Printed from a hidden same-page iframe rather than window.open(): a popup
+        // blocker silently kills the popup route, so the button just does nothing.
+        var frame = document.createElement('iframe');
+        frame.setAttribute('aria-hidden', 'true');
+        frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+        document.body.appendChild(frame);
+
+        var fired = false;
+        var cleaned = false;
+
+        function cleanup() {
+            if (cleaned) return;
+            cleaned = true;
+            setTimeout(function() {
+                if (frame && frame.parentNode) frame.parentNode.removeChild(frame);
+            }, 500);
+        }
+
+        function doPrint() {
+            if (fired) return;
+            fired = true;
+            var fw = frame.contentWindow;
+            if (!fw) { cleanup(); return; }
+            try { fw.addEventListener('afterprint', cleanup); } catch (err) {}
+            try {
+                fw.focus();
+                fw.print();
+            } catch (err) {
+                console.error('Print failed', err);
+            }
+            // afterprint is not fired by every browser - always reclaim the iframe.
+            setTimeout(cleanup, 60000);
+        }
+
+        var fdoc = frame.contentWindow.document;
+        fdoc.open();
+        fdoc.write(docHtml);
+        fdoc.close();
+
+        // Print once the logo has decoded, otherwise the header prints blank.
+        var logo = fdoc.querySelector('.print-doc-header img');
+        if (!logo || logo.complete) {
+            setTimeout(doPrint, 60);
+        } else {
+            logo.addEventListener('load', doPrint);
+            logo.addEventListener('error', doPrint);
+            setTimeout(doPrint, 2000);
+        }
     });
 
     document.addEventListener('shown.bs.tab', function (e) {

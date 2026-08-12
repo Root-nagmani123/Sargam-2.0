@@ -176,11 +176,11 @@
          pills here (Sargam 2.0.pdf p4) — the ?status= filter is still served, it
          simply has no on-screen control. --}}
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
-        <button type="button" class="btn store-master-export-btn" id="storesDownloadBtn">
+        <button type="button" class="btn store-master-export-btn border-0" id="storesDownloadBtn">
             <i class="material-symbols-rounded">download</i>
             <span>Download</span>
         </button>
-        <button type="button" class="btn store-master-export-btn" id="storesPrintBtn">
+        <button type="button" class="btn store-master-export-btn border-0" id="storesPrintBtn">
             <i class="material-symbols-rounded">print</i>
             <span>Print</span>
         </button>

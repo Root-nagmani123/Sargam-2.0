@@ -297,7 +297,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label itemcat-modal-label">Item Category Description</label>
-                            <textarea name="description" class="form-control itemcat-modal-control" rows="3" placeholder="e.g. Lorem ipsum dolor sit amet">{{ old('description') }}</textarea>
+                            <textarea name="description" class="form-control itemcat-modal-control" rows="3" placeholder="e.g. Enter Item Category Description....">{{ old('description') }}</textarea>
                             @error('description')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-12">
@@ -349,7 +349,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label itemcat-modal-label">Item Category Description</label>
-                            <textarea name="description" id="edit_description" class="form-control itemcat-modal-control" rows="3" placeholder="e.g. Lorem ipsum dolor sit amet"></textarea>
+                            <textarea name="description" id="edit_description" class="form-control itemcat-modal-control" rows="3" placeholder="e.g. Enter Item Category Description...."></textarea>
                         </div>
                         <div class="col-12">
                             <label class="form-label itemcat-modal-label">Status</label>

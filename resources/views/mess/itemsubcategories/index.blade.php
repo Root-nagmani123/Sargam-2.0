@@ -333,7 +333,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label itemsub-modal-label">Description</label>
-                            <textarea name="description" class="form-control itemsub-modal-control" rows="3" placeholder="e.g. Lorem ipsum dolor sit amet">{{ old('description') }}</textarea>
+                            <textarea name="description" class="form-control itemsub-modal-control" rows="3" placeholder="e.g. Enter Item Sub-Category Description....">{{ old('description') }}</textarea>
                             @error('description')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                         </div>
                     </div>
@@ -399,7 +399,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label itemsub-modal-label">Description</label>
-                            <textarea name="description" id="edit_description" class="form-control itemsub-modal-control" rows="3" placeholder="e.g. Lorem ipsum dolor sit amet"></textarea>
+                            <textarea name="description" id="edit_description" class="form-control itemsub-modal-control" rows="3" placeholder="e.g. Enter Item Sub-Category Description...."></textarea>
                         </div>
                     </div>
                 </div>

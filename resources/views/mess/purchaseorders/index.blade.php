@@ -102,109 +102,6 @@
     .po-master-page .programme-dt-footer .paginate_button.previous .page-link::before { content: "\2039"; font-size: 1.1rem; }
     .po-master-page .programme-dt-footer .paginate_button.next .page-link::before { content: "\203A"; font-size: 1.1rem; }
 
-    /* ── Clean modern Create / Edit / View PO modals ──
-       Reskins the legacy gradient/colored modal chrome to the design system.
-       Stylesheet !important overrides the modals' inline gradient styles; markup
-       and every JS hook (line-items, Choices, ids/names) are left untouched. */
-    #createPurchaseOrderModal .modal-content,
-    #editPurchaseOrderModal .modal-content,
-    #viewPurchaseOrderModal .modal-content {
-        border-radius: 16px !important;
-        border: 0 !important;
-        box-shadow: 0 24px 48px rgba(16, 24, 40, .18) !important;
-        overflow: hidden;
-    }
-
-    #createPurchaseOrderModal .modal-header,
-    #editPurchaseOrderModal .modal-header,
-    #viewPurchaseOrderModal .modal-header {
-        background: #fff !important;
-        background-image: none !important;
-        border-top: 0 !important;
-        border-bottom: 1px solid var(--ds-line, #eef2f6) !important;
-        padding: 1.15rem 1.5rem !important;
-    }
-
-    #createPurchaseOrderModal .modal-title,
-    #editPurchaseOrderModal .modal-title,
-    #viewPurchaseOrderModal .modal-title {
-        color: var(--ds-ink, #1f2937) !important;
-        font-size: 1.4rem !important;
-        font-weight: 700 !important;
-    }
-
-    #createPurchaseOrderModal .modal-body,
-    #editPurchaseOrderModal .modal-body,
-    #viewPurchaseOrderModal .modal-body {
-        background: #fff !important;
-        background-image: none !important;
-        padding: 1.25rem 1.5rem !important;
-    }
-
-    /* Section cards inside the body → clean white with hairline border */
-    #createPurchaseOrderModal .modal-body .card,
-    #editPurchaseOrderModal .modal-body .card,
-    #viewPurchaseOrderModal .modal-body .card {
-        border: 1px solid var(--ds-line, #eef2f6) !important;
-        border-radius: 12px !important;
-        box-shadow: none !important;
-    }
-
-    #createPurchaseOrderModal .modal-body .card-header,
-    #editPurchaseOrderModal .modal-body .card-header,
-    #viewPurchaseOrderModal .modal-body .card-header,
-    #createPurchaseOrderModal .modal-body .card-footer,
-    #editPurchaseOrderModal .modal-body .card-footer,
-    #viewPurchaseOrderModal .modal-body .card-footer {
-        background: #fff !important;
-        background-image: none !important;
-        border-color: var(--ds-line, #eef2f6) !important;
-    }
-
-    /* Colored icon squares in section headers → brand-tinted neutral */
-    #createPurchaseOrderModal .modal-body .card-header [class*="bg-"],
-    #editPurchaseOrderModal .modal-body .card-header [class*="bg-"],
-    #viewPurchaseOrderModal .modal-body .card-header [class*="bg-"] {
-        background: rgba(0, 74, 147, .1) !important;
-        color: var(--ds-primary, #004a93) !important;
-    }
-
-    /* Grand-total accents → brand blue */
-    #editPoGrandTotal, #poGrandTotal, #viewPoGrandTotal { color: var(--ds-primary, #004a93) !important; }
-
-    /* Inputs / selects → token radius */
-    #createPurchaseOrderModal .form-control, #createPurchaseOrderModal .form-select,
-    #editPurchaseOrderModal .form-control, #editPurchaseOrderModal .form-select {
-        border-radius: 8px;
-    }
-
-    /* Footers → clean; submit = blue, cancel = red outline */
-    #createPurchaseOrderModal .modal-footer,
-    #editPurchaseOrderModal .modal-footer,
-    #viewPurchaseOrderModal .modal-footer {
-        background: #fff !important;
-        background-image: none !important;
-        border-top: 1px solid var(--ds-line, #eef2f6) !important;
-        padding: 1rem 1.5rem 1.25rem !important;
-    }
-
-    #createPurchaseOrderModal .modal-footer .btn[type="submit"],
-    #editPurchaseOrderModal .modal-footer .btn[type="submit"] {
-        background: var(--ds-primary, #004a93) !important;
-        border: 1px solid var(--ds-primary, #004a93) !important;
-        color: #fff !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-    }
-
-    #createPurchaseOrderModal .modal-footer .btn[data-bs-dismiss="modal"],
-    #editPurchaseOrderModal .modal-footer .btn[data-bs-dismiss="modal"] {
-        color: var(--ds-secondary, #d92d20) !important;
-        border: 1px solid var(--ds-secondary, #d92d20) !important;
-        background: #fff !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-    }
 </style>
 @endpush
 
@@ -849,6 +746,10 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
     }
 
     function poPrepareBrowserPrint() {
+        // The View-modal print runs in its own iframe; some browsers still bubble
+        // beforeprint to the top window, and re-laying-out the list DataTable there
+        // is both pointless and visible to the user.
+        if (window.PO_MODAL_PRINT_ACTIVE) return;
         if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) return;
         var $t = window.jQuery('#purchaseOrdersTable');
         if (!$t.length || !window.jQuery.fn.DataTable.isDataTable($t)) return;
@@ -1231,211 +1132,699 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
     scroll-behavior: smooth;
 }
 </style>
+<style>
+/* ══ Purchase Order modals — compact spec design ══
+   One stylesheet for Create / Edit / View so all three read as the same form.
+   Selectors are ID-grouped (not a shared class) so they outrank the older
+   ID-scoped rules further up this file. Create-only or View-only bits are
+   marked. Never write a literal Blade directive in a comment here — Blade
+   compiles it even inside a comment, which opens a stray output buffer and
+   blanks the gzipped page. */
+#createPurchaseOrderModal .modal-content,
+#editPurchaseOrderModal .modal-content,
+#viewPurchaseOrderModal .modal-content {
+    border: 0;
+    border-radius: 8px;
+    box-shadow: 0 16px 40px rgba(16, 24, 40, .16);
+}
+
+#createPurchaseOrderModal .modal-header,
+#editPurchaseOrderModal .modal-header,
+#viewPurchaseOrderModal .modal-header {
+    align-items: center;
+    padding: .875rem 1.25rem;
+    background: #fff;
+    border-bottom: 1px solid #e9ecef;
+}
+
+#createPurchaseOrderModal .modal-title,
+#editPurchaseOrderModal .modal-title,
+#viewPurchaseOrderModal .modal-title {
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: #212529;
+}
+
+#createPurchaseOrderModal .btn-close,
+#editPurchaseOrderModal .btn-close,
+#viewPurchaseOrderModal .btn-close {
+    padding: .5rem;
+    font-size: .8rem;
+    opacity: .55;
+}
+
+#createPurchaseOrderModal .modal-body,
+#editPurchaseOrderModal .modal-body,
+#viewPurchaseOrderModal .modal-body {
+    padding: 1.125rem 1.25rem 1.25rem;
+    background: #fff;
+}
+
+/* ── Field labels ── */
+#createPurchaseOrderModal .po-label,
+#editPurchaseOrderModal .po-label,
+#viewPurchaseOrderModal .po-label {
+    display: block;
+    margin-bottom: .25rem;
+    font-size: .75rem;
+    font-weight: 400;
+    line-height: 1.2;
+    color: #212529;
+}
+
+#createPurchaseOrderModal .po-req,
+#editPurchaseOrderModal .po-req,
+#viewPurchaseOrderModal .po-req {
+    color: #dc3545;
+}
+
+/* ── Controls ── */
+#createPurchaseOrderModal .form-control,
+#createPurchaseOrderModal .form-select,
+#editPurchaseOrderModal .form-control,
+#editPurchaseOrderModal .form-select,
+#viewPurchaseOrderModal .form-control {
+    height: 32px;
+    min-height: 32px;
+    padding: .25rem .5rem;
+    font-size: .78125rem;
+    line-height: 1.4;
+    color: #212529;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    box-shadow: none;
+}
+
+#createPurchaseOrderModal .form-select,
+#editPurchaseOrderModal .form-select {
+    padding-right: 1.75rem;
+    background-size: 12px 9px;
+    background-position: right .5rem center;
+}
+
+#createPurchaseOrderModal .form-control::placeholder,
+#editPurchaseOrderModal .form-control::placeholder {
+    color: #adb5bd;
+    opacity: 1;
+}
+
+#createPurchaseOrderModal .form-control:focus,
+#createPurchaseOrderModal .form-select:focus,
+#editPurchaseOrderModal .form-control:focus,
+#editPurchaseOrderModal .form-select:focus {
+    border-color: var(--ds-primary, #004384) !important;
+    box-shadow: 0 0 0 .15rem rgba(0, 67, 132, .12) !important;
+}
+
+/* Auto-generated / read-only header fields */
+#createPurchaseOrderModal .po-readonly,
+#editPurchaseOrderModal .po-readonly,
+#viewPurchaseOrderModal .po-readonly {
+    background-color: #f1f3f5;
+    color: #868e96;
+}
+
+/* Attachment picker — native "Choose File" chrome, full width */
+#createPurchaseOrderModal input[type="file"].form-control,
+#editPurchaseOrderModal input[type="file"].form-control {
+    padding: 0;
+    font-size: .78125rem;
+    line-height: 30px;
+    color: #495057;
+}
+
+#createPurchaseOrderModal input[type="file"].form-control::file-selector-button,
+#editPurchaseOrderModal input[type="file"].form-control::file-selector-button {
+    height: 30px;
+    margin: 0 .625rem 0 0;
+    padding: 0 .75rem;
+    font-size: .78125rem;
+    color: #212529;
+    background: #e9ecef;
+    border: 0;
+    border-right: 1px solid #ced4da;
+    border-radius: 3px 0 0 3px;
+}
+
+/* Edit only: the current attachment sits beside the picker */
+#editPurchaseOrderModal .po-file-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+}
+
+#editPurchaseOrderModal .po-file-row .form-control {
+    flex: 1 1 260px;
+    min-width: 0;
+}
+
+#editPurchaseOrderModal .po-file-current,
+#viewPurchaseOrderModal .po-file-current {
+    display: inline-flex;
+    align-items: center;
+    gap: .375rem;
+    font-size: .75rem;
+    color: #6c757d;
+}
+
+#editPurchaseOrderModal .po-file-current a {
+    color: var(--ds-primary, #004384);
+    text-decoration: underline;
+}
+
+#editPurchaseOrderModal .po-btn-linkish {
+    padding: 0 .5rem;
+    font-size: .75rem;
+    font-weight: 500;
+    line-height: 30px;
+    color: #dc3545;
+    background: none;
+    border: 1px solid #dc3545;
+    border-radius: 4px;
+}
+
+/* Date fields — native inputs have no placeholder, so overlay one while empty */
+#createPurchaseOrderModal .po-date-wrap,
+#editPurchaseOrderModal .po-date-wrap {
+    position: relative;
+}
+
+#createPurchaseOrderModal .po-date-wrap.is-empty .po-date,
+#createPurchaseOrderModal .po-date-wrap.is-empty .po-date::-webkit-datetime-edit,
+#editPurchaseOrderModal .po-date-wrap.is-empty .po-date,
+#editPurchaseOrderModal .po-date-wrap.is-empty .po-date::-webkit-datetime-edit {
+    color: transparent;
+}
+
+#createPurchaseOrderModal .po-date-ph,
+#editPurchaseOrderModal .po-date-ph {
+    position: absolute;
+    top: 50%;
+    left: .5rem;
+    display: none;
+    font-size: .78125rem;
+    color: #adb5bd;
+    pointer-events: none;
+    transform: translateY(-50%);
+}
+
+#createPurchaseOrderModal .po-date-wrap.is-empty .po-date-ph,
+#editPurchaseOrderModal .po-date-wrap.is-empty .po-date-ph {
+    display: block;
+}
+
+#createPurchaseOrderModal .po-date::-webkit-calendar-picker-indicator,
+#editPurchaseOrderModal .po-date::-webkit-calendar-picker-indicator {
+    opacity: .5;
+    cursor: pointer;
+}
+
+/* Choices.js controls (Store / Vendor / Payment mode / Item) → same box as a native select */
+#createPurchaseOrderModal .choices,
+#editPurchaseOrderModal .choices {
+    margin-bottom: 0;
+}
+
+#createPurchaseOrderModal .choices__inner,
+#editPurchaseOrderModal .choices__inner {
+    display: flex;
+    align-items: center;
+    height: 32px;
+    min-height: 32px !important;
+    padding: 0 1.75rem 0 .5rem !important;
+    font-size: .78125rem !important;
+    background: #fff !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 4px !important;
+    box-shadow: none !important;
+}
+
+#createPurchaseOrderModal .choices.is-focused .choices__inner,
+#editPurchaseOrderModal .choices.is-focused .choices__inner {
+    border-color: var(--ds-primary, #004384) !important;
+    box-shadow: 0 0 0 .15rem rgba(0, 67, 132, .12) !important;
+}
+
+#createPurchaseOrderModal .choices__list--single,
+#editPurchaseOrderModal .choices__list--single {
+    padding: 0 !important;
+}
+
+#createPurchaseOrderModal .choices__list--single .choices__item,
+#editPurchaseOrderModal .choices__list--single .choices__item {
+    font-size: .78125rem;
+    line-height: 1.4;
+    color: #212529;
+}
+
+#createPurchaseOrderModal .choices__placeholder,
+#editPurchaseOrderModal .choices__placeholder {
+    color: #adb5bd;
+    opacity: 1;
+}
+
+#createPurchaseOrderModal .choices[data-type*="select-one"]::after,
+#editPurchaseOrderModal .choices[data-type*="select-one"]::after {
+    right: .625rem;
+    border-width: 4px;
+    border-top-color: #6c757d;
+}
+
+#createPurchaseOrderModal .choices__list--dropdown .choices__item,
+#editPurchaseOrderModal .choices__list--dropdown .choices__item {
+    font-size: .78125rem;
+}
+
+/* ── Order Items ── */
+#createPurchaseOrderModal .po-items-title,
+#editPurchaseOrderModal .po-items-title,
+#viewPurchaseOrderModal .po-items-title {
+    margin: 1.125rem 0 .5rem;
+    font-size: .8125rem;
+    font-weight: 600;
+    color: #212529;
+}
+
+#createPurchaseOrderModal .po-items-box,
+#editPurchaseOrderModal .po-items-box,
+#viewPurchaseOrderModal .po-items-box {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+#createPurchaseOrderModal .po-items-table,
+#editPurchaseOrderModal .po-items-table,
+#viewPurchaseOrderModal .po-items-table {
+    margin: 0;
+    font-size: .75rem;
+}
+
+#createPurchaseOrderModal .po-items-table>thead>tr>th,
+#editPurchaseOrderModal .po-items-table>thead>tr>th,
+#viewPurchaseOrderModal .po-items-table>thead>tr>th {
+    padding: .5rem;
+    font-size: .71875rem;
+    font-weight: 600;
+    color: #212529;
+    white-space: nowrap;
+    vertical-align: middle;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+#createPurchaseOrderModal .po-items-table>tbody>tr>td,
+#editPurchaseOrderModal .po-items-table>tbody>tr>td,
+#viewPurchaseOrderModal .po-items-table>tbody>tr>td {
+    padding: .3125rem .375rem;
+    vertical-align: middle;
+    background: #fff;
+    border-bottom: 1px solid #f1f3f5;
+}
+
+#createPurchaseOrderModal .po-items-table>tbody>tr:last-child>td,
+#editPurchaseOrderModal .po-items-table>tbody>tr:last-child>td,
+#viewPurchaseOrderModal .po-items-table>tbody>tr:last-child>td {
+    border-bottom: 0;
+}
+
+#createPurchaseOrderModal .po-items-table th:first-child,
+#createPurchaseOrderModal .po-items-table td:first-child,
+#editPurchaseOrderModal .po-items-table th:first-child,
+#editPurchaseOrderModal .po-items-table td:first-child,
+#viewPurchaseOrderModal .po-items-table th:first-child,
+#viewPurchaseOrderModal .po-items-table td:first-child {
+    padding-left: .625rem;
+}
+
+#createPurchaseOrderModal .po-items-table th:last-child,
+#createPurchaseOrderModal .po-items-table td:last-child,
+#editPurchaseOrderModal .po-items-table th:last-child,
+#editPurchaseOrderModal .po-items-table td:last-child,
+#viewPurchaseOrderModal .po-items-table th:last-child,
+#viewPurchaseOrderModal .po-items-table td:last-child {
+    padding-right: .625rem;
+}
+
+#createPurchaseOrderModal .po-items-table .form-control,
+#createPurchaseOrderModal .po-items-table .form-select,
+#editPurchaseOrderModal .po-items-table .form-control,
+#editPurchaseOrderModal .po-items-table .form-select {
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: .1875rem .375rem;
+    font-size: .71875rem !important;
+}
+
+#createPurchaseOrderModal .po-items-table .choices__inner,
+#editPurchaseOrderModal .po-items-table .choices__inner {
+    height: 28px;
+    min-height: 28px !important;
+    padding: 0 1.5rem 0 .375rem !important;
+    font-size: .71875rem !important;
+}
+
+#createPurchaseOrderModal .po-items-table .choices__list--single .choices__item,
+#editPurchaseOrderModal .po-items-table .choices__list--single .choices__item {
+    font-size: .71875rem;
+}
+
+/* readonly cells stay white here (only header Order number is greyed) */
+#createPurchaseOrderModal .po-items-table input[readonly],
+#editPurchaseOrderModal .po-items-table input[readonly] {
+    background-color: #fff;
+    color: #495057;
+}
+
+/* Row action buttons — remove on every row, add on the last row only */
+#createPurchaseOrderModal .po-act-cell,
+#editPurchaseOrderModal .po-act-cell {
+    white-space: nowrap;
+}
+
+#createPurchaseOrderModal .po-icon-btn,
+#editPurchaseOrderModal .po-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1;
+    color: #fff;
+    border: 0;
+    border-radius: 4px;
+}
+
+#createPurchaseOrderModal .po-icon-btn+.po-icon-btn,
+#editPurchaseOrderModal .po-icon-btn+.po-icon-btn {
+    margin-left: .375rem;
+}
+
+#createPurchaseOrderModal .po-icon-btn--remove,
+#editPurchaseOrderModal .po-icon-btn--remove {
+    background: #dc3545;
+}
+
+#createPurchaseOrderModal .po-icon-btn--remove:hover:not(:disabled),
+#editPurchaseOrderModal .po-icon-btn--remove:hover:not(:disabled) {
+    background: #bb2d3b;
+}
+
+#createPurchaseOrderModal .po-icon-btn--remove:disabled,
+#editPurchaseOrderModal .po-icon-btn--remove:disabled {
+    opacity: .45;
+}
+
+#createPurchaseOrderModal .po-icon-btn--add,
+#editPurchaseOrderModal .po-icon-btn--add {
+    background: #0d6efd;
+}
+
+#createPurchaseOrderModal .po-icon-btn--add:hover,
+#editPurchaseOrderModal .po-icon-btn--add:hover {
+    background: #0b5ed7;
+}
+
+#createPurchaseOrderModal #poItemsBody tr:not(:last-child) .po-add-row,
+#editPurchaseOrderModal #editPoItemsBody tr:not(:last-child) .po-add-row {
+    visibility: hidden;
+}
+
+/* Total strip */
+#createPurchaseOrderModal .po-total-bar,
+#editPurchaseOrderModal .po-total-bar,
+#viewPurchaseOrderModal .po-total-bar {
+    padding: .4375rem .75rem;
+    font-size: .78125rem;
+    font-weight: 600;
+    text-align: right;
+    color: var(--ds-primary, #004384);
+    background: #e7f0fb;
+    border-top: 1px solid #dee2e6;
+}
+
+#poGrandTotal,
+#editPoGrandTotal,
+#viewPoGrandTotal {
+    font-weight: 700;
+    color: var(--ds-primary, #004384);
+}
+
+/* ── View only: read-only value boxes, status pill, bill link ── */
+#viewPurchaseOrderModal .po-value {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+    padding: .25rem .5rem;
+    font-size: .78125rem;
+    line-height: 1.4;
+    color: #212529;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+}
+
+#viewPurchaseOrderModal .po-status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: .1875rem .625rem;
+    font-size: .71875rem;
+    font-weight: 600;
+    border-radius: 999px;
+}
+
+#viewPurchaseOrderModal .po-status-pill--approved {
+    color: #067647;
+    background: #ecfdf3;
+}
+
+#viewPurchaseOrderModal .po-status-pill--rejected {
+    color: #b42318;
+    background: #fef3f2;
+}
+
+#viewPurchaseOrderModal .po-status-pill--completed {
+    color: var(--ds-primary, #004384);
+    background: #e7f0fb;
+}
+
+#viewPurchaseOrderModal .po-status-pill--pending {
+    color: #b54708;
+    background: #fffaeb;
+}
+
+#viewPurchaseOrderModal .po-bill-link {
+    display: inline-flex;
+    align-items: center;
+    padding: .3125rem .875rem;
+    font-size: .75rem;
+    font-weight: 500;
+    color: var(--ds-primary, #004384);
+    background: #fff;
+    border: 1px solid var(--ds-primary, #004384);
+    border-radius: 4px;
+    text-decoration: none;
+}
+
+#viewPurchaseOrderModal .po-items-table>tbody>tr>td {
+    font-size: .75rem;
+    color: #212529;
+}
+
+/* ── Footers ── */
+#createPurchaseOrderModal .modal-footer,
+#editPurchaseOrderModal .modal-footer,
+#viewPurchaseOrderModal .modal-footer {
+    gap: .5rem;
+    padding: .75rem 1.25rem;
+    background: #fff;
+    border-top: 1px solid #e9ecef;
+}
+
+#createPurchaseOrderModal .modal-footer>*,
+#editPurchaseOrderModal .modal-footer>*,
+#viewPurchaseOrderModal .modal-footer>* {
+    margin: 0;
+}
+
+#createPurchaseOrderModal .modal-footer .btn,
+#editPurchaseOrderModal .modal-footer .btn,
+#viewPurchaseOrderModal .modal-footer .btn {
+    padding: .375rem 1.125rem;
+    font-size: .8125rem;
+    font-weight: 500;
+    border-radius: 4px;
+}
+
+#createPurchaseOrderModal .modal-footer .po-btn-primary,
+#editPurchaseOrderModal .modal-footer .po-btn-primary,
+#viewPurchaseOrderModal .modal-footer .po-btn-primary {
+    color: #fff;
+    background: var(--ds-primary, #004384);
+    border: 1px solid var(--ds-primary, #004384);
+}
+
+#createPurchaseOrderModal .modal-footer .po-btn-cancel,
+#editPurchaseOrderModal .modal-footer .po-btn-cancel,
+#viewPurchaseOrderModal .modal-footer .po-btn-cancel {
+    color: #dc3545;
+    background: #fff;
+    border: 1px solid #dc3545;
+}
+</style>
+
 <div class="modal fade" id="createPurchaseOrderModal" tabindex="-1" aria-labelledby="createPurchaseOrderModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-3">
+        <div class="modal-content">
             <form method="POST" action="{{ route('admin.mess.purchaseorders.store') }}" id="createPOForm"
                 enctype="multipart/form-data">
                 @csrf
-                <div class="modal-header bg-white border-bottom border-light-subtle py-3 px-4"
-                    style="border-top:4px solid #0b4a7e !important;">
-                    <div>
-                        <h5 class="modal-title fw-semibold mb-0 text-body" id="createPurchaseOrderModalLabel">Create
-                            Purchase Order</h5>
-                        <p class="mb-0 small text-body-secondary">Fields marked <span class="text-danger">*</span> are
-                            required</p>
-                    </div>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createPurchaseOrderModalLabel">Create Purchase Order</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body px-3 px-md-4 py-3 py-md-4 bg-body-tertiary">
+                <div class="modal-body">
                     <input type="hidden" name="po_number" value="{{ $po_number }}">
 
-                    <div class="row g-3 align-items-stretch mb-3">
-                        {{-- Order Details --}}
-                        <div class="col-12">
-                            <div class="card border border-light-subtle h-100 rounded-3">
-                                <div class="card-header bg-white py-2 px-3 d-flex align-items-center gap-2">
-                                    <i class="material-icons material-symbol-rounded text-primary"
-                                        style="font-size:1.15rem;" aria-hidden="true">assignment</i>
-                                    <span class="fw-semibold small text-body">Order Details</span>
-                                </div>
-                                <div class="card-body p-3 bg-white">
-                                    <div class="row g-3">
-                                        <div class="col-md-4">
-                                            <label class="form-label small mb-1">Order number</label>
-                                            <input type="text" class="form-control form-control-sm bg-body-secondary"
-                                                value="{{ $po_number }}" readonly>
-                                            <div class="form-text">Auto-generated</div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label small mb-1">Order date <span
-                                                    class="text-danger">*</span></label>
-                                            <input type="date" name="po_date" class="form-control form-control-sm"
-                                                value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label small mb-1">Store</label>
-                                            <select name="store_id" class="form-select form-select-sm">
-                                                <option value="">Select Store</option>
-                                                @foreach($stores as $store)
-                                                <option value="{{ $store->id }}">{{ $store->store_name }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label small mb-1">Vendor <span
-                                                    class="text-danger">*</span></label>
-                                            <select name="vendor_id" class="form-select form-select-sm" required>
-                                                <option value="">Select Vendor</option>
-                                                @foreach($vendors as $vendor)
-                                                <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label small mb-1">Payment mode</label>
-                                            <select name="payment_code" class="form-select form-select-sm">
-                                                <option value="">Select Payment Mode</option>
-                                                @foreach($paymentModes as $value => $label)
-                                                <option value="{{ $value }}">{{ $label }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label small mb-1">Bill / invoice no.</label>
-                                            <input type="text" name="bill_no" class="form-control form-control-sm"
-                                                maxlength="100" placeholder="Optional">
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label small mb-1">Bill date</label>
-                                            <input type="date" name="bill_date" class="form-control form-control-sm"
-                                                max="{{ date('Y-m-d') }}">
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label small mb-1">Challan / reference</label>
-                                            <input type="text" name="challan_no" class="form-control form-control-sm"
-                                                maxlength="100" placeholder="Optional">
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label small mb-1">Challan date</label>
-                                            <input type="date" name="challan_date" class="form-control form-control-sm"
-                                                max="{{ date('Y-m-d') }}">
-                                        </div>
-                                    </div>
-                                    <hr class="my-2">
-                                    <div class="bg-white py-2 px-3 d-flex align-items-center gap-2 mt-2">
-                                        <i class="material-icons material-symbol-rounded text-success"
-                                            style="font-size:1.15rem;" aria-hidden="true">attach_file</i>
-                                        <span class="fw-semibold small text-body">Bill Upload</span>
-                                        <span class="badge bg-body-secondary text-body-secondary ms-auto"
-                                            style="font-size:.65rem;">Optional</span>
-                                    </div>
-                                    <div class="mb-auto">
-                                        <label class="form-label small mb-1">Attachment</label>
-                                        <input type="file" name="bill_file" class="form-control form-control-sm"
-                                            accept=".pdf,.jpg,.jpeg,.png,.webp" id="createBillFileInput">
-                                        <div class="form-text">PDF, JPG, PNG, WEBP · max 5 MB</div>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2"
-                                            id="createBillClearBtn">Remove file</button>
-                                    </div>
-                                </div>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="po-label" for="createPoNumber">Order Number</label>
+                            <input type="text" id="createPoNumber" class="form-control po-readonly"
+                                value="{{ $po_number }}" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="po-label" for="createPoDate">Order Date<span class="po-req">*</span></label>
+                            <div class="po-date-wrap">
+                                <input type="date" name="po_date" id="createPoDate" class="form-control po-date"
+                                    value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
+                                <span class="po-date-ph">Select Date</span>
                             </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="po-label" for="createStoreId">Store</label>
+                            <select name="store_id" id="createStoreId" class="form-select">
+                                <option value="">Select Store</option>
+                                @foreach($stores as $store)
+                                <option value="{{ $store->id }}">{{ $store->store_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="po-label" for="createVendorId">Vendor<span class="po-req">*</span></label>
+                            <select name="vendor_id" id="createVendorId" class="form-select" required>
+                                <option value="">Select Vendor</option>
+                                @foreach($vendors as $vendor)
+                                <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="po-label" for="createPaymentCode">Payment Mode</label>
+                            <select name="payment_code" id="createPaymentCode" class="form-select">
+                                <option value="">Select Mode</option>
+                                @foreach($paymentModes as $value => $label)
+                                <option value="{{ $value }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="po-label" for="createBillNo">Bill/ Invoice No.</label>
+                            <input type="text" name="bill_no" id="createBillNo" class="form-control" maxlength="100"
+                                placeholder="e.g. BILL749943">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="po-label" for="createBillDate">Bill Date</label>
+                            <div class="po-date-wrap">
+                                <input type="date" name="bill_date" id="createBillDate" class="form-control po-date"
+                                    max="{{ date('Y-m-d') }}">
+                                <span class="po-date-ph">Select Date</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="po-label" for="createChallanNo">Challan/ Reference</label>
+                            <input type="text" name="challan_no" id="createChallanNo" class="form-control"
+                                maxlength="100" placeholder="e.g.">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="po-label" for="createChallanDate">Challan Date</label>
+                            <div class="po-date-wrap">
+                                <input type="date" name="challan_date" id="createChallanDate"
+                                    class="form-control po-date" max="{{ date('Y-m-d') }}">
+                                <span class="po-date-ph">Select Date</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="po-label" for="createBillFileInput">Bill Attachment</label>
+                            <input type="file" name="bill_file" id="createBillFileInput" class="form-control"
+                                accept=".pdf,.jpg,.jpeg,.png,.webp">
                         </div>
                     </div>
 
-                    {{-- Item Details --}}
-                    <div class="card border border-light-subtle mb-0 rounded-3">
-                        <div
-                            class="card-header bg-white py-2 px-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="material-icons material-symbol-rounded text-warning"
-                                    style="font-size:1.15rem;" aria-hidden="true">inventory_2</i>
-                                <span class="fw-semibold small text-body">Line Items</span>
-                            </div>
-                            <button type="button"
-                                class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2"
-                                id="addPoItemRow">
-                                <i class="material-icons material-symbol-rounded" style="font-size:.9rem;">add</i> Add
-                                line
-                            </button>
+                    <div class="po-items-title">Order Items</div>
+
+                    <div class="po-items-box">
+                        <div class="table-responsive">
+                            <table class="table po-items-table" id="poItemsTable">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="width:20%;">Item<span class="po-req">*</span></th>
+                                        <th scope="col" style="width:10%;">Unit</th>
+                                        <th scope="col" style="width:14%;">Code</th>
+                                        <th scope="col" style="width:9%;">Qty<span class="po-req">*</span></th>
+                                        <th scope="col" style="width:9%;">Rate<span class="po-req">*</span></th>
+                                        <th scope="col" style="width:8%;">Tax%</th>
+                                        <th scope="col" style="width:14%;">Line Total</th>
+                                        <th scope="col" style="width:86px;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="poItemsBody">
+                                    <tr class="po-item-row">
+                                        <td>
+                                            <select name="items[0][item_subcategory_id]"
+                                                class="form-select po-item-select" required aria-label="Select item">
+                                                <option value="">Item</option>
+                                                @foreach($itemSubcategories as $sub)
+                                                <option value="{{ $sub['id'] }}"
+                                                    data-unit="{{ e($sub['unit_measurement']) }}"
+                                                    data-code="{{ e($sub['item_code']) }}">
+                                                    {{ $sub['item_name'] }}</option>
+                                                @endforeach
+                                            </select>
+                                        </td>
+                                        <td><input type="text" name="items[0][unit]" class="form-control po-unit"
+                                                readonly placeholder="-"></td>
+                                        <td><input type="text" name="items[0][item_code_display]"
+                                                class="form-control po-item-code" readonly placeholder="-"></td>
+                                        <td><input type="text" name="items[0][quantity]" class="form-control po-qty"
+                                                placeholder="-" required></td>
+                                        <td><input type="text" name="items[0][unit_price]"
+                                                class="form-control po-unit-price" placeholder="-" required></td>
+                                        <td><input type="text" name="items[0][tax_percent]" class="form-control po-tax"
+                                                placeholder="-"></td>
+                                        <td><input type="text" name="items[0][total_display]"
+                                                class="form-control po-line-total" readonly placeholder="-"></td>
+                                        <td class="po-act-cell">
+                                            <button type="button" class="po-icon-btn po-icon-btn--remove po-remove-row"
+                                                title="Remove line" aria-label="Remove line" disabled>&minus;</button>
+                                            <button type="button" class="po-icon-btn po-icon-btn--add po-add-row"
+                                                title="Add line" aria-label="Add line">+</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="card-body p-0 bg-white">
-                            <div class="po-item-details-table-wrap">
-                                <div class="table-responsive">
-                                    <table class="table table-sm mb-0 align-middle" id="poItemsTable">
-                                        <thead>
-                                            <tr>
-                                                <th scope="col" style="width:180px;"
-                                                    class="fw-semibold small py-2 ps-3">Item <span
-                                                        class="text-danger">*</span></th>
-                                                <th scope="col" style="width:150px;" class="fw-semibold small py-2">Unit
-                                                </th>
-                                                <th scope="col" class="fw-semibold small py-2">Code</th>
-                                                <th scope="col" class="fw-semibold small py-2">Qty <span
-                                                        class="text-danger">*</span></th>
-                                                <th scope="col" class="fw-semibold small py-2">Rate <span
-                                                        class="text-danger">*</span></th>
-                                                <th scope="col" class="fw-semibold small py-2">Tax %</th>
-                                                <th scope="col" class="fw-semibold small py-2">Line total</th>
-                                                <th scope="col" class="fw-semibold small py-2 pe-3 text-center"
-                                                    style="width:2.5rem;"></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="poItemsBody">
-                                            <tr class="po-item-row">
-                                                <td class="py-1 ps-3">
-                                                    <select name="items[0][item_subcategory_id]"
-                                                        class="form-select form-select-sm po-item-select" required
-                                                        aria-label="Select item">
-                                                        <option value="">Select Item</option>
-                                                        @foreach($itemSubcategories as $sub)
-                                                        <option value="{{ $sub['id'] }}"
-                                                            data-unit="{{ e($sub['unit_measurement']) }}"
-                                                            data-code="{{ e($sub['item_code']) }}">
-                                                            {{ $sub['item_name'] }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                </td>
-                                                <td class="py-1"><input type="text" name="items[0][unit]"
-                                                        class="form-control form-control-sm po-unit bg-body-secondary"
-                                                        readonly placeholder="—"></td>
-                                                <td class="py-1"><input type="text" name="items[0][item_code_display]"
-                                                        class="form-control form-control-sm po-item-code bg-body-secondary"
-                                                        readonly placeholder="—"></td>
-                                                <td class="py-1"><input type="text" name="items[0][quantity]"
-                                                        class="form-control form-control-sm po-qty" required></td>
-                                                <td class="py-1"><input type="text" name="items[0][unit_price]"
-                                                        class="form-control form-control-sm po-unit-price" required>
-                                                </td>
-                                                <td class="py-1"><input type="text" name="items[0][tax_percent]"
-                                                        class="form-control form-control-sm po-tax"></td>
-                                                <td class="py-1"><input type="text" name="items[0][total_display]"
-                                                        class="form-control form-control-sm po-line-total bg-body-secondary"
-                                                        readonly></td>
-                                                <td class="py-1 text-center"><button type="button"
-                                                        class="btn btn-sm btn-outline-danger po-remove-row" disabled
-                                                        title="Remove line"><i
-                                                            class="material-icons material-symbol-rounded"
-                                                            style="font-size:.85rem;">close</i></button></td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                        <div
-                            class="card-footer bg-body-tertiary d-flex justify-content-end align-items-center py-2 px-3">
-                            <span class="text-body-secondary small me-2">Grand Total:</span>
-                            <span class="fs-5 fw-bold text-primary" id="poGrandTotal">₹0.00</span>
-                        </div>
+                        <div class="po-total-bar">Total: <span id="poGrandTotal">0.00</span>/-</div>
                     </div>
                 </div>
-                <div class="modal-footer bg-body-tertiary border-top border-light-subtle py-3 px-4">
-                    <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary px-4 d-inline-flex align-items-center gap-2">
-                        <i class="material-icons material-symbol-rounded" style="font-size:1rem;">check</i> Create
-                    </button>
+                <div class="modal-footer">
+                    <button type="button" class="btn po-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn po-btn-primary">Create Purchase Order</button>
                 </div>
             </form>
         </div>
@@ -1446,213 +1835,122 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
 <div class="modal fade" id="editPurchaseOrderModal" tabindex="-1" aria-labelledby="editPurchaseOrderModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4">
+        <div class="modal-content">
             <form method="POST" id="editPOForm" action="" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
-                <div class="modal-header border-0 border-bottom py-3 px-4 bg-gradient"
-                    style="background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);">
-                    <div>
-                        <h5 class="modal-title fw-bold mb-1 text-dark" id="editPurchaseOrderModalLabel">Edit purchase
-                            order</h5>
-                        <p class="mb-0 small text-body-secondary fw-medium">Update header, bill, and line items</p>
-                    </div>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editPurchaseOrderModalLabel">Edit Purchase Order</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body px-3 px-md-4 py-4"
-                    style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
-                    <div class="card border-0 shadow-lg mb-4 rounded-4 overflow-hidden">
-                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex align-items-center gap-2"
-                            style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                            <div class="rounded-3 bg-warning bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
-                                style="width: 2.25rem; height: 2.25rem;">
-                                <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;"
-                                    aria-hidden="true">assignment</i>
-                            </div>
-                            <h6 class="mb-0 fw-bold text-dark">Order details</h6>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="po-label" for="editPoNumber">Order Number</label>
+                            <input type="text" id="editPoNumber" class="form-control po-readonly" readonly>
                         </div>
-                        <div class="card-body p-3 p-md-4 bg-white">
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Order number</label>
-                                    <input type="text" id="editPoNumber"
-                                        class="form-control form-control-lg rounded-3 bg-light border-0 shadow"
-                                        readonly>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Order date <span
-                                            class="text-danger">*</span></label>
-                                    <input type="date" name="po_date" id="editPoDate"
-                                        class="form-control form-control-lg rounded-3 shadow border-2"
-                                        max="{{ date('Y-m-d') }}" required>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Store</label>
-                                    <select name="store_id" id="editStoreId"
-                                        class="form-select form-select-lg rounded-3 shadow border-2">
-                                        <option value="">Select Store</option>
-                                        @foreach($stores as $store)
-                                        <option value="{{ $store->id }}">{{ $store->store_name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Vendor <span
-                                            class="text-danger">*</span></label>
-                                    <select name="vendor_id" id="editVendorId"
-                                        class="form-select form-select-lg rounded-3 shadow border-2" required>
-                                        <option value="">Select Vendor</option>
-                                        @foreach($vendors as $vendor)
-                                        <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Payment mode</label>
-                                    <select name="payment_code" id="editPaymentCode"
-                                        class="form-select form-select-lg rounded-3 shadow border-2">
-                                        <option value="">Select Payment Mode</option>
-                                        @foreach($paymentModes as $value => $label)
-                                        <option value="{{ $value }}">{{ $label }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Bill / invoice no.</label>
-                                    <input type="text" name="bill_no" id="editBillNo"
-                                        class="form-control form-control-lg rounded-3 shadow border-2" maxlength="100"
-                                        placeholder="Optional">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Bill date</label>
-                                    <input type="date" name="bill_date" id="editBillDate"
-                                        class="form-control form-control-lg rounded-3 shadow border-2"
-                                        max="{{ date('Y-m-d') }}">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Challan / reference</label>
-                                    <input type="text" name="challan_no" id="editChallanNo"
-                                        class="form-control form-control-lg rounded-3 shadow border-2" maxlength="100"
-                                        placeholder="Optional">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Challan date</label>
-                                    <input type="date" name="challan_date" id="editChallanDate"
-                                        class="form-control form-control-lg rounded-3 shadow border-2"
-                                        max="{{ date('Y-m-d') }}">
-                                </div>
+                        <div class="col-md-4">
+                            <label class="po-label" for="editPoDate">Order Date<span class="po-req">*</span></label>
+                            <div class="po-date-wrap">
+                                <input type="date" name="po_date" id="editPoDate" class="form-control po-date"
+                                    max="{{ date('Y-m-d') }}" required>
+                                <span class="po-date-ph">Select Date</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="po-label" for="editStoreId">Store</label>
+                            <select name="store_id" id="editStoreId" class="form-select">
+                                <option value="">Select Store</option>
+                                @foreach($stores as $store)
+                                <option value="{{ $store->id }}">{{ $store->store_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="po-label" for="editVendorId">Vendor<span class="po-req">*</span></label>
+                            <select name="vendor_id" id="editVendorId" class="form-select" required>
+                                <option value="">Select Vendor</option>
+                                @foreach($vendors as $vendor)
+                                <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="po-label" for="editPaymentCode">Payment Mode</label>
+                            <select name="payment_code" id="editPaymentCode" class="form-select">
+                                <option value="">Select Mode</option>
+                                @foreach($paymentModes as $value => $label)
+                                <option value="{{ $value }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="po-label" for="editBillNo">Bill/ Invoice No.</label>
+                            <input type="text" name="bill_no" id="editBillNo" class="form-control" maxlength="100"
+                                placeholder="e.g. BILL749943">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="po-label" for="editBillDate">Bill Date</label>
+                            <div class="po-date-wrap">
+                                <input type="date" name="bill_date" id="editBillDate" class="form-control po-date"
+                                    max="{{ date('Y-m-d') }}">
+                                <span class="po-date-ph">Select Date</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="po-label" for="editChallanNo">Challan/ Reference</label>
+                            <input type="text" name="challan_no" id="editChallanNo" class="form-control"
+                                maxlength="100" placeholder="e.g.">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="po-label" for="editChallanDate">Challan Date</label>
+                            <div class="po-date-wrap">
+                                <input type="date" name="challan_date" id="editChallanDate" class="form-control po-date"
+                                    max="{{ date('Y-m-d') }}">
+                                <span class="po-date-ph">Select Date</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="po-label" for="editBillFileInput">Bill Attachment</label>
+                            <div class="po-file-row">
+                                <input type="file" name="bill_file" id="editBillFileInput" class="form-control"
+                                    accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                <button type="button" class="po-btn-linkish" id="editBillClearBtn">Remove</button>
+                                {{-- Only shown when the order already has a stored bill --}}
+                                <span class="po-file-current" id="editCurrentBillWrap" style="display:none;">
+                                    Current: <span id="editCurrentBillPath">No file chosen</span>
+                                    <span id="editCurrentBillLink"></span>
+                                </span>
                             </div>
                         </div>
                     </div>
-                    {{-- Bill / Attachment (Upload) --}}
-                    <div class="card border-0 shadow-lg mb-4 rounded-4 overflow-hidden"
-                        style="border-left: 4px solid var(--bs-warning) !important;">
-                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex align-items-center gap-2"
-                            style="background: linear-gradient(135deg, #ffffff 0%, #fff9e6 100%);">
-                            <div class="rounded-3 bg-warning bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
-                                style="width: 2.25rem; height: 2.25rem;">
-                                <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;"
-                                    aria-hidden="true">attach_file</i>
-                            </div>
-                            <h6 class="mb-0 fw-bold text-dark">Bill upload</h6>
-                            <span
-                                class="badge rounded-1 bg-secondary bg-opacity-25 text-secondary border-0 ms-auto fw-semibold px-3">Optional</span>
+
+                    <div class="po-items-title">Order Items</div>
+
+                    <div class="po-items-box">
+                        <div class="table-responsive">
+                            <table class="table po-items-table" id="editPoItemsTable">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="width:20%;">Item<span class="po-req">*</span></th>
+                                        <th scope="col" style="width:10%;">Unit</th>
+                                        <th scope="col" style="width:14%;">Code</th>
+                                        <th scope="col" style="width:9%;">Qty<span class="po-req">*</span></th>
+                                        <th scope="col" style="width:9%;">Rate<span class="po-req">*</span></th>
+                                        <th scope="col" style="width:8%;">Tax%</th>
+                                        <th scope="col" style="width:14%;">Line Total</th>
+                                        <th scope="col" style="width:86px;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="editPoItemsBody"></tbody>
+                            </table>
                         </div>
-                        <div class="card-body p-3 p-md-4 bg-white">
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Attachment <span
-                                            class="text-body-secondary fw-normal fst-italic">· leave blank to keep
-                                            current file</span></label>
-                                    <div class="d-flex align-items-center border rounded-3 px-3 py-2 bg-white gap-2 shadow"
-                                        style="min-height: 42px;">
-                                        <span id="editCurrentBillPath"
-                                            class="flex-grow-1 text-muted small text-truncate me-2"
-                                            style="min-width: 0;">No file chosen</span>
-                                        <label class="mb-0 btn btn-outline-secondary py-1 px-3 rounded-1 fw-semibold"
-                                            style="cursor: pointer; transition: all 0.3s ease;">
-                                            Choose file
-                                            <input type="file" name="bill_file" class="d-none"
-                                                accept=".pdf,.jpg,.jpeg,.png,.webp" id="editBillFileInput">
-                                        </label>
-                                        <button type="button"
-                                            class="btn btn-outline-danger py-1 px-3 rounded-1 fw-semibold"
-                                            id="editBillClearBtn" style="transition: all 0.3s ease;">
-                                            Remove
-                                        </button>
-                                    </div>
-                                    <div class="form-text fst-italic">PDF, JPG, JPEG, PNG or WEBP · max 5 MB</div>
-                                    <p class="mb-0 mt-2 small" id="editCurrentBillLink"></p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card border-0 shadow-lg mb-2 rounded-4 overflow-hidden">
-                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3"
-                            style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="rounded-3 bg-warning bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
-                                    style="width: 2.5rem; height: 2.5rem;">
-                                    <i class="material-icons material-symbol-rounded" style="font-size: 1.25rem;"
-                                        aria-hidden="true">inventory_2</i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-0 fw-bold text-dark">Line items</h6>
-                                    <span class="small text-body-secondary d-block fw-medium">Add items to create
-                                        purchase order lines.</span>
-                                </div>
-                            </div>
-                            <button type="button"
-                                class="btn btn-sm btn-warning rounded-1 d-inline-flex align-items-center gap-2 px-3 shadow-sm fw-semibold"
-                                id="addEditPoItemRow" style="transition: all 0.3s ease;"><i
-                                    class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">add</i>
-                                Add line</button>
-                        </div>
-                        <div class="card-body p-0 bg-white">
-                            <div class="po-item-details-table-wrap">
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-hover text-nowrap mb-0 align-middle">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th scope="col" style="width:180px;"
-                                                    class="fw-bold text-dark py-3 ps-3">Item <span
-                                                        class="text-danger">*</span></th>
-                                                <th scope="col" class="fw-bold text-dark py-3">Unit</th>
-                                                <th scope="col" class="fw-bold text-dark py-3">Code</th>
-                                                <th scope="col" style="width:120px;" class="fw-bold text-dark py-3">Qty
-                                                    <span class="text-danger">*</span></th>
-                                                <th scope="col" style="width:120px;" class="fw-bold text-dark py-3">Rate
-                                                    <span class="text-danger">*</span></th>
-                                                <th scope="col" style="width:120px;" class="fw-bold text-dark py-3">Tax
-                                                    %</th>
-                                                <th scope="col" style="width:120px;" class="fw-bold text-dark py-3">Line
-                                                    total</th>
-                                                <th scope="col" class="fw-bold text-dark py-3 pe-3 text-center"
-                                                    style="width:3rem;"> </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="editPoItemsBody"></tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-footer bg-gradient border-0 d-flex justify-content-end align-items-center py-3 px-4"
-                            style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                            <div class="d-flex align-items-baseline gap-3 flex-wrap justify-content-end">
-                                <span class="fw-bold text-dark small text-uppercase"
-                                    style="letter-spacing: 0.05em;">Grand total</span>
-                                <span class="fs-4 text-warning fw-bold" id="editPoGrandTotal"
-                                    style="font-family: 'Segoe UI', system-ui, sans-serif;">₹0.00</span>
-                            </div>
-                        </div>
+                        <div class="po-total-bar">Total: <span id="editPoGrandTotal">0.00</span>/-</div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 border-top py-3 px-4 bg-gradient"
-                    style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                    <button type="button" class="btn btn-outline-secondary rounded-1 px-4 fw-semibold"
-                        data-bs-dismiss="modal" style="transition: all 0.3s ease;">Cancel</button>
-                    <button type="submit" class="btn btn-warning rounded-1 px-5 shadow-sm fw-semibold"
-                        style="transition: all 0.3s ease;">Update purchase order</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn po-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn po-btn-primary">Update Purchase Order</button>
                 </div>
             </form>
         </div>
@@ -1663,168 +1961,90 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
 <div class="modal fade" id="viewPurchaseOrderModal" tabindex="-1" aria-labelledby="viewPurchaseOrderModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-fullscreen-lg-down modal-xl modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-header border-0 py-3 px-4 bg-gradient"
-                style="background: linear-gradient(135deg, #e7f3ff 0%, #cfe2ff 100%);">
-                <h5 class="modal-title fw-bold text-dark" id="viewPurchaseOrderModalLabel">Purchase Order Details</h5>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewPurchaseOrderModalLabel">Purchase Order Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-3 p-lg-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
-                <div class="card border-0 shadow-lg mb-4 overflow-hidden rounded-4">
-                    <div class="card-header bg-gradient border-0 py-3 px-4 d-flex align-items-center gap-2"
-                        style="background: linear-gradient(135deg, #ffffff 0%, #e7f3ff 100%);">
-                        <div class="rounded-3 bg-info bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
-                            style="width: 2.5rem; height: 2.5rem;">
-                            <i class="material-icons material-symbol-rounded"
-                                style="font-size: 1.25rem;">receipt_long</i>
-                        </div>
-                        <h6 class="mb-0 fw-bold text-dark">Order Details</h6>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="po-label">Order Number</label>
+                        <p class="po-value mb-0" id="viewPoNumber">-</p>
                     </div>
-                    <div class="card-body p-3 p-lg-4">
-                        <div class="row g-3">
-                            <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Order Number</label>
-                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewPoNumber">&mdash;</p>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Order Date</label>
-                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewPoDate">&mdash;</p>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Store Name</label>
-                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewStoreName">&mdash;</p>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Vendor Name</label>
-                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewVendorName">&mdash;</p>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Payment Mode</label>
-                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewPaymentCode">&mdash;</p>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Bill No./Invoice No</label>
-                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewBillNo">&mdash;</p>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Bill Date</label>
-                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewBillDate">&mdash;</p>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Challan No./Reference</label>
-                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewChallanNo">&mdash;</p>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Challan Date</label>
-                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewChallanDate">&mdash;</p>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Status</label>
-                                    <p class="mb-0"><span class="badge fs-6 px-3 py-2" id="viewStatus">&mdash;</span>
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="col-12">
-                                <div class="border-0 rounded-4 p-4 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #e7f3ff 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Bill</label>
-                                    <p class="mb-0" id="viewBillWrap">
-                                        <a href="#" id="viewBillLink" target="_blank" rel="noopener"
-                                            class="btn btn-info rounded-1 px-4 py-2 shadow-sm fw-semibold"
-                                            style="display: none; transition: all 0.3s ease;">View / Download Bill</a>
-                                        <span id="viewBillNone" class="text-muted fst-italic">No bill uploaded</span>
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="col-md-4">
+                        <label class="po-label">Order Date</label>
+                        <p class="po-value mb-0" id="viewPoDate">-</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="po-label">Store</label>
+                        <p class="po-value mb-0" id="viewStoreName">-</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="po-label">Vendor</label>
+                        <p class="po-value mb-0" id="viewVendorName">-</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="po-label">Payment Mode</label>
+                        <p class="po-value mb-0" id="viewPaymentCode">-</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="po-label">Bill/ Invoice No.</label>
+                        <p class="po-value mb-0" id="viewBillNo">-</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="po-label">Bill Date</label>
+                        <p class="po-value mb-0" id="viewBillDate">-</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="po-label">Challan/ Reference</label>
+                        <p class="po-value mb-0" id="viewChallanNo">-</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="po-label">Challan Date</label>
+                        <p class="po-value mb-0" id="viewChallanDate">-</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="po-label">Status</label>
+                        <p class="mb-0"><span class="po-status-pill po-status-pill--pending"
+                                id="viewStatus">-</span></p>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="po-label">Bill</label>
+                        <p class="mb-0" id="viewBillWrap">
+                            <a href="#" id="viewBillLink" target="_blank" rel="noopener" class="po-bill-link"
+                                style="display: none;">View / Download Bill</a>
+                            <span id="viewBillNone" class="po-file-current">No bill uploaded</span>
+                        </p>
                     </div>
                 </div>
 
-                <div class="card border-0 shadow-lg mb-0 overflow-hidden rounded-4">
-                    <div class="card-header bg-gradient border-0 py-3 px-4 d-flex align-items-center gap-2"
-                        style="background: linear-gradient(135deg, #ffffff 0%, #e7f3ff 100%);">
-                        <div class="rounded-3 bg-info bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
-                            style="width: 2.5rem; height: 2.5rem;">
-                            <i class="material-icons material-symbol-rounded"
-                                style="font-size: 1.25rem;">inventory_2</i>
-                        </div>
-                        <h6 class="mb-0 fw-bold text-dark">Item Details</h6>
+                <div class="po-items-title">Order Items</div>
+
+                <div class="po-items-box">
+                    <div class="table-responsive">
+                        <table class="table po-items-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col" style="width:20%;">Item</th>
+                                    <th scope="col" style="width:10%;">Unit</th>
+                                    <th scope="col" style="width:14%;">Code</th>
+                                    <th scope="col" style="width:9%;">Qty</th>
+                                    <th scope="col" style="width:13%;">Rate</th>
+                                    <th scope="col" style="width:10%;">Tax%</th>
+                                    <th scope="col" style="width:14%;">Line Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="viewPoItemsBody"></tbody>
+                        </table>
                     </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="text-nowrap fw-bold text-dark py-3 ps-4">Item Name</th>
-                                        <th class="text-nowrap fw-bold text-dark py-3">Unit</th>
-                                        <th class="text-nowrap fw-bold text-dark py-3">Item Code</th>
-                                        <th class="text-nowrap fw-bold text-dark py-3">Quantity</th>
-                                        <th class="text-nowrap fw-bold text-dark py-3">Unit Price</th>
-                                        <th class="text-nowrap fw-bold text-dark py-3">Tax (%)</th>
-                                        <th class="text-nowrap fw-bold text-dark py-3 pe-4">Total Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="viewPoItemsBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="card-footer bg-gradient d-flex justify-content-end align-items-center py-3 px-4"
-                        style="background: linear-gradient(135deg, #e7f3ff 0%, #cfe2ff 100%);">
-                        <span class="fw-bold text-dark" style="letter-spacing: 0.05em;">Grand Total:</span>
-                        <span class="fs-4 text-info fw-bold ms-3" id="viewPoGrandTotal"
-                            style="font-family: 'Segoe UI', system-ui, sans-serif;">&#8377;0.00</span>
-                    </div>
+                    <div class="po-total-bar">Total: <span id="viewPoGrandTotal">0.00</span>/-</div>
                 </div>
             </div>
-            <div class="modal-footer border-0 border-top py-3 px-4 d-flex flex-wrap gap-2 justify-content-end bg-gradient"
-                style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                <button type="button"
-                    class="btn btn-info rounded-1 d-inline-flex align-items-center gap-2 px-4 shadow-sm fw-semibold btn-print-view-modal"
-                    data-print-target="#viewPurchaseOrderModal" title="Print" style="transition: all 0.3s ease;">
-                    <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">print</i> Print
-                </button>
-                <button type="button" class="btn btn-secondary rounded-1 px-4 fw-semibold" data-bs-dismiss="modal"
-                    style="transition: all 0.3s ease;">Close</button>
+            <div class="modal-footer">
+                <button type="button" class="btn po-btn-cancel" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn po-btn-primary btn-print-view-modal"
+                    data-print-target="#viewPurchaseOrderModal" title="Print">Print</button>
             </div>
         </div>
     </div>
@@ -2216,7 +2436,7 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
         }
         if (createPayment) {
             choicesInstances.create.payment = initChoicesSingle(createPayment, {
-                placeholder: 'Select Payment Mode'
+                placeholder: 'Select Mode'
             });
         }
     }
@@ -2242,6 +2462,11 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
         }
     }
 
+    // Create modal shows a bare "Item" placeholder (per design); Edit keeps "Select Item".
+    function itemPlaceholder(isEditModal) {
+        return isEditModal ? 'Select Item' : 'Item';
+    }
+
     function refreshRowItemChoices(select, itemsToUse, currentValue) {
         var api = select.tomselect;
         var multi = !!select.multiple;
@@ -2251,7 +2476,7 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
         var selSet = new Set(selectedIds);
         var list = [{
             value: '',
-            label: 'Select Item',
+            label: itemPlaceholder(select.closest('#editPoItemsBody') !== null),
             disabled: true,
             selected: false
         }];
@@ -2295,7 +2520,7 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
 
             // Proper Choices.js config for multi-select
             var instance = createChoicesInstance(select, {
-                placeholder: 'Select Item',
+                placeholder: itemPlaceholder(row.closest('#editPoItemsBody') !== null),
                 maxOptions: 200,
                 searchEnabled: true,
                 searchChoices: true,
@@ -2416,25 +2641,27 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
         ).join('');
         const qty = editItem ? editItem.quantity : '';
         const price = editItem ? editItem.unit_price : '';
-        const tax = editItem ? editItem.tax_percent : '0';
+        // New rows start blank so the "-" placeholder shows (spec).
+        const tax = editItem ? editItem.tax_percent : '';
         const unit = editItem && editItem.unit ? editItem.unit.replace(/"/g, '&quot;') : '';
         const code = editItem && editItem.item_code ? editItem.item_code.replace(/"/g, '&quot;') : '';
         const lineTotal = editItem ? editItem.total_price : '';
+        // Create and Edit share one row shape — remove on every row, add on the last.
         return `
         <tr class="po-item-row ${isEditModal ? 'edit-po-item-row' : ''}">
-            <td class="py-2">
-                <select name="items[${index}][item_subcategory_id]" class="form-select form-select-sm po-item-select rounded-3 shadow-sm border-2" required aria-label="Select item for this line">
-                    <option value="">Select Item</option>
+            <td>
+                <select name="items[${index}][item_subcategory_id]" class="form-select po-item-select" required aria-label="Select item for this line">
+                    <option value="">${itemPlaceholder(isEditModal)}</option>
                     ${options}
                 </select>
             </td>
-            <td class="py-2"><input type="text" name="items[${index}][unit]" class="form-control form-control-sm rounded-3 po-unit" readonly placeholder="—" value="${unit}"></td>
-            <td class="py-2"><input type="text" class="form-control form-control-sm rounded-3 po-item-code" readonly placeholder="—" value="${code}"></td>
-            <td class="py-2"><input type="text" name="items[${index}][quantity]" class="form-control form-control-sm rounded-3 po-qty" value="${qty}" required></td>
-            <td class="py-2"><input type="text" name="items[${index}][unit_price]" class="form-control form-control-sm rounded-3 po-unit-price" value="${price}" required></td>
-            <td class="py-2"><input type="text" name="items[${index}][tax_percent]" class="form-control form-control-sm rounded-3 po-tax" max="100" value="${tax}"></td>
-            <td class="py-2"><input type="text" class="form-control form-control-sm rounded-3 po-line-total bg-light" readonly placeholder="0.00" value="${lineTotal}"></td>
-            <td class="py-2 text-center"><button type="button" class="btn btn-sm btn-outline-danger rounded-3 po-remove-row" title="Remove line">×</button></td>
+            <td><input type="text" name="items[${index}][unit]" class="form-control po-unit" readonly placeholder="-" value="${unit}"></td>
+            <td><input type="text" class="form-control po-item-code" readonly placeholder="-" value="${code}"></td>
+            <td><input type="text" name="items[${index}][quantity]" class="form-control po-qty" placeholder="-" value="${qty}" required></td>
+            <td><input type="text" name="items[${index}][unit_price]" class="form-control po-unit-price" placeholder="-" value="${price}" required></td>
+            <td><input type="text" name="items[${index}][tax_percent]" class="form-control po-tax" max="100" placeholder="-" value="${tax}"></td>
+            <td><input type="text" class="form-control po-line-total" readonly placeholder="-" value="${lineTotal}"></td>
+            <td class="po-act-cell"><button type="button" class="po-icon-btn po-icon-btn--remove po-remove-row" title="Remove line" aria-label="Remove line">&minus;</button><button type="button" class="po-icon-btn po-icon-btn--add po-add-row" title="Add line" aria-label="Add line">+</button></td>
         </tr>`;
     }
 
@@ -2481,7 +2708,7 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
             if (select.tomselect && select.tomselect._choices) {
                 refreshRowItemChoices(select, itemsToUse, currentValue);
             } else {
-                select.innerHTML = '<option value="">Select Item</option>';
+                select.innerHTML = '<option value="">' + itemPlaceholder(isEditModal) + '</option>';
                 itemsToUse.forEach(function(item) {
                     var option = document.createElement('option');
                     option.value = item.id;
@@ -2562,7 +2789,8 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
             if (totalInput && totalInput.value) sum += parseFloat(totalInput.value) || 0;
         });
         const el = document.getElementById('poGrandTotal');
-        if (el) el.textContent = '₹' + sum.toFixed(2);
+        // Rendered as "Total: 0.00/-" — the label and the /- suffix live in the markup.
+        if (el) el.textContent = sum.toFixed(2);
     }
 
     function updateRemoveButtons() {
@@ -2572,6 +2800,37 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
             if (btn) btn.disabled = rows.length <= 1;
         });
     }
+
+    // Native date inputs have no placeholder — overlay "Select Date" while empty.
+    function syncPoDatePlaceholders() {
+        document.querySelectorAll(
+            '#createPurchaseOrderModal .po-date-wrap, #editPurchaseOrderModal .po-date-wrap'
+        ).forEach(function(wrap) {
+            var input = wrap.querySelector('.po-date');
+            if (input) wrap.classList.toggle('is-empty', !input.value);
+        });
+    }
+    window.syncPoDatePlaceholders = syncPoDatePlaceholders;
+
+    (function() {
+        ['createPurchaseOrderModal', 'editPurchaseOrderModal'].forEach(function(id) {
+            var modalEl = document.getElementById(id);
+            if (!modalEl) return;
+            ['input', 'change'].forEach(function(evt) {
+                modalEl.addEventListener(evt, function(e) {
+                    if (e.target && e.target.classList && e.target.classList.contains('po-date')) {
+                        syncPoDatePlaceholders();
+                    }
+                });
+            });
+            // after the show handlers have run form.reset() / populated fields (neither fires events)
+            modalEl.addEventListener('show.bs.modal', function() {
+                setTimeout(syncPoDatePlaceholders, 0);
+            });
+            modalEl.addEventListener('shown.bs.modal', syncPoDatePlaceholders);
+        });
+        syncPoDatePlaceholders();
+    })();
 
     // Vendor selection change in CREATE modal
     document.addEventListener('DOMContentLoaded', function() {
@@ -2597,14 +2856,21 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
         }
     });
 
-    document.getElementById('addPoItemRow').addEventListener('click', function() {
+    // Create modal has no toolbar "Add line" button — the last row's blue + adds the next line.
+    function addCreateItemRow() {
         const tbody = document.getElementById('poItemsBody');
+        if (!tbody) return null;
         tbody.insertAdjacentHTML('beforeend', getItemRowHtml(itemRowIndex, null, false));
         const newRow = tbody.lastElementChild;
         initItemDropdownInRow(newRow);
         itemRowIndex++;
         updateRemoveButtons();
-    });
+        return newRow;
+    }
+    window.addCreatePoItemRow = addCreateItemRow;
+
+    const legacyAddPoItemRow = document.getElementById('addPoItemRow');
+    if (legacyAddPoItemRow) legacyAddPoItemRow.addEventListener('click', addCreateItemRow);
 
     document.getElementById('poItemsBody').addEventListener('change', function(e) {
         // Some browsers/users (spinner, blur) trigger change more reliably than input
@@ -2637,7 +2903,12 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
     });
 
     document.getElementById('poItemsBody').addEventListener('click', function(e) {
-        if (e.target.classList.contains('po-remove-row')) {
+        // closest() (not e.target) so a click on the glyph inside the button still counts
+        if (e.target.closest('.po-add-row')) {
+            addCreateItemRow();
+            return;
+        }
+        if (e.target.closest('.po-remove-row')) {
             const row = e.target.closest('.po-item-row');
             if (row && document.querySelectorAll('#poItemsBody .po-item-row').length > 1) {
                 row.remove();
@@ -2655,7 +2926,8 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
             if (totalInput && totalInput.value) sum += parseFloat(totalInput.value) || 0;
         });
         const el = document.getElementById('editPoGrandTotal');
-        if (el) el.textContent = '₹' + sum.toFixed(2);
+        // Rendered as "Total: 0.00/-" — label and /- suffix live in the markup.
+        if (el) el.textContent = sum.toFixed(2);
     }
 
     function updateEditRemoveButtons() {
@@ -2683,18 +2955,18 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
             .then(data => {
                 const po = data.po;
                 const items = data.items || [];
-                document.getElementById('viewPoNumber').textContent = po.po_number || '—';
+                document.getElementById('viewPoNumber').textContent = po.po_number || '-';
                 document.getElementById('viewPoDate').textContent = po.po_date ? new Date(po.po_date)
-                    .toLocaleDateString('en-IN') : '—';
-                document.getElementById('viewStoreName').textContent = po.store_name || '—';
-                document.getElementById('viewVendorName').textContent = po.vendor_name || '—';
-                document.getElementById('viewPaymentCode').textContent = po.payment_code || '—';
-                document.getElementById('viewBillNo').textContent = po.bill_no || '—';
+                    .toLocaleDateString('en-IN') : '-';
+                document.getElementById('viewStoreName').textContent = po.store_name || '-';
+                document.getElementById('viewVendorName').textContent = po.vendor_name || '-';
+                document.getElementById('viewPaymentCode').textContent = po.payment_code || '-';
+                document.getElementById('viewBillNo').textContent = po.bill_no || '-';
                 document.getElementById('viewBillDate').textContent = po.bill_date ? new Date(po
-                    .bill_date).toLocaleDateString('en-IN') : '—';
-                document.getElementById('viewChallanNo').textContent = po.challan_no || '—';
+                    .bill_date).toLocaleDateString('en-IN') : '-';
+                document.getElementById('viewChallanNo').textContent = po.challan_no || '-';
                 document.getElementById('viewChallanDate').textContent = po.challan_date ? new Date(po
-                    .challan_date).toLocaleDateString('en-IN') : '—';
+                    .challan_date).toLocaleDateString('en-IN') : '-';
                 const billLink = document.getElementById('viewBillLink');
                 const billNone = document.getElementById('viewBillNone');
                 if (po.bill_url) {
@@ -2707,10 +2979,10 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
                     if (billNone) billNone.style.display = '';
                 }
                 const statusEl = document.getElementById('viewStatus');
-                statusEl.textContent = (po.status || '—').charAt(0).toUpperCase() + (po.status || '')
+                statusEl.textContent = (po.status || '-').charAt(0).toUpperCase() + (po.status || '')
                     .slice(1);
-                statusEl.className = 'badge bg-' + (po.status === 'approved' ? 'success' : po.status ===
-                    'rejected' ? 'danger' : po.status === 'completed' ? 'primary' : 'warning');
+                statusEl.className = 'po-status-pill po-status-pill--' + (['approved', 'rejected',
+                    'completed'].indexOf(po.status) !== -1 ? po.status : 'pending');
                 const tbody = document.getElementById('viewPoItemsBody');
                 tbody.innerHTML = '';
                 let grandTotal = 0;
@@ -2718,16 +2990,17 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
                     grandTotal += parseFloat(item.total_price) || 0;
                     tbody.insertAdjacentHTML('beforeend', `
                             <tr>
-                                <td>${escapeHtml(item.item_name || '—')}</td>
-                                <td>${escapeHtml(item.unit || '—')}</td>
-                                <td>${escapeHtml(item.item_code || '—')}</td>
-                                <td>${item.quantity}</td>
-                                <td>₹${(parseFloat(item.unit_price) || 0).toFixed(2)}</td>
-                                <td>${(parseFloat(item.tax_percent) || 0).toFixed(2)}%</td>
-                                <td>₹${(parseFloat(item.total_price) || 0).toFixed(2)}</td>
+                                <td>${escapeHtml(item.item_name || '-')}</td>
+                                <td>${escapeHtml(item.unit || '-')}</td>
+                                <td>${escapeHtml(item.item_code || '-')}</td>
+                                <td>${escapeHtml(String(item.quantity ?? '-'))}</td>
+                                <td>${(parseFloat(item.unit_price) || 0).toFixed(2)}</td>
+                                <td>${(parseFloat(item.tax_percent) || 0).toFixed(2)}</td>
+                                <td>${(parseFloat(item.total_price) || 0).toFixed(2)}</td>
                             </tr>`);
                 });
-                document.getElementById('viewPoGrandTotal').textContent = '₹' + grandTotal.toFixed(2);
+                // Rendered as "Total: 0.00/-" — label and /- suffix live in the markup.
+                document.getElementById('viewPoGrandTotal').textContent = grandTotal.toFixed(2);
                 new bootstrap.Modal(document.getElementById('viewPurchaseOrderModal')).show();
             })
             .catch(err => {
@@ -2831,10 +3104,14 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
                 const editChallanDateEl = document.getElementById('editChallanDate');
                 if (editChallanDateEl) editChallanDateEl.value = po.challan_date || '';
                 var editBillPathEl = document.getElementById('editCurrentBillPath');
+                var editBillWrapEl = document.getElementById('editCurrentBillWrap');
                 if (editBillPathEl) {
                     editBillPathEl.textContent = po.bill_path ? (po.bill_path.split('/').pop() || po
                         .bill_path) : 'No file chosen';
                 }
+                // The "Current: …" hint only makes sense when a bill is already stored —
+                // otherwise it duplicates the file input's own "No file chosen".
+                if (editBillWrapEl) editBillWrapEl.style.display = po.bill_path ? '' : 'none';
                 var editBillFileInput = document.getElementById('editBillFileInput');
                 if (editBillFileInput) {
                     editBillFileInput.value = '';
@@ -2842,8 +3119,8 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
                 var editBillLinkEl = document.getElementById('editCurrentBillLink');
                 if (editBillLinkEl) {
                     if (po.bill_url) {
-                        editBillLinkEl.innerHTML = 'Current bill: <a href="' + escapeHtml(po.bill_url) +
-                            '" target="_blank" rel="noopener" class="text-primary">View Bill</a>';
+                        editBillLinkEl.innerHTML = ' · <a href="' + escapeHtml(po.bill_url) +
+                            '" target="_blank" rel="noopener">View</a>';
                     } else {
                         editBillLinkEl.innerHTML = '';
                     }
@@ -2904,14 +3181,21 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
             });
     }, true);
 
-    document.getElementById('addEditPoItemRow').addEventListener('click', function() {
+    // Edit modal has no toolbar "Add line" button either — the last row's blue + adds the next line.
+    function addEditItemRow() {
         const tbody = document.getElementById('editPoItemsBody');
+        if (!tbody) return null;
         tbody.insertAdjacentHTML('beforeend', getItemRowHtml(editItemRowIndex, null, true));
         const newRow = tbody.lastElementChild;
         initItemDropdownInRow(newRow);
         editItemRowIndex++;
         updateEditRemoveButtons();
-    });
+        return newRow;
+    }
+    window.addEditPoItemRow = addEditItemRow;
+
+    const legacyAddEditPoItemRow = document.getElementById('addEditPoItemRow');
+    if (legacyAddEditPoItemRow) legacyAddEditPoItemRow.addEventListener('click', addEditItemRow);
 
     var createBillFileInputEl = document.getElementById('createBillFileInput');
     var createBillClearBtnEl = document.getElementById('createBillClearBtn');
@@ -3012,7 +3296,12 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
         }
     });
     document.getElementById('editPoItemsBody').addEventListener('click', function(e) {
-        if (e.target.classList.contains('po-remove-row')) {
+        // closest() (not e.target) so a click on the glyph inside the button still counts
+        if (e.target.closest('.po-add-row')) {
+            addEditItemRow();
+            return;
+        }
+        if (e.target.closest('.po-remove-row')) {
             const row = e.target.closest('.po-item-row');
             if (row && document.querySelectorAll('#editPoItemsBody .po-item-row').length > 1) {
                 row.remove();
@@ -3045,11 +3334,8 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
 
             if (poItemsTable && poItemsTable.contains(activeEl) && activeEl.classList.contains(
                     'po-unit-price')) {
-                const addBtn = document.getElementById('addPoItemRow');
-                if (addBtn) {
-                    addBtn.click();
-                    const tbody = document.getElementById('poItemsBody');
-                    const newRow = tbody ? tbody.lastElementChild : null;
+                if (typeof window.addCreatePoItemRow === 'function') {
+                    const newRow = window.addCreatePoItemRow();
                     const firstInput = newRow ? newRow.querySelector(
                         '.po-item-select, .po-qty, .po-unit-price, input, select') : null;
                     if (firstInput) firstInput.focus();
@@ -3095,11 +3381,8 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
 
             if (editPoItemsTable && editPoItemsTable.contains(activeEl) && activeEl.classList.contains(
                     'po-unit-price')) {
-                const addBtn = document.getElementById('addEditPoItemRow');
-                if (addBtn) {
-                    addBtn.click();
-                    const tbody = document.getElementById('editPoItemsBody');
-                    const newRow = tbody ? tbody.lastElementChild : null;
+                if (typeof window.addEditPoItemRow === 'function') {
+                    const newRow = window.addEditPoItemRow();
                     const firstInput = newRow ? newRow.querySelector(
                         '.po-item-select, .po-qty, .po-unit-price, input, select') : null;
                     if (firstInput) firstInput.focus();
@@ -3212,6 +3495,8 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
 
             // Clear selected bill file (if any)
             if (createBillFileInputEl) createBillFileInputEl.value = '';
+
+            if (typeof window.syncPoDatePlaceholders === 'function') window.syncPoDatePlaceholders();
 
             // Reset items table to a single fresh row
             destroyAllItemDropdowns();
@@ -3396,11 +3681,6 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
         if (!modal) return;
         var bodyEl = modal.querySelector('.modal-body');
         if (!bodyEl) return;
-        var win = window.open('', '_blank', 'width=900,height=700');
-        if (!win) {
-            alert('Please allow popups to print.');
-            return;
-        }
         var title = (modal.querySelector('.modal-title') || {}).textContent || 'Purchase Order Details';
         var printedOn = new Date();
         var dateStr = printedOn.getDate().toString().padStart(2, '0') + '/' + (printedOn.getMonth() + 1)
@@ -3412,60 +3692,146 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
             });
         var bodyWrap = document.createElement('div');
         bodyWrap.innerHTML = bodyEl.innerHTML;
+
+        // A "View / Download Bill" button means nothing on paper — state whether one exists.
+        var billWrap = bodyWrap.querySelector('#viewBillWrap');
+        if (billWrap) {
+            var hasBill = !!bodyEl.querySelector('#viewBillLink') &&
+                bodyEl.querySelector('#viewBillLink').style.display !== 'none';
+            billWrap.textContent = hasBill ? 'Attached' : 'Not uploaded';
+            billWrap.className = 'po-value';
+        }
+        // The screen layout drops section headings; print reads better with them.
+        var firstRow = bodyWrap.querySelector('.row');
+        if (firstRow) {
+            var head = document.createElement('div');
+            head.className = 'po-items-title';
+            head.textContent = 'Order Details';
+            firstRow.parentNode.insertBefore(head, firstRow);
+        }
+
         var bodyContent = typeof window.poSanitizePrintDom === 'function'
             ? window.poSanitizePrintDom(bodyWrap)
             : bodyWrap.innerHTML;
         var poPrintLogoUrl = @json(asset('images/lbsnaa_logo.jpg'));
+        var poNumber = ((modal.querySelector('#viewPoNumber') || {}).textContent || '').trim();
+        var subLine = (poNumber && poNumber !== '-' ? 'Order No. ' + poNumber + ' &nbsp;|&nbsp; ' : '') +
+            'Printed on ' + dateStr;
         var printHeader =
             '<div class="print-doc-header" style="text-align:center;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #2c3e50;">' +
             '<div style="margin-bottom:10px;"><img src="' + poPrintLogoUrl + '" alt="LBSNAA Logo" style="height:60px;width:auto;"></div>' +
             '<div style="font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">OFFICER\'S MESS LBSNAA MUSSOORIE</div>' +
-            '<div style="background:#004a93;color:#fff;padding:8px 16px;font-size:14px;display:inline-block;margin:4px 0;border-radius:4px;-webkit-print-color-adjust:exact;print-color-adjust:exact;">Purchase Order Details</div>' +
-            '<div style="font-size:11px;color:#6c757d;margin-top:8px;">Printed on ' + dateStr +
+            '<div style="background:#004384;color:#fff;padding:8px 16px;font-size:14px;display:inline-block;margin:4px 0;border-radius:4px;-webkit-print-color-adjust:exact;print-color-adjust:exact;">Purchase Order Details</div>' +
+            '<div style="font-size:11px;color:#6c757d;margin-top:8px;">' + subLine +
             '</div></div>';
         var iconCss = window.PO_PRINT_SUPPRESS_ICON_CSS || '';
+        var ink = ' -webkit-print-color-adjust: exact; print-color-adjust: exact;';
+        // Styles below mirror the on-screen View modal classes (.po-label/.po-value/
+        // .po-items-table/.po-total-bar) on the branded report header used by the list print.
         var printCss = '<style>' + iconCss +
             '@page { size: A4; margin: 14mm; }' +
-            'body { font-family: Arial, sans-serif; font-size: 12px; color: #212529; padding: 0 12px; margin: 0; background: #fff; }' +
-            '.print-doc-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
-            '.print-doc-header img { -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
-            '.modal-header { border-bottom: 1px solid #dee2e6; padding-bottom: 8px; margin-bottom: 12px; display: none; }' +
-            '.modal-header .modal-title { font-size: 14px; font-weight: 600; }' +
-            '.modal-body { color: #212529; }' +
-            '.card { margin-bottom: 14px; page-break-inside: avoid; border: 1px solid #dee2e6; border-radius: 4px; }' +
-            '.card-header { font-weight: 600; font-size: 13px; margin-bottom: 10px; padding: 8px 12px; background: #f8f9fa; border-bottom: 2px solid #004a93; color: #004a93; }' +
-            '.card-body .row { display: flex; flex-wrap: wrap; margin: 0 -6px; }' +
-            '.card-body .col-md-4, .card-body .col-xl-4, .card-body .col-12 { width: 33.33%; box-sizing: border-box; padding: 0 6px 10px; }' +
-            '.card-body .col-md-12, .card-body .col-12 { width: 100%; }' +
-            '.card-body .form-label, .card-body label { font-size: 10px; color: #6c757d; display: block; margin-bottom: 2px; font-weight: 600; }' +
-            '.card-body p, .card-body .fw-medium { margin: 0; font-size: 12px; color: #212529; }' +
-            '.border { border: 1px solid #dee2e6 !important; }' +
-            '.rounded-3 { border-radius: 4px !important; }' +
-            '.bg-light-subtle { background-color: #f8f9fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
+            'body { font-family: Arial, sans-serif; font-size: 12px; color: #212529; padding: 0; margin: 0; background: #fff; }' +
+            '.print-doc-header {' + ink + ' }' +
+            '.print-doc-header img {' + ink + ' }' +
+            '.modal-header, .modal-footer, .btn-close { display: none !important; }' +
+            /* section heading */
+            '.po-items-title { margin: 16px 0 8px; font-size: 13px; font-weight: 700; color: #004384;' +
+            ' border-bottom: 1px solid #dee2e6; padding-bottom: 4px; }' +
+            '.po-items-title:first-child { margin-top: 0; }' +
+            /* field grid — Bootstrap columns are not available in the print window */
+            '.row { display: flex; flex-wrap: wrap; margin: 0 -6px; }' +
+            '.row > [class*="col-"] { box-sizing: border-box; padding: 0 6px 10px; width: 33.33%; }' +
+            '.row > .col-md-8 { width: 66.66%; }' +
+            '.row > .col-12 { width: 100%; }' +
+            '.po-label { display: block; margin-bottom: 2px; font-size: 10px; font-weight: 600;' +
+            ' color: #6c757d; text-transform: uppercase; letter-spacing: .02em; }' +
+            '.po-value { margin: 0; padding: 4px 8px; font-size: 12px; color: #212529;' +
+            ' background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 3px; min-height: 20px;' + ink + ' }' +
+            /* status pill keeps its tint on paper */
+            '.po-status-pill { display: inline-block; padding: 3px 10px; font-size: 10px; font-weight: 700;' +
+            ' border-radius: 999px;' + ink + ' }' +
+            '.po-status-pill--approved { color: #067647 !important; background: #d7f5e5 !important; }' +
+            '.po-status-pill--rejected { color: #b42318 !important; background: #fbe1de !important; }' +
+            '.po-status-pill--completed { color: #004384 !important; background: #dbe9f8 !important; }' +
+            '.po-status-pill--pending { color: #b54708 !important; background: #fdf0d5 !important; }' +
+            /* line items */
+            '.po-items-box { border: 1px solid #adb5bd; border-radius: 3px; overflow: hidden; }' +
             'table { width: 100%; border-collapse: collapse; font-size: 11px; page-break-inside: auto; }' +
-            'th, td { border: 1px solid #adb5bd; padding: 6px 8px; text-align: left; }' +
-            'thead th { background: #004a93 !important; color: #fff !important; border-color: #003d7a; font-weight: 600; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
-            'tbody tr:nth-child(even) { background-color: #f8f9fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
-            '.card-footer { font-weight: 600; padding: 10px 12px; border-top: 2px solid #004a93; margin-top: 4px; font-size: 13px; background: #f8f9fa; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
-            '.badge { display: inline-block; padding: 3px 8px; font-size: 10px; border-radius: 4px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
-            '.bg-success { background-color: #28a745 !important; color: #fff !important; }' +
-            '.bg-danger { background-color: #dc3545 !important; color: #fff !important; }' +
-            '.bg-warning { background-color: #ffc107 !important; color: #212529 !important; }' +
-            '.bg-primary { background-color: #004a93 !important; color: #fff !important; }' +
-            '.btn-close, .modal-footer { display: none !important; }' +
-            '.text-primary { color: #004a93 !important; }' +
-            '.fs-5 { font-size: 16px !important; }' +
-            '@media print { body { padding: 0; } .print-doc-header { margin-bottom: 16px; } }' +
+            'th, td { border: 1px solid #adb5bd; padding: 5px 8px; text-align: left; }' +
+            'thead th { background: #004384 !important; color: #fff !important; border-color: #003468;' +
+            ' font-weight: 600;' + ink + ' }' +
+            'thead { display: table-header-group; }' +
+            'tbody tr { page-break-inside: avoid; }' +
+            'tbody tr:nth-child(even) td { background-color: #f4f6f8 !important;' + ink + ' }' +
+            /* Qty / Rate / Tax% / Line Total read as numbers */
+            'th:nth-child(n+4), td:nth-child(n+4) { text-align: right; }' +
+            '.po-total-bar { padding: 7px 10px; font-size: 12px; font-weight: 700; text-align: right;' +
+            ' color: #004384 !important; background: #dbe9f8 !important; border-top: 1px solid #adb5bd;' +
+            ' page-break-inside: avoid;' + ink + ' }' +
+            '.po-file-current, .po-bill-link { font-size: 12px; color: #212529; border: 0; padding: 0;' +
+            ' text-decoration: none; }' +
+            '@media print { .print-doc-header { margin-bottom: 16px; } }' +
             '</style>';
-        win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + title.replace(/</g,
-                '&lt;') + '</title>' + printCss + '</head><body>' + printHeader +
-            '<div class="modal-content-wrap">' + bodyContent + '</div></body></html>');
-        win.document.close();
-        win.focus();
-        setTimeout(function() {
-            win.print();
-            win.close();
-        }, 350);
+        var docHtml = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' +
+            title.replace(/</g, '&lt;') + '</title>' + printCss + '</head><body>' + printHeader +
+            '<div class="modal-content-wrap">' + bodyContent + '</div></body></html>';
+
+        // Printed from a hidden same-page iframe rather than window.open(): a popup
+        // blocker silently kills the popup route (the button then does nothing), and
+        // the popup also had to be closed on a timer that raced the print dialog.
+        window.PO_MODAL_PRINT_ACTIVE = true;
+        var frame = document.createElement('iframe');
+        frame.setAttribute('aria-hidden', 'true');
+        frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+        document.body.appendChild(frame);
+
+        var fired = false;
+        var cleaned = false;
+
+        function cleanup() {
+            if (cleaned) return;
+            cleaned = true;
+            window.PO_MODAL_PRINT_ACTIVE = false;
+            setTimeout(function() {
+                if (frame && frame.parentNode) frame.parentNode.removeChild(frame);
+            }, 500);
+        }
+
+        function doPrint() {
+            if (fired) return;
+            fired = true;
+            var fw = frame.contentWindow;
+            if (!fw) {
+                cleanup();
+                return;
+            }
+            try {
+                fw.addEventListener('afterprint', cleanup);
+            } catch (err) {}
+            try {
+                fw.focus();
+                fw.print();
+            } catch (err) {
+                console.error('Print failed', err);
+            }
+            // afterprint is not fired by every browser — always reclaim the iframe.
+            setTimeout(cleanup, 60000);
+        }
+
+        var fdoc = frame.contentWindow.document;
+        fdoc.open();
+        fdoc.write(docHtml);
+        fdoc.close();
+
+        // Print once the logo has decoded, otherwise the header prints blank.
+        var logo = fdoc.querySelector('.print-doc-header img');
+        if (!logo || logo.complete) {
+            setTimeout(doPrint, 60);
+        } else {
+            logo.addEventListener('load', doPrint);
+            logo.addEventListener('error', doPrint);
+            setTimeout(doPrint, 2000);
+        }
     });
 
     // Initialize Choices on page load
