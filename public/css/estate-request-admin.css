@@ -430,54 +430,68 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   Possession Details (admin/estate/possession-details)
-   Thirteen columns plus row selection — the widest listing in the module.
+   Possession listings — Possession Details (LBSNAA) and Possession for Others
+   Thirteen columns plus row selection: the widest listings in the module. Both
+   screens are the same grid over different tables, so .pd-page and .epo-page
+   share every rule here (docs/new-design-index-page.md §7).
    ══════════════════════════════════════════════════════════════════════════ */
 
 /* Selection column */
 .pd-page .programme-dt-table th.pd-col-select,
-.pd-page .programme-dt-table td.pd-col-select {
+.epo-page .programme-dt-table th.pd-col-select,
+.pd-page .programme-dt-table td.pd-col-select,
+.epo-page .programme-dt-table td.pd-col-select {
     width: 48px;
     text-align: center;
 }
 
-.pd-page .pd-check {
+.pd-page .pd-check,
+.epo-page .pd-check {
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.pd-page .pd-check .form-check-input {
+.pd-page .pd-check .form-check-input,
+.epo-page .pd-check .form-check-input {
     width: 1.05rem;
     height: 1.05rem;
     margin: 0;
     cursor: pointer;
 }
 
-.pd-page .pd-check .form-check-input:checked {
+.pd-page .pd-check .form-check-input:checked,
+.epo-page .pd-check .form-check-input:checked {
     background-color: var(--ds-primary, #004a93);
     border-color: var(--ds-primary, #004a93);
 }
 
 /* Name & ID wraps; the rest stay on one line and the panel scrolls. */
 .pd-page .programme-dt-table th.pd-col-name,
-.pd-page .programme-dt-table td.pd-col-name {
+.epo-page .programme-dt-table th.pd-col-name,
+.pd-page .programme-dt-table td.pd-col-name,
+.epo-page .programme-dt-table td.pd-col-name {
     min-width: 170px;
     white-space: normal;
     line-height: 1.45;
 }
 
 .pd-page .programme-dt-table th.pd-col-action,
-.pd-page .programme-dt-table td.pd-col-action {
+.epo-page .programme-dt-table th.pd-col-action,
+.pd-page .programme-dt-table td.pd-col-action,
+.epo-page .programme-dt-table td.pd-col-action {
     min-width: 110px;
 }
 
-.pd-page .programme-dt-table tbody td {
+.pd-page .programme-dt-table tbody td,
+.epo-page .programme-dt-table tbody td {
     white-space: nowrap;
 }
 
 .pd-page .programme-dt-table thead th,
-.pd-page .programme-dt-table tbody td {
+.epo-page .programme-dt-table thead th,
+.pd-page .programme-dt-table tbody td,
+.epo-page .programme-dt-table tbody td {
     padding-left: 0.625rem !important;
     padding-right: 0.625rem !important;
     text-transform: none;
@@ -485,7 +499,8 @@
 }
 
 /* Bulk delete — appears in the toolbar only while rows are selected. */
-.pd-page .pd-btn-bulk-delete {
+.pd-page .pd-btn-bulk-delete,
+.epo-page .pd-btn-bulk-delete {
     height: var(--ds-control-h, 2.5rem);
     display: inline-flex;
     align-items: center;
@@ -500,14 +515,16 @@
     white-space: nowrap;
 }
 
-.pd-page .pd-btn-bulk-delete:hover {
+.pd-page .pd-btn-bulk-delete:hover,
+.epo-page .pd-btn-bulk-delete:hover {
     background: #fff5f5;
     border-color: #f97066;
     color: #7a271a;
 }
 
 /* The Allotment date filter is a native date input in a 180px slot. */
-.pd-page .programme-dt-filter-select .form-control[type="date"] {
+.pd-page .programme-dt-filter-select .form-control[type="date"],
+.epo-page .programme-dt-filter-select .form-control[type="date"] {
     min-height: var(--ds-control-h, 2.5rem);
     padding: 0.5rem 0.75rem;
     font-size: 0.9375rem;
@@ -518,13 +535,15 @@
     background-color: var(--ds-surface, #fff);
 }
 
-.pd-page .programme-dt-filter-select .form-control[type="date"]:focus {
+.pd-page .programme-dt-filter-select .form-control[type="date"]:focus,
+.epo-page .programme-dt-filter-select .form-control[type="date"]:focus {
     border-color: var(--ds-primary, #004a93);
     box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
 }
 
 /* Collapsed search: an icon button that reveals the DataTables filter slot. */
-.pd-page .pd-search-toggle {
+.pd-page .pd-search-toggle,
+.epo-page .pd-search-toggle {
     width: var(--ds-control-h, 2.5rem);
     height: var(--ds-control-h, 2.5rem);
     padding: 0;
@@ -538,14 +557,29 @@
 }
 
 .pd-page .pd-search-toggle:hover,
-.pd-page .pd-search-toggle[aria-expanded="true"] {
+.epo-page .pd-search-toggle:hover,
+.pd-page .pd-search-toggle[aria-expanded="true"],
+.epo-page .pd-search-toggle[aria-expanded="true"] {
     background: #f2f7fc;
     border-color: var(--ds-primary, #004a93);
     color: var(--ds-primary, #004a93);
 }
 
-.pd-page .programme-dt-search {
+.pd-page .programme-dt-search,
+.epo-page .programme-dt-search {
     width: 240px;
+}
+
+/* Sortable headers paint their caret at the cell's right edge, so the two
+   narrowest labels on this page need a floor or the caret sits on the text. */
+.epo-page .programme-dt-table th.epo-col-sno,
+.epo-page .programme-dt-table td.epo-col-sno {
+    min-width: 78px;
+}
+
+.epo-page .programme-dt-table th.epo-col-req,
+.epo-page .programme-dt-table td.epo-col-req {
+    min-width: 120px;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -606,6 +640,30 @@
 /* ══════════════════════════════════════════════════════════════════════════
    Update Meter Reading (filter + readings grid, page and modal)
    ══════════════════════════════════════════════════════════════════════════ */
+
+/* "Allotment Details" over the grid — the modal's only sub-heading. */
+.umr-form .umr-section-title {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ds-ink, #1f2937);
+}
+
+/* The Others grid keeps its checkbox column narrow and its inputs readable. */
+.umr-form .umr-grid .other-pair-cb {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+.umr-form .umr-grid .curr-reading {
+    min-width: 110px;
+}
 
 .umr-form .umr-grid-wrap {
     max-height: 46vh;

@@ -14,6 +14,7 @@ use App\DataTables\EstateHacApprovedDataTable;
 use App\Exports\EstateHacApprovedExport;
 use App\Exports\EstateOtherRequestExport;
 use App\Exports\EstatePossessionDetailsExport;
+use App\Exports\EstatePossessionOtherExport;
 use App\Exports\EstateRequestForEstateExport;
 use App\Exports\EstateUpdateMeterNoExport;
 use App\Http\Controllers\Controller;
@@ -3484,9 +3485,37 @@ class EstateController extends Controller
             $preselectedRequester = $request->requester_id;
         }
 
-        return view('admin.estate.estate_possession_view', compact(
-            'requesters', 'campuses', 'unitTypesByCampus', 'record', 'preselectedRequester'
-        ));
+        $payload = compact('requesters', 'campuses', 'unitTypesByCampus', 'record', 'preselectedRequester');
+
+        // The listing's Add / Edit Possession modal asks for the body only.
+        if ($request->boolean('modal')) {
+            return view('admin.estate._possession_view_form', $payload + ['inModal' => true]);
+        }
+
+        return view('admin.estate.estate_possession_view', $payload);
+    }
+
+    /**
+     * A business-rule failure on a form that can be posted from a modal.
+     *
+     * Validation-rule failures already come back as 422 JSON on their own; these
+     * are the hand-rolled guards (duplicate requester, occupied house, …) that
+     * would otherwise redirect and leave an AJAX caller with an HTML page.
+     * Returns null for a normal page post, so the caller keeps its redirect.
+     *
+     * @param  array<string, string>  $errors  field => message, for inline display
+     */
+    private function estateFormFailure(Request $request, string $message, array $errors = []): ?\Illuminate\Http\JsonResponse
+    {
+        if (! ($request->ajax() || $request->wantsJson())) {
+            return null;
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => $message,
+            'errors' => array_map(fn ($m) => [$m], $errors),
+        ], 422);
     }
 
     /**
@@ -3622,7 +3651,23 @@ class EstateController extends Controller
             'meter_reading_oth1.regex' => 'Secondary meter reading must be numbers only (max 10 digits).',
         ];
 
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), $rules, $messages);
+        // Field names as the form labels them — the modal shows these messages
+        // inline, so "possession date oth" would leak a column name at the user.
+        $attributes = [
+            'estate_other_req_pk' => 'Requester Name',
+            'estate_campus_master_pk' => 'Estate Name',
+            'estate_unit_type_master_pk' => 'Unit Name',
+            'estate_block_master_pk' => 'Building Name',
+            'estate_unit_sub_type_master_pk' => 'Unit Sub-type',
+            'estate_house_master_pk' => 'House Number',
+            'allotment_date' => 'Allotment Date',
+            'possession_date_oth' => 'Possession Date',
+            'meter_reading_oth' => 'Electric Meter Reading I',
+            'meter_reading_oth1' => 'Electric Meter Reading II',
+            'returning_date' => 'Returning Date',
+        ];
+
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), $rules, $messages, $attributes);
         $validator->after(function ($v) use ($request) {
             if ($request->get('redirect_to') === 'return-house') {
                 $returningDate = trim((string) $request->input('returning_date', ''));
@@ -3652,10 +3697,15 @@ class EstateController extends Controller
         // DB columns are INT; hard guard against overflow.
         foreach (['meter_reading_oth', 'meter_reading_oth1'] as $k) {
             if (!empty($validated[$k]) && (int) $validated[$k] > 2147483647) {
+                $tooLarge = 'Electric Meter Reading is too large. Please enter up to 10 digits.';
+                if ($json = $this->estateFormFailure($request, $tooLarge, [$k => $tooLarge])) {
+                    return $json;
+                }
+
                 return redirect()
                     ->back()
                     ->withInput()
-                    ->withErrors([$k => 'Electric Meter Reading is too large. Please enter up to 10 digits.'])
+                    ->withErrors([$k => $tooLarge])
                     ->with('error', 'Please correct the errors and try again.');
             }
         }
@@ -3666,10 +3716,15 @@ class EstateController extends Controller
                 $duplicateQuery->where('pk', '!=', (int) $request->id);
             }
             if ($duplicateQuery->exists()) {
+                $dupMsg = 'Selected requester already has a possession entry.';
+                if ($json = $this->estateFormFailure($request, $dupMsg, ['estate_other_req_pk' => $dupMsg])) {
+                    return $json;
+                }
+
                 return redirect()
                     ->back()
                     ->withInput()
-                    ->with('error', 'Selected requester already has a possession entry.');
+                    ->with('error', $dupMsg);
             }
         }
 
@@ -3677,10 +3732,15 @@ class EstateController extends Controller
             ->where('pk', $validated['estate_house_master_pk'])
             ->first();
         if (!$house) {
+            $missingHouse = 'Selected house not found. Please reselect the house and try again.';
+            if ($json = $this->estateFormFailure($request, $missingHouse, ['estate_house_master_pk' => $missingHouse])) {
+                return $json;
+            }
+
             return redirect()
                 ->back()
                 ->withInput()
-                ->with('error', 'Selected house not found. Please reselect the house and try again.');
+                ->with('error', $missingHouse);
         }
 
         // Always persist the actual house number from master, not the submitted hidden field.
@@ -3694,16 +3754,26 @@ class EstateController extends Controller
             $isSameAsExisting = $request->filled('id') && (int) (EstatePossessionOther::find($request->id)?->estate_house_master_pk ?? 0) === (int) $house->pk;
             if (! $isSameAsExisting) {
                 if ((int) ($house->vacant_renovation_status ?? 1) !== 1) {
+                    $renoMsg = 'Selected house is Under Renovation in Define House. Only Vacant houses can be allotted.';
+                    if ($json = $this->estateFormFailure($request, $renoMsg, ['estate_house_master_pk' => $renoMsg])) {
+                        return $json;
+                    }
+
                     return redirect()
                         ->back()
                         ->withInput()
-                        ->with('error', 'Selected house is Under Renovation in Define House. Only Vacant houses can be allotted.');
+                        ->with('error', $renoMsg);
                 }
                 if ((int) ($house->used_home_status ?? 0) !== 0) {
+                    $occupiedMsg = 'Selected house is already occupied. Please choose a vacant house from the list.';
+                    if ($json = $this->estateFormFailure($request, $occupiedMsg, ['estate_house_master_pk' => $occupiedMsg])) {
+                        return $json;
+                    }
+
                     return redirect()
                         ->back()
                         ->withInput()
-                        ->with('error', 'Selected house is already occupied. Please choose a vacant house from the list.');
+                        ->with('error', $occupiedMsg);
                 }
             }
         }
@@ -3844,6 +3914,12 @@ class EstateController extends Controller
         if ($request->get('redirect_to') === 'return-house') {
             return redirect()->route('admin.estate.return-house')->with('success', $message);
         }
+
+        // The listing's Add / Edit Possession modal stays open until it hears this.
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+
         return redirect()
             ->route('admin.estate.possession-for-others')
             ->with('success', $message);
@@ -5704,7 +5780,82 @@ class EstateController extends Controller
      */
     public function possessionForOthers(EstatePossessionOtherDataTable $dataTable)
     {
-        return $dataTable->render('admin.estate.estate_possession_for_others');
+        return $dataTable->render('admin.estate.estate_possession_for_others', [
+            // Estate Name filter options for the toolbar.
+            'estateCampuses' => DB::table('estate_campus_master')
+                ->orderBy('campus_name')
+                ->get(['pk', 'campus_name']),
+        ]);
+    }
+
+    /**
+     * Rows + heading line for the Estate Possession for Others downloads.
+     *
+     * Runs the DataTable's own listing query and filters, so the export always
+     * carries exactly the rows the on-screen list was showing.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function possessionForOthersExportPayload(Request $request): array
+    {
+        $search = trim((string) $request->input('search', ''));
+        $estateFilter = trim((string) $request->input('estate_filter', ''));
+        $allotmentDate = trim((string) $request->input('allotment_date_filter', ''));
+
+        $rows = EstatePossessionOtherDataTable::listingQuery()
+            ->tap(fn ($query) => EstatePossessionOtherDataTable::applyFilters(
+                $query,
+                $search,
+                $estateFilter,
+                $allotmentDate
+            ))
+            ->get();
+
+        $estateLabel = $estateFilter !== ''
+            ? (DB::table('estate_campus_master')->where('pk', (int) $estateFilter)->value('campus_name') ?: 'All')
+            : 'All';
+
+        $filters = ['Estate: ' . $estateLabel];
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $allotmentDate) === 1) {
+            $filters[] = 'Allotment date: ' . \Carbon\Carbon::parse($allotmentDate)->format('d-m-Y');
+        }
+        if ($search !== '') {
+            $filters[] = 'Search: "' . $search . '"';
+        }
+
+        return [
+            'rows' => $rows,
+            'cols' => EstatePossessionOtherExport::resolveCols($request->input('cols')),
+            'filterLine' => implode('  |  ', $filters),
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /**
+     * Estate Possession for Others — branded .xlsx of the currently filtered list.
+     */
+    public function exportPossessionForOthers(Request $request)
+    {
+        $payload = $this->possessionForOthersExportPayload($request);
+
+        return Excel::download(
+            new EstatePossessionOtherExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'estate-possession-for-others-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /**
+     * Estate Possession for Others — print-ready view of the currently filtered list.
+     * Same header and columns as the Excel download.
+     */
+    public function printPossessionForOthers(Request $request)
+    {
+        return view('admin.estate.estate_possession_for_others_print', $this->possessionForOthersExportPayload($request));
     }
 
     /**
@@ -6308,10 +6459,17 @@ class EstateController extends Controller
             }
         }
 
-        return view('admin.estate.update_meter_reading_of_other', compact(
+        $payload = compact(
             'campuses', 'unitTypes', 'unitTypesByCampus', 'billMonths', 'unitSubTypes',
             'prefill', 'selectedPossessions', 'possessionPks'
-        ));
+        );
+
+        // The listing's Update Meter Reading modal asks for the body only.
+        if (request()->boolean('modal')) {
+            return view('admin.estate._update_meter_reading_of_other_form', $payload + ['inModal' => true]);
+        }
+
+        return view('admin.estate.update_meter_reading_of_other', $payload);
     }
 
     /**
@@ -9069,6 +9227,14 @@ class EstateController extends Controller
         });
 
         if ($validator->fails()) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validator->errors()->first(),
+                    'errors' => $validator->errors()->toArray(),
+                ], 422);
+            }
+
             return redirect()
                 ->back()
                 ->withInput()
@@ -9159,10 +9325,15 @@ class EstateController extends Controller
                         ->where('return_home_status', '<>', 0)
                         ->exists();
                     if ($possReturned) {
+                        $returnedMsg = 'Meter reading cannot be updated for houses that have been returned.';
+                        if ($json = $this->estateFormFailure($request, $returnedMsg)) {
+                            return $json;
+                        }
+
                         return redirect()
                             ->back()
                             ->withInput()
-                            ->with('error', 'Meter reading cannot be updated for houses that have been returned.');
+                            ->with('error', $returnedMsg);
                     }
                 }
 
@@ -9499,6 +9670,11 @@ class EstateController extends Controller
 
                 break;
             }
+        }
+
+        // The listing's Update Meter Reading modal stays open until it hears this.
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Meter readings updated successfully.']);
         }
 
         return redirect()

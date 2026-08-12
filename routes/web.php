@@ -1671,6 +1671,8 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     Route::post('possession-details/store', [EstateController::class, 'storePossessionDetails'])->name('possession-details.store');
     Route::delete('possession-details/{id}', [EstateController::class, 'destroyPossessionDetails'])->name('possession-details.delete');
     Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
+    Route::get('possession-for-others/export', [EstateController::class, 'exportPossessionForOthers'])->name('possession-for-others.export');
+    Route::get('possession-for-others/print', [EstateController::class, 'printPossessionForOthers'])->name('possession-for-others.print');
     Route::delete('possession/{id}', [EstateController::class, 'destroyPossession'])->name('possession-delete');
     Route::post('possession/bulk-delete', [EstateController::class, 'destroyPossessionBulk'])->name('possession-bulk-delete');
 

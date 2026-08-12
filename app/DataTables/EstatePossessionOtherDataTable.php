@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\DataTables\Concerns\RendersEstateRowActions;
 use App\Models\EstatePossessionOther;
 use App\Support\RedisBackedCache;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
@@ -16,6 +17,8 @@ use Yajra\DataTables\Services\DataTable;
 
 class EstatePossessionOtherDataTable extends DataTable
 {
+    use RendersEstateRowActions;
+
     /**
      * Server-side JSON (ESTATE_UPDATE_METER_READING_CACHE_*). Keys: estate_epo:v1:…
      */
@@ -140,6 +143,8 @@ class EstatePossessionOtherDataTable extends DataTable
             'q' => trim((string) data_get($r->all(), 'search.value', '')),
             'order' => $r->input('order', []),
             'cols' => $colSearch,
+            'estate_filter' => trim((string) $r->input('estate_filter', '')),
+            'allotment_date_filter' => trim((string) $r->input('allotment_date_filter', '')),
             'can_del' => $canDelete ? 1 : 0,
             'uid' => Auth::id(),
         ];
@@ -147,63 +152,38 @@ class EstatePossessionOtherDataTable extends DataTable
 
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
-        return (new EloquentDataTable($query))
-            ->addIndexColumn()
-            ->addColumn('checkbox', function ($row) {
-                return '<input type="checkbox" class="form-check-input row-select-possession" data-id="' . (int) $row->pk . '" aria-label="Select row">';
-            })
-            ->editColumn('request_id', fn($row) => $row->estateOtherRequest->request_no_oth ?? 'N/A')
-            ->editColumn('name', fn($row) => $row->estateOtherRequest->emp_name ?? 'N/A')
-            ->editColumn('section_name', function ($row) {
-                $section = $row->getAttribute('eor_section') ?? $row->estateOtherRequest?->section;
-                $designation = $row->getAttribute('eor_designation') ?? $row->estateOtherRequest?->designation;
-                $value = ($section !== null && $section !== '') ? $section : $designation;
-                return $value !== null && $value !== '' ? $value : '—';
-            })
-            ->editColumn('estate_name', fn($row) => $row->campus_name ?? 'N/A')
-            ->editColumn('unit_type', fn($row) => $row->unit_type_name ?? 'N/A')
-            ->editColumn('building_name', fn($row) => $row->block_name ?? 'N/A')
-            ->editColumn('unit_sub_type', fn($row) => $row->unit_sub_type_name ?? 'N/A')
-            ->editColumn('house_no', fn($row) => $row->house_no ?? $row->house_no_display ?? 'N/A')
+        $canMutate = isEstateAuthority();
+
+        $dataTable = (new EloquentDataTable($query))
+            ->addIndexColumn();
+
+        if ($canMutate) {
+            $dataTable->addColumn('checkbox', function ($row) {
+                return '<div class="pd-check"><input type="checkbox" class="form-check-input row-select-possession"'
+                    . ' data-id="' . (int) $row->pk . '" aria-label="Select possession record ' . e($row->request_no_oth ?? '') . '"></div>';
+            });
+        }
+
+        $dataTable = $dataTable
+            ->editColumn('request_id', fn($row) => self::valueOrDash($row->estateOtherRequest->request_no_oth ?? $row->request_no_oth ?? null))
+            ->editColumn('name', fn($row) => self::nameWithId($row->estateOtherRequest->emp_name ?? $row->emp_name ?? '', null))
+            ->editColumn('section_name', fn($row) => self::valueOrDash(static::sectionLabel($row)))
+            ->editColumn('estate_name', fn($row) => self::valueOrDash($row->campus_name ?? null))
+            ->editColumn('unit_type', fn($row) => self::valueOrDash($row->unit_type_name ?? null))
+            ->editColumn('building_name', fn($row) => self::valueOrDash($row->block_name ?? null))
+            ->editColumn('unit_sub_type', fn($row) => self::valueOrDash($row->unit_sub_type_name ?? null))
+            ->editColumn('house_no', fn($row) => self::valueOrDash($row->house_no ?? $row->house_no_display ?? null))
             ->editColumn('allotment_date', fn($row) => $row->allotment_date ? $row->allotment_date->format('d-m-Y') : '—')
             ->editColumn('possession_date_oth', fn($row) => $row->possession_date_oth ? $row->possession_date_oth->format('d-m-Y') : '—')
             // Show "primary/secondary" only after secondary reading is actually saved (not empty / not 0).
-            ->editColumn('meter_reading_oth', function ($row) {
-                $primary = $row->meter_reading_oth;
-                $secondary = $row->meter_reading_oth1;
-
-                $seg = static function ($v) {
-                    return ($v !== null && trim((string) $v) !== '') ? (string) $v : '—';
-                };
-
-                $secStr = $secondary !== null ? trim((string) $secondary) : '';
-                $hasSecondaryEntered = $secStr !== ''
-                    && ! (is_numeric($secStr) && (int) $secStr === 0);
-
-                if ($hasSecondaryEntered) {
-                    return $seg($primary) . '/' . $seg($secondary);
-                }
-
-                return ($primary !== null && $primary !== '') ? (string) $primary : '---';
-            })
+            ->editColumn('meter_reading_oth', fn($row) => static::meterReadingLabel($row, '—'))
             ->filter(function ($query) {
-                $searchValue = request()->input('search.value');
-                if (empty($searchValue)) {
-                    return;
-                }
-                $searchLike = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $searchValue) . '%';
-                $query->where(function ($q) use ($searchLike) {
-                    $q->where('eor.request_no_oth', 'like', $searchLike)
-                        ->orWhere('eor.emp_name', 'like', $searchLike)
-                        ->orWhere('eor.section', 'like', $searchLike)
-                        ->orWhere('eor.designation', 'like', $searchLike)
-                        ->orWhere('ec.campus_name', 'like', $searchLike)
-                        ->orWhere('eb.block_name', 'like', $searchLike)
-                        ->orWhere('eut.unit_type', 'like', $searchLike)
-                        ->orWhere('eust.unit_sub_type', 'like', $searchLike)
-                        ->orWhere('estate_possession_other.house_no', 'like', $searchLike)
-                        ->orWhere('ehm.house_no', 'like', $searchLike);
-                });
+                static::applyFilters(
+                    $query,
+                    (string) request()->input('search.value', ''),
+                    (string) request()->input('estate_filter', ''),
+                    (string) request()->input('allotment_date_filter', '')
+                );
             })
             ->orderColumn('DT_RowIndex', fn ($query, $order) => $query->orderBy('estate_possession_other.pk', $order))
             ->orderColumn('request_id', fn ($query, $order) => $query->orderBy('eor.request_no_oth', $order))
@@ -216,35 +196,94 @@ class EstatePossessionOtherDataTable extends DataTable
             ->orderColumn('house_no', fn ($query, $order) => $query->orderBy('estate_possession_other.house_no', $order))
             ->orderColumn('allotment_date', fn ($query, $order) => $query->orderBy('estate_possession_other.allotment_date', $order))
             ->orderColumn('possession_date_oth', fn ($query, $order) => $query->orderBy('estate_possession_other.possession_date_oth', $order))
-            ->addColumn('actions', function ($row) {
+            ->addColumn('actions', function ($row) use ($canMutate) {
                 $editUrl = route('admin.estate.possession-view', ['id' => $row->pk]);
-                $canDelete = isEstateAuthority();
-                $deleteUrl = route('admin.estate.possession-delete', ['id' => $row->pk]);
 
-                $html = '<div class="d-inline-flex align-items-center gap-2" role="group">';
-                $html .= '<a href="' . $editUrl . '" class="text-primary" title="Edit">
-                    <i class="material-symbols-rounded">edit</i>
-                </a>';
+                // href stays the standalone page so ctrl-click / no-JS still works;
+                // the listing's JS intercepts the click and opens the modal instead.
+                $edit = self::actionLink('edit', 'Edit', 'edit', [
+                    'href' => $editUrl,
+                    'title' => 'Edit possession',
+                    'class' => 'btn-edit-possession-other',
+                    'attrs' => 'data-id="' . (int) $row->pk . '"',
+                ]);
 
-                if ($canDelete) {
-                    $html .= '<form method="POST" action="' . $deleteUrl . '" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this possession?\')">
-                        <input type="hidden" name="_token" value="' . csrf_token() . '">
-                        <input type="hidden" name="_method" value="DELETE">
-                        <button type="submit" class="btn btn-link p-0 text-danger" title="Delete" aria-label="Delete">
-                            <i class="material-symbols-rounded">delete</i>
-                        </button>
-                    </form>';
-                }
+                // Delete goes through the page's confirm dialog (and the same bulk
+                // endpoint), so no inline form / native confirm() here.
+                $delete = $canMutate
+                    ? self::actionLink('delete', 'Delete', 'delete', [
+                        'class' => 'btn-delete-possession-other',
+                        'title' => 'Delete possession',
+                        'attrs' => 'data-id="' . (int) $row->pk . '"',
+                    ])
+                    : '';
 
-                $html .= '</div>';
-                return $html;
+                return '<div class="rfe-actions" role="group" aria-label="Row actions">' . $edit . $delete . '</div>';
             })
-            ->rawColumns(['checkbox', 'actions'])
+            ->rawColumns(array_values(array_filter([
+                'name',
+                $canMutate ? 'checkbox' : null,
+                'actions',
+            ])))
             ->setRowId('pk');
+
+        return $dataTable;
+    }
+
+    /** Section, falling back to designation — the two carry the same thing on legacy rows. */
+    public static function sectionLabel($row): ?string
+    {
+        $section = $row->getAttribute('eor_section') ?? $row->estateOtherRequest?->section;
+        if ($section !== null && trim((string) $section) !== '') {
+            return (string) $section;
+        }
+
+        $designation = $row->getAttribute('eor_designation') ?? $row->estateOtherRequest?->designation;
+
+        return ($designation !== null && trim((string) $designation) !== '') ? (string) $designation : null;
+    }
+
+    /** Meter reading as shown on screen (I, or "I/II" once a second is entered). */
+    public static function meterReadingLabel($row, string $dash = '-'): string
+    {
+        $primary = $row->meter_reading_oth ?? null;
+        $secondary = $row->meter_reading_oth1 ?? null;
+
+        $seg = static fn ($v) => ($v !== null && trim((string) $v) !== '') ? (string) $v : $dash;
+
+        $secStr = $secondary !== null ? trim((string) $secondary) : '';
+        $hasSecondary = $secStr !== '' && ! (is_numeric($secStr) && (int) $secStr === 0);
+
+        if ($hasSecondary) {
+            return $seg($primary) . '/' . $seg($secondary);
+        }
+
+        return ($primary !== null && trim((string) $primary) !== '') ? (string) $primary : $dash;
+    }
+
+    /** Cell text, or the shared muted dash when the column is empty. */
+    private static function valueOrDash($value): string
+    {
+        $value = trim((string) ($value ?? ''));
+
+        return $value === '' || $value === '-' ? '—' : $value;
     }
 
     public function query(EstatePossessionOther $model): QueryBuilder
     {
+        return static::listingQuery($model);
+    }
+
+    /**
+     * The listing query — joins and the "still in possession" rule.
+     *
+     * The Download / Print exports call this too, so what a user downloads is
+     * always exactly the rows the table showed.
+     */
+    public static function listingQuery(?EstatePossessionOther $model = null): QueryBuilder
+    {
+        $model = $model ?: new EstatePossessionOther();
+
         $latestOtherReadings = DB::table('estate_month_reading_details_other as emro')
             ->join(DB::raw('(SELECT estate_possession_other_pk, MAX(pk) as max_pk FROM estate_month_reading_details_other GROUP BY estate_possession_other_pk) as x'), 'emro.pk', '=', 'x.max_pk')
             ->select('emro.estate_possession_other_pk', 'emro.curr_month_elec_red');
@@ -279,64 +318,102 @@ class EstatePossessionOtherDataTable extends DataTable
             ->orderByDesc('estate_possession_other.pk');
     }
 
+    /**
+     * The listing's search + Estate Name / Allotment date filters, shared by the
+     * DataTable and the exports so a download matches what the table showed.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $query
+     */
+    public static function applyFilters($query, string $searchValue, string $estateFilter = '', string $allotmentDate = ''): void
+    {
+        $estateFilter = trim($estateFilter);
+        if ($estateFilter !== '') {
+            $query->where('estate_possession_other.estate_campus_master_pk', (int) $estateFilter);
+        }
+
+        $allotmentDate = trim($allotmentDate);
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $allotmentDate) === 1) {
+            $query->whereDate('estate_possession_other.allotment_date', $allotmentDate);
+        }
+
+        $searchValue = trim($searchValue);
+        if ($searchValue === '') {
+            return;
+        }
+
+        $searchLike = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $searchValue) . '%';
+        $query->where(function ($q) use ($searchLike) {
+            $q->where('eor.request_no_oth', 'like', $searchLike)
+                ->orWhere('eor.emp_name', 'like', $searchLike)
+                ->orWhere('eor.section', 'like', $searchLike)
+                ->orWhere('eor.designation', 'like', $searchLike)
+                ->orWhere('ec.campus_name', 'like', $searchLike)
+                ->orWhere('eb.block_name', 'like', $searchLike)
+                ->orWhere('eut.unit_type', 'like', $searchLike)
+                ->orWhere('eust.unit_sub_type', 'like', $searchLike)
+                ->orWhere('estate_possession_other.house_no', 'like', $searchLike)
+                ->orWhere('ehm.house_no', 'like', $searchLike);
+        });
+    }
+
     public function html(): HtmlBuilder
     {
         return $this->builder()
             ->setTableId('estatePossessionTable')
-            ->addTableClass('table table-bordered table-hover text-nowrap w-100')
+            // programme-dt chrome (docs/new-design-index-page.md) — no `dom` and no
+            // `language` here on purpose: datatable-global-ui.js owns both, and a
+            // page-level override would win and break the "Showing N of M items" footer.
+            ->addTableClass('table table-hover align-middle mb-0 w-100 programme-dt-table')
             ->columns($this->getColumns())
-            ->minifiedAjax()
+            ->minifiedAjax('', null, [
+                'estate_filter' => '$("#epoEstateFilter").val() || ""',
+                'allotment_date_filter' => '$("#epoAllotmentDateFilter").val() || ""',
+            ])
             ->parameters([
                 'responsive' => false,
                 'autoWidth' => false,
                 'ordering' => true,
+                // Keep DataTables' native (server-side) ordering so a header click
+                // re-sorts the WHOLE list instead of just the loaded page.
+                'sargamServerOrder' => true,
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
-                // Default sort: newest possession first (by S.NO. which maps to pk desc)
-                'order' => [[1, 'desc']],
-                'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-                'language' => [
-                    'search' => 'Search:',
-                    'lengthMenu' => 'Show _MENU_ entries',
-                    'info' => 'Showing _START_ to _END_ of _TOTAL_ entries',
-                    'infoEmpty' => 'Showing 0 to 0 of 0 entries',
-                    'infoFiltered' => '(filtered from _MAX_ total entries)',
-                    'paginate' => [
-                        'first' => 'First',
-                        'last' => 'Last',
-                        'next' => 'Next',
-                        'previous' => 'Previous',
-                    ],
-                ],
-                'dom' => '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
-                'scrollX' => true,
+                // Newest possession first — S. No. maps to estate_possession_other.pk.
+                'order' => [[isEstateAuthority() ? 1 : 0, 'desc']],
+                'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
             ]);
     }
 
     public function getColumns(): array
     {
-        return [
-            Column::computed('checkbox')
-                ->title('<input type="checkbox" class="form-check-input" id="selectAllPossessionOthers" aria-label="Select all">')
-                ->addClass('text-center')
+        $canMutate = isEstateAuthority();
+
+        $columns = [];
+        if ($canMutate) {
+            $columns[] = Column::computed('checkbox')
+                ->title('<div class="pd-check"><input type="checkbox" class="form-check-input" id="selectAllPossessionOthers" aria-label="Select all rows on this page"></div>')
+                ->addClass('pd-col-select')
                 ->orderable(false)
                 ->searchable(false)
-                ->width('40px'),
-            Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(true)->searchable(false)->width('50px'),
-            Column::make('request_id')->title('REQUEST ID')->orderable(true)->searchable(true),
-            Column::make('name')->title('NAME')->orderable(true)->searchable(true),
-            Column::make('section_name')->title('SECTION NAME')->orderable(true)->searchable(true),
-            Column::make('estate_name')->title('ESTATE NAME')->orderable(true)->searchable(true),
-            Column::make('unit_type')->title('UNIT TYPE')->orderable(true)->searchable(true),
-            Column::make('building_name')->title('BUILDING NAME')->orderable(true)->searchable(true),
-            Column::make('unit_sub_type')->title('UNIT SUB TYPE')->orderable(true)->searchable(true),
-            Column::make('house_no')->title('HOUSE NO.')->orderable(true)->searchable(true),
-            Column::make('allotment_date')->title('ALLOTMENT DATE')->orderable(true)->searchable(false),
-            Column::make('possession_date_oth')->title('POSSESSION DATE')->orderable(true)->searchable(false),
-            Column::make('meter_reading_oth')->title('LAST MONTH ELECTRIC METER READING')->orderable(false)->searchable(false),
-            Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false)->width('120px'),
-        ];
+                ->width('48px');
+        }
+
+        return array_merge($columns, [
+            Column::computed('DT_RowIndex')->title('S. No.')->addClass('epo-col-sno')->orderable(true)->searchable(false)->width('72px'),
+            Column::make('request_id')->title('Request ID')->addClass('epo-col-req')->orderable(true)->searchable(true),
+            Column::make('name')->title('Employee Name')->addClass('pd-col-name')->orderable(true)->searchable(true),
+            Column::make('section_name')->title('Section Name')->orderable(true)->searchable(true),
+            Column::make('estate_name')->title('Estate Name')->orderable(true)->searchable(true),
+            Column::make('building_name')->title('Building Name')->orderable(true)->searchable(true),
+            Column::make('unit_type')->title('Unit Type')->orderable(true)->searchable(true),
+            Column::make('unit_sub_type')->title('Unit Sub Type')->orderable(true)->searchable(true),
+            Column::make('house_no')->title('House Number')->orderable(true)->searchable(true),
+            Column::make('allotment_date')->title('Allotment Date')->orderable(true)->searchable(false),
+            Column::make('possession_date_oth')->title('Possession Date')->orderable(true)->searchable(false),
+            Column::make('meter_reading_oth')->title('Last Electric Bill Reading')->orderable(false)->searchable(false)->width('140px'),
+            Column::computed('actions')->title('Action')->addClass('pd-col-action')->orderable(false)->searchable(false)->width('120px'),
+        ]);
     }
 
     protected function filename(): string
