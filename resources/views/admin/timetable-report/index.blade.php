@@ -625,10 +625,17 @@ $(document).ready(function() {
             $('#btnColumns').prop('disabled', false);
             $('#btnPrint').prop('disabled', false);
 
-            // Move toolbar buttons into DataTables search row
-            var $wrapper = $('#timetableReportTable').closest('.dataTables_wrapper');
-            var $filter  = $wrapper.find('.dataTables_filter');
-            var $toolbar = $('#timetableReportToolbar').children().detach();
+            // Move toolbar buttons into DataTables search row.
+            // NOTE: public/js/datatable-global-ui.js moves .dataTables_filter OUT of
+            // .dataTables_wrapper into its own toolbar (stamping it data-sargam-dt-filter="<tableId>"),
+            // so look for the stamp first and the wrapper second. Resolve the target BEFORE
+            // detaching: #timetableReportToolbar is d-none, so a detach with nowhere to go loses the
+            // Columns and Print buttons for good.
+            var $filter = $('[data-sargam-dt-filter="timetableReportTable"]').first();
+            if (!$filter.length) {
+                $filter = $('#timetableReportTable').closest('.dataTables_wrapper').find('.dataTables_filter').first();
+            }
+            var $toolbar = $('#timetableReportToolbar').children();
             if ($filter.length && $toolbar.length) {
                 $filter.addClass('d-flex align-items-center justify-content-end flex-wrap gap-2');
                 $filter.append($toolbar);
