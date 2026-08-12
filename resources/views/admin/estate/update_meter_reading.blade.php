@@ -35,11 +35,60 @@
         </div>
     @endif
 
-    <div class="card overflow-hidden rounded-1 ds-form-fields">
-        <div class="card-body p-3 p-md-4">
-            <div class="mb-4">
-                <h1 class="h5 fw-bold mb-1">Update Meter Reading</h1>
-                <p class="text-body-secondary small mb-0">Pick the month and location, then enter this month's readings.</p>
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <button type="button" class="btn btn-primary" id="loadMeterReadingsBtn">
+                            <i class="bi bi-search me-2"></i>Load Data
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <form id="meterReadingSaveForm" method="POST" action="{{ route('admin.estate.update-meter-reading.store') }}" style="display:none;">
+                @csrf
+                <input type="hidden" name="reading_bill_month" id="reading_bill_month" value="">
+                <input type="hidden" name="reading_current_date" id="reading_current_date" value="">
+                <input type="hidden" name="reading_campus_id" id="reading_campus_id" value="">
+                <input type="hidden" name="reading_block_id" id="reading_block_id" value="">
+                <input type="hidden" name="reading_unit_type_id" id="reading_unit_type_id" value="">
+                <input type="hidden" name="reading_unit_sub_type_id" id="reading_unit_sub_type_id" value="">
+                {{-- Set only when opened via Edit from List Meter Reading: that row skips the min-reading check. Units are unaffected. --}}
+                <input type="hidden" name="edit_reading_pk" id="edit_reading_pk" value="{{ $prefill['reading_pk'] ?? '' }}">
+
+                <div class="table-responsive mt-4">
+                    <table class="table table-bordered table-hover align-middle" id="updateMeterReadingTable">
+                        <thead class="table-primary">
+                            <tr>
+                                <th><input type="checkbox" class="form-check-input" id="select_all"></th>
+                                <th>House No.</th>
+                                <th>Name</th>
+                                <th>Last Month Electric Reading Date</th>
+                                <th>Old Meter No.</th>
+                                <th>Electric Meter Reading</th>
+                                <th>New Meter No.</th>
+                                <th>New Meter Reading <span class="text-danger">*</span></th>
+                                <th>Unit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-danger mb-4">
+                    <small>*Required Fields: All marked fields are mandatory</small>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-2"></i>Save
+                    </button>
+                    <a href="{{ route('admin.estate.update-meter-no') }}" class="btn btn-outline-primary">Cancel</a>
+                </div>
+            </form>
+
+            <div id="noDataMessage" class="alert alert-warning mt-4" style="display:none;">
+                No meter reading records found for the selected filters.
             </div>
 
             {{-- Same partial the Update Meter Reading modal renders. --}}
@@ -52,5 +101,553 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
 <link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
-<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
+<style>
+.select2-container--open { z-index: 1060; } /* sirf khula dropdown modal ke upar; closed widget normal flow me (modal ke peeche) */
+.select2-container--default .select2-selection--single { min-height: calc(1.5em + 0.75rem + 2px); display: flex; align-items: center; }
+.select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.5; padding-left: 0.25rem; }
+#updateMeterReadingTable td { vertical-align: middle; font-size: 0.85rem; }
+#updateMeterReadingTable .other-dual-stacked .other-dual-col { vertical-align: top; }
+#updateMeterReadingTable .other-dual-seg { padding-top: 0.35rem; padding-bottom: 0.35rem; }
+#updateMeterReadingTable .other-dual-seg[data-slot="1"] { border-bottom: 1px solid var(--bs-border-color, #dee2e6); }
+#updateMeterReadingTable .other-dual-stacked .new-meter-reading,
+#updateMeterReadingTable .other-dual-stacked .new-meter-no { max-width: 100%; }
+.perm-pair-cb { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+</style>
+@endpush
+
+@push('scripts')
+{{-- Select2 JS globally footer (admin.layouts.footer) se load hoti hai; yahan include ki zaroorat nahi. --}}
+<script>
+@if ($meterReadingPageAlertMessage !== null)
+(function () {
+    try { alert(@json($meterReadingPageAlertMessage)); } catch (e) {}
+})();
+@endif
+$(document).ready(function() {
+    const listUrl = "{{ route('admin.estate.update-meter-reading.list') }}";
+    const blocksUrl = "{{ route('admin.estate.update-meter-reading.blocks') }}";
+    const unitSubTypesUrl = "{{ route('admin.estate.update-meter-reading.unit-sub-types') }}";
+    const prefill = @json($prefill ?? null);
+    // Edit from List Meter Reading opens this same page with reading_pk — us flow me baseline validation nahi lagti.
+    const isListEditMode = !!(prefill && prefill.reading_pk);
+    // New Meter No. sirf usi Edit flow me editable hai; is page ko seedha kholne par field freeze rehti hai.
+    const newMeterNoLockAttr = isListEditMode ? '' : ' readonly';
+    const newMeterNoLockClass = isListEditMode ? '' : ' bg-light';
+    const newMeterNoPlaceholder = isListEditMode ? 'Enter new meter no.' : '';
+
+    // For this grid we avoid DataTables to keep typing smooth and prevent focus jumps.
+    let dataTable = null;
+    let lastInvalidReadingAlertAt = 0;
+
+    function initTs(el, placeholder) {
+        if (!el || typeof $.fn.select2 === 'undefined') return null;
+        if ($(el).data('select2')) { try { $(el).select2('destroy'); } catch (e) {} }
+        $(el).select2({ placeholder: placeholder || 'Select', allowClear: false, width: '100%' });
+        return $(el);
+    }
+    function getSelVal(el) { var v = el ? $(el).val() : ''; return (v === null || v === undefined) ? '' : v; }
+
+    var tsEstate = null, tsUnitName = null, tsBuilding = null, tsUnitSub = null;
+    if (document.getElementById('estate_name')) tsEstate = initTs(document.getElementById('estate_name'), 'Select');
+    if (document.getElementById('unit_name')) tsUnitName = initTs(document.getElementById('unit_name'), 'Select');
+    if (document.getElementById('building')) tsBuilding = initTs(document.getElementById('building'), 'Select');
+    if (document.getElementById('unit_sub_type')) tsUnitSub = initTs(document.getElementById('unit_sub_type'), 'Select');
+
+    function loadBuildingsThenPrefill(campusId, blockId, unitSubTypeId, thenLoadData) {
+        var elB = document.getElementById('building'), elSub = document.getElementById('unit_sub_type');
+        if (tsBuilding) { try { $('#building').select2('destroy'); } catch (e) {} tsBuilding = null; }
+        if (tsUnitSub) { try { $('#unit_sub_type').select2('destroy'); } catch (e) {} tsUnitSub = null; }
+        $('#building').html('<option value="">Select</option>');
+        $('#unit_sub_type').html('<option value="">All</option>');
+        if (elB) tsBuilding = initTs(elB, 'Select');
+        if (elSub) tsUnitSub = initTs(elSub, 'All');
+        if (!campusId) { if (thenLoadData) $('#loadMeterReadingsBtn').click(); return; }
+        $.get(blocksUrl, { campus_id: campusId }, function(res) {
+            if (res.status && res.data) {
+                if (tsBuilding) { try { $('#building').select2('destroy'); } catch (e) {} tsBuilding = null; }
+                $('#building').html('<option value="">Select</option>');
+                $.each(res.data, function(i, b) {
+                    var sel = (blockId && String(b.pk) === String(blockId)) ? ' selected' : '';
+                    $('#building').append('<option value="'+b.pk+'"'+sel+'>'+b.block_name+'</option>');
+                });
+                if (elB) tsBuilding = initTs(elB, 'Select');
+                if (blockId && tsBuilding) $('#building').val(String(blockId)).trigger('change.select2');
+            }
+            if (blockId && unitSubTypeId != null) {
+                loadUnitSubTypesThenPrefill(campusId, blockId, unitSubTypeId, thenLoadData);
+            } else if (thenLoadData) {
+                $('#loadMeterReadingsBtn').click();
+            }
+        });
+    }
+
+    function loadUnitSubTypesThenPrefill(campusId, blockId, unitSubTypeId, thenLoadData) {
+        var elSub = document.getElementById('unit_sub_type');
+        if (tsUnitSub) { try { $('#unit_sub_type').select2('destroy'); } catch (e) {} tsUnitSub = null; }
+        $('#unit_sub_type').html('<option value="">All</option>');
+        if (elSub) tsUnitSub = initTs(elSub, 'All');
+        if (!campusId || !blockId) { if (thenLoadData) $('#loadMeterReadingsBtn').click(); return; }
+        $.get(unitSubTypesUrl, { campus_id: campusId, block_id: blockId }, function(res) {
+            if (tsUnitSub) { try { $('#unit_sub_type').select2('destroy'); } catch (e) {} tsUnitSub = null; }
+            $('#unit_sub_type').html('<option value="">All</option>');
+            if (res.status && res.data) {
+                $.each(res.data, function(i, u) {
+                    var sel = (unitSubTypeId && String(u.pk) === String(unitSubTypeId)) ? ' selected' : '';
+                    $('#unit_sub_type').append('<option value="'+u.pk+'"'+sel+'>'+u.unit_sub_type+'</option>');
+                });
+            }
+            if (elSub) tsUnitSub = initTs(elSub, 'All');
+            if (unitSubTypeId != null && unitSubTypeId !== '' && tsUnitSub) $('#unit_sub_type').val(String(unitSubTypeId)).trigger('change.select2');
+            if (thenLoadData) $('#loadMeterReadingsBtn').click();
+        });
+    }
+
+    $(document).on('change', '#estate_name', function() {
+        const campusId = getSelVal(this);
+        var elB = document.getElementById('building'), elSub = document.getElementById('unit_sub_type');
+        if (tsBuilding) { try { $('#building').select2('destroy'); } catch (e) {} tsBuilding = null; }
+        if (tsUnitSub) { try { $('#unit_sub_type').select2('destroy'); } catch (e) {} tsUnitSub = null; }
+        $('#building').html('<option value="">Select</option>');
+        $('#unit_sub_type').html('<option value="">All</option>');
+        if (elB) tsBuilding = initTs(elB, 'Select');
+        if (elSub) tsUnitSub = initTs(elSub, 'All');
+        if (!campusId) return;
+        $.get(blocksUrl, { campus_id: campusId }, function(res) {
+            if (res.status && res.data) {
+                if (tsBuilding) { try { $('#building').select2('destroy'); } catch (e) {} tsBuilding = null; }
+                $('#building').html('<option value="">Select</option>');
+                $.each(res.data, function(i, b) {
+                    $('#building').append('<option value="'+b.pk+'">'+b.block_name+'</option>');
+                });
+                if (elB) tsBuilding = initTs(elB, 'Select');
+            }
+        });
+    });
+
+    $(document).on('change', '#building', function() {
+        const campusId = getSelVal(document.getElementById('estate_name'));
+        const blockId = getSelVal(this);
+        var elSub = document.getElementById('unit_sub_type');
+        if (tsUnitSub) { try { $('#unit_sub_type').select2('destroy'); } catch (e) {} tsUnitSub = null; }
+        $('#unit_sub_type').html('<option value="">All</option>');
+        if (!campusId || !blockId) {
+            if (elSub) tsUnitSub = initTs(elSub, 'All');
+            return;
+        }
+        $.get(unitSubTypesUrl, { campus_id: campusId, block_id: blockId }, function(res) {
+            if (tsUnitSub) { try { $('#unit_sub_type').select2('destroy'); } catch (e) {} tsUnitSub = null; }
+            $('#unit_sub_type').html('<option value="">All</option>');
+            if (res.status && res.data) {
+                $.each(res.data, function(i, u) {
+                    $('#unit_sub_type').append('<option value="'+u.pk+'">'+u.unit_sub_type+'</option>');
+                });
+            }
+            if (elSub) tsUnitSub = initTs(elSub, 'All');
+        });
+    });
+
+    @if (! $errors->any())
+    if (prefill && prefill.bill_month) {
+        $('#bill_month').val(prefill.bill_month);
+        if (prefill.campus_id) {
+            if (tsEstate) $('#estate_name').val(String(prefill.campus_id)).trigger('change.select2');
+            else $('#estate_name').val(prefill.campus_id);
+            loadBuildingsThenPrefill(prefill.campus_id, prefill.block_id, prefill.unit_sub_type_id, true);
+        } else {
+            $('#loadMeterReadingsBtn').click();
+        }
+    }
+    @endif
+
+    $('#loadMeterReadingsBtn').on('click', function() {
+        const billMonthVal = $('#bill_month').val();
+        if (!billMonthVal) {
+            alert('Please select Meter Change Month.');
+            $('#bill_month').trigger('focus');
+            return;
+        }
+        var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        var parts = billMonthVal.split('-');
+        var billYear = '';
+        var billMonth = '';
+        if (parts.length === 2) {
+            billYear = parts[0];
+            var mIdx = parseInt(parts[1], 10);
+            billMonth = (mIdx >= 1 && mIdx <= 12) ? monthNames[mIdx - 1] : '';
+        }
+        const today = new Date();
+        const maxFromInput = $('#bill_month').attr('max');
+        const maxMonth = maxFromInput || (today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0'));
+        if (billMonthVal > maxMonth) {
+            alert('Meter Change Month cannot be a future month. Please select current month or earlier.');
+            $('#bill_month').trigger('focus');
+            return;
+        }
+        if (!billMonth || !billYear) {
+            alert('Invalid Meter Change Month.');
+            $('#bill_month').trigger('focus');
+            return;
+        }
+        const params = {
+            bill_month: billMonth,
+            bill_year: billYear,
+            campus_id: getSelVal(document.getElementById('estate_name')) || '',
+            block_id: getSelVal(document.getElementById('building')) || '',
+            unit_type_id: getSelVal(document.getElementById('unit_name')) || '',
+            unit_sub_type_id: getSelVal(document.getElementById('unit_sub_type')) || ''
+        };
+        if (prefill && prefill.possession_pk) {
+            params.possession_pk = String(prefill.possession_pk);
+        }
+        if (prefill && prefill.reading_pk) {
+            params.reading_pk = String(prefill.reading_pk);
+        }
+        $.get(listUrl, params, function(res) {
+            if (!res.status || !res.data || res.data.length === 0) {
+                $('#meterReadingSaveForm').hide();
+                $('#noDataMessage').show();
+                if (dataTable) {
+                    dataTable.destroy();
+                    dataTable = null;
+                }
+                $('#updateMeterReadingTable tbody').html('');
+                return;
+            }
+            $('#noDataMessage').hide();
+            const tbody = $('#updateMeterReadingTable tbody');
+            tbody.html('');
+            $('#updateMeterReadingTable #select_all').prop('checked', false);
+            window.meterReadingRowData = window.meterReadingRowData || {};
+
+            function escAttr(s) {
+                return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+            }
+
+            let readingIdx = 0;
+            res.data.forEach(function(row) {
+                if (row.dual_meter && row.m1 && row.m2) {
+                    const i0 = readingIdx++;
+                    const i1 = readingIdx++;
+                    const m1 = row.m1;
+                    const m2 = row.m2;
+                    const base1 = (m1.baseline_min_reading !== undefined && m1.baseline_min_reading !== null && m1.baseline_min_reading !== '') ? String(m1.baseline_min_reading) : '';
+                    const base2 = (m2.baseline_min_reading !== undefined && m2.baseline_min_reading !== null && m2.baseline_min_reading !== '') ? String(m2.baseline_min_reading) : '';
+                    const nm1 = String(m1.new_meter_no || '').trim() || String(m1.old_meter_no || '');
+                    const nm2 = String(m2.new_meter_no || '').trim() || String(m2.old_meter_no || '');
+                    const elec1 = (m1.electric_meter_reading != null && m1.electric_meter_reading !== '') ? m1.electric_meter_reading : 'N/A';
+                    const elec2 = (m2.electric_meter_reading != null && m2.electric_meter_reading !== '') ? m2.electric_meter_reading : 'N/A';
+                    window.meterReadingRowData[row.pk + '_1'] = {
+                        pk: row.pk, meter_slot: 1, new_meter_no: nm1, curr_month_elec_red: '', original_curr_month_elec_red: ''
+                    };
+                    window.meterReadingRowData[row.pk + '_2'] = {
+                        pk: row.pk, meter_slot: 2, new_meter_no: nm2, curr_month_elec_red: '', original_curr_month_elec_red: ''
+                    };
+                    const trDual = '<tr class="other-dual-stacked" data-dual="1" data-pk="'+ row.pk +'">' +
+                        '<td class="text-center align-middle position-relative">' +
+                            '<input type="checkbox" class="form-check-input row-check row-check-master" name="readings['+i0+'][selected]" value="1" data-pair-sel-id="permPairSel_'+i1+'">' +
+                            '<input type="checkbox" class="form-check-input row-check perm-pair-cb" name="readings['+i1+'][selected]" value="1" id="permPairSel_'+i1+'" tabindex="-1" aria-hidden="true">' +
+                        '</td>' +
+                        '<td>'+ escAttr(row.house_no || 'N/A') +'</td>' +
+                        '<td>'+ escAttr(row.name || 'N/A') +'</td>' +
+                        '<td class="text-nowrap">'+ escAttr(row.last_reading_date || 'N/A') +'</td>' +
+                        '<td class="other-dual-col">' +
+                            '<div class="other-dual-seg" data-slot="1">'+ escAttr(m1.old_meter_no || 'N/A') +'</div>' +
+                            '<div class="other-dual-seg" data-slot="2">'+ escAttr(m2.old_meter_no || 'N/A') +'</div>' +
+                        '</td>' +
+                        '<td class="other-dual-col">' +
+                            '<div class="other-dual-seg" data-slot="1">'+ escAttr(elec1) +'</div>' +
+                            '<div class="other-dual-seg" data-slot="2">'+ escAttr(elec2) +'</div>' +
+                        '</td>' +
+                        '<td class="other-dual-col other-dual-newmeter-col">' +
+                            '<div class="other-dual-seg" data-slot="1">' +
+                            '<input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+i0+'][new_meter_no]" value="'+ escAttr(nm1) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m1.old_meter_no || '') +'"'+ newMeterNoLockAttr +'>' +
+                            '</div>' +
+                            '<div class="other-dual-seg" data-slot="2">' +
+                            '<input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+i1+'][new_meter_no]" value="'+ escAttr(nm2) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m2.old_meter_no || '') +'"'+ newMeterNoLockAttr +'>' +
+                            '</div>' +
+                        '</td>' +
+                        '<td class="other-dual-col other-dual-reading-col">' +
+                            '<div class="other-dual-seg" data-slot="1">' +
+                            '<input type="number" class="form-control form-control-sm new-meter-reading" name="readings['+i0+'][curr_month_elec_red]" value="" min="0" step="1" placeholder="Enter" inputmode="numeric" data-last-reading="'+ escAttr(base1) +'" data-existing-curr="">' +
+                            '<input type="hidden" name="readings['+i0+'][pk]" value="'+ row.pk +'">' +
+                            '<input type="hidden" name="readings['+i0+'][meter_slot]" value="1">' +
+                            '</div>' +
+                            '<div class="other-dual-seg" data-slot="2">' +
+                            '<input type="number" class="form-control form-control-sm new-meter-reading" name="readings['+i1+'][curr_month_elec_red]" value="" min="0" step="1" placeholder="Enter" inputmode="numeric" data-last-reading="'+ escAttr(base2) +'" data-existing-curr="">' +
+                            '<input type="hidden" name="readings['+i1+'][pk]" value="'+ row.pk +'">' +
+                            '<input type="hidden" name="readings['+i1+'][meter_slot]" value="2">' +
+                            '</div>' +
+                        '</td>' +
+                        '<td class="other-dual-col other-dual-units small">' +
+                            '<div class="other-dual-seg" data-slot="1"><span class="unit-cell">—</span></div>' +
+                            '<div class="other-dual-seg" data-slot="2"><span class="unit-cell">—</span></div>' +
+                        '</td>' +
+                        '</tr>';
+                    tbody.append(trDual);
+                    return;
+                }
+
+                const idx = readingIdx++;
+                var oldMeterNoStr = (row.old_meter_no != null && row.old_meter_no !== undefined) ? String(row.old_meter_no).trim() : '';
+                var apiNewMeterNo = (row.new_meter_no != null && row.new_meter_no !== undefined) ? String(row.new_meter_no).trim() : '';
+                var newMeterNo = apiNewMeterNo !== '' ? apiNewMeterNo : (oldMeterNoStr !== '' && oldMeterNoStr !== 'N/A' ? oldMeterNoStr : '');
+                var newMeterReading = '';
+                var baselineMin = (row.baseline_min_reading !== undefined && row.baseline_min_reading !== null && row.baseline_min_reading !== '') ? String(row.baseline_min_reading) : '';
+                const meterSlot = row.meter_slot || 1;
+                const rowKey = row.pk + '_' + meterSlot;
+                window.meterReadingRowData[rowKey] = {
+                    pk: row.pk,
+                    meter_slot: meterSlot,
+                    new_meter_no: newMeterNo,
+                    curr_month_elec_red: '',
+                    original_curr_month_elec_red: ''
+                };
+                const tr = '<tr data-last-reading="'+ baselineMin.replace(/"/g, '&quot;') +'" data-existing-curr="" data-pk="'+ row.pk +'" data-meter-slot="'+ meterSlot +'">' +
+                    '<td><input type="checkbox" class="form-check-input row-check row-check-master" name="readings['+idx+'][selected]" value="1"></td>' +
+                    '<td>'+ escAttr(row.house_no || 'N/A') +'</td>' +
+                    '<td>'+ escAttr(row.name || 'N/A') +'</td>' +
+                    '<td class="text-nowrap">'+ escAttr(row.last_reading_date || 'N/A') +'</td>' +
+                    '<td>'+ escAttr(row.old_meter_no || 'N/A') +'</td>' +
+                    '<td>'+ escAttr(row.electric_meter_reading ?? 'N/A') +'</td>' +
+                    '<td><input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+idx+'][new_meter_no]" value="'+ escAttr(newMeterNo) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(oldMeterNoStr) +'"'+ newMeterNoLockAttr +'></td>' +
+                    '<td><input type="number" class="form-control form-control-sm new-meter-reading" name="readings['+idx+'][curr_month_elec_red]" value="'+ escAttr(newMeterReading) +'" min="0" placeholder="Enter" step="1" inputmode="numeric">' +
+                    '<input type="hidden" name="readings['+idx+'][pk]" value="'+row.pk+'">' +
+                    '<input type="hidden" name="readings['+idx+'][meter_slot]" value="'+ meterSlot +'"></td>' +
+                    '<td class="unit-cell">—</td>' +
+                    '</tr>';
+                tbody.append(tr);
+            });
+            $('#meterReadingSaveForm').show();
+        }).fail(function() {
+            alert('Failed to load data.');
+        });
+    });
+
+    $(document).on('change', '#updateMeterReadingTable #select_all', function() {
+        const on = $(this).prop('checked');
+        $('#updateMeterReadingTable .row-check-master').each(function() {
+            $(this).prop('checked', on);
+            const sid = $(this).data('pair-sel-id');
+            if (sid) {
+                $('#' + sid).prop('checked', on);
+            }
+        });
+    });
+
+    $(document).on('change', '#updateMeterReadingTable .row-check-master', function() {
+        const on = $(this).prop('checked');
+        const sid = $(this).data('pair-sel-id');
+        if (sid) {
+            $('#' + sid).prop('checked', on);
+        }
+    });
+
+    /** Baseline for validation: dual rows store min on each input; single row on the tr. */
+    function getMinAllowedForReadingInput($inp) {
+        const $row = $inp.closest('tr');
+        let lastVal = $inp.data('last-reading');
+        if (lastVal === undefined || lastVal === '') {
+            lastVal = $row.data('last-reading');
+        }
+        return (lastVal !== '' && lastVal !== undefined && !isNaN(parseFloat(lastVal))) ? parseFloat(lastVal) : null;
+    }
+
+    function getNewMeterInputForReading($inp) {
+        const $row = $inp.closest('tr');
+        if ($row.hasClass('other-dual-stacked')) {
+            const slot = $inp.closest('.other-dual-seg').data('slot');
+            if (slot !== undefined && slot !== null) {
+                return $row.find('.other-dual-newmeter-col .other-dual-seg[data-slot="' + slot + '"] .new-meter-no');
+            }
+        }
+        return $row.find('.new-meter-no').first();
+    }
+
+    function isMeterNoChangedForReading($inp) {
+        const $meterInp = getNewMeterInputForReading($inp);
+        const oldNo = String($meterInp.data('old-meter-no') || '').trim();
+        if (!oldNo || oldNo === 'N/A') return false;
+        const newNo = String($meterInp.val() || '').trim();
+        if (!newNo) return false;
+        return newNo !== oldNo;
+    }
+
+    function isReadingBelowMinAllowed($inp, currReading) {
+        // Edit from List Meter Reading: purani galat reading theek karne ke liye khulta hai, isliye koi min baseline nahi.
+        if (isListEditMode) return false;
+        if (currReading === null || isNaN(currReading)) return false;
+        const minAllowed = getMinAllowedForReadingInput($inp);
+        if (minAllowed === null || currReading >= minAllowed) return false;
+        // Meter replaced: the new meter starts fresh, so any lower reading is valid.
+        if (isMeterNoChangedForReading($inp)) return false;
+        return true;
+    }
+
+    $('#meterReadingSaveForm').on('submit', function(e) {
+        const billMonthVal = $('#bill_month').val();
+        if (!billMonthVal) {
+            e.preventDefault();
+            alert('Please select Meter Change Month.');
+            $('#bill_month').trigger('focus');
+            return;
+        }
+        const meterReadingDateSubmit = ($('#meter_reading_date').val() || '').trim();
+        if (!meterReadingDateSubmit) {
+            e.preventDefault();
+            alert('Meter reading date is mandatory. Please select Meter Reading Date before saving.');
+            $('#meter_reading_date').trigger('focus');
+            return;
+        }
+
+        const selectedCount = $('#updateMeterReadingTable .row-check-master:checked').length;
+        if (selectedCount === 0) {
+            e.preventDefault();
+            alert('Please select at least one record by clicking the checkbox before saving.');
+            return;
+        }
+
+        let hasInvalidReading = false;
+        $('#updateMeterReadingTable .row-check-master:checked').each(function() {
+            const $row = $(this).closest('tr');
+            $row.find('.new-meter-reading').each(function() {
+                const $input = $(this);
+                const currVal = $input.val();
+                const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
+                if (!isNaN(currReading) && isReadingBelowMinAllowed($input, currReading)) {
+                    hasInvalidReading = true;
+                    $input.trigger('focus');
+                    return false;
+                }
+            });
+            if (hasInvalidReading) return false;
+        });
+        if (hasInvalidReading) {
+            e.preventDefault();
+            const now = Date.now();
+            if ((now - lastInvalidReadingAlertAt) > 800) {
+                lastInvalidReadingAlertAt = now;
+                alert('New Meter Reading cannot be less than the minimum allowed baseline for this row.\n\nIf the meter was replaced or the saved reading is wrong, open this row from List Meter Reading → Edit.');
+            }
+            return;
+        }
+
+        $('#reading_bill_month').val(billMonthVal);
+        $('#reading_current_date').val(meterReadingDateSubmit);
+        $('#reading_campus_id').val(getSelVal(document.getElementById('estate_name')) || '');
+        $('#reading_block_id').val(getSelVal(document.getElementById('building')) || '');
+        $('#reading_unit_type_id').val(getSelVal(document.getElementById('unit_name')) || '');
+        $('#reading_unit_sub_type_id').val(getSelVal(document.getElementById('unit_sub_type')) || '');
+    });
+
+    function getRowKey($row) {
+        var pk = $row.data('pk');
+        var meterSlot = $row.data('meter-slot');
+        if (pk == null || meterSlot == null) return null;
+        return pk + '_' + meterSlot;
+    }
+
+    function syncRowDataFromInputs($row) {
+        if (!$row || !$row.length || !window.meterReadingRowData) return;
+        if ($row.hasClass('other-dual-stacked')) {
+            var pk = $row.data('pk');
+            if (!pk) return;
+            ['1', '2'].forEach(function (slot) {
+                var key = pk + '_' + slot;
+                if (!window.meterReadingRowData[key]) {
+                    window.meterReadingRowData[key] = {
+                        pk: pk,
+                        meter_slot: parseInt(slot, 10),
+                        new_meter_no: '',
+                        curr_month_elec_red: '',
+                        original_curr_month_elec_red: ''
+                    };
+                }
+                var $segN = $row.find('.other-dual-newmeter-col .other-dual-seg[data-slot="' + slot + '"]');
+                var $segR = $row.find('.other-dual-reading-col .other-dual-seg[data-slot="' + slot + '"]');
+                window.meterReadingRowData[key].new_meter_no = $segN.find('.new-meter-no').val() || '';
+                window.meterReadingRowData[key].curr_month_elec_red = $segR.find('.new-meter-reading').val() || '';
+            });
+            return;
+        }
+        var key = getRowKey($row);
+        if (!key) return;
+        if (!window.meterReadingRowData[key]) {
+            window.meterReadingRowData[key] = {
+                pk: $row.data('pk'),
+                meter_slot: $row.data('meter-slot'),
+                new_meter_no: '',
+                curr_month_elec_red: '',
+                original_curr_month_elec_red: ''
+            };
+        }
+        window.meterReadingRowData[key].new_meter_no = $row.find('.new-meter-no').val() || '';
+        window.meterReadingRowData[key].curr_month_elec_red = $row.find('.new-meter-reading').val() || '';
+    }
+
+    function refreshUnitForReadingInput($inp) {
+        const $row = $inp.closest('tr');
+        const minBaseline = getMinAllowedForReadingInput($inp);
+
+        const currVal = $inp.val();
+        const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
+
+        let unit = '';
+        if (isMeterNoChangedForReading($inp)) {
+            // Meter replaced: naya meter 0 se start hota hai, isliye reading hi unit hai.
+            if (currReading !== null) unit = currReading;
+        } else if (minBaseline !== null && currReading !== null && currReading >= minBaseline) {
+            unit = currReading - minBaseline;
+        }
+        const unitText = unit === '' ? '—' : String(unit);
+        if ($row.hasClass('other-dual-stacked')) {
+            const slot = $inp.closest('.other-dual-seg').data('slot');
+            if (slot !== undefined && slot !== null) {
+                $row.find('.other-dual-units .other-dual-seg[data-slot="' + slot + '"] .unit-cell').text(unitText);
+            }
+        } else {
+            $row.find('td.unit-cell').last().text(unitText);
+        }
+    }
+
+    $(document).on('input', '#meterReadingSaveForm .new-meter-reading', function() {
+        this.value = String(this.value || '').replace(/\D/g, '').slice(0, 20);
+        const $inp = $(this);
+        syncRowDataFromInputs($inp.closest('tr'));
+        refreshUnitForReadingInput($inp);
+    });
+
+    $(document).on('blur', '#meterReadingSaveForm .new-meter-reading', function() {
+        const $inp = $(this);
+        const currVal = $inp.val();
+        const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
+        if (isReadingBelowMinAllowed($inp, currReading)) {
+            lastInvalidReadingAlertAt = Date.now();
+            alert('New Meter Reading cannot be less than the minimum allowed baseline for this row.\n\nIf the meter was replaced or the saved reading is wrong, open this row from List Meter Reading → Edit.');
+        }
+    });
+
+    $(document).on('input change', '#meterReadingSaveForm .new-meter-no', function() {
+        this.value = String(this.value || '').replace(/\D/g, '').slice(0, 50);
+        const $meterInp = $(this);
+        const $row = $meterInp.closest('tr');
+        syncRowDataFromInputs($row);
+
+        // Meter no badalne se unit ka basis badalta hai — Unit column refresh karo.
+        let $readingInp;
+        if ($row.hasClass('other-dual-stacked')) {
+            const slot = $meterInp.closest('.other-dual-seg').data('slot');
+            $readingInp = $row.find('.other-dual-reading-col .other-dual-seg[data-slot="' + slot + '"] .new-meter-reading');
+        } else {
+            $readingInp = $row.find('.new-meter-reading').first();
+        }
+        if ($readingInp && $readingInp.length) refreshUnitForReadingInput($readingInp);
+    });
+
+    $(document).on('keydown', '#meterReadingSaveForm .new-meter-no', function(e) {
+        if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
 @endpush

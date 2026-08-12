@@ -21,6 +21,17 @@
         <env name="APP_ENV" value="testing"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_DRIVER" value="array"/>
+        <!--
+            DB_CONNECTION / DB_DATABASE are intentionally left commented out: the
+            existing tests read real reference rows (users, FC documents, CENTCOM
+            masters) and would not survive an empty :memory: schema.
+
+            The consequence, which every test author has to know: this suite runs
+            against the database .env points at. NEVER use RefreshDatabase or
+            DatabaseMigrations here — either would run migrate:fresh and drop the
+            development schema. Use DatabaseTransactions, or keep the test
+            read-only, and skip gracefully when fixture data is absent.
+        -->
         <!-- <env name="DB_CONNECTION" value="sqlite"/> -->
         <!-- <env name="DB_DATABASE" value=":memory:"/> -->
         <env name="MAIL_MAILER" value="array"/>

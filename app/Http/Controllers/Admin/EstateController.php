@@ -6907,6 +6907,26 @@ class EstateController extends Controller
             abort(403, 'You do not have permission to update reading and meter no.');
         }
 
+        // Set only when this page was opened via Edit from List Meter Reading. It relaxes the input validation for
+        // that one row (a lower reading may be entered); it does NOT change how units are measured — those stay
+        // New Meter Reading − Electric Meter Reading, exactly as the screen shows.
+        $editReadingPkRaw = $request->input('edit_reading_pk');
+        $editReadingPk = (is_numeric($editReadingPkRaw) && (int) $editReadingPkRaw > 0) ? (int) $editReadingPkRaw : null;
+        // The edit deep-link scopes the grid to that one reading (getMeterReadingList: reading_pk), so a genuine
+        // correction always submits exactly that row. Anything else — a bulk save carrying the field, or a replayed
+        // POST — must not get the relaxed baseline, so drop the flag instead of trusting it.
+        if ($editReadingPk !== null) {
+            $submittedPks = [];
+            foreach ((array) $request->input('readings', []) as $item) {
+                if (is_array($item) && isset($item['selected']) && (string) $item['selected'] === '1' && ! empty($item['pk'])) {
+                    $submittedPks[(int) $item['pk']] = true;
+                }
+            }
+            if (array_keys($submittedPks) !== [$editReadingPk]) {
+                $editReadingPk = null;
+            }
+        }
+
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'readings' => 'required|array',
             'readings.*.pk' => 'required|exists:estate_month_reading_details,pk',
@@ -6920,9 +6940,10 @@ class EstateController extends Controller
             'reading_block_id' => 'nullable|integer|exists:estate_block_master,pk',
             'reading_unit_type_id' => 'nullable|integer|exists:estate_unit_type_master,pk',
             'reading_unit_sub_type_id' => 'nullable|integer|exists:estate_unit_sub_type_master,pk',
+            'edit_reading_pk' => 'nullable|integer|exists:estate_month_reading_details,pk',
         ]);
 
-        $validator->after(function ($v) use ($request) {
+        $validator->after(function ($v) use ($request, $editReadingPk) {
             $readings = (array) $request->input('readings', []);
             $selectedPks = [];
             foreach ($readings as $item) {
@@ -6993,6 +7014,10 @@ class EstateController extends Controller
                 }
 
                 $pk = isset($item['pk']) ? (int) $item['pk'] : 0;
+                // Edit flow from List Meter Reading: correcting a saved reading, so no baseline restriction on that row.
+                if ($editReadingPk !== null && $pk === $editReadingPk) {
+                    continue;
+                }
                 $row = $rows->get($pk);
                 if (! $row) {
                     continue;
@@ -7033,7 +7058,7 @@ class EstateController extends Controller
                     if (! $meterChanged) {
                         $v->errors()->add(
                             $field,
-                            'New meter reading cannot be less than the saved current reading, or than the opening reading when no current reading exists yet.'
+                            'New meter reading cannot be less than the saved current reading, or than the opening reading when no current reading exists yet. If the meter was replaced or the saved reading is wrong, open this row from List Meter Reading → Edit.'
                         );
                     }
                 }
@@ -7209,6 +7234,24 @@ class EstateController extends Controller
             }
 
             if ($row) {
+                // New Meter No. is frozen everywhere except the edit flow. Enforce that server-side too: a submitted
+                // number that differs from the stored one is dropped rather than written, so a replayed POST or a
+                // stale cached payload cannot silently change the meter. Equal values still write as before.
+                if (! ($editReadingPk !== null && $formRowPk === $editReadingPk)) {
+                    foreach ([1 => 'meter_one', 2 => 'meter_two'] as $guardSlot => $guardCol) {
+                        $submittedMeterNo = preg_replace('/\D/', '', (string) ($data[$guardCol] ?? ''));
+                        $storedMeterNo = preg_replace('/\D/', '', $this->effectiveOldMeterNoForRegularReadingRow($row, $guardSlot));
+                        if ($submittedMeterNo !== '' && $storedMeterNo !== '' && $submittedMeterNo !== $storedMeterNo) {
+                            // Coerce, don't just drop: the replacement check below reads $data, so leaving the
+                            // submitted value there would bill the row as a meter replacement that was never stored.
+                            $data[$guardCol] = $storedMeterNo;
+                            if (array_key_exists($guardCol, $update)) {
+                                $update[$guardCol] = $storedMeterNo;
+                            }
+                        }
+                    }
+                }
+
                 // Opening reading for units: saved curr when set, else last_month / possession (matches list baseline_min_reading).
                 $epdPrimary = (isset($row->epd_electric_meter_reading) && $row->epd_electric_meter_reading !== null && (int) $row->epd_electric_meter_reading > 0) ? (int) $row->epd_electric_meter_reading : null;
                 $epdSecondary = (isset($row->epd_electric_meter_reading_2) && $row->epd_electric_meter_reading_2 !== null && (int) $row->epd_electric_meter_reading_2 > 0) ? (int) $row->epd_electric_meter_reading_2 : null;
@@ -7235,24 +7278,26 @@ class EstateController extends Controller
                 $curr1New = $curr1Form !== null ? $curr1Form : $curr1Existing;
                 $curr2New = $curr2Form !== null ? $curr2Form : $curr2Existing;
 
-                $baseline1 = $curr1Existing !== null ? $curr1Existing : $prev1;
-                $baseline2 = $curr2Existing !== null ? $curr2Existing : $prev2;
+                // Units = New Meter Reading − Electric Meter Reading (the saved reading shown on screen);
+                // pehli entry par saved reading nahi hoti, tab last month / possession opening se naapte hain.
+                $baseline1 = \App\Support\EstateMeterReadingUnits::baseline($curr1Existing, (int) $prev1);
+                $baseline2 = \App\Support\EstateMeterReadingUnits::baseline($curr2Existing, (int) $prev2);
 
                 // Meter replace hua ho toh naya meter 0 se start hota hai — reading hi consumed unit hai,
                 // warna purane baseline se difference lo.
                 $meter1Changed = $this->isRegularMeterReplaced($row, 1, $data['meter_one']);
                 $meter2Changed = $this->isRegularMeterReplaced($row, 2, $data['meter_two']);
 
-                if ($meter1Changed) {
-                    $u1 = $curr1New !== null ? (int) $curr1New : 0;
-                } else {
-                    $u1 = ($curr1New !== null && $curr1New >= $baseline1) ? (int) ($curr1New - $baseline1) : 0;
-                }
-                if ($meter2Changed) {
-                    $u2 = $curr2New !== null ? (int) $curr2New : 0;
-                } else {
-                    $u2 = ($curr2New !== null && $curr2New >= $baseline2) ? (int) ($curr2New - $baseline2) : 0;
-                }
+                $u1 = \App\Support\EstateMeterReadingUnits::consumed(
+                    $curr1New !== null ? (int) $curr1New : null,
+                    $baseline1,
+                    $meter1Changed
+                );
+                $u2 = \App\Support\EstateMeterReadingUnits::consumed(
+                    $curr2New !== null ? (int) $curr2New : null,
+                    $baseline2,
+                    $meter2Changed
+                );
 
                 $unitTypePk = isset($row->unit_type_pk) ? (int) $row->unit_type_pk : null;
                 $m1Charge = $u1 > 0 ? $this->calculateElectricChargeForUnits($unitTypePk, $u1) : 0.0;
@@ -8952,7 +8997,7 @@ class EstateController extends Controller
                         $house = $row->house_no ? (" (House: {$row->house_no})") : '';
                         $v->errors()->add(
                             "readings.$idx.curr_month_elec_red",
-                            "Current month reading must be greater than or equal to last month meter reading{$house}."
+                            "Current month reading must be greater than or equal to last month meter reading{$house}. If the meter was replaced or the saved reading is wrong, open this row from List Meter Reading → Edit."
                         );
                     }
                 }

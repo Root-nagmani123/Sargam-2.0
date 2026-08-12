@@ -1,0 +1,545 @@
+/* ============================================================================
+   Centcom / Issue Management — admin index pages
+   ----------------------------------------------------------------------------
+   The `ic-*` component layer shared by every index screen in this module
+   (Manage Categories, Manage Sub-Categories, …). It implements the "new design"
+   status column + row actions (docs/new-design-index-page.md §3b) and the
+   matching Add/Edit modals (§3c).
+
+   Scoping:
+     .ic-page   — page root, put it on the container-fluid
+     .ic-modal  — modal root, put it on .modal-content
+   Both are required so these rules can beat Bootstrap's without !important
+   while still being unable to leak into other modules.
+
+   Load with:
+     <link rel="stylesheet" href="{{ asset('css/issue-management-admin.css') }}?v={{ @filemtime(public_path('css/issue-management-admin.css')) ?: time() }}">
+   ========================================================================= */
+
+/* ── Status column: soft badge (display only) ──
+   The theme ships the *-subtle backgrounds but not the text-*-emphasis
+   colours, so the label would render black. Tint it here. */
+.ic-page .status-pill {
+    padding: 0.4em 0.85em;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+.ic-page .status-pill.bg-success-subtle { color: #146c43; }
+.ic-page .status-pill.bg-danger-subtle  { color: #b02a37; }
+
+/* ── Row actions: icon over label ──
+   Each action is an equal-width column holding a fixed-height icon strip above
+   its caption. Equal widths keep the icon row evenly spaced even though "Edit"
+   and "Deactivate" are very different label widths; the fixed strip keeps the
+   glyphs and the switch on one baseline. */
+.ic-page .ic-act-group {
+    display: inline-flex;
+    align-items: stretch;   /* equal heights → icon strips stay in line */
+    justify-content: flex-start;
+    gap: 0.25rem;
+}
+
+.ic-page .ic-act {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    min-width: 62px;        /* ≈ the widest caption ("Deactivate") */
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+}
+
+.ic-page .ic-act__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;           /* one strip for glyphs AND the switch */
+}
+.ic-page .ic-act__icon > i {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+/* The switch deliberately has NO .form-check/.form-switch ancestor — that
+   combination pulls the input -2.375rem left (custom.css:107-112) for the
+   switch-beside-label layout and would knock it off-centre here. Pin it anyway. */
+.ic-page .ic-act__icon .form-check-input {
+    margin: 0;
+    float: none;
+}
+
+.ic-page .ic-act__label { white-space: nowrap; }
+
+/* Widen the column when a caption doesn't fit the 62px default ("Update
+   Status"). min-width has to clear the WIDEST caption in the group or that one
+   action grows past the rest and the icon row stops being evenly spaced. */
+.ic-page .ic-act-group--wide .ic-act { min-width: 84px; }
+
+.ic-page .ic-act--edit { color: #2563eb; }
+.ic-page .ic-act--view { color: #2563eb; }
+.ic-page .ic-act--del { color: var(--bs-danger, #dc3545); }
+.ic-page .ic-act--del.is-disabled {
+    color: #98a2b3;
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+.ic-page .ic-act--toggle { color: #475467; }
+
+/* The delete <form> is only a wrapper — it must not add a box of its own. */
+.ic-page .ic-delete-form {
+    display: flex;
+    margin: 0;
+    padding: 0;
+}
+
+/* Keep the Action header over its content. */
+.ic-page .programme-dt-table th:last-child,
+.ic-page .programme-dt-table td:last-child {
+    text-align: left;
+    white-space: nowrap;
+}
+
+/* .programme-dt-table only wraps its 2nd column (custom.css:413). Put this on any
+   other long-text cell — e.g. a Description that isn't in column 2. */
+.ic-page .programme-dt-table td.ic-col-wrap {
+    white-space: normal;
+    max-width: 420px;
+}
+
+/* ── Issue workflow badges ──
+   Five states, five tints. The two-tone Active/Inactive pill above can't carry
+   these, so they get their own modifiers rather than more *-subtle guessing. */
+.ic-page .ic-state {
+    display: inline-block;
+    padding: 0.4em 0.85em;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+.ic-page .ic-state--reported    { background: #e0e7ff; color: #3730a3; }
+.ic-page .ic-state--in-progress { background: #fef3c7; color: #92400e; }
+.ic-page .ic-state--completed   { background: #d1fae5; color: #065f46; }
+.ic-page .ic-state--pending     { background: #fef0c7; color: #b54708; }
+.ic-page .ic-state--reopened    { background: #fee4e2; color: #b42318; }
+
+/* ── Escalation levels: "Name - N Days", days tinted by level ── */
+.ic-page .ic-level__days { font-weight: 600; }
+.ic-page .ic-level--1 .ic-level__days { color: #2563eb; }
+.ic-page .ic-level--2 .ic-level__days { color: #b54708; }
+.ic-page .ic-level--3 .ic-level__days { color: #b42318; }
+
+/* ── Tab strip (All Requests / Raised By You / …) ── */
+.ic-page .ic-tabs {
+    display: inline-flex;
+    background: #fff;
+    border: 1px solid #eaecf0;
+    border-radius: 8px;
+    padding: 4px;
+    gap: 4px;
+}
+.ic-page .ic-tab {
+    padding: 0.45rem 1.1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #475467;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.ic-page .ic-tab:hover { background: #f9fafb; color: #101828; }
+.ic-page .ic-tab.is-active {
+    background: #004384;
+    color: #fff;
+    font-weight: 600;
+}
+
+/* ── Filter row ──
+   `.programme-dt-filter-select` is 180px. A row carrying 3 selects + 2 dates +
+   Reset + Columns + search overflows at that width and wraps onto a second
+   line, so this grid opts into narrower ones. */
+.ic-page .ic-toolbar--compact .programme-dt-filter-select { width: 132px; }
+
+.ic-page .ic-filter-date {
+    display: inline-flex;
+    align-items: center;
+    width: 146px;
+}
+.ic-page .ic-filter-date .form-control {
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    padding: 0.4rem 0.6rem;
+    color: #475467;
+}
+.ic-page .ic-filter-sep {
+    color: #98a2b3;
+    padding: 0 0.15rem;
+}
+
+/* ── Sortable headers — same caret language as the DataTables pages ── */
+.ic-page .ic-sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: inherit;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.ic-page .ic-sort i { font-size: 0.7rem; color: #98a2b3; }
+.ic-page .ic-sort.is-active i { color: #004384; }
+.ic-page .ic-sort:hover { color: #004384; }
+
+/* Header sorters that are <button>s (client-side tables) rather than links. */
+.ic-page .ic-sort-btn {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+}
+
+/* Status History: the Status column is centred, header and cell together. */
+.ic-page .ic-history-table .ic-th-center,
+.ic-page .ic-history-table .ic-td-center { text-align: center; }
+
+/* ── Search: an icon button reveals a server-side GET form ──
+   (the toggle variant — these grids are paginated by Laravel, not DataTables) */
+.ic-page .ic-search-wrap {
+    position: relative;
+    width: 260px;
+    max-width: 100%;
+}
+.ic-page .ic-search-input {
+    width: 100%;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.875rem;
+    color: #101828;
+}
+.ic-page .ic-search-input:focus {
+    outline: 0;
+    border-color: #004384;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
+}
+
+/* ── Empty state ── */
+.ic-page .ic-empty {
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: #667085;
+}
+.ic-page .ic-empty i {
+    font-size: 2.5rem;
+    opacity: 0.35;
+}
+
+/* ============================================================================
+   Add / Edit modals (§3c)
+   One visual language for both: a tinted field card holding the labelled
+   controls, a red Cancel and a solid brand submit.
+   ========================================================================= */
+
+.ic-modal { border-radius: 12px; }
+
+.ic-modal .ic-modal-header {
+    border-bottom: 1px solid #eaecf0;
+    padding: 1rem 1.25rem;
+}
+.ic-modal .ic-modal-header .modal-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #101828;
+    margin: 0;
+}
+
+.ic-modal .ic-modal-body { padding: 1.25rem; }
+
+/* The tinted card each field group lives in. */
+.ic-modal .ic-field-card,
+.ic-page .ic-field-card {
+    position: relative;
+    background: #eef1fc;
+    border-radius: 10px;
+    padding: 1rem;
+}
+.ic-modal .ic-field-card + .ic-field-card,
+.ic-page .ic-field-card + .ic-field-card { margin-top: 1rem; }
+
+.ic-modal .ic-form-label,
+.ic-page .ic-form-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+.ic-modal .ic-req,
+.ic-page .ic-req { color: #dc2626; margin-left: 1px; }
+
+/* Section heading inside a modal form ("Level 1", "Level 2", …). */
+.ic-modal .ic-level-heading,
+.ic-page .ic-level-heading {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: #101828;
+    border-bottom: 1px solid #eaecf0;
+    padding-bottom: 0.5rem;
+    margin: 1.25rem 0 0.75rem;
+}
+.ic-modal .ic-level-heading:first-child,
+.ic-page .ic-level-heading:first-child { margin-top: 0; }
+
+.ic-modal .ic-control[readonly] { background-color: #f2f4f7; color: #475467; }
+
+.ic-modal .ic-control {
+    background-color: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: #101828;
+    box-shadow: none;
+}
+.ic-modal .ic-control::placeholder { color: #9ca3af; }
+.ic-modal .ic-control:focus {
+    border-color: #004384;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
+}
+.ic-modal textarea.ic-control {
+    resize: vertical;
+    min-height: 78px;
+}
+
+/* Repeat controls, bottom-right inside the card.
+   Plain (non-!important) display so jQuery toggle()/show()/hide() work — see
+   the .d-flex trap in docs/new-design-index-page.md §9. */
+.ic-modal .ic-field-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+.ic-modal .ic-field-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border: 0;
+    border-radius: 7px;
+    color: #fff;
+    font-size: 0.9rem;
+    line-height: 1;
+    transition: filter 0.15s ease;
+}
+.ic-modal .ic-field-btn:hover { filter: brightness(0.92); }
+.ic-modal .ic-field-btn--remove { background: #ef4444; }
+.ic-modal .ic-field-btn--add { background: #2563eb; }
+
+.ic-modal .ic-modal-footer {
+    border-top: 0;
+    justify-content: end;
+    gap: 0.75rem;
+    padding: 0.25rem 1.25rem 1.25rem;
+}
+.ic-modal .ic-btn-cancel,
+.ic-page .ic-btn-cancel {
+    min-width: 108px;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    background: #fff;
+    color: #dc2626;
+    font-weight: 500;
+}
+.ic-modal .ic-btn-cancel:hover,
+.ic-page .ic-btn-cancel:hover {
+    background: #fef2f2;
+    border-color: #f87171;
+}
+.ic-modal .ic-btn-submit,
+.ic-page .ic-btn-submit {
+    min-width: 140px;
+    border: 1px solid #004384;
+    border-radius: 8px;
+    background: #004384;
+    color: #fff;
+    font-weight: 600;
+}
+.ic-modal .ic-btn-submit:hover,
+.ic-page .ic-btn-submit:hover {
+    background: #00356a;
+    border-color: #00356a;
+}
+
+/* ============================================================================
+   Detail view (View Issue)
+   ========================================================================= */
+
+.ic-page .ic-card {
+    background: #fff;
+    border: 1px solid #eaecf0;
+    border-radius: 12px;
+}
+.ic-page .ic-card + .ic-card { margin-top: 1rem; }
+.ic-page .ic-card__body { padding: 1.25rem 1.5rem; }
+.ic-page .ic-card__title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #101828;
+    margin: 0 0 1rem;
+}
+
+/* Hero strip: ticket number + headline facts + current state. */
+.ic-page .ic-hero {
+    background: #e8ecfb;
+    border: 0;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+}
+.ic-page .ic-hero__id {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #1d4ed8;
+    margin: 0 0 0.75rem;
+}
+
+/* On the tinted hero the state badge goes white — a *-subtle tint on top of
+   #e8ecfb reads as a smudge. Colour still comes from the Status History table. */
+.ic-page .ic-hero .ic-state {
+    background: #fff;
+    border: 1px solid #dfe3f3;
+    color: #344054;
+}
+
+/* Label-over-value pairs. */
+.ic-page .ic-facts,
+.ic-modal .ic-facts {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem 1.5rem;
+}
+/* Hero facts sit side by side. Grid auto-fit collapses to one column here
+   because the hero's left half is a shrink-to-fit flex child, so use a flex row
+   with an explicit gap instead. */
+.ic-page .ic-facts--hero {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 3.5rem;
+}
+@media (max-width: 991.98px) {
+    .ic-page .ic-facts,
+.ic-modal .ic-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 575.98px) {
+    .ic-page .ic-facts,
+.ic-modal .ic-facts { grid-template-columns: 1fr; }
+}
+.ic-page .ic-fact__label,
+.ic-modal .ic-fact__label {
+    display: block;
+    font-size: 0.75rem;
+    color: #667085;
+    margin-bottom: 2px;
+}
+.ic-page .ic-fact__value,
+.ic-modal .ic-fact__value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #101828;
+    word-break: break-word;
+}
+
+/* ============================================================================
+   Form view (Log New Issue / Edit)
+   ========================================================================= */
+
+.ic-page .ic-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem 1.5rem;
+}
+@media (max-width: 991.98px) {
+    .ic-page .ic-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 575.98px) {
+    .ic-page .ic-form-grid { grid-template-columns: 1fr; }
+}
+.ic-page .ic-form-grid--full { grid-column: 1 / -1; }
+
+.ic-page .ic-field-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+/* Controls: same language as the modal's .ic-control, but this page also has
+   Choices.js widgets, so the rules are kept on plain controls only. */
+.ic-page .ic-input {
+    background-color: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: #101828;
+    box-shadow: none;
+}
+.ic-page .ic-input::placeholder { color: #9ca3af; }
+.ic-page .ic-input:focus {
+    border-color: #004384;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
+}
+.ic-page textarea.ic-input { resize: vertical; min-height: 92px; }
+.ic-page .ic-input[readonly] { background-color: #f2f4f7; color: #475467; }
+
+.ic-page .ic-radio-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    min-height: 38px;
+}
+
+.ic-page .ic-form-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+/* Choices.js widgets sit inside .ic-form-grid — match the plain controls. */
+.ic-page .choices__inner {
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    font-size: 0.875rem;
+    min-height: 38px;
+}
+.ic-page .choices.is-focused .choices__inner,
+.ic-page .choices.is-open .choices__inner {
+    border-color: #004384 !important;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12) !important;
+}
+
+/* ── Print: the grid only ── */
+@media print {
+    .modern-breadcrumb-wrapper,
+    .ic-page .ic-toolbar,
+    .ic-page .ic-secondary-actions,
+    .ic-page .programme-dt-footer,
+    .ic-page .programme-dt-table th:last-child,
+    .ic-page .programme-dt-table td:last-child { display: none !important; }
+}
