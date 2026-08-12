@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Admin\Estate;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Admin\Estate\Concerns\AuthorizesEstateMaster;
 use App\Models\UnitType;
 use Illuminate\Http\Request;
 
 class UnitTypeController extends Controller
 {
+    use AuthorizesEstateMaster;
+
     public function index()
     {
         // Naya record hamesha sabse upar — isliye pk desc, naam se nahi.

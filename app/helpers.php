@@ -881,6 +881,26 @@ function isEstateAuthority(): bool
 }
 
 /**
+ * Estate Master screens (Define Campus / Unit Type / Unit Sub Type / Block-Building /
+ * Pay Scale / Electric Slab / Eligibility Criteria).
+ *
+ * Deliberately the UNION of the two estate role vocabularies this codebase uses:
+ *   - hasRole('Estate')     — what the Estate Master sidebar block gates on
+ *                             (components/menu/setup_estate_management.blade.php)
+ *   - isEstateAuthority()   — 'Estate Admin' || 'Super Admin', what EstateController gates on
+ *
+ * hasRole() checks session roles before Spatie roles, so the same operator can satisfy one
+ * vocabulary or the other depending on how they logged in. Taking the union means nobody who
+ * can reach these screens today loses access, while every other role (Student-OT, Faculty,
+ * Training, HAC Person, ...) is refused — the Admin/Estate/* controllers previously had no
+ * server-side check at all and relied on the sidebar hiding the link.
+ */
+function isEstateMasterAuthority(): bool
+{
+    return hasRole('Estate') || isEstateAuthority();
+}
+
+/**
  * Estate HAC authority: can perform HAC-related actions.
  * DB role names: 'Estate HAC' (id:9), 'Estate Admin' (id:8), 'Super Admin' (id:1).
  */
