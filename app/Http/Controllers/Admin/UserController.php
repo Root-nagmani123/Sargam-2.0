@@ -8,6 +8,10 @@ use App\DataTables\GroupMappingDataTable;
 use App\DataTables\Master\EmployeeTypeMasterDataTable;
 use App\DataTables\MemberDataTable;
 use App\DataTables\RoleDataTable;
+use App\Http\Controllers\Admin\IssueManagement\IssueCategoryController;
+use App\Http\Controllers\Admin\IssueManagement\IssueEscalationMatrixController;
+use App\Http\Controllers\Admin\IssueManagement\IssuePriorityController;
+use App\Http\Controllers\Admin\IssueManagement\IssueSubCategoryController;
 use App\Http\Controllers\Admin\Master\FacultyExpertiseMasterController;
 use App\Http\Controllers\Admin\Master\FacultyTypeMasterController;
 use App\DataTables\UserCredentialsDataTable;
@@ -67,6 +71,9 @@ use Carbon\Carbon;
 
 class UserController extends Controller
 {
+    /** Notices per page on the dashboard feed. */
+    private const NOTICE_FEED_PER_PAGE = 10;
+
     private const ADMIN_USERS_INDEX_LIST_EPOCH_KEY = 'admin_users_index_list_epoch';
 
     /**
@@ -454,16 +461,105 @@ class UserController extends Controller
             $activeTab = 'notifications';
         }
 
-        $data = $this->buildDashboardFeedData();
+        $data = $this->buildDashboardFeedData($request);
         $data['activeTab'] = $activeTab;
 
         return view('admin.dashboard.feed', $data);
     }
 
     /**
-     * Shared data for dashboard feed page.
+     * Notices tab: role-scoped, filtered and paginated in SQL.
+     *
+     * Returns [paginator, filterOptions, appliedFilters].
      */
-    protected function buildDashboardFeedData(): array
+    protected function buildNoticeFeed(?Request $request): array
+    {
+        // No year filter: this feed shows live notices only (the base query drops
+        // anything past its expiry_date), so a Year control could never offer more
+        // than the current year or two and would read as a broken archive. If an
+        // archive is wanted later, the expiry predicate has to relax first — the
+        // control on its own would not deliver one.
+        $filters = [
+            'type'     => trim((string) ($request?->query('notice_type') ?? '')),
+            'dept'     => trim((string) ($request?->query('notice_dept') ?? '')),
+            'audience' => trim((string) ($request?->query('notice_audience') ?? '')),
+            'q'        => trim((string) ($request?->query('q') ?? '')),
+        ];
+
+        $base = notice_feed_query_by_role();
+
+        if (!$base) {
+            $empty = new \Illuminate\Pagination\LengthAwarePaginator([], 0, self::NOTICE_FEED_PER_PAGE, 1, [
+                'path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(),
+            ]);
+
+            return [$empty, ['types' => collect(), 'depts' => collect(), 'audiences' => collect()], $filters];
+        }
+
+        // Dropdown options come from the UNFILTERED role-scoped set, so choosing a
+        // Type never empties the Department list (and a filtered-away option can
+        // still be un-chosen).
+        //
+        // One DISTINCT per column, never one DISTINCT across several together: a
+        // combined DISTINCT that includes a near-unique column (display_date) has a
+        // row count that tracks the notice count, so it degenerates into reading the
+        // whole live set. Per column the result is bounded by that column's real
+        // cardinality — a handful of types, audiences and departments.
+        //
+        // select(), not selectRaw(): selectRaw APPENDS to the base query's column
+        // list, which would mix the 13 plain columns with the projection here.
+        $distinctOf = fn (string $column) => (clone $base)
+            ->reorder()
+            ->select($column)
+            ->distinct()
+            ->pluck($column)
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
+        $filterOptions = [
+            'types'     => $distinctOf('notices_notification.notice_type'),
+            'depts'     => $distinctOf('notice_author_dept.department_name'),
+            'audiences' => $distinctOf('notices_notification.target_audience'),
+        ];
+
+        if ($filters['type'] !== '') {
+            $base->where('notices_notification.notice_type', $filters['type']);
+        }
+
+        if ($filters['audience'] !== '') {
+            $base->where('notices_notification.target_audience', $filters['audience']);
+        }
+
+        if ($filters['dept'] !== '') {
+            $base->where('notice_author_dept.department_name', $filters['dept']);
+        }
+
+        if ($filters['q'] !== '') {
+            // Escape LIKE metacharacters: a typed "%" should match a literal percent
+            // sign, not every notice.
+            $like = '%' . addcslashes($filters['q'], '%_\\') . '%';
+            $base->where(function ($w) use ($like) {
+                $w->where('notices_notification.notice_title', 'like', $like)
+                    ->orWhere('notices_notification.notice_type', 'like', $like)
+                    ->orWhere('notice_author_dept.department_name', 'like', $like)
+                    ->orWhereRaw("CONCAT_WS(' ', notice_author.first_name, notice_author.last_name) like ?", [$like]);
+            });
+        }
+
+        $notices = $base->paginate(self::NOTICE_FEED_PER_PAGE)->withQueryString();
+
+        return [$notices, $filterOptions, $filters];
+    }
+
+    /**
+     * Shared data for dashboard feed page.
+     *
+     * $request is optional so the dashboard widget can call this without one;
+     * the notices tab reads its filters from it when present.
+     */
+    protected function buildDashboardFeedData(?Request $request = null): array
     {
         $user = Auth::user();
         $isAdminSummary = hasRole('Admin');
@@ -524,26 +620,9 @@ class UserController extends Controller
             $upcomingBirthdays = $upcomingBirthdays->merge($upcoming);
         }
 
-        $notices = get_notice_notification_by_role();
-
-        $noticeTabKeys = ['office-orders', 'work-allocation', 'notice-circular'];
-        $noticeTabLabels = [
-            'office-orders' => 'Office Orders',
-            'work-allocation' => 'Work Allocation',
-            'notice-circular' => 'Notice/ Circular/ Order',
-        ];
-        $noticeTabCounts = ['office-orders' => 0, 'work-allocation' => 0, 'notice-circular' => 0];
-        foreach ($notices as $noticeForTab) {
-            $tabKey = $this->resolveDashboardNoticeTabKey($noticeForTab->notice_type ?? '');
-            $noticeTabCounts[$tabKey]++;
-        }
-        $defaultNoticeTab = 'office-orders';
-        foreach ($noticeTabKeys as $tabKeyCandidate) {
-            if ($noticeTabCounts[$tabKeyCandidate] > 0) {
-                $defaultNoticeTab = $tabKeyCandidate;
-                break;
-            }
-        }
+        // Notices are filtered and paginated in SQL (see buildNoticeFeed) rather
+        // than fetched whole and filtered in the browser.
+        [$notices, $noticeFilterOptions, $noticeFilters] = $this->buildNoticeFeed($request);
 
         $feedExpandedNotifications = collect();
         $feedExpandedWishes = collect();
@@ -576,27 +655,12 @@ class UserController extends Controller
             'upcomingBirthdays',
             'birthdayWishCounts',
             'notices',
-            'noticeTabKeys',
-            'noticeTabLabels',
-            'noticeTabCounts',
-            'defaultNoticeTab',
+            'noticeFilterOptions',
+            'noticeFilters',
             'feedExpandedNotifications',
             'feedExpandedWishes',
             'notificationBadgeCount'
         );
-    }
-
-    public function resolveDashboardNoticeTabKey(?string $type): string
-    {
-        $t = strtolower((string) ($type ?? ''));
-        if (str_contains($t, 'office order')) {
-            return 'office-orders';
-        }
-        if (str_contains($t, 'course notice')) {
-            return 'work-allocation';
-        }
-
-        return 'notice-circular';
     }
 
     /**
@@ -4535,6 +4599,21 @@ public function toggleStatus(Request $request)
         }
         if ($table === 'faculty_type_master') {
             FacultyTypeMasterController::bumpListCacheEpoch();
+        }
+        /* CENTCOM grids are server-side: their cached page snapshots are keyed by
+           search + sort, and both can depend on status (sorting by the Status
+           column, or a search term that matches the status pill). Without these
+           bumps a toggled row keeps its old position until the TTL expires. */
+        if ($table === 'issue_category_master') {
+            IssueCategoryController::bumpIndexListCacheEpoch();
+            // The matrix lists ACTIVE categories only, so it changes shape too.
+            IssueEscalationMatrixController::bumpEscalationMatrixListCacheEpoch();
+        }
+        if ($table === 'issue_sub_category_master') {
+            IssueSubCategoryController::bumpIndexListCacheEpoch();
+        }
+        if ($table === 'issue_priority_master') {
+            IssuePriorityController::bumpIndexListCacheEpoch();
         }
 
         $newState = ((int) $status === 1) ? 'Active' : 'Inactive';

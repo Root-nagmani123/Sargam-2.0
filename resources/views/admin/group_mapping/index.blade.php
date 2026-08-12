@@ -8,7 +8,7 @@
 
 @section('setup_content')
 <div class="container-fluid gm-master-page">
-    <x-breadcrum title="Course Group Mapping">
+    <x-breadcrum title="Course Group Mapping" :showBack="false">
         <div class="d-flex flex-wrap justify-content-end align-items-center gap-2">
             <div class="dropdown gm-add-student-hover">
                 <button type="button"
@@ -77,7 +77,7 @@
         </ul>
 
         <div class="dropdown">
-            <button type="button" class="btn programme-dt-btn-columns gm-download-btn dropdown-toggle"
+            <button type="button" class="btn programme-dt-btn-columns gm-download-btn dropdown-toggle border-0 text-primary"
                 id="gmDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-download" aria-hidden="true"></i>
                 <span>Download</span>
@@ -139,7 +139,7 @@
                         <span>Columns</span>
                         <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
-                    <div id="gmDtSearch" class="programme-dt-search">
+                    <div id="gmDtSearch" class="programme-dt-search" data-dt-search-for="group-mapping-table">
                         <div class="dataTables_filter">
                             <label class="mb-0 w-100">
                                 <input type="search" id="gmCustomSearch" class="form-control shadow-none"
@@ -154,7 +154,8 @@
                 <div class="table-responsive">
                     {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
                 </div>
-                <div id="gmDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"></div>
+                <div id="gmDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                    data-dt-footer-for="group-mapping-table"></div>
             </div>
         </div>
     </div>
@@ -596,77 +597,12 @@ $(document).ready(function() {
             .attr('aria-current', 'true');
     }
 
-    function enhanceGmDtControls() {
-        var $wrapper = $('#group-mapping-table_wrapper');
-        if (!$wrapper.length) {
-            return;
-        }
-
-        var $footer = $('#gmDtFooter');
-
-        if ($footer.data('dtReady')) {
-            updateGmDtCount();
-            return;
-        }
-
-        var $paginate = $wrapper.find('.dataTables_paginate').first();
-        var $length = $wrapper.find('.dataTables_length').first();
-
-        // Don't build (and don't lock in dtReady) until DataTables has actually
-        // rendered its controls — otherwise we'd cache an empty footer forever.
-        if (!$footer.length || (!$paginate.length && !$length.length)) {
-            return;
-        }
-
-        var $pagCol = $('<div class="programme-dt-pagination"></div>');
-        var $countCol = $('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>');
-
-        if ($paginate.length) {
-            $paginate.find('.pagination').addClass('mb-0');
-            $pagCol.append($paginate);
-        }
-
-        if ($length.length) {
-            var $select = $length.find('select').addClass('form-select form-select-sm').detach();
-            $length.find('label')
-                .empty()
-                .append(document.createTextNode('Showing '))
-                .append($select)
-                .append(document.createTextNode(' '));
-            $countCol.append($length);
-
-            // The length control is relocated out of the DataTables wrapper, which
-            // detaches DataTables' delegated change listener. Drive the page length
-            // explicitly via the API so changing "Showing N" actually re-pages.
-            $select.off('change.gmLen').on('change.gmLen', function() {
-                if ($.fn.DataTable.isDataTable('#group-mapping-table')) {
-                    var len = parseInt(this.value, 10);
-                    if (!isNaN(len)) {
-                        $('#group-mapping-table').DataTable().page.len(len).draw();
-                    }
-                }
-            });
-        }
-
-        // Self-managed count text — does NOT rely on relocating DataTables' own
-        // .dataTables_info node (which was the fragile part that kept failing).
-        $countCol.append('<span class="gm-count-text text-muted mb-0"></span>');
-
-        $footer.append($pagCol).append($countCol);
-        $footer.data('dtReady', true);
-        updateGmDtCount();
-    }
-
-    function updateGmDtCount() {
-        if (!$.fn.DataTable.isDataTable('#group-mapping-table')) {
-            return;
-        }
-        var info = $('#group-mapping-table').DataTable().page.info();
-        var $countText = $('#gmDtFooter .gm-count-text');
-        if ($countText.length && info && info.recordsDisplay !== undefined) {
-            $countText.text('of ' + info.recordsDisplay.toLocaleString() + ' items');
-        }
-    }
+    /* Pagination and the "Showing N of M items" count are relocated into
+       #gmDtFooter by the global enhancer (public/js/datatable-global-ui.js) via
+       the data-dt-footer-for hook. Do NOT rebuild them here — a second enhancer
+       races the global one and leaves the footer empty. The search box stays put:
+       #gmDtSearch already ships its own .dataTables_filter driven by
+       #gmCustomSearch, which the global enhancer leaves alone. */
 
     /* ---------- Column show / hide (DataTables API) ---------- */
     var gmColStorageKey = 'gmGrid:hiddenColumns:v1';
@@ -749,23 +685,8 @@ $(document).ready(function() {
         });
     }
 
-    function bindGmTableUi(table) {
-        enhanceGmDtControls();
-        updateGmDtCount();
-        setupGmColumns(table);
-
-        table.on('draw.dt', function() {
-            var $wrapper = $('#group-mapping-table_wrapper');
-            if ($wrapper.find('.dataTables_paginate').length && !$('#gmDtFooter .dataTables_paginate').length) {
-                $('#gmDtFooter').empty().data('dtReady', false);
-            }
-            enhanceGmDtControls();
-            updateGmDtCount();
-        });
-    }
-
     $('#group-mapping-table').on('init.dt', function() {
-        bindGmTableUi($(this).DataTable());
+        setupGmColumns($(this).DataTable());
     });
 
     setTimeout(function() {
@@ -774,7 +695,7 @@ $(document).ready(function() {
         }
 
         var table = $('#group-mapping-table').DataTable();
-        bindGmTableUi(table);
+        setupGmColumns(table);
 
         setActiveFilterButton($('#filterGroupActive'));
 

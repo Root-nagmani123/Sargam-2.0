@@ -185,6 +185,7 @@ $(document).ready(function() {
     const possessionPks = @json($possessionPks ?? '');
     const prefill = @json($prefill ?? null);
     // List Meter Reading ka Edit link is page ko reading_pk ke saath kholta hai — sirf usi flow me New Meter No. editable.
+    // Scope note: input validation ki relaxation deliberately is screen par NAHI hai — wo LBSNAA-only hai (by request).
     const isListEditMode = !!(prefill && prefill.reading_pk);
     const newMeterNoLockAttr = isListEditMode ? '' : ' readonly';
     const newMeterNoLockClass = isListEditMode ? '' : ' bg-light';
@@ -575,7 +576,7 @@ $(document).ready(function() {
         const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
         if (isOtherCurrReadingBelowMinAllowed($inp, currReading)) {
             lastInvalidReadingAlertAt = Date.now();
-            alert('Current Month Reading cannot be less than Last Month Meter Reading.');
+            alert('Current Month Reading cannot be less than Last Month Meter Reading.\n\nIf the meter was replaced or the saved reading is wrong, open this row from List Meter Reading → Edit.');
         }
     });
 
@@ -640,7 +641,7 @@ $(document).ready(function() {
             const now = Date.now();
             if ((now - lastInvalidReadingAlertAt) > 800) {
                 lastInvalidReadingAlertAt = now;
-                alert('Current Month Reading cannot be less than Last Month Meter Reading.');
+                alert('Current Month Reading cannot be less than Last Month Meter Reading.\n\nIf the meter was replaced or the saved reading is wrong, open this row from List Meter Reading → Edit.');
             }
             return;
         }

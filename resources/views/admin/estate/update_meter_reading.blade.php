@@ -117,7 +117,7 @@
                 <input type="hidden" name="reading_block_id" id="reading_block_id" value="">
                 <input type="hidden" name="reading_unit_type_id" id="reading_unit_type_id" value="">
                 <input type="hidden" name="reading_unit_sub_type_id" id="reading_unit_sub_type_id" value="">
-                {{-- Set only when opened via Edit from List Meter Reading: that row is a correction, so baseline check is skipped. --}}
+                {{-- Set only when opened via Edit from List Meter Reading: that row skips the min-reading check. Units are unaffected. --}}
                 <input type="hidden" name="edit_reading_pk" id="edit_reading_pk" value="{{ $prefill['reading_pk'] ?? '' }}">
 
                 <div class="table-responsive mt-4">
@@ -588,7 +588,7 @@ $(document).ready(function() {
             const now = Date.now();
             if ((now - lastInvalidReadingAlertAt) > 800) {
                 lastInvalidReadingAlertAt = now;
-                alert('New Meter Reading cannot be less than the minimum allowed baseline for this row.');
+                alert('New Meter Reading cannot be less than the minimum allowed baseline for this row.\n\nIf the meter was replaced or the saved reading is wrong, open this row from List Meter Reading → Edit.');
             }
             return;
         }
@@ -684,7 +684,7 @@ $(document).ready(function() {
         const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
         if (isReadingBelowMinAllowed($inp, currReading)) {
             lastInvalidReadingAlertAt = Date.now();
-            alert('New Meter Reading cannot be less than the minimum allowed baseline for this row.');
+            alert('New Meter Reading cannot be less than the minimum allowed baseline for this row.\n\nIf the meter was replaced or the saved reading is wrong, open this row from List Meter Reading → Edit.');
         }
     });
 
