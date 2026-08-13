@@ -1236,6 +1236,54 @@ class ProcessMessBillsEmployeeController extends Controller
             })
             ->values();
 
+        // Self-service: an item stays invisible to the user until its invoice has actually been sent.
+        $combinedBills = $combinedBills
+            ->map(function ($cb) use ($dateFrom, $dateTo) {
+                $bills = $cb->bills->all();
+                $receiverUserId = (int) ($this->resolveReceiverUserIdFromAnyBill($bills) ?? 0);
+                $lineItemKeys = $this->collectMessBillLineItemKeys($bills);
+
+                $notifiedKeys = $this->getMessCombinedNotifiedLineItemKeys(
+                    $receiverUserId,
+                    $cb->combined_id,
+                    $dateFrom,
+                    $dateTo,
+                    $bills
+                );
+
+                // Legacy notifications (sent before per-item tracking existed) count everything as sent.
+                if ($notifiedKeys === [] && $this->messCombinedHasInvoiceNotificationInDateRange($receiverUserId, $cb->combined_id, $dateFrom, $dateTo)) {
+                    return $cb;
+                }
+
+                if (empty($lineItemKeys)) {
+                    // No trackable line items on this bill — nothing to hold back.
+                    return $notifiedKeys === [] ? null : $cb;
+                }
+
+                $notifiedKeySet = array_fill_keys($notifiedKeys, true);
+                $currentNotifiedKeys = array_intersect($lineItemKeys, $notifiedKeys);
+
+                if (count($currentNotifiedKeys) === count($lineItemKeys)) {
+                    // Every current item has already been invoiced — totals are accurate as-is.
+                    return $cb;
+                }
+
+                $sentTotal = $this->roundMoney($this->sumMessBillNotifiedItemAmount($bills, $notifiedKeySet));
+
+                if ($sentTotal <= 0.0) {
+                    return null;
+                }
+
+                $cb->total = $sentTotal;
+                $cb->due = $this->billDueAmount($sentTotal, $cb->paid);
+                $cb->status = $this->isBillFullyPaid($cb->paid, $sentTotal) ? 2 : ($cb->paid > 0 ? 1 : 0);
+
+                return $cb;
+            })
+            ->filter()
+            ->values();
+
         $effectiveDateFrom = $request->filled('date_from') ? $request->date_from : now()->startOfMonth()->format('d-m-Y');
         $effectiveDateTo = $request->filled('date_to') ? $request->date_to : now()->endOfMonth()->format('d-m-Y');
         $effectiveDateFromYmd = $dateFrom;
@@ -2374,6 +2422,95 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
+     * Sum of line-item amounts whose key is present in $notifiedKeySet (self-service "My Mess Bills":
+     * show only what's actually been invoiced to the user). Works off already-loaded `items` relations
+     * so it respects any date-range constraint applied to the eager load, same as collectMessBillLineItemKeys().
+     *
+     * @param  array<int, SellingVoucherDateRangeReport|KitchenIssueMaster|object>  $bills
+     * @param  array<string, bool>  $notifiedKeySet
+     */
+    private function sumMessBillNotifiedItemAmount(array $bills, array $notifiedKeySet): float
+    {
+        $sum = 0.0;
+        foreach ($bills as $bill) {
+            if ($bill instanceof SellingVoucherDateRangeReport) {
+                foreach ($bill->items ?? [] as $item) {
+                    $id = (int) ($item->id ?? 0);
+                    if ($id > 0 && isset($notifiedKeySet['dr-' . $id])) {
+                        $sum += $this->lineItemNetAmount($item);
+                    }
+                }
+            } elseif ($bill instanceof KitchenIssueMaster) {
+                $items = $bill->relationLoaded('items') ? $bill->items : collect();
+                if ($items->isNotEmpty()) {
+                    foreach ($items as $item) {
+                        $pk = (int) ($item->pk ?? 0);
+                        if ($pk > 0 && isset($notifiedKeySet['ki-' . $pk])) {
+                            $sum += $this->lineItemNetAmount($item);
+                        }
+                    }
+                } else {
+                    $masterPk = (int) ($bill->pk ?? 0);
+                    if ($masterPk > 0 && isset($notifiedKeySet['ki-bill-' . $masterPk])) {
+                        $sum += (float) ($bill->net_total ?? 0);
+                    }
+                }
+            } elseif ($this->isProcessIndexVoucherStub($bill)) {
+                $sum += $this->sumMessBillNotifiedItemAmountFromStub($bill, $notifiedKeySet);
+            }
+        }
+
+        return $sum;
+    }
+
+    /**
+     * Same as sumMessBillNotifiedItemAmount() for a single lightweight process-index voucher stub
+     * (no Eloquent items loaded) — queries item amounts directly.
+     *
+     * @param  array<string, bool>  $notifiedKeySet
+     */
+    private function sumMessBillNotifiedItemAmountFromStub(object $bill, array $notifiedKeySet): float
+    {
+        $sum = 0.0;
+        if (($bill->source_type ?? '') === 'date_range') {
+            $reportId = (int) ($bill->id ?? 0);
+            if ($reportId <= 0) {
+                return 0.0;
+            }
+            foreach (DB::table('sv_date_range_report_items')
+                ->where('sv_date_range_report_id', $reportId)
+                ->select(['id', 'quantity', 'return_quantity', 'rate'])
+                ->get() as $item) {
+                $id = (int) $item->id;
+                if ($id > 0 && isset($notifiedKeySet['dr-' . $id])) {
+                    $sum += max(0.0, (float) $item->quantity - (float) ($item->return_quantity ?? 0)) * (float) $item->rate;
+                }
+            }
+        } elseif (($bill->source_type ?? '') === 'kitchen_issue') {
+            $masterPk = (int) ($bill->pk ?? $bill->id ?? 0);
+            if ($masterPk <= 0) {
+                return 0.0;
+            }
+            $items = DB::table('kitchen_issue_items')
+                ->where('kitchen_issue_master_pk', $masterPk)
+                ->select(['pk', 'quantity', 'return_quantity', 'rate'])
+                ->get();
+            if ($items->isNotEmpty()) {
+                foreach ($items as $item) {
+                    $pk = (int) $item->pk;
+                    if ($pk > 0 && isset($notifiedKeySet['ki-' . $pk])) {
+                        $sum += max(0.0, (float) $item->quantity - (float) ($item->return_quantity ?? 0)) * (float) $item->rate;
+                    }
+                }
+            } elseif (isset($notifiedKeySet['ki-bill-' . $masterPk])) {
+                $sum += (float) ($bill->net_total ?? 0);
+            }
+        }
+
+        return $sum;
+    }
+
+    /**
      * For notifications created before line-item tracking: items issued on/before notification date.
      *
      * @param  array<int, SellingVoucherDateRangeReport|KitchenIssueMaster>  $bills
@@ -3345,6 +3482,22 @@ class ProcessMessBillsEmployeeController extends Controller
             $financials = $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, $filterDateFromYmd, $filterDateToYmd);
             $totalAmount = $financials['total'];
             $paidAmount = $financials['paid'];
+
+            // Self-service: hold back items whose invoice hasn't been sent to the user yet.
+            $isSelfService = ! $this->currentUserCanAdminMessBills();
+            $notifiedKeySet = [];
+            if ($isSelfService) {
+                $receiverUserId = (int) ($this->resolveReceiverUserIdFromAnyBill($bills) ?? 0);
+                $notifiedKeys = $this->getMessCombinedNotifiedLineItemKeys($receiverUserId, $id, $filterDateFromYmd, $filterDateToYmd, $bills);
+                if ($notifiedKeys === [] && $this->messCombinedHasInvoiceNotificationInDateRange($receiverUserId, $id, $filterDateFromYmd, $filterDateToYmd)) {
+                    // Legacy notification predating per-item tracking — treat everything as sent.
+                    $isSelfService = false;
+                } else {
+                    $notifiedKeySet = array_fill_keys($notifiedKeys, true);
+                }
+            }
+
+            $sentTotal = 0.0;
             foreach ($bills as $bill) {
                 $storeName = $bill->resolved_store_name ?? '—';
                 $storeNames[$storeName] = true;
@@ -3352,7 +3505,14 @@ class ProcessMessBillsEmployeeController extends Controller
                 if ($clientTypeDisplay === '') {
                     $clientTypeDisplay = $bill->client_type_display ?? ($bill->client_type_label ?? ($bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : '—'));
                 }
+                $isDateRangeBill = $bill instanceof SellingVoucherDateRangeReport;
                 foreach ($bill->items ?? [] as $item) {
+                    if ($isSelfService) {
+                        $itemKey = $isDateRangeBill ? 'dr-' . (int) ($item->id ?? 0) : 'ki-' . (int) ($item->pk ?? 0);
+                        if (! isset($notifiedKeySet[$itemKey])) {
+                            continue;
+                        }
+                    }
                     $itemIssueDate = null;
                     try {
                         if (isset($item->issue_date) && $item->issue_date) {
@@ -3372,9 +3532,14 @@ class ProcessMessBillsEmployeeController extends Controller
                         'quantity' => $item->quantity,
                         'amount' => number_format($item->amount ?? 0, 2),
                     ];
+                    $sentTotal += $this->lineItemNetAmount($item);
                 }
             }
-            $dueAmount = $financials['due'];
+
+            if ($isSelfService) {
+                $totalAmount = $this->roundMoney($sentTotal);
+            }
+            $dueAmount = $isSelfService ? $this->billDueAmount($totalAmount, $paidAmount) : $financials['due'];
             $totalDueAmount = $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, null, $filterDateToYmd)['due'];
             $combinedInvoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
 
