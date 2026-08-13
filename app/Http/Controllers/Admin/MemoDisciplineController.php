@@ -54,7 +54,7 @@ class MemoDisciplineController extends Controller
     // the DataTable's own query() re-resolves them fresh on every AJAX request.
     $programNameFilter   = $request->program_name;
     $statusFilter        = $request->status;
-    $searchFilter        = $request->search;
+    $searchFilter        = is_array($request->input('search')) ? null : $request->input('search');
     $disciplineFilter    = $request->discipline_master_pk;
     $categoryFilter      = $request->minor_major;
 
@@ -192,7 +192,7 @@ public function otIndex(Request $request)
 
     $programNameFilter = $request->program_name;
     $statusFilter      = $request->status;
-    $searchFilter      = $request->search;
+    $searchFilter        = is_array($request->input('search')) ? null : $request->input('search');
     $disciplineFilter  = $request->discipline_master_pk;
     $categoryFilter    = $request->minor_major;
 
@@ -250,24 +250,15 @@ public function otIndex(Request $request)
         ->whereHas('discipline', function ($q) {
             $q->where('active_inactive', 1);
         })
-        ->orderBy('pk', 'desc')
-        ->paginate($perPage)
-        // Append the RESOLVED filter values (not just $request->all()) so every
-        // pagination link reproduces the exact filtered view on a full reload —
-        // otherwise the server-defaulted date filter is dropped and filters "reset".
-        ->appends([
-            'program_name'         => $programNameFilter ?? '',
-            'discipline_master_pk' => $disciplineFilter ?? '',
-            'status'               => $statusFilter ?? '',
-            'minor_major'          => $categoryFilter ?? '',
-            'search'               => $searchFilter ?? '',
-            'from_date'            => $fromDateFilter ?? '',
-            'to_date'              => $toDateFilter ?? '',
-            'per_page'             => $perPage,
-        ]);
+        ->orderBy('pk', 'desc');
+
+    // Grid is server-side: the filter bar above still narrows the query, then DataTables'
+    // own search/sort/paging run in SQL on top of it.
+    if ($request->ajax()) {
+        return $this->otMemosDatatable($memos);
+    }
 
     return view('admin.memo_discipline.ot_index', compact(
-        'memos',
         'courses',
         'disciplines',
         'programNameFilter',
@@ -278,6 +269,61 @@ public function otIndex(Request $request)
         'fromDateFilter',
         'toDateFilter'
     ));
+}
+
+/**
+ * Server-side feed for the Officer Trainee "My Memos" grid.
+ */
+protected function otMemosDatatable($query)
+{
+    return \Yajra\DataTables\Facades\DataTables::eloquent($query)
+        ->addIndexColumn()
+        ->addColumn('program_name', fn ($memo) => e($memo->course->course_name ?? 'N/A'))
+        ->addColumn('infraction_date', fn ($memo) => e($memo->date ? \Carbon\Carbon::parse($memo->date)->format('d M Y') : 'N/A'))
+        ->addColumn('infraction', fn ($memo) => '<span class="badge bg-info-subtle text-info">'.e($memo->discipline->discipline_name ?? 'N/A').'</span>')
+        ->addColumn('category', function ($memo) {
+            if ($memo->minor_major == 2) {
+                return '<span class="badge bg-danger-subtle text-danger">Major</span>';
+            }
+            if ($memo->minor_major == 1) {
+                return '<span class="badge bg-secondary-subtle text-secondary">Minor</span>';
+            }
+
+            return '<span class="text-muted">—</span>';
+        })
+        ->addColumn('marks_submitted', fn ($memo) => e($memo->mark_deduction_submit))
+        ->addColumn('final_marks', fn ($memo) => e($memo->final_mark_deduction))
+        ->addColumn('remarks_text', fn ($memo) => e($memo->remarks ?? '—'))
+        ->addColumn('conclusion_text', fn ($memo) => e($memo->conclusion_remark ?? '—'))
+        ->addColumn('created', fn ($memo) => e(! empty($memo->created_date) ? \Carbon\Carbon::parse($memo->created_date)->format('d M Y') : 'N/A'))
+        ->addColumn('status_cell', function ($memo) {
+            $viewLink = '<a href="'.route('memo.discipline.memo.show', encrypt($memo->pk)).'" class="link-primary small fw-medium">View Memo</a>';
+            $chatLink = '<a class="text-success view-conversation" data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas"'
+                .' data-id="'.e($memo->pk).'" data-type="OT" title="Open conversation">'
+                .'<i class="material-icons material-symbols-rounded fs-5">chat</i></a>';
+
+            if ($memo->status == 1) {
+                return '<span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i> Recorded</span>'
+                    .'<div class="mt-1 d-flex gap-2">'.$viewLink.'</div>';
+            }
+
+            if ($memo->status == 2) {
+                return '<span class="badge bg-warning-subtle text-warning"><i class="bi bi-envelope me-1"></i> Memo Sent</span>'
+                    .'<div class="mt-1 d-flex gap-2">'.$viewLink.$chatLink.'</div>';
+            }
+
+            return '<span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-lock me-1"></i> Closed</span>'
+                .'<div class="mt-1 d-flex gap-2">'.$viewLink.$chatLink.'</div>';
+        })
+        ->filterColumn('program_name', fn ($q, $keyword) => $q->whereHas('course', fn ($c) => $c->where('course_name', 'like', "%{$keyword}%")))
+        ->filterColumn('infraction', fn ($q, $keyword) => $q->whereHas('discipline', fn ($d) => $d->where('discipline_name', 'like', "%{$keyword}%")))
+        ->filterColumn('remarks_text', fn ($q, $keyword) => $q->where('remarks', 'like', "%{$keyword}%"))
+        ->filterColumn('conclusion_text', fn ($q, $keyword) => $q->where('conclusion_remark', 'like', "%{$keyword}%"))
+        ->filterColumn('infraction_date', fn ($q, $keyword) => $q->where('date', 'like', "%{$keyword}%"))
+        ->orderColumn('infraction_date', 'date $1')
+        ->orderColumn('created', 'created_date $1')
+        ->rawColumns(['infraction', 'category', 'status_cell'])
+        ->make(true);
 }
 
 /**
@@ -601,7 +647,7 @@ private function buildDisciplineExportData(Request $request): array
     // Filters (identical to index)
     $programNameFilter = $request->program_name;
     $statusFilter      = $request->status;
-    $searchFilter      = $request->search;
+    $searchFilter        = is_array($request->input('search')) ? null : $request->input('search');
     $disciplineFilter  = $request->discipline_master_pk;
     $categoryFilter    = $request->minor_major;
 

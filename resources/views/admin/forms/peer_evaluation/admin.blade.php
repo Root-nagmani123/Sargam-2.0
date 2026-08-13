@@ -1095,7 +1095,9 @@ $(document).ready(function() {
         order: [],
         language: { processing: "Loading data…" }
     });
-	
+    // The setTimeout above was never closed, which made this whole <script> a
+    // SyntaxError — so none of the three grids initialised.
+    }, 0);
 });
 </script>
 

@@ -88,7 +88,7 @@
             <hr class="my-3">
 
             <div class="table-responsive">
-                <table class="table align-middle mb-0 text-nowrap">
+                <table class="table align-middle mb-0 text-nowrap" id="otMemosTable">
                     <thead>
                         <tr>
                             <th>S. No.</th>
@@ -104,87 +104,12 @@
                             <th>Status</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse ($memos as $index => $memo)
-                        <tr>
-                            <td class="fw-semibold text-muted">{{ $memos->firstItem() + $index }}</td>
-                            <td class="fw-semibold">{{ $memo->course->course_name ?? 'N/A' }}</td>
-                            <td class="text-muted">{{ $memo->date ? \Carbon\Carbon::parse($memo->date)->format('d M Y') : 'N/A' }}</td>
-                            <td><span class="badge bg-info-subtle text-info">{{ $memo->discipline->discipline_name ?? 'N/A' }}</span></td>
-                            <td>
-                                @if($memo->minor_major == 2)
-                                <span class="badge bg-danger-subtle text-danger">Major</span>
-                                @elseif($memo->minor_major == 1)
-                                <span class="badge bg-secondary-subtle text-secondary">Minor</span>
-                                @else
-                                <span class="text-muted">—</span>
-                                @endif
-                            </td>
-                            <td class="text-center fw-semibold text-warning">{{ $memo->mark_deduction_submit }}</td>
-                            <td class="text-center fw-semibold text-danger">{{ $memo->final_mark_deduction }}</td>
-                            <td class="text-muted">{{ $memo->remarks ?? '—' }}</td>
-                            <td class="text-muted">{{ $memo->conclusion_remark ?? '—' }}</td>
-                            <td class="text-muted">{{ !empty($memo->created_date) ? \Carbon\Carbon::parse($memo->created_date)->format('d M Y') : 'N/A' }}</td>
-                            <td>
-                                @if ($memo->status == 1)
-                                <span class="badge bg-success-subtle text-success">
-                                    <i class="bi bi-check-circle me-1"></i> Recorded
-                                </span>
-                                <div class="mt-1 d-flex gap-2">
-                                    <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
-                                        class="link-primary small fw-medium">View Memo</a>
-                                </div>
-                                @elseif ($memo->status == 2)
-                                <span class="badge bg-warning-subtle text-warning">
-                                    <i class="bi bi-envelope me-1"></i> Memo Sent
-                                </span>
-                                <div class="mt-1 d-flex gap-2">
-                                    <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
-                                        class="link-primary small fw-medium">View Memo</a>
-                                    <a class="text-success view-conversation" data-bs-toggle="offcanvas"
-                                        data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}" data-type="OT"
-                                        title="Open conversation">
-                                        <i class="material-icons material-symbols-rounded fs-5">chat</i>
-                                    </a>
-                                </div>
-                                @else
-                                <span class="badge bg-secondary-subtle text-secondary">
-                                    <i class="bi bi-lock me-1"></i> Closed
-                                </span>
-                                <div class="mt-1 d-flex gap-2">
-                                    <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
-                                        class="link-primary small fw-medium">View Memo</a>
-                                    <a class="text-success view-conversation" data-bs-toggle="offcanvas"
-                                        data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}" data-type="OT"
-                                        title="Open conversation">
-                                        <i class="material-icons material-symbols-rounded fs-5">chat</i>
-                                    </a>
-                                </div>
-                                @endif
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="11" class="text-center py-5 text-muted">
-                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                                <span class="fw-medium">No discipline memos available</span>
-                            </td>
-                        </tr>
-                        @endforelse
-                    </tbody>
+                    {{-- Rows come from the server-side DataTable (see script below). --}}
+                    <tbody></tbody>
                 </table>
             </div>
 
-            {{-- Pagination --}}
-            <div class="card-footer bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div class="text-muted small">
-                    Showing {{ $memos->firstItem() ?? 0 }} to {{ $memos->lastItem() ?? 0 }}
-                    of {{ $memos->total() }} records
-                </div>
-                <div>
-                    {{ $memos->links('vendor.pagination.custom') }}
-                </div>
-            </div>
+
         </div>
     </div>
 
@@ -223,6 +148,39 @@
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
 $(document).ready(function () {
+
+    /* ── Memo list: server-side grid. The filter bar above still submits as a normal
+          GET, so its values ride along in the URL and narrow the query first. ── */
+    $('#otMemosTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{{ request()->fullUrl() }}",
+            type: 'GET'
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'fw-semibold text-muted' },
+            { data: 'program_name', name: 'program_name', orderable: false, className: 'fw-semibold' },
+            { data: 'infraction_date', name: 'infraction_date', className: 'text-muted' },
+            { data: 'infraction', name: 'infraction', orderable: false },
+            { data: 'category', name: 'minor_major', searchable: false },
+            { data: 'marks_submitted', name: 'mark_deduction_submit', className: 'text-center fw-semibold text-warning' },
+            { data: 'final_marks', name: 'final_mark_deduction', className: 'text-center fw-semibold text-danger' },
+            { data: 'remarks_text', name: 'remarks_text', orderable: false, className: 'text-muted' },
+            { data: 'conclusion_text', name: 'conclusion_text', orderable: false, className: 'text-muted' },
+            { data: 'created', name: 'created', className: 'text-muted' },
+            { data: 'status_cell', name: 'status', searchable: false }
+        ],
+        order: [],
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+        autoWidth: false,
+        language: {
+            processing: 'Loading data…',
+            emptyTable: 'No discipline memos available',
+            zeroRecords: 'No discipline memos match your search'
+        }
+    });
 
     /* ── Searchable dropdowns (match the admin page) ── */
     if (typeof window.Choices !== 'undefined') {

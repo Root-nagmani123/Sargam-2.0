@@ -920,15 +920,35 @@ if ($groupId && hasRole('Student-OT')) {
             DB::raw('MAX(m.event_name) as event_name'),
             // DB::raw('GROUP_CONCAT(DISTINCT m.ot_code SEPARATOR ", ") as ot_codes')
         )
-        ->groupBy('g.id', 'g.group_name')
-        ->get();
+        ->groupBy('g.id', 'g.group_name');
 
-        // print_r($groups);
-        // exit;
+        // Grid is server-side: only the visible page is sent to the browser.
+        if (request()->ajax()) {
+            return $this->userGroupsDatatable($groups);
+        }
 
+        return view('admin.forms.peer_evaluation.user_groups', [
+            'groupsCount' => (clone $groups)->get()->count(),
+        ]);
+    }
 
-
-        return view('admin.forms.peer_evaluation.user_groups', compact('groups'));
+    /**
+     * Server-side feed for the "My Peer Evaluation Groups" grid.
+     * course_name / event_name are aggregates, so their search runs through HAVING.
+     */
+    protected function userGroupsDatatable($query)
+    {
+        return \Yajra\DataTables\Facades\DataTables::of($query)
+            ->editColumn('group_name', fn ($row) => e($row->group_name))
+            ->editColumn('course_name', fn ($row) => e($row->course_name ?? '-'))
+            ->editColumn('event_name', fn ($row) => e($row->event_name ?? '-'))
+            ->addColumn('action', fn ($row) => '<a href="'.route('peer.index', ['group_id' => $row->id]).'" class="btn btn-success btn-sm">Submit Evaluation</a>')
+            ->filterColumn('group_name', fn ($q, $keyword) => $q->where('g.group_name', 'like', "%{$keyword}%"))
+            ->filterColumn('course_name', fn ($q, $keyword) => $q->having('course_name', 'like', "%{$keyword}%"))
+            ->filterColumn('event_name', fn ($q, $keyword) => $q->having('event_name', 'like', "%{$keyword}%"))
+            ->orderColumn('group_name', 'g.group_name $1')
+            ->rawColumns(['action'])
+            ->make(true);
     }
 
     /**

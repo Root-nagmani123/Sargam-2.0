@@ -2244,9 +2244,6 @@ class EmployeeIDCardApprovalController extends Controller
             }
         }
 
-        $permRows = $permQuery->get();
-        $permDtos = $permRows->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
-
         // 2) Contractual Regular requests (security_con_oth_id_apply)
         $contQuery = DB::table('security_con_oth_id_apply')->orderByDesc('created_date');
 
@@ -2269,29 +2266,107 @@ class EmployeeIDCardApprovalController extends Controller
             }
         }
 
-        $contRows = $contQuery->get();
-        $contDtos = $contRows->map(fn ($r) => IdCardSecurityMapper::toContractualRequestDto($r));
-
-        // 3) Merge Permanent + Contractual and paginate together
-        $merged = $permDtos->concat($contDtos)->sortByDesc(function ($d) {
-            return $d->created_at ? (\Carbon\Carbon::parse($d->created_at)->timestamp ?? 0) : 0;
-        })->values();
-
-        // Grid is server-side: only the visible page of the merged list is sent to the browser.
+        // Grid is server-side. Both streams are merged, sorted and sliced on their id +
+        // created_date alone; only the ~10 rows of the visible page are then hydrated and
+        // mapped to DTOs. Mapping the whole list here cost ~28k queries per request.
         if ($request->ajax() && $request->has('draw')) {
-            return $this->allRequestsDatatable($request, $merged);
+            return $this->allRequestsDatatable($request, $permQuery, $contQuery);
         }
 
         return view('admin.security.employee_idcard_approval.all');
     }
 
     /**
-     * Server-side rows for the "All ID Card Requests" grid. The page's Status / Search
-     * filters are already applied to $merged; search, sort and paging happen here.
+     * Merge key for the "All ID Card Requests" grid: one lightweight row per request
+     * (source + id + sort keys), without touching the DTO mapper.
      *
-     * @param  \Illuminate\Support\Collection<int, mixed>  $merged
+     * @return \Illuminate\Support\Collection<int, object>
      */
-    protected function allRequestsDatatable(Request $request, \Illuminate\Support\Collection $merged)
+    protected function allRequestsIndex($permQuery, $contQuery, string $keyword = '')
+    {
+        $perm = (clone $permQuery)
+            ->when($keyword !== '', function ($q) use ($keyword) {
+                $q->where(function ($inner) use ($keyword) {
+                    $inner->whereHas('employee', function ($e) use ($keyword) {
+                        $e->where('first_name', 'like', "%{$keyword}%")
+                            ->orWhere('last_name', 'like', "%{$keyword}%");
+                    })->orWhere('id_card_no', 'like', "%{$keyword}%");
+                });
+            })
+            ->reorder()
+            ->get(['emp_id_apply', 'created_date', 'employee_master_pk'])
+            ->map(fn ($r) => (object) [
+                'source' => 'perm',
+                'id' => $r->emp_id_apply,
+                'created_date' => $r->created_date,
+            ]);
+
+        $cont = (clone $contQuery)
+            ->when($keyword !== '', function ($q) use ($keyword) {
+                $q->where(function ($inner) use ($keyword) {
+                    $inner->where('employee_name', 'like', "%{$keyword}%")
+                        ->orWhere('id_card_no', 'like', "%{$keyword}%");
+                });
+            })
+            ->reorder()
+            ->get(['emp_id_apply', 'created_date'])
+            ->map(fn ($r) => (object) [
+                'source' => 'cont',
+                'id' => $r->emp_id_apply,
+                'created_date' => $r->created_date,
+            ]);
+
+        return $perm->concat($cont);
+    }
+
+    /**
+     * Hydrate one page of the merged index back into display DTOs.
+     *
+     * @param  \Illuminate\Support\Collection<int, object>  $page
+     * @return array<int, object>
+     */
+    protected function allRequestsHydrate($page): array
+    {
+        $permIds = $page->where('source', 'perm')->pluck('id')->all();
+        $contIds = $page->where('source', 'cont')->pluck('id')->all();
+
+        $permDtos = [];
+        if ($permIds !== []) {
+            $rows = SecurityParmIdApply::with(['employee.designation', 'approvals.approver'])
+                ->whereIn('emp_id_apply', $permIds)
+                ->get();
+            $cardLookups = IdCardSecurityMapper::prefetchCardLookupsForPermApplies($rows);
+            foreach ($rows as $row) {
+                $permDtos[(string) $row->emp_id_apply] = IdCardSecurityMapper::toEmployeeRequestDto($row, $cardLookups);
+            }
+        }
+
+        $contDtos = [];
+        if ($contIds !== []) {
+            foreach (DB::table('security_con_oth_id_apply')->whereIn('emp_id_apply', $contIds)->get() as $row) {
+                $contDtos[(string) $row->emp_id_apply] = IdCardSecurityMapper::toContractualRequestDto($row);
+            }
+        }
+
+        $out = [];
+        foreach ($page as $entry) {
+            $dto = $entry->source === 'perm'
+                ? ($permDtos[(string) $entry->id] ?? null)
+                : ($contDtos[(string) $entry->id] ?? null);
+            if ($dto !== null) {
+                $out[] = $dto;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Server-side rows for the "All ID Card Requests" grid. The page's Status / Search
+     * filters are already applied to both queries; the grid's own search, sort and paging
+     * happen here — against the lightweight index, never the full DTO list.
+     */
+    protected function allRequestsDatatable(Request $request, $permQuery, $contQuery)
     {
         $draw = (int) $request->input('draw', 0);
         $start = max((int) $request->input('start', 0), 0);
@@ -2300,38 +2375,25 @@ class EmployeeIDCardApprovalController extends Controller
             $length = 10;
         }
 
-        $recordsTotal = $merged->count();
+        // Cheap merge key first (id + created_date only) — no DTO mapping yet.
+        $recordsTotal = $this->allRequestsIndex($permQuery, $contQuery)->count();
 
         $keyword = trim((string) $request->input('search.value', ''));
-        if ($keyword !== '') {
-            $needle = mb_strtolower($keyword);
-            $merged = $merged->filter(function ($req) use ($needle) {
-                $haystack = mb_strtolower(implode(' ', array_filter([
-                    $req->name ?? '',
-                    $req->card_type ?? '',
-                    $req->request_for ?? '',
-                    $req->status ?? '',
-                    $req->created_at ? $req->created_at->format('d/m/Y') : '',
-                ], fn ($v) => $v !== null && $v !== '')));
+        $index = $this->allRequestsIndex($permQuery, $contQuery, $keyword);
 
-                return str_contains($haystack, $needle);
-            })->values();
-        }
+        $recordsFiltered = $index->count();
 
-        $recordsFiltered = $merged->count();
-
-        // Column index → property (S.No and Actions do not sort).
-        $sortable = [1 => 'created_at', 2 => 'card_type', 3 => 'request_for', 4 => 'name', 5 => 'status'];
-        $orderColumn = (int) $request->input('order.0.column', 1);
+        // Request Date is the only sortable column backed by the index; the rest are
+        // labels computed per row, so they stay on the default newest-first order.
         $orderDir = strtolower((string) $request->input('order.0.dir', 'desc'));
-        if (isset($sortable[$orderColumn])) {
-            $key = $sortable[$orderColumn];
-            $merged = $orderDir === 'desc'
-                ? $merged->sortByDesc(fn ($req) => $req->{$key} ?? '')->values()
-                : $merged->sortBy(fn ($req) => $req->{$key} ?? '')->values();
-        }
+        $index = $orderDir === 'asc'
+            ? $index->sortBy(fn ($e) => $e->created_date ? \Carbon\Carbon::parse($e->created_date)->timestamp : 0)->values()
+            : $index->sortByDesc(fn ($e) => $e->created_date ? \Carbon\Carbon::parse($e->created_date)->timestamp : 0)->values();
 
-        $page = $length === -1 ? $merged : $merged->slice($start, $length);
+        $pageIndex = $length === -1 ? $index : $index->slice($start, $length)->values();
+
+        // Only this page's rows are hydrated + mapped.
+        $page = $this->allRequestsHydrate($pageIndex);
 
         $serial = $start + 1;
         $data = [];
