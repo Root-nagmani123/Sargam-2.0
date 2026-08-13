@@ -15,228 +15,518 @@
 @section('title', $estateBillPageLabel . ' - Sargam')
 
 @section($estateSelfHomeTab ? 'content' : 'setup_content')
-<div class="container-fluid py-4">
+<div class="container-fluid geb-page">
     <x-breadcrum title="{{ $estateBillPageLabel }}"></x-breadcrum>
     <x-session_message />
 
+    {{-- Actions sit above the card, right-aligned, as the export row does on the
+         index pages (new-design-index-page.md §1). Print All only exists once a
+         month is chosen, so it stays inside the @if. --}}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 geb-secondary-actions">
+        <div class="form-check mb-0 d-flex align-items-center gap-2">
+            <input class="form-check-input mt-0" type="checkbox" id="check_all" name="check_all"
+                aria-describedby="check_all_help">
+            <label class="form-check-label geb-select-all" for="check_all">Select All</label>
+            <span id="check_all_help" class="visually-hidden">Select or clear all bill checkboxes</span>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            {{-- Bulk actions are revealed by a selection; with nothing ticked the
+                 row shows Print All alone, as the design does. --}}
+            <button type="button" id="btn_print_selected"
+                class="btn programme-dt-btn-columns border-0 text-primary geb-bulk d-none"
+                title="Print selected bills in a single tab">
+                <i class="bi bi-printer" aria-hidden="true"></i>
+                <span>Print Selected</span>
+            </button>
+            @if($showUnitSubTypeFilter)
+            <button type="button" id="btn_notify_selected"
+                class="btn programme-dt-btn-columns border-0 text-primary geb-bulk d-none"
+                title="Notify the selected bills">
+                <i class="bi bi-send" aria-hidden="true"></i>
+                <span>Notify Selected</span>
+            </button>
+            @endif
+        @if($billMonth)
+        <a href="{{ route('admin.estate.reports.bill-report-print-all', array_filter(['bill_month' => $billMonth, 'unit_sub_type_pk' => $unitSubTypePk, 'scope' => request('scope') === 'self' ? 'self' : null], static fn ($v) => $v !== null && $v !== '')) }}"
+            target="_blank" rel="noopener" id="btn_print_all"
+            class="btn programme-dt-btn-columns border-0 text-primary"
+            title="View all bills in one page — print or download as PDF at once">
+            <i class="bi bi-printer-fill" aria-hidden="true"></i>
+            <span>Print All</span>
+        </a>
+        @endif
+        </div>
+    </div>
 
-
-    <!-- Filters -->
-    <div class="card shadow-sm border-0 rounded-3 mb-4">
-
-        <div class="card-body p-4">
-            <div class="d-flex flex-column flex-md-row flex-wrap align-items-start align-items-md-center justify-content-between gap-3 mb-4">
-                <div>
-                    <h1 class="h4 fw-semibold mb-1">{{ $estateBillPageLabel }}</h1>
-                    <p class="text-muted small mb-0">
-                        @if($estateBillIsPersonalView)
-                        View your estate bill summary. Select bill month and (where available) unit sub type to review bills.
-                        @else
-                        View and generate estate bill summary. Select bill month and unit sub type, then use actions to notify or save as draft.
-                        @endif
-                    </p>
-                </div>
-            </div>
-            <hr class="my-2">
-            <form method="get" action="{{ route('admin.estate.generate-estate-bill') }}" class="row g-3 g-md-4 align-items-end">
+    <div class="geb-bar mb-3">
+          {{-- Toolbar: filters left · Columns + search right (§2) --}}
+            <form method="get" action="{{ route('admin.estate.generate-estate-bill') }}"
+                class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 programme-dt-toolbar">
                 @if(request('scope') === 'self')
                 <input type="hidden" name="scope" value="self">
                 @endif
-                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                    <label for="bill_month" class="form-label fw-medium">Bill Month <span class="text-danger">*</span></label>
-                    <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ old('bill_month', $billMonth) }}" max="{{ date('Y-m') }}" data-max-date="{{ date('Y-m-d') }}" required aria-describedby="bill_month_help">
-                    <div id="bill_month_help" class="form-text small">Select the month for billing</div>
-                </div>
-                @if($showUnitSubTypeFilter)
-                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                    <label for="unit_sub_type_pk" class="form-label fw-medium">Unit Sub Type </label>
-                    <select class="form-select" id="unit_sub_type_pk" name="unit_sub_type_pk" aria-label="Select Unit Sub Type" aria-describedby="unit_sub_type_help">
-                        <option value="">— Select Unit Sub Type —</option>
-                        @foreach($unitSubTypes as $ust)
-                        <option value="{{ $ust->pk }}" {{ (string)$unitSubTypePk === (string)$ust->pk ? 'selected' : '' }}>{{ $ust->unit_sub_type }}</option>
-                        @endforeach
-                    </select>
-                    <div id="unit_sub_type_help" class="form-text small">Filter by unit category</div>
-                </div>
-                @endif
-                @if($showGenerateEstateBillSearch)
-                <div class="col-12 col-sm-6 col-md-6 {{ $showUnitSubTypeFilter ? 'col-lg-3' : 'col-lg-5' }}">
-                    <label for="search" class="form-label fw-medium">Search</label>
-                    <input type="search" class="form-control" id="search" name="search" value="{{ old('search', $search ?? '') }}" placeholder="House, bill no., name…" autocomplete="off" aria-describedby="search_help" title="Also: month/year, designation, employee type, unit e.g. Type-(12)">
-                    <div id="search_help" class="form-text small text-muted mb-0">Bill, house, name, designation, type.</div>
-                </div>
-                @endif
-                <div class="col-12 col-sm-6 col-md-6 {{ $genBillActionsCol }}">
-                    {{-- Match Search column: label + field + form-text so align-items-end lines up with the input row, not the hint --}}
-                    <div class="form-label fw-medium invisible user-select-none" aria-hidden="true">&nbsp;</div>
-                    <div class="d-flex flex-wrap align-items-center gap-3">
-                        <div class="form-check mb-0">
-                            <input class="form-check-input" type="checkbox" id="check_all" name="check_all" aria-describedby="check_all_help">
-                            <label class="form-check-label text-nowrap" for="check_all">Check All</label>
-                        </div>
-                        <span id="check_all_help" class="visually-hidden">Select or clear all bill checkboxes</span>
-                        <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2 flex-shrink-0 text-nowrap">
-                            <i class="material-symbols-rounded" style="font-size: 1.1rem;">visibility</i>
-                            Show
-                        </button>
+
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="programme-dt-filters-label">Filter</span>
+
+                    <div class="programme-dt-filter-select">
+                        <select class="form-select" id="bill_month" name="bill_month" aria-label="Bill Month"
+                            data-max-date="{{ date('Y-m-d') }}">
+                            <option value="">Bill Month</option>
+                            @foreach($billMonthOptions ?? [] as $value => $label)
+                            <option value="{{ $value }}" {{ (string) old('bill_month', $billMonth) === (string) $value ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                        </select>
                     </div>
-                    <div class="form-text small text-muted mb-0 invisible user-select-none" aria-hidden="true">&nbsp;</div>
-                </div>
-                <div class="col-12 mt-2 pt-3 border-top">
-                    <div class="d-flex gap-2 flex-wrap justify-content-sm-end align-items-center">
-                        <button type="button" id="btn_print_selected" class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1" title="Print selected bills in a single tab">
-                            <i class="material-symbols-rounded" style="font-size: 1rem;">print</i>
-                            Print Selected
-                        </button>
-                        @if($showUnitSubTypeFilter)
-                        <button type="button" id="btn_notify_selected" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1">Notify Selected</button>
-                        @endif
+
+                    @if($showUnitSubTypeFilter)
+                    <div class="programme-dt-filter-select">
+                        <select class="form-select" id="unit_sub_type_pk" name="unit_sub_type_pk"
+                            aria-label="Unit Sub Type">
+                            <option value="">Unit Sub Type</option>
+                            @foreach($unitSubTypes as $ust)
+                            <option value="{{ $ust->pk }}" {{ (string)$unitSubTypePk === (string)$ust->pk ? 'selected' : '' }}>{{ $ust->unit_sub_type }}</option>
+                            @endforeach
+                        </select>
                     </div>
+                    @endif
+
+                    {{-- GET-filtered page, so the reset is a plain link back to the
+                         unfiltered route; the component (and its red) is the
+                         programme-dt one, not disc-reset (§2). --}}
+                    <a href="{{ route('admin.estate.generate-estate-bill', request('scope') === 'self' ? ['scope' => 'self'] : []) }}"
+                        class="btn programme-dt-btn-reset d-inline-flex align-items-center justify-content-center">Remove
+                        Filter</a>
                 </div>
-            </form>
-        </div>
-    </div>
+
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" data-bs-toggle="modal"
+                        data-bs-target="#gebColumnModal" title="Show / hide bill fields">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+
+                    @if($showGenerateEstateBillSearch)
+                    {{-- Toggle variant (§2): the icon reveals a GET search that keeps
+                         the other filter state as hidden inputs. --}}
+                    <button type="button" class="btn geb-search-toggle" id="gebSearchToggle"
+                        aria-expanded="{{ filled($search ?? '') ? 'true' : 'false' }}" aria-controls="gebSearchWrap"
+                        title="Search bills">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                    </button>
+                    <div class="programme-dt-search geb-search {{ filled($search ?? '') ? '' : 'd-none' }}"
+                        id="gebSearchWrap">
+                        <input type="search" class="form-control" id="search" name="search"
+                            value="{{ old('search', $search ?? '') }}" placeholder="Search" autocomplete="off"
+                            aria-label="Search bills"
+                            title="Bill no., house, name, designation, employee type, unit e.g. Type-(12)">
+                    </div>
+                    @endif
+                </div>
+            </form>  
+
 
     <div id="status-msg" class="mb-3" style="display: none;" aria-live="polite"></div>
 
     @if($billMonth)
-    <!-- Section title and print actions -->
-    <div class="d-flex flex-column flex-sm-row flex-wrap align-items-center justify-content-center justify-content-sm-between gap-3 mb-4">
-        <p class="lead fw-semibold text-body mb-0 py-2 px-3 bg-body-secondary rounded-3 d-inline-block">LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION, MUSSOORIE — ESTATE BILL</p>
-        <div class="d-flex gap-2 flex-wrap justify-content-center">
-            <a href="{{ route('admin.estate.reports.bill-report-print-all', array_filter(['bill_month' => $billMonth, 'unit_sub_type_pk' => $unitSubTypePk, 'scope' => request('scope') === 'self' ? 'self' : null], static fn ($v) => $v !== null && $v !== '')) }}" target="_blank" rel="noopener" id="btn_print_all" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" title="View all bills in one page — print or download as PDF at once">
-                <i class="material-symbols-rounded" style="font-size: 1rem;">print</i>
-                Print All
-            </a>
-        </div>
-    </div>
-
-    <!-- Scrollable bill cards area -->
-    <div class="bill-cards-wrapper border border-2 rounded-3 bg-body-secondary overflow-auto" style="max-height: 65vh;">
-        <div class="p-3 p-md-4">
+    <div class="bill-cards-wrapper geb-cards">
             @forelse($bills as $bill)
-            <div class="card shadow-sm border-0 rounded-3 mb-3 bill-card" data-bill-no="{{ $bill->bill_no ?? '' }}" data-bill-month="{{ $bill->bill_month ?? '' }}" data-bill-year="{{ $bill->bill_year ?? '' }}">
-                <div class="card-body p-4 position-relative">
-                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3 pb-2 border-bottom">
-                        <div class="form-check form-check-lg mb-0">
-                            <input class="form-check-input bill-checkbox" type="checkbox" value="{{ $bill->pk }}" id="bill_{{ $bill->pk }}" data-bill-pk="{{ $bill->pk }}">
-                            <label class="form-check-label text-muted small" for="bill_{{ $bill->pk }}">Select this bill</label>
+            @php
+                $gebMeterTwo = (isset($bill->meter_two) && (int) $bill->meter_two !== 0)
+                    || (isset($bill->meter_two_consume_unit) && (int) $bill->meter_two_consume_unit > 0);
+            @endphp
+            <div class="geb-bill mb-3 bill-card" data-bill-no="{{ $bill->bill_no ?? '' }}"
+                data-bill-month="{{ $bill->bill_month ?? '' }}" data-bill-year="{{ $bill->bill_year ?? '' }}">
+
+                <div class="geb-bill__head">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div class="form-check mb-0 d-flex align-items-center gap-2">
+                            <input class="form-check-input bill-checkbox mt-0" type="checkbox" value="{{ $bill->pk }}"
+                                id="bill_{{ $bill->pk }}" data-bill-pk="{{ $bill->pk }}">
+                            <label class="form-check-label geb-bill__no" for="bill_{{ $bill->pk }}">
+                                Bill Number #{{ $bill->bill_no ?? '—' }}
+                            </label>
                         </div>
-                        <a href="{{ route('admin.estate.reports.bill-report-print') }}?bill_no={{ $bill->bill_no }}&month={{ $bill->bill_month }}&year={{ $bill->bill_year }}" target="_blank" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" title="Print this bill">
-                            <i class="material-symbols-rounded" style="font-size: 1rem;">print</i>
-                            Print
+                        <a href="{{ route('admin.estate.reports.bill-report-print') }}?bill_no={{ $bill->bill_no }}&month={{ $bill->bill_month }}&year={{ $bill->bill_year }}"
+                            target="_blank" rel="noopener" class="btn geb-btn-print" title="Print this bill">
+                            <i class="bi bi-printer" aria-hidden="true"></i>
+                            <span>Print</span>
                         </a>
                     </div>
 
-                    <div class="row g-3 g-md-4 mb-3">
-                        <div class="col-12 col-md-6">
-                            <table class="table table-borderless table-sm mb-0">
-                                <tbody>
-                                    <tr>
-                                        <td class="text-muted pe-3 text-nowrap" style="width: 42%;">Bill No.</td>
-                                        <td class="fw-semibold">{{ $bill->bill_no ?? '—' }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">Month</td>
-                                        <td>{{ $bill->bill_month ?? '' }} {{ $bill->bill_year ?? '' }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">Emp Name</td>
-                                        <td><span class="text-primary fw-medium">{{ $bill->emp_name ?? '—' }}</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">Designation</td>
-                                        <td>{{ $bill->emp_designation ?? '—' }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">Employee Type</td>
-                                        <td><span class="badge text-bg-secondary">REGULAR</span></td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                    <div class="geb-facts geb-facts--head">
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Request Date</span>
+                            <span class="geb-fact__value">{{ $bill->req_date_formatted ?? '—' }}</span>
                         </div>
-                        <div class="col-12 col-md-6">
-                            <table class="table table-borderless table-sm mb-0">
-                                <tbody>
-                                    <tr>
-                                        <td class="text-muted pe-3 text-nowrap" style="width: 42%;">House No.</td>
-                                        <td><span class="text-primary fw-medium">{{ $bill->house_display ?? '—' }}</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">From Date</td>
-                                        <td>{{ $bill->from_date_formatted ?? '—' }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">To Date</td>
-                                        <td>{{ $bill->to_date_formatted ?? '—' }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Employee Name</span>
+                            <span class="geb-fact__value">{{ $bill->emp_name ?? '—' }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">House Number</span>
+                            <span class="geb-fact__value">{{ $bill->house_display ?? '—' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="geb-bill__body">
+                    <div class="geb-facts">
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Bill No.</span>
+                            <span class="geb-fact__value">{{ $bill->bill_no ?? '—' }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Month</span>
+                            <span class="geb-fact__value">{{ trim(($bill->bill_month ?? '') . ' ' . ($bill->bill_year ?? '')) ?: '—' }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Employee Name</span>
+                            <span class="geb-fact__value">{{ $bill->emp_name ?? '—' }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Designation</span>
+                            <span class="geb-fact__value">{{ $bill->emp_designation ?? '—' }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Employee Type</span>
+                            <span class="geb-fact__value"><span class="geb-pill">Regular</span></span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">House No.</span>
+                            <span class="geb-fact__value">{{ $bill->house_display ?? '—' }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">From Date</span>
+                            <span class="geb-fact__value">{{ $bill->from_date_formatted ?? '—' }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">To Date</span>
+                            <span class="geb-fact__value">{{ $bill->to_date_formatted ?? '—' }}</span>
                         </div>
                     </div>
 
-                    <div class="border-top pt-3 mt-2">
-                        <h6 class="text-secondary small text-uppercase fw-semibold mb-2 opacity-75">Meter One</h6>
-                        <div class="row row-cols-2 row-cols-md-5 g-2 g-md-3">
-                            <div class="col"><span class="text-muted small d-block">Meter No.</span><span class="fw-medium">{{ $bill->meter_one ?? '—' }}</span></div>
-                            <div class="col"><span class="text-muted small d-block">Previous Reading</span><span>{{ !empty($bill->meter_one_is_new) ? '—' : ($bill->last_month_elec_red ?? '—') }}</span></div>
-                            <div class="col"><span class="text-muted small d-block">Current Reading</span><span>{{ $bill->curr_month_elec_red ?? '—' }}</span></div>
-                            <div class="col"><span class="text-muted small d-block">Consumed Unit</span><span>{{ $bill->meter_one_consume_unit ?? '—' }}</span></div>
-                            <div class="col"><span class="text-muted small d-block">Electricity Bill</span><span>₹ {{ number_format((float)($bill->meter_one_elec_charge ?? 0), 2) }}</span></div>
+                    <h6 class="geb-section">Meter 01</h6>
+                    <div class="geb-facts">
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Meter No.</span>
+                            <span class="geb-fact__value">{{ $bill->meter_one ?? '—' }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Previous Reading</span>
+                            <span class="geb-fact__value">{{ !empty($bill->meter_one_is_new) ? '—' : ($bill->last_month_elec_red ?? '—') }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Current Reading</span>
+                            <span class="geb-fact__value">{{ $bill->curr_month_elec_red ?? '—' }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Consumed Unit</span>
+                            <span class="geb-fact__value">{{ $bill->meter_one_consume_unit ?? '—' }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Electricity Bill</span>
+                            <span class="geb-fact__value">₹ {{ number_format((float) ($bill->meter_one_elec_charge ?? 0), 2) }}</span>
                         </div>
                     </div>
 
-                    @php
-                    $hasMeterTwo = isset($bill->meter_two) && (int)$bill->meter_two !== 0;
-                    $hasMeterTwoUnits = isset($bill->meter_two_consume_unit) && (int)$bill->meter_two_consume_unit > 0;
-                    @endphp
-                    @if($hasMeterTwo || $hasMeterTwoUnits)
-                    <div class="border-top pt-3 mt-3">
-                        <h6 class="text-secondary small text-uppercase fw-semibold mb-2 opacity-75">Meter Two</h6>
-                        <div class="row row-cols-2 row-cols-md-5 g-2 g-md-3">
-                            <div class="col"><span class="text-muted small d-block">Meter No.</span><span class="fw-medium">{{ $bill->meter_two ?? '—' }}</span></div>
-                            <div class="col"><span class="text-muted small d-block">Previous Reading</span><span>{{ !empty($bill->meter_two_is_new) ? '—' : ($bill->last_month_elec_red2 ?? '—') }}</span></div>
-                            <div class="col"><span class="text-muted small d-block">Current Reading</span><span>{{ $bill->curr_month_elec_red2 ?? '—' }}</span></div>
-                            <div class="col"><span class="text-muted small d-block">Consumed Unit</span><span>{{ $bill->meter_two_consume_unit ?? '—' }}</span></div>
-                            <div class="col"><span class="text-muted small d-block">Electricity Bill</span><span>₹ {{ number_format((float)($bill->meter_two_elec_charge ?? 0), 2) }}</span></div>
+                    @if($gebMeterTwo)
+                    <h6 class="geb-section">Meter 02</h6>
+                    <div class="geb-facts">
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Meter No.</span>
+                            <span class="geb-fact__value">{{ $bill->meter_two ?? '—' }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Previous Reading</span>
+                            <span class="geb-fact__value">{{ !empty($bill->meter_two_is_new) ? '—' : ($bill->last_month_elec_red2 ?? '—') }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Current Reading</span>
+                            <span class="geb-fact__value">{{ $bill->curr_month_elec_red2 ?? '—' }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Consumed Unit</span>
+                            <span class="geb-fact__value">{{ $bill->meter_two_consume_unit ?? '—' }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Electricity Bill</span>
+                            <span class="geb-fact__value">₹ {{ number_format((float) ($bill->meter_two_elec_charge ?? 0), 2) }}</span>
                         </div>
                     </div>
                     @endif
 
-                    <div class="border-top pt-3 mt-3">
-                        <div class="row g-2 g-md-3 align-items-center flex-wrap">
-                            <div class="col-12 col-md-auto">
-                                <span class="text-muted small">Total Consumed Unit</span>
-                                <strong class="d-inline-block ms-1">{{ $bill->total_consumed_unit ?? $bill->meter_one_consume_unit ?? 0 }}</strong>
-                            </div>
-                            <div class="col-12 col-md-auto"><span class="text-muted small">Total Electricity</span> <strong class="d-inline-block ms-1">₹ {{ number_format((float)($bill->electricty_charges ?? 0), 2) }}</strong></div>
-                            <div class="col-12 col-md-auto"><span class="text-muted small">Licence Fee</span> <strong class="d-inline-block ms-1">₹ {{ number_format((float)($bill->licence_fees ?? 0), 2) }}</strong> <small class="text-muted">(not Outside Recovery)</small></div>
-                            <div class="col-12 col-md-auto"><span class="text-muted small">Water Charge</span> <strong class="d-inline-block ms-1">₹ {{ number_format((float)($bill->water_charges ?? 0), 2) }}</strong></div>
-                            <div class="col-12 col-md-auto"><span class="text-muted small">Grand Total</span> <strong class="text-primary fs-6 d-inline-block ms-1">₹ {{ number_format($bill->grand_total ?? 0, 2) }}</strong></div>
+                    <h6 class="geb-section">Bill</h6>
+                    <dl class="geb-totals">
+                        <div class="geb-totals__row">
+                            <dt>Total Consumed Unit</dt>
+                            <dd>{{ $bill->total_consumed_unit ?? $bill->meter_one_consume_unit ?? 0 }}</dd>
                         </div>
-                    </div>
+                        <div class="geb-totals__row">
+                            <dt>Total Electricity</dt>
+                            <dd>₹ {{ number_format((float) ($bill->electricty_charges ?? 0), 2) }}</dd>
+                        </div>
+                        <div class="geb-totals__row">
+                            <dt>Licence Fee</dt>
+                            <dd>₹ {{ number_format((float) ($bill->licence_fees ?? 0), 2) }}</dd>
+                        </div>
+                        <div class="geb-totals__row">
+                            <dt>Water Charge</dt>
+                            <dd>₹ {{ number_format((float) ($bill->water_charges ?? 0), 2) }}</dd>
+                        </div>
+                        <div class="geb-totals__row geb-totals__row--grand">
+                            <dt>Grand Total</dt>
+                            <dd>₹ {{ number_format($bill->grand_total ?? 0, 2) }}</dd>
+                        </div>
+                    </dl>
 
-                    <div class="text-end mt-3">
-                        <small class="text-muted fst-italic">(ESTATE SECTION)</small>
-                    </div>
                 </div>
             </div>
             @empty
-            <div class="text-center py-5 px-3">
-                <i class="material-symbols-rounded text-body-secondary mb-2" style="font-size: 3rem;">receipt_long</i>
-                <p class="lead text-muted mb-1">No bills found</p>
-                <p class="text-muted small mb-0">No bills are available for the selected month and unit sub type. Try changing the filters.</p>
+            <div class="ds-empty-state">
+                <i class="material-symbols-rounded" style="font-size: 3rem;">receipt_long</i>
+                <p class="mb-1">No bills found</p>
+                <p class="small mb-0">No bills are available for the selected month and unit sub type. Try changing the
+                    filters.</p>
             </div>
             @endforelse
-        </div>
     </div>
     @endif
+        </div>
+
+    {{-- Columns — this is a card list, so the toggles hide bill FIELDS rather
+         than table columns. Choice is remembered by label, never by index
+         (column-visibility.md §3). --}}
+    <div class="modal fade" id="gebColumnModal" tabindex="-1" aria-labelledby="gebColumnModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-0 pb-2">
+                    <h5 class="modal-title fw-bold" id="gebColumnModalLabel">Column Visibility</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-0">
+                    <hr class="mt-0">
+                    <div class="row g-3" id="gebColumnToggleGrid"></div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-primary rounded-3 px-4"
+                        data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
 <link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
 <style>
+    /* ── Generate Estate Bill — page-scoped chrome (namespaced .geb-page, §7),
+       built on the --ds-* tokens (design.md Layer A). ── */
+    .geb-page .geb-secondary-actions .btn i {
+        font-size: 1rem;
+        line-height: 1;
+    }
+
+    .geb-page .programme-dt-filter-select .form-control,
+    .geb-page .programme-dt-filter-select .form-select {
+        min-height: var(--ds-control-h, 2.5rem);
+    }
+
+    .geb-page .geb-search {
+        width: 260px;
+        max-width: 100%;
+    }
+
+    /* Search reveal button — square, brand-outlined, matches the Columns button height. */
+    .geb-page .geb-search-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--ds-control-h, 2.5rem);
+        height: var(--ds-control-h, 2.5rem);
+        padding: 0;
+        color: var(--ds-primary, #004a93);
+        background: var(--ds-surface, #fff);
+        border: 1px solid var(--ds-line, #d0d5dd);
+        border-radius: var(--ds-radius, 4px);
+    }
+
+    .geb-page .geb-search-toggle[aria-expanded="true"],
+    .geb-page .geb-search-toggle:hover {
+        border-color: var(--ds-primary, #004a93);
+        background: #f2f7fc;
+    }
+
+    /* Select All and the filters each sit on their own white bar. */
+    .geb-page .geb-bar {
+        padding: 0.75rem var(--ds-space-3, 1rem);
+        background: var(--ds-surface, #fff);
+        border: 1px solid var(--ds-line, #e5e7eb);
+        border-radius: var(--ds-radius-2, 8px);
+    }
+
+    .geb-page .geb-cards {
+        display: block;
+    }
+
+    /* ── Bill card ── */
+    .geb-page .geb-bill {
+        overflow: hidden;
+        background: var(--ds-surface, #fff);
+        border: 1px solid var(--ds-line, #e5e7eb);
+        border-radius: var(--ds-radius-2, 8px);
+        box-shadow: var(--ds-shadow-sm, 0 1px 2px rgba(16, 24, 40, .06));
+    }
+
+    .geb-page .geb-bill__head {
+        padding: var(--ds-space-3, 1rem);
+        background: #e8f0fb;
+        border-bottom: 1px solid var(--ds-line, #e5e7eb);
+    }
+
+    .geb-page .geb-bill__no {
+        color: var(--ds-primary, #004a93);
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .geb-page .geb-btn-print {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.3125rem 0.875rem;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--ds-primary, #004a93);
+        background: var(--ds-surface, #fff);
+        border: 1px solid var(--ds-line, #d0d5dd);
+        border-radius: var(--ds-radius, 4px);
+    }
+
+    .geb-page .geb-btn-print:hover {
+        border-color: var(--ds-primary, #004a93);
+        color: var(--ds-primary, #004a93);
+    }
+
+    .geb-page .geb-bill__body {
+        padding: var(--ds-space-3, 1rem);
+    }
+
+    /* Label-over-value fact grid, shared by the head strip and the body.
+       Fixed 5 columns (not auto-fit) so the body reads as the design does —
+       Bill No. → Employee Type on row one, House No. / From / To on row two.
+       auto-fit stretched all eight onto a single squeezed row. */
+    .geb-page .geb-facts {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 0.875rem var(--ds-space-3, 1rem);
+    }
+
+    @media (max-width: 1199.98px) {
+        .geb-page .geb-facts {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 767.98px) {
+        .geb-page .geb-facts {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    .geb-page .geb-facts--head,
+    .geb-page .geb-bill__head .geb-facts--head {
+        margin-top: 0.625rem;
+        grid-template-columns: repeat(auto-fit, minmax(140px, max-content));
+        gap: 0.25rem 2.5rem;
+    }
+
+    .geb-page .geb-fact {
+        min-width: 0;
+    }
+
+    .geb-page .geb-fact__label {
+        display: block;
+        font-size: 0.6875rem;
+        line-height: 1.3;
+        color: var(--ds-ink-muted, #667085);
+    }
+
+    .geb-page .geb-fact__value {
+        display: block;
+        font-size: 0.8125rem;
+        color: var(--ds-ink, #1f2937);
+        word-break: break-word;
+    }
+
+    .geb-page .geb-pill {
+        display: inline-block;
+        padding: 0.125rem 0.5rem;
+        border-radius: 999px;
+        background: #ecfdf3;
+        color: #067647;
+        font-size: 0.6875rem;
+        font-weight: 600;
+    }
+
+    .geb-page .geb-section {
+        margin: var(--ds-space-3, 1rem) 0 0.5rem;
+        padding-top: var(--ds-space-3, 1rem);
+        border-top: 1px solid var(--ds-line, #e5e7eb);
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--ds-ink, #1f2937);
+    }
+
+    /* Totals read as a right-aligned ledger, Grand Total last. */
+    .geb-page .geb-totals {
+        margin: 0;
+    }
+
+    .geb-page .geb-totals__row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: var(--ds-space-3, 1rem);
+        padding: 0.375rem 0;
+        border-bottom: 1px solid var(--ds-line, #e5e7eb);
+    }
+
+    .geb-page .geb-totals__row dt {
+        font-size: 0.8125rem;
+        font-weight: 400;
+        color: var(--ds-ink-muted, #667085);
+    }
+
+    .geb-page .geb-totals__row dt small {
+        font-size: 0.6875rem;
+    }
+
+    .geb-page .geb-totals__row dd {
+        margin: 0;
+        font-size: 0.8125rem;
+        color: var(--ds-ink, #1f2937);
+    }
+
+    .geb-page .geb-totals__row--grand {
+        padding-top: 0.625rem;
+        border-bottom: 0;
+    }
+
+    .geb-page .geb-totals__row--grand dt {
+        font-weight: 700;
+        color: var(--ds-ink, #1f2937);
+    }
+
+    .geb-page .geb-totals__row--grand dd {
+        font-size: 0.9375rem;
+        font-weight: 700;
+        color: var(--ds-primary, #004a93);
+    }
+
+
     .select2-container--open { z-index: 1060; } /* sirf khula dropdown modal ke upar; closed widget normal flow me (modal ke peeche) */
     .select2-container--default .select2-selection--single { min-height: calc(1.5em + 0.75rem + 2px); display: flex; align-items: center; }
     .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.5; padding-left: 0.25rem; }
@@ -244,6 +534,95 @@
 @endpush
 
 @push('scripts')
+<script>
+    // Design-chrome behaviour for this page. The bill/notify/print logic lives in
+    // the main script below and is untouched.
+    document.addEventListener('DOMContentLoaded', function () {
+        var form = document.querySelector('.geb-page .programme-dt-toolbar');
+
+        // No Show button in the design — changing a filter reloads the list.
+        ['bill_month', 'unit_sub_type_pk'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el && form) el.addEventListener('change', function () { form.submit(); });
+        });
+
+        // Search: the icon reveals the input; Enter submits the same GET form.
+        var toggle = document.getElementById('gebSearchToggle');
+        var wrap = document.getElementById('gebSearchWrap');
+        if (toggle && wrap) {
+            toggle.addEventListener('click', function () {
+                var open = wrap.classList.toggle('d-none') === false;
+                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                if (open) { var i = wrap.querySelector('input'); if (i) i.focus(); }
+            });
+        }
+
+        // Bulk actions appear only with a selection.
+        var bulk = Array.prototype.slice.call(document.querySelectorAll('.geb-bulk'));
+        function syncBulk() {
+            var any = document.querySelectorAll('.bill-checkbox:checked').length > 0;
+            bulk.forEach(function (b) { b.classList.toggle('d-none', !any); });
+        }
+        document.addEventListener('change', function (e) {
+            if (e.target && (e.target.classList.contains('bill-checkbox') || e.target.id === 'check_all')) {
+                setTimeout(syncBulk, 0);
+            }
+        });
+        syncBulk();
+
+        // ── Columns: hide/show bill FIELDS (no table here), remembered by label ──
+        var KEY = 'sargam.generateEstateBill.hiddenFields.' + @json(auth()->id() ?? 'guest');
+        function readHidden() {
+            try { var r = window.localStorage.getItem(KEY); var a = r ? JSON.parse(r) : []; return Array.isArray(a) ? a : []; }
+            catch (e) { return []; }
+        }
+        function saveHidden() {
+            var hidden = [];
+            document.querySelectorAll('#gebColumnToggleGrid .geb-field-toggle').forEach(function (cb) {
+                if (!cb.checked) hidden.push(cb.dataset.label);
+            });
+            try { window.localStorage.setItem(KEY, JSON.stringify(hidden)); } catch (e) {}
+        }
+        function applyHidden() {
+            var hidden = readHidden();
+            document.querySelectorAll('.geb-fact[data-fact]').forEach(function (f) {
+                var el = f.querySelector('.geb-fact__label');
+                var label = el ? el.textContent.trim() : '';
+                f.classList.toggle('d-none', label !== '' && hidden.indexOf(label) !== -1);
+            });
+        }
+
+        var grid = document.getElementById('gebColumnToggleGrid');
+        if (grid) {
+            var seen = [];
+            document.querySelectorAll('.bill-card .geb-fact[data-fact] .geb-fact__label').forEach(function (el) {
+                var label = el.textContent.trim();
+                if (!label || seen.indexOf(label) !== -1) return;
+                seen.push(label);
+            });
+            var hidden = readHidden();
+            seen.forEach(function (label, i) {
+                var id = 'gebField_' + i;
+                var cell = document.createElement('div');
+                cell.className = 'col-12 col-sm-6 col-md-4';
+                var lab = document.createElement('label');
+                lab.className = 'colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100';
+                lab.setAttribute('for', id);
+                var cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.className = 'form-check-input m-0 geb-field-toggle';
+                cb.id = id;
+                cb.dataset.label = label;
+                cb.checked = hidden.indexOf(label) === -1;
+                cb.addEventListener('change', function () { saveHidden(); applyHidden(); });
+                var span = document.createElement('span');
+                span.textContent = label;
+                lab.appendChild(cb); lab.appendChild(span); cell.appendChild(lab); grid.appendChild(cell);
+            });
+        }
+        applyHidden();
+    });
+</script>
 {{-- Select2 JS globally footer (admin.layouts.footer) se load hoti hai; yahan include ki zaroorat nahi. --}}
 <script>
     document.addEventListener('DOMContentLoaded', function() {

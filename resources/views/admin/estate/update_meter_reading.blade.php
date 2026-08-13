@@ -24,7 +24,7 @@
 @endphp
 @section($estateSelfHomeTab ? 'content' : 'setup_content')
 <div class="container-fluid rfe-page umr-page">
-    <x-breadcrum title="Update Meter Reading" :showBack="false" />
+    <x-breadcrum title="Update Meter Reading" :showBack="true" />
 
     <x-session_message />
 
@@ -35,63 +35,13 @@
         </div>
     @endif
 
-                <div class="row mb-3">
-                    <div class="col-md-12">
-                        <button type="button" class="btn btn-primary" id="loadMeterReadingsBtn">
-                            <i class="bi bi-search me-2"></i>Load Data
-                        </button>
-                    </div>
-                </div>
-            </form>
-
-            <form id="meterReadingSaveForm" method="POST" action="{{ route('admin.estate.update-meter-reading.store') }}" style="display:none;">
-                @csrf
-                <input type="hidden" name="reading_bill_month" id="reading_bill_month" value="">
-                <input type="hidden" name="reading_current_date" id="reading_current_date" value="">
-                <input type="hidden" name="reading_campus_id" id="reading_campus_id" value="">
-                <input type="hidden" name="reading_block_id" id="reading_block_id" value="">
-                <input type="hidden" name="reading_unit_type_id" id="reading_unit_type_id" value="">
-                <input type="hidden" name="reading_unit_sub_type_id" id="reading_unit_sub_type_id" value="">
-                {{-- Set only when opened via Edit from List Meter Reading: that row skips the min-reading check. Units are unaffected. --}}
-                <input type="hidden" name="edit_reading_pk" id="edit_reading_pk" value="{{ $prefill['reading_pk'] ?? '' }}">
-
-                <div class="table-responsive mt-4">
-                    <table class="table table-bordered table-hover align-middle" id="updateMeterReadingTable">
-                        <thead class="table-primary">
-                            <tr>
-                                <th><input type="checkbox" class="form-check-input" id="select_all"></th>
-                                <th>House No.</th>
-                                <th>Name</th>
-                                <th>Last Month Electric Reading Date</th>
-                                <th>Old Meter No.</th>
-                                <th>Electric Meter Reading</th>
-                                <th>New Meter No.</th>
-                                <th>New Meter Reading <span class="text-danger">*</span></th>
-                                <th>Unit</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="alert alert-danger mb-4">
-                    <small>*Required Fields: All marked fields are mandatory</small>
-                </div>
-
-                <div class="d-flex justify-content-end gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-save me-2"></i>Save
-                    </button>
-                    <a href="{{ route('admin.estate.update-meter-no') }}" class="btn btn-outline-primary">Cancel</a>
-                </div>
-            </form>
-
-            <div id="noDataMessage" class="alert alert-warning mt-4" style="display:none;">
-                No meter reading records found for the selected filters.
-            </div>
-
-            {{-- Same partial the Update Meter Reading modal renders. --}}
+    {{-- The filter form, readings grid and save form all live in the partial
+         below — it is the same body the Update Meter Reading modal renders.
+         A stale duplicate of that markup used to sit here, which put every
+         id on the page twice (getElementById then resolved to the dead
+         copy) and left two stray closing tags behind. --}}
+    <div class="ds-card">
+        <div class="ds-card-body">
             @include('admin.estate._update_meter_reading_form', ['inModal' => false])
         </div>
     </div>
@@ -99,6 +49,11 @@
 @endsection
 
 @push('styles')
+{{-- Carries the .umr-form rules this partial was written against (see the
+     "Update Meter Reading (filter + readings grid, page and modal)" block).
+     Only the modal host used to load it, so the standalone page rendered
+     unstyled. --}}
+<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
 <link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
 <link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
 <style>

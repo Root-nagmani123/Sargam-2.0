@@ -1,0 +1,721 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - link "Skip to main content" [ref=e4] [cursor=pointer]:
+      - /url: "#main-content"
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - img "Flag of India" [ref=e9]
+        - generic [ref=e10]: भारत सरकार | Government of India
+      - navigation "Utility Navigation" [ref=e11]:
+        - list [ref=e12]:
+          - listitem [ref=e13]:
+            - link "Skip to content" [ref=e14] [cursor=pointer]:
+              - /url: "#main-content"
+          - listitem [ref=e15]
+          - listitem "Font size controls" [ref=e16]:
+            - link "Increase font size" [ref=e17] [cursor=pointer]:
+              - /url: javascript:void(0)
+              - text: A+
+            - link "Normal font size" [ref=e18] [cursor=pointer]:
+              - /url: javascript:void(0)
+              - text: A
+            - link "Decrease font size" [ref=e19] [cursor=pointer]:
+              - /url: javascript:void(0)
+              - text: A-
+          - listitem [ref=e20]
+          - listitem [ref=e21]:
+            - generic [ref=e22]:
+              - generic [ref=e23]: language
+              - combobox "Select Language" [ref=e24] [cursor=pointer]:
+                - option "English" [selected]
+                - option "हिन्दी"
+    - navigation [ref=e26]:
+      - list [ref=e27]:
+        - listitem [ref=e28]:
+          - link [ref=e29] [cursor=pointer]:
+            - /url: javascript:void(0)
+            - img [ref=e31]
+      - link "Go to Dashboard" [ref=e33] [cursor=pointer]:
+        - /url: http://localhost:8080/dashboard
+        - img "ashoka emblem" [ref=e34]
+        - img "Sargam 2.0" [ref=e36]
+      - generic [ref=e37]:
+        - menubar [ref=e40]:
+          - tab "Home" [ref=e41] [cursor=pointer]:
+            - generic [ref=e42]: Home
+          - tab "Setup" [selected] [ref=e43] [cursor=pointer]:
+            - generic [ref=e44]: Setup
+          - tab "Communications" [ref=e45] [cursor=pointer]:
+            - generic [ref=e46]: Communications
+          - tab "Academics" [ref=e47] [cursor=pointer]:
+            - generic [ref=e48]: Academics
+          - listitem [ref=e49]
+        - generic [ref=e51]:
+          - button "Notifications" [ref=e53] [cursor=pointer]:
+            - generic [ref=e54]: notifications_none
+          - button "Profile photo UX4G Visual Test Super Admin " [ref=e56] [cursor=pointer]:
+            - img "Profile photo" [ref=e58]
+            - generic [ref=e59]:
+              - generic [ref=e60]: UX4G Visual Test
+              - generic [ref=e61]: Super Admin
+            - generic [ref=e62]: 
+  - generic [ref=e63]:
+    - generic:
+      - tabpanel "Setup":
+        - complementary [ref=e64]:
+          - generic [ref=e67]:
+            - generic [ref=e68]:
+              - button "Collapse sidebar menu" [expanded] [ref=e70] [cursor=pointer]:
+                - generic [ref=e72]: left_panel_close
+                - generic [ref=e73]: Close
+              - list [ref=e74]:
+                - region "scrollable content" [ref=e78]:
+                  - list [ref=e80]:
+                    - listitem [ref=e81]:
+                      - link "dashboard_customize Training Setup" [ref=e82] [cursor=pointer]:
+                        - /url: javascript:void(0)
+                        - generic [ref=e84]: dashboard_customize
+                        - generic [ref=e85]: Training Setup
+                    - listitem [ref=e86]:
+                      - link "calendar_month Time Table" [ref=e87] [cursor=pointer]:
+                        - /url: javascript:void(0)
+                        - generic [ref=e89]: calendar_month
+                        - generic [ref=e90]: Time Table
+                    - listitem [ref=e91]:
+                      - link "user_attributes HR Management" [ref=e92] [cursor=pointer]:
+                        - /url: javascript:void(0)
+                        - generic [ref=e94]: user_attributes
+                        - generic [ref=e95]: HR Management
+                    - listitem [ref=e96]:
+                      - link "account_tree Mappings" [ref=e97] [cursor=pointer]:
+                        - /url: javascript:void(0)
+                        - generic [ref=e99]: account_tree
+                        - generic [ref=e100]: Mappings
+                    - listitem [ref=e101]:
+                      - link "description FC Forms" [ref=e102] [cursor=pointer]:
+                        - /url: javascript:void(0)
+                        - generic [ref=e104]: description
+                        - generic [ref=e105]: FC Forms
+                    - listitem [ref=e106]:
+                      - link "adaptive_audio_mic Course Repository" [ref=e107] [cursor=pointer]:
+                        - /url: javascript:void(0)
+                        - generic [ref=e109]: adaptive_audio_mic
+                        - generic [ref=e110]: Course Repository
+                    - listitem [ref=e111]:
+                      - link "home_filled Estate Management" [ref=e112] [cursor=pointer]:
+                        - /url: javascript:void(0)
+                        - generic [ref=e114]: home_filled
+                        - generic [ref=e115]: Estate Management
+                    - listitem [ref=e116]:
+                      - link "fork_spoon Mess Management" [ref=e117] [cursor=pointer]:
+                        - /url: javascript:void(0)
+                        - generic [ref=e119]: fork_spoon
+                        - generic [ref=e120]: Mess Management
+                    - listitem [ref=e121]:
+                      - link "6_ft_apart CENTCOM Management" [ref=e122] [cursor=pointer]:
+                        - /url: javascript:void(0)
+                        - generic [ref=e124]: 6_ft_apart
+                        - generic [ref=e125]: CENTCOM Management
+                    - listitem [ref=e126]:
+                      - link "account_balance Security Management" [ref=e127] [cursor=pointer]:
+                        - /url: javascript:void(0)
+                        - generic [ref=e129]: account_balance
+                        - generic [ref=e130]: Security Management
+                    - listitem [ref=e131]:
+                      - link "book Course Repository" [ref=e132] [cursor=pointer]:
+                        - /url: javascript:void(0)
+                        - generic [ref=e134]: book
+                        - generic [ref=e135]: Course Repository
+                    - listitem [ref=e136]:
+                      - link "account_child_invert Memo and Duty Management" [ref=e137] [cursor=pointer]:
+                        - /url: javascript:void(0)
+                        - generic [ref=e139]: account_child_invert
+                        - generic [ref=e140]: Memo and Duty Management
+            - navigation [ref=e142]:
+              - region "scrollable content" [ref=e146]:
+                - generic [ref=e147]:
+                  - heading [level=2] [ref=e148]
+                  - list [ref=e149]:
+                    - listitem [ref=e150]:
+                      - link "home_work Estate Management chevron_right" [expanded] [ref=e151] [cursor=pointer]:
+                        - /url: "#menu_205"
+                        - generic [ref=e152]: home_work
+                        - generic [ref=e153]: Estate Management
+                        - generic [ref=e154]: chevron_right
+                    - list [ref=e155]:
+                      - listitem [ref=e156]:
+                        - link "Request For Estate" [ref=e157] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/request-for-estate?menu=35
+                          - generic [ref=e158]: Request For Estate
+                      - listitem [ref=e159]:
+                        - link "Put In HAC" [ref=e160] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/put-in-hac?menu=36
+                          - generic [ref=e161]: Put In HAC
+                      - listitem [ref=e162]:
+                        - link "HAC Approval" [ref=e163] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/change-request-hac-approved?menu=37
+                          - generic [ref=e164]: HAC Approval
+                      - listitem [ref=e165]:
+                        - link "Possession Details" [ref=e166] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/possession-details?menu=38
+                          - generic [ref=e167]: Possession Details
+                      - listitem [ref=e168]:
+                        - link "Update Meter Details" [ref=e169] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/update-meter-no?menu=39
+                          - generic [ref=e170]: Update Meter Details
+                      - listitem [ref=e171]:
+                        - link "Estate Request for Others" [ref=e172] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/request-for-others?menu=40
+                          - generic [ref=e173]: Estate Request for Others
+                      - listitem [ref=e174]:
+                        - link "Estate Possession for Other" [ref=e175] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/possession-for-others?menu=41
+                          - generic [ref=e176]: Estate Possession for Other
+                      - listitem [ref=e177]:
+                        - link "Update Meter Details of Other" [ref=e178] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/update-meter-reading-of-other?menu=42
+                          - generic [ref=e179]: Update Meter Details of Other
+                      - listitem [ref=e180]:
+                        - link "List Meter Reading" [ref=e181] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/list-meter-reading?menu=43
+                          - generic [ref=e182]: List Meter Reading
+                      - listitem [ref=e183]:
+                        - link "Generate / View Estate Bill" [ref=e184] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/generate-estate-bill?menu=44
+                          - generic [ref=e185]: Generate / View Estate Bill
+                      - listitem [ref=e186]:
+                        - link "View Estate Bill for Other" [ref=e187] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/generate-estate-bill-for-other?menu=45
+                          - generic [ref=e188]: View Estate Bill for Other
+                      - listitem [ref=e189]:
+                        - link "Define House" [ref=e190] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/define-house?menu=46
+                          - generic [ref=e191]: Define House
+                      - listitem [ref=e192]:
+                        - link "Define Electric Slab" [ref=e193] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/define-electric-slab?menu=47
+                          - generic [ref=e194]: Define Electric Slab
+                      - listitem [ref=e195]:
+                        - link "Return House" [ref=e196] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/return-house?menu=48
+                          - generic [ref=e197]: Return House
+                      - listitem [ref=e198]:
+                        - link "Change House Request" [ref=e199] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/request-for-house?menu=49
+                          - generic [ref=e200]: Change House Request
+                    - listitem [ref=e201]:
+                      - link "home_work Estate Master chevron_right" [ref=e202] [cursor=pointer]:
+                        - /url: "#menu_209"
+                        - generic [ref=e203]: home_work
+                        - generic [ref=e204]: Estate Master
+                        - generic [ref=e205]: chevron_right
+                    - listitem [ref=e206]:
+                      - link "home_work Estate Reports chevron_right" [ref=e207] [cursor=pointer]:
+                        - /url: "#menu_210"
+                        - generic [ref=e208]: home_work
+                        - generic [ref=e209]: Estate Reports
+                        - generic [ref=e210]: chevron_right
+    - main [ref=e212]:
+      - tabpanel [ref=e214]:
+        - generic [ref=e215]:
+          - generic [ref=e218]:
+            - generic [ref=e220]:
+              - navigation "breadcrumb" [ref=e221]:
+                - list [ref=e222]:
+                  - listitem [ref=e223]:
+                    - link "Home" [ref=e224] [cursor=pointer]:
+                      - /url: http://localhost:8080/dashboard
+                  - listitem [ref=e225]: / Setup
+                  - listitem [ref=e226]:
+                    - text: /
+                    - link "Estate Management" [ref=e227] [cursor=pointer]:
+                      - /url: http://localhost:8080/estate_management
+                  - listitem [ref=e228]: / Estate Possession for Other
+                  - listitem [ref=e229]: / Estate Possession for Others
+              - heading "Estate Possession for Others" [level=4] [ref=e230]
+            - generic [ref=e231]:
+              - link "Update Reading" [ref=e232] [cursor=pointer]:
+                - /url: http://localhost:8080/admin/estate/update-meter-reading-of-other
+              - link "Add Possession" [ref=e233] [cursor=pointer]:
+                - /url: http://localhost:8080/admin/estate/possession-view
+                - generic [ref=e234]: 
+                - generic [ref=e235]: Add Possession
+          - generic [ref=e236]:
+            - button "Download" [ref=e237] [cursor=pointer]:
+              - generic [ref=e238]: 
+              - generic [ref=e239]: Download
+            - button "Print" [ref=e240] [cursor=pointer]:
+              - generic [ref=e241]: 
+              - generic [ref=e242]: Print
+          - generic [ref=e244]:
+            - generic [ref=e245]:
+              - generic [ref=e246]:
+                - generic [ref=e247]: Filter
+                - combobox "Filter by estate name" [ref=e249]:
+                  - option "Estate Name" [selected]
+                  - option "Above Himachal Avas"
+                  - option "Behind Karamshilla Building"
+                  - option "Happy Valley"
+                  - option "Hollywood"
+                  - option "Indira Bhavan Campus"
+                  - option "Kalindi"
+                  - option "LAUNDROMAT"
+                  - option "Madan Niwas"
+                  - option "Malakoff"
+                  - option "MONASTERY ESTATE"
+                  - option "Near Academy Gate"
+                  - option "Near Happy Valley Ground"
+                  - option "Near Indira Bhawan"
+                  - option "Near Madan Niwas"
+                  - option "Near Malakaff"
+                  - option "Near Riding ground"
+                  - option "POLO GROUND"
+                  - option "Silverwood"
+                - textbox "Filter by allotment date" [ref=e251]
+                - button "Remove Filter" [ref=e252] [cursor=pointer]
+              - generic [ref=e253]:
+                - text: 
+                - button "Columns" [ref=e254] [cursor=pointer]:
+                  - generic [ref=e255]: Columns
+                  - generic [ref=e256]: 
+                - button "Search" [ref=e257] [cursor=pointer]:
+                  - generic [ref=e258]: 
+                  - generic [ref=e259]: Search
+                - text: 
+            - generic [ref=e260]:
+              - table [ref=e263]:
+                - rowgroup [ref=e264]:
+                  - 'row "Select all rows on this page S. No.: activate to sort column ascending Request ID: activate to sort column ascending Employee Name: activate to sort column ascending Section Name: activate to sort column ascending Estate Name: activate to sort column ascending Building Name: activate to sort column ascending Unit Type: activate to sort column ascending Unit Sub Type: activate to sort column ascending House Number: activate to sort column ascending Allotment Date: activate to sort column ascending Possession Date: activate to sort column ascending Last Electric Bill Reading Action" [ref=e265]':
+                    - columnheader "Select all rows on this page" [ref=e266]:
+                      - checkbox "Select all rows on this page" [ref=e268] [cursor=pointer]
+                    - 'columnheader "S. No.: activate to sort column ascending" [ref=e269] [cursor=pointer]': S. No.
+                    - 'columnheader "Request ID: activate to sort column ascending" [ref=e270] [cursor=pointer]': Request ID
+                    - 'columnheader "Employee Name: activate to sort column ascending" [ref=e271] [cursor=pointer]': Employee Name
+                    - 'columnheader "Section Name: activate to sort column ascending" [ref=e272] [cursor=pointer]': Section Name
+                    - 'columnheader "Estate Name: activate to sort column ascending" [ref=e273] [cursor=pointer]': Estate Name
+                    - 'columnheader "Building Name: activate to sort column ascending" [ref=e274] [cursor=pointer]': Building Name
+                    - 'columnheader "Unit Type: activate to sort column ascending" [ref=e275] [cursor=pointer]': Unit Type
+                    - 'columnheader "Unit Sub Type: activate to sort column ascending" [ref=e276] [cursor=pointer]': Unit Sub Type
+                    - 'columnheader "House Number: activate to sort column ascending" [ref=e277] [cursor=pointer]': House Number
+                    - 'columnheader "Allotment Date: activate to sort column ascending" [ref=e278] [cursor=pointer]': Allotment Date
+                    - 'columnheader "Possession Date: activate to sort column ascending" [ref=e279] [cursor=pointer]': Possession Date
+                    - columnheader "Last Electric Bill Reading" [ref=e280]
+                    - columnheader "Action" [ref=e281]
+                - rowgroup [ref=e282]:
+                  - row "Select possession record oth-req-167 1 oth-req-167 PAWAN KUMAR & AKHILESH KALA COACH AND MEDICAL CENTRE Near Happy Valley Ground Himachal Avas Residential Type -IV HA-10 31-05-2026 30-06-2026 25521/36862 Row actions" [ref=e283]:
+                    - cell "Select possession record oth-req-167" [ref=e284]:
+                      - checkbox "Select possession record oth-req-167" [ref=e286] [cursor=pointer]
+                    - cell "1" [ref=e287]
+                    - cell "oth-req-167" [ref=e288]
+                    - cell "PAWAN KUMAR & AKHILESH KALA" [ref=e289]
+                    - cell "COACH AND MEDICAL CENTRE" [ref=e290]
+                    - cell "Near Happy Valley Ground" [ref=e291]
+                    - cell "Himachal Avas" [ref=e292]
+                    - cell "Residential" [ref=e293]
+                    - cell "Type -IV" [ref=e294]
+                    - cell "HA-10" [ref=e295]
+                    - cell "31-05-2026" [ref=e296]
+                    - cell "30-06-2026" [ref=e297]
+                    - cell "25521/36862" [ref=e298]
+                    - cell "Row actions" [ref=e299]:
+                      - group "Row actions" [ref=e300]:
+                        - link "Edit possession" [ref=e301] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/possession-view?id=139
+                          - generic [ref=e302]: edit
+                          - generic [ref=e303]: Edit
+                        - link "Delete possession" [ref=e304] [cursor=pointer]:
+                          - /url: javascript:void(0);
+                          - generic [ref=e305]: delete
+                          - generic [ref=e306]: Delete
+                  - row "Select possession record oth-req-166 2 oth-req-166 JYOTI PRAJAPATI Research Fellow Near Indira Bhawan COZY COT Studio Appartments Studio Appartment CZ-14 30-04-2026 30-04-2026 11536/2690 Row actions" [ref=e307]:
+                    - cell "Select possession record oth-req-166" [ref=e308]:
+                      - checkbox "Select possession record oth-req-166" [ref=e310] [cursor=pointer]
+                    - cell "2" [ref=e311]
+                    - cell "oth-req-166" [ref=e312]
+                    - cell "JYOTI PRAJAPATI" [ref=e313]
+                    - cell "Research Fellow" [ref=e314]
+                    - cell "Near Indira Bhawan" [ref=e315]
+                    - cell "COZY COT" [ref=e316]
+                    - cell "Studio Appartments" [ref=e317]
+                    - cell "Studio Appartment" [ref=e318]
+                    - cell "CZ-14" [ref=e319]
+                    - cell "30-04-2026" [ref=e320]
+                    - cell "30-04-2026" [ref=e321]
+                    - cell "11536/2690" [ref=e322]
+                    - cell "Row actions" [ref=e323]:
+                      - group "Row actions" [ref=e324]:
+                        - link "Edit possession" [ref=e325] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/possession-view?id=138
+                          - generic [ref=e326]: edit
+                          - generic [ref=e327]: Edit
+                        - link "Delete possession" [ref=e328] [cursor=pointer]:
+                          - /url: javascript:void(0);
+                          - generic [ref=e329]: delete
+                          - generic [ref=e330]: Delete
+                  - row "Select possession record oth-req-123 3 oth-req-123 NAFED SHOP Near Academy Gate Silverwood Shoping Centre ALLOTTED SHOPS SHOPS SWC-01 31-03-2026 31-03-2026 96987/45655 Row actions" [ref=e331]:
+                    - cell "Select possession record oth-req-123" [ref=e332]:
+                      - checkbox "Select possession record oth-req-123" [ref=e334] [cursor=pointer]
+                    - cell "3" [ref=e335]
+                    - cell "oth-req-123" [ref=e336]
+                    - cell "NAFED" [ref=e337]
+                    - cell "SHOP" [ref=e338]
+                    - cell "Near Academy Gate" [ref=e339]
+                    - cell "Silverwood Shoping Centre" [ref=e340]
+                    - cell "ALLOTTED SHOPS" [ref=e341]
+                    - cell "SHOPS" [ref=e342]
+                    - cell "SWC-01" [ref=e343]
+                    - cell "31-03-2026" [ref=e344]
+                    - cell "31-03-2026" [ref=e345]
+                    - cell "96987/45655" [ref=e346]
+                    - cell "Row actions" [ref=e347]:
+                      - group "Row actions" [ref=e348]:
+                        - link "Edit possession" [ref=e349] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/possession-view?id=137
+                          - generic [ref=e350]: edit
+                          - generic [ref=e351]: Edit
+                        - link "Delete possession" [ref=e352] [cursor=pointer]:
+                          - /url: javascript:void(0);
+                          - generic [ref=e353]: delete
+                          - generic [ref=e354]: Delete
+                  - row "Select possession record oth-req-164 4 oth-req-164 Nisha Perween & Kanak TA Near Indira Bhawan COZY COT Studio Appartments Studio Appartment CZ-04 31-05-2026 31-05-2026 16889/1739 Row actions" [ref=e355]:
+                    - cell "Select possession record oth-req-164" [ref=e356]:
+                      - checkbox "Select possession record oth-req-164" [ref=e358] [cursor=pointer]
+                    - cell "4" [ref=e359]
+                    - cell "oth-req-164" [ref=e360]
+                    - cell "Nisha Perween & Kanak" [ref=e361]
+                    - cell "TA" [ref=e362]
+                    - cell "Near Indira Bhawan" [ref=e363]
+                    - cell "COZY COT" [ref=e364]
+                    - cell "Studio Appartments" [ref=e365]
+                    - cell "Studio Appartment" [ref=e366]
+                    - cell "CZ-04" [ref=e367]
+                    - cell "31-05-2026" [ref=e368]
+                    - cell "31-05-2026" [ref=e369]
+                    - cell "16889/1739" [ref=e370]
+                    - cell "Row actions" [ref=e371]:
+                      - group "Row actions" [ref=e372]:
+                        - link "Edit possession" [ref=e373] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/possession-view?id=136
+                          - generic [ref=e374]: edit
+                          - generic [ref=e375]: Edit
+                        - link "Delete possession" [ref=e376] [cursor=pointer]:
+                          - /url: javascript:void(0);
+                          - generic [ref=e377]: delete
+                          - generic [ref=e378]: Delete
+                  - row "Select possession record oth-req-163 5 oth-req-163 MANISH KUMAR ADMIN TRENDSETTER Behind Karamshilla Building River View Out Houses Residential Out House RV-01 31-03-2026 31-03-2026 9673 Row actions" [ref=e379]:
+                    - cell "Select possession record oth-req-163" [ref=e380]:
+                      - checkbox "Select possession record oth-req-163" [ref=e382] [cursor=pointer]
+                    - cell "5" [ref=e383]
+                    - cell "oth-req-163" [ref=e384]
+                    - cell "MANISH KUMAR" [ref=e385]
+                    - cell "ADMIN TRENDSETTER" [ref=e386]
+                    - cell "Behind Karamshilla Building" [ref=e387]
+                    - cell "River View Out Houses" [ref=e388]
+                    - cell "Residential" [ref=e389]
+                    - cell "Out House" [ref=e390]
+                    - cell "RV-01" [ref=e391]
+                    - cell "31-03-2026" [ref=e392]
+                    - cell "31-03-2026" [ref=e393]
+                    - cell "9673" [ref=e394]
+                    - cell "Row actions" [ref=e395]:
+                      - group "Row actions" [ref=e396]:
+                        - link "Edit possession" [ref=e397] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/possession-view?id=135
+                          - generic [ref=e398]: edit
+                          - generic [ref=e399]: Edit
+                        - link "Delete possession" [ref=e400] [cursor=pointer]:
+                          - /url: javascript:void(0);
+                          - generic [ref=e401]: delete
+                          - generic [ref=e402]: Delete
+                  - row "Select possession record oth-req-162 6 oth-req-162 GIRJESH KUMAR BVG Behind Karamshilla Building Tin Shed Residential Type -I TS-05 30-04-2026 30-04-2026 18870 Row actions" [ref=e403]:
+                    - cell "Select possession record oth-req-162" [ref=e404]:
+                      - checkbox "Select possession record oth-req-162" [ref=e406] [cursor=pointer]
+                    - cell "6" [ref=e407]
+                    - cell "oth-req-162" [ref=e408]
+                    - cell "GIRJESH KUMAR" [ref=e409]
+                    - cell "BVG" [ref=e410]
+                    - cell "Behind Karamshilla Building" [ref=e411]
+                    - cell "Tin Shed" [ref=e412]
+                    - cell "Residential" [ref=e413]
+                    - cell "Type -I" [ref=e414]
+                    - cell "TS-05" [ref=e415]
+                    - cell "30-04-2026" [ref=e416]
+                    - cell "30-04-2026" [ref=e417]
+                    - cell "18870" [ref=e418]
+                    - cell "Row actions" [ref=e419]:
+                      - group "Row actions" [ref=e420]:
+                        - link "Edit possession" [ref=e421] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/possession-view?id=134
+                          - generic [ref=e422]: edit
+                          - generic [ref=e423]: Edit
+                        - link "Delete possession" [ref=e424] [cursor=pointer]:
+                          - /url: javascript:void(0);
+                          - generic [ref=e425]: delete
+                          - generic [ref=e426]: Delete
+                  - row "Select possession record oth-req-161 7 oth-req-161 BIJENDER BVG Behind Karamshilla Building Tin Shed Residential Type -I TS-12 30-04-2026 30-04-2026 11759 Row actions" [ref=e427]:
+                    - cell "Select possession record oth-req-161" [ref=e428]:
+                      - checkbox "Select possession record oth-req-161" [ref=e430] [cursor=pointer]
+                    - cell "7" [ref=e431]
+                    - cell "oth-req-161" [ref=e432]
+                    - cell "BIJENDER" [ref=e433]
+                    - cell "BVG" [ref=e434]
+                    - cell "Behind Karamshilla Building" [ref=e435]
+                    - cell "Tin Shed" [ref=e436]
+                    - cell "Residential" [ref=e437]
+                    - cell "Type -I" [ref=e438]
+                    - cell "TS-12" [ref=e439]
+                    - cell "30-04-2026" [ref=e440]
+                    - cell "30-04-2026" [ref=e441]
+                    - cell "11759" [ref=e442]
+                    - cell "Row actions" [ref=e443]:
+                      - group "Row actions" [ref=e444]:
+                        - link "Edit possession" [ref=e445] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/possession-view?id=133
+                          - generic [ref=e446]: edit
+                          - generic [ref=e447]: Edit
+                        - link "Delete possession" [ref=e448] [cursor=pointer]:
+                          - /url: javascript:void(0);
+                          - generic [ref=e449]: delete
+                          - generic [ref=e450]: Delete
+                  - row "Select possession record oth-req-160 8 oth-req-160 SUNIL SINGH BVG Behind Karamshilla Building Tin Shed Residential Type -I TS-20 30-04-2026 30-04-2026 6223 Row actions" [ref=e451]:
+                    - cell "Select possession record oth-req-160" [ref=e452]:
+                      - checkbox "Select possession record oth-req-160" [ref=e454] [cursor=pointer]
+                    - cell "8" [ref=e455]
+                    - cell "oth-req-160" [ref=e456]
+                    - cell "SUNIL SINGH" [ref=e457]
+                    - cell "BVG" [ref=e458]
+                    - cell "Behind Karamshilla Building" [ref=e459]
+                    - cell "Tin Shed" [ref=e460]
+                    - cell "Residential" [ref=e461]
+                    - cell "Type -I" [ref=e462]
+                    - cell "TS-20" [ref=e463]
+                    - cell "30-04-2026" [ref=e464]
+                    - cell "30-04-2026" [ref=e465]
+                    - cell "6223" [ref=e466]
+                    - cell "Row actions" [ref=e467]:
+                      - group "Row actions" [ref=e468]:
+                        - link "Edit possession" [ref=e469] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/possession-view?id=132
+                          - generic [ref=e470]: edit
+                          - generic [ref=e471]: Edit
+                        - link "Delete possession" [ref=e472] [cursor=pointer]:
+                          - /url: javascript:void(0);
+                          - generic [ref=e473]: delete
+                          - generic [ref=e474]: Delete
+                  - row "Select possession record oth-req-158 9 oth-req-158 KANTI LAKRA BVG Behind Karamshilla Building Krishna Avas Residential Type -II KS-02 31-03-2026 31-03-2026 49330 Row actions" [ref=e475]:
+                    - cell "Select possession record oth-req-158" [ref=e476]:
+                      - checkbox "Select possession record oth-req-158" [ref=e478] [cursor=pointer]
+                    - cell "9" [ref=e479]
+                    - cell "oth-req-158" [ref=e480]
+                    - cell "KANTI LAKRA" [ref=e481]
+                    - cell "BVG" [ref=e482]
+                    - cell "Behind Karamshilla Building" [ref=e483]
+                    - cell "Krishna Avas" [ref=e484]
+                    - cell "Residential" [ref=e485]
+                    - cell "Type -II" [ref=e486]
+                    - cell "KS-02" [ref=e487]
+                    - cell "31-03-2026" [ref=e488]
+                    - cell "31-03-2026" [ref=e489]
+                    - cell "49330" [ref=e490]
+                    - cell "Row actions" [ref=e491]:
+                      - group "Row actions" [ref=e492]:
+                        - link "Edit possession" [ref=e493] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/possession-view?id=131
+                          - generic [ref=e494]: edit
+                          - generic [ref=e495]: Edit
+                        - link "Delete possession" [ref=e496] [cursor=pointer]:
+                          - /url: javascript:void(0);
+                          - generic [ref=e497]: delete
+                          - generic [ref=e498]: Delete
+                  - row "Select possession record oth-req-157 10 oth-req-157 PRITAM S. PANWAR BVG Above Himachal Avas Deodar -II Residential Type -II DE0-04 31-03-2026 31-03-2026 8613 Row actions" [ref=e499]:
+                    - cell "Select possession record oth-req-157" [ref=e500]:
+                      - checkbox "Select possession record oth-req-157" [ref=e502] [cursor=pointer]
+                    - cell "10" [ref=e503]
+                    - cell "oth-req-157" [ref=e504]
+                    - cell "PRITAM S. PANWAR" [ref=e505]
+                    - cell "BVG" [ref=e506]
+                    - cell "Above Himachal Avas" [ref=e507]
+                    - cell "Deodar -II" [ref=e508]
+                    - cell "Residential" [ref=e509]
+                    - cell "Type -II" [ref=e510]
+                    - cell "DE0-04" [ref=e511]
+                    - cell "31-03-2026" [ref=e512]
+                    - cell "31-03-2026" [ref=e513]
+                    - cell "8613" [ref=e514]
+                    - cell "Row actions" [ref=e515]:
+                      - group "Row actions" [ref=e516]:
+                        - link "Edit possession" [ref=e517] [cursor=pointer]:
+                          - /url: http://localhost:8080/admin/estate/possession-view?id=130
+                          - generic [ref=e518]: edit
+                          - generic [ref=e519]: Edit
+                        - link "Delete possession" [ref=e520] [cursor=pointer]:
+                          - /url: javascript:void(0);
+                          - generic [ref=e521]: delete
+                          - generic [ref=e522]: Delete
+              - generic [ref=e523]:
+                - list [ref=e526]:
+                  - listitem [ref=e527]:
+                    - link "First" [disabled]
+                  - listitem [ref=e528]:
+                    - link "‹" [disabled]
+                  - listitem [ref=e529]:
+                    - link "1" [ref=e530] [cursor=pointer]:
+                      - /url: "#"
+                  - listitem [ref=e531]:
+                    - link "2" [ref=e532] [cursor=pointer]:
+                      - /url: "#"
+                  - listitem [ref=e533]:
+                    - link "3" [ref=e534] [cursor=pointer]:
+                      - /url: "#"
+                  - listitem [ref=e535]:
+                    - link "4" [ref=e536] [cursor=pointer]:
+                      - /url: "#"
+                  - listitem [ref=e537]:
+                    - link "5" [ref=e538] [cursor=pointer]:
+                      - /url: "#"
+                  - listitem [ref=e539]:
+                    - link "…" [disabled]
+                  - listitem [ref=e540]:
+                    - link "13" [ref=e541] [cursor=pointer]:
+                      - /url: "#"
+                  - listitem [ref=e542]:
+                    - link "›" [ref=e543] [cursor=pointer]:
+                      - /url: "#"
+                  - listitem [ref=e544]:
+                    - link "Last" [ref=e545] [cursor=pointer]:
+                      - /url: "#"
+                - generic [ref=e546]:
+                  - generic [ref=e548]:
+                    - text: Showing
+                    - combobox "Showing" [ref=e549]:
+                      - option "10" [selected]
+                      - option "25"
+                      - option "50"
+                      - option "100"
+                      - option "200"
+                  - status [ref=e550]: of 128 items
+            - generic [ref=e551]: Estate Possession for Others list
+        - dialog "Add Possession Request" [ref=e552]:
+          - generic [ref=e553]:
+            - generic [ref=e554]:
+              - heading "Add Possession Request" [level=5] [ref=e555]
+              - button "Close" [ref=e556] [cursor=pointer]
+            - generic [ref=e558]:
+              - generic [ref=e560]:
+                - generic [ref=e561]:
+                  - generic [ref=e562]: Requester Name *
+                  - combobox "Requester Name *" [ref=e563]:
+                    - option "Select Requester"
+                    - option "ASHOK KUMAR SAINI (oth-req-126)" [selected]
+                    - option "AWATRA SINGH (oth-req-127)"
+                    - option "BALDEV BHANDARI (oth-req-128)"
+                    - option "DEEPAK KUMAR (oth-req-140)"
+                    - option "DR. PASALA E. RAO (oth-req-120)"
+                    - option "DR. PRATIK PANDEY (oth-req-142)"
+                    - option "DR. PRATIK PANDEY (oth-req-143)"
+                    - option "DR. YSR REDDY (oth-req-66)"
+                    - option "JOYTI PRAJAPATI (oth-req-166)"
+                    - option "JYOTI PRAJAPATI (oth-req-166)"
+                    - option "NISHA, PRAMILA & ASHIKA (oth-req-156)"
+                    - option "RAMESH KOTHARI (oth-req-139)"
+                    - option "RAVI AND SHEKHAR (oth-req-168)"
+                    - option "TARA CHAND (oth-req-136)"
+                    - option "Vipul Tomar (oth-req-165)"
+                    - option "YOGENDRA GIRI (oth-req-159)"
+                    - option "ZULFEQUHAR ALI (oth-req-121)"
+                    - option "ZULFIKAR ALI (oth-req-146)"
+                    - option "ZULFIKAR ALI (oth-req-146)"
+                  - alert
+                - generic [ref=e564]:
+                  - generic [ref=e565]: Request ID *
+                  - textbox "Request ID *" [ref=e566]:
+                    - /placeholder: Request ID
+                    - text: oth-req-126
+                - generic [ref=e567]:
+                  - generic [ref=e568]: Section *
+                  - textbox "Section *" [ref=e569]:
+                    - /placeholder: Section
+                    - text: OFFICER MESS
+                - generic [ref=e570]:
+                  - generic [ref=e571]: Estate Name *
+                  - combobox "Estate Name *" [ref=e572]:
+                    - option "Select Estate"
+                    - option "Above Himachal Avas" [selected]
+                    - option "Behind Karamshilla Building"
+                    - option "Happy Valley"
+                    - option "Hollywood"
+                    - option "Indira Bhavan Campus"
+                    - option "Kalindi"
+                    - option "LAUNDROMAT"
+                    - option "Madan Niwas"
+                    - option "Malakoff"
+                    - option "MONASTERY ESTATE"
+                    - option "Near Academy Gate"
+                    - option "Near Happy Valley Ground"
+                    - option "Near Indira Bhawan"
+                    - option "Near Madan Niwas"
+                    - option "Near Malakaff"
+                    - option "Near Riding ground"
+                    - option "POLO GROUND"
+                    - option "Silverwood"
+                  - alert
+                - generic [ref=e573]:
+                  - generic [ref=e574]: Unit Name *
+                  - combobox "Unit Name *" [ref=e575]:
+                    - option "Select Unit"
+                    - option "Residential" [selected]
+                  - alert
+                - generic [ref=e576]:
+                  - generic [ref=e577]: Building Name *
+                  - combobox "Building Name *" [ref=e578]:
+                    - option "Select Building"
+                    - option "Alakhnanda Awas" [selected]
+                    - option "Deodar -II"
+                  - alert
+                - generic [ref=e579]:
+                  - generic [ref=e580]: Unit Sub-type *
+                  - combobox "Unit Sub-type *" [ref=e581]:
+                    - option "Select Sub-type"
+                    - option "Type -I" [selected]
+                  - alert
+                - generic [ref=e582]:
+                  - generic [ref=e583]: House Number *
+                  - combobox "House Number *" [ref=e584]:
+                    - option "Select House"
+                    - option "e2" [selected]
+                  - alert
+                - generic [ref=e585]:
+                  - generic [ref=e586]: Allotment Date *
+                  - textbox "Allotment Date *" [ref=e587]
+                  - alert [ref=e588]: The Allotment Date field is required.
+                - generic [ref=e589]:
+                  - generic [ref=e590]: Possession Date *
+                  - textbox "Possession Date *" [ref=e591]
+                  - alert [ref=e592]: The Possession Date field is required.
+                - generic [ref=e593]:
+                  - generic [ref=e594]: Electric Meter Number I
+                  - textbox "Electric Meter Number I" [ref=e595]:
+                    - /placeholder: Electric Meter Number
+                    - text: "32"
+                - generic [ref=e596]:
+                  - generic [ref=e597]: Electric Meter Reading I *
+                  - textbox "Electric Meter Reading I *" [ref=e598]:
+                    - /placeholder: Electric Meter Reading
+                  - alert [ref=e599]: Electric Meter Reading is required (enter Primary or Secondary).
+                - generic [ref=e600]:
+                  - generic [ref=e601]: Electric Meter Number II
+                  - textbox "Electric Meter Number II" [ref=e602]:
+                    - /placeholder: Electric Meter Number
+                    - text: "23"
+                - generic [ref=e603]:
+                  - generic [ref=e604]: Electric Meter Reading II
+                  - textbox "Electric Meter Reading II" [ref=e605]:
+                    - /placeholder: Electric Meter Reading
+                  - alert
+              - generic [ref=e606]:
+                - button "Cancel" [ref=e607] [cursor=pointer]
+                - button "Add Possession Request" [ref=e608] [cursor=pointer]
+```
