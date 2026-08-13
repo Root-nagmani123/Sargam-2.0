@@ -41,6 +41,15 @@ use Illuminate\Support\Facades\View;
 class EstateController extends Controller
 {
     /**
+     * Per-request memo for {@see estateSelfOtherLinks()}, keyed by user id.
+     * The links are an input to the bill cache's key, so they cannot live inside that cache;
+     * memoising here keeps repeat call sites in one request from re-running the query.
+     *
+     * @var array<int, array<int, array{emp_id: string, name: string}>>
+     */
+    private array $estateSelfOtherLinksMemo = [];
+
+    /**
      * Column on employee_master that payroll_salary_master.employee_master_pk joins to (often pk_old when that column exists).
      * estate_possession_details.emploee_master_pk is canonical employee_master.pk — use resolveEmployeeMasterCanonicalPk() when saving.
      */
@@ -3116,6 +3125,10 @@ class EstateController extends Controller
      * Yahan pehle do steps se employee row nikalti hai; naam ka match query me lagta hai
      * ({@see applyEstateOtherRequestSelfFilter()}).
      *
+     * Result is memoised for the request. It cannot go into the Redis bill cache — it is an INPUT
+     * to that cache's key — so the query has to run before the cache is consulted. Memoising keeps
+     * that at one query per request no matter how many call sites ask for the links.
+     *
      * @return array<int, array{emp_id: string, name: string}>
      */
     private function estateSelfOtherLinks(): array
@@ -3130,6 +3143,12 @@ class EstateController extends Controller
         $userId = (int) ($user->user_id ?? $user->pk ?? 0);
         if ($userId <= 0) {
             return [];
+        }
+
+        // Keyed by user id: a single request is always one user, but keying it means a queue
+        // worker or a test that switches users in-process can never read a stale answer.
+        if (array_key_exists($userId, $this->estateSelfOtherLinksMemo)) {
+            return $this->estateSelfOtherLinksMemo[$userId];
         }
 
         $rows = DB::table('employee_master')
@@ -3158,7 +3177,7 @@ class EstateController extends Controller
 
         ksort($links); // cache key stable rahe
 
-        return array_values($links);
+        return $this->estateSelfOtherLinksMemo[$userId] = array_values($links);
     }
 
     /**
@@ -11614,7 +11633,7 @@ class EstateController extends Controller
         bool $filterByUser,
         array $employeeIdsSorted,
         mixed $currentUserId,
-        array $currentUserLinksNorm,
+        array $currentUserLinks,
         int $reqStart,
         mixed $reqLengthRaw,
         string $searchValue,
@@ -11626,14 +11645,17 @@ class EstateController extends Controller
             'fbu' => $filterByUser,
             'eids' => $employeeIdsSorted,
             'uid' => $currentUserId,
-            'em' => $currentUserLinksNorm,
+            // 'oth' (not the old 'em'): this carries the Other/contract links, not an email.
+            // Renaming the field changes every key, so the version below is bumped v2 -> v3 to
+            // retire the old entries cleanly instead of leaving them to expire.
+            'oth' => $currentUserLinks,
             'et' => $employeeTypeFilter,
         ];
         if (! $isDataTables) {
-            return 'estate_br_grid:v2:lg:' . md5(json_encode([$normalizedBillMonth, $scope]));
+            return 'estate_br_grid:v3:lg:' . md5(json_encode([$normalizedBillMonth, $scope]));
         }
 
-        return 'estate_br_grid:v2:dt:' . md5(json_encode([
+        return 'estate_br_grid:v3:dt:' . md5(json_encode([
             'm' => $normalizedBillMonth,
             's' => $scope,
             'st' => $reqStart,

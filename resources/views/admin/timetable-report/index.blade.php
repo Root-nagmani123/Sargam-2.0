@@ -625,20 +625,15 @@ $(document).ready(function() {
             $('#btnColumns').prop('disabled', false);
             $('#btnPrint').prop('disabled', false);
 
-            // Move toolbar buttons into DataTables search row.
-            // NOTE: public/js/datatable-global-ui.js moves .dataTables_filter OUT of
-            // .dataTables_wrapper into its own toolbar (stamping it data-sargam-dt-filter="<tableId>"),
-            // so look for the stamp first and the wrapper second. Resolve the target BEFORE
-            // detaching: #timetableReportToolbar is d-none, so a detach with nowhere to go loses the
-            // Columns and Print buttons for good.
-            var $filter = $('[data-sargam-dt-filter="timetableReportTable"]').first();
-            if (!$filter.length) {
-                $filter = $('#timetableReportTable').closest('.dataTables_wrapper').find('.dataTables_filter').first();
-            }
-            var $toolbar = $('#timetableReportToolbar').children();
-            if ($filter.length && $toolbar.length) {
-                $filter.addClass('d-flex align-items-center justify-content-end flex-wrap gap-2');
-                $filter.append($toolbar);
+            // Move the Columns/Print buttons into the DataTables search row. appendToSearchRow()
+            // finds the search row wherever the global UI script has put it. Matters here because
+            // #timetableReportToolbar is d-none: a move that fails must leave the buttons alone
+            // rather than strand them, which is what the old detach()-first version did.
+            if (window.SargamDataTableUI) {
+                window.SargamDataTableUI.appendToSearchRow(
+                    'timetableReportTable',
+                    $('#timetableReportToolbar').children()
+                );
             }
         } else {
             reportDt.ajax.reload(null, true);
