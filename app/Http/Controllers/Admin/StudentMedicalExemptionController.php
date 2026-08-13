@@ -472,11 +472,12 @@ class StudentMedicalExemptionController extends Controller
 }
 
     /**
-     * Check if a date-time range overlaps with an existing exemption of the SAME
+     * Check if a date-time range exactly duplicates an existing exemption of the SAME
      * exemption type (opd_category) for the same student. Different exemption types
-     * (e.g. PT Exemption vs OPD vs Referral) are allowed to overlap - a student can be
-     * referred to a hospital and separately marked PT Exempt for the same dates.
-     * Two ranges overlap if: new_start < existing_end AND new_end > existing_start
+     * (e.g. PT Exemption vs OPD vs Referral) are always allowed to overlap - a student
+     * can be referred to a hospital and separately marked PT Exempt for the same dates.
+     * Same-type exemptions are also allowed on the same day as long as their time
+     * ranges differ - only an exact from/to match is treated as a duplicate booking.
      */
     private function checkOverlap($studentId, $fromDate, $toDate, $exemptionType, $excludeId = null)
     {
@@ -499,10 +500,10 @@ class StudentMedicalExemptionController extends Controller
             // Use a far future date if to_date is null (ongoing exemption)
             $existingTo = $exemption->to_date ? \Carbon\Carbon::parse($exemption->to_date) : \Carbon\Carbon::create(2099, 12, 31, 23, 59, 59);
 
-            // Check for overlap: new_start < existing_end AND new_end > existing_start
-            $overlaps = $newFrom < $existingTo && $newTo > $existingFrom;
+            // Only an exact same time-range match counts as a duplicate booking.
+            $sameTimeRange = $newFrom->equalTo($existingFrom) && $newTo->equalTo($existingTo);
 
-            if ($overlaps) {
+            if ($sameTimeRange) {
                 $existingFromFormatted = $existingFrom->format('d M Y H:i');
                 $existingToFormatted = $exemption->to_date ? \Carbon\Carbon::parse($exemption->to_date)->format('d M Y H:i') : 'Ongoing';
                 return "This time range overlaps with an existing '{$exemptionType}' exemption for this student (from {$existingFromFormatted} to {$existingToFormatted}).";
