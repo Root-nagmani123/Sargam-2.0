@@ -3272,6 +3272,7 @@ class ProcessMessBillsEmployeeController extends Controller
                         'itemSubcategory' => null,
                         'store_name' => $storeName,
                         'issue_date' => $itemIssueDate ?: $purchaseDateStr,
+                        'issue_date_sort' => $itemIssueYmd ?? ($b->issue_date ? $b->issue_date->format('Y-m-d') : ''),
                     ];
                 }
                 if ($b->issue_date) {
@@ -3305,6 +3306,7 @@ class ProcessMessBillsEmployeeController extends Controller
             $paymentStatusLabel = $this->isBillFullyPaid($paidAmount, $totalAmount) ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid');
             $invoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
             $clientNameCourse = $courseName ? trim($buyerName . ' – ' . $courseName) : $buyerName;
+            $items = collect($items)->sortBy('issue_date_sort')->values()->all();
             $bill = (object) [
                 'items' => collect($items),
                 'client_name' => $buyerName,
@@ -3522,12 +3524,14 @@ class ProcessMessBillsEmployeeController extends Controller
                         }
                     }
                     $itemIssueDate = null;
+                    $itemIssueYmd = null;
                     try {
                         if (isset($item->issue_date) && $item->issue_date) {
                             $idt = $item->issue_date instanceof Carbon
                                 ? $item->issue_date
                                 : Carbon::parse($item->issue_date);
                             $itemIssueDate = $idt->format('d-m-Y');
+                            $itemIssueYmd = $idt->format('Y-m-d');
                         }
                     } catch (\Throwable $e) {
                         $itemIssueDate = null;
@@ -3536,6 +3540,7 @@ class ProcessMessBillsEmployeeController extends Controller
                         'store_name' => $storeName,
                         'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
                         'issue_date' => $itemIssueDate ?: $purchaseDate,
+                        'issue_date_sort' => $itemIssueYmd ?? ($bill->issue_date ? $bill->issue_date->format('Y-m-d') : ''),
                         'price' => number_format($item->rate ?? 0, 1),
                         'quantity' => $item->quantity,
                         'amount' => number_format($item->amount ?? 0, 2),
@@ -3543,6 +3548,11 @@ class ProcessMessBillsEmployeeController extends Controller
                     $sentTotal += $this->lineItemNetAmount($item);
                 }
             }
+            $items = collect($items)->sortBy('issue_date_sort')->values()->map(function ($row) {
+                unset($row['issue_date_sort']);
+
+                return $row;
+            })->all();
 
             if ($isSelfService) {
                 $totalAmount = $this->roundMoney($sentTotal);
