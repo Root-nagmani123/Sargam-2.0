@@ -1230,17 +1230,24 @@ class ProcessMessBillsEmployeeController extends Controller
         );
 
         $combinedBills = $combinedBills
-            ->filter(function ($cb) use ($authLinkedUserIds) {
+            ->map(function ($cb) use ($authLinkedUserIds) {
                 $rid = $this->resolveReceiverUserIdFromAnyBill($cb->bills->all());
-                return $rid !== null && in_array((int) $rid, $authLinkedUserIds, true);
+                if ($rid === null || ! in_array((int) $rid, $authLinkedUserIds, true)) {
+                    return null;
+                }
+                $cb->receiver_user_id = (int) $rid;
+
+                return $cb;
             })
+            ->filter()
             ->values();
 
         // Self-service: an item stays invisible to the user until its invoice has actually been sent.
+        $this->preloadMessCombinedNotificationsForReceivers($combinedBills->pluck('receiver_user_id')->unique()->all());
         $combinedBills = $combinedBills
             ->map(function ($cb) use ($dateFrom, $dateTo) {
                 $bills = $cb->bills->all();
-                $receiverUserId = (int) ($this->resolveReceiverUserIdFromAnyBill($bills) ?? 0);
+                $receiverUserId = $cb->receiver_user_id;
                 $lineItemKeys = $this->collectMessBillLineItemKeys($bills);
 
                 $notifiedKeys = $this->getMessCombinedNotifiedLineItemKeys(
@@ -3461,10 +3468,11 @@ class ProcessMessBillsEmployeeController extends Controller
             if (empty($bills)) {
                 return response()->json(['error' => 'No bills found for this buyer in the selected date range.'], 404);
             }
+            $resolvedReceiverUserId = null;
             if (!$this->currentUserCanAdminMessBills()) {
-                $rid = $this->resolveReceiverUserIdFromAnyBill($bills);
+                $resolvedReceiverUserId = $this->resolveReceiverUserIdFromAnyBill($bills);
                 $uid = (int) (auth()->user()->user_id ?? 0);
-                if ($rid === null || $rid <= 0 || (int) $rid !== $uid) {
+                if ($resolvedReceiverUserId === null || $resolvedReceiverUserId <= 0 || (int) $resolvedReceiverUserId !== $uid) {
                     return response()->json(['error' => 'You do not have access to this bill.'], 403);
                 }
             }
@@ -3487,7 +3495,7 @@ class ProcessMessBillsEmployeeController extends Controller
             $isSelfService = ! $this->currentUserCanAdminMessBills();
             $notifiedKeySet = [];
             if ($isSelfService) {
-                $receiverUserId = (int) ($this->resolveReceiverUserIdFromAnyBill($bills) ?? 0);
+                $receiverUserId = (int) ($resolvedReceiverUserId ?? 0);
                 $notifiedKeys = $this->getMessCombinedNotifiedLineItemKeys($receiverUserId, $id, $filterDateFromYmd, $filterDateToYmd, $bills);
                 if ($notifiedKeys === [] && $this->messCombinedHasInvoiceNotificationInDateRange($receiverUserId, $id, $filterDateFromYmd, $filterDateToYmd)) {
                     // Legacy notification predating per-item tracking — treat everything as sent.
