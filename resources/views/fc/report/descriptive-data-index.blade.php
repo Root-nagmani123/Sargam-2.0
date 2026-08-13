@@ -6,14 +6,6 @@
 <style>
     #ddColMenu { max-height: 420px; overflow-y: auto; min-width: 290px; }
     #ddColMenu .form-check-label { cursor: pointer; }
-    /* Section headers keep ~100 checkboxes navigable; each one toggles its whole section. */
-    #ddColMenu .dd-col-group {
-        position: sticky; top: 0; z-index: 1;
-        background: #f1f4f8; border-top: 1px solid #dee2e6;
-        font-size: 11px; font-weight: 600; letter-spacing: .02em;
-        text-transform: uppercase; color: #24486e;
-    }
-    #ddColMenu .dd-col-group:first-child { border-top: 0; }
     #descriptiveDataTable_wrapper .dataTables_filter { text-align: right; }
     #descriptiveDataTable_wrapper .dataTables_filter input { width: auto; min-width: 220px; }
     .dd-course-picker .choices-wrap { flex: 0 1 380px; max-width: 380px; min-width: 0; }
@@ -90,25 +82,34 @@
                     </div>
                 </div>
 
-                {{-- Field filters are rendered by JS so the initial load and a course switch
-                     go through exactly one code path. --}}
-                <div class="col-6 col-md-3 col-lg-2">
-                    <button type="button" id="btnResetFilters" class="btn btn-outline-secondary btn-sm w-100">
-                        <i class="bi bi-x-lg me-1"></i>Reset
-                    </button>
-                </div>
+                {{-- Field filters are appended here by JS so the initial load and a course
+                     switch go through exactly one code path. --}}
             </div>
-            <small class="text-muted d-block mt-2">
-                Select a course to load its fields. Columns differ per course because each form maps its own fields.
-            </small>
+
+            {{-- Reset lives on its own line, not in the filter grid. As a grid cell it sat
+                 wherever the flow happened to leave it — mid-row with a course selected,
+                 stranded beside the course picker with none — and w-100 stretched it to the
+                 full width of its column. Here it is the same size and the same place in
+                 every state. --}}
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3 pt-2 border-top">
+                <small class="text-muted mb-0">
+                    Select a course to load its fields. Columns differ per course because each form maps its own fields.
+                </small>
+                <button type="button" id="btnResetFilters" class="btn btn-outline-secondary btn-sm px-3 flex-shrink-0">
+                    <i class="bi bi-x-lg me-1"></i>Reset
+                </button>
+            </div>
         </div>
     </div>
 
     <div class="card border-0 shadow-sm" style="border-radius:8px;">
         <div class="card-body p-3">
-            <div class="table-responsive">
-                {!! $dataTable->table(['class' => 'table table-bordered table-striped table-hover text-nowrap align-middle mb-0', 'style' => 'width:100%;', 'data-sargam-dt-ui' => 'false']) !!}
-            </div>
+            {{-- No .table-responsive wrapper here on purpose. It would enclose the whole
+                 DataTables wrapper — search box, length menu, info and pagination included —
+                 so scrolling a 97-column table sideways dragged all of them along with it.
+                 The horizontal scroller is declared inside the dom layout below instead, so
+                 it wraps the table alone and the controls stay at page width. --}}
+            {!! $dataTable->table(['class' => 'table table-bordered table-striped table-hover text-nowrap align-middle mb-0', 'style' => 'width:100%;', 'data-sargam-dt-ui' => 'false']) !!}
         </div>
     </div>
 </div>
@@ -148,8 +149,56 @@ $(function () {
         return params;
     }
 
+    // ── Remembered column selection ───────────────────────────────────────────
+    // Stored per COURSE, because the column set differs per course — one shared list would
+    // hide a column on a course that does not even have it. HIDDEN keys are stored rather
+    // than visible ones, so a column added to the form later shows up by default instead of
+    // silently staying out of a saved list that predates it.
+    // Every localStorage call is wrapped: it throws in private-browsing modes and when the
+    // quota is full, and losing the saved selection must never take the report down.
+    function colStoreKey() {
+        var id = currentFormId();
+        return id ? 'fcDescData.hiddenCols.' + id : '';
+    }
+
+    function savedHiddenColumns() {
+        var key = colStoreKey();
+        if (!key) { return null; }
+        try {
+            var raw = window.localStorage.getItem(key);
+            var arr = raw ? JSON.parse(raw) : null;
+            return Array.isArray(arr) ? arr : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function saveHiddenColumns() {
+        var key = colStoreKey();
+        if (!key || !table) { return; }
+        var hidden = [];
+        table.columns().every(function () {
+            var name = this.dataSrc();
+            if (name && name !== 'DT_RowIndex' && !this.visible()) { hidden.push(name); }
+        });
+        try {
+            window.localStorage.setItem(key, JSON.stringify(hidden));
+        } catch (e) {
+            // Storage unavailable — the selection just will not survive the refresh.
+        }
+    }
+
     function visibleColumnKeys() {
-        if (!table) { return []; }
+        // Before the table exists (the first draw of a page load) the saved selection is the
+        // only record of what is visible. Without this the first request after a refresh
+        // would ask for all ~97 columns and then immediately redraw.
+        if (!table) {
+            var hidden = savedHiddenColumns();
+            if (!hidden || !hidden.length) { return []; }
+            return ['login_username']
+                .concat(META.fields.map(function (f) { return f.key; }))
+                .filter(function (k) { return hidden.indexOf(k) === -1; });
+        }
         var keys = [];
         table.columns().every(function () {
             var name = this.dataSrc();
@@ -160,8 +209,8 @@ $(function () {
 
     // ── Rendering driven entirely by META ─────────────────────────────────────
     function renderFilters() {
-        $('#ddFilterRow .dd-filter-col').remove();
-        var $anchor = $('#btnResetFilters').closest('.col-6');
+        var $row = $('#ddFilterRow');
+        $row.find('.dd-filter-col').remove();
 
         META.fields.forEach(function (f) {
             if (!f.filter) { return; }
@@ -183,23 +232,46 @@ $(function () {
                        '<label class="form-label small mb-1">' + esc(f.label) + '</label>' +
                        '<select class="form-select form-select-sm dd-filter" data-param="f_' + esc(f.key) + '">' + o + '</select></div>';
             }
-            $(html).insertBefore($anchor);
+            // Appended, not inserted before Reset — Reset is no longer part of this grid.
+            $row.append(html);
         });
     }
 
+    // No course chosen means no columns are known yet, so the header stays blank rather than
+    // advertising S.No. / Username above a table that can never hold a row. One unnamed
+    // column is still emitted because DataTables needs a header cell per column definition,
+    // and the "Select a course to begin." message spans it.
+    function hasColumns() { return META.fields.length > 0; }
+
     function renderHeader() {
+        if (!hasColumns()) {
+            $('#descriptiveDataTable').html('<thead><tr><th></th></tr></thead><tbody></tbody>');
+            return;
+        }
         var h = '<thead><tr><th class="text-center" style="width:50px;">S.No.</th><th>Username</th>';
         META.fields.forEach(function (f) { h += '<th>' + esc(f.label) + '</th>'; });
         $('#descriptiveDataTable').html(h + '</tr></thead><tbody></tbody>');
     }
 
     function columnDefs() {
+        // Must match renderHeader() cell-for-cell: one unnamed column while no course is
+        // chosen, so nothing is labelled before there is anything to label.
+        if (!hasColumns()) {
+            return [{ data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, defaultContent: '' }];
+        }
+
+        // Restore the remembered selection here rather than toggling after init: a column
+        // created hidden is never drawn at all, so a refresh does not flash the full table
+        // before collapsing to the saved set.
+        var hidden = savedHiddenColumns() || [];
+        function shown(key) { return hidden.indexOf(key) === -1; }
+
         var cols = [
             { data: 'DT_RowIndex',    name: 'DT_RowIndex',    orderable: false, searchable: false, className: 'text-center', width: '50px' },
-            { data: 'login_username', name: 'login_username', orderable: false, searchable: false }
+            { data: 'login_username', name: 'login_username', orderable: false, searchable: false, visible: shown('login_username') }
         ];
         META.fields.forEach(function (f) {
-            cols.push({ data: f.key, name: f.key, searchable: false, orderable: !!f.orderable });
+            cols.push({ data: f.key, name: f.key, searchable: false, orderable: !!f.orderable, visible: shown(f.key) });
         });
         return cols;
     }
@@ -239,6 +311,20 @@ $(function () {
 
     function initTable() {
         table = $('#descriptiveDataTable').DataTable({
+            // Opt in to DataTables' native server-side ordering. Without this flag
+            // datatable-global-ui.js forces ordering:false on every serverSide table and
+            // substitutes a client-side sorter that only reorders the ~10 rows already on
+            // screen. Two reasons that is wrong here:
+            //  1. this report resolves a real ORDER BY for all 64 sortable columns —
+            //     lookups sort by their resolved NAME via the lk_<key> alias, Service by
+            //     the coalesced service name — so sorting the whole course is already
+            //     built and paging through it stays consistent;
+            //  2. that substitute sorter decorates the header once and guards on a flag
+            //     stored on the table node. This report destroys and re-inits the table on
+            //     every course change, and the flag survives, so from the second init on it
+            //     bailed out early — leaving the header with no .sorting classes, which is
+            //     why the sort arrows disappeared and header clicks did nothing.
+            sargamServerOrder: true,
             processing: true,
             serverSide: true,
             searching: true,
@@ -280,8 +366,13 @@ $(function () {
                 }
             },
             columns: columnDefs(),
+            // The horizontal scroller lives HERE, around the table only ('t' and the
+            // processing overlay 'r'). Wrapping the whole wrapper in .table-responsive
+            // instead made the search, length menu, info and pagination scroll sideways
+            // with the table — the search box drifted into the middle of the page and
+            // "Showing 10" left the screen entirely.
             dom: "<'row mb-2 align-items-center'<'col-sm-6'l><'col-sm-6'f>>" +
-                 "<'row'<'col-sm-12'tr>>" +
+                 "<'row'<'col-sm-12'<'table-responsive'tr>>>" +
                  "<'row mt-2 align-items-center'<'col-sm-5'i><'col-sm-7'p>>"
         });
         table.on('draw', syncExportButtons);
@@ -382,61 +473,23 @@ $(function () {
         }, 200);
     }
 
-    // Section name per column index, so the menu can group. Index 0/1 are S.No. and Username,
-    // which come before META.fields.
-    function groupForColumnIndex(idx) {
-        if (idx <= 1) { return 'General'; }
-        var f = META.fields[idx - 2];
-        return (f && f.group) ? f.group : 'Other';
-    }
-
+    // One flat list — every column the same shape, no section rows.
     function buildColMenu() {
         var $menu = $('#ddColMenu').empty();
         if (!table) { return; }
 
-        var lastGroup = null;
-        var groupBoxes = {};
-
         table.columns().every(function () {
             var col = this;
-            var idx = col.index();
             var title = ($(col.header()).text() || '').trim();
             if (!title || title.toLowerCase() === 's.no.') { return; }
-
-            var group = groupForColumnIndex(idx);
-            if (group !== lastGroup) {
-                lastGroup = group;
-                var $head = $('<li class="dd-col-group px-3 py-1"><div class="form-check mb-0">' +
-                    '<input type="checkbox" class="form-check-input me-2" checked>' +
-                    '<label class="form-check-label"></label></div></li>');
-                $head.find('label').text(group);
-                // One click shows or hides the whole section — ticking 9 Education boxes by
-                // hand is the difference between the menu being usable and not.
-                $head.find('input').on('change', function () {
-                    var on = $(this).prop('checked');
-                    $(this).closest('li').nextUntil('.dd-col-group').find('input')
-                        .prop('checked', on).each(function () {
-                            table.column($(this).data('colIdx')).visible(on, false);
-                        });
-                    table.columns.adjust();
-                    syncExportButtons();
-                    reloadForColumnChange();
-                });
-                groupBoxes[group] = $head.find('input');
-                $menu.append($head);
-            }
 
             var $li = $('<li class="px-3 py-1"><div class="form-check mb-0">' +
                 '<input type="checkbox" class="form-check-input me-2"' + (col.visible() ? ' checked' : '') + '>' +
                 '<label class="form-check-label"></label></div></li>');
             $li.find('label').text(title);
-            $li.find('input').data('colIdx', idx).on('change', function () {
+            $li.find('input').data('colIdx', col.index()).on('change', function () {
                 col.visible($(this).prop('checked'));
-                // Keep the section box honest: it is only ticked when every column under it is.
-                var $siblings = $(this).closest('li').prevAll('.dd-col-group').first()
-                    .nextUntil('.dd-col-group').find('input');
-                var box = groupBoxes[groupForColumnIndex(idx)];
-                if (box) { box.prop('checked', $siblings.not(':checked').length === 0); }
+                saveHiddenColumns();
                 syncExportButtons();
                 reloadForColumnChange();
             });
@@ -460,10 +513,20 @@ $(function () {
         syncExportButtons();
     });
 
+    // Reset returns the page to exactly the state it loads in — course picker back to
+    // whatever the URL asked for (nothing, normally), no field filters, empty search box,
+    // page 1, every column visible again.
+    //
+    // It rebuilds rather than blanking values. The old version set .val('') on each control
+    // and reloaded, which left the controls themselves in place: anything holding its own
+    // state (the Choices-backed course picker, a browser that keeps a rendered <select>
+    // showing its old label) went on displaying the previous selection even though the
+    // underlying value had been cleared — so Reset looked like it had done nothing.
+    // populateCourses() + loadCourse() destroy and re-create the whole set, which is the
+    // same path a course switch already takes, so there is no stale widget left to disagree.
     $('#btnResetFilters').on('click', function () {
-        $('.dd-filter').val('');
-        if (table) { table.search(''); table.ajax.reload(); }
-        syncExportButtons();
+        populateCourses(preselectId);
+        loadCourse(preselectId);
     });
 
     populateCourses(preselectId);

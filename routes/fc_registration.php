@@ -25,6 +25,7 @@ use App\Http\Controllers\FC\{
     ReportController,
     TravelPlanController,
     TravelPlanReportController,
+    StepReportController,
 };
 use Illuminate\Support\Facades\Route;
 
@@ -331,6 +332,61 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     Route::get('/descriptive-data/export-photos', [DescriptiveDataReportController::class, 'exportPhotos'])
         ->middleware('fc.reg.admin')
         ->name('descriptive-data.export.photos');
+
+    // Step reports — one FC registration step, one row per trainee, with Excel/PDF export.
+    // All served by StepReportController; the report is pinned per URL with ->defaults() rather
+    // than exposed as a path segment, so each keeps a readable address of its own and an unknown
+    // key cannot be probed. Adding another is one entry here plus one FcStepReport subclass.
+    //
+    // match(get|post) for the same reason as descriptive-data: the page renders on GET and the
+    // DataTable POSTs its draw request.
+    foreach ([
+        'vision-statement' => 'Vision Statement',
+        'special-assistant' => 'Special Assistant',
+        // 'bank-report', not 'bank-details': /admin/reports/bank-details already belongs to the
+        // older ReportController::bankDetails() screen, which overview.blade.php and
+        // form-overview.blade.php both link to. Registering the same URI here would shadow it.
+        'bank-report' => 'Bank Details',
+        'pre-medical-history' => 'Pre-Medical History',
+    ] as $stepReportKey => $stepReportLabel) {
+        // NOTE — the group's `auth` only, by decision. A role gate was applied here and then
+        // deliberately removed: no role or user currently holds the `bulk_smsemail` permission
+        // that fc.reg.admin accepts, so gating these would have left them Super-Admin-only and
+        // locked out the people who use them.
+        //
+        // The exposure this leaves open is real and recorded: `auth` is not an admin gate in
+        // this application — Authenticate.php:96 hydrates an FC trainee's roster session into
+        // Auth — so a logged-in trainee can reach these screens and their sheet exports. Same
+        // gate the sibling descriptive-data report already carries. Revisit when a reporting
+        // permission exists to gate on.
+        Route::match(['get', 'post'], '/'.$stepReportKey, [StepReportController::class, 'index'])
+            ->defaults('report', $stepReportKey)->name($stepReportKey);
+        Route::get('/'.$stepReportKey.'/export-excel', [StepReportController::class, 'exportExcel'])
+            ->defaults('report', $stepReportKey)->name($stepReportKey.'.export.excel');
+        Route::get('/'.$stepReportKey.'/export-pdf', [StepReportController::class, 'exportPdf'])
+            ->defaults('report', $stepReportKey)->name($stepReportKey.'.export.pdf');
+
+        // fc.reg.admin, unlike its siblings: this endpoint returns EVERY uploaded document on a
+        // course in a single file. The rest of the report is a screen an admin reads; this is a
+        // bulk extract of trainee-supplied documents, so it gets the same gate as the photo
+        // archive on descriptive-data rather than the group's auth-only one. 404s on a report
+        // that has no upload columns.
+        Route::get('/'.$stepReportKey.'/export-documents', [StepReportController::class, 'exportDocuments'])
+            ->defaults('report', $stepReportKey)
+            ->middleware('fc.reg.admin')
+            ->name($stepReportKey.'.export.documents');
+    }
+
+    // Serves the step reports' uploads — AUTHENTICATED, unlike descriptive-data/file.
+    //
+    // That older route has no auth at all, deliberately, so an emailed workbook keeps resolving
+    // for a recipient who is not a Sargam user — a trade accepted for photographs and
+    // signatures. These reports' uploads are Aadhaar cards, PAN cards, cancelled cheques and
+    // medical documents, which should not be readable by an anonymous URL holder, so they get
+    // their own endpoint inside the auth group. No role gate, matching the screens above.
+    // Consequence, deliberate: document links inside a forwarded export require a login.
+    Route::get('/step-file', [StepReportController::class, 'file'])
+        ->name('step-file');
 
     // Aggregated reports
     Route::get('/by-service',   [ReportController::class, 'byService'])->name('service');
