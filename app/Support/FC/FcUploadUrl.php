@@ -30,14 +30,25 @@ final class FcUploadUrl
     /** Query parameter carrying the token. */
     public const TOKEN_PARAM = 't';
 
-    public static function for(?string $path): string
+    /** Where a token is served from unless the caller names its own endpoint. */
+    public const DEFAULT_PATH = '/admin/reports/descriptive-data/file';
+
+    /**
+     * @param  string|null  $basePath  the endpoint that will serve the token.
+     *
+     * Defaults to the long-standing, deliberately UNAUTHENTICATED photo/signature route, so
+     * existing callers are unchanged. Reports whose uploads are identity or medical documents
+     * pass their own authenticated endpoint instead — the open route's accepted-risk decision
+     * was taken for photographs and does not extend to an Aadhaar card.
+     */
+    public static function for(?string $path, ?string $basePath = null): string
     {
         $path = trim((string) $path);
         if ($path === '') {
             return '';
         }
 
-        return url('/admin/reports/descriptive-data/file').'?'.self::TOKEN_PARAM.'='.self::encode($path);
+        return url($basePath ?: self::DEFAULT_PATH).'?'.self::TOKEN_PARAM.'='.self::encode($path);
     }
 
     /** Encrypted, URL-safe. base64url so the token survives a query string untouched. */
