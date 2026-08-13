@@ -103,7 +103,10 @@ Inert until a page adds the class. Use these when **modernizing a screen**.
 | `.ds-table-wrap` / `.ds-table-sticky` | scroll wrapper + sticky header |
 | `.ds-actions` | row-action button cluster |
 | `.ds-form-section` / `.ds-form-section-title` | grouped form block |
-| `.ds-stepper` (`.ds-step`, `.ds-step-index`, `.is-active`/`.is-done`) | multi-step progress |
+| `.ds-form-grid` (`.ds-form-grid-full`) / `.ds-form-label` / `.ds-req` / `.ds-form-footer` | full-page form: 2-col grid → 1 on mobile, label + red asterisk, right-aligned footer |
+| `.ds-btn-primary` / `.ds-btn-cancel` / `.ds-btn-back` | form action roles — brand navy, brand red outline, amber outline. Use these instead of `.btn-outline-danger` / `.btn-outline-warning`, which the admin theme paints pink (`#ff6692`) and bright yellow (`#f8c20a`) |
+| `.ds-wizard` (`.ds-wizard-rail` / `.ds-wizard-body`) | wizard shell: step rail beside the panels, stacks on mobile |
+| `.ds-stepper` (`.ds-step`, `.ds-step-index`, `.ds-step-label`, `.is-active`/`.is-done`) | multi-step progress — circular indicators on one continuous connector; active is a ring, done is a tick |
 | `.ds-empty-state` | empty/zero-record placeholder |
 | `.ds-stack-2/3/4` | vertical rhythm (`* + *` margin) |
 | `.ds-section` / `.ds-block` | section (24px) / block (32px) bottom gaps |

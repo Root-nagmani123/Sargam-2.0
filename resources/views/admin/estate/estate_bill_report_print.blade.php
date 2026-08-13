@@ -222,78 +222,135 @@
     .select2-container--open { z-index: 1060; } /* sirf khula dropdown modal ke upar; closed widget normal flow me (modal ke peeche) */
     .select2-container--default .select2-selection--single { min-height: calc(1.5em + 0.75rem + 2px); display: flex; align-items: center; }
     .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.5; padding-left: 0.25rem; }
+
+    /* ── Estate Bill Report for Print — screen chrome only (namespaced
+       .ebp-page, §7), built on the --ds-* tokens (design.md Layer A). Every
+       element it styles carries `no-print`, so the A4 bill is unaffected. ── */
+    .ebp-page .ebp-secondary-actions .btn i {
+        font-size: 1rem;
+        line-height: 1;
+    }
+
+    /* The filters sit on their own white bar, as they do on Generate Estate Bill. */
+    .ebp-page .ebp-bar {
+        padding: 0.75rem var(--ds-space-3, 1rem);
+        background: var(--ds-surface, #fff);
+        border: 1px solid var(--ds-line, #e5e7eb);
+        border-radius: var(--ds-radius-2, 8px);
+    }
+
+    .ebp-page .programme-dt-filter-select .form-control,
+    .ebp-page .programme-dt-filter-select .form-select {
+        min-height: var(--ds-control-h, 2.5rem);
+    }
+
+    /* Employee names + IDs are long; give that one filter room to breathe. */
+    .ebp-page .ebp-filter-wide {
+        width: 260px;
+        max-width: 100%;
+    }
+
+    /* Select2 replaces the <select>, so the height has to be re-applied to the
+       widget it renders or the row loses its baseline. */
+    .ebp-page .programme-dt-filter-select .select2-container--default .select2-selection--single {
+        min-height: var(--ds-control-h, 2.5rem);
+        border-color: var(--ds-line, #d0d5dd);
+        border-radius: var(--ds-radius, 4px);
+    }
 </style>
 @endpush
-<div class="container-fluid">
+<div class="container-fluid ebp-page">
     <!-- Breadcrumb (hidden when printing) -->
     <div class="no-print">
         <x-breadcrum title="Estate Bill Report for Print"></x-breadcrum>
     </div>
 
+    {{-- Screen chrome only — everything down to the bill doc carries `no-print`,
+         so the A4 output is untouched by this row. The action sits above the bar,
+         right-aligned, as the export row does on the index pages
+         (new-design-index-page.md §1). --}}
+    @if($bill)
+    <div class="no-print d-flex flex-wrap justify-content-end gap-2 mb-3 ebp-secondary-actions">
+        <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" onclick="window.print();"
+            title="Print this bill">
+            <i class="bi bi-printer" aria-hidden="true"></i>
+            <span>Print Bill</span>
+        </button>
+    </div>
+    @endif
+
     <!-- Filters (hidden when printing) -->
-    <div class="no-print card shadow-sm border-0 rounded-3 mb-4">
-        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
-            <h2 class="h6 fw-semibold text-body mb-0 d-flex align-items-center gap-2">
-                <i class="material-symbols-rounded fs-5">filter_list</i>
-                Filters
-            </h2>
-        </div>
-        <div class="card-body p-4">
-            <form method="get" action="{{ route('admin.estate.reports.bill-report-print') }}" class="row g-3 g-md-4 align-items-end">
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                    <label for="employee_category" class="form-label fw-medium">Employee Category</label>
-                    <select class="form-select" id="employee_category" name="employee_category" aria-label="Employee Category">
-                        @php
-                            $empCat = old('employee_category', request('employee_category', 'LBSNAA'));
-                        @endphp
+    <div class="no-print ebp-bar mb-4">
+        {{-- Toolbar: filters left · action right (§2). The placeholder option is
+             the field's label, so the separate <label> elements are gone. --}}
+        <form method="get" action="{{ route('admin.estate.reports.bill-report-print') }}"
+            class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 programme-dt-toolbar">
+
+            <div class="d-flex flex-wrap align-items-center gap-3">
+                <span class="programme-dt-filters-label">Filter</span>
+
+                <div class="programme-dt-filter-select">
+                    @php
+                        $empCat = old('employee_category', request('employee_category', 'LBSNAA'));
+                    @endphp
+                    <select class="form-select" id="employee_category" name="employee_category"
+                        aria-label="Employee Category">
                         <option value="LBSNAA" {{ $empCat === 'LBSNAA' ? 'selected' : '' }}>LBSNAA</option>
                         <option value="Other Employee" {{ $empCat === 'Other Employee' ? 'selected' : '' }}>Other Employee</option>
                     </select>
                 </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                    <label for="month" class="form-label fw-medium">Select Month</label>
-                    <select class="form-select" id="month" name="month" aria-label="Select Month">
-                        <option value="">— Select Month —</option>
+
+                <div class="programme-dt-filter-select">
+                    <select class="form-select" id="month" name="month" aria-label="Month">
+                        <option value="">Month</option>
                         @foreach($months as $m)
                             <option value="{{ $m }}" {{ old('month', request('month')) === $m ? 'selected' : '' }}>{{ $m }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                    <label for="year" class="form-label fw-medium">Select Year</label>
-                    <select class="form-select" id="year" name="year" aria-label="Select Year">
-                        <option value="">— Select Year —</option>
+
+                <div class="programme-dt-filter-select">
+                    <select class="form-select" id="year" name="year" aria-label="Year">
+                        <option value="">Year</option>
                         @foreach($years as $y)
                             <option value="{{ $y }}" {{ old('year', request('year')) == $y ? 'selected' : '' }}>{{ $y }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                    <label for="employee_type_pk" class="form-label fw-medium">Select Employee Type</label>
-                    <select class="form-select" id="employee_type_pk" name="employee_type_pk" aria-label="Select Employee Type">
-                        <option value="">— Select Employee Type —</option>
+
+                <div class="programme-dt-filter-select">
+                    <select class="form-select" id="employee_type_pk" name="employee_type_pk" aria-label="Employee Type">
+                        <option value="">Employee Type</option>
                         @foreach($employeeTypes as $et)
                             <option value="{{ $et->pk }}" {{ old('employee_type_pk', request('employee_type_pk')) == $et->pk ? 'selected' : '' }}>{{ $et->unit_sub_type }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                    <label for="employee_pk" class="form-label fw-medium">Select Employee</label>
-                    <select class="form-select" id="employee_pk" name="employee_pk" aria-label="Select Employee">
-                        <option value="">— Select Employee —</option>
+
+                <div class="programme-dt-filter-select ebp-filter-wide">
+                    <select class="form-select" id="employee_pk" name="employee_pk" aria-label="Employee">
+                        <option value="">Employee</option>
                         @foreach($employees as $emp)
                             <option value="{{ $emp->pk }}" {{ old('employee_pk', request('employee_pk')) == $emp->pk ? 'selected' : '' }}>{{ $emp->emp_name }} {{ $emp->employee_id ? '(' . trim($emp->employee_id) . ')' : '' }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2">
-                        <i class="material-symbols-rounded" style="font-size: 1.1rem;">visibility</i>
-                        Show Bill
-                    </button>
-                </div>
-            </form>
-        </div>
+
+                {{-- GET-filtered page, so the reset is a plain link back to the
+                     unfiltered route; the component (and its red) is the
+                     programme-dt one, not disc-reset (§2). --}}
+                <a href="{{ route('admin.estate.reports.bill-report-print') }}"
+                    class="btn programme-dt-btn-reset d-inline-flex align-items-center justify-content-center">Remove
+                    Filter</a>
+            </div>
+
+            <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                <button type="submit" class="btn programme-dt-btn-columns" title="Show the bill for these filters">
+                    <span>Show Bill</span>
+                    <i class="bi bi-eye" aria-hidden="true"></i>
+                </button>
+            </div>
+        </form>
     </div>
 
     @if($bill)
@@ -332,13 +389,6 @@
             : asset('admin_assets/images/logos/logo.svg');
     @endphp
     <!-- Bill for print (visible on screen and in print) -->
-    <div class="estate-bill-print no-print mb-4">
-        <button type="button" class="btn btn-primary btn-sm mb-3 d-inline-flex align-items-center gap-1" onclick="window.print();" title="Print this bill">
-            <i class="material-symbols-rounded" style="font-size: 1rem;">print</i>
-            Print Bill
-        </button>
-    </div>
-
     <div class="estate-bill-print bill-page">
         <div class="bill-doc">
             <!-- Header -->
@@ -477,10 +527,12 @@
         </div>
     </div>
     @else
-    <div class="no-print card shadow-sm">
-        <div class="card-body text-center py-5">
-            <p class="text-muted mb-0">No bill found. Select <strong>Month</strong>, <strong>Year</strong> and <strong>Employee</strong> above and click <strong>Show Bill</strong>, or use the link from <strong>Generate Estate Bill</strong> with bill_no, month and year.</p>
-        </div>
+    <div class="no-print ds-empty-state">
+        <i class="material-symbols-rounded" style="font-size: 3rem;">receipt_long</i>
+        <p class="mb-1">No bill found</p>
+        <p class="small mb-0">Select <strong>Month</strong>, <strong>Year</strong> and <strong>Employee</strong>
+            above and click <strong>Show Bill</strong>, or open this page from <strong>Generate Estate Bill</strong>.
+        </p>
     </div>
     @endif
 </div>
@@ -522,7 +574,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 var empEl = document.getElementById('employee_pk');
                 if (!empEl) return;
                 destroySelect2(empEl);
-                var html = '<option value="">— Select Employee —</option>';
+                var html = '<option value="">Employee</option>';
                 if (res.status && res.data && res.data.length) {
                     res.data.forEach(function (e) {
                         var label = (e.emp_name || '') + (e.employee_id ? ' (' + e.employee_id + ')' : '');
@@ -531,15 +583,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 empEl.innerHTML = html;
                 if (typeof $.fn.select2 !== 'undefined') {
-                    $(empEl).select2(Object.assign({}, commonCfg, { placeholder: '— Select Employee —' }));
+                    $(empEl).select2(Object.assign({}, commonCfg, { placeholder: 'Employee' }));
                 }
             })
             .catch(function () {
                 var empEl = document.getElementById('employee_pk');
                 if (empEl) destroySelect2(empEl);
-                if (empEl) empEl.innerHTML = '<option value="">— Select Employee —</option>';
+                if (empEl) empEl.innerHTML = '<option value="">Employee</option>';
                 if (empEl && typeof $.fn.select2 !== 'undefined') {
-                    $(empEl).select2(Object.assign({}, commonCfg, { placeholder: '— Select Employee —' }));
+                    $(empEl).select2(Object.assign({}, commonCfg, { placeholder: 'Employee' }));
                 }
             });
     }
@@ -565,10 +617,10 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof $.fn.select2 !== 'undefined') {
         var ids = [
             { id: 'employee_category', placeholder: 'Employee Category' },
-            { id: 'month', placeholder: '— Select Month —' },
-            { id: 'year', placeholder: '— Select Year —' },
-            { id: 'employee_type_pk', placeholder: '— Select Employee Type —' },
-            { id: 'employee_pk', placeholder: '— Select Employee —' }
+            { id: 'month', placeholder: 'Month' },
+            { id: 'year', placeholder: 'Year' },
+            { id: 'employee_type_pk', placeholder: 'Employee Type' },
+            { id: 'employee_pk', placeholder: 'Employee' }
         ];
         ids.forEach(function (item) {
             var el = document.getElementById(item.id);

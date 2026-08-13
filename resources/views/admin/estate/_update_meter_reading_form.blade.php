@@ -13,7 +13,10 @@
     $meterReadingDateDefault = isset($prefill['meter_reading_date']) ? $prefill['meter_reading_date'] : '';
 @endphp
 
-<div class="{{ $inModal ? 'modal-body' : '' }} umr-form">
+{{-- ds-form-fields is the documented full-page counterpart of .ds-modal
+     (sargam-app.css) — without it .ds-req and the control styling only apply
+     inside the modal, and the page renders black asterisks. --}}
+<div class="{{ $inModal ? 'modal-body' : '' }} umr-form ds-form-fields">
     <div class="alert alert-danger d-none js-umr-error" role="alert"></div>
 
             <form>
@@ -72,6 +75,8 @@
                 <input type="hidden" name="reading_block_id" id="reading_block_id" value="">
                 <input type="hidden" name="reading_unit_type_id" id="reading_unit_type_id" value="">
                 <input type="hidden" name="reading_unit_sub_type_id" id="reading_unit_sub_type_id" value="">
+                {{-- Set only when opened via Edit from List Meter Reading: that row skips the min-reading check. Units are unaffected. --}}
+                <input type="hidden" name="edit_reading_pk" id="edit_reading_pk" value="{{ $prefill['reading_pk'] ?? '' }}">
 
                 <div class="table-responsive umr-grid-wrap mt-3">
                     <table class="table table-hover align-middle mb-0 w-100 programme-dt-table umr-grid" id="updateMeterReadingTable">

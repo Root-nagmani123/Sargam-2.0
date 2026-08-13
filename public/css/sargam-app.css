@@ -47,6 +47,9 @@
     /* --- Brand (mirror theme; do NOT redefine --bs-*) ------------- */
     --ds-primary: var(--bs-primary, #004a93);
     --ds-secondary: #b12923;
+    --ds-warning: #b54708;      /* amber — tertiary/step-back actions */
+    --ds-danger: #ef4444;       /* destructive control (remove a row) */
+    --ds-accent: #2563eb;       /* additive control (add a row) */
     --ds-ink: #1f2937;          /* primary text */
     --ds-ink-muted: #667085;    /* secondary text */
     --ds-line: #e5e7eb;         /* hairline borders */
@@ -189,10 +192,6 @@ a.dropdown-item:focus-visible {
 
 /* --- Card ------------------------------------------------------- */
 .ds-card {
-    background: var(--ds-surface);
-    border: 1px solid var(--ds-line);
-    border-radius: var(--ds-radius-card);
-    box-shadow: var(--ds-shadow-sm);
     overflow: hidden;
 }
 .ds-card > .ds-card-header,
@@ -306,7 +305,11 @@ a.dropdown-item:focus-visible {
     border-radius: var(--ds-radius-2);
     margin-bottom: var(--ds-space-4);
 }
-.ds-form-section > .ds-form-section-title {
+/* Scoped to BOTH roots: the title is also used standalone on full-page forms
+   (a wizard panel is not a bordered .ds-form-section). As a child-only rule it
+   silently fell back to the browser's <h2> default — 2em, no rule under it. */
+.ds-form-section > .ds-form-section-title,
+.ds-form-section-title {
     font-size: 1rem;
     font-weight: 600;
     color: var(--ds-ink);
@@ -315,39 +318,226 @@ a.dropdown-item:focus-visible {
     border-bottom: 1px solid var(--ds-line);
 }
 
+/* --- Opted-in grids: sentence-case headers ----------------------- */
+/* The admin theme uppercases every DataTable header
+   (`table.dataTable thead th` in styles.css). The designs render them in
+   sentence case — "S. No.", "Merge with House" — so grids that opt into the
+   design system opt out of that transform. Two classes beat the theme's one
+   without !important; legacy tables are untouched. */
+table.dataTable.programme-dt-table thead th,
+.programme-dt-table thead th {
+    text-transform: none;
+}
+
+/* The designs' pager is arrows + page numbers only. DataTables' full_numbers
+   style also emits First/Last, so the opted-in footer drops them. Kept here
+   rather than per page — every design-system grid wants the same pager.
+   `!important` is required, not stylistic: custom.css:577 sets
+   `display: inline-flex !important` on .paginate_button, which a plain
+   `display:none` cannot beat at any specificity. */
+.programme-dt-footer .paginate_button.first,
+.programme-dt-footer .paginate_button.last,
+.programme-dt-footer .page-item.first,
+.programme-dt-footer .page-item.last {
+    display: none !important;
+}
+
+/* --- Wizard shell: step rail beside the panels ------------------- */
+/* Drop inside a .ds-card. The rail keeps its own hairline so the two halves
+   read as one surface rather than two stacked cards. */
+.ds-wizard {
+    display: flex;
+    align-items: stretch;
+}
+.ds-wizard > .ds-wizard-rail {
+    flex: 0 0 8.25rem;
+    padding: var(--ds-space-3) var(--ds-space-3);
+}
+.ds-wizard > .ds-wizard-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: var(--ds-space-3);
+    background: var(--ds-surface); border-radius: var(--ds-radius-card); box-shadow: var(--ds-shadow-sm);
+}
+@media (max-width: 767.98px) {
+    .ds-wizard {
+        flex-direction: column;
+    }
+    .ds-wizard > .ds-wizard-rail {
+        flex-basis: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--ds-line);
+    }
+}
+
 /* --- Vertical stepper (wizards) --------------------------------- */
 .ds-stepper {
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: var(--ds-space-3);
+    gap: var(--ds-space-6);
     list-style: none;
     padding: 0;
     margin: 0;
 }
 .ds-stepper .ds-step {
+    position: relative;
     display: flex;
     gap: var(--ds-space-2);
     align-items: flex-start;
+    color: var(--ds-ink-muted);
+    font-size: 0.8125rem;
+    line-height: 1.3;
+}
+/* The connector is per-step and stops at the last one — a single line spanning
+   the whole list leaves a tail dangling below the final indicator, because the
+   last row is taller than its dot whenever the label wraps. Each segment is
+   anchored to its own dot and reaches exactly the next dot's top, so a wrapped
+   label cannot pull it out of alignment either. */
+.ds-stepper .ds-step::before {
+    content: '';
+    position: absolute;
+    left: 0.6875rem;
+    top: 1.375rem;
+    bottom: calc(-1 * var(--ds-space-6));
+    width: 2px;
+    margin-left: -1px;
+    background: var(--ds-line);
+}
+.ds-stepper .ds-step:last-child::before {
+    content: none;
 }
 .ds-stepper .ds-step-index {
-    width: 1.75rem;
-    height: 1.75rem;
+    position: relative;
+    z-index: 1;
+    width: 1.375rem;
+    height: 1.375rem;
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: var(--ds-radius-1);
-    background: var(--ds-surface-2);
-    border: 1px solid var(--ds-line);
-    font-size: 0.8125rem;
+    border-radius: 50%;
+    background: var(--ds-surface);
+    border: 2px solid var(--ds-line);
+    font-size: 0.75rem;
     font-weight: 600;
     color: var(--ds-ink-muted);
 }
-.ds-stepper .ds-step.is-active .ds-step-index,
+.ds-stepper .ds-step-label {
+    min-width: 0;
+    padding-top: 0.125rem;
+}
+.ds-stepper .ds-step.is-active {
+    color: var(--ds-ink);
+    font-weight: 600;
+}
+/* Active reads as a ring around a solid core. The core is its own element:
+   nesting it in inset box-shadows makes its size a function of the border width
+   and collapses it to a pinpoint the moment either changes. */
+.ds-stepper .ds-step.is-active .ds-step-index {
+    border-color: var(--ds-primary);
+    color: transparent;
+}
+.ds-stepper .ds-step.is-active .ds-step-index::after {
+    content: '';
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--ds-primary);
+}
 .ds-stepper .ds-step.is-done .ds-step-index {
     background: var(--ds-primary);
     border-color: var(--ds-primary);
     color: #fff;
+}
+/* A finished step is a tick drawn from borders, so no icon font is needed. */
+.ds-stepper .ds-step.is-done .ds-step-index::after {
+    content: '';
+    width: 0.25rem;
+    height: 0.5rem;
+    margin-top: -0.1875rem;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/* --- Form grid + footer for full-page forms ---------------------- */
+.ds-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--ds-space-2) var(--ds-space-5);
+}
+.ds-form-grid > .ds-form-grid-full {
+    grid-column: 1 / -1;
+}
+@media (max-width: 767.98px) {
+    .ds-form-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+.ds-form-label {
+    display: block;
+    margin-bottom: var(--ds-space-1);
+    color: var(--ds-ink);
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+.ds-req {
+    margin-left: 0.125rem;
+    color: var(--ds-secondary);
+}
+.ds-form-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--ds-space-2);
+    margin-top: var(--ds-space-4);
+    padding-top: var(--ds-space-3);
+    border-top: 1px solid var(--ds-line);
+}
+
+/* Form action roles. The admin theme paints .btn-outline-danger pink (#ff6692)
+   and .btn-outline-warning a bright #f8c20a — neither is the brand red/amber
+   these forms are drawn with — so the roles are defined here in tokens rather
+   than borrowed from the theme's variants. */
+.ds-btn-primary,
+.ds-btn-cancel,
+.ds-btn-back {
+    min-width: 6.75rem;
+    padding: 0.6875rem var(--ds-space-4);
+    border-radius: var(--ds-radius-1);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+.ds-btn-primary {
+    color: var(--ds-surface);
+    background: var(--ds-primary);
+    border: 1px solid var(--ds-primary);
+}
+.ds-btn-primary:hover {
+    color: var(--ds-surface);
+    filter: brightness(0.92);
+}
+.ds-btn-cancel {
+    color: var(--ds-secondary);
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-secondary);
+}
+.ds-btn-back {
+    color: var(--ds-warning);
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-warning);
+}
+.ds-btn-cancel:hover,
+.ds-btn-back:hover {
+    background: var(--ds-surface-2);
+}
+.ds-btn-cancel:hover {
+    color: var(--ds-secondary);
+}
+.ds-btn-back:hover {
+    color: var(--ds-warning);
 }
 
 /* --- Empty state ------------------------------------------------ */

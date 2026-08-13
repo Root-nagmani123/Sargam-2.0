@@ -16,7 +16,7 @@ class EstateElectricSlabDataTable extends DataTable
         return (new EloquentDataTable($query))
             ->addIndexColumn()
             ->addColumn('unit_range', function ($row) {
-                return $row->start_unit_range . ' - ' . $row->end_unit_range;
+                return e($row->start_unit_range . '-' . $row->end_unit_range);
             })
             ->orderColumn('unit_range', 'start_unit_range $1')
             ->filterColumn('unit_range', function ($query, $keyword) {
@@ -26,27 +26,23 @@ class EstateElectricSlabDataTable extends DataTable
                 });
             })
             ->editColumn('rate_per_unit', function ($row) {
-                return number_format((float) $row->rate_per_unit, 2);
+                return number_format((float) $row->rate_per_unit, 2) . ' INR';
             })
             ->addColumn('merge_with_house', function ($row) {
                 return $row->unitType ? e($row->unitType->unit_type) : '-';
             })
+            // Sortable via the joined alias rather than the relation, so the
+            // header arrow the design shows actually does something.
+            ->orderColumn('merge_with_house', 'unit_type_name $1')
+            ->filterColumn('merge_with_house', function ($query, $keyword) {
+                $query->where('ut.unit_type', 'like', "%{$keyword}%");
+            })
             ->addColumn('action', function ($row) {
-                $editUrl = route('admin.estate.define-electric-slab.edit', $row->pk);
-                $deleteUrl = route('admin.estate.define-electric-slab.destroy', $row->pk);
-                $token = csrf_token();
-
-                return '<div class="d-inline-flex align-items-center gap-1" role="group">
-                    <a href="' . e($editUrl) . '" class="text-primary" title="Edit"><i class="material-icons material-symbols-rounded">edit</i></a>
-                    <form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this electric slab?\');">
-                        <input type="hidden" name="_token" value="' . e($token) . '">
-                        <input type="hidden" name="_method" value="DELETE">
-                        <button type="submit" class="btn btn-link p-0 m-0 text-primary" title="Delete" style="text-decoration:none">
-                            <i class="material-icons material-symbols-rounded">delete</i>
-                        </button>
-                       
-                    </form>
-                </div>';
+                // Edit opens the modal from these attributes — no extra fetch,
+                // since the row already holds every field the form needs.
+                return view('admin.estate.define_electric_slab._row_actions', [
+                    'row' => $row,
+                ])->render();
             })
             ->rawColumns(['action'])
             ->setRowId('pk');
@@ -56,51 +52,40 @@ class EstateElectricSlabDataTable extends DataTable
     {
         return $model->newQuery()
             ->with('unitType')
+            ->leftJoin('estate_unit_type_master as ut', 'estate_electric_slab.estate_unit_type_master_pk', '=', 'ut.pk')
+            ->select('estate_electric_slab.*', 'ut.unit_type as unit_type_name')
             ->orderBy('start_unit_range');
     }
 
     public function html(): HtmlBuilder
     {
+        // No dom / language / lengthMenu here: datatable-global-ui.js owns the
+        // toolbar and footer chrome, and hand-rolling them stops it relocating
+        // the search and pager (new-design-index-page.md §3, §5).
         return $this->builder()
             ->setTableId('electricSlabTable')
-            ->addTableClass('table align-middle mb-0')
+            ->addTableClass('table table-hover align-middle mb-0 w-100 programme-dt-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
-                'responsive' => true,
+                // Responsive would inject a control column and shift every
+                // Column-Visibility index; .table-responsive handles overflow.
+                'responsive' => false,
                 'autoWidth' => false,
                 'ordering' => true,
                 'searching' => true,
-                'lengthChange' => true,
-                'pageLength' => 10,
                 'order' => [[1, 'asc']],
-                'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-                'language' => [
-                    'search' => 'Search within table:',
-                    'lengthMenu' => 'Show _MENU_ entries',
-                    'info' => 'Showing _START_ to _END_ of _TOTAL_ entries',
-                    'infoEmpty' => 'Showing 0 to 0 of 0 entries',
-                    'infoFiltered' => '(filtered from _MAX_ total entries)',
-                    'paginate' => [
-                        'first' => 'First',
-                        'last' => 'Last',
-                        'next' => 'Next',
-                        'previous' => 'Previous',
-                    ],
-                ],
-                'dom' => '<"row align-items-center g-2"<"col-12 col-md-6"l><"col-12 col-md-6 text-md-end"f>>rt<"row align-items-center mt-2 g-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>',
             ]);
     }
-
 
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('60px'),
-            Column::computed('unit_range')->title('UNIT RANGE')->orderable(true)->searchable(true),
-            Column::make('rate_per_unit')->title('RATE/UNIT')->orderable(true)->searchable(true),
-            Column::computed('merge_with_house')->title('MERGE WITH HOUSE')->orderable(false)->searchable(false),
-            Column::computed('action')->title('EDIT')->addClass('text-center')->orderable(false)->searchable(false)->width('120px'),
+            Column::computed('DT_RowIndex')->title('S. No.')->orderable(false)->searchable(false)->width('64px'),
+            Column::computed('unit_range')->title('Unit Range')->orderable(true)->searchable(true),
+            Column::make('rate_per_unit')->title('Rate/ Unit')->orderable(true)->searchable(true),
+            Column::computed('merge_with_house')->title('Merge with House')->orderable(true)->searchable(true),
+            Column::computed('action')->title('Action')->orderable(false)->searchable(false)->width('120px'),
         ];
     }
 

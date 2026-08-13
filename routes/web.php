@@ -1647,12 +1647,16 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     Route::get('raise-change-request/{id}', [EstateController::class, 'raiseChangeRequest'])->name('raise-change-request');
     Route::post('raise-change-request', [EstateController::class, 'storeRaiseChangeRequest'])->name('raise-change-request.store');
     Route::get('request-for-house', [EstateController::class, 'requestForHouse'])->name('request-for-house');
+    Route::get('request-for-house/download', [EstateController::class, 'downloadRequestForHouse'])->name('request-for-house.download');
+    Route::get('request-for-house/print', [EstateController::class, 'printRequestForHouse'])->name('request-for-house.print');
     Route::get('change-request/details/{id?}', [EstateController::class, 'changeRequestDetails'])->name('change-request-details');
     Route::post('change-request/details/{id}', [EstateController::class, 'updateChangeRequestDetails'])->name('change-request-details.update');
     Route::get('change-request/details/modal/{id}', [EstateController::class, 'changeRequestDetailsModal'])->name('change-request-details.modal');
     Route::get('raise-change-request/{id}', [EstateController::class, 'raiseChangeRequest'])->name('raise-change-request');
     Route::post('raise-change-request', [EstateController::class, 'storeRaiseChangeRequest'])->name('raise-change-request.store');
     Route::get('request-for-house', [EstateController::class, 'requestForHouse'])->name('request-for-house');
+    Route::get('request-for-house/download', [EstateController::class, 'downloadRequestForHouse'])->name('request-for-house.download');
+    Route::get('request-for-house/print', [EstateController::class, 'printRequestForHouse'])->name('request-for-house.print');
     Route::get('new-request/allot-details/{id}', [EstateController::class, 'getNewRequestAllotDetails'])->name('new-request.allot-details');
     Route::post('new-request/allot/{id}', [EstateController::class, 'allotNewRequest'])->name('new-request.allot');
 
@@ -1690,6 +1694,8 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     Route::get('update-meter-reading', [EstateController::class, 'updateMeterReading'])->name('update-meter-reading');
     Route::get('list-meter-reading', [EstateController::class, 'listMeterReading'])->name('list-meter-reading');
     Route::get('list-meter-reading/data', [EstateController::class, 'getListMeterReadingData'])->name('list-meter-reading.data');
+    Route::get('list-meter-reading/download', [EstateController::class, 'exportListMeterReading'])->name('list-meter-reading.download');
+    Route::get('list-meter-reading/print', [EstateController::class, 'printListMeterReading'])->name('list-meter-reading.print');
     Route::get('update-meter-reading/list', [EstateController::class, 'getMeterReadingList'])->name('update-meter-reading.list');
     Route::get('update-meter-reading/meter-reading-dates', [EstateController::class, 'getMeterReadingDates'])->name('update-meter-reading.meter-reading-dates');
     Route::get('update-meter-reading/blocks', [EstateController::class, 'getMeterReadingBlocks'])->name('update-meter-reading.blocks');
@@ -1719,10 +1725,14 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     // Generate Estate Bill for Other (contract employees)
     Route::get('generate-estate-bill-for-other', [EstateController::class, 'generateEstateBillForOther'])->name('generate-estate-bill-for-other');
     Route::get('generate-estate-bill-for-other/data', [EstateController::class, 'getGenerateEstateBillForOtherData'])->name('generate-estate-bill-for-other.data');
+    Route::get('generate-estate-bill-for-other/download', [EstateController::class, 'exportGenerateEstateBillForOther'])->name('generate-estate-bill-for-other.download');
+    Route::get('generate-estate-bill-for-other/print', [EstateController::class, 'printGenerateEstateBillForOther'])->name('generate-estate-bill-for-other.print');
     Route::post('generate-estate-bill-for-other/verify-selected', [EstateController::class, 'verifySelectedBillsForOther'])->name('generate-estate-bill-for-other.verify-selected');
     Route::post('generate-estate-bill-for-other/save-as-draft', [EstateController::class, 'saveAsDraftBillsForOther'])->name('generate-estate-bill-for-other.save-as-draft');
 
     Route::get('return-house', [EstateController::class, 'returnHouse'])->name('return-house');
+    Route::get('return-house/download', [EstateController::class, 'downloadReturnHouse'])->name('return-house.download');
+    Route::get('return-house/print', [EstateController::class, 'printReturnHouse'])->name('return-house.print');
     Route::get('return-house/employees', [EstateController::class, 'getReturnHouseEmployees'])->name('return-house.employees');
     Route::get('return-house/request-details', [EstateController::class, 'getReturnHouseRequestDetails'])->name('return-house.request-details');
     Route::post('return-house/mark-return/{id}', [EstateController::class, 'markReturnHouse'])->name('return-house.mark-return');
@@ -1732,10 +1742,14 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     // Generate Estate Bill for Other (contract employees)
     Route::get('generate-estate-bill-for-other', [EstateController::class, 'generateEstateBillForOther'])->name('generate-estate-bill-for-other');
     Route::get('generate-estate-bill-for-other/data', [EstateController::class, 'getGenerateEstateBillForOtherData'])->name('generate-estate-bill-for-other.data');
+    Route::get('generate-estate-bill-for-other/download', [EstateController::class, 'exportGenerateEstateBillForOther'])->name('generate-estate-bill-for-other.download');
+    Route::get('generate-estate-bill-for-other/print', [EstateController::class, 'printGenerateEstateBillForOther'])->name('generate-estate-bill-for-other.print');
     Route::post('generate-estate-bill-for-other/verify-selected', [EstateController::class, 'verifySelectedBillsForOther'])->name('generate-estate-bill-for-other.verify-selected');
     Route::post('generate-estate-bill-for-other/save-as-draft', [EstateController::class, 'saveAsDraftBillsForOther'])->name('generate-estate-bill-for-other.save-as-draft');
 
     Route::get('return-house', [EstateController::class, 'returnHouse'])->name('return-house');
+    Route::get('return-house/download', [EstateController::class, 'downloadReturnHouse'])->name('return-house.download');
+    Route::get('return-house/print', [EstateController::class, 'printReturnHouse'])->name('return-house.print');
     Route::get('return-house/employees', [EstateController::class, 'getReturnHouseEmployees'])->name('return-house.employees');
     Route::get('return-house/request-details', [EstateController::class, 'getReturnHouseRequestDetails'])->name('return-house.request-details');
     Route::post('return-house/mark-return/{id}', [EstateController::class, 'markReturnHouse'])->name('return-house.mark-return');
@@ -1745,12 +1759,19 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     Route::post('define-house', [EstateController::class, 'storeDefineHouse'])->name('define-house.store');
     Route::get('define-house/data', [EstateController::class, 'getDefineHouseData'])->name('define-house.data');
     Route::get('define-house/blocks', [EstateController::class, 'getDefineHouseBlocks'])->name('define-house.blocks');
+    // Both must stay ABOVE define-house/{id} or the wildcard swallows them.
+    Route::get('define-house/download', [EstateController::class, 'exportDefineHouse'])->name('define-house.download');
+    Route::get('define-house/print', [EstateController::class, 'printDefineHouse'])->name('define-house.print');
+    Route::get('define-house/create', [EstateController::class, 'createDefineHouse'])->name('define-house.create');
+    Route::get('define-house/{id}/edit', [EstateController::class, 'editDefineHouse'])->name('define-house.edit');
     Route::get('define-house/{id}', [EstateController::class, 'showDefineHouse'])->name('define-house.show');
     Route::put('define-house/{id}', [EstateController::class, 'updateDefineHouse'])->name('define-house.update');
     Route::delete('define-house/{id}', [EstateController::class, 'destroyDefineHouse'])->name('define-house.destroy');
 
     // Define Electric Slab
     Route::get('define-electric-slab', [EstateElectricSlabController::class, 'index'])->name('define-electric-slab.index');
+    Route::get('define-electric-slab/download', [EstateElectricSlabController::class, 'download'])->name('define-electric-slab.download');
+    Route::get('define-electric-slab/print', [EstateElectricSlabController::class, 'print'])->name('define-electric-slab.print');
     Route::get('define-electric-slab/create', [EstateElectricSlabController::class, 'create'])->name('define-electric-slab.create');
     Route::post('define-electric-slab', [EstateElectricSlabController::class, 'store'])->name('define-electric-slab.store');
     Route::get('define-electric-slab/{id}/edit', [EstateElectricSlabController::class, 'edit'])->name('define-electric-slab.edit');
@@ -1758,6 +1779,8 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     Route::delete('define-electric-slab/{id}', [EstateElectricSlabController::class, 'destroy'])->name('define-electric-slab.destroy');
     // Define Electric Slab
     Route::get('define-electric-slab', [EstateElectricSlabController::class, 'index'])->name('define-electric-slab.index');
+    Route::get('define-electric-slab/download', [EstateElectricSlabController::class, 'download'])->name('define-electric-slab.download');
+    Route::get('define-electric-slab/print', [EstateElectricSlabController::class, 'print'])->name('define-electric-slab.print');
     Route::get('define-electric-slab/create', [EstateElectricSlabController::class, 'create'])->name('define-electric-slab.create');
     Route::post('define-electric-slab', [EstateElectricSlabController::class, 'store'])->name('define-electric-slab.store');
     Route::get('define-electric-slab/{id}/edit', [EstateElectricSlabController::class, 'edit'])->name('define-electric-slab.edit');

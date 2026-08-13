@@ -371,55 +371,47 @@ class EstateReturnHouseDataTable extends DataTable
     {
         return $this->builder()
             ->setTableId('returnHouseTable')
-            ->addTableClass('table table-striped table-hover align-middle mb-0 text-nowrap w-100')
+            ->addTableClass('table table-hover align-middle mb-0 text-nowrap w-100 programme-dt-table')
             ->columns($this->getColumns())
             ->minifiedAjax('', null, [
                 'scope' => 'new URLSearchParams(window.location.search).get("scope") || ""',
             ])
+            // No dom / language / lengthMenu here: datatable-global-ui.js owns the
+            // toolbar and footer chrome, and hand-rolling them stops it relocating
+            // the search and pager (new-design-index-page.md §3, §5). Responsive is
+            // off for the same reason as the other grids — its control column would
+            // shift every Column-Visibility index.
             ->parameters([
-                'responsive' => true,
+                'responsive' => false,
                 'autoWidth' => false,
                 'ordering' => true,
                 'searching' => true,
-                'lengthChange' => true,
-                'pageLength' => 10,
-                // Default sort by Returning Date (desc). Column index is 0-based in DataTables config.
+                // Default sort by Return Date (desc). Column index is 0-based.
                 'order' => [[11, 'desc']],
-                'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-                'language' => [
-                    'search' => 'Search:',
-                    'lengthMenu' => 'Show _MENU_ entries',
-                    'info' => 'Showing _START_ to _END_ of _TOTAL_ entries',
-                    'infoEmpty' => 'Showing 0 to 0 of 0 entries',
-                    'infoFiltered' => '(filtered from _MAX_ total entries)',
-                    'paginate' => [
-                        'first' => 'First',
-                        'last' => 'Last',
-                        'next' => 'Next',
-                        'previous' => 'Previous',
-                    ],
-                ],
-                'dom' => '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
-                'scrollX' => true,
+                // NO scrollX: it splits the grid into a scrollHead table plus a
+                // second <thead> inside the scroll body for column sizing, and
+                // that sizing row shows through as an empty band under the real
+                // header. The .table-responsive wrapper already scrolls this
+                // 14-column grid horizontally.
             ]);
     }
 
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
-            Column::make('name')->title('Name'),
+            Column::computed('DT_RowIndex')->title('S. No.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
+            Column::make('name')->title('Name & ID'),
             Column::make('employee_type')->title('Employee Type'),
             Column::make('section_name')->title('Section'),
             Column::make('estate_name')->title('Estate Name'),
-            Column::make('house_no')->title('House No.'),
+            Column::make('house_no')->title('House Number'),
             Column::make('unit_name')->title('Unit Name'),
             Column::make('building_name')->title('Building Name'),
             Column::make('unit_sub_type')->title('Unit Subtype'),
-            Column::make('allotment_date')->title('Date of Allotment'),
-            Column::make('possession_date_oth')->title('Date of Possession'),
-            Column::make('returning_date')->title('Returning Date'),
-            Column::make('upload_document')->title('Upload Document'),
+            Column::make('allotment_date')->title('Allotment Date'),
+            Column::make('possession_date_oth')->title('Possession Date'),
+            Column::make('returning_date')->title('Return Date'),
+            Column::make('upload_document')->title('Upload Documents'),
             Column::make('remarks')->title('Remarks'),
         ];
     }

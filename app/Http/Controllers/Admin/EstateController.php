@@ -11,7 +11,12 @@ use App\DataTables\EstateRequestForEstateDataTable;
 use App\DataTables\EstateReturnHouseDataTable;
 use App\DataTables\EstateRequestPutInHacDataTable;
 use App\DataTables\EstateHacApprovedDataTable;
+use App\Exports\EstateChangeRequestHouseExport;
+use App\Exports\EstateDefineHouseExport;
+use App\Exports\EstateGenerateBillForOtherExport;
 use App\Exports\EstateHacApprovedExport;
+use App\Exports\EstateListMeterReadingExport;
+use App\Exports\EstateReturnHouseExport;
 use App\Exports\EstateOtherRequestExport;
 use App\Exports\EstatePossessionDetailsExport;
 use App\Exports\EstatePossessionOtherExport;
@@ -2418,7 +2423,11 @@ class EstateController extends Controller
      * Request For House - List of house requests (Bootstrap 5 layout).
      * Self-service (HAC Person / Staff etc.): only their own change requests. Estate/Admin: full list.
      */
-    public function requestForHouse()
+    /**
+     * Rows behind Change Request For House — shared by the page, the Excel
+     * download and the printout, so the three cannot drift apart.
+     */
+    private function requestForHouseRows(): \Illuminate\Support\Collection
     {
         $latestPossessionSub = DB::table('estate_possession_details as ep')
             ->select('ep.estate_home_request_details', DB::raw('MAX(ep.pk) as latest_possession_pk'))
@@ -2510,7 +2519,69 @@ class EstateController extends Controller
                 ];
             });
 
-        return view('admin.estate.request_for_house', ['requests' => $requests]);
+        return $requests;
+    }
+
+    /**
+     * Change Request For House — the list page.
+     */
+    public function requestForHouse()
+    {
+        return view('admin.estate.request_for_house', ['requests' => $this->requestForHouseRows()]);
+    }
+
+    /**
+     * Rows + heading line for the Change Request For House downloads.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function requestForHouseExportPayload(Request $request): array
+    {
+        $search = trim((string) $request->input('search', ''));
+        $rows = $this->requestForHouseRows()->map(fn ($row) => (object) $row)->values();
+
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $rows = $rows->filter(function ($row) use ($needle) {
+                foreach (['request_id', 'request_date', 'name', 'emp_id', 'doj_academy', 'status',
+                    'alloted_house', 'eligibility_type', 'possession_from', 'possession_to'] as $key) {
+                    if (str_contains(mb_strtolower((string) ($row->{$key} ?? '')), $needle)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            })->values();
+        }
+
+        return [
+            'rows' => $rows,
+            'cols' => EstateChangeRequestHouseExport::resolveCols($request->input('cols')),
+            'filterLine' => $search !== '' ? 'Search: "' . $search . '"' : 'All change requests',
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /** Change Request For House — branded .xlsx of the list. */
+    public function downloadRequestForHouse(Request $request)
+    {
+        $payload = $this->requestForHouseExportPayload($request);
+
+        return Excel::download(
+            new EstateChangeRequestHouseExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'change-request-for-house-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /** Change Request For House — print-ready view, same columns as the Excel. */
+    public function printRequestForHouse(Request $request)
+    {
+        return view('admin.estate.request_for_house_print', $this->requestForHouseExportPayload($request));
     }
 
     /**
@@ -4661,8 +4732,29 @@ class EstateController extends Controller
                 'h.used_home_status',
                 'h.vacant_renovation_status',
                 'h.remarks'
-            )
-            ->orderBy('h.pk', 'desc');
+            );
+
+        // Sortable headers: DataTables sends order[0][column] as the table's own
+        // column index, so the map is positional and must move with the <thead>.
+        // Anything unmapped (S. No., Status, Action) falls back to newest-first.
+        $sortable = [
+            1 => 'c.campus_name',
+            2 => 'ut.unit_type',
+            3 => 'b.block_name',
+            4 => 'ust.unit_sub_type',
+            5 => 'h.house_no',
+            6 => 'h.meter_one',
+            7 => 'h.water_charge',
+            8 => 'h.electric_charge',
+            9 => 'h.licence_fee',
+        ];
+        $orderCol = (int) data_get($request->get('order'), '0.column', -1);
+        $orderDir = strtolower((string) data_get($request->get('order'), '0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+        if (isset($sortable[$orderCol])) {
+            $query->orderBy($sortable[$orderCol], $orderDir);
+        } else {
+            $query->orderBy('h.pk', 'desc');
+        }
 
         $total = $query->count();
 
@@ -4731,7 +4823,142 @@ class EstateController extends Controller
             'len' => (int) $request->get('length', 10),
             'q' => $qKey,
             'ut' => $hasUnitTypeOnSubType ? 1 : 0,
+            // The payload is now ordered by the clicked header, so the sort has
+            // to be part of the key or a re-sort serves the previous order.
+            'oc' => (int) data_get($request->get('order'), '0.column', -1),
+            'od' => strtolower((string) data_get($request->get('order'), '0.dir', 'asc')) === 'desc' ? 'desc' : 'asc',
         ];
+    }
+
+    /**
+     * The option lists every Define House form needs.
+     *
+     * Buildings are deliberately NOT scoped to a campus: getDefineHouseBlocks()
+     * returns the full list whatever campus is passed, so the form renders them
+     * once instead of fetching the same rows again on every campus change.
+     *
+     * @return array<string, \Illuminate\Support\Collection>
+     */
+    private function defineHouseFormOptions(): array
+    {
+        return [
+            'campuses' => DB::table('estate_campus_master')->orderBy('campus_name')->get(['pk', 'campus_name']),
+            'unitTypes' => DB::table('estate_unit_type_master')->orderBy('unit_type')->get(['pk', 'unit_type']),
+            'unitSubTypes' => DB::table('estate_unit_sub_type_master')->orderBy('unit_sub_type')->get(['pk', 'unit_sub_type']),
+            'blocks' => DB::table('estate_block_master')->orderBy('block_name')->get(['pk', 'block_name']),
+        ];
+    }
+
+    /**
+     * Define House — full-page Add wizard (Basic Details → House Details).
+     */
+    public function createDefineHouse()
+    {
+        return view('admin.estate.define_house_form', array_merge($this->defineHouseFormOptions(), [
+            'house' => null,
+        ]));
+    }
+
+    /**
+     * Define House — full-page Edit wizard. Same view as Add, so the two look
+     * alike; only the loaded record and the submit target differ.
+     */
+    public function editDefineHouse($id)
+    {
+        $hasUnitTypeOnSubType = Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
+
+        $house = DB::table('estate_house_master as h')
+            ->leftJoin('estate_unit_sub_type_master as ust', 'h.estate_unit_sub_type_master_pk', '=', 'ust.pk')
+            ->where('h.pk', (int) $id)
+            ->select(
+                'h.pk',
+                'h.estate_campus_master_pk',
+                'h.estate_block_master_pk',
+                'h.estate_unit_sub_type_master_pk',
+                'h.estate_unit_master_pk',
+                ($hasUnitTypeOnSubType
+                    ? 'ust.estate_unit_type_master_pk as resolved_unit_type_pk'
+                    : 'h.estate_unit_master_pk as resolved_unit_type_pk'),
+                'h.house_no',
+                'h.meter_one',
+                'h.meter_two',
+                'h.water_charge',
+                'h.electric_charge',
+                'h.licence_fee',
+                'h.vacant_renovation_status',
+                'h.used_home_status',
+                'h.remarks'
+            )
+            ->first();
+
+        if (! $house) {
+            return redirect()->route('admin.estate.define-house')->with('error', 'House not found.');
+        }
+
+        return view('admin.estate.define_house_form', array_merge($this->defineHouseFormOptions(), [
+            'house' => $house,
+        ]));
+    }
+
+    /**
+     * Rows + heading line for the Define House downloads.
+     *
+     * Runs the grid's own payload builder with the paging removed, so the export
+     * carries exactly the rows the table showed for that search and sort.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function defineHouseExportPayload(Request $request): array
+    {
+        $search = trim((string) $request->input('search', ''));
+
+        // The grid's builder reads DataTables' own request shape, so hand it one
+        // rather than duplicating the query with a second set of rules.
+        $gridRequest = Request::create($request->fullUrl(), 'GET', [
+            'start' => 0,
+            'length' => -1,
+            'search' => ['value' => $search],
+            'order' => $request->input('order', []),
+        ]);
+
+        $payload = $this->computeDefineHouseDataTablePayload($gridRequest);
+
+        $filters = [];
+        $filters[] = $search !== '' ? 'Search: "' . $search . '"' : 'All houses';
+
+        return [
+            'rows' => collect($payload['data'])->map(fn ($row) => (object) $row),
+            'cols' => EstateDefineHouseExport::resolveCols($request->input('cols')),
+            'filterLine' => implode('  |  ', $filters),
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /**
+     * Define House — branded .xlsx of the currently searched list.
+     */
+    public function exportDefineHouse(Request $request)
+    {
+        $payload = $this->defineHouseExportPayload($request);
+
+        return Excel::download(
+            new EstateDefineHouseExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'define-house-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /**
+     * Define House — print-ready view of the currently searched list.
+     * Same header and columns as the Excel download.
+     */
+    public function printDefineHouse(Request $request)
+    {
+        return view('admin.estate.define_house_print', $this->defineHouseExportPayload($request));
     }
 
     /**
@@ -6061,6 +6288,64 @@ class EstateController extends Controller
             ->all();
 
         return $dataTable->render('admin.estate.return_house', compact('requesters', 'campuses', 'unitTypesByCampus'));
+    }
+
+    /**
+     * Rows + heading line for the Return House downloads.
+     *
+     * Reuses the grid's own query builder, so the export is scoped exactly as
+     * the table is — including the non-privileged employee restriction.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function returnHouseExportPayload(Request $request): array
+    {
+        $search = trim((string) $request->input('search', ''));
+
+        $rows = app(EstateReturnHouseDataTable::class)->query()->get();
+
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $rows = $rows->filter(function ($row) use ($needle) {
+                foreach (['name', 'employee_type', 'section_name', 'estate_name', 'house_no', 'unit_name',
+                    'building_name', 'unit_sub_type', 'remarks'] as $key) {
+                    if (str_contains(mb_strtolower((string) ($row->{$key} ?? '')), $needle)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            })->values();
+        }
+
+        return [
+            'rows' => $rows,
+            'cols' => EstateReturnHouseExport::resolveCols($request->input('cols')),
+            'filterLine' => $search !== '' ? 'Search: "' . $search . '"' : 'All returned houses',
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /** Return House — branded .xlsx of the list. */
+    public function downloadReturnHouse(Request $request)
+    {
+        $payload = $this->returnHouseExportPayload($request);
+
+        return Excel::download(
+            new EstateReturnHouseExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'return-house-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /** Return House — print-ready view, same columns as the Excel download. */
+    public function printReturnHouse(Request $request)
+    {
+        return view('admin.estate.return_house_print', $this->returnHouseExportPayload($request));
     }
 
     /**
@@ -9988,6 +10273,7 @@ class EstateController extends Controller
             'ehm.estate_unit_sub_type_master_pk as unit_sub_type_pk',
             'ehrd.emp_name',
             'ehrd.employee_id',
+            'ehrd.req_date',
             DB::raw("COALESCE(NULLIF(TRIM(d_emp.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), '')) as emp_designation"),
             'eust.unit_sub_type',
             'ehm.water_charge as ehm_water_charge',
@@ -10044,6 +10330,7 @@ class EstateController extends Controller
             $b->meter_two_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m2'];
 
             $b->bill_no = $this->resolveBillNumber($b->bill_no ?? null, $b->pk ?? null);
+            $b->req_date_formatted = ! empty($b->req_date) ? \Carbon\Carbon::parse($b->req_date)->format('d-m-Y') : '—';
             $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d-m-Y') : '—';
             $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d-m-Y') : '—';
             $b->house_display = $b->unit_sub_type && $b->house_no ? $b->unit_sub_type . '-(' . $b->house_no . ')' : ($b->house_no ?? '—');
@@ -10199,10 +10486,29 @@ class EstateController extends Controller
         $estateBillIsPersonalView = $this->isEstateAuthorityPersonalScope($request)
             || ! (isEstateAuthority());
 
+        // The Bill Month filter is a select of the periods that actually have
+        // readings (newest first) — value is the `Y-m` this action parses.
+        $billMonthOptions = [];
+        foreach (
+            EstateMonthReadingDetails::select('bill_year', 'bill_month')
+                ->whereNotNull('bill_year')->whereNotNull('bill_month')
+                ->groupBy('bill_year', 'bill_month')
+                ->orderByRaw('CAST(bill_year AS UNSIGNED) DESC, CAST(bill_month AS UNSIGNED) DESC')
+                ->limit(24)->get() as $row
+        ) {
+            [$m, $y] = $this->meterReadingParseUiMonthYear($row->bill_month ?? null, $row->bill_year ?? null);
+            if ($m === null || $y === null) {
+                continue;
+            }
+            $billMonthOptions[sprintf('%04d-%02d', $y, $m)] = date('F Y', mktime(0, 0, 0, $m, 1, $y));
+        }
+        krsort($billMonthOptions);
+
         return view('admin.estate.generate_estate_bill', compact(
             'unitSubTypes',
             'bills',
             'billMonth',
+            'billMonthOptions',
             'unitSubTypePk',
             'search',
             'showUnitSubTypeFilter',
@@ -11336,7 +11642,124 @@ class EstateController extends Controller
                 ->orderBy('b.block_name')
                 ->get();
         }
-        return view('admin.estate.list_meter_reading', compact('billMonths', 'blocks'));
+        // The grid's Bill Month filter is rendered server-side from the periods
+        // that actually have readings, newest first — value is the `Y-m` the
+        // data endpoint parses, label is what the user reads.
+        $billMonthOptions = [];
+        foreach ($billMonths as $row) {
+            [$m, $y] = $this->meterReadingParseUiMonthYear($row->bill_month ?? null, $row->bill_year ?? null);
+            if ($m === null || $y === null) {
+                continue;
+            }
+            $billMonthOptions[sprintf('%04d-%02d', $y, $m)] = date('F Y', mktime(0, 0, 0, $m, 1, $y));
+        }
+        krsort($billMonthOptions);
+
+        return view('admin.estate.list_meter_reading', compact('billMonths', 'billMonthOptions', 'blocks'));
+    }
+
+    /**
+     * Rows + heading line for the List Meter Reading downloads.
+     *
+     * Runs the grid's own payload builder with the paging removed, so the export
+     * carries exactly the rows the table showed for those filters and search.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function listMeterReadingExportPayload(Request $request): array
+    {
+        $this->authorizeEstateMasterMeterAndReports();
+
+        $billMonth = trim((string) $request->input('bill_month', date('Y-m')));
+        $blockId = $request->input('block_id', 'all');
+        $employeeType = trim((string) $request->input('employee_type', 'LBSNAA'));
+        $search = trim((string) $request->input('search', ''));
+
+        $parts = explode('-', $billMonth);
+        $billYearStr = (isset($parts[0]) && is_numeric($parts[0])) ? (string) ((int) $parts[0]) : (string) date('Y');
+        $monthNum = (isset($parts[1]) && is_numeric($parts[1])) ? (int) $parts[1] : (int) date('n');
+        if ($monthNum < 1 || $monthNum > 12) {
+            $monthNum = (int) date('n');
+        }
+
+        $canSeeAll = (isEstateAuthority() || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST'));
+        $restrictedEmployeeIdsSorted = null;
+        if (! $canSeeAll) {
+            $ids = Auth::check()
+                ? array_values(array_filter(array_map('intval', getEmployeeIdsForUser(Auth::user()->user_id ?? Auth::user()->pk ?? null))))
+                : [];
+            sort($ids, SORT_NUMERIC);
+            $restrictedEmployeeIdsSorted = $ids;
+        }
+
+        // Same builder the grid uses, with the page window opened wide enough to
+        // hold the whole filtered month.
+        $payload = $this->computeListMeterReadingDataPayload(
+            $billMonth,
+            $blockId,
+            $employeeType,
+            true,
+            0,
+            100000,
+            $search,
+            $billYearStr,
+            date('F', mktime(0, 0, 0, $monthNum, 1)),
+            date('M', mktime(0, 0, 0, $monthNum, 1)),
+            (string) $monthNum,
+            str_pad((string) $monthNum, 2, '0', STR_PAD_LEFT),
+            0,
+            'asc',
+            $restrictedEmployeeIdsSorted,
+            \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk')
+        );
+
+        $blockLabel = 'All';
+        if ($blockId !== null && $blockId !== '' && $blockId !== 'all') {
+            $blockLabel = DB::table('estate_block_master')->where('pk', (int) $blockId)->value('block_name') ?: 'All';
+        }
+
+        $filters = [
+            'Bill Month: ' . date('F Y', mktime(0, 0, 0, $monthNum, 1, (int) $billYearStr)),
+            'Employee Type: ' . ($employeeType !== '' ? $employeeType : 'LBSNAA'),
+            'Building: ' . $blockLabel,
+        ];
+        if ($search !== '') {
+            $filters[] = 'Search: "' . $search . '"';
+        }
+
+        return [
+            'rows' => collect($payload['data'])->map(fn ($row) => (object) $row),
+            'cols' => EstateListMeterReadingExport::resolveCols($request->input('cols')),
+            'filterLine' => implode('  |  ', $filters),
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /**
+     * List Meter Reading — branded .xlsx of the currently filtered list.
+     */
+    public function exportListMeterReading(Request $request)
+    {
+        $payload = $this->listMeterReadingExportPayload($request);
+
+        return Excel::download(
+            new EstateListMeterReadingExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'list-meter-reading-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /**
+     * List Meter Reading — print-ready view of the currently filtered list.
+     * Same header and columns as the Excel download.
+     */
+    public function printListMeterReading(Request $request)
+    {
+        return view('admin.estate.list_meter_reading_print', $this->listMeterReadingExportPayload($request));
     }
 
     /**
@@ -11633,6 +12056,7 @@ class EstateController extends Controller
                     'emrd.last_month_elec_red',
                     'emrd.last_month_elec_red2',
                     'ehrd.emp_name',
+                    'ehrd.employee_id',
                     DB::raw("COALESCE(NULLIF(TRIM(d_lmr.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), '')) as emp_designation"),
                     // Section: department is often unset on employee_master; fall back like bill/return-house UIs.
                     DB::raw("COALESCE(NULLIF(TRIM(dm.department_name), ''), NULLIF(TRIM(d_lmr.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), ''), NULLIF(TRIM(ehrd.remarks), '')) as section"),
@@ -12437,7 +12861,112 @@ class EstateController extends Controller
      */
     public function generateEstateBillForOther()
     {
-        return view('admin.estate.generate_estate_bill_for_other');
+        // The Bill Month filter is a select of the periods that actually have
+        // other/contract readings (newest first) — value is the `Y-m` the data
+        // endpoint parses, label is what the user reads.
+        $billMonthOptions = [];
+        foreach (
+            DB::table('estate_month_reading_details_other')
+                ->select('bill_year', 'bill_month')
+                ->whereNotNull('bill_year')->whereNotNull('bill_month')
+                ->groupBy('bill_year', 'bill_month')
+                ->orderByRaw('CAST(bill_year AS UNSIGNED) DESC')
+                ->limit(24)->get() as $row
+        ) {
+            [$m, $y] = $this->meterReadingParseUiMonthYear($row->bill_month ?? null, $row->bill_year ?? null);
+            if ($m === null || $y === null) {
+                continue;
+            }
+            $billMonthOptions[sprintf('%04d-%02d', $y, $m)] = date('F Y', mktime(0, 0, 0, $m, 1, $y));
+        }
+        krsort($billMonthOptions);
+
+        return view('admin.estate.generate_estate_bill_for_other', compact('billMonthOptions'));
+    }
+
+    /**
+     * Rows + heading line for the Generate Estate Bill for Other downloads.
+     *
+     * Runs the grid's own row builder, then applies the same free-text search the
+     * client-side DataTable applies, so the export carries exactly the rows the
+     * table was showing.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function generateBillForOtherExportPayload(Request $request): array
+    {
+        $billMonth = trim((string) $request->input('bill_month', date('Y-m')));
+        $search = trim((string) $request->input('search', ''));
+
+        $parts = explode('-', $billMonth);
+        $billYearStr = (isset($parts[0]) && is_numeric($parts[0])) ? (string) ((int) $parts[0]) : (string) date('Y');
+        $monthNum = (isset($parts[1]) && is_numeric($parts[1])) ? (int) $parts[1] : (int) date('n');
+        if ($monthNum < 1 || $monthNum > 12) {
+            $monthNum = (int) date('n');
+        }
+        $billMonthStr = date('F', mktime(0, 0, 0, $monthNum, 1));
+
+        $rows = collect($this->computeGenerateEstateBillForOtherDataRows(
+            $billMonthStr,
+            $billYearStr,
+            Schema::hasColumn('estate_possession_other', 'return_home_status')
+        ));
+
+        // The grid searches client-side across every rendered cell; mirror that
+        // here rather than inventing a narrower server-side match.
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $rows = $rows->filter(function (array $row) use ($needle) {
+                foreach (['name', 'request_no', 'section', 'house_no', 'from_date', 'to_date', 'meter_no',
+                    'prev_reading', 'curr_reading', 'unit_consumed', 'total_charge', 'licence_fee',
+                    'water_charges', 'grand_total'] as $key) {
+                    if (str_contains(mb_strtolower((string) ($row[$key] ?? '')), $needle)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            })->values();
+        }
+
+        $filters = ['Bill Month: ' . date('F Y', mktime(0, 0, 0, $monthNum, 1, (int) $billYearStr))];
+        if ($search !== '') {
+            $filters[] = 'Search: "' . $search . '"';
+        }
+
+        return [
+            'rows' => $rows->map(fn (array $row) => (object) $row)->values(),
+            'cols' => EstateGenerateBillForOtherExport::resolveCols($request->input('cols')),
+            'filterLine' => implode('  |  ', $filters),
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /**
+     * Generate Estate Bill for Other — branded .xlsx of the currently filtered list.
+     */
+    public function exportGenerateEstateBillForOther(Request $request)
+    {
+        $payload = $this->generateBillForOtherExportPayload($request);
+
+        return Excel::download(
+            new EstateGenerateBillForOtherExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'estate-bill-for-other-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /**
+     * Generate Estate Bill for Other — print-ready view of the currently filtered
+     * list. Same header and columns as the Excel download.
+     */
+    public function printGenerateEstateBillForOther(Request $request)
+    {
+        return view('admin.estate.generate_estate_bill_for_other_print', $this->generateBillForOtherExportPayload($request));
     }
 
     /**
@@ -12485,6 +13014,7 @@ class EstateController extends Controller
                 'ehm.water_charge as ehm_water_charge',
                 'ehm.licence_fee as ehm_licence_fee',
                 'eor.emp_name',
+                'eor.request_no_oth',
                 'eor.section',
                 'b.block_name as building_name',
             ])
@@ -12533,10 +13063,19 @@ class EstateController extends Controller
                 'bill_month' => $r->bill_month ?? $billMonthStr,
                 'bill_year' => $r->bill_year ?? $billYearStr,
                 'name' => $r->emp_name ?? 'N/A',
+                // Contract staff have no employee_id; the request number is the
+                // only identifier they carry. Auto-generated "oth-req-N" values
+                // are internal keys, not IDs, so they stay out of the UI.
+                'request_no' => preg_match('/^oth-req-\d+$/i', trim((string) ($r->request_no_oth ?? '')))
+                    ? ''
+                    : trim((string) ($r->request_no_oth ?? '')),
                 'section' => $r->section ?? '—',
                 'house_no' => $r->house_no ?? '—',
                 'from_date' => $r->from_date ? \Carbon\Carbon::parse($r->from_date)->format('d-m-Y') : '—',
                 'to_date' => $r->to_date ? \Carbon\Carbon::parse($r->to_date)->format('d-m-Y') : '—',
+                // Sortable twins: the grid shows d-m-Y, which string-sorts wrong.
+                'from_date_sort' => $r->from_date ? \Carbon\Carbon::parse($r->from_date)->format('Y-m-d') : '',
+                'to_date_sort' => $r->to_date ? \Carbon\Carbon::parse($r->to_date)->format('Y-m-d') : '',
                 'meter_no' => trim(($r->meter_one ?? '') . ($showMeterTwo ? "\n" . (int) ($r->meter_two ?? 0) : '')),
                 'prev_reading' => ($meterOneIsNew ? '—' : (string) $prev) . ($showMeterTwo ? "\n" . ($meterTwoIsNew ? '—' : (string) $prev2) : ''),
                 'curr_reading' => (string) $curr . ($showMeterTwo ? "\n" . (string) $curr2 : ''),
@@ -12583,7 +13122,8 @@ class EstateController extends Controller
         $billMonthStr = date('F', mktime(0, 0, 0, $monthNum, 1));
 
         $hasReturnHomeStatusCol = Schema::hasColumn('estate_possession_other', 'return_home_status');
-        $cacheKey = 'estate_gebo:v2:' . md5(json_encode([
+        // v3: rows gained `request_no`, so v2 payloads are the wrong shape.
+        $cacheKey = 'estate_gebo:v3:' . md5(json_encode([
             'bm' => $billMonthStr,
             'by' => $billYearStr,
             'rh' => $hasReturnHomeStatusCol ? 1 : 0,

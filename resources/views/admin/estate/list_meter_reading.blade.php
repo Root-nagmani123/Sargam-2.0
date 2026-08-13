@@ -1,125 +1,223 @@
 @extends('admin.layouts.master')
 
-@section('title', 'List Meter Reading - Sargam')
+@section('title', 'List Meter Reading')
 
 @section('setup_content')
+@push('styles')
 <style>
-    /* List Meter Reading page: force search bar in top-right of header row */
-    #listMeterReadingCard .dataTables_wrapper .row:first-child {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
+    /* ── List Meter Reading — page-scoped chrome on top of programme-dt ──
+       Namespaced under .lmr-page so nothing leaks (new-design-index-page.md §7).
+       Values come from the --ds-* tokens (design.md Layer A). */
+    .lmr-page .lmr-secondary-actions .btn i {
+        font-size: 1rem;
+        line-height: 1;
     }
-    #listMeterReadingCard .dataTables_wrapper .dataTables_length {
-        text-align: left;
-    }
-    #listMeterReadingCard .dataTables_wrapper .dataTables_filter {
-        width: auto;
-        margin-left: auto;
-        margin-bottom: 0.5rem;
-        float: none !important;
-        text-align: right !important;
-    }
-    #listMeterReadingCard .dataTables_wrapper .dataTables_filter label {
+
+    /* Row actions — icon over caption, all stacks the same width so the
+       glyph row stays on one baseline (new-design-index-page.md §3b). */
+    .lmr-page .lmr-act-group {
         display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        justify-content: flex-end;
-        margin: 0 !important;
+        align-items: stretch;
+        gap: var(--ds-space-1, 0.25rem);
     }
-    @media (max-width: 767.98px) {
-        #listMeterReadingCard .dataTables_wrapper .row:first-child {
-            flex-direction: column;
-            align-items: stretch;
-        }
-        #listMeterReadingCard .dataTables_wrapper .dataTables_filter {
-            width: 100%;
-            margin-left: 0;
-            text-align: left !important;
-        }
-        #listMeterReadingCard .dataTables_wrapper .dataTables_filter label {
-            justify-content: flex-start;
-        }
+
+    .lmr-page .lmr-act {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 4px;
+        min-width: 62px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        font-size: 0.72rem;
+        font-weight: 500;
+        line-height: 1;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .lmr-page .lmr-act__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 22px;
+    }
+
+    .lmr-page .lmr-act__icon > i {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+
+    .lmr-page .lmr-act__label {
+        white-space: nowrap;
+    }
+
+    .lmr-page .lmr-act--edit {
+        color: #2563eb;
+    }
+
+    .lmr-page .lmr-act--edit:hover {
+        color: var(--ds-primary, #004a93);
+    }
+
+    /* The grid is wide; let the two widest text columns wrap rather than
+       stretch the table sideways (only column 2 wraps by default — §3). */
+    .lmr-page .programme-dt-table td.lmr-col-wrap,
+    .lmr-page .programme-dt-table th.lmr-col-wrap {
+        white-space: normal;
+        max-width: 260px;
+    }
+
+    .lmr-page .lmr-empty {
+        color: var(--ds-ink-muted, #667085);
+    }
+
+    /* A serverSide table with no rows still owns the footer slot; keep the
+       "no data" line from colliding with the pager. */
+    .lmr-page .programme-dt-footer:empty {
+        display: none;
+    }
+
+    /* Pager reads as arrows + numbers, per the design: full_numbers still
+       emits First/Last, which the mock doesn't show. */
+    .lmr-page .programme-dt-footer .paginate_button.first,
+    .lmr-page .programme-dt-footer .paginate_button.last {
+        display: none;
+    }
+
+    /* DataTables Responsive is on by default here and injects a control
+       column; the .table-responsive wrapper already handles overflow, and the
+       extra column would shift every Column-Visibility index. */
+    .lmr-page .programme-dt-table td.dtr-control,
+    .lmr-page .programme-dt-table th.dtr-control {
+        display: none;
     }
 </style>
-<div class="container-fluid px-2 px-sm-3 px-md-4">
-    <x-breadcrum title="List Meter Reading" />
+@endpush
+
+<div class="container-fluid px-2 px-sm-3 px-md-4 lmr-page">
+    <x-breadcrum title="List Meter Reading" :showBack="false" />
 
     <x-session_message />
 
-    <div class="card shadow-sm border-0 rounded-3 mb-4">
-        <div class="card-body p-4">
-            <h1 class="h4 fw-bold text-dark mb-1">List Meter Reading</h1>
-            <p class="text-muted small mb-4">Filter meter readings by Bill Month and Building Name.</p>
+    {{-- No status pills on this grid, so the export row sits alone on the right
+         (new-design-index-page.md §1). Print is the server-rendered view, not
+         window.print(), so the printout and the Excel can't drift apart. --}}
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 lmr-secondary-actions">
+        <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="lmrDownloadBtn"
+            title="Download as Excel">
+            <i class="bi bi-download" aria-hidden="true"></i>
+            <span>Download</span>
+        </button>
+        <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="lmrPrintBtn" title="Print">
+            <i class="bi bi-printer" aria-hidden="true"></i>
+            <span>Print</span>
+        </button>
+    </div>
 
-            <form id="listMeterReadingFilterForm" class="row g-3">
-                <div class="col-12 col-md-4">
-                    <label for="bill_month" class="form-label">Bill Month <span class="text-danger">*</span></label>
-                    <input
-                        type="month"
-                        class="form-control"
-                        id="bill_month"
-                        name="bill_month"
-                        value="{{ date('Y-m') }}"
-                        max="{{ date('Y-m') }}"
-                        required
-                    >
-                    <small class="text-muted d-block">Select Bill Month</small>
-                </div>
-                <div class="col-12 col-md-4">
-                    <label for="employee_type" class="form-label">Employee Type <span class="text-danger">*</span></label>
-                    <select class="form-select" id="employee_type" name="employee_type" required>
-                        <option value="LBSNAA" selected>LBSNAA</option>
-                        <option value="Other Employee">Other Employee</option>
-                    </select>
-                    <small class="text-muted d-block">Select Employee Type</small>
-                </div>
-                <div class="col-12 col-md-4">
-                    <label for="block_id" class="form-label">Building Name <span class="text-danger">*</span></label>
-                    <select class="form-select" id="block_id" name="block_id">
-                        <option value="all">All</option>
-                        @foreach($blocks ?? [] as $b)
+    <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-body p-3 p-md-4">
+            {{-- Toolbar: filters left · Columns + search right (§2) --}}
+            <div
+                class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="programme-dt-filters-label">Filter</span>
+
+                    <div class="programme-dt-filter-select">
+                        <select class="form-select" id="bill_month" name="bill_month" aria-label="Bill Month">
+                            <option value="">Bill Month</option>
+                            @foreach($billMonthOptions ?? [] as $value => $label)
+                            <option value="{{ $value }}" @selected($loop->first)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="programme-dt-filter-select">
+                        <select class="form-select" id="employee_type" name="employee_type" aria-label="Employee Type">
+                            <option value="LBSNAA">LBSNAA</option>
+                            <option value="Other Employee">Other Employee</option>
+                        </select>
+                    </div>
+
+                    <div class="programme-dt-filter-select">
+                        <select class="form-select" id="block_id" name="block_id" aria-label="Building Name">
+                            <option value="all">Building Name</option>
+                            @foreach($blocks ?? [] as $b)
                             <option value="{{ $b->pk }}">{{ $b->block_name ?? 'N/A' }}</option>
-                        @endforeach
-                    </select>
-                    <small class="text-muted d-block">Select Building Name</small>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <button type="button" class="btn programme-dt-btn-reset" id="lmrResetFilters">Remove Filter</button>
                 </div>
-                <div class="col-12 col-md-4">
-                    <label class="form-label d-block" style="height: 1.25em; margin-bottom: 0.5rem;" aria-hidden="true">&nbsp;</label>
-                    <button type="button" class="btn btn-primary" id="btnShow">
-                        <i class="bi bi-search me-1"></i> Show
+
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" data-bs-toggle="modal"
+                        data-bs-target="#lmrColumnModal" title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
+
+                    <div id="lmrDtSearch" class="programme-dt-search" data-dt-search-for="listMeterReadingTable"></div>
                 </div>
-            </form>
+            </div>
+
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table"
+                        id="listMeterReadingTable">
+                        <thead>
+                            <tr>
+                                <th>S. No.</th>
+                                <th>Name &amp; ID</th>
+                                <th>Designation</th>
+                                <th>Section</th>
+                                <th>Unit Type</th>
+                                <th>Unit Sub Type</th>
+                                <th>Building Name</th>
+                                <th>House Number</th>
+                                <th>Meter 1 Reading</th>
+                                <th>Meter 2 Reading</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr id="noDataRow">
+                                <td colspan="11" class="text-center lmr-empty py-4">Select a Bill Month to load
+                                    readings.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {{-- DataTables paginates, so the footer is an empty slot the global
+                 UI script fills (§4A). --}}
+            <div id="lmrDtFooter"
+                class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                data-dt-footer-for="listMeterReadingTable"></div>
         </div>
     </div>
 
-    <div class="card shadow-sm border-0 rounded-3" id="listMeterReadingCard">
-        <div class="card-body p-4">
-            <div class="table-responsive">
-                <table class="table table-striped table-hover align-middle mb-0" id="listMeterReadingTable">
-                    <thead class="table-primary">
-                        <tr>
-                            <th>S.NO.</th>
-                            <th>NAME</th>
-                            <th>DESIGNATION</th>
-                            <th>SECTION</th>
-                            <th>UNIT TYPE</th>
-                            <th>UNIT SUB TYPE</th>
-                            <th>BUILDING NAME</th>
-                            <th>HOUSE NO.</th>
-                            <th>METER1 READING</th>
-                            <th>METER2 READING</th>
-                            <th class="text-center">EDIT</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr id="noDataRow">
-                            <td colspan="11" class="text-center text-muted py-4">Select Bill Month and Building Name, then click Show to load data.</td>
-                        </tr>
-                    </tbody>
-                </table>
+    {{-- Column Visibility (column-visibility.md — colvis-item card grid) --}}
+    <div class="modal fade" id="lmrColumnModal" tabindex="-1" aria-labelledby="lmrColumnModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-0 pb-2">
+                    <h5 class="modal-title fw-bold" id="lmrColumnModalLabel">Column Visibility</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-0">
+                    <hr class="mt-0">
+                    <div class="row g-3" id="lmrColumnToggleGrid"></div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-primary rounded-3 px-4"
+                        data-bs-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
     </div>
@@ -128,48 +226,138 @@
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // NOTE: Employee Type / Building Name filters ko plain native <select> rakha gaya hai (Bootstrap
-    // form-select). Pehle widget-enhance (TomSelect/Select2) karne par is page pe dropdown blank aa
-    // raha tha; native select apne server-rendered options hamesha reliably dikhata hai.
-    var dataTableInstance = null;
-    var lastLoadedParams = null;
+    $(function () {
+        var dataUrl = @json(route('admin.estate.list-meter-reading.data'));
+        var downloadUrl = @json(route('admin.estate.list-meter-reading.download'));
+        var printUrl = @json(route('admin.estate.list-meter-reading.print'));
 
-    function initOrReload() {
-        var billMonth = document.getElementById('bill_month').value;
-        var employeeType = document.getElementById('employee_type').value;
-        var blockId = document.getElementById('block_id').value;
-        if (!billMonth) {
-            alert('Please select Bill Month.');
-            return;
+        // Header index -> the export's column key. Positional: adding a column
+        // means editing this array AND the empty-state colspan
+        // (column-visibility.md §2). '' = a column the export doesn't carry.
+        var LMR_EXPORT_KEYS = ['sno', 'name_id', 'designation', 'section', 'unit_type',
+            'unit_sub_type', 'building_name', 'house_no', 'meter1_reading', 'meter2_reading', ''
+        ];
+
+        // Hidden columns are remembered by LABEL, never index — a label that no
+        // longer matches any header is ignored, so a renamed column comes back
+        // visible instead of hiding a different one (column-visibility.md §3).
+        var LMR_COLVIS_KEY = 'sargam.listMeterReading.hiddenCols.' + @json(auth()->id() ?? 'guest');
+
+        function readHiddenCols() {
+            try {
+                var raw = window.localStorage.getItem(LMR_COLVIS_KEY);
+                var arr = raw ? JSON.parse(raw) : [];
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) {
+                return [];
+            }
         }
-        lastLoadedParams = { bill_month: billMonth, employee_type: employeeType, block_id: blockId };
 
-        if (typeof $ === 'undefined' || !$.fn.DataTable) {
-            alert('DataTable library not loaded.');
-            return;
+        function saveHiddenCols() {
+            var hidden = [];
+            $('#lmrColumnToggleGrid .lmr-col-toggle').each(function () {
+                if (!this.checked) hidden.push($(this).data('label'));
+            });
+            try {
+                window.localStorage.setItem(LMR_COLVIS_KEY, JSON.stringify(hidden));
+            } catch (e) { /* private mode — the choice just won't persist */ }
         }
 
-        if (!dataTableInstance) {
-            dataTableInstance = $('#listMeterReadingTable').DataTable({
+        var dt = null;
+
+        function currentFilters() {
+            return {
+                bill_month: $('#bill_month').val() || '',
+                employee_type: $('#employee_type').val() || '',
+                block_id: $('#block_id').val() || 'all'
+            };
+        }
+
+        /** Export links carry what the user is looking at: filters, search, visible columns. */
+        function exportQuery() {
+            var params = new URLSearchParams(currentFilters());
+            params.set('search', dt ? (dt.search() || '') : '');
+            var cols = [];
+            $('#listMeterReadingTable thead th').each(function (i) {
+                var key = LMR_EXPORT_KEYS[i];
+                if (!key) return;
+                if (!dt || dt.column(i).visible()) cols.push(key);
+            });
+            if (cols.length) params.set('cols', cols.join(','));
+            return params.toString();
+        }
+
+        function buildColumnToggles() {
+            if (!dt) return;
+            var $grid = $('#lmrColumnToggleGrid');
+            if (!$grid.length) return;
+            $grid.empty();
+
+            dt.columns().every(function (i) {
+                var col = this;
+                var label = $(col.header()).text().trim();
+                if (!label) return; // no label, no chip
+
+                var inputId = 'lmrColVis_' + i;
+                var $cb = $('<input type="checkbox" class="form-check-input m-0 lmr-col-toggle">')
+                    .attr({ id: inputId, 'data-column': i, 'data-label': label })
+                    .prop('checked', col.visible());
+
+                $cb.on('change', function () {
+                    dt.column(i).visible(this.checked);
+                    saveHiddenCols();
+                });
+
+                $grid.append(
+                    $('<div class="col-12 col-sm-6 col-md-4"></div>').append(
+                        $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                            .attr('for', inputId)
+                            .append($cb)
+                            .append($('<span></span>').text(label))
+                    )
+                );
+            });
+        }
+
+        function applySavedVisibility() {
+            var hidden = readHiddenCols();
+            if (!hidden.length || !dt) return;
+            dt.columns().every(function (i) {
+                var label = $(this.header()).text().trim();
+                if (label && hidden.indexOf(label) !== -1) this.visible(false, false);
+            });
+            dt.columns.adjust().draw(false);
+        }
+
+        function initTable() {
+            if (dt) return dt;
+
+            $('#noDataRow').remove();
+
+            // No dom / language / lengthMenu here: datatable-global-ui.js owns
+            // those, and hand-rolling them breaks the chrome relocation
+            // (new-design-index-page.md §3, §5).
+            dt = $('#listMeterReadingTable').DataTable({
                 processing: true,
                 serverSide: true,
                 searching: true,
-                pageLength: 10,
-                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                searchDelay: 400,
+                autoWidth: false,
+                responsive: false,
+                order: [],
                 ajax: {
-                    url: '{{ route("admin.estate.list-meter-reading.data") }}',
+                    url: dataUrl,
                     data: function (d) {
-                        // Always read latest filter values (avoid stale closure values on reload)
-                        d.bill_month = document.getElementById('bill_month').value;
-                        d.employee_type = document.getElementById('employee_type').value;
-                        d.block_id = document.getElementById('block_id').value;
+                        var f = currentFilters();
+                        d.bill_month = f.bill_month;
+                        d.employee_type = f.employee_type;
+                        d.block_id = f.block_id;
                     }
                 },
                 columns: [
                     { data: 'sno', name: 'sno', orderable: false, searchable: false },
-                    { data: 'name', name: 'name' },
-                    { data: 'designation', name: 'designation' },
+                    { data: 'name', name: 'name', className: 'lmr-col-wrap' },
+                    { data: 'designation', name: 'designation', className: 'lmr-col-wrap' },
                     { data: 'section', name: 'section' },
                     { data: 'unit_type', name: 'unit_type' },
                     { data: 'unit_sub_type', name: 'unit_sub_type' },
@@ -179,44 +367,73 @@ document.addEventListener('DOMContentLoaded', function() {
                     { data: 'meter2_reading', name: 'meter2_reading' },
                     {
                         data: 'edit_url',
+                        name: 'edit_url',
                         orderable: false,
                         searchable: false,
-                        className: 'text-center',
-                        render: function (data) {
+                        render: function (data, type) {
+                            if (type !== 'display') return '';
                             var url = data || '#';
-                            return '<a href="' + url + '" class="btn btn-sm btn-outline-success" title="Edit"><i class="material-icons">edit</i></a>';
+                            var $a = $('<a class="lmr-act lmr-act--edit" title="Edit reading">')
+                                .attr('href', url)
+                                .append('<span class="lmr-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>')
+                                .append($('<span class="lmr-act__label">').text('Edit'));
+                            return $('<div class="lmr-act-group" role="group" aria-label="Row actions">')
+                                .append($a).prop('outerHTML');
                         }
                     }
-                ],
-                language: {
-                    search: 'Search within table:',
-                    lengthMenu: 'Show _MENU_ entries',
-                    info: 'Showing _START_ to _END_ of _TOTAL_ entries',
-                    infoEmpty: 'Showing 0 to 0 of 0 entries',
-                    infoFiltered: '(filtered from _MAX_ total entries)',
-                    paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
-                },
-                responsive: true,
-                autoWidth: false,
-                dom: '<"row mb-3"<"col-md-6 col-12"l><"col-md-6 col-12"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>'
+                ]
             });
-        } else {
-            dataTableInstance.ajax.reload(null, true);
-        }
-    }
 
-    document.getElementById('btnShow').addEventListener('click', initOrReload);
+            dt.on('init.dt', function () {
+                buildColumnToggles();
+                applySavedVisibility();
+                // Rebuild after restore so the checkboxes mirror what is showing.
+                buildColumnToggles();
+            });
 
-    // When user navigates back from edit/update screen, browsers may restore this page from bfcache.
-    // In that case the table shows stale DOM. Refresh automatically to reflect saved readings.
-    window.addEventListener('pageshow', function(event) {
-        var navEntry = (performance && performance.getEntriesByType) ? performance.getEntriesByType('navigation')[0] : null;
-        var isBackForward = (navEntry && navEntry.type === 'back_forward') || event.persisted;
-        if (!isBackForward) return;
-        if (lastLoadedParams && lastLoadedParams.bill_month && dataTableInstance) {
-            dataTableInstance.ajax.reload(null, false);
+            return dt;
         }
+
+        function reload() {
+            if (!$('#bill_month').val()) return;
+            if (!dt) { initTable(); return; }
+            dt.ajax.reload(null, false);
+        }
+
+        $('#bill_month, #employee_type, #block_id').on('change', reload);
+
+        $('#lmrResetFilters').on('click', function () {
+            $('#bill_month').prop('selectedIndex', 0);
+            $('#employee_type').val('LBSNAA');
+            $('#block_id').val('all');
+            if (dt) {
+                dt.search('');
+                reload();
+            }
+        });
+
+        function requireMonth() {
+            if ($('#bill_month').val()) return true;
+            if (window.Swal) {
+                Swal.fire({ icon: 'info', title: 'Select a Bill Month first.' });
+            } else {
+                window.alert('Select a Bill Month first.');
+            }
+            return false;
+        }
+
+        $('#lmrDownloadBtn').on('click', function () {
+            if (!requireMonth()) return;
+            window.location.href = downloadUrl + '?' + exportQuery();
+        });
+
+        $('#lmrPrintBtn').on('click', function () {
+            if (!requireMonth()) return;
+            window.open(printUrl + '?' + exportQuery(), '_blank', 'noopener');
+        });
+
+        // A month is preselected, so load straight away.
+        if ($('#bill_month').val()) initTable();
     });
-});
 </script>
 @endpush

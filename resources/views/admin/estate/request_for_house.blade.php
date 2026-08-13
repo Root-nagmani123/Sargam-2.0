@@ -1,44 +1,70 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Change Request For House - Sargam')
+@section('title', 'Change Request For House')
 
 @section('setup_content')
-<div class="container-fluid py-4">
-    {{-- Breadcrumb: Home > My Requests / Complaints > Request For House --}}
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a href="{{ url('/') }}">Home</a></li>
-            <li class="breadcrumb-item"><a href="#">My Requests / Complaints</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Change Request For House</li>
-        </ol>
-    </nav>
+<div class="container-fluid px-2 px-sm-3 px-md-4 rfh-page">
+    <x-breadcrum title="Change Request For House" :showBack="false"
+        :items="['Home', 'My Requests / Complaints', 'Change Request For House']" />
 
     <x-session_message />
 
-    <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
-        <div class="card-body p-4 p-lg-5">
-            <h1 class="h4 fw-bold text-body mb-2">Change Request For House</h1>
-            <p class="text-body-secondary small mb-4">
-                This page displays all list of change request details added in the system, and provides options to manage records.
-            </p>
+    {{-- No status pills on this grid, so the export row sits alone on the right
+         (new-design-index-page.md §1). Print is the server-rendered view, not
+         window.print(), so the printout and the Excel can't drift apart. --}}
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 rfh-secondary-actions no-print">
+        <a href="{{ route('admin.estate.request-for-house.download') }}"
+            class="btn programme-dt-btn-columns border-0 text-primary" title="Download as Excel">
+            <i class="bi bi-download" aria-hidden="true"></i>
+            <span>Download</span>
+        </a>
+        <a href="{{ route('admin.estate.request-for-house.print') }}" target="_blank" rel="noopener"
+            class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
+            <i class="bi bi-printer" aria-hidden="true"></i>
+            <span>Print</span>
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-body p-3 p-md-4">
+            {{-- Toolbar: nothing to filter by on this grid, so Columns + search
+                 sit alone on the right (§2). --}}
+            <div
+                class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4 programme-dt-toolbar no-print">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" data-bs-toggle="modal"
+                        data-bs-target="#rfhColumnModal" title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+
+                    <button type="button" class="btn rfh-search-toggle" id="rfhSearchToggle" aria-expanded="false"
+                        aria-controls="rfhDtSearch" title="Search requests">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                    </button>
+                    <div id="rfhDtSearch" class="programme-dt-search d-none"
+                        data-dt-search-for="requestForHouseTable"></div>
+                </div>
+            </div>
 
             {{-- Main data table --}}
+            <div class="programme-dt-panel">
             <div class="table-responsive">
-                <table class="table table-striped table-bordered align-middle mb-0" id="requestForHouseTable">
+                <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" id="requestForHouseTable">
                     <caption class="visually-hidden">Request For House – list of request details</caption>
-                    <thead class="table-primary">
+                    <thead>
                         <tr>
-                            <th scope="col" class="text-nowrap">S.NO.</th>
-                            <th scope="col" class="text-nowrap">REQUEST ID</th>
-                            <th scope="col" class="text-nowrap">REQUEST DATE</th>
-                            <th scope="col" class="text-nowrap">NAME / ID</th>
-                            <th scope="col" class="text-nowrap">DATE OF JOINING IN ACADEMY</th>
-                            <th scope="col" class="text-nowrap">STATUS OF REQUEST</th>
-                            <th scope="col" class="text-nowrap">ALLOTED HOUSE</th>
-                            <th scope="col" class="text-nowrap">ELIGIBILITY TYPE</th>
-                            <th scope="col" class="text-nowrap">POSSESSION FROM</th>
-                            <th scope="col" class="text-nowrap">POSSESSION TO</th>
-                            <th scope="col" class="text-nowrap">ACTION</th>
+                            <th scope="col" class="text-nowrap">S. No.</th>
+                            <th scope="col" class="text-nowrap">Request ID</th>
+                            <th scope="col" class="text-nowrap">Request Date</th>
+                            <th scope="col" class="text-nowrap">Name &amp; ID</th>
+                            <th scope="col" class="text-nowrap">Date of Joining in Academy</th>
+                            <th scope="col" class="text-nowrap">Status of Request</th>
+                            <th scope="col" class="text-nowrap">Alloted House</th>
+                            <th scope="col" class="text-nowrap">Eligibility Type</th>
+                            <th scope="col" class="text-nowrap">Possession From</th>
+                            <th scope="col" class="text-nowrap">Possession To</th>
+                            <th scope="col" class="text-nowrap">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -50,7 +76,20 @@
                             <td data-order="{{ $row->request_date_sort ?? '' }}">{{ $row->request_date ?? '—' }}</td>
                             <td>{{ ($row->name ?? '—') }} ({{ $row->emp_id ?? '—' }})</td>
                             <td>{{ $row->doj_academy ?? '—' }}</td>
-                            <td>{{ $row->status ?? '—' }}</td>
+                            @php
+                                $rfhStatus = trim((string) ($row->status ?? ''));
+                                $rfhKey = strtolower($rfhStatus);
+                                $rfhTone = str_contains($rfhKey, 'approve') && ! str_contains($rfhKey, 'disapprove')
+                                    ? 'ok'
+                                    : (str_contains($rfhKey, 'disapprove') || str_contains($rfhKey, 'reject') ? 'no' : 'wait');
+                            @endphp
+                            <td data-order="{{ $rfhStatus }}">
+                                @if($rfhStatus !== '')
+                                <span class="rfh-status rfh-status--{{ $rfhTone }}">{{ $rfhStatus }}</span>
+                                @else
+                                —
+                                @endif
+                            </td>
                             <td>{{ $row->alloted_house ?? '—' }}</td>
                             <td>{{ $row->eligibility_type ?? '—' }}</td>
                             <td>{{ $row->possession_from ?? '—' }}</td>
@@ -95,22 +134,39 @@
                             </td>
                         </tr>
                         @empty
-                        <tr>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td class="text-center text-body-secondary py-4">No request records found.</td>
+                        <tr id="rfhNoDataRow">
+                            <td colspan="11" class="text-center text-body-secondary py-4">No request records found.</td>
                         </tr>
                         @endforelse
                     </tbody>
                 </table>
+            </div>
+            </div>
+
+            {{-- DataTables paginates, so the footer is an empty slot the global
+                 UI script fills (§4A). --}}
+            <div id="rfhDtFooter"
+                class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 no-print"
+                data-dt-footer-for="requestForHouseTable"></div>
+        </div>
+    </div>
+
+    {{-- Column Visibility (column-visibility.md — colvis-item card grid) --}}
+    <div class="modal fade" id="rfhColumnModal" tabindex="-1" aria-labelledby="rfhColumnModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-0 pb-2">
+                    <h5 class="modal-title fw-bold" id="rfhColumnModalLabel">Column Visibility</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-0">
+                    <hr class="mt-0">
+                    <div class="row g-3" id="rfhColumnToggleGrid"></div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-primary rounded-3 px-4"
+                        data-bs-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
     </div>
@@ -264,25 +320,61 @@
 
 @push('styles')
 <style>
-    #requestForHouseTable thead th {
-        background-color: var(--bs-primary);
-        color: var(--bs-white);
-        font-weight: 600;
-        border-color: var(--bs-primary);
-        padding: 0.75rem 0.5rem;
-        font-size: 0.8125rem;
+    /* Change Request For House — page-scoped remainder. The toolbar, panel and
+       footer are design-system components; only what is specific to this grid
+       lives here, in --ds-* tokens (design.md usage rule 2). */
+    .rfh-page .rfh-secondary-actions .btn i {
+        font-size: 1rem;
+        line-height: 1;
     }
-    #requestForHouseTable tbody td {
-        padding: 0.65rem 0.5rem;
-        font-size: 0.875rem;
+
+    .rfh-page .rfh-search-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--ds-control-h, 2.5rem);
+        height: var(--ds-control-h, 2.5rem);
+        padding: 0;
+        color: var(--ds-primary, #004a93);
+        background: var(--ds-surface, #fff);
+        border: 1px solid var(--ds-line, #d0d5dd);
+        border-radius: var(--ds-radius, 4px);
     }
-    #requestForHouseTable tbody tr:nth-of-type(even) {
-        background-color: rgba(var(--bs-primary-rgb), 0.04);
+
+    .rfh-page .rfh-search-toggle[aria-expanded="true"],
+    .rfh-page .rfh-search-toggle:hover {
+        border-color: var(--ds-primary, #004a93);
+        background: #f2f7fc;
     }
-    #requestForHouseTable tbody tr:hover {
-        background-color: rgba(var(--bs-primary-rgb), 0.08);
+
+    /* Status: soft badge, display only (new-design-index-page.md 3b). */
+    .rfh-page .rfh-status {
+        display: inline-block;
+        padding: 0.25rem 0.625rem;
+        border-radius: var(--ds-radius, 4px);
+        font-size: 0.6875rem;
+        font-weight: 500;
+        white-space: nowrap;
     }
-    /* Let Bootstrap handle horizontal scroll via table-responsive wrapper */
+
+    .rfh-page .rfh-status--ok {
+        background: #ecfdf3;
+        color: #067647;
+    }
+
+    .rfh-page .rfh-status--no {
+        background: #fef3f2;
+        color: #b42318;
+    }
+
+    .rfh-page .rfh-status--wait {
+        background: #fffaeb;
+        color: #b54708;
+    }
+
+    .rfh-page .programme-dt-footer:empty {
+        display: none;
+    }
 </style>
 @endpush
 
@@ -609,20 +701,64 @@ document.addEventListener('DOMContentLoaded', function() {
         modalBody.innerHTML = '';
     });
 
+    // Reveal the DataTables search that the global UI relocates into the slot.
+    jQuery(document).on('click', '#rfhSearchToggle', function () {
+        var $wrap = jQuery('#rfhDtSearch');
+        var open = $wrap.hasClass('d-none');
+        $wrap.toggleClass('d-none', !open);
+        jQuery(this).attr('aria-expanded', open ? 'true' : 'false');
+        if (open) $wrap.find('input').trigger('focus');
+    });
+
+    // Column visibility, remembered by LABEL never index (column-visibility.md 3).
+    var RFH_COLVIS_KEY = 'sargam.requestForHouse.hiddenCols.' + @json(auth()->id() ?? 'guest');
+
+    function rfhBuildToggles(dt) {
+        var $grid = jQuery('#rfhColumnToggleGrid').empty();
+        dt.columns().every(function (i) {
+            var col = this;
+            var label = jQuery(col.header()).text().trim();
+            if (!label || label === 'Action') return;
+            var id = 'rfhColVis_' + i;
+            var $cb = jQuery('<input type="checkbox" class="form-check-input m-0 rfh-col-toggle">')
+                .attr({ id: id, 'data-column': i, 'data-label': label })
+                .prop('checked', col.visible());
+            $cb.on('change', function () {
+                dt.column(i).visible(this.checked);
+                var hidden = [];
+                jQuery('#rfhColumnToggleGrid .rfh-col-toggle').each(function () {
+                    if (!this.checked) hidden.push(jQuery(this).data('label'));
+                });
+                try { window.localStorage.setItem(RFH_COLVIS_KEY, JSON.stringify(hidden)); } catch (e) { /* private mode */ }
+            });
+            $grid.append(
+                jQuery('<div class="col-12 col-sm-6 col-md-4"></div>').append(
+                    jQuery('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                        .attr('for', id).append($cb).append(jQuery('<span></span>').text(label))
+                )
+            );
+        });
+    }
+
     if (window.jQuery && jQuery.fn && jQuery.fn.DataTable) {
         var table = jQuery('#requestForHouseTable');
-        if (table.length && !jQuery.fn.DataTable.isDataTable(table)) {
+        // The empty state is a single colspan cell, which DataTables would read
+        // as a malformed row — only initialise when there is real data
+        // (clientside-datatable-merged-collection).
+        var hasRows = table.length && jQuery('#rfhNoDataRow').length === 0
+            && table.find('tbody tr').length > 0;
+        if (hasRows && !jQuery.fn.DataTable.isDataTable(table)) {
             var dt = table.DataTable({
                 responsive: false,
                 autoWidth: false,
                 scrollX: false,
                 ordering: true,
                 searching: true,
-                lengthChange: true,
-                pageLength: 10,
+                // No dom / language / lengthMenu here: datatable-global-ui.js owns
+                // the toolbar and footer chrome, and hand-rolling them stops it
+                // relocating the search and pager (new-design-index-page.md 3, 5).
                 // Default sort by Request Date (index 2)
                 order: [[2, 'desc']],
-                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 columnDefs: [
                     // S.NO. column: dynamic serial number 1,2,3... respecting paging
                     {
@@ -635,21 +771,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     // Change column (last)
                     { targets: 10, orderable: false, searchable: false }
-                ],
-                language: {
-                    search: 'Search within table:',
-                    lengthMenu: 'Show _MENU_ entries',
-                    info: 'Showing _START_ to _END_ of _TOTAL_ entries',
-                    infoEmpty: 'Showing 0 to 0 of 0 entries',
-                    infoFiltered: '(filtered from _MAX_ total entries)',
-                    paginate: {
-                        first: 'First',
-                        last: 'Last',
-                        next: 'Next',
-                        previous: 'Previous'
-                    }
-                },
-                dom: '<"row align-items-center mb-3"<"col-12 col-md-4"l><"col-12 col-md-8"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>'
+                ]
             });
 
             // Ensure S.NO. column always shows 1,2,3... based on current
@@ -660,6 +782,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             });
             dt.draw();
+
+            rfhBuildToggles(dt);
+            var rfhHidden = [];
+            try { rfhHidden = JSON.parse(window.localStorage.getItem(RFH_COLVIS_KEY) || '[]') || []; } catch (e) { rfhHidden = []; }
+            if (rfhHidden.length) {
+                dt.columns().every(function () {
+                    var label = jQuery(this.header()).text().trim();
+                    if (label && rfhHidden.indexOf(label) !== -1) this.visible(false, false);
+                });
+                dt.columns.adjust().draw(false);
+                rfhBuildToggles(dt);
+            }
         }
     }
 });
