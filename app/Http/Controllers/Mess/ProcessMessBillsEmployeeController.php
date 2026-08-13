@@ -67,6 +67,11 @@ class ProcessMessBillsEmployeeController extends Controller
 
     private array $messCombinedNotificationsByReceiver = [];
 
+    /** Per-request memoization for name -> receiver user id lookups (avoids repeat DB hits for the same buyer). */
+    private array $receiverUserIdByClientNameCache = [];
+
+    private array $receiverUserIdByStudentNameCache = [];
+
     /** First working store per request: redis, then file if Redis extension/server unavailable. */
     private ?string $processMessBillsResolvedCacheStore = null;
 
@@ -2835,30 +2840,61 @@ class ProcessMessBillsEmployeeController extends Controller
     {
         $dateFromYmd = $dateFromYmd ?? now()->startOfMonth()->format('Y-m-d');
         $dateToYmd = $dateToYmd ?? now()->endOfMonth()->format('Y-m-d');
-        $allowlist = [];
 
-        foreach (Notification::query()
-            ->where('type', 'mess')
-            ->where('module_name', 'MessInvoiceCombined')
-            ->get(['message']) as $notification) {
-            $parsed = NotificationService::parseMessCombinedReceiptPayload($notification->message);
-            if ($parsed === null || empty($parsed['i'])) {
+        $entries = $this->getMessCombinedInvoiceNotificationEntriesCached();
+
+        $allowlist = [];
+        foreach ($entries as $entry) {
+            if (! $this->messCombinedDateRangesOverlap($entry['f'], $entry['t'], $dateFromYmd, $dateToYmd)) {
                 continue;
             }
-            $nf = (string) ($parsed['f'] ?? '');
-            $nt = (string) ($parsed['t'] ?? '');
-            if (! $this->messCombinedDateRangesOverlap($nf, $nt, $dateFromYmd, $dateToYmd)) {
-                continue;
-            }
-            $buyer = $this->parseProcessMessCombinedBillId((string) $parsed['i']);
-            if ($buyer === null) {
-                continue;
-            }
-            $key = $buyer['name'] . '|' . $buyer['slug'];
-            $allowlist[$key] = $buyer;
+            $key = $entry['name'] . '|' . $entry['slug'];
+            $allowlist[$key] = ['name' => $entry['name'], 'slug' => $entry['slug']];
         }
 
         return array_values($allowlist);
+    }
+
+    /**
+     * Decoded {name, slug, f, t} for every MessInvoiceCombined notification, cached (shares the
+     * combined-bills cache version, so it is invalidated whenever a new invoice notification is sent).
+     *
+     * @return list<array{name: string, slug: string, f: string, t: string}>
+     */
+    private function getMessCombinedInvoiceNotificationEntriesCached(): array
+    {
+        $cacheKey = 'process_mess_bills_invoice_notification_entries_v1:'
+            . $this->processMessBillsCombinedCacheVersion();
+
+        $entries = $this->rememberProcessMessBillsCombined(
+            $cacheKey,
+            function () {
+                $result = [];
+                foreach (Notification::query()
+                    ->where('type', 'mess')
+                    ->where('module_name', 'MessInvoiceCombined')
+                    ->get(['message']) as $notification) {
+                    $parsed = NotificationService::parseMessCombinedReceiptPayload($notification->message);
+                    if ($parsed === null || empty($parsed['i'])) {
+                        continue;
+                    }
+                    $buyer = $this->parseProcessMessCombinedBillId((string) $parsed['i']);
+                    if ($buyer === null) {
+                        continue;
+                    }
+                    $result[] = [
+                        'name' => $buyer['name'],
+                        'slug' => $buyer['slug'],
+                        'f' => (string) ($parsed['f'] ?? ''),
+                        't' => (string) ($parsed['t'] ?? ''),
+                    ];
+                }
+
+                return $result;
+            }
+        );
+
+        return is_array($entries) ? $entries : [];
     }
 
     /**
@@ -4236,6 +4272,19 @@ class ProcessMessBillsEmployeeController extends Controller
      */
     private function resolveReceiverUserIdByClientName(string $clientName): ?int
     {
+        $cacheKey = trim($clientName);
+        if (array_key_exists($cacheKey, $this->receiverUserIdByClientNameCache)) {
+            return $this->receiverUserIdByClientNameCache[$cacheKey];
+        }
+
+        $resolved = $this->resolveReceiverUserIdByClientNameUncached($clientName);
+        $this->receiverUserIdByClientNameCache[$cacheKey] = $resolved;
+
+        return $resolved;
+    }
+
+    private function resolveReceiverUserIdByClientNameUncached(string $clientName): ?int
+    {
         $candidates = [
             trim($clientName),
             $this->sanitizeBuyerNameForUserLookup($clientName),
@@ -4293,6 +4342,19 @@ class ProcessMessBillsEmployeeController extends Controller
      * Resolve student portal user (user_credentials.user_id = student_master.pk, user_category S) from buyer name.
      */
     private function resolveReceiverUserIdByStudentName(string $clientName): ?int
+    {
+        $cacheKey = trim($clientName);
+        if (array_key_exists($cacheKey, $this->receiverUserIdByStudentNameCache)) {
+            return $this->receiverUserIdByStudentNameCache[$cacheKey];
+        }
+
+        $resolved = $this->resolveReceiverUserIdByStudentNameUncached($clientName);
+        $this->receiverUserIdByStudentNameCache[$cacheKey] = $resolved;
+
+        return $resolved;
+    }
+
+    private function resolveReceiverUserIdByStudentNameUncached(string $clientName): ?int
     {
         if (!Schema::hasTable('student_master')) {
             return null;
