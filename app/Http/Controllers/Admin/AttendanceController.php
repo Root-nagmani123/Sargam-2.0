@@ -424,14 +424,14 @@ class AttendanceController extends Controller
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
-        ]) . '" class="btn btn-link btn-sm text-primary text-decoration-none d-inline-flex flex-column align-items-center lh-1 p-1" title="' . $markTitle . '" aria-label="' . $markTitle . '"><i class="bi bi-pencil-square" style="font-size:1.35rem;" aria-hidden="true"></i><span class="small mt-1 text-center lh-sm">' . $markLabel . '</span></a>';
+        ]) . '" class="btn btn-link btn-sm text-primary text-decoration-none d-inline-flex flex-column align-items-center lh-1 p-1" title="' . $markTitle . '" aria-label="' . $markTitle . '"><i class="bi bi-pencil" style="font-size:1.35rem;" aria-hidden="true"></i><span class="small mt-1 text-center lh-sm">' . $markLabel . '</span></a>';
         }
         else{
             return '<a href="' . route('attendance.mark', [
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
-        ]) . '" class="btn btn-link btn-sm text-primary text-decoration-none d-inline-flex flex-column align-items-center lh-1 p-1" title="' . $markTitle . '" aria-label="' . $markTitle . '"><i class="bi bi-pencil-square" style="font-size:1.35rem;" aria-hidden="true"></i><span class="small mt-1 text-center lh-sm">' . $markLabel . '</span></a>';
+        ]) . '" class="btn btn-link btn-sm text-primary text-decoration-none d-inline-flex flex-column align-items-center lh-1 p-1" title="' . $markTitle . '" aria-label="' . $markTitle . '"><i class="bi bi-pencil" style="font-size:1.35rem;" aria-hidden="true"></i><span class="small mt-1 text-center lh-sm">' . $markLabel . '</span></a>';
         }
 
         // Admin Page

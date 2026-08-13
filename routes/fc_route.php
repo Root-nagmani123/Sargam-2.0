@@ -199,10 +199,13 @@ Route::get('/fc/thank-you', function () {
     return view('fc.thank_you');
 })->name('fc.thank_you');
 
-//forget password page
-Route::get('/fc/forget-password', function () {
-    return view('fc.forget');
-})->name('fc.forget');
+// The `fc.forget` route was removed: GET /fc/forget-password (public, no auth)
+// rendered view('fc.forget'), which has never existed, so it returned a hard 500
+// to anonymous visitors. It was a typo'd duplicate — one letter — of
+// /fc/forgot-password below, which is the real page: it goes through
+// FrontPageController@showForgotPasswordForm and renders fc.forgot_password with
+// the OTP send/verify flow. Nothing referenced the broken name anywhere in the
+// app, and the working route is untouched.
 
 //status page (fc_registration_master dashboard)
 Route::get('/fc/status', [FrontPageController::class, 'student_status'])->name('fc.status');

@@ -139,7 +139,7 @@
                     <button type="button" class="btn btn-sm btn-outline-secondary"
                         data-bs-toggle="modal" data-bs-target="#renameSectionModal"
                         title="Rename a section across all its fields at once">
-                        <i class="bi bi-pencil-square me-1"></i>Rename Section
+                        <i class="bi bi-pencil me-1"></i>Rename Section
                     </button>
                 @endif
                 <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addFieldModal">

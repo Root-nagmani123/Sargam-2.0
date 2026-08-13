@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Estate;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Admin\Estate\Concerns\AuthorizesEstateMaster;
 use App\Models\EligibilityCriterion;
 use App\Models\SalaryGrade;
 use App\Models\UnitType;
@@ -11,6 +12,8 @@ use Illuminate\Http\Request;
 
 class PayScaleController extends Controller
 {
+    use AuthorizesEstateMaster;
+
     public function index()
     {
         $items = EligibilityCriterion::with(['salaryGrade', 'unitType', 'unitSubType'])

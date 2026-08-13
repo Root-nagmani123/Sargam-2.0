@@ -2,52 +2,138 @@
 
 namespace App\Http\Controllers\Admin\IssueManagement;
 
+use App\Exports\IssueSubCategoryExport;
+use App\Http\Controllers\Concerns\NormalisesDataTablesRequest;
 use App\Http\Controllers\Controller;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 use App\Models\{
     IssueCategoryMaster,
     IssueSubCategoryMaster,
     IssueLogSubCategoryMap
 };
 use App\Support\DataTableRedisCache;
+use App\Support\DataTableSearchHelper;
+use App\Support\ExportCsvHeader;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
 
 class IssueSubCategoryController extends Controller
 {
+    use NormalisesDataTablesRequest;
+
     private const LISTING_CACHE_EPOCH_KEY = 'admin_issue_sub_categories_index_list_epoch';
 
-    private const INDEX_PER_PAGE = 20;
+    private const INDEX_PER_PAGE = 10;
+
+    /**
+     * Page sizes the grid feed accepts — this list MUST mirror the lengthMenu
+     * datatable-global-ui.js installs, or picking one it offers falls back to
+     * INDEX_PER_PAGE and the footer says 25 while 10 rows are shown.
+     */
+    private const DATA_PER_PAGE_OPTIONS = [10, 25, 50, 100, 200];
+
+    /** Sortable grid headers → the column ordered by. */
+    private const SORTABLE_COLUMNS = [
+        'category' => 'category_name',
+        'sub_category' => 'issue_sub_category_master.issue_sub_category',
+        'status' => 'issue_sub_category_master.status',
+    ];
 
     public static function bumpIndexListCacheEpoch(): void
     {
         DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'IssueSubCategoryController@index');
     }
 
-    private function indexFilteredQuery(Request $request): Builder
+    private function resolveSearch(Request $request): string
     {
-        $query = IssueSubCategoryMaster::query();
-        if ($request->filled('category_id')) {
-            $query->where('issue_category_master_pk', $request->category_id);
-        }
-        $query->orderBy('pk', 'desc');
+        return trim((string) $request->query('q', ''));
+    }
 
-        return $query;
+    /**
+     * Whitelisted sort keys → the expression the query orders by.
+     *
+     * @return array{key: string, dir: string}
+     */
+    private function resolveSort(Request $request): array
+    {
+        $key = (string) $request->query('sort', 'category');
+        if (! array_key_exists($key, self::SORTABLE_COLUMNS)) {
+            $key = 'category';
+        }
+
+        $dir = strtolower((string) $request->query('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+
+        return ['key' => $key, 'dir' => $dir];
+    }
+
+    private function resolveCategoryFilter(Request $request): ?int
+    {
+        $categoryId = $request->query('category_id');
+
+        return ($categoryId !== null && $categoryId !== '') ? (int) $categoryId : null;
+    }
+
+    /**
+     * The grid sorts and searches by the PARENT category name, so the join is
+     * not optional — an orderBy on the relation alone would not work here.
+     */
+    private function indexFilteredQuery(
+        string $search = '',
+        string $sortKey = 'category',
+        string $sortDir = 'asc',
+        ?int $categoryId = null
+    ): Builder {
+        $sortColumn = self::SORTABLE_COLUMNS[$sortKey] ?? self::SORTABLE_COLUMNS['category'];
+        $sortDir = $sortDir === 'desc' ? 'desc' : 'asc';
+
+        return IssueSubCategoryMaster::query()
+            ->leftJoin(
+                'issue_category_master',
+                'issue_category_master.pk',
+                '=',
+                'issue_sub_category_master.issue_category_master_pk'
+            )
+            ->select('issue_sub_category_master.*')
+            ->selectRaw('issue_category_master.issue_category as category_name')
+            ->when($categoryId !== null, fn (Builder $query) => $query
+                ->where('issue_sub_category_master.issue_category_master_pk', $categoryId))
+            ->when($search !== '', function (Builder $query) use ($search) {
+                $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $search) . '%';
+                $query->where(function (Builder $inner) use ($like, $search) {
+                    $inner->where('issue_sub_category_master.issue_sub_category', 'like', $like)
+                        ->orWhere('issue_category_master.issue_category', 'like', $like);
+
+                    // The grid searches in the browser, so it also matches the
+                    // rendered Status pill. The export runs this query instead —
+                    // match the pill here too, or a searched export comes back
+                    // empty while the screen shows rows.
+                    $statuses = DataTableSearchHelper::statusPillMatches($search);
+                    if ($statuses !== []) {
+                        $inner->orWhereIn('issue_sub_category_master.status', $statuses);
+                    }
+                });
+            })
+            ->orderBy($sortColumn, $sortDir)
+            // pk tiebreaker — names are not unique, and without it rows can
+            // duplicate/vanish between pages of the snapshot pagination.
+            ->orderBy('issue_sub_category_master.pk');
     }
 
     /**
      * @return array{total: int, ids: array<int, int>}
      */
-    private function indexPageSnapshot(Request $request, int $page): array
+    private function indexPageSnapshot(int $page, int $perPage, string $search, string $sortKey, string $sortDir, ?int $categoryId): array
     {
-        $base = $this->indexFilteredQuery($request);
-        $perPage = self::INDEX_PER_PAGE;
+        $base = $this->indexFilteredQuery($search, $sortKey, $sortDir, $categoryId);
         $total = (int) (clone $base)->toBase()->getCountForPagination();
         $ids = [];
         if ($total > 0) {
-            $ids = (clone $base)->forPage($page, $perPage)->pluck('pk')->values()->all();
+            $ids = (clone $base)->forPage($page, $perPage)
+                ->pluck('issue_sub_category_master.pk')
+                ->values()
+                ->all();
             $ids = array_map('intval', $ids);
         }
 
@@ -77,15 +163,83 @@ class IssueSubCategoryController extends Controller
 
     /**
      * Display a listing of issue sub-categories.
+     *
+     * Rows come from data() over ajax, so this action only renders the shell and
+     * the Category dropdown. ?category_id= still seeds that dropdown, so a deep
+     * link into one category keeps working.
      */
     public function index(Request $request)
     {
-        $page = Paginator::resolveCurrentPage('page');
+        $categoryId = $this->resolveCategoryFilter($request);
+
+        $categories = IssueCategoryMaster::active()->orderBy('issue_category')->get();
+
+        return view('admin.issue_management.sub_categories.index', compact(
+            'categories',
+            'categoryId'
+        ));
+    }
+
+    /**
+     * DataTables server-side feed for the Manage Sub-Categories grid.
+     *
+     * Searching, sorting and paging are all SQL: only the page on screen ever
+     * crosses the wire. The Category filter rides along on the same call, so
+     * narrowing the scope is one small XHR rather than a full page reload.
+     */
+    public function data(Request $request)
+    {
+        $paging = $this->normaliseDataTablesRequest($request, self::INDEX_PER_PAGE, self::DATA_PER_PAGE_OPTIONS);
+        $search = $this->resolveSearch($request);
+        $sort = $this->resolveSort($request);
+        $categoryId = $this->resolveCategoryFilter($request);
+
+        $snapshot = $this->indexCachedSnapshot($paging['page'], $paging['perPage'], $search, $sort, $categoryId);
+
+        // Only the pk order is cached; the rows themselves are hydrated fresh so
+        // a status toggle shows up on the very next draw.
+        $rows = $this->hydrateSubCategoriesByOrderedPks($snapshot['ids'])
+            ->values()
+            ->map(fn (IssueSubCategoryMaster $subCategory, int $i) => [
+                'sno' => $paging['start'] + $i + 1,
+                'category' => e((string) ($subCategory->category->issue_category ?? '—')),
+                'sub_category' => e((string) $subCategory->issue_sub_category),
+                'status' => view('admin.issue_management.sub_categories._row_status', compact('subCategory'))->render(),
+                'action' => view('admin.issue_management.sub_categories._row_actions', compact('subCategory'))->render(),
+            ]);
+
+        return response()->json([
+            'draw' => (int) $request->input('draw', 0),
+            // recordsTotal is the count BEFORE the search term. The Category
+            // dropdown is a scope, not DataTables' filter, so it stays applied
+            // here; only the search term is removed.
+            'recordsTotal' => $search === ''
+                ? $snapshot['total']
+                : (int) $this->indexFilteredQuery('', 'category', 'asc', $categoryId)
+                    ->toBase()->getCountForPagination(),
+            'recordsFiltered' => $snapshot['total'],
+            'data' => $rows,
+        ]);
+    }
+
+    /**
+     * Cached {total, ids} snapshot for one page of the grid query.
+     *
+     * @param  array{key: string, dir: string}  $sort
+     * @return array{total: int, ids: array<int, int>}
+     */
+    private function indexCachedSnapshot(int $page, int $perPage, string $search, array $sort, ?int $categoryId): array
+    {
         $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_sub_categories_index:v1:' . md5(json_encode([
+        // Every input that changes the slice is in the key — a page cached under
+        // one search term or category must never be served for another.
+        $cacheKey = 'admin_issue_sub_categories_index:v3:' . md5(json_encode([
             'epoch' => $epoch,
-            'category_id' => $request->filled('category_id') ? (string) $request->category_id : null,
+            'search' => $search,
+            'sort' => $sort,
+            'category_id' => $categoryId,
             'page' => $page,
+            'per_page' => $perPage,
         ]));
 
         $snapshot = DataTableRedisCache::remember(
@@ -94,33 +248,192 @@ class IssueSubCategoryController extends Controller
                 'enabled' => 'ISSUE_SUB_CATEGORY_INDEX_CACHE_ENABLED',
                 'seconds' => 'ISSUE_SUB_CATEGORY_INDEX_CACHE_SECONDS',
             ],
-            'IssueSubCategoryController@index',
-            fn () => $this->indexPageSnapshot($request, $page)
+            'IssueSubCategoryController@data',
+            fn () => $this->indexPageSnapshot($page, $perPage, $search, $sort['key'], $sort['dir'], $categoryId)
         );
 
-        if (! is_array($snapshot) || ! array_key_exists('total', $snapshot) || ! array_key_exists('ids', $snapshot) || ! is_array($snapshot['ids'])) {
-            $snapshot = $this->indexPageSnapshot($request, $page);
+        if (! is_array($snapshot) || ! isset($snapshot['total']) || ! isset($snapshot['ids']) || ! is_array($snapshot['ids'])) {
+            $snapshot = $this->indexPageSnapshot($page, $perPage, $search, $sort['key'], $sort['dir'], $categoryId);
         }
 
-        $total = (int) $snapshot['total'];
-        $ids = array_map('intval', $snapshot['ids']);
-        $items = $this->hydrateSubCategoriesByOrderedPks($ids);
+        return [
+            'total' => (int) $snapshot['total'],
+            'ids' => array_map('intval', $snapshot['ids']),
+        ];
+    }
 
-        $subCategories = new LengthAwarePaginator(
-            $items,
-            $total,
-            self::INDEX_PER_PAGE,
-            $page,
-            [
-                'path' => Paginator::resolveCurrentPath(),
-                'pageName' => 'page',
-            ]
+    /**
+     * Canonical export columns, in order. Keys must match ISC_EXPORT_COLUMN_KEYS
+     * in sub_categories/index.blade.php.
+     */
+    private function exportColumnDefs(): array
+    {
+        return [
+            'sno' => [
+                'heading' => 'S. No.',
+                'class' => 'col-sno',
+                'value' => fn ($row, int $index) => $index + 1,
+            ],
+            'category' => [
+                'heading' => 'Category',
+                'class' => 'col-category',
+                'value' => fn ($row) => $row->category_name ?? ($row->category->issue_category ?? '-'),
+            ],
+            'sub_category' => [
+                'heading' => 'Sub-Categories Name',
+                'class' => 'col-sub',
+                'value' => fn ($row) => $row->issue_sub_category,
+            ],
+            'status' => [
+                'heading' => 'Status',
+                'class' => 'col-status',
+                'value' => fn ($row) => ((int) $row->status === 1) ? 'Active' : 'Inactive',
+            ],
+        ];
+    }
+
+    /**
+     * Intersect the requested ?cols= against the canonical list so a hand-edited
+     * value can't reorder the report or inject a column. Empty => every column.
+     */
+    private function resolveExportColumns(Request $request): array
+    {
+        $defs = $this->exportColumnDefs();
+        $wanted = array_filter(array_map('trim', explode(',', (string) $request->query('cols', ''))));
+
+        if ($wanted === []) {
+            return $defs;
+        }
+
+        $keys = array_values(array_intersect(array_keys($defs), $wanted));
+
+        return $keys === [] ? $defs : array_intersect_key($defs, array_flip($keys));
+    }
+
+    /**
+     * "Search: foo &nbsp;|&nbsp; Category: Estate" for the print/PDF header.
+     * $html=false returns the same thing as plain text, for the spreadsheet's
+     * header band.
+     *
+     * Same shape as IssueManagementController::exportFilterLine(): every filter
+     * the grid applied has to be named on the report, or the reader cannot tell
+     * a filtered list from the whole one.
+     */
+    private function exportFilterLine(string $search, ?int $categoryId, bool $html = true): ?string
+    {
+        $labels = [];
+
+        if ($search !== '') {
+            $labels['Search'] = $search;
+        }
+
+        if ($categoryId !== null) {
+            // Name it, don't print the pk — the report is read on paper.
+            $category = IssueCategoryMaster::find($categoryId);
+            $labels['Category'] = $category->issue_category ?? (string) $categoryId;
+        }
+
+        if ($labels === []) {
+            return null;
+        }
+
+        return collect($labels)
+            ->map(fn (string $value, string $label) => $html
+                ? '<strong>' . e($label) . ':</strong> ' . e($value)
+                : $label . ': ' . $value)
+            ->implode($html ? ' &nbsp;|&nbsp; ' : '  |  ');
+    }
+
+    /**
+     * Download / print the full (filtered) sub-category list.
+     *
+     * Both formats share the same header + columns as the index grid.
+     */
+    public function export(Request $request, string $format = 'csv')
+    {
+        $format = strtolower($format);
+        abort_unless(in_array($format, ['csv', 'excel', 'pdf', 'print'], true), 404);
+
+        $search = $this->resolveSearch($request);
+        $sort = $this->resolveSort($request);
+        $categoryId = $this->resolveCategoryFilter($request);
+
+        $rows = $this->indexFilteredQuery($search, $sort['key'], $sort['dir'], $categoryId)->get();
+
+        $columns = $this->resolveExportColumns($request);
+        $header = array_values(array_map(fn ($col) => $col['heading'], $columns));
+        $exportDate = now()->format('d-m-Y h:i A');
+        $stamp = now()->format('YmdHis');
+
+        if ($format === 'print') {
+            return view('admin.issue_management.sub_categories.export_print', [
+                'columns' => $columns,
+                'header' => $header,
+                'rows' => $rows,
+                'filterLine' => $this->exportFilterLine($search, $categoryId),
+                'exportDate' => $exportDate,
+            ]);
+        }
+
+        if ($format === 'excel') {
+            return Excel::download(
+                new IssueSubCategoryExport(
+                    $rows,
+                    $columns,
+                    $exportDate,
+                    $this->exportFilterLine($search, $categoryId, false)
+                ),
+                'ManageSubCategories_' . $stamp . '.xlsx'
+            );
+        }
+
+        if ($format === 'pdf') {
+            return Pdf::loadView('admin.issue_management.sub_categories.export_pdf', [
+                'columns' => $columns,
+                'rows' => $rows,
+                'filterLine' => $this->exportFilterLine($search, $categoryId),
+                'exportDate' => $exportDate,
+            ])
+                ->setPaper('a4', 'portrait')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    'isPhpEnabled' => true,
+                ])
+                ->download('ManageSubCategories_' . $stamp . '.pdf');
+        }
+
+        $filename = 'ManageSubCategories_' . $stamp . '.csv';
+
+        // Same band the .xlsx and the print/PDF headers carry, so the CSV names
+        // the applied filters too.
+        $csvBand = ExportCsvHeader::rows(
+            'Manage Sub-Categories',
+            $this->exportFilterLine($search, $categoryId, false),
+            $exportDate,
+            $rows->count()
         );
-        $subCategories->withQueryString();
 
-        $categories = IssueCategoryMaster::active()->orderBy('issue_category')->get();
+        return response()->streamDownload(function () use ($columns, $header, $rows, $csvBand) {
+            $handle = fopen('php://output', 'w');
+            // BOM so Excel opens the UTF-8 file with the right encoding.
+            fwrite($handle, "\xEF\xBB\xBF");
+            foreach ($csvBand as $bandRow) {
+                fputcsv($handle, $bandRow);
+            }
+            fputcsv($handle, $header);
 
-        return view('admin.issue_management.sub_categories.index', compact('subCategories', 'categories'));
+            foreach ($rows as $index => $row) {
+                fputcsv($handle, array_values(array_map(
+                    fn ($col) => $col['value']($row, $index),
+                    $columns
+                )));
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 
     /**
