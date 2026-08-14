@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Security;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use App\Exports\VehiclePassExport;
 use App\Support\DataTableRedisCache;
 use App\Support\IdCardSecurityMapper;
@@ -23,6 +24,8 @@ use Carbon\Carbon;
 
 class VehiclePassController extends Controller
 {
+    use PaginatesListings;
+
     private const LISTING_CACHE_EPOCH_KEY = 'admin_security_vehicle_pass_index_list_epoch';
 
     public static function bumpIndexListCacheEpoch(): void
@@ -58,10 +61,33 @@ class VehiclePassController extends Controller
             $allPasses = collect($allPasses);
         }
 
+        // Search filters the cached collection AFTER the cache read, not inside it:
+        // the cache holds the applicant's full pass list keyed on employee, so
+        // filtering here keeps one cache entry serving every search instead of
+        // one per term (and can't serve a stale filtered snapshot).
+        $search = $this->searchTerm($request);
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $allPasses = $allPasses->filter(function ($m) use ($needle) {
+                foreach ([
+                    $m->display_name ?? null,
+                    $m->vehicle_req_id ?? null,
+                    $m->vehicle_no ?? null,
+                    optional($m->vehicleType)->vehicle_type ?? ($m->vehicle_type ?? null),
+                ] as $field) {
+                    if ($field !== null && str_contains(mb_strtolower((string) $field), $needle)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            })->values();
+        }
+
         $activeCollection = $allPasses->filter(fn ($m) => (int) $m->vech_card_status === 1)->values();
         $archiveCollection = $allPasses->filter(fn ($m) => in_array((int) $m->vech_card_status, [2, 3], true))->values();
 
-        $perPage = 10;
+        $perPage = $this->resolvePerPage($request);
         $activePasses = static::paginateCollection(
             $activeCollection,
             (int) $request->get('page', 1) ?: 1,

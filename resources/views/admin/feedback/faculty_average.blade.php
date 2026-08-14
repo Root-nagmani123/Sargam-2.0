@@ -261,6 +261,13 @@
                             </div>
 
                             <div class="mb-3">
+                                <label class="form-label" for="avgTopicSearch">Topic</label>
+                                <input type="search" class="form-control" id="avgTopicSearch" name="topic_search"
+                                    value="{{ $topicSearch ?? '' }}" placeholder="Search topic"
+                                    autocomplete="off" />
+                            </div>
+
+                            <div class="mb-3">
                                 <label class="form-label">From Date</label>
                                 <input type="date" class="form-control" name="from_date" value="{{ $fromDate ?? '' }}" />
                             </div>
@@ -294,13 +301,13 @@
                         </span>
                         <div class="export-btn-group d-flex flex-wrap gap-2">
                             <!-- Excel Export -->
-                            <a href="{{ $fr['average_export_excel'] }}?{{ http_build_query(array_filter(['course_type' => $courseType ?? 'current', 'program_name' => $currentProgram ?? '', 'faculty_name' => $currentFaculty ?? '', 'from_date' => $fromDate ?? '', 'to_date' => $toDate ?? ''])) }}"
+                            <a href="{{ $fr['average_export_excel'] }}?{{ http_build_query(array_filter(['course_type' => $courseType ?? 'current', 'program_name' => $currentProgram ?? '', 'faculty_name' => $currentFaculty ?? '', 'from_date' => $fromDate ?? '', 'to_date' => $toDate ?? '', 'topic_search' => $topicSearch ?? ''])) }}"
                                 class="btn btn-outline-success btn-sm export-excel-link" target="_blank" title="Export to Excel">
                                 <i class="fas fa-file-excel"></i> Excel
                             </a>
 
                             <!-- PDF Export -->
-                            <a href="{{ $fr['average_export_pdf'] }}?{{ http_build_query(array_filter(['course_type' => $courseType ?? 'current', 'program_name' => $currentProgram ?? '', 'faculty_name' => $currentFaculty ?? '', 'from_date' => $fromDate ?? '', 'to_date' => $toDate ?? ''])) }}"
+                            <a href="{{ $fr['average_export_pdf'] }}?{{ http_build_query(array_filter(['course_type' => $courseType ?? 'current', 'program_name' => $currentProgram ?? '', 'faculty_name' => $currentFaculty ?? '', 'from_date' => $fromDate ?? '', 'to_date' => $toDate ?? '', 'topic_search' => $topicSearch ?? ''])) }}"
                                 class="btn btn-outline-danger btn-sm" target="_blank" title="Export to PDF">
                                 <i class="fas fa-file-pdf"></i> PDF
                             </a>
@@ -340,13 +347,19 @@
                                 <div class="d-flex justify-content-end mb-2">
                                     <span class="record-count">
                                         <i class="fas fa-list-ol me-1"></i>
-                                        {{ $feedbackData->count() }} {{ Str::plural('record', $feedbackData->count()) }}
+                                        {{-- total(), not count(): count() is the size of the current page. --}}
+                                        {{ $feedbackData->total() }} {{ Str::plural('record', $feedbackData->total()) }}
                                     </span>
                                 </div>
 
-                                <!-- TABLE -->
+                                <!-- TABLE (§3: panel > table-responsive > programme-dt-table) -->
+                                <div class="programme-dt-panel">
                                 <div class="table-responsive">
-                                    <table class="table table-hover align-middle mb-0" id="feedbackTable">
+                                    {{-- data-sargam-dt-ui="false": Laravel paginates this
+                                         grid and the footer below is hand-written, so the
+                                         global enhancer must not claim it (§5). --}}
+                                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table"
+                                        id="feedbackTable" data-sargam-dt-ui="false">
                                         <thead>
                                             <tr>
                                                 <th>Faculty</th>
@@ -401,17 +414,11 @@
                                     </table>
                                 </div>
 
-                                <!-- PAGINATION (if needed) -->
-                                @if ($feedbackData->count() > 20)
-                                    <div class="d-flex justify-content-between align-items-center mt-3">
-                                        <small class="text-muted">Showing {{ $feedbackData->count() }} records</small>
-                                        <nav aria-label="Feedback pagination">
-                                            <ul class="pagination mb-0">
-                                                <!-- Add pagination logic if needed -->
-                                            </ul>
-                                        </nav>
-                                    </div>
-                                @endif
+                                {{-- Footer variant B (§4B) — pagination left,
+                                     "Showing [N] of M items" right. --}}
+                                <x-programme-dt-footer :paginator="$feedbackData"
+                                    per-page-id="facultyAveragePerPage" default="25" />
+                                </div>
                             @endif
                         </div>
                     </div>
@@ -450,6 +457,7 @@
             const facultyName = document.querySelector('select[name="faculty_name"]')?.value || '';
             const fromDate = document.querySelector('input[name="from_date"]')?.value || '';
             const toDate = document.querySelector('input[name="to_date"]')?.value || '';
+            const topicSearch = document.querySelector('input[name="topic_search"]')?.value || '';
 
             // Get the base URLs
             const excelBaseUrl = "{{ $fr['average_export_excel'] }}";
@@ -467,6 +475,7 @@
                     url.searchParams.set('faculty_name', facultyName);
                     url.searchParams.set('from_date', fromDate);
                     url.searchParams.set('to_date', toDate);
+                    url.searchParams.set('topic_search', topicSearch);
                     link.href = url.toString();
                     link.title = `Export to Excel (Program: ${programName})`;
                 } else if (link.href.includes('export-pdf')) {
@@ -477,6 +486,7 @@
                     url.searchParams.set('faculty_name', facultyName);
                     url.searchParams.set('from_date', fromDate);
                     url.searchParams.set('to_date', toDate);
+                    url.searchParams.set('topic_search', topicSearch);
                     link.href = url.toString();
                     link.title = `Export to PDF (Program: ${programName})`;
                 }
@@ -487,7 +497,8 @@
                 programName,
                 facultyName,
                 fromDate,
-                toDate
+                toDate,
+                topicSearch
             });
         }
 

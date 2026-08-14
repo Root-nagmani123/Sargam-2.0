@@ -3,15 +3,24 @@
 namespace App\Http\Controllers\Admin\Master;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use Illuminate\Http\Request;
 use App\Models\ClassSessionMaster;
 use App\Http\Requests\ClassSessionMasterRequest;
 
 class ClassSessionMasterController extends Controller
 {
-    function index() {
+    use PaginatesListings;
 
-        $classSessionMaster = ClassSessionMaster::paginate(10);
+    function index(Request $request) {
+
+        $search = $this->searchTerm($request);
+
+        $query = ClassSessionMaster::query();
+        $this->applySearch($query, $search, ['shift_name']);
+
+        $classSessionMaster = $query->paginate($this->resolvePerPage($request))->withQueryString();
+
         return view('admin.master.class_session_master.index', compact('classSessionMaster'));
     }
     function create() {

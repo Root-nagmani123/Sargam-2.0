@@ -11,8 +11,13 @@
                     Add Designation
                 </a>
             </div>
+            {{-- Toolbar (new-design-index-page.md §2): search right-aligned; this
+                 grid has no filters, so the row carries the search alone. --}}
+            <x-programme-dt-toolbar :action="url()->current()"
+                placeholder="Search designation" label="Search by designation name" />
+
             <div class="table-responsive">
-                <table class="table mb-0" id="designationMasterTable">
+                <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" data-sargam-dt-ui="false" id="designationMasterTable">
                     <thead>
                         <tr>
                             <th style="width:70px;">S.No.</th>
@@ -53,10 +58,7 @@
                     </tbody>
                 </table>
             </div>
-            <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
-                <div class="small text-muted mb-2">Showing {{ $designations->firstItem() }} to {{ $designations->lastItem() }} of {{ $designations->total() }} items</div>
-                <div>{{ $designations->links('pagination::bootstrap-5') }}</div>
-            </div>
+            <x-programme-dt-footer :paginator="$designations" per-page-id="designationPerPage" />
         </div>
     </div>
 </div>
@@ -129,7 +131,7 @@
             });
 
             function buildEditUrl(encrypted){ return `${window.location.origin}/admin/setup/designation-master/edit/${encodeURIComponent(encrypted)}`; }
-            function escapeHtml(str){ return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]); }
+            function escapeHtml(str){ return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
             function reindexSerials(tbody){ Array.from(tbody.querySelectorAll('tr')).forEach((r,i)=>{ const cell=r.querySelector('td'); if(cell) cell.textContent=i+1; }); }
 
             function updateTable(payload){

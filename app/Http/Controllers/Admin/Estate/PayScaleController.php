@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Estate;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use App\Http\Controllers\Admin\Estate\Concerns\AuthorizesEstateMaster;
 use App\Models\EligibilityCriterion;
 use App\Models\SalaryGrade;
@@ -12,13 +13,38 @@ use Illuminate\Http\Request;
 
 class PayScaleController extends Controller
 {
+    use PaginatesListings;
     use AuthorizesEstateMaster;
 
-    public function index()
+    public function index(Request $request)
     {
-        $items = EligibilityCriterion::with(['salaryGrade', 'unitType', 'unitSubType'])
-            ->orderBy('pk')
-            ->paginate(request('per_page', 10));
+        $search = $this->searchTerm($request);
+
+        $query = EligibilityCriterion::with(['salaryGrade', 'unitType', 'unitSubType'])
+            ->orderBy('pk');
+
+        // Every column on this grid comes from a relation, so the search has to go
+        // through them — there is nothing searchable on eligibility_criteria itself.
+        if ($search !== '') {
+            $like = '%' . $search . '%';
+            $query->where(function ($q) use ($like) {
+                // The Pay Scale cell renders SalaryGrade::$display_label_text, which
+                // is "salary_grade (GP <grade_3|grade_2|grade_1>)" — so the grade-pay
+                // columns are on screen too and have to be searchable.
+                $q->whereHas('salaryGrade', fn ($s) => $s->where(fn ($g) => $g
+                        ->where('salary_grade', 'like', $like)
+                        ->orWhere('grade_1', 'like', $like)
+                        ->orWhere('grade_2', 'like', $like)
+                        ->orWhere('grade_3', 'like', $like)))
+                    ->orWhereHas('unitType', fn ($u) => $u->where('unit_type', 'like', $like))
+                    ->orWhereHas('unitSubType', fn ($u) => $u->where('unit_sub_type', 'like', $like));
+            });
+        }
+
+        // per_page was already read here, but unvalidated — ?per_page=999999 would
+        // have been honoured verbatim.
+        $items = $query->paginate($this->resolvePerPage($request))->withQueryString();
+
         return view('admin.estate.define_pay_scale.index', compact('items'));
     }
 

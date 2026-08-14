@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Security;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use App\Models\SecVehiclePassConfig;
 use App\Models\SecVehicleType;
 use Illuminate\Http\Request;
@@ -10,9 +11,29 @@ use Illuminate\Validation\Rule;
 
 class VehiclePassConfigController extends Controller
 {
-    public function index()
+    use PaginatesListings;
+
+    public function index(Request $request)
     {
-        $configs = SecVehiclePassConfig::with('vehicleType')->orderBy('pk', 'desc')->paginate(10);
+        $search = $this->searchTerm($request);
+
+        $query = SecVehiclePassConfig::with('vehicleType')->orderBy('pk', 'desc');
+
+        // Vehicle Type is the grid's first column and comes from the relation, so
+        // the search has to reach it as well as this table's own columns.
+        if ($search !== '') {
+            $like = '%' . $search . '%';
+            $query->where(function ($q) use ($like) {
+                $q->where('config_name', 'like', $like)
+                    ->orWhere('prefix', 'like', $like)
+                    ->orWhere('suffix', 'like', $like)
+                    ->orWhere('start_counter', 'like', $like)
+                    ->orWhereHas('vehicleType', fn ($v) => $v->where('vehicle_type', 'like', $like));
+            });
+        }
+
+        $configs = $query->paginate($this->resolvePerPage($request))->withQueryString();
+
         return view('admin.security.vehicle_pass_config.index', compact('configs'));
     }
 

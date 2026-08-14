@@ -3455,8 +3455,32 @@ function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
                     'sm.pk as student_id',
                     'sm.generated_OT_code as generated_OT_code'
                 )
-                ->orderBy('sm.display_name')
-                ->paginate(30);
+                ->orderBy('sm.display_name');
+
+            // Name / OT-code search, applied before the slice so the count below
+            // reflects it.
+            $search = trim((string) request()->input('search', ''));
+            if ($search !== '') {
+                $like = '%' . $search . '%';
+                $students->where(function ($q) use ($like) {
+                    $q->where('sm.display_name', 'like', $like)
+                        ->orWhere('sm.generated_OT_code', 'like', $like);
+                });
+            }
+
+            // 100 per page, not 30. This grid was already paginated at 30 but the
+            // view rendered NO pager, so on the largest group (187 students) 157 of
+            // them were unreachable and 'Select all' silently covered 30. The footer
+            // is rendered now; 100 keeps all but the largest groups on one page so
+            // select-all still means what the user expects (average group is 31).
+            $allowedPerPage = ['10', '25', '50', '100', '200', 'all'];
+            $perPageParam = (string) request()->input('per_page', '100');
+            if (! in_array($perPageParam, $allowedPerPage, true)) {
+                $perPageParam = '100';
+            }
+            $students = $students
+                ->paginate($perPageParam === 'all' ? 100000 : (int) $perPageParam)
+                ->withQueryString();
 
             return view('admin.courseAttendanceNoticeMap.view_all_notice_list', compact('students','courseGroup', 'group_pk', 'course_pk', 'timetable_pk'));
 } catch (\Exception $e) {

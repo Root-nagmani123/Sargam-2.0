@@ -20,6 +20,10 @@
                 </div>
             @endif
 
+            {{-- Toolbar (§2): search right-aligned; this grid has no filters. --}}
+            <x-programme-dt-toolbar :action="url()->current()"
+                placeholder="Search visitor pass" label="Search by pass no., visitor, company, purpose or host" per-page="10" />
+
             <div class="table-responsive">
                 <table class="table table-striped mb-0">
                     <thead>
@@ -95,10 +99,6 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-3">
-                {{ $visitorPasses->links() }}
-            </div>
-        </div>
-    </div>
-</div>
+            {{-- Footer variant B (new-design-index-page.md §4B). --}}
+            <x-programme-dt-footer :paginator="$visitorPasses" per-page-id="visitorPassPerPage" />
 @endsection

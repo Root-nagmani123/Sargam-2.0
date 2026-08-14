@@ -20,6 +20,7 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Color;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str; // Add this import
 use App\Exports\PendingFeedbackExport;
@@ -595,6 +596,24 @@ class FeedbackController extends Controller
     //     return $query;
     // }
 
+    /**
+     * Topic is free text typed per session, so the sidebar's Program / Faculty
+     * dropdowns cannot cover it.
+     *
+     * Deliberately shared by the screen AND all three exports. Wiring it into
+     * showFacultyAverage() alone would let a download contain rows the user had
+     * filtered off the screen, which is a worse bug than the missing box was.
+     * Filters before the GROUP BY, so the aggregates only count matching rows.
+     *
+     * @param  \Illuminate\Database\Query\Builder  $query
+     */
+    private function applyFacultyAverageTopicFilter($query, string $topicSearch): void
+    {
+        if ($topicSearch !== '') {
+            $query->where('tf.topic_name', 'like', '%' . $topicSearch . '%');
+        }
+    }
+
     public function showFacultyAverage(Request $request)
     {
         // Get filter parameters with defaults
@@ -603,6 +622,7 @@ class FeedbackController extends Controller
         $fromDate = $request->input('from_date');
         $toDate = $request->input('to_date');
         $courseType = $request->input('course_type', 'current');
+        $topicSearch = trim((string) $request->input('topic_search', ''));
 
         // 1. Get programs from course_master table
         $currentDate = now()->toDateString();
@@ -715,6 +735,8 @@ class FeedbackController extends Controller
         if ($facultyName && $facultyName !== 'All Faculty') {
             $query->where('tf.faculty_pk', $facultyName);
         }
+        $this->applyFacultyAverageTopicFilter($query, $topicSearch);
+
 
         if ($fromDate) {
             $query->whereDate('tf.created_date', '>=', $fromDate);
@@ -836,8 +858,37 @@ class FeedbackController extends Controller
             ];
         });
 
+        // Paginate the PROCESSED collection rather than the query. Two reasons:
+        // the query is a GROUP BY aggregate, which ->paginate() cannot count
+        // reliably, and the percentages above are derived in PHP after the fetch.
+        // Slicing here keeps the SQL byte-identical to before and puts real page
+        // links under a table that previously rendered every row at once.
+        //
+        // The Print / PDF / Excel exports build their own copy of this data (see
+        // exportExcel / the faculty_average_export views) so they still cover the
+        // full result set, not the visible page.
+        // Rows-per-page from the footer dropdown, whitelisted server-side
+        // (new-design-index-page.md §4B / §8.8).
+        $allowedPerPage = ['10', '25', '50', '100', '200', 'all'];
+        $perPageParam = (string) $request->input('per_page', '25');
+        if (!in_array($perPageParam, $allowedPerPage, true)) {
+            $perPageParam = '25';
+        }
+        $perPage = $perPageParam === 'all' ? max($processedData->count(), 1) : (int) $perPageParam;
+
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+
+        $paginatedData = new LengthAwarePaginator(
+            $processedData->forPage($currentPage, $perPage)->values(),
+            $processedData->count(),
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
         return view('admin.feedback.faculty_average', [
-            'feedbackData' => $processedData,
+            'feedbackData' => $paginatedData,
+            'topicSearch' => $topicSearch,
             'programs' => $programs,
             'faculties' => $faculties,
             'currentProgram' => $programName,
@@ -861,6 +912,7 @@ class FeedbackController extends Controller
         $fromDate = $request->input('from_date');
         $toDate = $request->input('to_date');
         $courseType = $request->input('course_type', 'current');
+        $topicSearch = trim((string) $request->input('topic_search', ''));
 
         $currentDate = now()->toDateString();
 
@@ -934,6 +986,8 @@ class FeedbackController extends Controller
         if ($facultyName && $facultyName !== 'All Faculty') {
             $query->where('tf.faculty_pk', $facultyName);
         }
+        $this->applyFacultyAverageTopicFilter($query, $topicSearch);
+
 
         if ($fromDate) {
             $query->whereDate('tf.created_date', '>=', $fromDate);
@@ -1034,6 +1088,7 @@ class FeedbackController extends Controller
         $fromDate = $request->input('from_date');
         $toDate = $request->input('to_date');
         $courseType = $request->input('course_type', 'current');
+        $topicSearch = trim((string) $request->input('topic_search', ''));
 
         $currentDate = now()->toDateString();
 
@@ -1123,6 +1178,8 @@ class FeedbackController extends Controller
         if ($facultyName && $facultyName !== 'All Faculty') {
             $query->where('tf.faculty_pk', $facultyName);
         }
+        $this->applyFacultyAverageTopicFilter($query, $topicSearch);
+
 
         if ($fromDate) {
             $query->whereDate('tf.created_date', '>=', $fromDate);
@@ -1260,6 +1317,7 @@ class FeedbackController extends Controller
             $fromDate = $request->input('from_date');
             $toDate = $request->input('to_date');
             $courseType = $request->input('course_type', 'current');
+            $topicSearch = trim((string) $request->input('topic_search', ''));
             $currentDate = now()->toDateString();
 
             $programsQuery = DB::table('course_master')
@@ -1312,6 +1370,7 @@ class FeedbackController extends Controller
             $this->applyFeedbackReportCourseScope($query);
             $currentProgramName = (!empty($programName) && $programs->has($programName)) ? $programs[$programName] : null;
             if ($facultyName && $facultyName !== 'All Faculty') $query->where('tf.faculty_pk', $facultyName);
+            $this->applyFacultyAverageTopicFilter($query, $topicSearch);
             if ($fromDate) $query->whereDate('tf.created_date', '>=', $fromDate);
             if ($toDate) $query->whereDate('tf.created_date', '<=', $toDate);
             if ($courseType === 'archived') {

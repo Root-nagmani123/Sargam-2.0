@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use Illuminate\Http\Request;
 use App\Models\{VenueMaster};
 use App\Support\DataTableRedisCache;
 
 class VenueMasterController extends Controller
 {
+    use PaginatesListings;
+
     private const INDEX_LIST_EPOCH_KEY = 'venue_master_index_list_epoch';
 
     public static function bumpIndexCacheEpoch(): void
@@ -18,13 +21,18 @@ class VenueMasterController extends Controller
 
     public function index(Request $request)
     {
-        $perPage = 10;
+        $perPage = $this->resolvePerPage($request);
+        $search = $this->searchTerm($request);
 
         $epoch = DataTableRedisCache::readListEpoch(self::INDEX_LIST_EPOCH_KEY);
-        $cacheKey = 'venue_master_index:v1:' . md5(json_encode([
+        // `search` folded into the key alongside page/per_page: this caches a page
+        // snapshot, so without it every search would be served the cached
+        // unfiltered rows (new-design-index-page.md §4B).
+        $cacheKey = 'venue_master_index:v2:' . md5(json_encode([
             'epoch' => $epoch,
             'page' => (int) $request->input('page', 1),
             'per_page' => $perPage,
+            'search' => $search,
         ]));
 
         $cached = DataTableRedisCache::remember(
@@ -34,7 +42,7 @@ class VenueMasterController extends Controller
                 'seconds' => 'VENUE_MASTER_INDEX_CACHE_SECONDS',
             ],
             'VenueMasterController@index',
-            fn () => $this->buildVenueMasterIndexPaginator($request, $perPage)
+            fn () => $this->buildVenueMasterIndexPaginator($request, $perPage, $search)
         );
 
         $venues = new \Illuminate\Pagination\LengthAwarePaginator(
@@ -51,10 +59,12 @@ class VenueMasterController extends Controller
     /**
      * @return array{items: array<int, mixed>, total: int, perPage: int, currentPage: int}
      */
-    private function buildVenueMasterIndexPaginator(Request $request, int $perPage): array
+    private function buildVenueMasterIndexPaginator(Request $request, int $perPage, string $search = ''): array
     {
-        $paginator = VenueMaster::query()
-            ->orderBy('venue_id', 'desc')
+        $query = VenueMaster::query()->orderBy('venue_id', 'desc');
+        $this->applySearch($query, $search, ['venue_name', 'venue_short_name', 'description']);
+
+        $paginator = $query
             ->paginate($perPage)
             ->withQueryString();
 

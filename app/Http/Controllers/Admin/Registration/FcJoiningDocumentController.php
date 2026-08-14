@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Registration;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +13,8 @@ use Illuminate\Support\Str;
 
 class FcJoiningDocumentController extends Controller
 {
+    use PaginatesListings;
+
     protected $documents = [
         // Admin section
         'admin_family_details_form'       => ['title' => 'Family Details Form (Form - 3)', 'section' => 'admin'],
@@ -201,7 +204,10 @@ class FcJoiningDocumentController extends Controller
         }
 
         // Finally paginate
-        $students = $query->paginate(20);
+        // 25, not a hard-coded 20: the footer dropdown offers 10/25/50/100/200,
+        // so a default outside that list would leave it showing a page size the
+        // server never used, and ?per_page= would be ignored entirely.
+        $students = $query->paginate($this->resolvePerPage($request, '25'))->withQueryString();
         // $students = $query->orderBy('name')->paginate(20);
 
 

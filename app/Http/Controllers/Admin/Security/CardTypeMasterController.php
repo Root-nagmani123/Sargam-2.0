@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Security;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -10,17 +11,21 @@ use Illuminate\Validation\Rule;
 
 class CardTypeMasterController extends Controller
 {
+    use PaginatesListings;
+
     /** Must match DB column `sec_id_cardno_master.sec_card_name` (e.g. varchar(11)). */
     private const SEC_CARD_NAME_MAX_LENGTH = 11;
 
-    public function index()
+    public function index(Request $request)
     {
         $query = DB::table('sec_id_cardno_master')->orderBy('sec_card_name');
         // If status column exists, include it for display/toggle.
         if (Schema::hasColumn('sec_id_cardno_master', 'active_inactive')) {
             $query->select(['pk', 'sec_card_name', 'active_inactive']);
         }
-        $cardTypes = $query->paginate(15);
+        $this->applySearch($query, $this->searchTerm($request), ['sec_card_name']);
+
+        $cardTypes = $query->paginate($this->resolvePerPage($request, '25'))->withQueryString();
 
         return view('admin.security.idcard_master.card_type.index', compact('cardTypes'));
     }

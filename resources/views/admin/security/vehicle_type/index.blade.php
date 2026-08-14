@@ -20,6 +20,10 @@
                 </div>
             @endif
 
+            {{-- Toolbar (§2): search right-aligned; this grid has no filters. --}}
+            <x-programme-dt-toolbar :action="url()->current()"
+                placeholder="Search vehicle type" label="Search by vehicle type" per-page="10" />
+
             <div class="table-responsive">
                 <table class="table mb-0" id="vehicleTypeTable">
                     <thead>
@@ -67,12 +71,8 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-3">
-                {{ $vehicleTypes->links() }}
-            </div>
-        </div>
-    </div>
-</div>
+            {{-- Footer variant B (new-design-index-page.md §4B). --}}
+            <x-programme-dt-footer :paginator="$vehicleTypes" per-page-id="vehicleTypePerPage" />
 
 <!-- Modal for Create/Edit -->
 <div class="modal fade" id="vehicleTypeModal" tabindex="-1">

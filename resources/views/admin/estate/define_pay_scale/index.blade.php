@@ -20,8 +20,13 @@
                 </div>
             </div>
 
+            {{-- Toolbar (new-design-index-page.md §2): search right-aligned; this
+                 grid has no filters, so the row carries the search alone. --}}
+            <x-programme-dt-toolbar :action="url()->current()"
+                placeholder="Search pay scale" label="Search by pay scale, unit type or sub type" />
+
             <div class="table-responsive">
-                <table class="table align-middle mb-0">
+                <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" data-sargam-dt-ui="false">
                     <thead>
                         <tr>
                             <th>S.NO.</th>
@@ -49,12 +54,7 @@
                 </table>
             </div>
 
-            @if($items->hasPages())
-            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 mt-3">
-                <div class="text-muted small">Showing {{ $items->firstItem() }} to {{ $items->lastItem() }} of {{ $items->total() }} entries</div>
-                {{ $items->links() }}
-            </div>
-            @endif
+            <x-programme-dt-footer :paginator="$items" per-page-id="payScalePerPage" />
         </div>
     </div>
 </div>

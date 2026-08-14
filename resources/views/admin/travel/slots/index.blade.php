@@ -191,6 +191,13 @@
     @empty
         <p class="text-muted">No slots yet. Add one above.</p>
     @endforelse
+    {{-- Count only: 5 slots today, and each row is an inline edit form rather
+         than a table row, so a pager would add friction with nothing to page. --}}
+    <div class="d-flex justify-content-end mt-2">
+        <span class="text-muted small">Showing
+            <span class="fw-semibold">{{ count($slots) }}</span>
+            of <span class="fw-semibold">{{ count($slots) }}</span> slots</span>
+    </div>
     </div>
 </div>
 

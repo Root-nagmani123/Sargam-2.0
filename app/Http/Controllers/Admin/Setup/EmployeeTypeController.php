@@ -4,15 +4,24 @@ namespace App\Http\Controllers\Admin\Setup;
 
 use App\DataTables\Master\EmployeeTypeMasterDataTable;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use Illuminate\Http\Request;
 use App\Models\EmployeeTypeMaster;
 use Illuminate\Validation\Rule;
 
 class EmployeeTypeController extends Controller
 {
+    use PaginatesListings;
+
     public function index(Request $request)
     {
-        $employeeTypes = EmployeeTypeMaster::orderBy('pk','desc')->paginate(10);
+        $search = $this->searchTerm($request);
+
+        $query = EmployeeTypeMaster::orderBy('pk','desc');
+        $this->applySearch($query, $search, ['category_type_name']);
+
+        $employeeTypes = $query->paginate($this->resolvePerPage($request))->withQueryString();
+
         return view('admin.setup.employee_type.index', compact('employeeTypes'));
     }
 

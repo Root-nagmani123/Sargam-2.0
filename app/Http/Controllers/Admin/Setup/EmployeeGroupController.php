@@ -3,15 +3,24 @@
 namespace App\Http\Controllers\Admin\Setup;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use Illuminate\Http\Request;
 use App\Models\EmployeeGroupMaster;
 use Illuminate\Validation\Rule;
 
 class EmployeeGroupController extends Controller
 {
+    use PaginatesListings;
+
     public function index(Request $request)
     {
-        $employeeGroups = EmployeeGroupMaster::orderBy('pk','desc')->paginate(10);
+        $search = $this->searchTerm($request);
+
+        $query = EmployeeGroupMaster::orderBy('pk','desc');
+        $this->applySearch($query, $search, ['emp_group_name']);
+
+        $employeeGroups = $query->paginate($this->resolvePerPage($request))->withQueryString();
+
         return view('admin.setup.employee_group.index', compact('employeeGroups'));
     }
 

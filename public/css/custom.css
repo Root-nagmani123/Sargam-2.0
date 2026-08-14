@@ -343,6 +343,77 @@ body.custom-loaded {
     box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12) !important;
 }
 
+/* ── Server-side search variant ────────────────────────────────────────────
+   Every rule above is scoped to .dataTables_filter, i.e. the node the global
+   enhancer injects. Pages that paginate in Laravel have no DataTables filter to
+   move, so they render a plain GET <form> instead and would otherwise sit in the
+   slot completely unstyled. This mirrors the look above for that form, so both
+   search variants are indistinguishable. Used by <x-programme-dt-search>. */
+.programme-dt-search .programme-dt-search-form {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    margin: 0;
+}
+
+.programme-dt-search .programme-dt-search-form::before {
+    content: "\F52A";
+    font-family: "bootstrap-icons";
+    position: absolute;
+    left: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #98a2b3;
+    font-size: 1rem;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.programme-dt-search .programme-dt-search-input {
+    width: 100%;
+    height: 40px;
+    margin: 0;
+    padding: 0.5rem 2.25rem 0.5rem 2.375rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    color: #344054;
+    background-color: #fff;
+    box-shadow: none;
+}
+
+.programme-dt-search .programme-dt-search-input::placeholder {
+    color: #98a2b3;
+}
+
+.programme-dt-search .programme-dt-search-input:focus {
+    outline: none;
+    border-color: #004a93;
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+}
+
+/* Clear (×) sits inside the field, so it needs the right padding reserved above. */
+.programme-dt-search .programme-dt-search-clear {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    color: #98a2b3;
+    line-height: 1;
+    padding: 0.15rem;
+    z-index: 2;
+}
+
+.programme-dt-search .programme-dt-search-clear:hover {
+    color: #667085;
+}
+
 #coursemaster-table_wrapper .dt-buttons,
 #coursemaster-table_wrapper .dataTables_length,
 #coursemaster-table_wrapper .dataTables_filter,

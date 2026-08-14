@@ -26,6 +26,10 @@
                 </div>
             @endif
 
+            {{-- Toolbar (§2): search right-aligned; this grid has no filters. --}}
+            <x-programme-dt-toolbar :action="url()->current()"
+                placeholder="Search sub type" label="Search by card type or sub type" per-page="25" />
+
             <div class="table-responsive">
                 <table class="table mb-0">
                     <thead>
@@ -99,12 +103,8 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-3">
-                {{ $subTypes->links() }}
-            </div>
-        </div>
-    </div>
-</div>
+            {{-- Footer variant B (new-design-index-page.md §4B). --}}
+            <x-programme-dt-footer :paginator="$subTypes" per-page-id="cardSubTypePerPage" default="25" />
 
 <div class="modal fade" id="subTypeModal" tabindex="-1">
     <div class="modal-dialog">

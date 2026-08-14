@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Security;
 
 use App\Http\Controllers\Admin\FamilyIDCardRequestController;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use App\Models\SecurityFamilyIdApply;
 use App\Models\SecurityFamilyIdApplyApproval;
 use App\Support\IdCardSecurityMapper;
@@ -19,6 +20,8 @@ use Illuminate\Support\Facades\Schema;
  */
 class FamilyIDCardApprovalController extends Controller
 {
+    use PaginatesListings;
+
     public function index(Request $request)
     {
         $search = trim($request->get('search', ''));
@@ -579,11 +582,18 @@ class FamilyIDCardApprovalController extends Controller
             ->with('success', 'Family ID Card group rejected (' . $groupRows->count() . ' members)');
     }
 
-    public function all()
+    public function all(Request $request)
     {
-        $applications = SecurityFamilyIdApply::with('approvals')
-            ->orderBy('created_date', 'desc')
-            ->paginate(15);
+        $search = $this->searchTerm($request);
+
+        $query = SecurityFamilyIdApply::with('approvals')
+            ->orderBy('created_date', 'desc');
+        // Real columns on security_family_id_apply — the grid renders family_name,
+        // emp_id_apply and family_relation (there is no family_member_name /
+        // employee_id / relation on this table).
+        $this->applySearch($query, $search, ['fml_id_apply', 'family_name', 'emp_id_apply', 'family_relation', 'id_card_no']);
+
+        $applications = $query->paginate($this->resolvePerPage($request, '25'))->withQueryString();
 
         return view('admin.security.family_idcard_approval.all', compact('applications'));
     }

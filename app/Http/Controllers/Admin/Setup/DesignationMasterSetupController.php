@@ -3,15 +3,24 @@
 namespace App\Http\Controllers\Admin\Setup;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use Illuminate\Http\Request;
 use App\Models\DesignationMaster;
 use Illuminate\Validation\Rule;
 
 class DesignationMasterSetupController extends Controller
 {
+    use PaginatesListings;
+
     public function index(Request $request)
     {
-        $designations = DesignationMaster::orderBy('pk','desc')->paginate(10);
+        $search = $this->searchTerm($request);
+
+        $query = DesignationMaster::orderBy('pk','desc');
+        $this->applySearch($query, $search, ['designation_name']);
+
+        $designations = $query->paginate($this->resolvePerPage($request))->withQueryString();
+
         return view('admin.setup.designation_master.index', compact('designations'));
     }
 

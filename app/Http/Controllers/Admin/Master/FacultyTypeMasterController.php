@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Admin\Master;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use App\Models\FacultyTypeMaster;
 use App\Support\DataTableRedisCache;
 use Illuminate\Http\Request;
 
 class FacultyTypeMasterController extends Controller
 {
+    use PaginatesListings;
+
     private const LIST_CACHE_EPOCH_KEY = 'master_faculty_type_list_epoch';
 
     public static function bumpListCacheEpoch(): void
@@ -20,7 +23,17 @@ class FacultyTypeMasterController extends Controller
     {
         $epoch = DataTableRedisCache::readListEpoch(self::LIST_CACHE_EPOCH_KEY);
         $page = max(1, (int) $request->query('page', 1));
-        $cacheKey = 'master_fac_type_list:v1:' . md5(json_encode(['epoch' => $epoch, 'page' => $page]));
+        $search = $this->searchTerm($request);
+        $perPage = $this->resolvePerPage($request);
+
+        // search / per_page belong in the key — see the note in
+        // FacultyExpertiseMasterController::index().
+        $cacheKey = 'master_fac_type_list:v2:' . md5(json_encode([
+            'epoch' => $epoch,
+            'page' => $page,
+            'search' => $search,
+            'per_page' => $perPage,
+        ]));
 
         $facultyTypes = DataTableRedisCache::remember(
             $cacheKey,
@@ -29,7 +42,12 @@ class FacultyTypeMasterController extends Controller
                 'seconds' => 'FACULTY_TYPE_MASTER_LIST_CACHE_SECONDS',
             ],
             'FacultyTypeMasterController@index',
-            fn () => FacultyTypeMaster::paginate(10)
+            function () use ($search, $perPage) {
+                $query = FacultyTypeMaster::query();
+                $this->applySearch($query, $search, ['faculty_type_name', 'shot_faculty_type_name']);
+
+                return $query->paginate($perPage)->withQueryString();
+            }
         );
 
         return view('admin.master.faculty_type.index', compact('facultyTypes'));

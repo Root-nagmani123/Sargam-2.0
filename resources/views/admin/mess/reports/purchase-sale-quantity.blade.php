@@ -377,9 +377,28 @@
                             </div>
                         @endif
                     @endif
-                    @if(! empty($section['paginator']) && $section['paginator']->hasPages())
-                        <div class="d-flex justify-content-center py-3 px-2 border-top bg-body-tertiary bg-opacity-25 no-print">
-                            {{ $section['paginator']->withQueryString()->links('pagination::bootstrap-5') }}
+                    {{-- Footer renders whenever the section has a paginator, not only
+                         when it spans pages: the row count is useful on a single page
+                         too, and hiding it was the reported "showing" gap. Pagination
+                         left, "Showing [rows] of N items" right (§4B). --}}
+                    @if(! empty($section['paginator']))
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 py-3 px-3 border-top bg-body-tertiary bg-opacity-25 no-print">
+                            <div>
+                                @if($section['paginator']->hasPages())
+                                    {{-- vendor.pagination.custom, not pagination::bootstrap-5: the
+                                         Bootstrap view prints its own "Showing 1 to 10 of N results"
+                                         above the links, which would repeat the count added on the
+                                         right. The design-system view renders links only. --}}
+                                    {{ $section['paginator']->withQueryString()->links('vendor.pagination.custom') }}
+                                @endif
+                            </div>
+                            <div class="small text-body-secondary ms-auto">
+                                Showing
+                                <span class="fw-semibold">{{ number_format($section['paginator']->count()) }}</span>
+                                of
+                                <span class="fw-semibold">{{ number_format($section['paginator']->total()) }}</span>
+                                items
+                            </div>
                         </div>
                     @endif
                 </div>

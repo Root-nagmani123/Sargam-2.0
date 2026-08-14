@@ -59,19 +59,42 @@ class FormController extends Controller
         ]);
     }
 
+    /**
+     * Rows-per-page values the programme-dt footer offers. Whitelisted server-side
+     * so ?per_page= can't ask for an arbitrarily large page.
+     * See new-design-index-page.md §4B / §8.8.
+     */
+    private const PER_PAGE_OPTIONS = ['10', '25', '50', '100', '200', 'all'];
+
+    /** Resolve ?per_page= to a row count paginate() can use. */
+    private function resolvePerPage(Request $request, string $default = '10'): int
+    {
+        $perPage = (string) $request->input('per_page', $default);
+        if (!in_array($perPage, self::PER_PAGE_OPTIONS, true)) {
+            $perPage = $default;
+        }
+
+        // "all" stays in the URL for the dropdown; paginate() needs an int. The
+        // high cap is safe — paginate() runs its own COUNT either way.
+        return $perPage === 'all' ? 100000 : (int) $perPage;
+    }
+
     // New method for inactive forms
     public function inactive(Request $request)
     {
+        $search = trim((string) $request->input('search', ''));
+
         $query = DB::table('local_form')
             ->where('visible', 0) // Only inactive
             ->orderBy('sortorder');
 
-        if ($request->has('search') && $request->search != '') {
-            $query->where('name', 'like', '%' . $request->search . '%');
+        if ($search !== '') {
+            $query->where('name', 'like', '%' . $search . '%');
         }
 
-        // Get inactive forms
-        $forms = $query->get();
+        // Get inactive forms. Paginated, and withQueryString so paging past
+        // page 1 keeps the search term instead of silently widening the list.
+        $forms = $query->paginate($this->resolvePerPage($request))->withQueryString();
 
         return view('admin.registration.inactive', compact('forms'));
     }
@@ -883,13 +906,42 @@ class FormController extends Controller
     public function courseList(Request $request, $formid)
     {
         $statusval = $request->input('statusval');
+        $search    = trim((string) $request->input('search', ''));
 
         // 1) Fetch submission records (optionally filter by confirm_status)
+        //
+        // ⚠️ `confirm_status` is a column on form_submissions (see the
+        // 2025_04_17_093502 migration), NOT on fc_registration_master. Applying it
+        // here is "Unknown column 'confirm_status' in 'where clause'" — a hard 500,
+        // and has been since the filter shipped; ?statusval=1 has never returned a
+        // page. Guarded rather than remapped: fc_registration_master.status holds
+        // '1'/NULL, which does not carry the confirm / not-confirm meaning the
+        // dropdown offers, so pointing at it would silently show the wrong rows.
+        // The view hides the control while this is false.
+        $statusFilterAvailable = Schema::hasColumn('fc_registration_master', 'confirm_status');
         $query = DB::table('fc_registration_master')->where('formid', $formid);
-        if (!is_null($statusval) && $statusval !== '') {
+        if ($statusFilterAvailable && !is_null($statusval) && $statusval !== '') {
             $query->where('confirm_status', $statusval);
         }
-        $records = $query->get();
+
+        // Name search. The name shown in the grid is assembled from
+        // user_credentials (see $fullnames below), not stored on this table, so
+        // match there and narrow by the uids that come back.
+        if ($search !== '') {
+            $query->whereIn('uid', function ($sub) use ($search) {
+                $sub->select('pk')
+                    ->from('user_credentials')
+                    ->whereRaw(
+                        "CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) LIKE ?",
+                        ['%' . $search . '%']
+                    );
+            });
+        }
+
+        // Paginated: this grid used to render every submission for the form, and
+        // steps 3-11 below then ran a lookup per distinct value in that full set.
+        // Paging first means those lookups only cover the visible page.
+        $records = $query->paginate($this->resolvePerPage($request, '25'))->withQueryString();
 
         // 2) Extract UIDs
         $uids = $records->pluck('uid')->filter()->unique()->values()->all();
@@ -1034,7 +1086,9 @@ class FormController extends Controller
             'passwords',
             'formid',
             'total_students',
-            'statusval'
+            'statusval',
+            'search',
+            'statusFilterAvailable'
         ));
     }
 
@@ -1123,13 +1177,29 @@ class FormController extends Controller
         // 1. Get Form Name
         $formName = DB::table('local_form')->where('id', $formid)->value('name');
         $statusval = $request->input('statusval');
+        $search = trim((string) $request->input('search', ''));
         $format = $request->input('format'); // 'xlsx', 'csv', or 'pdf'
 
         // 2. Fetch registration records
+        // Same missing-column guard as courseList() — see the note there.
         $query = DB::table('fc_registration_master')->where('formid', $formid);
-        if (!empty($statusval)) {
+        if (!empty($statusval) && Schema::hasColumn('fc_registration_master', 'confirm_status')) {
             $query->where('confirm_status', $statusval);
         }
+
+        // Same name search the grid applies, so the download matches what the
+        // user is looking at rather than silently exporting the unfiltered form.
+        if ($search !== '') {
+            $query->whereIn('uid', function ($sub) use ($search) {
+                $sub->select('pk')
+                    ->from('user_credentials')
+                    ->whereRaw(
+                        "CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) LIKE ?",
+                        ['%' . $search . '%']
+                    );
+            });
+        }
+
         $records = $query->get();
 
         if ($records->isEmpty()) {

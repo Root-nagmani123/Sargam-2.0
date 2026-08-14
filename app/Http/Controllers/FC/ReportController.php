@@ -1469,6 +1469,53 @@ class ReportController extends Controller
     }
 
     // ── 5. Document Checklist Report ──────────────────────────────────
+    /**
+     * Paginate the Documents report's student rows.
+     *
+     * Both code paths finish with a Collection (the doc_status filter is applied
+     * in PHP after the uploads are loaded, so it cannot be pushed into SQL), and
+     * the grid previously rendered every student in one page over a wide
+     * document matrix. Slicing here keeps the filtering correct and bounds the
+     * page. The name search runs before the slice so the count reflects it.
+     *
+     * @param  \Illuminate\Support\Collection  $students
+     */
+    private function paginateDocumentReportStudents($students, Request $request): \Illuminate\Pagination\LengthAwarePaginator
+    {
+        $students = collect($students)->values();
+
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $students = $students->filter(function ($s) use ($needle) {
+                foreach (['name', 'display_name', 'user_id', 'login_username', 'service_name'] as $key) {
+                    $value = is_array($s) ? ($s[$key] ?? null) : ($s->$key ?? null);
+                    if ($value !== null && str_contains(mb_strtolower((string) $value), $needle)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            })->values();
+        }
+
+        $allowed = ['10', '25', '50', '100', '200', 'all'];
+        $perPageParam = (string) $request->input('per_page', '25');
+        if (! in_array($perPageParam, $allowed, true)) {
+            $perPageParam = '25';
+        }
+        $perPage = $perPageParam === 'all' ? max($students->count(), 1) : (int) $perPageParam;
+        $page = \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage();
+
+        return new \Illuminate\Pagination\LengthAwarePaginator(
+            $students->forPage($page, $perPage)->values(),
+            $students->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+    }
+
     public function documents(Request $request)
     {
         $forms      = FcForm::orderByDesc('id')->get();
@@ -1558,6 +1605,8 @@ class ReportController extends Controller
                     })->values();
                 }
 
+                $students = $this->paginateDocumentReportStudents($students, $request);
+
                 return view('fc.report.documents', compact(
                     'students', 'docMasters', 'allUploaded', 'forms', 'scopedForm'
                 ));
@@ -1619,6 +1668,8 @@ class ReportController extends Controller
                 })
                 ->get()
                 ->groupBy(fn ($row) => (string) $row->user_id);
+
+        $students = $this->paginateDocumentReportStudents($students, $request);
 
         return view('fc.report.documents', compact(
             'students', 'docMasters', 'allUploaded', 'forms', 'scopedForm'

@@ -193,6 +193,21 @@
                         </tbody>
                     </table>
                 </div>
+
+                {{-- Count only, deliberately no pager. This grid is a collapsible
+                     parent → child tree; slicing a flattened tree by row would strip
+                     children away from the parent that owns them. At 32 top-level
+                     forms (71 rows in total) there is nothing to page anyway — the
+                     honest gap here was the missing count, not the missing pager. --}}
+                <div class="d-flex justify-content-end mt-3">
+                    <span class="text-muted small" id="formsShowingCount"
+                        data-total-parents="{{ count($groupedForms[null] ?? []) }}"
+                        data-total-forms="{{ $forms->count() }}">
+                        Showing <span class="fw-semibold">{{ count($groupedForms[null] ?? []) }}</span>
+                        of <span class="fw-semibold">{{ count($groupedForms[null] ?? []) }}</span> forms
+                        <span class="text-body-tertiary">({{ $forms->count() }} including sub-forms)</span>
+                    </span>
+                </div>
             </div>
         </div>
     </div>
@@ -227,7 +242,17 @@
                         row.find('.toggle-child').removeClass('expanded');
                     }
                 });
+                updateFormsShowingCount();
             });
+
+            // Keep the footer count honest while the client-side filter hides rows —
+            // a static count beside a filtered table is worse than no count at all.
+            function updateFormsShowingCount() {
+                var $label = $('#formsShowingCount');
+                if (!$label.length) { return; }
+                var visible = $('#registration_forms tbody tr.parent-row:visible').length;
+                $label.find('.fw-semibold').first().text(visible);
+            }
 
             // Expand/Collapse child rows
             $('#registration_forms tbody').on('click', '.toggle-child', function(e) {

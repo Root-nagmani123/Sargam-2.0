@@ -84,6 +84,18 @@
                             @endforeach
                         </select>
                     </div>
+                    {{-- Free-text search. The dropdowns above pick whole vendors/stores;
+                         this is the only way to reach an individual item, code, PO or
+                         bill number. Applied in the shared base query, so the line count
+                         and grand total below move with it. --}}
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <label for="stockPurchaseSearch"
+                            class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">Search</label>
+                        <input type="search" name="search" id="stockPurchaseSearch"
+                            class="form-control" value="{{ $reportSearch ?? '' }}"
+                            placeholder="Item, code, vendor, PO or bill no."
+                            aria-label="Search by item, item code, vendor, PO number or bill number">
+                    </div>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-2 pt-3 mt-3 border-top border-light-subtle">
                     <button type="submit" name="refresh" value="1" class="btn btn-primary btn-sm rounded-1 d-inline-flex align-items-center gap-1 px-3">

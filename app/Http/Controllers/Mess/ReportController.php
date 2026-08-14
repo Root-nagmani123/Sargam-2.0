@@ -140,11 +140,15 @@ class ReportController extends Controller
         sort($filters['vendorIds']);
         sort($filters['storeIds']);
 
-        $cacheKey = 'stock-purchase-details:v2:meta:' . md5(json_encode([
+        // `search` MUST be in the key: the cached meta carries lineCount and
+        // grandTotal, so a key without it would report the unfiltered totals over
+        // a filtered page (new-design-index-page.md §4B).
+        $cacheKey = 'stock-purchase-details:v3:meta:' . md5(json_encode([
             $filters['fromDate'],
             $filters['toDate'],
             $filters['vendorIds'],
             $filters['storeIds'],
+            $filters['search'],
         ]));
         $loadMeta = fn () => $this->loadStockPurchaseDetailMeta($filters);
 
@@ -203,6 +207,7 @@ class ReportController extends Controller
             'toDate'                 => $meta['toDate'] ?? $filters['toDate'],
             'reportTimingMs'         => $reportTimingMs,
             'reportCacheStatus'      => $reportCacheStatus,
+            'reportSearch'           => $filters['search'],
         ];
 
         $timingHeaders = $this->messReportTimingHeaders(
@@ -576,6 +581,7 @@ class ReportController extends Controller
             'toDate' => $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d'),
             'vendorIds' => $this->normalizedIdList($request, 'vendor_id'),
             'storeIds' => $this->normalizedIdList($request, 'store_id'),
+            'search' => trim((string) $request->input('search', '')),
         ];
     }
 
@@ -621,6 +627,25 @@ class ReportController extends Controller
         }
         if ($filters['vendorIds'] !== []) {
             $query->whereIn('po.vendor_id', $filters['vendorIds']);
+        }
+
+        // Applied HERE, in the one query every consumer funnels through, so the
+        // line count, the grand total and the page slice can never disagree about
+        // what the search matched. Item name/code go through the schema-aware SQL
+        // helpers because those columns differ between deployments.
+        $search = (string) ($filters['search'] ?? '');
+        if ($search !== '') {
+            $like = '%' . $search . '%';
+            $itemNameSql = $this->stockPurchaseDetailItemNameSql();
+            $itemCodeSql = $this->stockPurchaseDetailItemCodeSql();
+
+            $query->where(function ($q) use ($like, $itemNameSql, $itemCodeSql) {
+                $q->whereRaw("{$itemNameSql} LIKE ?", [$like])
+                    ->orWhereRaw("{$itemCodeSql} LIKE ?", [$like])
+                    ->orWhere('v.name', 'like', $like)
+                    ->orWhere('po.po_number', 'like', $like)
+                    ->orWhere('po.bill_no', 'like', $like);
+            });
         }
 
         return $query;
@@ -837,6 +862,41 @@ class ReportController extends Controller
 
         $purchaseOrders = $baseQuery->get();
 
+        // Mirror the screen's search (stockPurchaseDetailLinesBaseQuery). Without
+        // this the Excel/PDF would quietly contain every line while the screen
+        // showed the filtered few — the exports build from this separate,
+        // PO-shaped query rather than the flat line query the screen uses.
+        //
+        // Same per-line rule as the screen: a line survives if its own item
+        // matches, OR if its PO's vendor / PO no. / bill no. matches (in which
+        // case the whole PO is a match and all its lines stay). Filtering before
+        // $grandTotal below keeps the total consistent with the rows shown.
+        $search = $filters['search'];
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $contains = static fn ($haystack) => $haystack !== null
+                && $haystack !== ''
+                && str_contains(mb_strtolower((string) $haystack), $needle);
+
+            $purchaseOrders = $purchaseOrders
+                ->map(static function ($po) use ($contains) {
+                    $poLevelMatch = $contains(optional($po->vendor)->name)
+                        || $contains($po->po_number)
+                        || $contains($po->bill_no);
+
+                    if (! $poLevelMatch) {
+                        $po->setRelation('items', $po->items->filter(static function ($item) use ($contains) {
+                            $sub = $item->itemSubcategory;
+                            return $contains(optional($sub)->item_name) || $contains(optional($sub)->item_code);
+                        })->values());
+                    }
+
+                    return $po;
+                })
+                ->filter(static fn ($po) => $po->items->isNotEmpty())
+                ->values();
+        }
+
         $grandTotal = $purchaseOrders->sum(static function ($po) {
             return $po->items->sum(static fn ($item) => (float) ($item->quantity ?? 0) * (float) ($item->unit_price ?? 0));
         });
@@ -916,6 +976,18 @@ class ReportController extends Controller
             [$reportData, $selectedStoreName, $cachedTotals, $cacheHit] = $this->rememberStockSummaryReport($cacheKey, $loadReport);
         }
 
+        // Item search, applied to the rows AFTER the cache read: the cache keeps the
+        // full unfiltered report, so one entry still serves every term.
+        //
+        // $cachedTotals must be dropped whenever a term is active — it was computed
+        // over the WHOLE report, so reusing it would print grand totals that do not
+        // match the rows on screen. The ?? further down then recomputes them.
+        $reportSearch = trim((string) $request->input('search', ''));
+        if ($reportSearch !== '') {
+            $reportData = $this->filterStockSummaryRows($reportData, $reportSearch);
+            $cachedTotals = null;
+        }
+
         // Convert report data to collection for convenient pagination & totals
         $reportCollection = collect($this->sortMessReportRows($reportData, $request, [
             'item_name' => 'item_name',
@@ -976,7 +1048,8 @@ class ReportController extends Controller
                 'toDate',
                 'storeIds',
                 'storeType',
-                'selectedStoreName'
+                'selectedStoreName',
+                'reportSearch'
             ))
             ->withHeaders($timingHeaders);
     }
@@ -1210,6 +1283,37 @@ class ReportController extends Controller
     /**
      * Stock Summary Report - Excel Export
      */
+    /**
+     * Item name/code search for the Stock Summary report.
+     *
+     * Shared by the screen and BOTH exports. The exports build their rows through
+     * getStockSummaryReportData() rather than the screen's paginated collection,
+     * so without this a download would contain every item while the screen showed
+     * the filtered few.
+     *
+     * @param  array<int, mixed>  $rows
+     * @return array<int, mixed>
+     */
+    private function filterStockSummaryRows(array $rows, string $search): array
+    {
+        if ($search === '') {
+            return $rows;
+        }
+
+        $needle = mb_strtolower($search);
+
+        return array_values(array_filter($rows, static function ($row) use ($needle) {
+            foreach (['item_name', 'item_code'] as $key) {
+                $value = is_array($row) ? ($row[$key] ?? null) : ($row->$key ?? null);
+                if ($value !== null && str_contains(mb_strtolower((string) $value), $needle)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }));
+    }
+
     public function stockSummaryExcel(Request $request)
     {
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
@@ -1219,6 +1323,7 @@ class ReportController extends Controller
         $storeIds = $this->stockSummaryStoreIdsFromRequest($request, $storeType);
 
         [$reportData, $selectedStoreName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeIds, $storeType);
+        $reportData = $this->filterStockSummaryRows($reportData, trim((string) $request->input('search', '')));
 
         $fileName = 'stock-summary-report-' . $fromDate . '-to-' . $toDate . '-' . now()->format('Y-m-d_His') . '.xlsx';
         return Excel::download(
@@ -1242,6 +1347,7 @@ class ReportController extends Controller
         $storeIds = $this->stockSummaryStoreIdsFromRequest($request, $storeType);
 
         [$reportData, $selectedStoreName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeIds, $storeType);
+        $reportData = $this->filterStockSummaryRows($reportData, trim((string) $request->input('search', '')));
 
         $data = [
             'reportData'        => $reportData,

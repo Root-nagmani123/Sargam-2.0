@@ -109,10 +109,6 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-3">
-                {{ $requests->links() }}
-            </div>
-        </div>
-    </div>
-</div>
+            {{-- Footer variant B (new-design-index-page.md §4B). --}}
+            <x-programme-dt-footer :paginator="$requests" per-page-id="employeeApprovalPerPage" />
 @endsection

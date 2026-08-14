@@ -9,7 +9,10 @@
             <x-breadcrum title="Attendance Notice List" />
             <x-session_message />
 
-            <input type="hidden" name="subject_master_id" id="subject_master_id" value="{{ $courseGroup->timetable->subject_master_pk }}">
+            {{-- optional(), like the three siblings below. A mapping row can point at a
+                 timetable that no longer exists, and this one unguarded access took the
+                 whole page down with "Attempt to read property timetable on null". --}}
+            <input type="hidden" name="subject_master_id" id="subject_master_id" value="{{ optional($courseGroup->timetable)->subject_master_pk }}">
             <input type="hidden" name="course_master_pk" id="course_master_pk" value="{{ $course_pk }}">
             <input type="hidden" name="topic_id" id="topic_id" value="{{ optional($courseGroup->timetable)->pk }}">
             <input type="hidden" name="venue_id" id="venue_id" value="{{ optional($courseGroup->timetable)->venue_id }}">
@@ -79,6 +82,12 @@
                         </div>
                     </div>
                     <hr>
+                    {{-- Toolbar (new-design-index-page.md §2). Server-side search, so
+                         "Select all" covers exactly the rows on screen. --}}
+                    <x-programme-dt-toolbar :action="url()->current()"
+                        placeholder="Search student" label="Search by student name or OT code"
+                        per-page="100" />
+
                     <div class="table-responsive">
                         <table class="table table-bordered align-middle" id="simpleAttendanceTable">
                             <thead>
@@ -128,8 +137,14 @@
                                 @endif
                             </tbody>
                         </table>
-                        <button id="sendMemoAllBtn" type="button" class="btn btn-success mt-2" style="display:none;">Send Memo to All</button>
                     </div>
+
+                    {{-- Footer variant B (§4B). The controller always paginated this
+                         grid, but no pager was ever rendered — students past the first
+                         page could not be reached or selected. --}}
+                    <x-programme-dt-footer :paginator="$students" per-page-id="noticeStudentsPerPage" default="100" />
+
+                    <button id="sendMemoAllBtn" type="button" class="btn btn-success mt-2" style="display:none;">Send Memo to All</button>
                 </div>
             </div>
         </div>

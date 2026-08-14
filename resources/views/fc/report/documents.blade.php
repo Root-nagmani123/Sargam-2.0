@@ -131,6 +131,16 @@
 
     {{-- Main table --}}
     <div class="card border-0 shadow-sm" style="border-radius:8px; overflow:hidden;">
+        {{-- Toolbar (new-design-index-page.md §2). --}}
+        <div class="px-3 pt-3">
+            <x-programme-dt-toolbar :action="url()->current()"
+                placeholder="Search student" label="Search by student name, id or service"
+                per-page="25">
+                <input type="hidden" name="form_id" value="{{ request('form_id') }}">
+                <input type="hidden" name="doc_status" value="{{ request('doc_status') }}">
+            </x-programme-dt-toolbar>
+        </div>
+
         <div class="table-responsive">
             <table class="table table-sm table-bordered mb-0" style="font-size:11px; border-color:#e5e7eb;">
                 <thead>
@@ -166,7 +176,8 @@
                         $textColor     = $pct >= 100 ? '#16a34a' : ($pct > 0 ? '#b45309' : '#9ca3af');
                     @endphp
                     <tr style="{{ $i % 2 === 0 ? 'background:#f9fafb;' : 'background:#fff;' }}">
-                        <td style="padding:6px 10px; color:#9ca3af; vertical-align:middle;">{{ $i+1 }}</td>
+                        {{-- firstItem() so the serial keeps counting on page 2. --}}
+                        <td style="padding:6px 10px; color:#9ca3af; vertical-align:middle;">{{ $students->firstItem() + $i }}</td>
                         <td style="padding:6px 10px; vertical-align:middle;">
                             <a href="{{ route('admin.reports.student', $s->route_user_id ?? $s->user_id) }}"
                                style="color:#1a3c6e; font-family:monospace; font-size:11px; font-weight:600; text-decoration:none;"
@@ -219,6 +230,11 @@
                 @endforelse
                 </tbody>
             </table>
+        </div>
+
+        {{-- Footer variant B (§4B). --}}
+        <div class="px-3">
+            <x-programme-dt-footer :paginator="$students" per-page-id="docReportPerPage" default="25" />
         </div>
 
         {{-- Table footer icon key --}}

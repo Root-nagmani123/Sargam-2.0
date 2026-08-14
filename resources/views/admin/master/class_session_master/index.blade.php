@@ -30,8 +30,13 @@
                         </div>
                     </div>
                     <hr>
+                    {{-- Toolbar (new-design-index-page.md §2): search right-aligned; this
+                         grid has no filters, so the row carries the search alone. --}}
+                    <x-programme-dt-toolbar :action="url()->current()"
+                        placeholder="Search shift" label="Search by shift name" />
+
                     <div class="table-responsive">
-                        <table class="table w-100 nowrap">
+                        <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" data-sargam-dt-ui="false">
                             <thead>
                                 <!-- start row -->
                                 <tr>
@@ -118,15 +123,7 @@
                         </table>
 
                         <!-- Pagination -->
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <div>
-                                Showing {{ $classSessionMaster->firstItem() ?? 0 }} to
-                                {{ $classSessionMaster->lastItem() ?? 0 }} of {{ $classSessionMaster->total() }} entries
-                            </div>
-                            <div>
-                                {{ $classSessionMaster->links('pagination::bootstrap-5') }}
-                            </div>
-                        </div>
+                        <x-programme-dt-footer :paginator="$classSessionMaster" per-page-id="classSessionPerPage" />
 
                     </div>
                 </div>

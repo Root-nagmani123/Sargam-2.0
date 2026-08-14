@@ -3,16 +3,36 @@
 @section('title', 'Inactive Forms - Sargam | Lal Bahadur')
 
 @section('setup_content')
-    <div class="container-fluid">
+    <div class="container-fluid inactive-forms-page">
         <x-breadcrum title="Inactive Registration Forms" />
 
-        <div class="card mt-3">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <div id="zero_config_wrapper" class="dataTables_wrapper">
+        <div class="card mt-3 overflow-hidden rounded-3">
+            <div class="card-body p-3 p-md-4">
+
+                {{-- Toolbar (§2). The controller has always supported ?search=; it
+                     just had no UI until now. --}}
+                <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4 programme-dt-toolbar">
+                    <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                        <x-programme-dt-search :action="route('forms.inactive')"
+                            placeholder="Search course name"
+                            label="Search inactive forms by course name">
+                            <input type="hidden" name="per_page" value="{{ request('per_page', '10') }}">
+                        </x-programme-dt-search>
+                    </div>
+                </div>
+
+                <div class="programme-dt-panel">
+                    <div class="table-responsive">
+                        {{-- The old markup wrapped this in a hand-written
+                             #zero_config_wrapper.dataTables_wrapper and tagged the table
+                             `dataTable` — decoration only, no DataTable was ever
+                             initialised here (and `dataTable` !== the `datatable`
+                             class the footer auto-init looks for). Dropped, because a
+                             fake wrapper is exactly what getWrapper() in
+                             datatable-global-ui.js would latch onto. --}}
                         <table id="zero_config"
-                            class="table text-nowrap align-middle dataTable"
-                            aria-describedby="zero_config_info">
+                            class="table table-hover align-middle mb-0 w-100 programme-dt-table"
+                            data-sargam-dt-ui="false">
                             <thead>
                                 <tr>
                                     <th>S.No.</th>
@@ -24,10 +44,10 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @php $serial = 1; @endphp
-                                @forelse ($forms as $index => $form)
+                                @forelse ($forms as $form)
                                     <tr>
-                                        <td>{{ $serial++ }}</td>
+                                        {{-- firstItem() so the numbering continues on page 2 rather than restarting. --}}
+                                        <td>{{ $forms->firstItem() + $loop->index }}</td>
                                         <td>{{ $form->id }}</td>
                                         <td>{{ $form->name }}</td>
                                         <td>{{ $form->description }}</td>
@@ -44,18 +64,27 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="text-center">No inactive forms found.</td>
+                                        <td colspan="6" class="text-center py-4 text-muted">
+                                            @if (request('search') !== null && request('search') !== '')
+                                                No inactive form matches “{{ request('search') }}”.
+                                                <a href="{{ route('forms.inactive') }}">Clear the search</a>.
+                                            @else
+                                                No inactive forms found.
+                                            @endif
+                                        </td>
                                     </tr>
                                 @endforelse
                             </tbody>
                         </table>
-                        <div class="mt-3">
-                            {{-- {{ $forms->links() }} --}}
-                        </div>
                     </div>
+
+                    {{-- Footer variant B (§4B). --}}
+                    <x-programme-dt-footer :paginator="$forms" per-page-id="inactiveFormsPerPage" />
                 </div>
+
             </div>
         </div>
+    </div>
     @endsection
 
     @push('scripts')

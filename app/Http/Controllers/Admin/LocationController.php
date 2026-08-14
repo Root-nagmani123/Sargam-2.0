@@ -1,15 +1,25 @@
 <?php
 namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use App\Models\{Country, State, District, City};
 use Illuminate\Http\Request;
 
 
 class LocationController extends Controller
 {
-    public function countryIndex()
+    use PaginatesListings;
+
+    public function countryIndex(Request $request)
     {
-        $countries = Country::paginate(10);
+        $search = $this->searchTerm($request);
+
+        $query = Country::query();
+        $this->applySearch($query, $search, ['country_name']);
+
+        // withQueryString: without it the search term and per_page are dropped
+        // the moment you click page 2.
+        $countries = $query->paginate($this->resolvePerPage($request))->withQueryString();
 
         return view('admin.country.index', compact('countries'));
     }
@@ -76,10 +86,15 @@ class LocationController extends Controller
     }
 
     // State
-    public function stateIndex()
+    public function stateIndex(Request $request)
     {
-        $states = State::paginate(10);
-        // print_r($states);die;
+        $search = $this->searchTerm($request);
+
+        $query = State::query();
+        $this->applySearch($query, $search, ['state_name']);
+
+        $states = $query->paginate($this->resolvePerPage($request))->withQueryString();
+
         return view('admin.state.index', compact('states'));
     }
 
@@ -146,9 +161,15 @@ class LocationController extends Controller
     }
 
     // District
-    public function districtIndex()
+    public function districtIndex(Request $request)
     {
-        $districts = District::paginate(10);
+        $search = $this->searchTerm($request);
+
+        $query = District::query();
+        $this->applySearch($query, $search, ['district_name']);
+
+        $districts = $query->paginate($this->resolvePerPage($request))->withQueryString();
+
         return view('admin.district.index', compact('districts'));
     }
 
@@ -216,9 +237,27 @@ class LocationController extends Controller
     }
 
     // City
-    public function cityIndex()
+    public function cityIndex(Request $request)
     {
-        $cities = City::with(['state', 'district'])->paginate(10);
+        $search = $this->searchTerm($request);
+
+        $query = City::with(['state', 'district']);
+
+        // This grid shows District and State columns as well as the city name, so
+        // the search has to reach them or it looks broken to anyone typing a state.
+        // whereHas (an EXISTS subquery) rather than a join: city_master is ~1.6k
+        // rows, so the cost is negligible and no rows get duplicated.
+        if ($search !== '') {
+            $like = '%' . $search . '%';
+            $query->where(function ($q) use ($like) {
+                $q->where('city_name', 'like', $like)
+                    ->orWhereHas('state', fn ($s) => $s->where('state_name', 'like', $like))
+                    ->orWhereHas('district', fn ($d) => $d->where('district_name', 'like', $like));
+            });
+        }
+
+        $cities = $query->paginate($this->resolvePerPage($request))->withQueryString();
+
         return view('admin.city.index', compact('cities'));
     }
 

@@ -4,6 +4,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use App\Models\MemoNoticeTemplate;
 use App\Models\CourseMaster;
 use Illuminate\Http\Request;
@@ -12,6 +13,8 @@ use Illuminate\Support\Facades\Storage;
 
 class MemoNoticeController extends Controller
 {
+    use PaginatesListings;
+
     // Display all templates
     public function index(Request $request)
     {
@@ -33,7 +36,25 @@ class MemoNoticeController extends Controller
             $query->where('status', $request->status);
         }
 
-        $templates = $query->paginate(20);
+        // Free-text search over the columns the grid actually shows. Course is a
+        // relation, so it needs whereHas rather than a plain column match.
+        $search = $this->searchTerm($request);
+        if ($search !== '') {
+            $like = '%' . $search . '%';
+            $query->where(function ($q) use ($like) {
+                $q->where('title', 'like', $like)
+                    ->orWhere('memo_notice_type', 'like', $like)
+                    ->orWhereHas('course', fn ($c) => $c->where('course_name', 'like', $like));
+            });
+        }
+
+        // 25, not the previous 20: the footer's rows-per-page dropdown offers
+        // 10/25/50/100/200, and a default outside that list would show "10"
+        // selected while the server had actually used 20.
+        //
+        // withQueryString so the course filter and the search term both survive
+        // a click on page 2.
+        $templates = $query->paginate($this->resolvePerPage($request, '25'))->withQueryString();
 
         // Current date for filtering
         $currentDate = now()->toDateString();

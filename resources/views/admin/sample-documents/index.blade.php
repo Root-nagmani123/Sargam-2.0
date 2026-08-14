@@ -89,6 +89,13 @@
                         @endforelse
                     </tbody>
                 </table>
+                {{-- Count only: measured at a handful of rows, so a pager would be
+                     ceremony. The missing count was the real gap. --}}
+                <div class="d-flex justify-content-end mt-3">
+                    <span class="text-muted small">Showing
+                        <span class="fw-semibold">{{ count($samples) }}</span>
+                        of <span class="fw-semibold">{{ count($samples) }}</span> sample documents</span>
+                </div>
             </div>
         </div>
     </div>

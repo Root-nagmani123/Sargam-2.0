@@ -3,39 +3,37 @@
 @section('title', 'Country List')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid country-page">
     <x-breadcrum title="Country List" />
-    <div class="card" >
-        <div class="card-body">
-            <div class="row">
-                <div class="col-6">
-                    <h4>Country List</h4>
-                </div>
-                <div class="col-6">
-                    <div class="d-flex justify-content-end align-items-end mb-3">
-                        <div class="d-flex align-items-center gap-2">
 
-                            <!-- Add New Button -->
-                            <a href="{{ route('master.country.create') }}"
-                                class="btn btn-primary px-3 py-2 rounded-3 shadow-sm">
-                                <i class="material-icons menu-icon material-symbols-rounded"
-                                    style="font-size: 20px; vertical-align: middle;">add</i>
-                                Add Country
-                            </a>
+    {{-- Primary action above the card, per new-design-index-page.md §1. There are
+         no status pills on this grid, so the row is right-aligned buttons alone. --}}
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
+        <a href="{{ route('master.country.create') }}" class="btn btn-primary px-3 py-2 rounded-1">
+            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add Country
+        </a>
+    </div>
 
-                            <!-- Export Button -->
-                            <a href="" class="px-3 py-2">
-                                <i class="material-icons menu-icon material-symbols-rounded"
-                                    style="font-size: 20px; vertical-align: middle;">search</i>
-                            </a>
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
 
-                        </div>
-                    </div>
+            {{-- Toolbar (§2): nothing to filter on this grid, so search alone, right-aligned. --}}
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <x-programme-dt-search :action="route('master.country.index')"
+                        placeholder="Search country" label="Search by country name">
+                        <input type="hidden" name="per_page" value="{{ request('per_page', '10') }}">
+                    </x-programme-dt-search>
                 </div>
             </div>
-            <hr>
+
+            <div class="programme-dt-panel">
             <div class="table-responsive">
-                <table class="table w-100 text-nowrap">
+                {{-- data-sargam-dt-ui="false": Laravel paginates this grid and the
+                     footer below is hand-written, so the global enhancer must not
+                     claim it (§5 "Opting out"). --}}
+                <table class="table table-hover align-middle mb-0 w-100 programme-dt-table"
+                    data-sargam-dt-ui="false">
                     <thead>
                         <tr>
                             <th class="col">#</th>
@@ -46,9 +44,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($countries as $index => $country)
+                        @forelse($countries as $index => $country)
                         <tr>
-                            <td>{{ $index + 1 }}</td>
+                            {{-- firstItem() keeps the numbering running across pages; $index alone restarts at 1 on page 2. --}}
+                            <td>{{ $countries->firstItem() + $index }}</td>
                             <td>{{ $country->country_name }}</td>
 
                             <td>
@@ -102,25 +101,26 @@
                             </td>
 
                         </tr>
-                        @endforeach
+                        @empty
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">
+                                @if (request('search') !== null && request('search') !== '')
+                                    No country matches “{{ request('search') }}”.
+                                    <a href="{{ route('master.country.index') }}">Clear the search</a>.
+                                @else
+                                    No countries have been added yet.
+                                @endif
+                            </td>
+                        </tr>
+                        @endforelse
                     </tbody>
                 </table>
-
-                <!-- Pagination (if applicable) -->
-                <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
-
-                    <div class="text-muted small mb-2">
-                        Showing {{ $countries->firstItem() }}
-                        to {{ $countries->lastItem() }}
-                        of {{ $countries->total() }} items
-                    </div>
-
-                    <div>
-                        {{ $countries->links('vendor.pagination.custom') }}
-                    </div>
-
-                </div>
             </div>
+
+            {{-- Footer variant B (§4B): pagination left, "Showing [N] of M items" right. --}}
+            <x-programme-dt-footer :paginator="$countries" per-page-id="countryPerPage" />
+            </div>
+
         </div>
     </div>
 </div>

@@ -30,8 +30,13 @@
                         </div>
                     </div>
                     <hr>
+                    {{-- Toolbar (new-design-index-page.md §2): search right-aligned; this
+                         grid has no filters, so the row carries the search alone. --}}
+                    <x-programme-dt-toolbar :action="url()->current()"
+                        placeholder="Search faculty type" label="Search by faculty type or short name" />
+
                     <div class="table-responsive">
-                        <table class="table text-nowrap w-100">
+                        <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" data-sargam-dt-ui="false">
                             <thead>
                                 <!-- start row -->
                                 <tr>
@@ -112,19 +117,7 @@
                         </table>
 
                         <!-- Pagination -->
-                        <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
-
-                            <div class="text-muted small mb-2">
-                                Showing {{ $facultyTypes->firstItem() ?? 0 }}
-                                to {{ $facultyTypes->lastItem() }}
-                                of {{ $facultyTypes->total() }} items
-                            </div>
-
-                            <div>
-                                {{ $facultyTypes->links('vendor.pagination.custom') }}
-                            </div>
-
-                        </div>
+                        <x-programme-dt-footer :paginator="$facultyTypes" per-page-id="facultyTypePerPage" />
                     </div>
                 </div>
             </div>

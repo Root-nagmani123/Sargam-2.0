@@ -123,6 +123,12 @@
                     <input type="date" name="to_date_filter" id="to_date_filter" class="form-control form-control-sm"
                         value="{{ isset($toDateFilter) ? $toDateFilter : '' }}">
                 </div>
+                <div class="col-12 col-md-3">
+                    <label for="otmdoSearch" class="form-label">Search</label>
+                    <input type="search" name="search" id="otmdoSearch" class="form-control form-control-sm"
+                        value="{{ $searchFilter ?? '' }}" placeholder="Course, duty type, faculty or remark"
+                        aria-label="Search duties by course, duty type, faculty or remark">
+                </div>
                 <div class="col-12 col-md-auto">
                     <button type="button" id="clearFilterBtn"
                         class="btn btn-outline-danger btn-sm w-100 rounded-1 d-inline-flex align-items-center justify-content-center gap-1">
@@ -268,6 +274,12 @@
                     <input type="date" name="to_date_filter" id="to_date_filter" class="form-control form-control-sm"
                         value="{{ isset($toDateFilter) ? $toDateFilter : '' }}">
                 </div>
+                <div class="col-12 col-md-3">
+                    <label for="otmdoSearch" class="form-label">Search</label>
+                    <input type="search" name="search" id="otmdoSearch" class="form-control form-control-sm"
+                        value="{{ $searchFilter ?? '' }}" placeholder="Course, duty type, faculty or remark"
+                        aria-label="Search duties by course, duty type, faculty or remark">
+                </div>
                 <div class="col-12 col-md-auto">
                     <button type="button" id="clearFilterBtn"
                         class="btn btn-outline-danger btn-sm w-100 rounded-3 d-inline-flex align-items-center justify-content-center gap-1">
@@ -406,11 +418,20 @@
         const dutyTypeFilter = document.getElementById('duty_type_filter');
         const fromDateFilter = document.getElementById('from_date_filter');
         const toDateFilter = document.getElementById('to_date_filter');
+        const otmdoSearch = document.getElementById('otmdoSearch');
         const clearFilterBtn = document.getElementById('clearFilterBtn');
 
         // Function to update URL with filters
         function updateFilters() {
             const url = new URL(window.location.href);
+
+            // Search term. Reset to the first page is not needed here (this view is
+            // not paginated), but the term must survive every other filter change.
+            if (otmdoSearch && otmdoSearch.value.trim()) {
+                url.searchParams.set('search', otmdoSearch.value.trim());
+            } else {
+                url.searchParams.delete('search');
+            }
 
             // Update duty type filter
             if (dutyTypeFilter && dutyTypeFilter.value) {
@@ -451,6 +472,15 @@
             toDateFilter.addEventListener('change', updateFilters);
         }
 
+        // Search: on change (blur / Enter) rather than per keystroke, so one
+        // navigation per search instead of one per character.
+        if (otmdoSearch) {
+            otmdoSearch.addEventListener('change', updateFilters);
+            otmdoSearch.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); updateFilters(); }
+            });
+        }
+
         // Clear all filters
         if (clearFilterBtn) {
             clearFilterBtn.addEventListener('click', function() {
@@ -458,6 +488,7 @@
                 url.searchParams.delete('duty_type_filter');
                 url.searchParams.delete('from_date_filter');
                 url.searchParams.delete('to_date_filter');
+                url.searchParams.delete('search');
                 window.location.href = url.toString();
             });
         }

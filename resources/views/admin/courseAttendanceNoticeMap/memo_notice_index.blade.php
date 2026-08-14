@@ -52,13 +52,35 @@
             </a>
         </div>
         <div class="card-body">
+            {{-- Toolbar (new-design-index-page.md §2). Outside the isEmpty() branch so
+                 a search that matches nothing still leaves you a box to clear. --}}
+            {{-- No filters slot: the course filter has its own card above, so the
+                 toolbar carries the search alone, right-aligned. --}}
+            <x-programme-dt-toolbar :action="route('admin.memo-notice.index')"
+                placeholder="Search template" label="Search by title, type or course"
+                per-page="25" />
+
             @if ($templates->isEmpty())
             <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i> No templates found. Create your first template!
+                <i class="fas fa-info-circle me-2"></i>
+                @if (request('search'))
+                    No template matches “{{ request('search') }}”.
+                    <a href="{{ route('admin.memo-notice.index') }}">Clear the search</a>.
+                @else
+                    No templates found. Create your first template!
+                @endif
             </div>
             @else
+            <div class="programme-dt-panel">
             <div class="table-responsive">
-                <table id="memoTemplatesTable" class="table text-nowrap">
+                {{-- data-sargam-dt-ui="false": Laravel paginates this grid and the footer
+                     below is hand-written, so the global enhancer must not claim it. It
+                     was previously left on, and because paging/searching/info are all
+                     off, enhance() injected an empty .programme-dt-footer — a 52px
+                     white strip with a top border and nothing in it (§5). --}}
+                <table id="memoTemplatesTable"
+                    class="table table-hover align-middle mb-0 w-100 programme-dt-table"
+                    data-sargam-dt-ui="false">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -142,9 +164,9 @@
                 </table>
             </div>
 
-            <!-- Pagination -->
-            <div class="mt-3">
-                {{ $templates->links() }}
+            {{-- Footer variant B (§4B): pagination left, "Showing [N] of M items" right. --}}
+            <x-programme-dt-footer :paginator="$templates" per-page-id="memoTemplatesPerPage"
+                default="25" />
             </div>
             @endif
         </div>
@@ -172,6 +194,12 @@
 @section('scripts')
 <script>
 $(document).ready(function () {
+    // Sort-only DataTable. paging/searching/info stay off because Laravel owns all
+    // three (see the programme-dt-footer and the toolbar search above) — turning
+    // any of them on here would put a second, disagreeing set of controls on the
+    // page. Note the ordering it provides is page-local: it reorders the rows the
+    // server sent for the current page, not the whole result set. Making the
+    // headers sort the full set needs server-side sort links (§4B).
     if ($('#memoTemplatesTable tbody tr td[colspan]').length === 0) {
         $('#memoTemplatesTable').DataTable({
             paging: false,

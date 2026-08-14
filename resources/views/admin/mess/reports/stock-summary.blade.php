@@ -77,6 +77,17 @@
                             @endforeach
                         </select>
                     </div>
+                    {{-- Item search. The store dropdowns scope the report; this is the
+                         only way to reach one item by name or code. Filtered after the
+                         report cache, and the grand totals are recomputed to match. --}}
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <label for="stockSummarySearch"
+                            class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">Search</label>
+                        <input type="search" name="search" id="stockSummarySearch"
+                            class="form-control rounded-2" value="{{ $reportSearch ?? '' }}"
+                            placeholder="Item name or code"
+                            aria-label="Search by item name or item code">
+                    </div>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-2 pt-3 mt-3 border-top border-light-subtle">
                     <button type="submit" name="refresh" value="1" class="btn btn-primary btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3">

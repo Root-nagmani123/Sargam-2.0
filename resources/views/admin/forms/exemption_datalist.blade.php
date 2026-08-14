@@ -70,8 +70,18 @@
                         </div>
 
                     </form>
+                    {{-- Toolbar (new-design-index-page.md §2): the dropdowns above pick a
+                         category / type; this reaches an individual applicant. --}}
+                    <x-programme-dt-toolbar :action="url()->current()"
+                        placeholder="Search name or contact"
+                        label="Search by applicant name, contact number or exemption"
+                        per-page="25">
+                        <input type="hidden" name="exemption_category" value="{{ request('exemption_category') }}">
+                        <input type="hidden" name="application_type" value="{{ request('application_type') }}">
+                    </x-programme-dt-toolbar>
+
                     <div class="table-responsive">
-                        <table class="table text-nowrap w-100">
+                        <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" data-sargam-dt-ui="false">
                                 <thead>
                                     <tr>
                                         <th>S.No</th>
@@ -88,7 +98,8 @@
                                 <tbody>
                                     @forelse ($submissions as $index => $data)
                                         <tr>
-                                            <td>{{ $index + 1 }}</td>
+                                            {{-- firstItem() so S.No keeps counting on page 2. --}}
+                                            <td>{{ $submissions->firstItem() + $index }}</td>
                                             <td>
                                                 {{ $data->username ?? trim(($data->first_name ?? '') . ' ' . ($data->middle_name ?? '') . ' ' . ($data->last_name ?? '')) ?: 'N/A' }}
                                             </td>
@@ -151,7 +162,10 @@
                                     @endforelse
                                 </tbody>
                             </table>
-                    </div>
+                        </div>
+
+                        {{-- Footer variant B (§4B). --}}
+                        <x-programme-dt-footer :paginator="$submissions" per-page-id="exemptionDataPerPage" default="25" />
                 </div>
             </div>
     </div>

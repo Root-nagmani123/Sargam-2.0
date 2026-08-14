@@ -44,6 +44,7 @@ class OTMDOEscrotExemptionController extends Controller
         $dutyTypeFilter = $request->get('duty_type_filter');
         $fromDateFilter = $request->get('from_date_filter');
         $toDateFilter = $request->get('to_date_filter');
+        $searchFilter = trim((string) $request->get('search', ''));
 
         // Build the full, course-validated duty list once (used for both stats and the
         // filtered table, so we only hit the DB once for the heavy part).
@@ -57,7 +58,7 @@ class OTMDOEscrotExemptionController extends Controller
         ];
 
         // Apply the toolbar filters (in PHP) to produce the visible table rows.
-        $validDutyMaps = $this->applyFilters($allDuties, $dutyTypeFilter, $fromDateFilter, $toDateFilter);
+        $validDutyMaps = $this->applyFilters($allDuties, $dutyTypeFilter, $fromDateFilter, $toDateFilter, $searchFilter);
 
         // Get all duty types for filter dropdown
         $allDutyTypes = $this->dutyTypeOptions();
@@ -73,7 +74,7 @@ class OTMDOEscrotExemptionController extends Controller
             'stats' => $stats,
         ];
 
-        return view('admin.ot_mdo_escrot_exemption.view', compact('studentData', 'allDutyTypes', 'dutyTypeFilter', 'fromDateFilter', 'toDateFilter'));
+        return view('admin.ot_mdo_escrot_exemption.view', compact('studentData', 'allDutyTypes', 'dutyTypeFilter', 'fromDateFilter', 'toDateFilter', 'searchFilter'));
     }
 
     /**
@@ -195,6 +196,7 @@ class OTMDOEscrotExemptionController extends Controller
         $dutyTypeFilter = $request->get('duty_type_filter');
         $fromDateFilter = $request->get('from_date_filter');
         $toDateFilter = $request->get('to_date_filter');
+        $searchFilter = trim((string) $request->get('search', ''));
 
         // Get all students with category = 'S' from user_credentials
         $studentIds = DB::table('user_credentials')
@@ -212,9 +214,28 @@ class OTMDOEscrotExemptionController extends Controller
         // Build the data structure with duty maps
         $studentData = [];
 
+        $needle = $searchFilter !== '' ? mb_strtolower($searchFilter) : null;
+
         foreach ($students as $student) {
             $allDuties = $this->buildDutyMaps($student->pk, $currentDate);
-            $validDutyMaps = $this->applyFilters($allDuties, $dutyTypeFilter, $fromDateFilter, $toDateFilter);
+
+            // A term matching the STUDENT (name or OT code) keeps that student's whole
+            // roster; otherwise the term has to match individual duty rows. Without
+            // this, searching an OT's name on the admin list would return nothing,
+            // because the name is not on any duty row.
+            $studentMatches = $needle !== null && (
+                str_contains(mb_strtolower((string) ($student->display_name ?? '')), $needle)
+                || str_contains(mb_strtolower((string) ($student->generated_OT_code ?? '')), $needle)
+                || str_contains(mb_strtolower(trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''))), $needle)
+            );
+
+            $validDutyMaps = $this->applyFilters(
+                $allDuties,
+                $dutyTypeFilter,
+                $fromDateFilter,
+                $toDateFilter,
+                $studentMatches ? '' : $searchFilter
+            );
 
             // Only add students who have matching duties
             if (count($validDutyMaps) > 0) {
@@ -237,7 +258,8 @@ class OTMDOEscrotExemptionController extends Controller
             'allDutyTypes',
             'dutyTypeFilter',
             'fromDateFilter',
-            'toDateFilter'
+            'toDateFilter',
+            'searchFilter'
         ));
     }
 
@@ -322,10 +344,12 @@ class OTMDOEscrotExemptionController extends Controller
     /**
      * Apply the duty-type + date-range toolbar filters to an already-built list.
      */
-    private function applyFilters(array $rows, $dutyTypeFilter, $fromDateFilter, $toDateFilter): array
+    private function applyFilters(array $rows, $dutyTypeFilter, $fromDateFilter, $toDateFilter, string $search = ''): array
     {
+        $needle = $search !== '' ? mb_strtolower($search) : null;
+
         return collect($rows)
-            ->filter(function ($r) use ($dutyTypeFilter, $fromDateFilter, $toDateFilter) {
+            ->filter(function ($r) use ($dutyTypeFilter, $fromDateFilter, $toDateFilter, $needle) {
                 if ($dutyTypeFilter && (string) $r['duty_type_pk'] !== (string) $dutyTypeFilter) {
                     return false;
                 }
@@ -335,6 +359,23 @@ class OTMDOEscrotExemptionController extends Controller
                 if ($toDateFilter && (!$r['date'] || $r['date'] > $toDateFilter)) {
                     return false;
                 }
+
+                // Free text across the columns the table renders. The duty-type
+                // dropdown only selects whole types; this reaches a course, a
+                // faculty name or a remark. Both the OT's own roster and the admin
+                // list run through here, so one rule serves both.
+                if ($needle !== null) {
+                    foreach (['course', 'duty_type', 'faculty', 'description', 'date'] as $key) {
+                        $value = $r[$key] ?? null;
+                        if ($value !== null && $value !== 'N/A'
+                            && str_contains(mb_strtolower((string) $value), $needle)) {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }
+
                 return true;
             })
             ->values()

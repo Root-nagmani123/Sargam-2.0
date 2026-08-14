@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Registration;
 
 // namespace App\Models;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use App\Services\FC\FcRegistrationIntentService;
 use App\Services\FC\FcRegistrationStatusService;
 use App\Services\FC\FcRosterApplicationGuardService;
@@ -36,6 +37,8 @@ use Carbon\Carbon;
 
 class FrontPageController extends Controller
 {
+    use PaginatesListings;
+
     /** Matches validation rule max:5120 (kilobytes) for medical_doc uploads. */
     private const MEDICAL_DOC_MAX_KB = 5120;
 
@@ -1042,12 +1045,15 @@ class FrontPageController extends Controller
 
 
 
-    public function exemptionIndex()
+    public function exemptionIndex(Request $request)
     {
+        $search = $this->searchTerm($request);
 
-        $headings = ExemptionCategory::with(['creator', 'updater'])
-            ->where('is_notice', 0)
-            ->paginate(10);
+        $query = ExemptionCategory::with(['creator', 'updater'])
+            ->where('is_notice', 0);
+        $this->applySearch($query, $search, ['Exemption_name', 'description']);
+
+        $headings = $query->paginate($this->resolvePerPage($request))->withQueryString();
 
         $notice = ExemptionCategory::with(['creator', 'updater'])
             ->where('is_notice', true)

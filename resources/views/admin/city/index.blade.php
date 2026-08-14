@@ -31,8 +31,13 @@
                         </div>
                     </div>
                     <hr>
+                    {{-- Toolbar (new-design-index-page.md §2): search right-aligned; this
+                         grid has no filters, so the row carries the search alone. --}}
+                    <x-programme-dt-toolbar :action="url()->current()"
+                        placeholder="Search city" label="Search by city, district or state" />
+
                     <div class="table-responsive">
-                        <table class="table w-100 text-nowrap">
+                        <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" data-sargam-dt-ui="false">
 
                             <thead>
                                 <!-- start row -->
@@ -111,19 +116,7 @@
                         </table>
                     </div>
                     <!-- Pagination -->
-                    <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
-
-                        <div class="text-muted small mb-2">
-                            Showing {{ $cities->firstItem() }}
-                            to {{ $cities->lastItem() }}
-                            of {{ $cities->total() }} items
-                        </div>
-
-                        <div>
-                            {{ $cities->links('vendor.pagination.custom') }}
-                        </div>
-
-                    </div>
+                    <x-programme-dt-footer :paginator="$cities" per-page-id="cityPerPage" />
 
                 </div>
             </div>

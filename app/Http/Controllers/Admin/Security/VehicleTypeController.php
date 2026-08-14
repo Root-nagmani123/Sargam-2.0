@@ -3,15 +3,24 @@
 namespace App\Http\Controllers\Admin\Security;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use App\Models\SecVehicleType;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class VehicleTypeController extends Controller
 {
-    public function index()
+    use PaginatesListings;
+
+    public function index(Request $request)
     {
-        $vehicleTypes = SecVehicleType::orderBy('pk', 'desc')->paginate(10);
+        $search = $this->searchTerm($request);
+
+        $query = SecVehicleType::orderBy('pk', 'desc');
+        $this->applySearch($query, $search, ['vehicle_type']);
+
+        $vehicleTypes = $query->paginate($this->resolvePerPage($request))->withQueryString();
+
         return view('admin.security.vehicle_type.index', compact('vehicleTypes'));
     }
 

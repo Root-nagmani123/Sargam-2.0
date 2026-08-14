@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Security;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -10,14 +11,19 @@ use Illuminate\Validation\Rule;
 
 class CardSubTypeMasterController extends Controller
 {
-    public function index()
+    use PaginatesListings;
+
+    public function index(Request $request)
     {
-        $subTypes = DB::table('sec_id_cardno_config_map as m')
+        $query = DB::table('sec_id_cardno_config_map as m')
             ->join('sec_id_cardno_master as t', 't.pk', '=', 'm.sec_id_cardno_master')
             ->select('m.*', 't.sec_card_name')
             ->orderBy('t.sec_card_name')
-            ->orderBy('m.config_name')
-            ->paginate(20);
+            ->orderBy('m.config_name');
+
+        $this->applySearch($query, $this->searchTerm($request), ['t.sec_card_name', 'm.config_name', 'm.card_name']);
+
+        $subTypes = $query->paginate($this->resolvePerPage($request, '25'))->withQueryString();
 
         return view('admin.security.idcard_master.sub_type.index', compact('subTypes'));
     }

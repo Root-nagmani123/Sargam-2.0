@@ -352,14 +352,8 @@
                                     </tbody>
                                 </table>
                             </div>
-                            <div class="d-flex justify-content-end mt-4">
-                                {!! $students->links() !!}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+                            {{-- Footer variant B (new-design-index-page.md §4B). --}}
+                            <x-programme-dt-footer :paginator="$students" per-page-id="joiningDocsPerPage" default="25" />
     </main>
 
     <footer>

@@ -11,8 +11,13 @@
                     Add Employee Group
                 </a>
             </div>
+            {{-- Toolbar (new-design-index-page.md §2): search right-aligned; this
+                 grid has no filters, so the row carries the search alone. --}}
+            <x-programme-dt-toolbar :action="url()->current()"
+                placeholder="Search group" label="Search by employee group name" />
+
             <div class="table-responsive">
-                <table class="table mb-0" id="employeeGroupTable">
+                <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" data-sargam-dt-ui="false" id="employeeGroupTable">
                     <thead>
                         <tr>
                             <th style="width:70px;">S.No.</th>
@@ -53,10 +58,7 @@
                     </tbody>
                 </table>
             </div>
-            <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
-                <div class="small text-muted mb-2">Showing {{ $employeeGroups->firstItem() }} to {{ $employeeGroups->lastItem() }} of {{ $employeeGroups->total() }} items</div>
-                <div>{{ $employeeGroups->links('pagination::bootstrap-5') }}</div>
-            </div>
+            <x-programme-dt-footer :paginator="$employeeGroups" per-page-id="empGroupPerPage" />
         </div>
     </div>
 </div>
@@ -163,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function reindexSerials(tbody){ Array.from(tbody.querySelectorAll('tr')).forEach((r,i)=>{ const cell=r.querySelector('td'); if(cell) cell.textContent=i+1; }); }
     function interceptEdit(e){ e.preventDefault(); loadForm(this.getAttribute('href'),'Edit Employee Group'); }
-    function escapeHtml(str){ return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]); }
+    function escapeHtml(str){ return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 });
 </script>
 @endpush

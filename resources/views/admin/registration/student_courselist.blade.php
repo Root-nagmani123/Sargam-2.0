@@ -129,6 +129,52 @@
             border-radius: 50rem;
         }
 
+        /* Search box. This page opts out of the global enhancer (dt-legacy-layout +
+           data-sargam-dt-ui="false"), so .programme-dt-search never reaches it —
+           these rules reproduce that look locally with --ds-* tokens. */
+        .scl-dt .dataTables_wrapper .dataTables_filter {
+            padding-top: var(--ds-space-3);
+            text-align: right;
+        }
+
+        .scl-dt .dataTables_wrapper .dataTables_filter label {
+            position: relative;
+            display: inline-block;
+            margin: 0;
+            width: 100%;
+            max-width: 320px;
+        }
+
+        .scl-dt .dataTables_wrapper .dataTables_filter label::before {
+            content: "\F52A";
+            font-family: "bootstrap-icons";
+            position: absolute;
+            left: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--ds-ink-muted);
+            font-size: 1rem;
+            pointer-events: none;
+        }
+
+        .scl-dt .dataTables_wrapper .dataTables_filter input {
+            width: 100%;
+            height: var(--ds-control-h);
+            margin: 0;
+            padding: 0.5rem 0.875rem 0.5rem 2.375rem;
+            border: 1px solid #d0d5dd;
+            border-radius: var(--ds-radius-2);
+            font-size: 0.9375rem;
+            color: var(--ds-ink);
+            background: #fff;
+        }
+
+        .scl-dt .dataTables_wrapper .dataTables_filter input:focus {
+            outline: none;
+            border-color: var(--ds-primary);
+            box-shadow: var(--ds-focus-ring);
+        }
+
         /* Length / info / pagination — clean, brand-aligned */
         .scl-dt .dataTables_wrapper .dataTables_length,
         .scl-dt .dataTables_wrapper .dataTables_info,
@@ -546,7 +592,12 @@
                     processing: true,
                     serverSide: true,
                     responsive: false,
-                    searching: false,
+                    // The server side already ships filterColumn() mappings for every
+                    // visible column (EnrollementController::studentCourses), so the
+                    // search is fully wired end to end — this flag was the only thing
+                    // keeping the box off the page and those mappings unreachable.
+                    searching: true,
+                    searchDelay: 400,
                     ordering: true,
                     autoWidth: false,
                     lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
@@ -560,6 +611,19 @@
                         processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading…</span></div>',
                         emptyTable: 'No records available for the selected course.',
                         zeroRecords: 'No matching records found',
+                        // Empty label + placeholder, matching the design system's
+                        // search slot rather than DataTables' "Search:" prefix.
+                        search: '',
+                        searchPlaceholder: 'Search student, course, service, OT code…',
+                        // DataTables APPENDS infoFiltered to info. The global defaults
+                        // in datatable-global-ui.js set both to "of _N_ items", which
+                        // only ever showed while searching was off; with search on it
+                        // renders as "of 0 items of 187 items". Enhanced tables escape
+                        // this because the enhancer rewrites .dataTables_info itself —
+                        // this page opts out, so it needs its own wording.
+                        info: 'of _TOTAL_ items',
+                        infoFiltered: '(filtered from _MAX_)',
+                        infoEmpty: 'of 0 items',
                         paginate: {
                             previous: '<span aria-hidden="true">&lsaquo;</span>',
                             next: '<span aria-hidden="true">&rsaquo;</span>'

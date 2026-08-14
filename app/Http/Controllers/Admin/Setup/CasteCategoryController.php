@@ -3,15 +3,28 @@
 namespace App\Http\Controllers\Admin\Setup;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use Illuminate\Http\Request;
 use App\Models\CasteCategoryMaster;
 use Illuminate\Validation\Rule;
 
 class CasteCategoryController extends Controller
 {
+    use PaginatesListings;
+
     public function index(Request $request)
     {
-        $casteCategories = CasteCategoryMaster::orderBy('pk','desc')->paginate(10);
+        $search = $this->searchTerm($request);
+
+        $query = CasteCategoryMaster::orderBy('pk','desc');
+        // The real columns are Seat_name / Seat_name_hindi. `category_name` does
+        // not exist on caste_category_master — see the note on the grid's name
+        // column in the view; the write path in this controller still uses it and
+        // is broken independently of this search.
+        $this->applySearch($query, $search, ['Seat_name', 'Seat_name_hindi']);
+
+        $casteCategories = $query->paginate($this->resolvePerPage($request))->withQueryString();
+
         return view('admin.setup.caste_category.index', compact('casteCategories'));
     }
 

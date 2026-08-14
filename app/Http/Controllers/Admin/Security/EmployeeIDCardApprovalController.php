@@ -2413,10 +2413,18 @@ class EmployeeIDCardApprovalController extends Controller
             ->orderBy('created_date', 'desc');
 
         if ($search !== '') {
-            $permQuery->whereHas('employee', function ($q) use ($search) {
-                $q->where('first_name', 'like', "%{$search}%")
-                    ->orWhere('last_name', 'like', "%{$search}%");
-            })->orWhere('id_card_no', 'like', "%{$search}%");
+            // The two alternatives MUST be wrapped in one closure. Ungrouped, this
+            // compiled to "... AND EXISTS(name match) OR id_card_no LIKE ? AND
+            // id_status = ?" — and because AND binds tighter than OR, any row whose
+            // card number matched escaped every other constraint, so searching a name
+            // while a status filter was set returned rows in all statuses. The
+            // contractual branch below already grouped its version correctly.
+            $permQuery->where(function ($q) use ($search) {
+                $q->whereHas('employee', function ($e) use ($search) {
+                    $e->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%");
+                })->orWhere('id_card_no', 'like', "%{$search}%");
+            });
         }
 
         if ($statusFilter !== '') {

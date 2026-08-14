@@ -6,6 +6,7 @@ use App\Models\FcExemptionMaster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User; // Assuming you have a User model for user relationships
 use Illuminate\Support\Facades\DB; // For database operations if needed
@@ -16,6 +17,8 @@ use Barryvdh\DomPDF\Facade\Pdf; // For PDF generation
 
 class FcExemptionMasterController extends Controller
 {
+    use PaginatesListings;
+
     public function index()
     {
         // $exemptions = FcExemptionMaster::all();
@@ -236,9 +239,30 @@ class FcExemptionMasterController extends Controller
             $query->where('r.application_type', intval($typeFilter));
         }
 
-        $submissions = $query->get();
+        // Name / contact search over the columns the grid renders. The name is split
+        // across three columns, so match the concatenation too — searching a full
+        // name would otherwise never hit.
+        $search = $this->searchTerm($request);
+        if ($search !== '') {
+            $like = '%' . $search . '%';
+            $query->where(function ($q) use ($like) {
+                $q->where('r.first_name', 'like', $like)
+                    ->orWhere('r.middle_name', 'like', $like)
+                    ->orWhere('r.last_name', 'like', $like)
+                    ->orWhere('r.contact_no', 'like', $like)
+                    ->orWhere('e.Exemption_name', 'like', $like)
+                    ->orWhereRaw(
+                        "CONCAT_WS(' ', r.first_name, r.middle_name, r.last_name) LIKE ?",
+                        [$like]
+                    );
+            });
+        }
 
-        return view('admin.forms.exemption_datalist', compact('submissions', 'categories', 'filter', 'typeFilter'));
+        // Paginated: this grid used to render every matching submission in one page,
+        // and fc_registration_master holds ~10.5k rows.
+        $submissions = $query->paginate($this->resolvePerPage($request, '25'))->withQueryString();
+
+        return view('admin.forms.exemption_datalist', compact('submissions', 'categories', 'filter', 'typeFilter', 'search'));
     }
 
 

@@ -1,15 +1,24 @@
 <?php
 namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use App\Models\Stream;
 use Illuminate\Http\Request;
 
 
 class StreamController extends Controller
 {
-    public function index()
+    use PaginatesListings;
+
+    public function index(Request $request)
     {
-        $streams = Stream::paginate(10);
+        $search = $this->searchTerm($request);
+
+        $query = Stream::query();
+        $this->applySearch($query, $search, ['stream_name']);
+
+        $streams = $query->paginate($this->resolvePerPage($request))->withQueryString();
+
         return view('admin.stream.index', compact('streams'));
     }
 

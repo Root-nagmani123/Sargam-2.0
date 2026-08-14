@@ -11,8 +11,13 @@
                     Add Employee Type
                 </a>
             </div>
+            {{-- Toolbar (new-design-index-page.md §2): search right-aligned; this
+                 grid has no filters, so the row carries the search alone. --}}
+            <x-programme-dt-toolbar :action="url()->current()"
+                placeholder="Search category" label="Search by category type name" />
+
             <div class="table-responsive">
-                <table class="table mb-0" id="employeeTypeTable">
+                <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" data-sargam-dt-ui="false" id="employeeTypeTable">
                     <thead>
                         <tr>
                             <th style="width:70px;">S.No.</th>
@@ -53,10 +58,7 @@
                     </tbody>
                 </table>
             </div>
-            <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
-                <div class="small text-muted mb-2">Showing {{ $employeeTypes->firstItem() }} to {{ $employeeTypes->lastItem() }} of {{ $employeeTypes->total() }} items</div>
-                <div>{{ $employeeTypes->links('pagination::bootstrap-5') }}</div>
-            </div>
+            <x-programme-dt-footer :paginator="$employeeTypes" per-page-id="empTypePerPage" />
         </div>
     </div>
 </div>

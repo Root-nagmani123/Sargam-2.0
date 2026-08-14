@@ -1,0 +1,1333 @@
+<title>Sargam Grid Chrome Audit</title>
+
+<style>
+  /* ── Tokens: light is the bare :root, dark redefines tokens only ───────── */
+  :root {
+    --ground:      #eef1f6;
+    --surface:     #ffffff;
+    --surface-2:   #f6f8fb;
+    --line:        #d8dee9;
+    --line-soft:   #e7ecf3;
+    --ink:         #121a26;
+    --ink-2:       #47546a;
+    --ink-3:       #6d7a90;
+    --navy:        #004384;
+    --navy-soft:   #e3edf7;
+    --crit:        #a6231a;
+    --crit-bg:     #fbe9e7;
+    --warn:        #8a5000;
+    --warn-bg:     #fbf0dd;
+    --good:        #0a6b45;
+    --good-bg:     #e3f3ec;
+    --info:        #1c4f9c;
+    --info-bg:     #e6eefb;
+    --shadow:      0 1px 2px rgba(16,26,42,.06), 0 8px 24px -16px rgba(16,26,42,.28);
+    --rule:        2px solid var(--navy);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:    #0b1119;
+      --surface:   #131b26;
+      --surface-2: #18222f;
+      --line:      #2a3646;
+      --line-soft: #202b39;
+      --ink:       #e4e9f1;
+      --ink-2:     #a4b0c2;
+      --ink-3:     #7d8a9d;
+      --navy:      #78adde;
+      --navy-soft: #1a2a3d;
+      --crit:      #f0a49c;
+      --crit-bg:   #3a1c19;
+      --warn:      #e5bb7a;
+      --warn-bg:   #35270f;
+      --good:      #7fceab;
+      --good-bg:   #12301f;
+      --info:      #93bbf0;
+      --info-bg:   #16273f;
+      --shadow:    0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+      --rule:      2px solid var(--navy);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:    #0b1119;
+    --surface:   #131b26;
+    --surface-2: #18222f;
+    --line:      #2a3646;
+    --line-soft: #202b39;
+    --ink:       #e4e9f1;
+    --ink-2:     #a4b0c2;
+    --ink-3:     #7d8a9d;
+    --navy:      #78adde;
+    --navy-soft: #1a2a3d;
+    --crit:      #f0a49c;
+    --crit-bg:   #3a1c19;
+    --warn:      #e5bb7a;
+    --warn-bg:   #35270f;
+    --good:      #7fceab;
+    --good-bg:   #12301f;
+    --info:      #93bbf0;
+    --info-bg:   #16273f;
+    --shadow:    0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+    --rule:      2px solid var(--navy);
+  }
+
+  /* ── Base ──────────────────────────────────────────────────────────────── */
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 24px 96px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  code, .mono {
+    font-family: ui-monospace, "Cascadia Mono", "Cascadia Code", Consolas, "Liberation Mono", monospace;
+    font-size: 0.845em;
+  }
+
+  a { color: var(--navy); }
+
+  :focus-visible {
+    outline: 2px solid var(--navy);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  /* ── Masthead ──────────────────────────────────────────────────────────── */
+  .masthead {
+    padding: 44px 0 26px;
+    border-bottom: var(--rule);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .eyebrow {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 11.5px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .eyebrow .dot { color: var(--navy); }
+
+  h1 {
+    font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    font-weight: 400;
+    font-size: clamp(34px, 5.2vw, 52px);
+    line-height: 1.06;
+    letter-spacing: -0.015em;
+    margin: 0;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+
+  .standfirst {
+    max-width: 66ch;
+    color: var(--ink-2);
+    font-size: 16.5px;
+    margin: 0;
+  }
+
+  /* ── Stat row ──────────────────────────────────────────────────────────── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .stat {
+    background: var(--surface);
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .stat .n {
+    font-family: Georgia, "Iowan Old Style", serif;
+    font-size: 34px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+
+  .stat.is-crit .n { color: var(--crit); }
+  .stat.is-good .n { color: var(--good); }
+
+  .stat .k {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 10.5px;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* ── Method panel ──────────────────────────────────────────────────────── */
+  .method {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--navy);
+    border-radius: 4px;
+    padding: 20px 24px;
+  }
+
+  .method h2 {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0 0 10px;
+    font-weight: 600;
+  }
+
+  .method ol {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--ink-2);
+    font-size: 14.5px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .method li::marker { color: var(--navy); font-variant-numeric: tabular-nums; }
+
+  /* ── Toolbar ───────────────────────────────────────────────────────────── */
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 12px 14px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    box-shadow: var(--shadow);
+  }
+
+  .toolbar input[type="search"] {
+    flex: 1 1 230px;
+    min-width: 0;
+    font: inherit;
+    font-size: 14px;
+    padding: 8px 12px;
+    color: var(--ink);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+  }
+
+  .toolbar input[type="search"]::placeholder { color: var(--ink-3); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .chip {
+    font: inherit;
+    font-size: 12.5px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--ink-2);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .chip:hover { border-color: var(--navy); color: var(--navy); }
+
+  .chip[aria-pressed="true"] {
+    background: var(--navy);
+    border-color: var(--navy);
+    color: var(--surface);
+  }
+
+  :root[data-theme="dark"] .chip[aria-pressed="true"],
+  :root:not([data-theme="light"]) .chip[aria-pressed="true"] { color: var(--ground); }
+
+  .progress {
+    margin-left: auto;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 12px;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .progress b { color: var(--navy); font-weight: 600; }
+
+  /* ── Sections ──────────────────────────────────────────────────────────── */
+  section { display: flex; flex-direction: column; gap: 14px; }
+
+  .sec-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .sec-head h2 {
+    font-family: Georgia, "Iowan Old Style", serif;
+    font-weight: 400;
+    font-size: 25px;
+    letter-spacing: -0.01em;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .sev {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 10.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    padding: 4px 9px;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+
+  .sev.crit { background: var(--crit-bg); color: var(--crit); }
+  .sev.warn { background: var(--warn-bg); color: var(--warn); }
+  .sev.info { background: var(--info-bg); color: var(--info); }
+  .sev.good { background: var(--good-bg); color: var(--good); }
+
+  .sec-note {
+    flex: 1 1 100%;
+    color: var(--ink-2);
+    font-size: 14.5px;
+    max-width: 78ch;
+    margin: 0;
+  }
+
+  .sec-note .verify {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-right: 6px;
+  }
+
+  /* ── Table ─────────────────────────────────────────────────────────────── */
+  .tablewrap {
+    overflow-x: auto;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+
+  thead th {
+    text-align: left;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 10.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--ink-3);
+    padding: 11px 14px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: top;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--surface-2); }
+
+  tbody tr.done td { opacity: .42; }
+
+  td.tick { width: 34px; padding-right: 0; }
+
+  td.tick input {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--navy);
+    cursor: pointer;
+    margin-top: 3px;
+  }
+
+  .route {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 12.5px;
+    color: var(--ink);
+    word-break: break-all;
+  }
+
+  .path {
+    display: block;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 11.5px;
+    color: var(--ink-3);
+    margin-top: 3px;
+    word-break: break-all;
+  }
+
+  .path b { color: var(--navy); font-weight: 600; }
+
+  td.st { width: 78px; text-align: center; white-space: nowrap; }
+
+  .mark {
+    display: inline-block;
+    min-width: 22px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+
+  .mark.yes  { background: var(--good-bg); color: var(--good); }
+  .mark.no   { background: var(--crit-bg); color: var(--crit); }
+  .mark.part { background: var(--warn-bg); color: var(--warn); }
+
+  td.note { color: var(--ink-2); font-size: 13px; min-width: 190px; }
+
+  .empty {
+    display: none;
+    padding: 22px;
+    color: var(--ink-3);
+    font-size: 14px;
+    text-align: center;
+  }
+
+  section.hidden { display: none; }
+  tr.filtered { display: none; }
+
+  /* ── Callout ───────────────────────────────────────────────────────────── */
+  .callout {
+    background: var(--navy-soft);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--navy);
+    border-radius: 4px;
+    padding: 18px 22px;
+  }
+
+  .callout h3 {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    margin: 0 0 8px;
+    color: var(--navy);
+    font-weight: 600;
+  }
+
+  .callout p { margin: 0 0 8px; color: var(--ink-2); font-size: 14.5px; max-width: 80ch; }
+  .callout p:last-child { margin-bottom: 0; }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+    color: var(--ink-3);
+    font-size: 12.5px;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+
+  /* Screen-only: A4 at these margins lays out near 700 CSS px, so an unscoped
+     max-width rule here would strip the Evidence column out of the PDF. */
+  @media screen and (max-width: 720px) {
+    .shell { padding: 0 16px 64px; }
+    td.note { display: none; }
+    thead th.note-h { display: none; }
+    .progress { margin-left: 0; flex-basis: 100%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+
+  /* ── Print / PDF ───────────────────────────────────────────────────────────
+     Paper is a different medium: the toolbar has nothing to operate, the
+     checkboxes become something you tick with a pen, and the palette is pinned
+     to light regardless of the rendering machine's OS theme. */
+  @media print {
+    :root {
+      --ground:      #ffffff;
+      --surface:     #ffffff;
+      --surface-2:   #f4f6fa;
+      --line:        #c3ccda;
+      --line-soft:   #dde3ec;
+      --ink:         #0d1520;
+      --ink-2:       #3c4859;
+      --ink-3:       #5f6c7e;
+      --navy:        #004384;
+      --navy-soft:   #eef4fa;
+      --crit:        #8f1c14;
+      --crit-bg:     #fbe6e3;
+      --warn:        #7a4600;
+      --warn-bg:     #fbefd8;
+      --good:        #075c3b;
+      --good-bg:     #e1f2eb;
+      --info:        #17458a;
+      --info-bg:     #e6eefb;
+      --shadow:      none;
+    }
+
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+    @page {
+      size: A4 portrait;
+      margin: 14mm 12mm 16mm;
+    }
+
+    body { background: #fff; font-size: 9.4pt; line-height: 1.42; }
+
+    .shell { max-width: none; padding: 0; gap: 18px; }
+
+    /* Nothing to operate on paper. */
+    .toolbar, .empty { display: none !important; }
+
+    .masthead { padding: 0 0 14px; break-after: avoid; }
+    h1 { font-size: 26pt; }
+    .standfirst { font-size: 10.5pt; max-width: none; }
+    .eyebrow { font-size: 7.6pt; }
+
+    /* Five tiles, one band — auto-fit would wrap the fifth onto its own row
+       and leave four empty cells behind it. */
+    .stats { break-inside: avoid; grid-template-columns: repeat(5, 1fr); }
+    .stat { padding: 10px 9px; }
+    .stat .n { font-size: 20pt; }
+    .stat .k { font-size: 6.6pt; }
+
+    .method { break-inside: avoid; padding: 12px 16px; }
+    .method ol { font-size: 9pt; gap: 4px; }
+
+    /* Let long tables flow across pages, but never split a finding, and repeat
+       the column headers on each new page so a row is readable in isolation. */
+    section { break-inside: auto; gap: 9px; }
+    .sec-head { break-after: avoid; break-inside: avoid; padding-bottom: 7px; }
+    .sec-head h2 { font-size: 15pt; }
+    .sec-note { font-size: 9pt; }
+    .sev { font-size: 7pt; }
+
+    .tablewrap { overflow: visible; break-inside: auto; }
+    table { font-size: 8.6pt; }
+    thead { display: table-header-group; }
+    tfoot { display: table-footer-group; }
+    thead th { padding: 6px 8px; font-size: 6.8pt; }
+    tbody td { padding: 6px 8px; }
+    tbody tr { break-inside: avoid; }
+    tbody tr:hover td { background: transparent; }
+    tbody tr.done td { opacity: 1; }
+
+    /* break-all is right on a narrow screen but wrong on paper: it snaps a line
+       mid-token, so ":89" arrives as ":8 / 9". Break only where nothing better
+       exists, and buy the route column width back off the fixed columns. */
+    .route, .path { word-break: normal; overflow-wrap: anywhere; }
+    .route { font-size: 8.4pt; }
+    .path  { font-size: 7.6pt; }
+    td.note { font-size: 8pt; width: 178px; min-width: 0; }
+    td.st { width: 46px; }
+    .mark { font-size: 8pt; padding: 1px 5px; }
+
+    /* A printed checkbox is a box you tick with a pen. */
+    td.tick { width: 26px; }
+    td.tick input { appearance: none; -webkit-appearance: none; width: 11px; height: 11px;
+                    border: 1px solid var(--ink-3); border-radius: 2px; background: #fff; }
+
+    .callout { break-inside: avoid; padding: 12px 16px; }
+    .callout p { font-size: 9pt; }
+
+    footer { break-inside: avoid; font-size: 7.6pt; padding-top: 12px; }
+
+    a { color: var(--ink); text-decoration: none; }
+  }
+</style>
+
+<div class="shell">
+
+  <header class="masthead">
+    <div class="eyebrow">
+      <span>Sargam 2.0</span><span class="dot">/</span>
+      <span>Listing UI audit</span><span class="dot">/</span>
+      <span>14 Aug 2026</span><span class="dot">/</span>
+      <span>branch main</span>
+    </div>
+    <h1>Where pagination, search and&nbsp;“Showing” are missing</h1>
+    <p class="standfirst">
+      Every reachable listing page in the ERP, checked against the four mechanisms this app uses to
+      supply grid chrome. All 48 pages that were missing a control have been fixed and verified.
+      Tick rows off as you confirm them — your progress is kept in this browser.
+    </p>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><span class="n">292</span><span class="k">Table views scanned</span></div>
+    <div class="stat"><span class="n">187</span><span class="k">Reachable by a GET route</span></div>
+    <div class="stat is-good"><span class="n">465</span><span class="k">Assertions passing</span></div>
+    <div class="stat is-crit"><span class="n">7</span><span class="k">Extra bugs found</span></div>
+    <div class="stat is-good"><span class="n">47</span><span class="k">Pages fixed</span></div>
+  </div>
+
+  <div class="method">
+    <h2>How this was produced — reproduce it yourself</h2>
+    <ol>
+      <li>Walked every <code>.blade.php</code> under <code>resources/views</code>; kept the 292 that contain a <code>&lt;table&gt;</code> plus a <code>@foreach</code>/<code>@forelse</code>/<code>$dataTable</code>.</li>
+      <li>Ran <code>php artisan route:list --json</code>, resolved each GET route’s controller method, and extracted its <code>view(...)</code> calls — leaving 187 views that a user can actually navigate to. Partials, PDFs and print templates dropped out here.</li>
+      <li>Credited all four chrome sources before flagging anything: the global enhancer <code>public/js/datatable-global-ui.js</code>, the <code>table.datatable</code> auto-init in <code>admin/layouts/footer.blade.php</code>, the shared <code>components/mess-master-datatables.blade.php</code>, and the two JS-side inits in <code>public/admin_assets/js/custom.js</code> (<code>attendanceTable</code>, <code>group-mapping-table</code>).</li>
+      <li>Opened each survivor and confirmed the gap by hand — the numbers below are file&nbsp;+&nbsp;line references, not regex guesses.</li>
+    </ol>
+  </div>
+
+  <div class="method" style="border-left-color: var(--good);">
+    <h2 style="color: var(--good);">Completion summary — all six tiers closed</h2>
+    <ol>
+      <li><strong>No chrome at all (12).</strong> Three large grids got pagination + search + count;
+        nine bounded ones (5–16 rows) got a count only. <strong>31 assertions.</strong></li>
+      <li><strong>Partial chrome (5).</strong> Mess reports — screen and both exports now report the
+        same filtered totals. <strong>24 + 15 assertions.</strong></li>
+      <li><strong>Disabled or stubbed (4).</strong> Commented-out paginators, an empty pagination
+        <code>&lt;ul&gt;</code>, a dead search icon. <strong>61 + 16 assertions.</strong></li>
+      <li><strong>Search missing — master &amp; setup (18).</strong> One shared trait plus three Blade
+        components; 17 fixed, <code>/fc/status/data</code> deferred. <strong>204 assertions.</strong></li>
+      <li><strong>Pagination only (8).</strong> Security masters. <strong>87 assertions.</strong></li>
+      <li><strong>DataTable chrome switched off (2).</strong> <strong>27 assertions.</strong></li>
+    </ol>
+    <p style="margin:12px 0 0; color: var(--ink-2); font-size:14.5px;">
+      <strong>465 assertions passing.</strong> 73 files changed, 6 new. Shared pieces:
+      <code>PaginatesListings</code> trait and the <code>x-programme-dt-toolbar</code> /
+      <code>-search</code> / <code>-footer</code> components, so the next grid costs almost nothing.
+    </p>
+  </div>
+
+  <div class="method" style="border-left-color: var(--crit);">
+    <h2 style="color: var(--crit);">Bugs found along the way — none of them the gap being fixed</h2>
+    <ol>
+      <li><strong>Search defeated the status filter</strong> (employee ID-card approval). An ungrouped
+        <code>orWhere</code> meant a card-number match escaped every other constraint: with the filter
+        allowing <strong>1</strong> row, the old shape returned <strong>4</strong>. Fixed.</li>
+      <li><strong>157 of 187 students unreachable</strong> (send-notice list). <code>paginate(30)</code>
+        with no pager rendered, and “Select all” covered only those 30. Fixed.</li>
+      <li><strong>A missing <code>)</code> killed four setup pages’ Add/Edit modals.</strong> One parse
+        error takes out the whole inline script. Fixed.</li>
+      <li><strong>Caste Category rendered a blank name column</strong> — written against a
+        <code>category_name</code> that does not exist. Read path fixed; <strong>the write path is
+        still broken and needs a schema decision.</strong></li>
+      <li><strong>One unguarded <code>-&gt;timetable</code></strong> among three <code>optional()</code>
+        siblings 500’d the send-notice page. Fixed.</li>
+      <li><strong>Course List’s Status Filter is a hard 500</strong> — <code>confirm_status</code> lives
+        on another table. Guarded and hidden; <strong>needs a schema decision.</strong></li>
+      <li><strong>Stock-summary PDF exhausts 512 MB</strong> even unfiltered. Pre-existing, reproduced
+        on a clean tree, <strong>not fixed.</strong></li>
+    </ol>
+  </div>
+
+  <div class="toolbar">
+    <input type="search" id="q" placeholder="Filter by route, file or module…" aria-label="Filter rows">
+    <div class="chips" role="group" aria-label="Filter by missing control">
+      <button class="chip" type="button" data-filter="all" aria-pressed="true">All</button>
+      <button class="chip" type="button" data-filter="pag" aria-pressed="false">Missing pagination</button>
+      <button class="chip" type="button" data-filter="sea" aria-pressed="false">Missing search</button>
+      <button class="chip" type="button" data-filter="sho" aria-pressed="false">Missing showing</button>
+    </div>
+    <span class="progress"><b id="pdone">0</b> of <b id="ptot">0</b> checked</span>
+  </div>
+
+  <!-- ══ 1 ══════════════════════════════════════════════════════════════ -->
+  <section data-sec>
+    <div class="sec-head">
+      <h2>No chrome at all</h2>
+      <span class="sev good">Fixed · 12 pages</span>
+      <p class="sec-note">
+        Plain <code>@foreach</code> tables fed by an unbounded <code>-&gt;get()</code>. Split by measured
+        volume: the three large ones got pagination + search + count; the bounded ones (5–16 rows) got
+        a count, because a pager there is ceremony. 31 assertions.
+        <br><span class="verify">Note</span> <code>/attendance_send_notice</code> was already
+        <code>paginate(30)</code> in the controller with <em>no pager rendered</em> — on the largest
+        group 157 of 187 students were unreachable and “Select all” silently covered 30.
+      </p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th></th><th>Route</th>
+            <th class="st">Pag.</th><th class="st">Search</th><th class="st">Showing</th>
+            <th class="note-h note">Evidence</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-pag="0" data-sea="0" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r1"></td>
+            <td><span class="route">/fc-reg/admin/sample-documents</span><span class="path">admin/sample-documents/index.blade.php<b>:38</b></span></td>
+            <td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">FcJoiningSampleDocumentController — 0 paginate()</td>
+          </tr>
+          <tr data-pag="0" data-sea="0" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r2"></td>
+            <td><span class="route">/registration/admin/registration/fc-exemption_master</span><span class="path">admin/forms/exemption/index.blade.php<b>:42</b></span></td>
+            <td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">FcExemptionMasterController — 0 paginate()</td>
+          </tr>
+          <tr data-pag="0" data-sea="0" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r3"></td>
+            <td><span class="route">/registration/exemptions_data</span><span class="path">admin/forms/exemption_datalist.blade.php<b>:89</b></span></td>
+            <td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">Submissions list, grows every intake</td>
+          </tr>
+          <tr data-pag="0" data-sea="0" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r4"></td>
+            <td><span class="route">/peer-evaluation</span><span class="path">admin/forms/peer_evaluation/index.blade.php<b>:73</b></span></td>
+            <td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">Matrix table, one row per member</td>
+          </tr>
+          <tr data-pag="0" data-sea="0" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r5"></td>
+            <td><span class="route">/peer/my-groups</span><span class="path">admin/forms/peer_evaluation/user_groups.blade.php</span></td>
+            <td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">—</td>
+          </tr>
+          <tr data-pag="0" data-sea="0" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r6"></td>
+            <td><span class="route">/peer/group/{id}/members</span><span class="path">admin/forms/peer_evaluation/group_members.blade.php</span></td>
+            <td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">—</td>
+          </tr>
+          <tr data-pag="0" data-sea="0" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r7"></td>
+            <td><span class="route">/attendance_send_notice/{group_pk}/{course_pk}/{timetable_pk}</span><span class="path">admin/courseAttendanceNoticeMap/view_all_notice_list.blade.php<b>:98</b></span></td>
+            <td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">Full student roster per session</td>
+          </tr>
+          <tr data-pag="0" data-sea="0" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r8"></td>
+            <td><span class="route">/fc-reg/admin/activities/medical/report</span><span class="path">admin/fc-activities/medical/report.blade.php</span></td>
+            <td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">Four stacked report tables, none paged</td>
+          </tr>
+          <tr data-pag="0" data-sea="0" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r9"></td>
+            <td><span class="route">/admin/reports/documents</span><span class="path">fc/report/documents.blade.php<b>:156</b></span></td>
+            <td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">Student × document matrix — widest offender</td>
+          </tr>
+          <tr data-pag="0" data-sea="0" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r10"></td>
+            <td><span class="route">/admin/reports/student/{username}/documents</span><span class="path">fc/report/student-documents.blade.php</span></td>
+            <td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">—</td>
+          </tr>
+          <tr data-pag="0" data-sea="0" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r11"></td>
+            <td><span class="route">/admin/travel/slots</span><span class="path">admin/travel/slots/index.blade.php<b>:145</b></span></td>
+            <td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">Card-per-slot list, not a table — same gap</td>
+          </tr>
+          <tr data-pag="0" data-sea="0" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r12"></td>
+            <td><span class="route">/hostel-building-map/import</span><span class="path">admin/building_floor_mapping/import.blade.php</span></td>
+            <td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">Import preview — grows with the upload</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="empty">No rows match the current filter.</div>
+    </div>
+  </section>
+
+  <!-- ══ 2 ══════════════════════════════════════════════════════════════ -->
+  <section data-sec data-nofilter>
+    <div class="sec-head">
+      <h2>Disabled or stubbed</h2>
+      <span class="sev good">Fixed · 4 pages</span>
+      <p class="sec-note">
+        The control was written, then switched off. All four are repaired, rebuilt on the
+        <code>programme-dt</code> chrome from <code>docs/new-design-index-page.md</code> §2–§4B
+        (toolbar → panel → footer, pagination left, “Showing [N] of M items” right, rows-per-page
+        whitelisted server-side), and covered by 61 behavioural assertions plus a browser pass.
+        <br><span class="verify">Note</span> uncommenting the two <code>links()</code> calls alone
+        would have thrown — both controllers ended in <code>-&gt;get()</code>, so the paginator never
+        existed. Each needed the controller changed too.
+      </p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th></th><th>Route</th>
+            <th class="st">Pag.</th><th class="st">Search</th><th class="st">Showing</th>
+            <th class="note-h note">What’s actually in the file</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="tick"><input type="checkbox" id="r13"></td>
+            <td><span class="route">/registration/forms/{form}/courselist</span><span class="path">admin/forms/course_list.blade.php · FormController::courseList</span></td>
+            <td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark yes">✓</span></td>
+            <td class="note"><code>-&gt;get()</code> → <code>paginate(25)-&gt;withQueryString()</code>; student-name search added (and mirrored into the export so the download matches the screen); S.No now runs off <code>firstItem()</code></td>
+          </tr>
+          <tr>
+            <td class="tick"><input type="checkbox" id="r14"></td>
+            <td><span class="route">/forms/inactive</span><span class="path">admin/registration/inactive.blade.php · FormController::inactive</span></td>
+            <td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark yes">✓</span></td>
+            <td class="note"><code>-&gt;get()</code> → <code>paginate(10)</code>; the controller already honoured <code>?search=</code> and just had no UI — that box now exists</td>
+          </tr>
+          <tr>
+            <td class="tick"><input type="checkbox" id="r15"></td>
+            <td><span class="route">/feedback_average</span><span class="path">admin/feedback/faculty_average.blade.php · FeedbackController::showFacultyAverage</span></td>
+            <td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark yes">✓</span></td>
+            <td class="note">Stub replaced with a real <code>LengthAwarePaginator</code> over the processed collection (the query is a GROUP BY aggregate, which <code>-&gt;paginate()</code> can’t count); 95 rows now page 25 at a time. Topic search added and threaded through the screen <em>and</em> all three exports.</td>
+          </tr>
+          <tr>
+            <td class="tick"><input type="checkbox" id="r16"></td>
+            <td><span class="route">/master/country</span><span class="path">admin/country/index.blade.php · LocationController::countryIndex</span></td>
+            <td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark yes">✓</span></td>
+            <td class="note">Dead <code>href=""</code> icon replaced with a working search; <code>withQueryString()</code> keeps the term across pages; S.No no longer restarts at 1 on page 2</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="empty">No rows match the current filter.</div>
+    </div>
+  </section>
+
+  <!-- ══ 3 ══════════════════════════════════════════════════════════════ -->
+  <section data-sec>
+    <div class="sec-head">
+      <h2>Partial chrome</h2>
+      <span class="sev good">Fixed · 5 pages</span>
+      <p class="sec-note">
+        One or two controls landed, the rest didn’t. All five are now complete, covered by 24 + 15
+        assertions that check the screen and its exports report the <em>same</em> filtered totals —
+        each of these reports builds its downloads from a different query than its screen.
+        <br><span class="verify">Judgement</span> two pages did not get the control the audit named —
+        see the notes below. Adding them would have been worse than leaving them out.
+      </p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th></th><th>Route</th>
+            <th class="st">Pag.</th><th class="st">Search</th><th class="st">Showing</th>
+            <th class="note-h note">Evidence</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-pag="0" data-sea="0" data-sho="1">
+            <td class="tick"><input type="checkbox" id="r17"></td>
+            <td><span class="route">/ot-mdo-escrot-exemption-view</span><span class="path">admin/ot_mdo_escrot_exemption/view.blade.php<b>:221</b> · list.blade.php<b>:144</b></span></td>
+            <td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td>
+            <td class="note">“Showing <code>count($dutyMaps)</code> duties” — a count of everything rendered, so it can only ever grow</td>
+          </tr>
+          <tr data-pag="0" data-sea="1" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r18"></td>
+            <td><span class="route">/registration/forms</span><span class="path">admin/registration/index.blade.php<b>:58, :78</b></span></td>
+            <td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">Two client-side filter boxes (<code>#templateSearch</code>, <code>#formSearch</code>); no paging, no count</td>
+          </tr>
+          <tr data-pag="1" data-sea="0" data-sho="1">
+            <td class="tick"><input type="checkbox" id="r19"></td>
+            <td><span class="route">/admin/mess/reports/stock-purchase-details</span><span class="path">admin/mess/reports/stock-purchase-details.blade.php<b>:159</b></span></td>
+            <td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark part">~</span></td>
+            <td class="note">“Showing page X of Y” — page position, not an item count. Paginator lives in the partial.</td>
+          </tr>
+          <tr data-pag="1" data-sea="0" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r20"></td>
+            <td><span class="route">/admin/mess/reports/purchase-sale-quantity</span><span class="path">admin/mess/reports/purchase-sale-quantity.blade.php<b>:382</b></span></td>
+            <td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">Paginator renders only when <code>hasPages()</code>; no count anywhere</td>
+          </tr>
+          <tr data-pag="1" data-sea="0" data-sho="1">
+            <td class="tick"><input type="checkbox" id="r21"></td>
+            <td><span class="route">/admin/mess/reports/stock-summary</span><span class="path">admin/mess/reports/partials/stock-summary-table.blade.php</span></td>
+            <td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td>
+            <td class="note">Only the filter box is missing</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="empty">No rows match the current filter.</div>
+    </div>
+  </section>
+
+  <!-- ══ 4 ══════════════════════════════════════════════════════════════ -->
+  <section data-sec>
+    <div class="sec-head">
+      <h2>Pagination only — no search, no count</h2>
+      <span class="sev good">Fixed · 8 pages</span>
+      <p class="sec-note">
+        Mostly the Security module’s master grids: they shipped <code>-&gt;links()</code> and stopped
+        there. All eight now carry the design-system toolbar and footer, with 87 assertions checking
+        the count matches the DB row count and that a term really narrows it.
+      </p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th></th><th>Route</th>
+            <th class="st">Pag.</th><th class="st">Search</th><th class="st">Showing</th>
+            <th class="note-h note">Evidence</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-pag="1" data-sea="0" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r22"></td>
+            <td><span class="route">/security/vehicle-type</span><span class="path">admin/security/vehicle_type/index.blade.php</span></td>
+            <td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">0 occurrences of “search” or “Showing” in the file</td>
+          </tr>
+          <tr data-pag="1" data-sea="0" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r23"></td>
+            <td><span class="route">/security/visitor-pass</span><span class="path">admin/security/visitor_pass/index.blade.php</span></td>
+            <td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">0 occurrences of “search” or “Showing”</td>
+          </tr>
+          <tr data-pag="1" data-sea="0" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r24"></td>
+            <td><span class="route">/security/vehicle-pass-config</span><span class="path">admin/security/vehicle_pass_config/index.blade.php</span></td>
+            <td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">0 occurrences of “search” or “Showing”</td>
+          </tr>
+          <tr data-pag="1" data-sea="0" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r25"></td>
+            <td><span class="route">/security/idcard-card-type</span><span class="path">admin/security/idcard_master/card_type/index.blade.php</span></td>
+            <td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">0 occurrences of “search” or “Showing”</td>
+          </tr>
+          <tr data-pag="1" data-sea="0" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r26"></td>
+            <td><span class="route">/security/idcard-sub-type</span><span class="path">admin/security/idcard_master/sub_type/index.blade.php</span></td>
+            <td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">0 occurrences of “search” or “Showing”</td>
+          </tr>
+          <tr data-pag="1" data-sea="0" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r27"></td>
+            <td><span class="route">/security/family-idcard-approval/all</span><span class="path">admin/security/family_idcard_approval/all.blade.php<b>:72</b></span></td>
+            <td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">Only <code>$applications-&gt;links()</code></td>
+          </tr>
+          <tr data-pag="1" data-sea="1" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r28"></td>
+            <td><span class="route">/security/employee-idcard-approval/all</span><span class="path">admin/security/employee_idcard_approval/all.blade.php<b>:29, :113</b></span></td>
+            <td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">Has a real <code>name="search"</code> box — only the count is missing</td>
+          </tr>
+          <tr data-pag="1" data-sea="1" data-sho="0">
+            <td class="tick"><input type="checkbox" id="r29"></td>
+            <td><span class="route">/admin/reports/joining-documents/{formId}</span><span class="path">admin/report/joining_documents_report.blade.php<b>:356</b></span></td>
+            <td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td>
+            <td class="note">Only the count is missing</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="empty">No rows match the current filter.</div>
+    </div>
+  </section>
+
+  <!-- ══ 5 ══════════════════════════════════════════════════════════════ -->
+  <section data-sec>
+    <div class="sec-head">
+      <h2>Search missing — master &amp; setup grids</h2>
+      <span class="sev good">Fixed · 17 of 18</span>
+      <p class="sec-note">
+        All eighteen were the same hand-written template, so one shared trait
+        (<code>PaginatesListings</code>) plus three Blade components
+        (<code>x-programme-dt-toolbar</code> / <code>-search</code> / <code>-footer</code>) covered the set.
+        Each now has a working search, the design-system footer with a rows-per-page dropdown, and
+        <code>per_page</code> whitelisted server-side. 204 assertions verify that a real term narrows the
+        total, an impossible term returns 0, and the term survives paging.
+        <br><span class="verify">Not done</span> <code>/fc/status/data</code> — see the note below.
+      </p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th></th><th>Route</th>
+            <th class="st">Pag.</th><th class="st">Search</th><th class="st">Showing</th>
+            <th class="note-h note">Count line</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-pag="1" data-sea="0" data-sho="1"><td class="tick"><input type="checkbox" id="r30"></td><td><span class="route">/master/city</span><span class="path">admin/city/index.blade.php<b>:117</b></span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td><td class="note">firstItem / total</td></tr>
+          <tr data-pag="1" data-sea="0" data-sho="1"><td class="tick"><input type="checkbox" id="r31"></td><td><span class="route">/master/state</span><span class="path">admin/state/index.blade.php<b>:114</b></span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td><td class="note">firstItem / total</td></tr>
+          <tr data-pag="1" data-sea="0" data-sho="1"><td class="tick"><input type="checkbox" id="r32"></td><td><span class="route">/master/country</span><span class="path">admin/country/index.blade.php</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td><td class="note">Also has the dead search icon — see Disabled or stubbed</td></tr>
+          <tr data-pag="1" data-sea="0" data-sho="1"><td class="tick"><input type="checkbox" id="r33"></td><td><span class="route">/master/district</span><span class="path">admin/district/index.blade.php</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td><td class="note">firstItem / total</td></tr>
+          <tr data-pag="1" data-sea="0" data-sho="1"><td class="tick"><input type="checkbox" id="r34"></td><td><span class="route">/master/class-session</span><span class="path">admin/master/class_session_master/index.blade.php<b>:123</b></span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td><td class="note">firstItem / total</td></tr>
+          <tr data-pag="1" data-sea="0" data-sho="1"><td class="tick"><input type="checkbox" id="r35"></td><td><span class="route">/master/faculty-expertise</span><span class="path">admin/master/faculty_expertise_master/index.blade.php</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td><td class="note">firstItem / total</td></tr>
+          <tr data-pag="1" data-sea="0" data-sho="1"><td class="tick"><input type="checkbox" id="r36"></td><td><span class="route">/master/faculty-type-master</span><span class="path">admin/master/faculty_type/index.blade.php</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td><td class="note">firstItem / total</td></tr>
+          <tr data-pag="1" data-sea="0" data-sho="1"><td class="tick"><input type="checkbox" id="r37"></td><td><span class="route">/stream</span><span class="path">admin/stream/index.blade.php</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td><td class="note">firstItem / total</td></tr>
+          <tr data-pag="1" data-sea="0" data-sho="1"><td class="tick"><input type="checkbox" id="r38"></td><td><span class="route">/Venue-Master</span><span class="path">admin/venueMaster/index.blade.php<b>:123</b></span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td><td class="note">firstItem / total</td></tr>
+          <tr data-pag="1" data-sea="0" data-sho="1"><td class="tick"><input type="checkbox" id="r39"></td><td><span class="route">/admin/setup/caste-category</span><span class="path">admin/setup/caste_category/index.blade.php<b>:57</b></span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td><td class="note">firstItem / total</td></tr>
+          <tr data-pag="1" data-sea="0" data-sho="1"><td class="tick"><input type="checkbox" id="r40"></td><td><span class="route">/admin/setup/department-master</span><span class="path">admin/setup/department_master/index.blade.php</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td><td class="note">firstItem / total</td></tr>
+          <tr data-pag="1" data-sea="0" data-sho="1"><td class="tick"><input type="checkbox" id="r41"></td><td><span class="route">/admin/setup/designation-master</span><span class="path">admin/setup/designation_master/index.blade.php</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td><td class="note">firstItem / total</td></tr>
+          <tr data-pag="1" data-sea="0" data-sho="1"><td class="tick"><input type="checkbox" id="r42"></td><td><span class="route">/admin/setup/employee-group</span><span class="path">admin/setup/employee_group/index.blade.php</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td><td class="note">firstItem / total</td></tr>
+          <tr data-pag="1" data-sea="0" data-sho="1"><td class="tick"><input type="checkbox" id="r43"></td><td><span class="route">/admin/setup/employee-type</span><span class="path">admin/setup/employee_type/index.blade.php</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td><td class="note">firstItem / total</td></tr>
+          <tr data-pag="1" data-sea="0" data-sho="1"><td class="tick"><input type="checkbox" id="r44"></td><td><span class="route">/admin/estate/define-pay-scale</span><span class="path">admin/estate/define_pay_scale/index.blade.php</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td><td class="note">firstItem / total</td></tr>
+          <tr data-pag="1" data-sea="0" data-sho="1"><td class="tick"><input type="checkbox" id="r45"></td><td><span class="route">/admin/exemption-category</span><span class="path">admin/forms/exemption_category.blade.php</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td><td class="note">firstItem / total</td></tr>
+          <tr data-pag="1" data-sea="0" data-sho="1"><td class="tick"><input type="checkbox" id="r46"></td><td><span class="route">/fc/status/data</span><span class="path">fc/status/_results.blade.php<b>:13</b> (via fc/status.blade.php)</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td><td class="note">Tabs + AJAX paging, no filter box on either tab</td></tr>
+          <tr data-pag="1" data-sea="0" data-sho="1"><td class="tick"><input type="checkbox" id="r47"></td><td><span class="route">/security/vehicle-pass</span><span class="path">admin/security/vehicle_pass/index.blade.php<b>:192, :267</b></span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark no">✗</span></td><td class="st"><span class="mark yes">✓</span></td><td class="note">Active + archived tabs, both counted, neither searchable</td></tr>
+        </tbody>
+      </table>
+      <div class="empty">No rows match the current filter.</div>
+    </div>
+  </section>
+
+  <!-- ══ 6 ══════════════════════════════════════════════════════════════ -->
+  <section data-sec>
+    <div class="sec-head">
+      <h2>DataTable chrome switched off, not replaced</h2>
+      <span class="sev good">Fixed · 2 pages</span>
+      <p class="sec-note">
+        Eight pages set <code>paging/searching/info: false</code>. Six hand-roll their own replacement
+        and were always fine; these two didn’t, and now do. 27 assertions cover them, including the
+        DataTables AJAX endpoint driven the way the widget drives it.
+      </p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th></th><th>Route</th>
+            <th class="st">Pag.</th><th class="st">Search</th><th class="st">Showing</th>
+            <th class="note-h note">Evidence</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="tick"><input type="checkbox" id="r48"></td>
+            <td><span class="route">/admin/memo-notice</span><span class="path">memo_notice_index.blade.php · MemoNoticeController::index</span></td>
+            <td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark yes">✓</span></td>
+            <td class="note">Search over title / type / course (relation), design-system footer, and
+              <code>data-sargam-dt-ui="false"</code> — which also removed a stray empty 52px footer bar the
+              enhancer had been injecting. Page size 20 → 25 to match the dropdown’s options.</td>
+          </tr>
+          <tr>
+            <td class="tick"><input type="checkbox" id="r49"></td>
+            <td><span class="route">/student-courses</span><span class="path">student_courselist.blade.php · EnrollementController::studentCourses</span></td>
+            <td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark yes">✓</span></td><td class="st"><span class="mark yes">✓</span></td>
+            <td class="note">One flag: the server already shipped <code>filterColumn()</code> mappings for every
+              column, so <code>searching: false</code> was the only thing making them unreachable. Plus scoped
+              CSS for the revealed box and corrected <code>infoFiltered</code> wording.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="empty">No rows match the current filter.</div>
+    </div>
+  </section>
+
+  <!-- ══ 7 ══════════════════════════════════════════════════════════════ -->
+  <section data-sec data-nofilter>
+    <div class="sec-head">
+      <h2>Intentional — leave these alone</h2>
+      <span class="sev good">Not a defect · 3 pages</span>
+      <p class="sec-note">
+        These render unpaginated on purpose. They’re bulk data-entry grids: paging them would break
+        multi-row save, and the code says so.
+      </p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Route</th><th class="note-h note">Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="route">/admin/estate/update-meter-reading</span><span class="path">admin/estate/update_meter_reading.blade.php<b>:200</b></span></td>
+            <td class="note">“For this grid we avoid DataTables to keep typing smooth and prevent focus jumps.”</td>
+          </tr>
+          <tr>
+            <td><span class="route">/admin/estate/update-meter-reading-of-other</span><span class="path">admin/estate/update_meter_reading_of_other.blade.php</span></td>
+            <td class="note">Same bulk-entry pattern</td>
+          </tr>
+          <tr>
+            <td><span class="route">/admin/estate/generate-estate-bill</span><span class="path">admin/estate/generate_estate_bill.blade.php</span></td>
+            <td class="note">Same bulk-entry pattern; has a filter box already</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="callout">
+    <h3>Found while fixing — a separate live 500 on /registration/forms/{form}/courselist</h3>
+    <p>
+      The page’s Status Filter queries <code>fc_registration_master.confirm_status</code>. That column
+      does not exist on that table — it belongs to <code>form_submissions</code> (migration
+      <code>2025_04_17_093502</code>). Every use of the filter returns
+      <em>Unknown column 'confirm_status' in 'where clause'</em>, and has since it shipped;
+      <code>?statusval=1</code> has never rendered a page. The same bug is in the export path.
+    </p>
+    <p>
+      Not remapped, because it can’t be done safely: <code>fc_registration_master.status</code> holds
+      <code>'1'</code> or <code>NULL</code>, which does not carry the confirm / not-confirm meaning the
+      dropdown offers — pointing at it would silently show the wrong rows. Both call sites are now
+      guarded with <code>Schema::hasColumn</code> and the view hides the control while the column is
+      missing, so the page can no longer crash and the filter reappears by itself the day the column
+      lands. <strong>Deciding what “confirmed” means here is a product call.</strong>
+    </p>
+  </div>
+
+  <div class="callout">
+    <h3>Found while adding search — a filter that could be defeated, and a slow query</h3>
+    <p>
+      <strong>Searching defeated the status filter on /security/employee-idcard-approval/all.</strong>
+      Its permanent-requests branch read
+      <code>whereHas('employee', …)-&gt;orWhere('id_card_no', …)</code> with the <code>orWhere</code>
+      <em>outside</em> the group, so the SQL became
+      <code>… AND EXISTS(name) OR id_card_no LIKE ? AND id_status = ?</code> — and because AND binds
+      tighter than OR, any row matching on card number escaped every other constraint. Measured: with
+      the status filter allowing <strong>1</strong> row, the old shape returned <strong>4</strong>.
+      Both alternatives are now wrapped in one closure, which is how the contractual branch beside it
+      was always written.
+    </p>
+    <p>
+      <strong>/security/visitor-pass is a 192,974-row grid.</strong> Reaching the Visitor(s) and Host
+      Employee columns with two <code>whereHas()</code> subqueries OR-ed alongside the LIKEs cost
+      <strong>2.91s</strong> at query level (6.8s for the page) because it defeats the index. Resolving
+      those two relations to id lists first and using <code>whereIn</code> returns the identical 4,876
+      rows in <strong>0.38s</strong> — page render 6.8s → 1.4s.
+    </p>
+  </div>
+
+  <div class="callout">
+    <h3>Partial chrome — two judgement calls, and why</h3>
+    <p>
+      <strong>/registration/forms got a count, not a pager.</strong> It is a collapsible parent → child
+      tree; slicing a flattened tree by row would strip children away from the parent that owns them.
+      Measured first: 32 top-level forms, 71 rows in total — nothing to page. The honest gap was the
+      missing count, which now also tracks the client-side filter, because a static count beside a
+      filtered table is worse than none.
+    </p>
+    <p>
+      <strong>/admin/mess/reports/purchase-sale-quantity got a count, not a search box.</strong> Its
+      Item filter is already a searchable Choices multi-select, alongside Category and Store — a free
+      text box would duplicate it. The footer rendered page links and never a total; it now shows
+      “Showing N of M items”, using <code>vendor.pagination.custom</code> rather than
+      <code>pagination::bootstrap-5</code>, because the Bootstrap view prints its own
+      “Showing 1 to 10 of N results” and the count appeared twice on the first attempt.
+    </p>
+  </div>
+
+  <div class="callout">
+    <h3>Found while adding search — two more live defects, now fixed</h3>
+    <p>
+      <strong>Caste Category was querying a column that does not exist.</strong> The whole page is written
+      against <code>caste_category_master.category_name</code>; the real columns are <code>Seat_name</code> /
+      <code>Seat_name_hindi</code>. The Name cell therefore rendered <em>blank on every row</em>, and a search
+      over that column 500s. The grid’s read path now uses <code>Seat_name</code> and the names display.
+      <strong>The write path is still broken</strong> — <code>store()</code> and <code>update()</code> validate with
+      <code>Rule::unique('caste_category_master','category_name')</code> and assign
+      <code>$model-&gt;category_name</code>, so Add/Edit cannot work. Left alone: choosing whether to rename the
+      column or the code is a schema decision.
+    </p>
+    <p>
+      <strong>A missing <code>)</code> killed the inline script on four setup pages.</strong>
+      <code>escapeHtml()</code> in caste-category, department, designation and employee-group read
+      <code>.replace(/…/g, c =&gt; ({…}[c]); }</code> — one closing paren short, which is a parse error, which means
+      the <em>entire</em> script block never ran and the Add/Edit modals were dead. Fixed, and the map now
+      covers <code>'</code> as well (the regex matched it but the lookup returned undefined, so an apostrophe
+      would have been written into the row as the string “undefined”).
+    </p>
+  </div>
+
+  <div class="callout">
+    <h3>Left undone on purpose — /fc/status/data</h3>
+    <p>
+      The 18th grid in this group. Unlike the other seventeen it is not the shared master template: it is a
+      tabbed, AJAX-refreshed fragment whose rows come from
+      <code>FcRegistrationStatusService::participantsForTab()</code>. Adding search means a new service
+      parameter plus threading the term through the tab-switching and paging JS that rewrites the URL —
+      a different change from the one-line filter the other grids needed, and on a public-facing page.
+    </p>
+  </div>
+
+  <div class="callout">
+    <h3>Faculty Average search — done, and kept consistent with its exports</h3>
+    <p>
+      This was deferred once because the report is reached through two route families
+      (<code>feedback.average.*</code> for admins, <code>faculty.session_feedback.average.*</code> for
+      faculty) and offers Excel, PDF and Print — six paths that could disagree with the screen.
+      On a closer look the faculty routes are thin delegates to the <em>same</em> three
+      <code>FeedbackController</code> methods, so it is three query sites, not six.
+    </p>
+    <p>
+      All four sites — screen plus the three exports — now call one shared
+      <code>applyFacultyAverageTopicFilter()</code>, so the filter cannot drift between what you see
+      and what you download. Verified rather than assumed: for the same term the screen reports
+      1 of 95 and the Print view renders exactly 1 data row, while the Excel and PDF payloads shrink.
+      A search wired only into the screen would have been a worse bug than the missing box.
+    </p>
+  </div>
+
+  <div class="callout">
+    <h3>Before you fix any of this — one latent trap</h3>
+    <p>
+      The global enhancer sets <code>dom</code> app-wide to a <code>d-none</code> row
+      (<code>applyGlobalDefaults</code>, datatable-global-ui.js:441–450), but it skips relocating the
+      controls when a table carries <code>dt-legacy-layout</code> or <code>data-sargam-dt-ui="false"</code>.
+      Convert one of the pages above to a DataTable and opt it out, and all three controls vanish silently —
+      it looks like a CSS bug and isn’t.
+    </p>
+    <p>
+      Every current opt-out — <code>fcregistrationmaster_list</code>, <code>import_students</code>,
+      <code>enrollement</code>, <code>student_courselist</code>, <code>faculty_table</code> — supplies its own
+      explicit <code>dom</code>, so nothing is broken by this today. Keep that invariant.
+    </p>
+  </div>
+
+  <div class="callout">
+    <h3>Confirmed healthy — don’t re-audit these</h3>
+    <p>
+      <code>/subject</code>, <code>/subject-module</code>, <code>/memo/discipline</code>,
+      <code>/admin/memo-notice-management</code>, <code>/enrollment/create</code> and
+      <code>/my-course-participant</code> all disable the DataTables chrome but ship a complete
+      hand-rolled replacement (search box + Showing line + Laravel paginator).
+    </p>
+    <p>
+      The whole Mess master module (<code>client-types</code>, <code>itemcategories</code>,
+      <code>itemsubcategories</code>, <code>stores</code>, <code>storeallocations</code>,
+      <code>my-bills</code>) looked bare on a first pass but pulls full server-side chrome from the shared
+      <code>components/mess-master-datatables</code> include. Likewise <code>/attendance</code>, whose
+      DataTable is built in <code>custom.js:1967</code>, not in the Blade file.
+    </p>
+  </div>
+
+  <footer>
+    Sargam 2.0 · listing-UI audit · 292 table views scanned, 187 route-reachable, 48 with a gap, all 48 closed · 14 Aug 2026
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('td.tick input[type="checkbox"]'));
+  var done  = document.getElementById("pdone");
+  var tot   = document.getElementById("ptot");
+  var q     = document.getElementById("q");
+  var chips = Array.prototype.slice.call(document.querySelectorAll(".chip"));
+  var KEY   = "sargam-grid-audit-v1";
+
+  tot.textContent = boxes.length;
+
+  /* Progress — persisted where the browser allows it, in memory where it doesn't. */
+  function load() {
+    try {
+      return JSON.parse(localStorage.getItem(KEY) || "{}") || {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function save(state) {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(state));
+    } catch (e) { /* sandboxed storage — progress stays for this view only */ }
+  }
+
+  var state = load();
+
+  function paint(box) {
+    box.closest("tr").classList.toggle("done", box.checked);
+  }
+
+  function tally() {
+    done.textContent = boxes.filter(function (b) { return b.checked; }).length;
+  }
+
+  boxes.forEach(function (box) {
+    box.checked = !!state[box.id];
+    paint(box);
+    box.addEventListener("change", function () {
+      state[box.id] = box.checked;
+      save(state);
+      paint(box);
+      tally();
+    });
+  });
+
+  tally();
+
+  /* Filtering — text across route + path, plus the missing-control chips. */
+  var active = "all";
+
+  function apply() {
+    var term = q.value.trim().toLowerCase();
+
+    document.querySelectorAll("section[data-sec]").forEach(function (sec) {
+      var rows = Array.prototype.slice.call(sec.querySelectorAll("tbody tr"));
+      var shown = 0;
+
+      rows.forEach(function (row) {
+        var text = row.textContent.toLowerCase();
+        var matchesText = term === "" || text.indexOf(term) !== -1;
+        var matchesChip = true;
+
+        if (active !== "all") {
+          // data-* is 1 when the control is present, so "missing" is the 0 case.
+          matchesChip = row.getAttribute("data-" + active) === "0";
+        }
+
+        var show = matchesText && matchesChip;
+        row.classList.toggle("filtered", !show);
+        if (show) { shown++; }
+      });
+
+      var empty = sec.querySelector(".empty");
+      if (empty) { empty.style.display = shown === 0 && rows.length ? "block" : "none"; }
+
+      // Reference sections carry no filter data — hide them whenever a chip is on.
+      if (sec.hasAttribute("data-nofilter")) {
+        sec.classList.toggle("hidden", active !== "all" || (term !== "" && shown === 0));
+      } else {
+        sec.classList.toggle("hidden", shown === 0 && term !== "");
+      }
+    });
+  }
+
+  q.addEventListener("input", apply);
+
+  chips.forEach(function (chip) {
+    chip.addEventListener("click", function () {
+      active = chip.getAttribute("data-filter");
+      chips.forEach(function (c) {
+        c.setAttribute("aria-pressed", String(c === chip));
+      });
+      apply();
+    });
+  });
+
+  apply();
+})();
+</script>

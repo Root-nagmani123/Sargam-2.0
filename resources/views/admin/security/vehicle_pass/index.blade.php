@@ -101,10 +101,19 @@
 
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
+            {{-- Toolbar (§2). One search for both tabs: the controller filters the
+                 pass collection before splitting it into Active / Archive, so the
+                 term applies to whichever tab is open. --}}
+            <div class="px-3 pt-3">
+                <x-programme-dt-toolbar :action="url()->current()"
+                    placeholder="Search vehicle pass"
+                    label="Search by employee, pass number, vehicle number or type" />
+            </div>
+
             <div class="tab-content">
                 <div class="tab-pane show active" id="active-panel" role="tabpanel" aria-labelledby="active-tab">
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0 align-middle vehicle-pass-table">
+                        <table class="table table-hover align-middle mb-0 w-100 programme-dt-table vehicle-pass-table" data-sargam-dt-ui="false">
                             <thead>
                                 <tr>
                                     <th style="width: 50px;">
@@ -187,19 +196,15 @@
                             </tbody>
                         </table>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center px-3 py-3 border-top flex-wrap gap-2">
-                        <div class="small text-muted">
-                            Showing <strong>{{ $activePasses->firstItem() ?? 0 }}</strong> to <strong>{{ $activePasses->lastItem() ?? 0 }}</strong> of <strong>{{ $activePasses->total() }}</strong> active requests
-                        </div>
-                        <nav>
-                            {{ $activePasses->links('pagination::bootstrap-5') }}
-                        </nav>
+                    {{-- Footer variant B (§4B). --}}
+                    <div class="px-3 pb-3">
+                        <x-programme-dt-footer :paginator="$activePasses" per-page-id="vehiclePassActivePerPage" />
                     </div>
                 </div>
 
                 <div class="tab-pane fade" id="archive-panel" role="tabpanel" aria-labelledby="archive-tab">
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0 align-middle vehicle-pass-table">
+                        <table class="table table-hover align-middle mb-0 w-100 programme-dt-table vehicle-pass-table" data-sargam-dt-ui="false">
                             <thead>
                                 <tr>
                                     <th>S.No.</th>
@@ -262,13 +267,11 @@
                             </tbody>
                         </table>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center px-3 py-3 border-top flex-wrap gap-2">
-                        <div class="small text-muted">
-                            Showing <strong>{{ $archivedPasses->firstItem() ?? 0 }}</strong> to <strong>{{ $archivedPasses->lastItem() ?? 0 }}</strong> of <strong>{{ $archivedPasses->total() }}</strong> archived requests
-                        </div>
-                        <nav>
-                            {{ $archivedPasses->links('pagination::bootstrap-5', ['pageName' => 'archive_page']) }}
-                        </nav>
+                    {{-- Footer variant B (§4B). The paginator was built with
+                         pageName => archive_page, so links() already emits that
+                         param — the tab keeps its own page position. --}}
+                    <div class="px-3 pb-3">
+                        <x-programme-dt-footer :paginator="$archivedPasses" per-page-id="vehiclePassArchivePerPage" />
                     </div>
                 </div>
             </div>

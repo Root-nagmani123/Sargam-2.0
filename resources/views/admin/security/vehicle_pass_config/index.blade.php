@@ -25,6 +25,10 @@
                 </div>
             @endif
 
+            {{-- Toolbar (§2): search right-aligned; this grid has no filters. --}}
+            <x-programme-dt-toolbar :action="url()->current()"
+                placeholder="Search config" label="Search by vehicle type, config name or counter" per-page="10" />
+
             <div class="table-responsive">
                 <table class="table table-striped mb-0" id="vehiclePassConfigTable">
                     <thead>
@@ -86,12 +90,8 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-3">
-                {{ $configs->links() }}
-            </div>
-        </div>
-    </div>
-</div>
+            {{-- Footer variant B (new-design-index-page.md §4B). --}}
+            <x-programme-dt-footer :paginator="$configs" per-page-id="vehiclePassConfigPerPage" />
 @endsection
 
 @push('scripts')

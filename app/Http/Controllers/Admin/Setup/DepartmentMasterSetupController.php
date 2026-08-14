@@ -3,15 +3,24 @@
 namespace App\Http\Controllers\Admin\Setup;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use Illuminate\Http\Request;
 use App\Models\DepartmentMaster;
 use Illuminate\Validation\Rule;
 
 class DepartmentMasterSetupController extends Controller
 {
+    use PaginatesListings;
+
     public function index(Request $request)
     {
-        $departments = DepartmentMaster::orderBy('pk','desc')->paginate(10);
+        $search = $this->searchTerm($request);
+
+        $query = DepartmentMaster::orderBy('pk','desc');
+        $this->applySearch($query, $search, ['department_name']);
+
+        $departments = $query->paginate($this->resolvePerPage($request))->withQueryString();
+
         return view('admin.setup.department_master.index', compact('departments'));
     }
 

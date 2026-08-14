@@ -11,8 +11,13 @@
                     Add Caste Category
                 </a>
             </div>
+            {{-- Toolbar (new-design-index-page.md §2): search right-aligned; this
+                 grid has no filters, so the row carries the search alone. --}}
+            <x-programme-dt-toolbar :action="url()->current()"
+                placeholder="Search category" label="Search by caste category name" />
+
             <div class="table-responsive">
-                <table class="table mb-0" id="casteCategoryTable">
+                <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" data-sargam-dt-ui="false" id="casteCategoryTable">
                     <thead>
                         <tr>
                             <th style="width:70px;">S.No.</th>
@@ -25,7 +30,10 @@
                         @forelse($casteCategories as $index => $cat)
                             <tr data-pk="{{ $cat->pk }}">
                                 <td>{{ $casteCategories->firstItem() + $index }}</td>
-                                <td>{{ $cat->category_name }}</td>
+                                {{-- Seat_name, not category_name: there is no
+                                     category_name column on caste_category_master, so
+                                     this cell rendered blank on every row. --}}
+                                <td>{{ $cat->Seat_name }}</td>
                                 <td>
                                     <div class="d-flex gap-2">
                                         <a href="{{ route('admin.setup.caste_category.edit', encrypt($cat->pk)) }}" class="text-success openEditCasteCategory" title="Edit">
@@ -53,10 +61,7 @@
                     </tbody>
                 </table>
             </div>
-            <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
-                <div class="small text-muted mb-2">Showing {{ $casteCategories->firstItem() }} to {{ $casteCategories->lastItem() }} of {{ $casteCategories->total() }} items</div>
-                <div>{{ $casteCategories->links('pagination::bootstrap-5') }}</div>
-            </div>
+            <x-programme-dt-footer :paginator="$casteCategories" per-page-id="castePerPage" />
         </div>
     </div>
 </div>
@@ -129,7 +134,7 @@
             });
 
             function buildEditUrl(encrypted){ return `${window.location.origin}/admin/setup/caste-category/edit/${encodeURIComponent(encrypted)}`; }
-            function escapeHtml(str){ return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]); }
+            function escapeHtml(str){ return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
             function reindexSerials(tbody){ Array.from(tbody.querySelectorAll('tr')).forEach((r,i)=>{ const cell=r.querySelector('td'); if(cell) cell.textContent=i+1; }); }
 
             function updateTable(payload){

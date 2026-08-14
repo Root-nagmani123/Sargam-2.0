@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Admin\Master;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\PaginatesListings;
 use App\Models\FacultyExpertiseMaster;
 use App\Support\DataTableRedisCache;
 use Illuminate\Http\Request;
 
 class FacultyExpertiseMasterController extends Controller
 {
+    use PaginatesListings;
+
     private const LIST_CACHE_EPOCH_KEY = 'master_faculty_expertise_list_epoch';
 
     /**
@@ -23,7 +26,18 @@ class FacultyExpertiseMasterController extends Controller
     {
         $epoch = DataTableRedisCache::readListEpoch(self::LIST_CACHE_EPOCH_KEY);
         $page = max(1, (int) $request->query('page', 1));
-        $cacheKey = 'master_fac_exp_list:v1:' . md5(json_encode(['epoch' => $epoch, 'page' => $page]));
+        $search = $this->searchTerm($request);
+        $perPage = $this->resolvePerPage($request);
+
+        // search and per_page MUST be part of the key. This controller memoises a
+        // whole page snapshot, so a key built from `page` alone would hand every
+        // search back the cached unfiltered rows (new-design-index-page.md §4B).
+        $cacheKey = 'master_fac_exp_list:v2:' . md5(json_encode([
+            'epoch' => $epoch,
+            'page' => $page,
+            'search' => $search,
+            'per_page' => $perPage,
+        ]));
 
         $faculties = DataTableRedisCache::remember(
             $cacheKey,
@@ -32,7 +46,12 @@ class FacultyExpertiseMasterController extends Controller
                 'seconds' => 'FACULTY_EXPERTISE_MASTER_LIST_CACHE_SECONDS',
             ],
             'FacultyExpertiseMasterController@index',
-            fn () => FacultyExpertiseMaster::latest('pk')->paginate(10)
+            function () use ($search, $perPage) {
+                $query = FacultyExpertiseMaster::latest('pk');
+                $this->applySearch($query, $search, ['expertise_name']);
+
+                return $query->paginate($perPage)->withQueryString();
+            }
         );
 
         return view('admin.master.faculty_expertise_master.index', compact('faculties'));

@@ -16,6 +16,10 @@
                 </a>
             </div>
 
+            {{-- Toolbar (§2): search right-aligned; this grid has no filters. --}}
+            <x-programme-dt-toolbar :action="url()->current()"
+                placeholder="Search application" label="Search by request id, family member, employee id or relation" per-page="25" />
+
             <div class="table-responsive">
                 <table class="table table-striped mb-0">
                     <thead>
@@ -68,10 +72,6 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-3">
-                {{ $applications->links() }}
-            </div>
-        </div>
-    </div>
-</div>
+            {{-- Footer variant B (new-design-index-page.md §4B). --}}
+            <x-programme-dt-footer :paginator="$applications" per-page-id="familyApprovalPerPage" default="25" />
 @endsection

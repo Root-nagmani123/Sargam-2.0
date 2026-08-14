@@ -43,8 +43,13 @@
                 </ul>
             </div>
             @endif
+            {{-- Toolbar (new-design-index-page.md §2): search right-aligned; this
+                 grid has no filters, so the row carries the search alone. --}}
+            <x-programme-dt-toolbar :action="url()->current()"
+                placeholder="Search exemption" label="Search by exemption name or description" />
+
             <div class="table-responsive">
-                <table class="table text-nowrap w-100">
+                <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" data-sargam-dt-ui="false">
                     <thead>
                         <tr>
                             <th>S.No</th>
@@ -87,19 +92,7 @@
                 </table>
 
                 <!-- Pagination -->
-                <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
-
-                    <div class="text-muted small mb-2">
-                        Showing {{ $headings->firstItem() }}
-                        to {{ $headings->lastItem() }}
-                        of {{ $headings->total() }} items
-                    </div>
-
-                    <div>
-                        {{ $headings->links('vendor.pagination.custom') }}
-                    </div>
-
-                </div>
+                <x-programme-dt-footer :paginator="$headings" per-page-id="exemptionPerPage" />
             </div>
         </div>
     </div>
