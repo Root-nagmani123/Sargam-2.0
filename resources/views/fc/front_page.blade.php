@@ -63,6 +63,10 @@
             <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo" height="80">
             <h1 class="fc-academy-name mt-3">Lal Bahadur Shastri National Academy of Administration</h1>
             <p class="fc-academy-place">Mussoorie, Uttarakhand</p>
+            {{-- Course Title from Landing Page Admin (may carry <sup> ordinal markup). --}}
+            <h2 class="fc-course-title mt-2">
+                {!! isset($data) && ! empty($data->course_title) ? $data->course_title : 'Foundation Course' !!}
+            </h2>
         </div>
         <hr>
         <div class="container-fluid px-0 px-md-2">
