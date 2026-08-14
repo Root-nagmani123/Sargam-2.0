@@ -2,10 +2,13 @@
 
 namespace App\Models\Mess;
 
+use App\Models\Mess\Concerns\HasActiveStatus;
 use Illuminate\Database\Eloquent\Model;
 
 class Store extends Model
 {
+    use HasActiveStatus;
+
     public const TYPE_MESS = 'mess';
 
     public const STATUS_ACTIVE   = 'active';
@@ -34,21 +37,6 @@ class Store extends Model
         return [
             self::TYPE_MESS => 'MESS',
         ];
-    }
-
-    public function scopeActive($query)
-    {
-        return $query->where('status', self::STATUS_ACTIVE);
-    }
-
-    public function getStatusLabelAttribute(): string
-    {
-        return $this->status ?: self::STATUS_ACTIVE;
-    }
-
-    public function getStatusBadgeClassAttribute(): string
-    {
-        return $this->status === self::STATUS_ACTIVE ? 'success' : 'danger';
     }
 
     public function purchaseOrders()

@@ -317,13 +317,18 @@ class PurchaseOrderController extends Controller
                     $purchaseOrder->update(['bill_path' => $path]);
                 }
 
+                $subcategories = ItemSubcategory::whereIn(
+                    'id',
+                    collect($request->items)->map(fn ($item) => $this->coerceItemSubcategoryId($item['item_subcategory_id'] ?? null))->filter()
+                )->get()->keyBy('id');
+
                 foreach ($request->items as $item) {
                     $qty = (float) $item['quantity'];
                     $unitPrice = (float) $item['unit_price'];
                     $taxPercent = isset($item['tax_percent']) ? (float) $item['tax_percent'] : 0;
                     $lineTotal = round($qty * $unitPrice * (1 + $taxPercent / 100), 2);
                     $itemSubcategoryId = $this->coerceItemSubcategoryId($item['item_subcategory_id'] ?? null);
-                    $sub = ItemSubcategory::find($itemSubcategoryId);
+                    $sub = $subcategories->get($itemSubcategoryId);
                     PurchaseOrderItem::create([
                         'purchase_order_id' => $purchaseOrder->id,
                         'inventory_id' => null,
@@ -483,13 +488,18 @@ class PurchaseOrderController extends Controller
             }
 
             $purchaseOrder->items()->delete();
+            $subcategories = ItemSubcategory::whereIn(
+                'id',
+                collect($request->items)->map(fn ($item) => $this->coerceItemSubcategoryId($item['item_subcategory_id'] ?? null))->filter()
+            )->get()->keyBy('id');
+
             foreach ($request->items as $item) {
                 $qty = (float) $item['quantity'];
                 $unitPrice = (float) $item['unit_price'];
                 $taxPercent = isset($item['tax_percent']) ? (float) $item['tax_percent'] : 0;
                 $lineTotal = round($qty * $unitPrice * (1 + $taxPercent / 100), 2);
                 $itemSubcategoryId = $this->coerceItemSubcategoryId($item['item_subcategory_id'] ?? null);
-                $sub = ItemSubcategory::find($itemSubcategoryId);
+                $sub = $subcategories->get($itemSubcategoryId);
                 PurchaseOrderItem::create([
                     'purchase_order_id' => $purchaseOrder->id,
                     'inventory_id' => null,

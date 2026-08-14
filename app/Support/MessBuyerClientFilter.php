@@ -17,6 +17,20 @@ use Illuminate\Support\Collection;
 class MessBuyerClientFilter
 {
     /**
+     * Historical mess_client_types.id values still stored on sv_date_range_reports /
+     * kitchen_issue_master rows after employee categories were re-seeded
+     * (Academy Staff=3, Mess Staff=4, Faculty=5). Shared by SellingVoucherDateRangeController
+     * and KitchenIssueController so the mapping can't drift between the two.
+     *
+     * @var array<string, list<int>>
+     */
+    public const LEGACY_EMPLOYEE_CLIENT_TYPE_PK = [
+        'academy staff' => [2, 12],
+        'faculty' => [1],
+        'mess staff' => [],
+    ];
+
+    /**
      * @param  Builder|\Illuminate\Database\Query\Builder  $query
      * @param  array<int, string>  $buyerValues
      * @param  array<int, string>  $clientTypeSlugs  employee/ot/course slugs; empty = any
@@ -254,11 +268,19 @@ class MessBuyerClientFilter
         });
     }
 
+    /** @var array<string, list<string>> Per-request memoization: same (clientId, clientTypePk, buyerValue) is asked for repeatedly across buyer-loop callers. */
+    private static array $nameVariantsCache = [];
+
     /**
      * @return list<string>
      */
     public static function nameVariants(string $buyerValue, int $clientId, int $clientTypePk = 0): array
     {
+        $cacheKey = $clientId . '|' . $clientTypePk . '|' . $buyerValue;
+        if (isset(self::$nameVariantsCache[$cacheKey])) {
+            return self::$nameVariantsCache[$cacheKey];
+        }
+
         $variants = array_values(array_unique(array_filter([
             trim($buyerValue),
             trim((string) preg_replace('/\s*\([^)]+\)\s*$/', '', $buyerValue)),
@@ -291,7 +313,7 @@ class MessBuyerClientFilter
             ->values()
             ->all();
 
-        return array_values(array_unique(array_merge($variants, $svNames, $kiNames)));
+        return self::$nameVariantsCache[$cacheKey] = array_values(array_unique(array_merge($variants, $svNames, $kiNames)));
     }
 
     /**

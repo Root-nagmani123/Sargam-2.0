@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Mess\Concerns\AuthorizesMessDeletes;
 use App\Support\DataTableRedisCache;
 use App\Support\DataTableSearchHelper;
+use App\Support\MessBuyerClientFilter;
 use App\Models\Mess\SellingVoucherDateRangeReport;
 use App\Models\Mess\SellingVoucherDateRangeReportItem;
 use App\Services\Mess\AvailableQuantityService;
@@ -46,18 +47,6 @@ class SellingVoucherDateRangeController extends Controller
         DataTableRedisCache::bumpListEpoch(self::SV_DATE_RANGE_DT_LIST_EPOCH, 'SellingVoucherDateRangeController@datatable');
         AvailableQuantityService::bumpCacheEpoch();
     }
-
-    /**
-     * Historical mess_client_types.id values still stored on sv_date_range_reports rows
-     * after employee categories were re-seeded (Academy Staff=3, Mess Staff=4, Faculty=5).
-     *
-     * @var array<string, list<int>>
-     */
-    private const LEGACY_EMPLOYEE_CLIENT_TYPE_PK = [
-        'academy staff' => [2, 12],
-        'faculty' => [1],
-        'mess staff' => [],
-    ];
 
     public function index(Request $request)
     {
@@ -705,7 +694,7 @@ class SellingVoucherDateRangeController extends Controller
                     'return_quantity' => 0,
                     'rate' => $rate,
                     'amount' => $amount,
-                    'unit' => $sub->unit_measurement ?? '',
+                    'unit' => $sub ? ($sub->unit_measurement ?? '') : '',
                     'issue_date' => $itemIssueDate,
                 ]);
             }
@@ -1482,7 +1471,7 @@ class SellingVoucherDateRangeController extends Controller
                     'return_quantity' => $returnQty,
                     'rate' => $rate,
                     'amount' => $amount,
-                    'unit' => $sub->unit_measurement ?? '',
+                    'unit' => $sub ? ($sub->unit_measurement ?? '') : '',
                     'issue_date' => $itemIssueDate,
                 ]);
             }
@@ -2290,7 +2279,7 @@ class SellingVoucherDateRangeController extends Controller
             ->value('client_name');
 
         if ($category !== null) {
-            $legacy = self::LEGACY_EMPLOYEE_CLIENT_TYPE_PK[strtolower(trim((string) $category))] ?? [];
+            $legacy = MessBuyerClientFilter::LEGACY_EMPLOYEE_CLIENT_TYPE_PK[strtolower(trim((string) $category))] ?? [];
             $pks = array_merge($pks, $legacy);
         }
 
@@ -2687,35 +2676,5 @@ class SellingVoucherDateRangeController extends Controller
         }
 
         return AvailableQuantityService::fifoPriceTiersForStore($storeType, $storeId);
-    }
-
-    /**
-     * Limit listing rows to items matching return status (per-line return_quantity).
-     *
-     * @param  \Illuminate\Support\Collection<int, SellingVoucherDateRangeReport>  $reports
-     * @return \Illuminate\Support\Collection<int, SellingVoucherDateRangeReport>
-     */
-    private function filterSellingVoucherDateRangeRowsByReturnStatus($reports, string $returnStatus)
-    {
-        $returnStatus = strtolower(trim($returnStatus));
-        if ($returnStatus === '' || $returnStatus === 'all') {
-            return $reports;
-        }
-
-        $wantReturned = $returnStatus === 'returned';
-        if (! $wantReturned && $returnStatus !== 'not_returned') {
-            return $reports;
-        }
-
-        return $reports->map(function ($report) use ($wantReturned) {
-            $filtered = $report->items->filter(function ($item) use ($wantReturned) {
-                $rq = (float) ($item->return_quantity ?? 0);
-
-                return $wantReturned ? $rq > 0 : $rq <= 0;
-            });
-            $report->setRelation('items', $filtered);
-
-            return $report;
-        })->filter(fn ($report) => $report->items->isNotEmpty())->values();
     }
 }

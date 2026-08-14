@@ -168,10 +168,6 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
         $sheet->mergeCells('A2:G2');
         $sheet->mergeCells('A3:G3');
         $sheet->mergeCells('A4:G4');
-        $sheet->mergeCells('A1:G1');
-        $sheet->mergeCells('A2:G2');
-        $sheet->mergeCells('A3:G3');
-        $sheet->mergeCells('A4:G4');
 
         $sheet->getStyle('A1:A4')->getAlignment()->setHorizontal('center');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
@@ -179,7 +175,6 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
         $sheet->getStyle('A3:A4')->getFont()->setSize(10);
 
         $lastRow = $sheet->getHighestRow();
-        $tableRange = "A5:G{$lastRow}";
         $tableRange = "A5:G{$lastRow}";
         $sheet->getStyle($tableRange)->getBorders()->getAllBorders()
             ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)
@@ -200,7 +195,6 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
         for ($row = 5; $row <= $lastRow; $row++) {
             $a = (string) $sheet->getCell("A{$row}")->getValue();
             if (str_starts_with($a, 'Slip No.')) {
-                $sheet->getStyle("A{$row}:G{$row}")->getFont()->setBold(true);
                 $sheet->getStyle("A{$row}:G{$row}")->getFont()->setBold(true);
             }
             $e = (string) $sheet->getCell("E{$row}")->getValue();

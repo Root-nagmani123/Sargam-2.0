@@ -2,10 +2,13 @@
 
 namespace App\Models\Mess;
 
+use App\Models\Mess\Concerns\HasActiveStatus;
 use Illuminate\Database\Eloquent\Model;
 
 class ClientType extends Model
 {
+    use HasActiveStatus;
+
     public const TYPE_EMPLOYEE = 'employee';
     public const TYPE_OT = 'ot';
     public const TYPE_COURSE = 'course';
@@ -37,18 +40,4 @@ class ClientType extends Model
         ];
     }
 
-    public function scopeActive($query)
-    {
-        return $query->where('status', self::STATUS_ACTIVE);
-    }
-
-    public function getStatusLabelAttribute(): string
-    {
-        return $this->status ?: self::STATUS_ACTIVE;
-    }
-
-    public function getStatusBadgeClassAttribute(): string
-    {
-        return $this->status === self::STATUS_ACTIVE ? 'success' : 'danger';
-    }
 }

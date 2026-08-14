@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Mess\Concerns\AuthorizesMessDeletes;
 use App\Support\DataTableRedisCache;
 use App\Support\DataTableSearchHelper;
+use App\Support\MessBuyerClientFilter;
 use App\Models\KitchenIssueMaster;
 use App\Services\Mess\AvailableQuantityService;
 use App\Models\KitchenIssueItem;
@@ -47,18 +48,6 @@ class KitchenIssueController extends Controller
         AvailableQuantityService::bumpCacheEpoch();
         DataTableRedisCache::bumpListEpoch(self::INDEX_MASTER_CACHE_EPOCH, 'KitchenIssueController@indexMasterData');
     }
-
-    /**
-     * Historical mess_client_types.id values still stored on kitchen_issue_master rows
-     * after employee categories were re-seeded (Academy Staff=3, Mess Staff=4, Faculty=5).
-     *
-     * @var array<string, list<int>>
-     */
-    private const LEGACY_EMPLOYEE_CLIENT_TYPE_PK = [
-        'academy staff' => [2, 12],
-        'faculty' => [1],
-        'mess staff' => [],
-    ];
 
     /**
      * Display a listing of selling vouchers (kitchen issues)
@@ -891,7 +880,7 @@ class KitchenIssueController extends Controller
             ->value('client_name');
 
         if ($category !== null) {
-            $legacy = self::LEGACY_EMPLOYEE_CLIENT_TYPE_PK[strtolower(trim((string) $category))] ?? [];
+            $legacy = MessBuyerClientFilter::LEGACY_EMPLOYEE_CLIENT_TYPE_PK[strtolower(trim((string) $category))] ?? [];
             $pks = array_merge($pks, $legacy);
         }
 
