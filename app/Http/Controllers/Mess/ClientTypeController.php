@@ -37,7 +37,8 @@ class ClientTypeController extends Controller
                     'seconds' => 'MESS_CLIENT_TYPE_MASTER_DATATABLE_CACHE_SECONDS',
                 ],
                 'ClientTypeController@index',
-                fn () => $this->buildClientTypeDatatableResponse($request)
+                fn () => $this->buildClientTypeDatatableResponse($request),
+                ['can_delete' => function_exists('hasRole') && (hasRole('Super Admin') || hasRole('Mess-Admin'))]
             );
         }
 

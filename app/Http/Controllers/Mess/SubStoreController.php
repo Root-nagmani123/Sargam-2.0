@@ -36,7 +36,8 @@ class SubStoreController extends Controller
                     'seconds' => 'MESS_SUB_STORE_MASTER_DATATABLE_CACHE_SECONDS',
                 ],
                 'SubStoreController@index',
-                fn () => $this->buildSubStoreDatatableResponse($request)
+                fn () => $this->buildSubStoreDatatableResponse($request),
+                ['can_delete' => function_exists('hasRole') && (hasRole('Super Admin') || hasRole('Mess-Admin'))]
             );
         }
 

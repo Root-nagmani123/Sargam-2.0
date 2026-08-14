@@ -113,6 +113,8 @@ class ProcessMessBillsEmployeeController extends Controller
 
     public function index(Request $request)
     {
+        abort_unless($this->currentUserCanAdminMessBills(), 403, 'You are not authorized to view all buyers\' mess bills.');
+
         // DataTables serverSide sends `draw` on every AJAX request; do not require X-Requested-With.
         $isDataTableRequest = $request->filled('draw');
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
@@ -3119,6 +3121,8 @@ class ProcessMessBillsEmployeeController extends Controller
      */
     public function export(Request $request)
     {
+        abort_unless($this->currentUserCanAdminMessBills(), 403, 'You are not authorized to export all buyers\' mess bills.');
+
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
         $unionCollation = 'utf8mb4_unicode_ci';
@@ -3857,6 +3861,8 @@ class ProcessMessBillsEmployeeController extends Controller
      */
     public function modalData(Request $request)
     {
+        abort_unless($this->currentUserCanAdminMessBills(), 403, 'You are not authorized to view all buyers\' mess bills.');
+
         $dateFrom = $request->filled('date_from')
             ? ($this->parseDate($request->date_from) ?? now()->startOfMonth()->format('Y-m-d'))
             : now()->startOfMonth()->format('Y-m-d');
@@ -4018,6 +4024,13 @@ class ProcessMessBillsEmployeeController extends Controller
             if (empty($bills)) {
                 return response()->json(['success' => false, 'message' => 'No bills found for this buyer in the selected date range.'], 404);
             }
+            if (!$this->currentUserCanAdminMessBills()) {
+                $rid = $this->resolveReceiverUserIdFromAnyBill($bills);
+                $linkedUserIds = $this->authLinkedUserIdsForMessSelfService();
+                if ($rid === null || $rid <= 0 || ! in_array((int) $rid, $linkedUserIds, true)) {
+                    return response()->json(['success' => false, 'message' => 'You do not have access to this bill.'], 403);
+                }
+            }
             $first = $bills[0];
             $receiverUserId = $this->resolveReceiverUserIdFromAnyBill($bills);
             if ($receiverUserId === null || $receiverUserId <= 0) {
@@ -4099,6 +4112,7 @@ class ProcessMessBillsEmployeeController extends Controller
         }
 
         [$bill, $isDateRange] = $this->resolveBillById($id);
+        $this->assertCurrentUserCanAccessSingleBill($bill, $isDateRange);
         $isKitchenIssue = !$isDateRange;
         $billId = $bill->id ?? $bill->pk;
         $receiverUserId = $this->getReceiverUserIdForBill($bill, $isKitchenIssue);
@@ -5056,6 +5070,13 @@ class ProcessMessBillsEmployeeController extends Controller
             if (empty($bills)) {
                 return response()->json(['success' => false, 'message' => 'No bills found for this buyer in the selected date range.'], 404);
             }
+            if (!$this->currentUserCanAdminMessBills()) {
+                $rid = $this->resolveReceiverUserIdFromAnyBill($bills);
+                $linkedUserIds = $this->authLinkedUserIdsForMessSelfService();
+                if ($rid === null || $rid <= 0 || ! in_array((int) $rid, $linkedUserIds, true)) {
+                    return response()->json(['success' => false, 'message' => 'You do not have access to this bill.'], 403);
+                }
+            }
             $buyerName = trim((string) ($bills[0]->client_name ?? ($bills[0]->clientTypeCategory->client_name ?? '')));
             $clientTypeSlug = $bills[0] instanceof SellingVoucherDateRangeReport
                 ? (string) ($bills[0]->client_type_slug ?? 'employee')
@@ -5211,6 +5232,7 @@ class ProcessMessBillsEmployeeController extends Controller
         }
 
         [$bill, $isDateRange] = $this->resolveBillById($id);
+        $this->assertCurrentUserCanAccessSingleBill($bill, $isDateRange);
         $isKitchenIssue = !$isDateRange;
         if ($isKitchenIssue) {
             $bill->load('paymentDetails');

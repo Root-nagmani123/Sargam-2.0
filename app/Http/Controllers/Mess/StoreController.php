@@ -38,7 +38,8 @@ class StoreController extends Controller
                     'seconds' => 'MESS_STORE_MASTER_DATATABLE_CACHE_SECONDS',
                 ],
                 'StoreController@index',
-                fn () => $this->buildStoreDatatableResponse($request)
+                fn () => $this->buildStoreDatatableResponse($request),
+                ['can_delete' => function_exists('hasRole') && (hasRole('Super Admin') || hasRole('Mess-Admin'))]
             );
         }
 

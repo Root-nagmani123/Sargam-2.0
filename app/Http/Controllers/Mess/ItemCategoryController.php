@@ -287,12 +287,10 @@ class ItemCategoryController extends Controller
 
     protected function canDeleteItemCategory(): bool
     {
-        $user = auth()->user();
-        if (! $user) {
+        if (! auth()->user()) {
             return false;
         }
 
-        return hasRole('Main Admin')
-            || (hasRole('Mess Admin') && strcasecmp((string) $user->name, 'Rohit Aggarwal') === 0);
+        return hasRole('Main Admin') || hasRole('Mess Admin');
     }
 }

@@ -1348,6 +1348,7 @@ function canSeeLowStockAlert()
 
     if (hasRole('Mess Staff') || hasRole('mess staff')) return true;
     if (hasRole('Mess Admin') || hasRole('mess admin')) return true;
+    if (hasRole('Mess Billing') || hasRole('mess billing')) return true;
 
     // Mess staff dropdown list = employees in Officers Mess department; show alert to them when they login
     if (isset($user->user_category) && $user->user_category === 'E' && !empty($user->user_id)) {

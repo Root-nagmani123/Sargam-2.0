@@ -36,7 +36,8 @@ class VendorController extends Controller
                     'seconds' => 'MESS_VENDOR_MASTER_DATATABLE_CACHE_SECONDS',
                 ],
                 'VendorController@index',
-                fn () => $this->buildVendorDatatableResponse($request)
+                fn () => $this->buildVendorDatatableResponse($request),
+                ['can_delete' => function_exists('hasRole') && (hasRole('Super Admin') || hasRole('Mess-Admin'))]
             );
         }
 
