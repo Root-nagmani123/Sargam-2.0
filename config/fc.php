@@ -195,7 +195,7 @@ return [
     //
     // Reordering, deleting and every per-field lock keep their own flags; this one is only
     // about reaching the two editors.
-    'form_step_actions_enabled'     => (bool) env('FC_FORM_STEP_ACTIONS_ENABLED', false),
+    'form_step_actions_enabled'     => (bool) env('FC_FORM_STEP_ACTIONS_ENABLED', true),
 
     /*
     |--------------------------------------------------------------------------

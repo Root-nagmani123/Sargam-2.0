@@ -778,10 +778,61 @@
         } catch (err) { /* noop */ }
     });
 
+    /**
+     * Move page-owned controls (an "Add New" button, a print/columns toolbar, ...) into a table's
+     * DataTables search row, wherever that row currently lives.
+     *
+     * Pages used to hand-roll this as:
+     *
+     *     var $filter = $table.closest('.dataTables_wrapper').find('.dataTables_filter');
+     *     var $btn    = $('.my-add-btn').detach();          // <- detached before the target is known
+     *     if ($filter.length) { $filter.append($btn); }
+     *
+     * which breaks here, because enhance() moves .dataTables_filter OUT of .dataTables_wrapper into
+     * its own toolbar. The wrapper lookup then finds nothing and the already-detached control is
+     * gone for good. That silently hid the "Add New" button on four Estate Master screens and the
+     * Columns/Print buttons on Timetable Report.
+     *
+     * This resolves the filter by its data-sargam-dt-filter stamp first (post-enhance) and the
+     * wrapper second (pre-enhance, or enhancement skipped), and never detaches — jQuery's append()
+     * moves existing nodes anyway. If no search row exists the control is left exactly where the
+     * page put it, which is always better than losing it.
+     *
+     * @param  {string} tableId  table id attribute, without the leading '#'
+     * @param  {jQuery|Element|string} el  control(s) to move in
+     * @return {boolean} true if the control was placed in a search row
+     */
+    function appendToSearchRow(tableId, el) {
+        if (!tableId || !el) {
+            return false;
+        }
+
+        var $el = $(el);
+        if (!$el.length) {
+            return false;
+        }
+
+        var $filter = $('[data-sargam-dt-filter="' + tableId + '"]').first();
+        if (!$filter.length) {
+            $filter = $(document.getElementById(tableId))
+                .closest('.dataTables_wrapper')
+                .find('.dataTables_filter')
+                .first();
+        }
+        if (!$filter.length) {
+            return false;
+        }
+
+        $filter.addClass('d-flex align-items-center justify-content-end flex-wrap gap-2').append($el);
+
+        return true;
+    }
+
     window.SargamDataTableUI = {
         enhance: enhance,
         updateCount: updateCount,
         shouldEnhance: shouldEnhance,
+        appendToSearchRow: appendToSearchRow,
         DEFAULT_DOM: DEFAULT_DOM,
         DEFAULT_LANGUAGE: DEFAULT_LANGUAGE
     };

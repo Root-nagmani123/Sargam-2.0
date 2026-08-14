@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Admin\Estate;
 
 use App\DataTables\EstateElectricSlabDataTable;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Admin\Estate\Concerns\AuthorizesEstateMaster;
 use App\Models\EstateElectricSlab;
 use App\Models\UnitType;
 use Illuminate\Http\Request;
 
 class EstateElectricSlabController extends Controller
 {
+    use AuthorizesEstateMaster;
+
     public function index(EstateElectricSlabDataTable $dataTable)
     {
         return $dataTable->render('admin.estate.define_electric_slab.index');
