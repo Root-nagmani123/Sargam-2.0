@@ -91,6 +91,14 @@ class ProcessMessBillsEmployeeController extends Controller
     /** Per-request memoization for FIFO / allocation (avoids duplicate heavy loads per buyer). */
     private array $combinedBillFinancialsCache = [];
 
+    /**
+     * Per-request memoization for buildCombinedFifoAllocatedLines(), keyed independent of
+     * dateFromYmd since that parameter doesn't affect the FIFO build (only the post-hoc
+     * date-range filter/sum in callers). Avoids rebuilding the same FIFO allocation twice
+     * when a caller needs it for two different dateFromYmd values but the same dateToYmd.
+     */
+    private array $combinedFifoAllocatedLinesCache = [];
+
     private array $buyerBillsForAllocationCache = [];
 
     private array $messCombinedNotificationsByReceiver = [];
@@ -434,10 +442,11 @@ class ProcessMessBillsEmployeeController extends Controller
             ]);
         }
 
+        $statsPaidCount = $combinedBills->where('status', 2)->count();
         $statsPayload = [
-            'total_bills' => $combinedBills->count(),
-            'paid_count' => $combinedBills->where('status', 2)->count(),
-            'unpaid_count' => $combinedBills->count() - $combinedBills->where('status', 2)->count(),
+            'total_bills' => $recordsTotal,
+            'paid_count' => $statsPaidCount,
+            'unpaid_count' => $recordsTotal - $statsPaidCount,
             'total_amount' => (float) $combinedBills->sum('total'),
             'total_due_amount' => (float) $combinedBills->sum('total_due_amount'),
         ];
@@ -1336,10 +1345,12 @@ class ProcessMessBillsEmployeeController extends Controller
         $effectiveDateFromYmd = $dateFrom;
         $effectiveDateToYmd = $dateTo;
 
+        $statsTotalBills = $combinedBills->count();
+        $statsPaidCount = $combinedBills->where('status', 2)->count();
         $stats = [
-            'total_bills' => $combinedBills->count(),
-            'paid_count' => $combinedBills->where('status', 2)->count(),
-            'unpaid_count' => $combinedBills->count() - $combinedBills->where('status', 2)->count(),
+            'total_bills' => $statsTotalBills,
+            'paid_count' => $statsPaidCount,
+            'unpaid_count' => $statsTotalBills - $statsPaidCount,
             'total_amount' => (float) $combinedBills->sum('total'),
         ];
 
@@ -3413,39 +3424,10 @@ class ProcessMessBillsEmployeeController extends Controller
             ]);
         }
 
-        $isDateRange = null;
-        $numericId = $id;
-        if (is_string($id) && preg_match('/^(dr|ki)-(\d+)$/i', $id, $m)) {
-            $isDateRange = (strtolower($m[1]) === 'dr');
-            $numericId = (int) $m[2];
-        }
-
-        if ($isDateRange === true) {
-            $bill = SellingVoucherDateRangeReport::with(['store', 'subStore', 'clientTypeCategory', 'course', 'items.itemSubcategory'])
-                ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
-                ->findOrFail($numericId);
-            $isDateRange = true;
-        } elseif ($isDateRange === false) {
-            $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'course', 'items.itemSubcategory'])
-                ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
-                ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
-                ->where('pk', $numericId)
-                ->firstOrFail();
-            $isDateRange = false;
-        } else {
-            // Legacy: numeric id – try date range first, then kitchen
-            $bill = SellingVoucherDateRangeReport::with(['store', 'subStore', 'clientTypeCategory', 'course', 'items.itemSubcategory'])
-                ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
-                ->find($id);
-            $isDateRange = (bool) $bill;
-            if (!$bill) {
-                $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'course', 'items.itemSubcategory'])
-                    ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
-                    ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
-                    ->where('pk', $id)
-                    ->firstOrFail();
-            }
-        }
+        [$bill, $isDateRange] = $this->resolveBillById(
+            $id,
+            ['store', 'subStore', 'clientTypeCategory', 'course', 'items.itemSubcategory']
+        );
 
         $this->assertCurrentUserCanAccessSingleBill($bill, $isDateRange);
 
@@ -4163,8 +4145,13 @@ class ProcessMessBillsEmployeeController extends Controller
      * Resolve bill by id (numeric or composite 'dr-123' / 'ki-123').
      * Returns [bill model, isDateRange].
      */
-    private function resolveBillById($id): array
+    /**
+     * @param  list<string>|null  $eagerLoad  Overrides the default eager-load relation list.
+     */
+    private function resolveBillById($id, ?array $eagerLoad = null): array
     {
+        $eagerLoad ??= ['store', 'subStore', 'clientTypeCategory', 'items'];
+
         $numericId = $id;
         $preferDateRange = null;
         if (is_string($id) && preg_match('/^(dr|ki)-(\d+)$/i', $id, $m)) {
@@ -4173,13 +4160,13 @@ class ProcessMessBillsEmployeeController extends Controller
         }
 
         if ($preferDateRange === true) {
-            $bill = SellingVoucherDateRangeReport::with(['store', 'subStore', 'clientTypeCategory', 'items'])
+            $bill = SellingVoucherDateRangeReport::with($eagerLoad)
                 ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
                 ->findOrFail($numericId);
             return [$bill, true];
         }
         if ($preferDateRange === false) {
-            $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'items'])
+            $bill = KitchenIssueMaster::with($eagerLoad)
                 ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
                 ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
                 ->where('pk', $numericId)
@@ -4187,13 +4174,13 @@ class ProcessMessBillsEmployeeController extends Controller
             return [$bill, false];
         }
 
-        $bill = SellingVoucherDateRangeReport::with(['store', 'subStore', 'clientTypeCategory', 'items'])
+        $bill = SellingVoucherDateRangeReport::with($eagerLoad)
             ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
             ->find($numericId);
         if ($bill) {
             return [$bill, true];
         }
-        $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'items'])
+        $bill = KitchenIssueMaster::with($eagerLoad)
             ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
             ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
             ->where('pk', $numericId)
@@ -4792,6 +4779,11 @@ class ProcessMessBillsEmployeeController extends Controller
         string $clientTypeSlug,
         ?string $dateToYmd
     ): array {
+        $cacheKey = $buyerName . '|' . $clientTypeSlug . '|' . ($dateToYmd ?? '');
+        if (isset($this->combinedFifoAllocatedLinesCache[$cacheKey])) {
+            return $this->combinedFifoAllocatedLinesCache[$cacheKey];
+        }
+
         $allocationBills = $this->resolveBuyerBillsForPaymentAllocation($buyerName, $clientTypeSlug, $dateToYmd);
 
         $lineItems = [];
@@ -4806,7 +4798,10 @@ class ProcessMessBillsEmployeeController extends Controller
             }
         }
 
-        return $this->allocatePaidAmountFifo($lineItems, $this->roundMoney($totalPaidPool));
+        $result = $this->allocatePaidAmountFifo($lineItems, $this->roundMoney($totalPaidPool));
+        $this->combinedFifoAllocatedLinesCache[$cacheKey] = $result;
+
+        return $result;
     }
 
     private function lineItemInDateRange(string $issueDateYmd, ?string $dateFromYmd, ?string $dateToYmd): bool

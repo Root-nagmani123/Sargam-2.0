@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Mess\Concerns\GeneratesUniqueCode;
 use App\Support\DataTableRedisCache;
 use App\Support\DataTableSearchHelper;
 use Illuminate\Database\Eloquent\Builder;
@@ -20,6 +21,8 @@ use Illuminate\Validation\ValidationException;
 
 class PurchaseOrderController extends Controller
 {
+    use GeneratesUniqueCode;
+
     private const PURCHASE_ORDER_DT_LIST_EPOCH = 'purchase_order_dt_list_epoch';
 
     /**
@@ -183,9 +186,9 @@ class PurchaseOrderController extends Controller
         $rowStart = $start + 1;
 
         $data = $purchaseOrders->map(function ($po, $index) use ($canDeletePurchaseOrder, $rowStart, $forPrint) {
-            $statusBadgeClass = $po->status === 'approved'
+            $statusBadgeClass = $po->status === PurchaseOrder::STATUS_APPROVED
                 ? 'text-bg-success'
-                : ($po->status === 'rejected' ? 'text-bg-danger' : ($po->status === 'completed' ? 'text-bg-primary' : 'text-bg-warning'));
+                : ($po->status === PurchaseOrder::STATUS_REJECTED ? 'text-bg-danger' : ($po->status === PurchaseOrder::STATUS_COMPLETED ? 'text-bg-primary' : 'text-bg-warning'));
 
             $row = [
                 '<span class="ps-4 d-inline-block text-body-secondary fw-medium">' . ($rowStart + $index) . '</span>',
@@ -302,7 +305,7 @@ class PurchaseOrderController extends Controller
                     'challan_date' => $request->challan_date,
                     'remarks' => $request->remarks,
                     'created_by' => Auth::id(),
-                    'status' => 'approved',
+                    'status' => PurchaseOrder::STATUS_APPROVED,
                 ]);
                 $purchaseOrderId = $purchaseOrder->id;
 
@@ -517,7 +520,7 @@ class PurchaseOrderController extends Controller
     {
         $purchaseOrder = PurchaseOrder::findOrFail($id);
         $purchaseOrder->update([
-            'status' => 'approved',
+            'status' => PurchaseOrder::STATUS_APPROVED,
             'approved_by' => Auth::id(),
             'approved_at' => now(),
         ]);
@@ -529,7 +532,7 @@ class PurchaseOrderController extends Controller
     public function reject($id)
     {
         $purchaseOrder = PurchaseOrder::findOrFail($id);
-        $purchaseOrder->update(['status' => 'rejected']);
+        $purchaseOrder->update(['status' => PurchaseOrder::STATUS_REJECTED]);
         self::bumpPurchaseOrderListingCacheEpoch();
 
         return redirect()->route('admin.mess.purchaseorders.index')->with('success', 'Purchase order rejected');
@@ -652,14 +655,10 @@ class PurchaseOrderController extends Controller
      */
     protected function generatePoNumber(): string
     {
-        $next = ((int) PurchaseOrder::max('id')) + 1;
-        $code = 'PO/' . $next . '/NM';
-
-        while (PurchaseOrder::where('po_number', $code)->exists()) {
-            $next++;
-            $code = 'PO/' . $next . '/NM';
-        }
-
-        return $code;
+        return $this->generateUniqueSequentialCode(
+            fn () => PurchaseOrder::max('id'),
+            fn (int $next) => 'PO/' . $next . '/NM',
+            fn (string $code) => PurchaseOrder::where('po_number', $code)->exists()
+        );
     }
 }

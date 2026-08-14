@@ -790,7 +790,6 @@ class ReportController extends Controller
      *
      * @return array{
      *     purchaseOrdersByVendor: \Illuminate\Support\Collection<int, array{vendor_id: int, vendor_name: string, vendor: ?\App\Models\Mess\Vendor, orders: \Illuminate\Support\Collection<int, \App\Models\Mess\PurchaseOrder>}>,
-     *     grandTotal: float|int,
      *     fromDate: string,
      *     toDate: string,
      *     selectedVendors: \Illuminate\Support\Collection<int, \App\Models\Mess\Vendor>,
@@ -837,10 +836,6 @@ class ReportController extends Controller
 
         $purchaseOrders = $baseQuery->get();
 
-        $grandTotal = $purchaseOrders->sum(static function ($po) {
-            return $po->items->sum(static fn ($item) => (float) ($item->quantity ?? 0) * (float) ($item->unit_price ?? 0));
-        });
-
         $purchaseOrdersByVendor = $purchaseOrders
             ->groupBy(static fn ($po) => (int) ($po->vendor_id ?? 0))
             ->map(static function ($vendorOrders, $vendorId) {
@@ -871,7 +866,6 @@ class ReportController extends Controller
 
         return [
             'purchaseOrdersByVendor' => $purchaseOrdersByVendor,
-            'grandTotal'             => $grandTotal,
             'fromDate'               => $fromDate,
             'toDate'                 => $toDate,
             'selectedVendors'        => $selectedVendors,

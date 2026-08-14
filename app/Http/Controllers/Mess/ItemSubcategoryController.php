@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Mess\Concerns\GeneratesUniqueCode;
 use App\Models\Mess\ItemCategory;
 use App\Models\Mess\ItemSubcategory;
 use App\Support\DataTableRedisCache;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\Schema;
 
 class ItemSubcategoryController extends Controller
 {
+    use GeneratesUniqueCode;
     private const DT_LIST_EPOCH_KEY = 'mess_item_subcategory_dt_list_epoch';
 
     public static function bumpListCacheEpoch(): void
@@ -328,25 +330,17 @@ class ItemSubcategoryController extends Controller
 
     protected function generateItemCode(): string
     {
-        $next = ((int) ItemSubcategory::max('id')) + 1;
-
-        $hasItemCode = Schema::hasColumn('mess_item_subcategories', 'item_code');
-        $hasSubcategoryCode = Schema::hasColumn('mess_item_subcategories', 'subcategory_code');
-
-        $code = 'ITEM/' . $next . '/CODE';
-
-        if ($hasItemCode) {
-            while (ItemSubcategory::where('item_code', $code)->exists()) {
-                $next++;
-                $code = 'ITEM/' . $next . '/CODE';
-            }
-        } elseif ($hasSubcategoryCode) {
-            while (ItemSubcategory::where('subcategory_code', $code)->exists()) {
-                $next++;
-                $code = 'ITEM/' . $next . '/CODE';
-            }
+        $codeColumn = null;
+        if (Schema::hasColumn('mess_item_subcategories', 'item_code')) {
+            $codeColumn = 'item_code';
+        } elseif (Schema::hasColumn('mess_item_subcategories', 'subcategory_code')) {
+            $codeColumn = 'subcategory_code';
         }
 
-        return $code;
+        return $this->generateUniqueSequentialCode(
+            fn () => ItemSubcategory::max('id'),
+            fn (int $next) => 'ITEM/' . $next . '/CODE',
+            fn (string $code) => $codeColumn !== null && ItemSubcategory::where($codeColumn, $code)->exists()
+        );
     }
 }

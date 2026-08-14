@@ -3,6 +3,7 @@ namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Mess\Concerns\BuildsMasterDataDatatable;
+use App\Http\Controllers\Mess\Concerns\GeneratesUniqueCode;
 use App\Support\DataTableRedisCache;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -12,6 +13,7 @@ use App\Models\Mess\Store;
 class StoreController extends Controller
 {
     use BuildsMasterDataDatatable;
+    use GeneratesUniqueCode;
 
     private const LIST_CACHE_EPOCH_KEY = 'mess_store_master_list_epoch';
     private const DT_LIST_EPOCH_KEY = 'mess_store_master_dt_list_epoch';
@@ -201,14 +203,10 @@ class StoreController extends Controller
      */
     protected function generateStoreCode(): string
     {
-        $next = ((int) Store::max('id')) + 1;
-        $code = 'STR' . str_pad((string) $next, 5, '0', STR_PAD_LEFT);
-
-        while (Store::where('store_code', $code)->exists()) {
-            $next++;
-            $code = 'STR' . str_pad((string) $next, 5, '0', STR_PAD_LEFT);
-        }
-
-        return $code;
+        return $this->generateUniqueSequentialCode(
+            fn () => Store::max('id'),
+            fn (int $next) => 'STR' . str_pad((string) $next, 5, '0', STR_PAD_LEFT),
+            fn (string $code) => Store::where('store_code', $code)->exists()
+        );
     }
 }

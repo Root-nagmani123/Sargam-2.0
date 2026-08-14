@@ -7,7 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 class PurchaseOrder extends Model
 {
     protected $table = 'mess_purchase_orders';
-    
+
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_APPROVED = 'approved';
+    public const STATUS_REJECTED = 'rejected';
+    public const STATUS_COMPLETED = 'completed';
+
     protected $fillable = [
         'po_number',
         'vendor_id',

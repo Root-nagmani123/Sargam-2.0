@@ -75,6 +75,22 @@ class SellingVoucherDateRangeReport extends Model
     }
 
     /**
+     * Get the employee (if client_type_slug is employee)
+     */
+    public function employee()
+    {
+        return $this->belongsTo(\App\Models\EmployeeMaster::class, 'client_id', 'pk');
+    }
+
+    /**
+     * Get the student (if client_type_slug is OT/Course)
+     */
+    public function student()
+    {
+        return $this->belongsTo(\App\Models\StudentMaster::class, 'client_id', 'pk');
+    }
+
+    /**
      * When client_type_slug is 'ot' or 'course', client_type_pk stores course_master.pk.
      */
     public function course()

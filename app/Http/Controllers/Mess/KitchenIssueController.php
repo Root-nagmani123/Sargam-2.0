@@ -1305,98 +1305,76 @@ class KitchenIssueController extends Controller
      */
     public function create()
     {
-        // Get active stores and sub-stores
-        $stores = Store::active()->get(['id', 'store_name'])->map(function ($store) {
-            return [
-                'id' => $store->id,
-                'store_name' => $store->store_name,
-                'type' => 'store'
-            ];
-        });
-        
-        $subStores = SubStore::active()->get(['id', 'sub_store_name'])->map(function ($subStore) {
-            return [
-                'id' => 'sub_' . $subStore->id,
-                'store_name' => $subStore->sub_store_name . ' (Sub-Store)',
-                'type' => 'sub_store',
-                'original_id' => $subStore->id
-            ];
-        });
-        
-        // Combine stores and sub-stores
-        $stores = $stores->concat($subStores)->sortBy('store_name')->values();
-        
-        $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get(ItemSubcategory::listSelectColumns())->map(function ($s) {
-            return [
-                'id' => $s->id,
-                'item_name' => $s->item_name ?? $s->name ?? '—',
-                'item_code' => $s->item_code ?? '—',
-                'unit_measurement' => $s->unit_measurement ?? '—',
-                'standard_cost' => $s->standard_cost ?? 0,
-            ];
-        });
-        $clientTypes = ClientType::clientTypes();
-        $clientNamesByType = ClientType::active()->orderBy('client_type')->orderBy('client_name')->get(['id', 'client_type', 'client_name'])
-            ->groupBy('client_type');
-        $faculties = FacultyMaster::whereNotNull('full_name')
-            ->where('full_name', '!=', '')
-            ->where('faculty_type', 1)
-            ->whereNotNull('employee_master_pk')
-            ->whereIn('employee_master_pk', EmployeeMaster::active()->select('pk'))
-            ->orderBy('full_name')
-            ->get(['pk', 'full_name', 'faculty_code'])
-            ->map(function ($f) {
-                $fullName = trim((string) ($f->full_name ?? ''));
-                $facultyCode = trim((string) ($f->faculty_code ?? ''));
-                $f->full_name_with_code = $facultyCode !== '' ? ($fullName . ' (' . $facultyCode . ')') : $fullName;
-                return $f;
-            });
-        $departmentNamesByPk = DepartmentMaster::query()->select(['pk', 'department_name'])->pluck('department_name', 'pk');
+        // Reuse the same Redis-cached master-data payload as index() instead of re-querying
+        // stores/sub-stores/item-subcategories/client-types uncached on every GET. Only the
+        // fields create.blade.php actually renders (stores, itemSubcategories, clientTypes,
+        // clientNamesByType) are used here; the payload also carries faculties/employees/
+        // messStaff/otCourses for index(), which this view ignores.
+        $masterData = $this->loadIndexMasterFormData();
 
-        $buildEmployeeLabel = function ($fullName, $departmentPk) use ($departmentNamesByPk) {
-            $fullName = trim((string) $fullName);
-            if ($fullName === '') {
-                $fullName = '—';
-            }
-            $departmentName = trim((string) ($departmentNamesByPk[$departmentPk] ?? ''));
-            return $departmentName !== '' ? ($fullName . ' (' . $departmentName . ')') : $fullName;
-        };
-
-        $employees = EmployeeMaster::active()
-            ->orderBy('first_name')->orderBy('last_name')
-            ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
-            ->map(function ($e) use ($buildEmployeeLabel) {
-                $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                $fullName = $fullName ?: '—';
-                return (object) [
-                    'pk' => $e->pk,
-                    'full_name' => $fullName,
-                    'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
-                ];
-            })
-            ->filter(fn($e) => $e->full_name !== '—')
-            ->values();
-
-        $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first(['pk']);
-        $messStaff = $officersMessDept
-            ? EmployeeMaster::active()
-                ->where('department_master_pk', $officersMessDept->pk)
-                ->orderBy('first_name')->orderBy('last_name')
-                ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
-                ->map(function ($e) use ($buildEmployeeLabel) {
-                    $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                    $fullName = $fullName ?: '—';
-                    return (object) [
-                        'pk' => $e->pk,
-                        'full_name' => $fullName,
-                        'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
-                    ];
-                })
-                ->filter(fn($e) => $e->full_name !== '—')
-                ->values()
-            : collect();
+        $stores = collect($masterData['stores']);
+        $itemSubcategories = collect($masterData['itemSubcategories']);
+        $clientTypes = $masterData['clientTypes'];
+        $clientNamesByType = collect($masterData['clientNamesByType']);
+        $faculties = collect($masterData['faculties']);
+        $employees = collect($masterData['employees']);
+        $messStaff = collect($masterData['messStaff']);
 
         return view('mess.kitchen-issues.create', compact('stores', 'itemSubcategories', 'clientTypes', 'clientNamesByType', 'faculties', 'employees', 'messStaff'));
+    }
+
+    /**
+     * Validation rule for store_id: accepts a Store id, or a "sub_{id}" SubStore id.
+     * Shared by store() and update() — identical rule in both.
+     */
+    private function storeIdValidationRule(): array
+    {
+        return ['required', function ($attribute, $value, $fail) {
+            if (str_starts_with($value, 'sub_')) {
+                $subStoreId = str_replace('sub_', '', $value);
+                if (!\App\Models\Mess\SubStore::where('id', $subStoreId)->exists()) {
+                    $fail('The selected store is invalid.');
+                }
+            } else {
+                if (!\App\Models\Mess\Store::where('id', $value)->exists()) {
+                    $fail('The selected store is invalid.');
+                }
+            }
+        }];
+    }
+
+    /**
+     * Validation rule for client_type_pk: resolves against ClientType or CourseMaster
+     * depending on client_type_slug. Shared by store() and update() — identical rule in both.
+     */
+    private function clientTypePkValidationRule(Request $request): array
+    {
+        return ['required', 'integer', 'min:1', function ($attribute, $value, $fail) use ($request) {
+            $slug = $request->client_type_slug ?? '';
+            if (in_array($slug, ['employee', 'section', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
+                $fail('The selected client is invalid.');
+            }
+            if (in_array($slug, ['ot', 'course']) && !CourseMaster::where('pk', $value)->exists()) {
+                $fail('The selected course is invalid.');
+            }
+        }];
+    }
+
+    /**
+     * Map client_type_slug to the numeric KitchenIssueMaster::CLIENT_* value.
+     * Shared by store() and update() — identical map in both.
+     *
+     * @return array<string, int>
+     */
+    private function clientTypeSlugMap(): array
+    {
+        return [
+            'employee' => KitchenIssueMaster::CLIENT_EMPLOYEE,
+            'ot' => KitchenIssueMaster::CLIENT_OT,
+            'course' => KitchenIssueMaster::CLIENT_COURSE,
+            'section' => KitchenIssueMaster::CLIENT_SECTION,
+            'other' => KitchenIssueMaster::CLIENT_OTHER,
+        ];
     }
 
     /**
@@ -1405,29 +1383,10 @@ class KitchenIssueController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'store_id' => ['required', function ($attribute, $value, $fail) {
-                if (str_starts_with($value, 'sub_')) {
-                    $subStoreId = str_replace('sub_', '', $value);
-                    if (!\App\Models\Mess\SubStore::where('id', $subStoreId)->exists()) {
-                        $fail('The selected store is invalid.');
-                    }
-                } else {
-                    if (!\App\Models\Mess\Store::where('id', $value)->exists()) {
-                        $fail('The selected store is invalid.');
-                    }
-                }
-            }],
+            'store_id' => $this->storeIdValidationRule(),
             'payment_type' => 'required|integer|in:0,1,2',
             'client_type_slug' => 'required|string|in:employee,ot,course,section,other',
-            'client_type_pk' => ['required', 'integer', 'min:1', function ($attribute, $value, $fail) use ($request) {
-                $slug = $request->client_type_slug ?? '';
-                if (in_array($slug, ['employee', 'section', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
-                    $fail('The selected client is invalid.');
-                }
-                if (in_array($slug, ['ot', 'course']) && !CourseMaster::where('pk', $value)->exists()) {
-                    $fail('The selected course is invalid.');
-                }
-            }],
+            'client_type_pk' => $this->clientTypePkValidationRule($request),
             'client_id' => ['required_if:client_type_slug,employee,ot', 'nullable', 'integer'],
             'name_id' => 'nullable|integer',
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
@@ -1470,13 +1429,7 @@ class KitchenIssueController extends Controller
             }
 
             // Map client_type_slug to numeric value
-            $clientTypeMap = [
-                'employee' => KitchenIssueMaster::CLIENT_EMPLOYEE,
-                'ot' => KitchenIssueMaster::CLIENT_OT,
-                'course' => KitchenIssueMaster::CLIENT_COURSE,
-                'section' => KitchenIssueMaster::CLIENT_SECTION,
-                'other' => KitchenIssueMaster::CLIENT_OTHER,
-            ];
+            $clientTypeMap = $this->clientTypeSlugMap();
             $clientType = $clientTypeMap[$request->client_type_slug] ?? KitchenIssueMaster::CLIENT_EMPLOYEE;
             $clientTypePk = $request->filled('client_type_pk') ? (int) $request->client_type_pk : null;
             
@@ -1819,29 +1772,10 @@ class KitchenIssueController extends Controller
         $preExistingSubcategoryIds = $kitchenIssue->items()->pluck('item_subcategory_id')->all();
 
         $request->validate([
-            'store_id' => ['required', function ($attribute, $value, $fail) {
-                if (str_starts_with($value, 'sub_')) {
-                    $subStoreId = str_replace('sub_', '', $value);
-                    if (!\App\Models\Mess\SubStore::where('id', $subStoreId)->exists()) {
-                        $fail('The selected store is invalid.');
-                    }
-                } else {
-                    if (!\App\Models\Mess\Store::where('id', $value)->exists()) {
-                        $fail('The selected store is invalid.');
-                    }
-                }
-            }],
+            'store_id' => $this->storeIdValidationRule(),
             'payment_type' => 'required|integer|in:0,1,2',
             'client_type_slug' => 'required|string|in:employee,ot,course,section,other',
-            'client_type_pk' => ['required', 'integer', 'min:1', function ($attribute, $value, $fail) use ($request) {
-                $slug = $request->client_type_slug ?? '';
-                if (in_array($slug, ['employee', 'section', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
-                    $fail('The selected client is invalid.');
-                }
-                if (in_array($slug, ['ot', 'course']) && !CourseMaster::where('pk', $value)->exists()) {
-                    $fail('The selected course is invalid.');
-                }
-            }],
+            'client_type_pk' => $this->clientTypePkValidationRule($request),
             'client_id' => ['required_if:client_type_slug,employee,ot', 'nullable', 'integer'],
             'name_id' => 'nullable|integer',
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
