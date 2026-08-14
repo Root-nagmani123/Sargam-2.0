@@ -1,5 +1,5 @@
 @extends('admin.layouts.master')
-@section('title', 'Create Quick Link - Sargam | Lal Bahadur Shastri')
+@section('title', 'Create Quick Link ')
 @section('setup_content')
     <div class="container-fluid">
         <div class="card" style="border-left:4px solid #004a93;">

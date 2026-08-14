@@ -16,6 +16,31 @@ class CasteCategoryMaster extends Model
         return $query->where('active_inactive', 1);
     }
 
+    /**
+     * `category_name` <-> `Seat_name`.
+     *
+     * The controller, the form field, the index cell and the AJAX payload were all
+     * written against a `category_name` column that does not exist on
+     * caste_category_master — the real column is `Seat_name`. The read side showed
+     * a blank name on every row; the write side could not save at all.
+     *
+     * Mapping it here rather than renaming everything keeps the form field, the
+     * validation key and the JSON keys the JS reads unchanged, and keeps the real
+     * column name authoritative in one place.
+     *
+     * NOTE: Rule::unique() queries the table directly and does NOT pass through
+     * this accessor, so validation rules must name `Seat_name` explicitly.
+     */
+    public function getCategoryNameAttribute(): ?string
+    {
+        return $this->attributes['Seat_name'] ?? null;
+    }
+
+    public function setCategoryNameAttribute($value): void
+    {
+        $this->attributes['Seat_name'] = $value;
+    }
+
     public static function GetSeatName()
     {
         return self::active()->select('pk', 'Seat_name', 'Seat_name_hindi')

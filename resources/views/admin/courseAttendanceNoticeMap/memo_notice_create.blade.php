@@ -1,6 +1,6 @@
 @extends('admin.layouts.master') {{-- this layout MUST contain the tabs --}}
 
-@section('title', 'Memo / Notice - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Memo / Notice  National Academy of Administration')
 
 @section('setup_content')
     <div class="container-fluid">

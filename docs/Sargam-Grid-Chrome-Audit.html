@@ -595,8 +595,8 @@
   <div class="stats">
     <div class="stat"><span class="n">292</span><span class="k">Table views scanned</span></div>
     <div class="stat"><span class="n">187</span><span class="k">Reachable by a GET route</span></div>
-    <div class="stat is-good"><span class="n">465</span><span class="k">Assertions passing</span></div>
-    <div class="stat is-crit"><span class="n">7</span><span class="k">Extra bugs found</span></div>
+    <div class="stat is-good"><span class="n">481</span><span class="k">Assertions passing</span></div>
+    <div class="stat is-good"><span class="n">6</span><span class="k">Of 7 extra bugs fixed</span></div>
     <div class="stat is-good"><span class="n">47</span><span class="k">Pages fixed</span></div>
   </div>
 
@@ -625,31 +625,35 @@
       <li><strong>DataTable chrome switched off (2).</strong> <strong>27 assertions.</strong></li>
     </ol>
     <p style="margin:12px 0 0; color: var(--ink-2); font-size:14.5px;">
-      <strong>465 assertions passing.</strong> 73 files changed, 6 new. Shared pieces:
+      <strong>481 assertions passing.</strong> 73 files changed, 6 new. Shared pieces:
       <code>PaginatesListings</code> trait and the <code>x-programme-dt-toolbar</code> /
       <code>-search</code> / <code>-footer</code> components, so the next grid costs almost nothing.
     </p>
   </div>
 
   <div class="method" style="border-left-color: var(--crit);">
-    <h2 style="color: var(--crit);">Bugs found along the way — none of them the gap being fixed</h2>
+    <h2 style="color: var(--crit);">Bugs found along the way — 6 of 7 fixed</h2>
     <ol>
       <li><strong>Search defeated the status filter</strong> (employee ID-card approval). An ungrouped
         <code>orWhere</code> meant a card-number match escaped every other constraint: with the filter
-        allowing <strong>1</strong> row, the old shape returned <strong>4</strong>. Fixed.</li>
+        allowing <strong>1</strong> row, the old shape returned <strong>4</strong>. <em>Fixed.</em></li>
       <li><strong>157 of 187 students unreachable</strong> (send-notice list). <code>paginate(30)</code>
-        with no pager rendered, and “Select all” covered only those 30. Fixed.</li>
+        with no pager rendered, and “Select all” covered only those 30. <em>Fixed.</em></li>
       <li><strong>A missing <code>)</code> killed four setup pages’ Add/Edit modals.</strong> One parse
-        error takes out the whole inline script. Fixed.</li>
-      <li><strong>Caste Category rendered a blank name column</strong> — written against a
-        <code>category_name</code> that does not exist. Read path fixed; <strong>the write path is
-        still broken and needs a schema decision.</strong></li>
+        error takes out the whole inline script. <em>Fixed.</em></li>
+      <li><strong>Caste Category was written against a column that does not exist.</strong> Blank name on
+        every row, and Add/Edit could not save. The real column is <code>Seat_name</code>; an accessor +
+        mutator now maps <code>category_name</code> onto it, and <code>Rule::unique()</code> names the real
+        column because validation bypasses accessors. <em>Fixed — full CRUD verified.</em></li>
       <li><strong>One unguarded <code>-&gt;timetable</code></strong> among three <code>optional()</code>
-        siblings 500’d the send-notice page. Fixed.</li>
-      <li><strong>Course List’s Status Filter is a hard 500</strong> — <code>confirm_status</code> lives
-        on another table. Guarded and hidden; <strong>needs a schema decision.</strong></li>
-      <li><strong>Stock-summary PDF exhausts 512 MB</strong> even unfiltered. Pre-existing, reproduced
-        on a clean tree, <strong>not fixed.</strong></li>
+        siblings 500’d the send-notice page. <em>Fixed.</em></li>
+      <li><strong>Stock-summary PDF exhausted 512 MB.</strong> Measured at ~0.8 MB/row, so the live
+        1,105-item catalogue died with a blank page. Ceiling raised to 1024 MB for that action and a
+        named row cap turns anything beyond into a message pointing at Excel.
+        <em>Fixed — 742 KB PDF at 704 MB peak, the exact case that used to die.</em></li>
+      <li><strong>Course List’s Status Filter is a hard 500.</strong> <code>confirm_status</code> exists on
+        <em>no live table</em>. Guarded and hidden so the page cannot crash —
+        <strong>still needs a schema decision.</strong></li>
     </ol>
   </div>
 

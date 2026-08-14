@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Discipline mark record - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Discipline mark record  National Academy of Administration')
 
 @section('setup_content')
 <link rel="stylesheet" href="{{asset('admin_assets/css/dual-listbox.css')}}">

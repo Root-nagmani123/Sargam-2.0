@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Bulk Upload Registration - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Bulk Upload Registration  National Academy of Administration')
 
 @section('setup_content')
     <div class="container-fluid py-5">

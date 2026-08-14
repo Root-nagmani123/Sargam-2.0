@@ -1,5 +1,5 @@
 @extends('admin.layouts.master')
-@section('title', 'Request For Family Id Card - Sargam | Lal Bahadur Shastri')
+@section('title', 'Request For Family Id Card ')
 @section('content')
 <div class="container-fluid family-idcard-index-page family-idcard-print-area">
     {{-- Print-only header: LBSNAA theme + logo, visible only when printing --}}

@@ -49,7 +49,7 @@ class CasteCategoryController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'category_name' => ['required','string','max:150', Rule::unique('caste_category_master','category_name')],
+            'category_name' => ['required','string','max:150', Rule::unique('caste_category_master','Seat_name')],
         ]);
         $model = new CasteCategoryMaster();
         $model->category_name = $validated['category_name'];
@@ -75,7 +75,7 @@ class CasteCategoryController extends Controller
         try { $pk = decrypt($id); } catch(\Exception $e){ abort(404); }
         $model = CasteCategoryMaster::findOrFail($pk);
         $validated = $request->validate([
-            'category_name' => ['required','string','max:150', Rule::unique('caste_category_master','category_name')->ignore($model->pk,'pk')],
+            'category_name' => ['required','string','max:150', Rule::unique('caste_category_master','Seat_name')->ignore($model->pk,'pk')],
         ]);
         $model->category_name = $validated['category_name'];
         $model->save();

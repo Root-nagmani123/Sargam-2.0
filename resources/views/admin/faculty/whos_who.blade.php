@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', "Who's Who - Sargam | Lal Bahadur Shastri National Academy of Administration")
+@section('title', "Who's Who  National Academy of Administration")
 
 @section('setup_content')
 

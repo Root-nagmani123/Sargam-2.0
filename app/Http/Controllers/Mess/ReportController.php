@@ -41,6 +41,16 @@ use Illuminate\Support\Facades\Schema;
 
 class ReportController extends Controller
 {
+    /**
+     * Row ceiling for the Stock Summary PDF.
+     *
+     * Derived, not guessed: DomPDF peaks at ~0.8 MB per row on this 13-column
+     * template (measured 100/300/600/855 rows -> 80/186/420/686 MB), so 1,200
+     * rows is roughly 970 MB and the action raises its limit to 1024M. Excel
+     * has no such cost and stays uncapped.
+     */
+    private const STOCK_SUMMARY_PDF_MAX_ROWS = 1200;
+
     use SortsMessReportData;
 
     /** @var array{enabled: string, seconds: string} */
@@ -1337,7 +1347,11 @@ class ReportController extends Controller
      */
     public function stockSummaryPdf(Request $request)
     {
-        @ini_set('memory_limit', '512M');
+        // 1024M, not 512M: the live catalogue is 1,105 items (~890 MB at the
+        // measured 0.8 MB/row). The guard below refuses anything past the point
+        // this ceiling can actually render, so it degrades to a message rather
+        // than a fatal.
+        @ini_set('memory_limit', '1024M');
         @set_time_limit(120);
 
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
@@ -1348,6 +1362,25 @@ class ReportController extends Controller
 
         [$reportData, $selectedStoreName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeIds, $storeType);
         $reportData = $this->filterStockSummaryRows($reportData, trim((string) $request->input('search', '')));
+
+        // DomPDF lays out one frame per element, and this report is 13 columns wide,
+        // so peak memory tracks the row count almost linearly. Measured on this
+        // template (855 rows = 686 MB):
+        //
+        //     100 rows ->  80 MB      600 rows -> 420 MB
+        //     300 rows -> 186 MB      855 rows -> 686 MB
+        //
+        // ~0.8 MB per row over a ~10 MB baseline. The previous 512 MB covered about
+        // 640 rows, so the full 1,105-item catalogue died with a fatal error and a
+        // blank page — no message, nothing in the UI.
+        if (count($reportData) > self::STOCK_SUMMARY_PDF_MAX_ROWS) {
+            return back()->with('error', sprintf(
+                'This PDF would contain %s rows, which is too large to render. '
+                . 'Narrow the date range, store or search, or use Export Excel — '
+                . 'it has no row limit.',
+                number_format(count($reportData))
+            ));
+        }
 
         $data = [
             'reportData'        => $reportData,

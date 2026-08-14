@@ -1,5 +1,5 @@
 @extends('admin.layouts.master')
-@section('title', 'Generate New ID Card - Sargam | Lal Bahadur Shastri')
+@section('title', 'Generate New ID Card ')
 @section('content')
 <div class="container-fluid idcard-create-page">
     <x-breadcrum title="Generate New ID Card"></x-breadcrum>

@@ -239,10 +239,17 @@ The guard makes the page safe, hides a control that cannot work, and lets the
 filter reappear by itself the day the column exists. **Choosing between adding
 the column and repointing the code is a schema decision and is still open.**
 
-Same reasoning on Caste Category: the read path now uses the real `Seat_name`
-column (the grid rendered a blank name on every row), but `store()`/`update()`
-still assign a `category_name` that does not exist. Read path fixed, write path
-reported, not guessed.
+**Caste Category turned out NOT to need one — same symptom, different cause.**
+The whole CRUD was written against `category_name`; the real column is
+`Seat_name`. Unlike `confirm_status` there is no ambiguity here: `Seat_name`
+plainly holds the caste category name (EWS / OBC / ST / SC / GENERAL), and
+adding a second column for the same data would be wrong. Resolved with an
+accessor + mutator on the model mapping `category_name` <-> `Seat_name`, which
+keeps the form field, the validation key and the AJAX payload keys unchanged.
+
+`Rule::unique()` queries the table directly and does **not** pass through an
+accessor, so the validation rules name `Seat_name` explicitly — that one is easy
+to miss and would have let duplicates through.
 
 ---
 
@@ -358,20 +365,61 @@ to be my own test using invalid ids. `git stash push -- app resources`, re-run,
 
 ---
 
+## Resolved after the first pass
+
+- **Caste Category write path** — see decision 10. Accessor + mutator; full CRUD
+  verified end to end (create, duplicate rejected, edit pre-filled, update
+  persisted, test row cleaned up).
+- **Stock Summary PDF OOM** — decision 16.
+
+---
+
+## 16. A measured ceiling for the Stock Summary PDF, not a bigger number
+
+**Decision.** Raise that one action to `1024M` **and** refuse past a named row
+cap with a message.
+
+**Why the number.** DomPDF builds a frame per element and this template is 13
+columns wide, so peak memory tracks row count almost linearly. Measured:
+
+| Rows | Peak | Rows | Peak |
+|---|---|---|---|
+| 100 | 80 MB | 600 | 420 MB |
+| 300 | 186 MB | 855 | 686 MB |
+
+~0.8 MB per row over a ~10 MB baseline. The old `512M` covered about 640 rows,
+so the live 1,105-item catalogue died with a **fatal error and a blank page** —
+no message, nothing in the UI.
+
+**Why not just raise the limit.** A bigger number alone moves the cliff without
+removing it, and the failure past it is still a white page. `1024M` covers the
+real catalogue with headroom; `STOCK_SUMMARY_PDF_MAX_ROWS = 1200` (~960 MB at
+the measured rate) turns anything beyond into a sentence telling the user to
+narrow the filter or use Excel — which has no such cost (79 KB for the same
+data) and stays uncapped.
+
+**Why not chunk the PDF.** DomPDF holds every frame for the whole document
+regardless of how the HTML is assembled, so chunking the *markup* saves nothing.
+Splitting into several files changes what the button does.
+
+**Verified the way production runs it**: base limit 256M, controller raises to
+1024M, real 742 KB PDF at 704 MB peak — the exact case that used to die.
+
+---
+
 ## Still open — these need a decision from a human
 
-1. **Caste Category write path.** `store()`/`update()` validate and assign
-   `category_name`, which does not exist. Add/Edit cannot work. Rename the column
-   or the code?
-2. **Course List Status Filter.** See decision 10. Add `confirm_status` to
-   `fc_registration_master`, or define what "confirmed" means against an existing
-   column?
-3. **Stock-summary PDF export** exhausts 512 MB even unfiltered (reproduced on a
-   clean tree). Needs chunking or a hard row cap.
-4. **`/fc/status/data`** — the only grid in its tier without search. It is a
+1. **Course List Status Filter.** See decision 10. The dropdown offers
+   confirm (1) / not-confirm (2). `confirm_status` exists on **no live table** —
+   the `form_submissions` migration that defines it has never run. Nothing on
+   `fc_registration_master` carries that meaning either: `status` is `'1'`/NULL
+   (485 rows), `final_submit` is `'2'`/`'0'` (466/19), `refund_status` is
+   `'0'`/NULL. **Add the column, or say which existing one means "confirmed"?**
+   Guarded and hidden until then, so the page cannot 500.
+2. **`/fc/status/data`** — the only grid in its tier without search. It is a
    tabbed AJAX fragment fed by `FcRegistrationStatusService::participantsForTab()`,
    so it needs a service-signature change plus threading the term through the
    tab/paging JS. Different shape from the other 17; deferred deliberately.
-5. **Sortable headers on `/admin/memo-notice`** are page-local — the DataTable
+3. **Sortable headers on `/admin/memo-notice`** are page-local — the DataTable
    reorders the current page, not the result set. Real sorting needs server-side
    sort links (§4B).

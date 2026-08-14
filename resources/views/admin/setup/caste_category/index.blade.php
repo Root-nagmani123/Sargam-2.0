@@ -1,5 +1,5 @@
 @extends('admin.layouts.master')
-@section('title', 'Caste Category - Sargam | Lal Bahadur Shastri')
+@section('title', 'Caste Category ')
 @section('setup_content')
 <div class="container-fluid">
     <div class="card" style="border-left:4px solid #004a93;">
@@ -33,7 +33,7 @@
                                 {{-- Seat_name, not category_name: there is no
                                      category_name column on caste_category_master, so
                                      this cell rendered blank on every row. --}}
-                                <td>{{ $cat->Seat_name }}</td>
+                                <td>{{ $cat->category_name }}</td>
                                 <td>
                                     <div class="d-flex gap-2">
                                         <a href="{{ route('admin.setup.caste_category.edit', encrypt($cat->pk)) }}" class="text-success openEditCasteCategory" title="Edit">

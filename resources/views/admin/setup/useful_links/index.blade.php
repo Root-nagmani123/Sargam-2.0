@@ -1,5 +1,5 @@
 @extends('admin.layouts.master')
-@section('title', 'Useful Links - Sargam | Lal Bahadur Shastri')
+@section('title', 'Useful Links ')
 @section('setup_content')
     <div class="container-fluid">
         <x-breadcrum title="Useful Links" />

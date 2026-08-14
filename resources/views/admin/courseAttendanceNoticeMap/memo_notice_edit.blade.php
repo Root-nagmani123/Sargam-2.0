@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Edit Memo / Notice - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Edit Memo / Notice  National Academy of Administration')
 
 @section('setup_content')
     <div class="container-fluid">

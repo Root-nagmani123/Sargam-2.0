@@ -1,5 +1,5 @@
 @extends('admin.layouts.master')
-@section('title', 'List of Family Members - Sargam | Lal Bahadur Shastri')
+@section('title', 'List of Family Members ')
 @section('content')
 <div class="container-fluid family-members-page">
     <x-breadcrum title="List of Family Members"></x-breadcrum>
