@@ -2937,13 +2937,34 @@ class ReportController extends Controller
      * @param  array<int>  $storeIds  Empty: all stores; non-empty: aggregate purchases/issues for those stores only.
      * @return array<int, array<string, mixed>>
      */
-    private function buildStockBalanceTillDateData(string $tillDate, array $storeIds = []): array
+    /**
+     * Shared "purchased/allocated vs issued, as of a date" aggregation used by both the Stock
+     * Balance report and the Low Stock alert (both compute remaining_qty = purchased - issued
+     * from kitchen_issue + sv_date_range, as of $tillDate, optionally filtered to specific stores).
+     *
+     * $itemIds: pass a known item-id list to scope the purchase/issued queries via whereIn (as
+     * getLowStockAlertItems does, since it already knows which items have alert_quantity set).
+     * Pass null to discover candidate items from whatever has purchase/issue activity instead
+     * (as buildStockBalanceTillDateData does — no upfront item list to filter by).
+     *
+     * @param  array<int>|null  $itemIds
+     * @param  array<int>  $storeIds
+     * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection, 2: \Illuminate\Support\Collection}
+     *         [purchaseAgg (item_subcategory_id => {total_qty, total_value}),
+     *          issuedKiAgg (item_subcategory_id => {total_issued}),
+     *          issuedSvAgg (item_subcategory_id => {total_issued})], all keyBy('item_subcategory_id')
+     */
+    private static function fetchStoreRemainingQuantityAggregates(string $tillDate, ?array $itemIds, array $storeIds): array
     {
         $purchaseAgg = DB::table('mess_purchase_order_items as poi')
             ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
             ->where('po.status', 'approved')
             ->where('po.po_date', '<=', $tillDate)
-            ->whereNotNull('poi.item_subcategory_id')
+            ->when(
+                $itemIds !== null,
+                fn ($q) => $q->whereIn('poi.item_subcategory_id', $itemIds),
+                fn ($q) => $q->whereNotNull('poi.item_subcategory_id')
+            )
             ->when($storeIds !== [], fn ($q) => $q->whereIn('po.store_id', $storeIds))
             ->groupBy('poi.item_subcategory_id')
             ->selectRaw('
@@ -2959,7 +2980,11 @@ class ReportController extends Controller
             ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
             ->where('kim.store_type', 'store')
             ->where('kim.issue_date', '<=', $tillDate)
-            ->whereNotNull('kii.item_subcategory_id')
+            ->when(
+                $itemIds !== null,
+                fn ($q) => $q->whereIn('kii.item_subcategory_id', $itemIds),
+                fn ($q) => $q->whereNotNull('kii.item_subcategory_id')
+            )
             ->when($storeIds !== [], fn ($q) => $q->whereIn('kim.store_id', $storeIds))
             ->groupBy('kii.item_subcategory_id')
             ->selectRaw('
@@ -2973,7 +2998,11 @@ class ReportController extends Controller
             ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
             ->where('svr.store_type', 'store')
             ->where('svi.issue_date', '<=', $tillDate)
-            ->whereNotNull('svi.item_subcategory_id')
+            ->when(
+                $itemIds !== null,
+                fn ($q) => $q->whereIn('svi.item_subcategory_id', $itemIds),
+                fn ($q) => $q->whereNotNull('svi.item_subcategory_id')
+            )
             ->when($storeIds !== [], fn ($q) => $q->whereIn('svr.store_id', $storeIds))
             ->groupBy('svi.item_subcategory_id')
             ->selectRaw('
@@ -2982,6 +3011,13 @@ class ReportController extends Controller
             ')
             ->get()
             ->keyBy('item_subcategory_id');
+
+        return [$purchaseAgg, $issuedKiAgg, $issuedSvAgg];
+    }
+
+    private function buildStockBalanceTillDateData(string $tillDate, array $storeIds = []): array
+    {
+        [$purchaseAgg, $issuedKiAgg, $issuedSvAgg] = self::fetchStoreRemainingQuantityAggregates($tillDate, null, $storeIds);
 
         $candidateIds = $purchaseAgg->keys()
             ->merge($issuedKiAgg->keys())
@@ -3143,39 +3179,11 @@ class ReportController extends Controller
             return [];
         }
 
-        $purchaseAgg = DB::table('mess_purchase_order_items as poi')
-            ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
-            ->where('po.status', 'approved')
-            ->where('po.po_date', '<=', $tillDate)
-            ->whereIn('poi.item_subcategory_id', $itemIds)
-            ->when($storeIds !== null, fn ($q) => $q->whereIn('po.store_id', $storeIds))
-            ->groupBy('poi.item_subcategory_id')
-            ->selectRaw('poi.item_subcategory_id, COALESCE(SUM(poi.quantity), 0) as total_qty')
-            ->get()
-            ->keyBy('item_subcategory_id');
-
-        $issuedKiAgg = DB::table('kitchen_issue_items as kii')
-            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
-            ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-            ->where('kim.store_type', 'store')
-            ->where('kim.issue_date', '<=', $tillDate)
-            ->whereIn('kii.item_subcategory_id', $itemIds)
-            ->when($storeIds !== null, fn ($q) => $q->whereIn('kim.store_id', $storeIds))
-            ->groupBy('kii.item_subcategory_id')
-            ->selectRaw('kii.item_subcategory_id, COALESCE(SUM(kii.quantity - COALESCE(kii.return_quantity, 0)), 0) as total_issued')
-            ->get()
-            ->keyBy('item_subcategory_id');
-
-        $issuedSvAgg = DB::table('sv_date_range_report_items as svi')
-            ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
-            ->where('svr.store_type', 'store')
-            ->where('svi.issue_date', '<=', $tillDate)
-            ->whereIn('svi.item_subcategory_id', $itemIds)
-            ->when($storeIds !== null, fn ($q) => $q->whereIn('svr.store_id', $storeIds))
-            ->groupBy('svi.item_subcategory_id')
-            ->selectRaw('svi.item_subcategory_id, COALESCE(SUM(svi.quantity - COALESCE(svi.return_quantity, 0)), 0) as total_issued')
-            ->get()
-            ->keyBy('item_subcategory_id');
+        [$purchaseAgg, $issuedKiAgg, $issuedSvAgg] = self::fetchStoreRemainingQuantityAggregates(
+            $tillDate,
+            $itemIds,
+            $storeIds ?? []
+        );
 
         $out = [];
         foreach ($items as $item) {

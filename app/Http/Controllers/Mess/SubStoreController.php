@@ -3,14 +3,16 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Mess\Concerns\BuildsMasterDataDatatable;
 use App\Support\DataTableRedisCache;
-use App\Support\DataTableSearchHelper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\Mess\SubStore;
 
 class SubStoreController extends Controller
 {
+    use BuildsMasterDataDatatable;
+
     private const LIST_CACHE_EPOCH_KEY = 'mess_sub_store_master_list_epoch';
     private const DT_LIST_EPOCH_KEY = 'mess_sub_store_master_dt_list_epoch';
 
@@ -41,64 +43,17 @@ class SubStoreController extends Controller
 
     private function buildSubStoreDatatableResponse(Request $request): JsonResponse
     {
-        $query = SubStore::query();
-
-        $draw = (int) $request->input('draw', 0);
-        $start = max((int) $request->input('start', 0), 0);
-        $length = (int) $request->input('length', 10);
-        if ($length < 1 || $length > 100) {
-            $length = 10;
-        }
-
-        $searchTokens = DataTableSearchHelper::tokens((string) $request->input('search.value', ''));
-
-        $recordsTotal = (clone $query)->count();
-
-        if ($searchTokens !== []) {
-            $query->where(function ($q) use ($searchTokens) {
-                foreach ($searchTokens as $token) {
-                    $like = DataTableSearchHelper::likePattern($token);
-                    $q->where(function ($inner) use ($like) {
-                        $inner->where('sub_store_name', 'like', $like)
-                            ->orWhere('status', 'like', $like);
-                    });
-                }
-            });
-        }
-
-        $recordsFiltered = (clone $query)->count();
-
-        $paged = clone $query;
-        $orderCol = DataTableSearchHelper::orderColumnIndex($request, 0);
-        $orderDir = DataTableSearchHelper::orderDirection($request, 'asc');
-
-        switch ($orderCol) {
-            case 0:
-                $paged->orderBy('sub_store_name', $orderDir);
-                break;
-            case 1:
-                $paged->orderBy('status', $orderDir);
-                break;
-            default:
-                $paged->orderByDesc('id');
-        }
-        $paged->orderByDesc('id');
-
-        if ($length !== -1) {
-            $paged->skip($start)->take($length);
-        }
-
-        $rows = $paged->get();
         $canDelete = function_exists('hasRole') && (hasRole('Super Admin') || hasRole('Mess-Admin'));
 
-        $data = $rows->map(fn (SubStore $subStore) => $this->buildSubStoreDatatableRow($subStore, $canDelete))->all();
-
-        return response()->json([
-            'draw' => $draw,
-            'recordsTotal' => $recordsTotal,
-            'recordsFiltered' => $recordsFiltered,
-            'data' => $data,
-        ]);
+        return $this->buildMasterDataDatatableResponse(
+            $request,
+            SubStore::query(),
+            ['sub_store_name', 'status'],
+            [0 => 'sub_store_name', 1 => 'status'],
+            'asc',
+            fn ($rows) => $rows->map(fn (SubStore $subStore) => $this->buildSubStoreDatatableRow($subStore, $canDelete))->all(),
+            true
+        );
     }
 
     /**

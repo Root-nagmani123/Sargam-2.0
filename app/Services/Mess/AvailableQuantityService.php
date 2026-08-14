@@ -285,14 +285,22 @@ class AvailableQuantityService
         }
 
         // Step 2: Subtract issued from Selling Voucher (kitchen_issue, kitchen_issue_type = Selling Voucher only)
-        $kitchenIssued = DB::table('kitchen_issue_items as kii')
-            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
-            ->where('kim.store_id', $storeId)
-            ->where('kim.store_type', $storeType)
-            ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-            ->select('kii.item_subcategory_id', DB::raw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as issued_quantity'))
-            ->groupBy('kii.item_subcategory_id')
-            ->get();
+        // Resolve matching master PKs first (uses idx_kim_store_type_issue_pk), then aggregate kitchen_issue_items
+        // by those PKs (uses idx_kii_master_subcategory). Avoids grouping across the join, which forced MySQL
+        // into a temp table + filesort on kitchen_issue_items.item_subcategory_id in the original single-query form.
+        $kimPks = DB::table('kitchen_issue_master')
+            ->where('store_id', $storeId)
+            ->where('store_type', $storeType)
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->pluck('pk');
+
+        $kitchenIssued = $kimPks->isEmpty()
+            ? collect()
+            : DB::table('kitchen_issue_items')
+                ->whereIn('kitchen_issue_master_pk', $kimPks)
+                ->select('item_subcategory_id', DB::raw('SUM(quantity - COALESCE(return_quantity, 0)) as issued_quantity'))
+                ->groupBy('item_subcategory_id')
+                ->get();
 
         foreach ($kitchenIssued as $r) {
             $id = (int) ($r->item_subcategory_id ?? 0);

@@ -1988,7 +1988,16 @@ class KitchenIssueController extends Controller
                 ]);
             }
 
-            $kitchenIssue->items()->delete();
+            // Diff incoming rows against existing items (queued by item_subcategory_id, since a
+            // voucher can have multiple rows for the same item) so unchanged/edited rows keep
+            // their pk — only rows actually removed are deleted, only genuinely new rows are
+            // inserted. Preserves historical pk references (e.g. prior returns tracking).
+            $existingItemsByCategory = [];
+            foreach ($kitchenIssue->items as $existingItem) {
+                $existingItemsByCategory[(int) $existingItem->item_subcategory_id][] = $existingItem;
+            }
+
+            $keptItemPks = [];
 
             foreach ($request->items as $row) {
                 $sub = $subcategories->get($row['item_subcategory_id']);
@@ -2005,7 +2014,8 @@ class KitchenIssueController extends Controller
                 $rate = (float) ($row['rate'] ?? 0);
                 $avail = (float) ($row['available_quantity'] ?? 0);
                 $fallbackDisplay = $existingItemDisplayById[$itemId] ?? ['item_name' => '', 'unit' => ''];
-                KitchenIssueItem::create([
+
+                $attributes = [
                     'kitchen_issue_master_pk' => $kitchenIssue->pk,
                     'item_subcategory_id' => $row['item_subcategory_id'],
                     'item_name' => $sub ? ($sub->item_name ?? $sub->name ?? '') : $fallbackDisplay['item_name'],
@@ -2015,8 +2025,22 @@ class KitchenIssueController extends Controller
                     'rate' => $rate,
                     'amount' => $netQty * $rate,
                     'unit' => $sub ? ($sub->unit_measurement ?? '') : $fallbackDisplay['unit'],
-                ]);
+                ];
+
+                $candidatesForItem = $existingItemsByCategory[$itemId] ?? [];
+                $reuseTarget = array_shift($candidatesForItem);
+                $existingItemsByCategory[$itemId] = $candidatesForItem;
+                if ($reuseTarget) {
+                    $reuseTarget->fill($attributes);
+                    $reuseTarget->save();
+                    $keptItemPks[] = $reuseTarget->pk;
+                } else {
+                    $created = KitchenIssueItem::create($attributes);
+                    $keptItemPks[] = $created->pk;
+                }
             }
+
+            $kitchenIssue->items()->whereNotIn('pk', $keptItemPks)->delete();
 
             DB::commit();
             self::bumpSellingVoucherListingCacheEpoch();

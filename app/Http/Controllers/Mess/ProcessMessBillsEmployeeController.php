@@ -46,6 +46,34 @@ class ProcessMessBillsEmployeeController extends Controller
     /** Max rows returned for print/export (avoids multi‑MB JSON responses). */
     private const PRINT_MAX_ROWS = 500;
 
+    /**
+     * Safety ceiling on the system-wide MessInvoiceCombined notification scan
+     * (getMessCombinedInvoiceNotificationEntriesCached). Real volume is a few hundred rows
+     * today; this bound only guards against unbounded future growth of that scan — it is
+     * far above any observed volume so it does not change current behavior.
+     */
+    private const MESS_COMBINED_INVOICE_NOTIFICATION_SCAN_CAP = 20000;
+
+    /**
+     * Above this many grouped buyer rows, processMessBillsDatatableResponse()'s in-memory
+     * filter/sort/slice over $combinedBills stops being cheap. Real volume today is roughly
+     * one row per distinct buyer per month (low hundreds); this only logs a warning so a real
+     * scale increase is visible before it becomes a user-facing slowdown — it does not change
+     * behavior on its own.
+     */
+    private const COMBINED_BILLS_PHP_SORT_WARN_THRESHOLD = 5000;
+
+    /**
+     * Ceiling on the raw voucher union query in queryAndGroupBillsForProcessIndex() /
+     * …Light() (kitchen_issue_master + sv_date_range_reports combined, before buyer grouping).
+     * Was hard-coded at 5000, which is below current all-time system volume (~16.5k) and could
+     * silently drop older vouchers from a wide/unfiltered date range without any error. Raised
+     * to a safety margin above observed volume (~20k vs ~16.5k today) rather than removed
+     * outright, so the query still has a bound. Kept closer to current volume (not 50k+) to
+     * limit worst-case load time on an all-time/unfiltered date range query.
+     */
+    private const PROCESS_INDEX_UNION_ROW_CAP = 20000;
+
     /** Client type constants for KitchenIssueMaster (Employee, OT, Course, Other) */
     private const ALLOWED_KITCHEN_CLIENT_TYPES = [
         KitchenIssueMaster::CLIENT_EMPLOYEE,
@@ -313,6 +341,13 @@ class ProcessMessBillsEmployeeController extends Controller
         $lifetimeDueOnly = $request->boolean('lifetime_due_only');
 
         $recordsTotal = $combinedBills->count();
+
+        if ($recordsTotal > self::COMBINED_BILLS_PHP_SORT_WARN_THRESHOLD) {
+            Log::warning('ProcessMessBillsEmployeeController: combined bill count exceeds PHP sort/filter comfort threshold; consider moving search/sort to SQL.', [
+                'records_total' => $recordsTotal,
+                'threshold' => self::COMBINED_BILLS_PHP_SORT_WARN_THRESHOLD,
+            ]);
+        }
 
         $searchRaw = '';
         $searchPayload = $request->input('search');
@@ -1334,7 +1369,7 @@ class ProcessMessBillsEmployeeController extends Controller
             ->mergeBindings($unionQuery->getQuery())
             ->orderBy('issue_date', 'desc')
             ->orderBy('id', 'desc')
-            ->limit(5000)
+            ->limit(self::PROCESS_INDEX_UNION_ROW_CAP)
             ->get();
 
         $drIds = [];
@@ -1484,7 +1519,7 @@ class ProcessMessBillsEmployeeController extends Controller
             ->mergeBindings($unionQuery->getQuery())
             ->orderBy('issue_date', 'desc')
             ->orderBy('id', 'desc')
-            ->limit(5000)
+            ->limit(self::PROCESS_INDEX_UNION_ROW_CAP)
             ->get();
 
         $drIds = [];
@@ -1598,7 +1633,7 @@ class ProcessMessBillsEmployeeController extends Controller
             ? []
             : $this->batchLineItemKeysByProcessIndexStubKey($voucherStubs);
 
-        return [$this->groupProcessIndexVouchersByBuyer($voucherStubs, $dateTo, true, $stubLineKeysMap, $deferReceiverUserId), $voucherStubs];
+        return [$this->groupProcessIndexVouchersByBuyer($voucherStubs, $dateTo, true, $stubLineKeysMap, $deferReceiverUserId, $skipLineItemKeys), $voucherStubs];
     }
 
     /**
@@ -1912,14 +1947,15 @@ class ProcessMessBillsEmployeeController extends Controller
         ?string $dateToYmd = null,
         bool $deferLifetimeDue = false,
         array $stubLineKeysMap = [],
-        bool $deferReceiverUserId = false
+        bool $deferReceiverUserId = false,
+        bool $skipLineItemKeys = false
     ): Collection {
         $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
 
         return $vouchers->groupBy(fn ($bill) => $deferReceiverUserId
             ? $this->messBillBuyerGroupKeyFast($bill)
             : $this->messBillBuyerGroupKey($bill))
-            ->map(function ($group) use ($paymentTypeMap, $dateToYmd, $deferLifetimeDue, $stubLineKeysMap, $deferReceiverUserId) {
+            ->map(function ($group) use ($paymentTypeMap, $dateToYmd, $deferLifetimeDue, $stubLineKeysMap, $deferReceiverUserId, $skipLineItemKeys) {
             $first = $group->first();
             $buyerName = $deferReceiverUserId
                 ? $this->resolveMessBillBuyerDisplayNameFast($first, $group)
@@ -1995,9 +2031,11 @@ class ProcessMessBillsEmployeeController extends Controller
             $receiverUserId = $deferReceiverUserId
                 ? 0
                 : $this->resolveReceiverUserIdFromAnyBill($group->all());
-            $lineItemKeys = $stubLineKeysMap !== []
-                ? $this->collectMessBillLineItemKeysWithStubMap($group->all(), $stubLineKeysMap)
-                : $this->collectMessBillLineItemKeys($group->all());
+            $lineItemKeys = match (true) {
+                $stubLineKeysMap !== [] => $this->collectMessBillLineItemKeysWithStubMap($group->all(), $stubLineKeysMap),
+                $skipLineItemKeys => [],
+                default => $this->collectMessBillLineItemKeys($group->all()),
+            };
 
             $billStubKeys = $group->map(function ($b) {
                 return ($b->source_type ?? '') === 'date_range'
@@ -2873,6 +2911,8 @@ class ProcessMessBillsEmployeeController extends Controller
                 foreach (Notification::query()
                     ->where('type', 'mess')
                     ->where('module_name', 'MessInvoiceCombined')
+                    ->orderByDesc('pk')
+                    ->limit(self::MESS_COMBINED_INVOICE_NOTIFICATION_SCAN_CAP)
                     ->get(['message']) as $notification) {
                     $parsed = NotificationService::parseMessCombinedReceiptPayload($notification->message);
                     if ($parsed === null || empty($parsed['i'])) {

@@ -2,15 +2,17 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Mess\Concerns\BuildsMasterDataDatatable;
 use App\Models\Mess\Vendor;
 use App\Support\DataTableRedisCache;
-use App\Support\DataTableSearchHelper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class VendorController extends Controller
 {
+    use BuildsMasterDataDatatable;
+
     private const LIST_CACHE_EPOCH_KEY = 'mess_vendor_master_list_epoch';
     private const DT_LIST_EPOCH_KEY = 'mess_vendor_master_dt_list_epoch';
 
@@ -41,76 +43,17 @@ class VendorController extends Controller
 
     private function buildVendorDatatableResponse(Request $request): JsonResponse
     {
-        $query = Vendor::query();
-
-        $draw = (int) $request->input('draw', 0);
-        $start = max((int) $request->input('start', 0), 0);
-        $length = (int) $request->input('length', 10);
-        if ($length < 1 || $length > 100) {
-            $length = 10;
-        }
-
-        $searchTokens = DataTableSearchHelper::tokens((string) $request->input('search.value', ''));
-
-        $recordsTotal = (clone $query)->count();
-
-        if ($searchTokens !== []) {
-            $query->where(function ($q) use ($searchTokens) {
-                foreach ($searchTokens as $token) {
-                    $like = DataTableSearchHelper::likePattern($token);
-                    $q->where(function ($inner) use ($like) {
-                        $inner->where('name', 'like', $like)
-                            ->orWhere('email', 'like', $like)
-                            ->orWhere('contact_person', 'like', $like)
-                            ->orWhere('phone', 'like', $like)
-                            ->orWhere('address', 'like', $like);
-                    });
-                }
-            });
-        }
-
-        $recordsFiltered = (clone $query)->count();
-
-        $paged = clone $query;
-        $orderCol = DataTableSearchHelper::orderColumnIndex($request, 0);
-        $orderDir = DataTableSearchHelper::orderDirection($request, 'asc');
-
-        switch ($orderCol) {
-            case 0:
-                $paged->orderBy('name', $orderDir);
-                break;
-            case 1:
-                $paged->orderBy('email', $orderDir);
-                break;
-            case 2:
-                $paged->orderBy('contact_person', $orderDir);
-                break;
-            case 3:
-                $paged->orderBy('phone', $orderDir);
-                break;
-            case 4:
-                $paged->orderBy('address', $orderDir);
-                break;
-            default:
-                $paged->orderByDesc('id');
-        }
-        $paged->orderByDesc('id');
-
-        if ($length !== -1) {
-            $paged->skip($start)->take($length);
-        }
-
-        $rows = $paged->get();
         $canDelete = function_exists('hasRole') && (hasRole('Super Admin') || hasRole('Mess-Admin'));
 
-        $data = $rows->map(fn (Vendor $vendor) => $this->buildVendorDatatableRow($vendor, $canDelete))->all();
-
-        return response()->json([
-            'draw' => $draw,
-            'recordsTotal' => $recordsTotal,
-            'recordsFiltered' => $recordsFiltered,
-            'data' => $data,
-        ]);
+        return $this->buildMasterDataDatatableResponse(
+            $request,
+            Vendor::query(),
+            ['name', 'email', 'contact_person', 'phone', 'address'],
+            [0 => 'name', 1 => 'email', 2 => 'contact_person', 3 => 'phone', 4 => 'address'],
+            'asc',
+            fn ($rows) => $rows->map(fn (Vendor $vendor) => $this->buildVendorDatatableRow($vendor, $canDelete))->all(),
+            true
+        );
     }
 
     /**

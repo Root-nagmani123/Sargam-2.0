@@ -2,8 +2,8 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Mess\Concerns\BuildsMasterDataDatatable;
 use App\Support\DataTableRedisCache;
-use App\Support\DataTableSearchHelper;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,6 +11,8 @@ use App\Models\Mess\Store;
 
 class StoreController extends Controller
 {
+    use BuildsMasterDataDatatable;
+
     private const LIST_CACHE_EPOCH_KEY = 'mess_store_master_list_epoch';
     private const DT_LIST_EPOCH_KEY = 'mess_store_master_dt_list_epoch';
 
@@ -46,76 +48,18 @@ class StoreController extends Controller
 
     private function buildStoreDatatableResponse(Request $request): JsonResponse
     {
-        $query = $this->storeFilteredQuery($request);
-
-        $draw = (int) $request->input('draw', 0);
-        $start = max((int) $request->input('start', 0), 0);
-        $length = (int) $request->input('length', 10);
-        if ($length < 1 || $length > 100) {
-            $length = 10;
-        }
-
-        $searchTokens = DataTableSearchHelper::tokens((string) $request->input('search.value', ''));
-
-        $recordsTotal = (clone $query)->count();
-
-        if ($searchTokens !== []) {
-            $query->where(function ($q) use ($searchTokens) {
-                foreach ($searchTokens as $token) {
-                    $like = DataTableSearchHelper::likePattern($token);
-                    $q->where(function ($inner) use ($like) {
-                        $inner->where('store_name', 'like', $like)
-                            ->orWhere('store_code', 'like', $like)
-                            ->orWhere('store_type', 'like', $like)
-                            ->orWhere('location', 'like', $like)
-                            ->orWhere('status', 'like', $like);
-                    });
-                }
-            });
-        }
-
-        $recordsFiltered = (clone $query)->count();
-
-        $paged = clone $query;
-        $orderCol = DataTableSearchHelper::orderColumnIndex($request, 0);
-        $orderDir = DataTableSearchHelper::orderDirection($request, 'desc');
-
-        switch ($orderCol) {
-            case 0:
-                $paged->orderBy('id', $orderDir);
-                break;
-            case 1:
-                $paged->orderBy('store_name', $orderDir);
-                break;
-            case 2:
-                $paged->orderBy('store_type', $orderDir);
-                break;
-            case 3:
-                $paged->orderBy('location', $orderDir);
-                break;
-            case 4:
-                $paged->orderBy('status', $orderDir);
-                break;
-            default:
-                $paged->orderByDesc('id');
-        }
-
-        if ($length !== -1) {
-            $paged->skip($start)->take($length);
-        }
-
-        $rows = $paged->get();
         $canDelete = function_exists('hasRole') && (hasRole('Super Admin') || hasRole('Mess-Admin'));
         $storeTypes = Store::storeTypes();
 
-        $data = $rows->map(fn (Store $store) => $this->buildStoreDatatableRow($store, $canDelete, $storeTypes))->all();
-
-        return response()->json([
-            'draw' => $draw,
-            'recordsTotal' => $recordsTotal,
-            'recordsFiltered' => $recordsFiltered,
-            'data' => $data,
-        ]);
+        return $this->buildMasterDataDatatableResponse(
+            $request,
+            $this->storeFilteredQuery($request),
+            ['store_name', 'store_code', 'store_type', 'location', 'status'],
+            [0 => 'id', 1 => 'store_name', 2 => 'store_type', 3 => 'location', 4 => 'status'],
+            'desc',
+            fn ($rows) => $rows->map(fn (Store $store) => $this->buildStoreDatatableRow($store, $canDelete, $storeTypes))->all(),
+            false
+        );
     }
 
     /**
