@@ -5,7 +5,9 @@ namespace App\Services\Mess;
 use App\Models\KitchenIssueMaster;
 use App\Models\Mess\ItemSubcategory;
 use App\Support\RedisBackedCache;
+use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -21,6 +23,9 @@ class AvailableQuantityService
     private const EPOCH_KEY = 'mess_available_qty_epoch';
 
     private const CACHE_KEY_PREFIX = 'mess_available_qty:';
+
+    /** Default cache TTL (seconds) when MESS_AVAILABLE_QTY_CACHE_SECONDS is unset. */
+    private const DEFAULT_CACHE_TTL = 3600; // 1 hour
 
     /**
      * Get available quantities by item_subcategory_id for a store/sub-store.
@@ -43,7 +48,7 @@ class AvailableQuantityService
         }
 
         try {
-            $repo = RedisBackedCache::repositoryForStore(RedisBackedCache::projectDefaultStoreName());
+            $repo = self::resolveCacheRepository();
             $key = self::cacheKey($storeType, $storeId);
 
             /** @var array<int, float> $map */
@@ -60,6 +65,30 @@ class AvailableQuantityService
             ]);
 
             return self::computeAvailableQuantitiesForStore($storeType, $storeId);
+        }
+    }
+
+    /**
+     * Resolve the configured cache store, falling back to the "file" store if it's unusable
+     * (e.g. the Redis backend is configured but the phpredis/predis client isn't actually
+     * available — that failure only surfaces on first real use, not on Cache::store()).
+     * Without this fallback, every call silently recomputes from scratch (~400-580ms) instead
+     * of caching, because RedisBackedCache::repositoryForStore() itself never throws.
+     */
+    private static function resolveCacheRepository(): Repository
+    {
+        $repo = RedisBackedCache::repositoryForStore(RedisBackedCache::projectDefaultStoreName());
+
+        try {
+            $repo->has('__mess_available_qty_cache_probe__');
+
+            return $repo;
+        } catch (\Throwable $e) {
+            Log::warning('AvailableQuantityService: configured cache store unusable, falling back to file cache.', [
+                'message' => $e->getMessage(),
+            ]);
+
+            return Cache::store('file');
         }
     }
 
@@ -244,7 +273,7 @@ class AvailableQuantityService
     public static function bumpCacheEpoch(): void
     {
         try {
-            $repo = RedisBackedCache::repositoryForStore(RedisBackedCache::projectDefaultStoreName());
+            $repo = self::resolveCacheRepository();
             $repo->increment(self::EPOCH_KEY);
         } catch (\Throwable $e) {
             Log::warning('AvailableQuantityService: failed to bump cache epoch.', [
@@ -344,7 +373,7 @@ class AvailableQuantityService
         }
 
         try {
-            $repo = RedisBackedCache::repositoryForStore(RedisBackedCache::projectDefaultStoreName());
+            $repo = self::resolveCacheRepository();
             $repo->put(self::cacheKey($storeType, $storeId), $map, $ttl);
         } catch (\Throwable $e) {
             Log::warning('AvailableQuantityService: cache write failed.', [
@@ -361,7 +390,7 @@ class AvailableQuantityService
     private static function readEpoch(): int
     {
         try {
-            $repo = RedisBackedCache::repositoryForStore(RedisBackedCache::projectDefaultStoreName());
+            $repo = self::resolveCacheRepository();
 
             return (int) $repo->get(self::EPOCH_KEY, 0);
         } catch (\Throwable $e) {
@@ -371,6 +400,6 @@ class AvailableQuantityService
 
     private static function cacheTtlSeconds(): int
     {
-        return max(0, (int) env('MESS_AVAILABLE_QTY_CACHE_SECONDS', 300));
+        return max(0, (int) env('MESS_AVAILABLE_QTY_CACHE_SECONDS', self::DEFAULT_CACHE_TTL));
     }
 }

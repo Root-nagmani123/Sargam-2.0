@@ -553,26 +553,52 @@ class KitchenIssueController extends Controller
         if (is_array($searchPayload) && isset($searchPayload['value'])) {
             $searchRaw = (string) $searchPayload['value'];
         }
-
-        $base = $this->sellingVoucherItemRowsBaseQuery($request);
-        $recordsTotal = (clone $base)->count('kii.pk');
-
-        $filtered = clone $base;
-        $this->applySellingVoucherItemSearch($filtered, $searchRaw);
-
-        // When the DataTables global search is empty, the filtered query matches `$base`; avoid a second COUNT.
         $searchTrimmed = DataTableSearchHelper::normalizeRaw($searchRaw);
-        $recordsFiltered = $searchTrimmed === ''
-            ? $recordsTotal
-            : (clone $filtered)->count('kii.pk');
 
-        $ordered = clone $filtered;
-        $this->applySellingVoucherDatatableOrder($ordered, $request);
+        // recordsTotal always ignores search — kim+kii only (no display joins) is enough for that.
+        $idBase = $this->sellingVoucherFilteredIdsQuery($request);
+        $recordsTotal = (clone $idBase)->count('kii.pk');
 
-        $rows = $ordered
-            ->offset($start)
-            ->limit($length)
-            ->get();
+        $orderCol = DataTableSearchHelper::orderColumnIndex($request, 9);
+
+        if ($searchTrimmed === '' && $this->sellingVoucherOrderIsDeferrable($orderCol)) {
+            // recordsFiltered matches recordsTotal here (no search applied).
+            $recordsFiltered = $recordsTotal;
+
+            // Deferred join: resolve the LIMIT-bound kii.pk ids first via kim+kii only (uses
+            // idx_kim_type_issue_date_pk / idx_kim_store_type_issue_pk on kim, then idx_kii_master_pk
+            // on kii), then join display columns onto just those `length` rows instead of the full
+            // filtered result set. kii.pk is the item table's own PK, so it alone uniquely identifies
+            // each row — no need to carry kim.pk through as well.
+            $idQuery = clone $idBase;
+            $this->applySellingVoucherDatatableOrder($idQuery, $request);
+            $itemPks = $idQuery
+                ->offset($start)
+                ->limit($length)
+                ->pluck('kii.pk');
+
+            $rows = collect();
+            if ($itemPks->isNotEmpty()) {
+                $display = $this->sellingVoucherItemRowsBaseQuery($request);
+                $display->whereIn('kii.pk', $itemPks);
+                $this->applySellingVoucherDatatableOrder($display, $request);
+                $rows = $display->get();
+            }
+        } else {
+            // Search text touches joined-table columns (mis/ms/mss/cm/mct), so both the recordsFiltered
+            // count and the page fetch need the full display join — the id-only query doesn't have those tables.
+            $filtered = $this->sellingVoucherItemRowsBaseQuery($request);
+            $this->applySellingVoucherItemSearch($filtered, $searchRaw);
+            $recordsFiltered = $searchTrimmed === ''
+                ? $recordsTotal
+                : (clone $filtered)->count('kii.pk');
+
+            $this->applySellingVoucherDatatableOrder($filtered, $request);
+            $rows = $filtered
+                ->offset($start)
+                ->limit($length)
+                ->get();
+        }
 
         $canDeleteSellingVoucher = hasRole('Admin') || hasRole('Mess-Admin');
 
@@ -634,18 +660,25 @@ class KitchenIssueController extends Controller
     /**
      * SQL fragment for subcategory display label (DBs may have item_name, subcategory_name, or name only).
      */
+    /** @var string[]|null Cached per-request: mess_item_subcategories name columns present on this DB. */
+    private static ?array $messSubcategoryNameColumns = null;
+
+    /** @return string[] Which of item_name/subcategory_name/name actually exist on mess_item_subcategories. */
+    private function messSubcategoryNameColumns(): array
+    {
+        if (self::$messSubcategoryNameColumns === null) {
+            self::$messSubcategoryNameColumns = array_values(array_filter(
+                ['item_name', 'subcategory_name', 'name'],
+                fn ($c) => Schema::hasColumn('mess_item_subcategories', $c)
+            ));
+        }
+
+        return self::$messSubcategoryNameColumns;
+    }
+
     private function messSubcategoryDisplayCoalesceSql(): string
     {
-        $parts = [];
-        if (Schema::hasColumn('mess_item_subcategories', 'item_name')) {
-            $parts[] = 'mis.item_name';
-        }
-        if (Schema::hasColumn('mess_item_subcategories', 'subcategory_name')) {
-            $parts[] = 'mis.subcategory_name';
-        }
-        if (Schema::hasColumn('mess_item_subcategories', 'name')) {
-            $parts[] = 'mis.name';
-        }
+        $parts = array_map(fn ($c) => 'mis.' . $c, $this->messSubcategoryNameColumns());
 
         return $parts === [] ? 'NULL' : ('COALESCE(' . implode(',', $parts) . ')');
     }
@@ -653,67 +686,17 @@ class KitchenIssueController extends Controller
     /** @return string[] Qualified columns on alias mis for LIKE search */
     private function messSubcategorySearchColumns(): array
     {
-        $cols = [];
-        foreach (['item_name', 'subcategory_name', 'name'] as $c) {
-            if (Schema::hasColumn('mess_item_subcategories', $c)) {
-                $cols[] = 'mis.' . $c;
-            }
-        }
-
-        return $cols;
+        return array_map(fn ($c) => 'mis.' . $c, $this->messSubcategoryNameColumns());
     }
 
     /**
-     * @return Builder
+     * All selling-voucher-item filters that only ever touch kim/kii columns (store, status, payment_type,
+     * client_type(_pk), buyer_name, date range, return_status). Shared by the id-only query (deferred join)
+     * and the full display-join query so the two can never drift out of sync.
      */
-    private function sellingVoucherItemRowsBaseQuery(Request $request)
+    private function applySellingVoucherFilters(Builder $q, Request $request): void
     {
-        $q = DB::table('kitchen_issue_items as kii')
-            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
-            ->leftJoin('mess_item_subcategories as mis', 'kii.item_subcategory_id', '=', 'mis.id')
-            ->leftJoin('mess_stores as ms', function ($join) {
-                $join->on('kim.store_id', '=', 'ms.id')
-                    ->where('kim.store_type', '=', 'store');
-            })
-            ->leftJoin('mess_sub_stores as mss', function ($join) {
-                $join->on('kim.store_id', '=', 'mss.id')
-                    ->where('kim.store_type', '=', 'sub_store');
-            })
-            ->leftJoin('course_master as cm', function ($join) {
-                $join->on('kim.client_type_pk', '=', 'cm.pk')
-                    ->whereIn('kim.client_type', [KitchenIssueMaster::CLIENT_OT, KitchenIssueMaster::CLIENT_COURSE]);
-            })
-            ->leftJoin('mess_client_types as mct', function ($join) {
-                $join->on('kim.client_type_pk', '=', 'mct.id')
-                    ->whereNotIn('kim.client_type', [KitchenIssueMaster::CLIENT_OT, KitchenIssueMaster::CLIENT_COURSE]);
-            })
-            ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER);
-
-        $misLabelSql = $this->messSubcategoryDisplayCoalesceSql();
-
-        $q->select([
-                'kii.pk as item_pk',
-                'kim.pk as voucher_pk',
-                'kii.item_name',
-                'kii.quantity',
-                'kii.return_quantity',
-                'kim.client_name as voucher_client_name',
-                'kim.payment_type',
-                'kim.status',
-                'kim.issue_date',
-                'kim.created_at',
-                DB::raw($misLabelSql . ' as sub_item_name'),
-                DB::raw("(CASE
-                    WHEN kim.store_type = 'sub_store' AND mss.sub_store_name IS NOT NULL THEN CONCAT(mss.sub_store_name, ' (Sub-Store)')
-                    WHEN kim.store_type = 'store' AND ms.store_name IS NOT NULL THEN ms.store_name
-                    ELSE 'N/A' END) as resolved_store_name"),
-                DB::raw('(CASE kim.client_type
-                    WHEN 1 THEN \'Employee\' WHEN 2 THEN \'OT\' WHEN 3 THEN \'Course\'
-                    WHEN 4 THEN \'Other\' WHEN 5 THEN \'Section\' ELSE \'Unknown\' END) as client_type_label'),
-                DB::raw("(CASE
-                    WHEN kim.client_type IN (2, 3) AND cm.course_name IS NOT NULL THEN cm.course_name
-                    ELSE COALESCE(mct.client_name, '—') END) as display_client_name"),
-            ]);
+        $q->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER);
 
         if ($request->filled('store')) {
             $storeFilter = $request->store;
@@ -785,6 +768,87 @@ class KitchenIssueController extends Controller
                 $rq->whereNull('kii.return_quantity')->orWhere('kii.return_quantity', '<=', 0);
             });
         }
+    }
+
+    /**
+     * kim+kii only (no display joins) — used to resolve recordsTotal/recordsFiltered and, for the
+     * deferred-join fast path, the LIMIT-bound (kim.pk, kii.pk) id pairs. Lets the query planner use
+     * idx_kim_type_issue_date_pk / idx_kim_store_type_issue_pk without dragging 4 extra LEFT JOINs
+     * through the filter+sort+limit stage.
+     *
+     * @return Builder
+     */
+    private function sellingVoucherFilteredIdsQuery(Request $request)
+    {
+        $q = DB::table('kitchen_issue_items as kii')
+            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk');
+
+        $this->applySellingVoucherFilters($q, $request);
+
+        return $q;
+    }
+
+    /**
+     * True when the requested sort column only needs kim/kii (no mis/ms/mss/cm/mct), so it's safe to
+     * order the id-only query directly and defer the display join to just the LIMIT-bound rows.
+     */
+    private function sellingVoucherOrderIsDeferrable(int $orderCol): bool
+    {
+        return in_array($orderCol, [0, 2, 3, 5, 7, 8, 9, 10, 11], true);
+    }
+
+    /**
+     * @return Builder
+     */
+    private function sellingVoucherItemRowsBaseQuery(Request $request)
+    {
+        $q = DB::table('kitchen_issue_items as kii')
+            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+            ->leftJoin('mess_item_subcategories as mis', 'kii.item_subcategory_id', '=', 'mis.id')
+            ->leftJoin('mess_stores as ms', function ($join) {
+                $join->on('kim.store_id', '=', 'ms.id')
+                    ->where('kim.store_type', '=', 'store');
+            })
+            ->leftJoin('mess_sub_stores as mss', function ($join) {
+                $join->on('kim.store_id', '=', 'mss.id')
+                    ->where('kim.store_type', '=', 'sub_store');
+            })
+            ->leftJoin('course_master as cm', function ($join) {
+                $join->on('kim.client_type_pk', '=', 'cm.pk')
+                    ->whereIn('kim.client_type', [KitchenIssueMaster::CLIENT_OT, KitchenIssueMaster::CLIENT_COURSE]);
+            })
+            ->leftJoin('mess_client_types as mct', function ($join) {
+                $join->on('kim.client_type_pk', '=', 'mct.id')
+                    ->whereNotIn('kim.client_type', [KitchenIssueMaster::CLIENT_OT, KitchenIssueMaster::CLIENT_COURSE]);
+            });
+
+        $misLabelSql = $this->messSubcategoryDisplayCoalesceSql();
+
+        $q->select([
+                'kii.pk as item_pk',
+                'kim.pk as voucher_pk',
+                'kii.item_name',
+                'kii.quantity',
+                'kii.return_quantity',
+                'kim.client_name as voucher_client_name',
+                'kim.payment_type',
+                'kim.status',
+                'kim.issue_date',
+                'kim.created_at',
+                DB::raw($misLabelSql . ' as sub_item_name'),
+                DB::raw("(CASE
+                    WHEN kim.store_type = 'sub_store' AND mss.sub_store_name IS NOT NULL THEN CONCAT(mss.sub_store_name, ' (Sub-Store)')
+                    WHEN kim.store_type = 'store' AND ms.store_name IS NOT NULL THEN ms.store_name
+                    ELSE 'N/A' END) as resolved_store_name"),
+                DB::raw('(CASE kim.client_type
+                    WHEN 1 THEN \'Employee\' WHEN 2 THEN \'OT\' WHEN 3 THEN \'Course\'
+                    WHEN 4 THEN \'Other\' WHEN 5 THEN \'Section\' ELSE \'Unknown\' END) as client_type_label'),
+                DB::raw("(CASE
+                    WHEN kim.client_type IN (2, 3) AND cm.course_name IS NOT NULL THEN cm.course_name
+                    ELSE COALESCE(mct.client_name, '—') END) as display_client_name"),
+            ]);
+
+        $this->applySellingVoucherFilters($q, $request);
 
         return $q;
     }
