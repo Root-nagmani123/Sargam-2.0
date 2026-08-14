@@ -7,13 +7,6 @@
 @endphp
 {{-- Report context strip (inside the AJAX-updated wrap so it stays in sync with filters) --}}
 
-@if(isset($reportLineCount) && $reportLineCount > 0 && isset($reportPage))
-    <p class="small text-body-secondary mb-2 no-print">
-        Showing page {{ $reportPage->currentPage() }} of {{ $reportPage->lastPage() }}
-        ({{ $reportPage->count() }} of {{ $reportLineCount }} lines).
-        Use PDF/Excel for full export; print uses current page only.
-    </p>
-@endif
 <div class="programme-dt-panel">
 <div class="table-responsive stock-purchase-table-wrapper" role="region" aria-label="Stock purchase table" tabindex="0">
     <table class="table table-hover align-middle mb-0 stock-purchase-table" style="width:100%;">
@@ -101,8 +94,27 @@
     </table>
 </div>
 </div>
-@if(isset($reportPage) && $reportPage->hasPages())
-    <div class="ssr-pagination-bar px-3 py-3 border-top bg-white rounded-bottom-3">
-        {{ $reportPage->appends(request()->query())->links('pagination::bootstrap-5') }}
+{{-- Footer chrome: same shape as the other report/index pages —
+     pager on the left, rows-per-page + total on the right. --}}
+@if(isset($reportPage) && ! request()->boolean('print_all'))
+    @php
+        $sprPerPageOptions = $reportPerPageOptions ?? [10, 25, 50, 100, 200];
+        $sprPagerQuery = collect(request()->query())->except('page')->all();
+    @endphp
+    <div class="ssr-pagination-bar px-3 px-lg-4 py-3 border-top d-flex flex-wrap align-items-center justify-content-between gap-3 no-print">
+        @if($reportPage->hasPages())
+            <div class="ssr-pagination-links order-2 order-md-1">{{ $reportPage->appends($sprPagerQuery)->links('pagination::bootstrap-5') }}</div>
+        @else
+            <span class="order-2 order-md-1"></span>
+        @endif
+        <div class="d-flex align-items-center gap-2 small text-body-secondary order-1 order-md-2 ms-md-auto">
+            <span>Showing</span>
+            <select id="sprPerPage" class="form-select form-select-sm ssr-perpage-select" aria-label="Rows per page">
+                @foreach($sprPerPageOptions as $pp)
+                    <option value="{{ $pp }}" {{ (int) $reportPage->perPage() === (int) $pp ? 'selected' : '' }}>{{ $pp }}</option>
+                @endforeach
+            </select>
+            <span>of {{ number_format($reportPage->total()) }} items</span>
+        </div>
     </div>
 @endif

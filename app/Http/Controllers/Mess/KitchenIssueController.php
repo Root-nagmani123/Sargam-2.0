@@ -143,9 +143,127 @@ class KitchenIssueController extends Controller
                 ->values();
         }
 
+        // Category options for EVERY client type, not just the selected one, so
+        // changing Client Type can repopulate Client Category without a round
+        // trip. Both sources are already loaded above, so this costs no queries.
+        $otCourseOptions = $otCourses->map(fn ($course) => [
+            'value' => (string) $course->pk,
+            'text' => (string) $course->course_name,
+        ])->values();
+
+        $filterClientTypePkMap = [];
+        foreach ($typeSlugMap as $typeValue => $slug) {
+            if (in_array($slug, ['ot', 'course'], true)) {
+                $filterClientTypePkMap[$typeValue] = $otCourseOptions->all();
+
+                continue;
+            }
+
+            $filterClientTypePkMap[$typeValue] = isset($clientNamesByType[$slug])
+                ? $clientNamesByType[$slug]->map(fn ($category) => [
+                    'value' => (string) $category->id,
+                    'text' => (string) $category->client_name,
+                ])->values()->all()
+                : [];
+        }
+
         $filterEmployeeBuyerOptions = $this->employeeBuyerFilterOptions($employees);
         $filterFacultyBuyerOptions = $this->facultyBuyerFilterOptions($faculties);
         $filterMessStaffBuyerOptions = $this->employeeBuyerFilterOptions($messStaff);
+
+        $filterBuyerNames = $this->filterBuyerNameOptions(
+            $selectedTypeSlug,
+            $selectedClientTypePk,
+            $filterClientTypePkOptions,
+            $filterEmployeeBuyerOptions,
+            $filterFacultyBuyerOptions,
+            $filterMessStaffBuyerOptions
+        );
+
+        if ($selectedBuyerName !== '' && ! $filterBuyerNames->contains(function ($item) use ($selectedBuyerName) {
+            $value = is_array($item) ? (string) ($item['value'] ?? '') : (string) $item;
+
+            return $value === (string) $selectedBuyerName;
+        })) {
+            $label = $selectedBuyerName;
+            if (ctype_digit($selectedBuyerName)) {
+                $resolvedLabel = $this->resolveEmployeeBuyerNameForFilter((int) $selectedBuyerName, (int) $selectedClientTypePk);
+                if ($resolvedLabel !== '') {
+                    $label = $resolvedLabel;
+                }
+            }
+            $filterBuyerNames = $filterBuyerNames->prepend([
+                'value' => $selectedBuyerName,
+                'text' => $label,
+            ])->values();
+        }
+
+        if ($selectedClientTypePk !== '' && $selectedClientType !== '') {
+            $hasSelectedCategory = $filterClientTypePkOptions->contains(
+                fn (array $option) => (string) ($option['value'] ?? '') === $selectedClientTypePk
+            );
+            if (! $hasSelectedCategory) {
+                $categoryLabel = '';
+                if (in_array($selectedTypeSlug, ['employee', 'section', 'other'], true)) {
+                    $categoryLabel = (string) (ClientType::find((int) $selectedClientTypePk)?->client_name ?? '');
+                } elseif (in_array($selectedTypeSlug, ['ot', 'course'], true)) {
+                    $categoryLabel = (string) ($otCourses->firstWhere('pk', (int) $selectedClientTypePk)?->course_name ?? '');
+                }
+                if ($categoryLabel !== '') {
+                    $filterClientTypePkOptions = $filterClientTypePkOptions->prepend([
+                        'value' => $selectedClientTypePk,
+                        'text' => $categoryLabel,
+                    ])->values();
+                }
+            }
+        }
+
+        return view('mess.kitchen-issues.index', compact(
+            'stores',
+            'itemSubcategories',
+            'clientTypes',
+            'clientNamesByType',
+            'faculties',
+            'employees',
+            'messStaff',
+            'otCourses',
+            'selectedClientType',
+            'selectedClientTypePk',
+            'selectedBuyerName',
+            'filterClientTypePkOptions',
+            'filterClientTypePkMap',
+            'typeSlugMap',
+            'filterBuyerNames',
+            'filterEmployeeBuyerOptions',
+            'filterFacultyBuyerOptions',
+            'filterMessStaffBuyerOptions'
+        ));
+    }
+
+    /**
+     * Cached dropdown/master payload for the Selling Voucher index form.
+     *
+     * @return array<string, mixed>
+     */
+    /**
+     * Buyer Name options for the Selling Voucher filter toolbar.
+     *
+     * Shared by the page render and the ajax endpoint below so the two can never
+     * disagree. Note this is NOT getBuyerNames(): that one serves the create
+     * form and only knows the course/section/other slugs, so it returns nothing
+     * for 'employee' and 'ot'.
+     *
+     * @param  \Illuminate\Support\Collection  $categoryOptions  the Client Category list for the chosen type
+     */
+    private function filterBuyerNameOptions(
+        string $selectedTypeSlug,
+        string $selectedClientTypePk,
+        $categoryOptions,
+        array $filterEmployeeBuyerOptions,
+        array $filterFacultyBuyerOptions,
+        array $filterMessStaffBuyerOptions
+    ) {
+        $filterClientTypePkOptions = collect($categoryOptions);
 
         $filterBuyerNames = collect();
         if ($selectedTypeSlug === 'employee' && $selectedClientTypePk !== '') {
@@ -207,70 +325,66 @@ class KitchenIssueController extends Controller
                 ->sort()
                 ->values();
         }
-
-        if ($selectedBuyerName !== '' && ! $filterBuyerNames->contains(function ($item) use ($selectedBuyerName) {
-            $value = is_array($item) ? (string) ($item['value'] ?? '') : (string) $item;
-
-            return $value === (string) $selectedBuyerName;
-        })) {
-            $label = $selectedBuyerName;
-            if (ctype_digit($selectedBuyerName)) {
-                $resolvedLabel = $this->resolveEmployeeBuyerNameForFilter((int) $selectedBuyerName, (int) $selectedClientTypePk);
-                if ($resolvedLabel !== '') {
-                    $label = $resolvedLabel;
-                }
-            }
-            $filterBuyerNames = $filterBuyerNames->prepend([
-                'value' => $selectedBuyerName,
-                'text' => $label,
-            ])->values();
-        }
-
-        if ($selectedClientTypePk !== '' && $selectedClientType !== '') {
-            $hasSelectedCategory = $filterClientTypePkOptions->contains(
-                fn (array $option) => (string) ($option['value'] ?? '') === $selectedClientTypePk
-            );
-            if (! $hasSelectedCategory) {
-                $categoryLabel = '';
-                if (in_array($selectedTypeSlug, ['employee', 'section', 'other'], true)) {
-                    $categoryLabel = (string) (ClientType::find((int) $selectedClientTypePk)?->client_name ?? '');
-                } elseif (in_array($selectedTypeSlug, ['ot', 'course'], true)) {
-                    $categoryLabel = (string) ($otCourses->firstWhere('pk', (int) $selectedClientTypePk)?->course_name ?? '');
-                }
-                if ($categoryLabel !== '') {
-                    $filterClientTypePkOptions = $filterClientTypePkOptions->prepend([
-                        'value' => $selectedClientTypePk,
-                        'text' => $categoryLabel,
-                    ])->values();
-                }
-            }
-        }
-
-        return view('mess.kitchen-issues.index', compact(
-            'stores',
-            'itemSubcategories',
-            'clientTypes',
-            'clientNamesByType',
-            'faculties',
-            'employees',
-            'messStaff',
-            'otCourses',
-            'selectedClientType',
-            'selectedClientTypePk',
-            'selectedBuyerName',
-            'filterClientTypePkOptions',
-            'filterBuyerNames',
-            'filterEmployeeBuyerOptions',
-            'filterFacultyBuyerOptions',
-            'filterMessStaffBuyerOptions'
-        ));
+        return $filterBuyerNames;
     }
 
     /**
-     * Cached dropdown/master payload for the Selling Voucher index form.
-     *
-     * @return array<string, mixed>
+     * Ajax twin of the above: lets the toolbar refresh Buyer Name without a page
+     * reload. Returns [{value, text}] so the caller does not have to care which
+     * branch produced the list.
      */
+    public function filterBuyerNames(Request $request)
+    {
+        $selectedClientType = (string) $request->query('client_type', '');
+        $selectedClientTypePk = (string) $request->query('client_type_pk', '');
+
+        $typeSlugMap = [
+            (string) KitchenIssueMaster::CLIENT_EMPLOYEE => 'employee',
+            (string) KitchenIssueMaster::CLIENT_OT => 'ot',
+            (string) KitchenIssueMaster::CLIENT_COURSE => 'course',
+            (string) KitchenIssueMaster::CLIENT_SECTION => 'section',
+            (string) KitchenIssueMaster::CLIENT_OTHER => 'other',
+        ];
+        $slug = $typeSlugMap[$selectedClientType] ?? '';
+        if ($slug === '' || $selectedClientTypePk === '') {
+            return response()->json(['options' => []]);
+        }
+
+        $master = $this->loadIndexMasterFormData();
+        $clientNamesByType = collect($master['clientNamesByType'])->map(
+            fn ($group) => collect($group)->map(fn ($row) => (object) $row)
+        );
+        $otCourses = collect($master['otCourses'])->map(fn ($row) => (object) $row);
+
+        $categoryOptions = in_array($slug, ['ot', 'course'], true)
+            ? $otCourses->map(fn ($c) => ['value' => (string) $c->pk, 'text' => (string) $c->course_name])->values()
+            : (isset($clientNamesByType[$slug])
+                ? $clientNamesByType[$slug]->map(fn ($c) => ['value' => (string) $c->id, 'text' => (string) $c->client_name])->values()
+                : collect());
+
+        $options = $this->filterBuyerNameOptions(
+            $slug,
+            $selectedClientTypePk,
+            $categoryOptions,
+            $this->employeeBuyerFilterOptions(collect($master['employees'])->map(fn ($r) => (object) $r)),
+            $this->facultyBuyerFilterOptions(collect($master['faculties'])->map(fn ($r) => (object) $r)),
+            $this->employeeBuyerFilterOptions(collect($master['messStaff'])->map(fn ($r) => (object) $r))
+        );
+
+        return response()->json([
+            'options' => $options->map(function ($item) {
+                if (is_array($item)) {
+                    return [
+                        'value' => (string) ($item['value'] ?? ''),
+                        'text' => (string) ($item['text'] ?? ($item['value'] ?? '')),
+                    ];
+                }
+
+                return ['value' => (string) $item, 'text' => (string) $item];
+            })->values(),
+        ]);
+    }
+
     private function loadIndexMasterFormData(): array
     {
         $epoch = DataTableRedisCache::readListEpoch(self::INDEX_MASTER_CACHE_EPOCH);
@@ -716,9 +830,6 @@ class KitchenIssueController extends Controller
         ];
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     private function sellingVoucherDatatableFilterFingerprint(Request $request): array
     {
         $store = $request->input('store');

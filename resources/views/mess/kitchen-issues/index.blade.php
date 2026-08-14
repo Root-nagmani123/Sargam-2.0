@@ -56,6 +56,19 @@
     .sv-master-page .sv-filter-item { flex-shrink: 0; }
     .sv-master-page .sv-filter-item .sv-filter-item-label { display: none; }   /* inline: label hidden (placeholder carries it) */
 
+    /* Below md the single row cannot hold even the fixed chrome — the label,
+       the "+N Filter" toggle and Remove Filter alone overflow once Columns and
+       search share the line. Let the toolbar stack there so the filter form
+       gets a full-width line of its own, and keep Remove Filter reachable. */
+    @media (max-width: 767.98px) {
+        .sv-master-page .sv-toolbar { flex-wrap: wrap; }
+        .sv-master-page .sv-filter-form { flex: 1 1 100%; width: 100%; }
+        /* custom.css:640 stretches these to 100% for toolbars whose filters STACK
+           on mobile. This toolbar keeps one row and spills into "+Filter", so a
+           full-width reset button alone would push the row past the screen. */
+        .sv-master-page .programme-dt-btn-reset { width: auto; }
+    }
+
     /* "+N Filter" popover trigger — clearly separated pill */
     .sv-master-page .sv-more-filters {
         flex-shrink: 0; color: #004a93; font-weight: 600; font-size: .9375rem;
@@ -168,23 +181,25 @@
                     (string) \App\Models\KitchenIssueMaster::CLIENT_OTHER => 'Other',
                 ];
             @endphp
-            {{-- Responsive single-row toolbar: filters auto-apply on change; overflow spills into "+Filter"; Columns + search on the same row. --}}
+    {{-- Responsive single-row toolbar: filters auto-apply on change; overflow spills into "+Filter"; Columns + search on the same row. --}}
             <div class="d-flex align-items-center gap-2 mb-3 programme-dt-toolbar sv-toolbar">
                 <form method="GET" action="{{ route('admin.mess.material-management.index') }}" id="svFilterForm"
                       class="d-flex align-items-center gap-2 sv-filter-form">
                     <span class="programme-dt-filters-label flex-shrink-0">Filter</span>
-
+                    {{-- Every filter lives inside #svFilterItems: the overflow
+                         manager only collects `.sv-filter-item` from within this
+                         wrapper, so anything left outside it can never move into
+                         "+Filter" and would pin the row wider than the screen. --}}
                     <div id="svFilterItems" class="d-flex align-items-center gap-2 sv-filter-items">
-                        <div class="sv-filter-item" data-filter="date">
-                            <label class="sv-filter-item-label">Date Range</label>
-                            <div class="d-flex align-items-center gap-1">
-                                <input type="date" name="start_date" id="filter_start_date" class="form-control sv-filter-date sv-auto-filter" value="{{ request('start_date') }}" aria-label="Start date">
-                                <span class="sv-filter-dash">–</span>
-                                <input type="date" name="end_date" id="filter_end_date" class="form-control sv-filter-date sv-auto-filter" value="{{ request('end_date') }}" aria-label="End date" @if(request()->filled('start_date')) min="{{ request('start_date') }}" @endif>
-                            </div>
+                        <div class="sv-filter-item" data-filter="status">
+                            <label class="sv-filter-item-label">Status</label>
+                            <select name="status" id="filter_status" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Status">
+                                <option value="">Status</option>
+                                <option value="0" {{ $svSelStatus === '0' ? 'selected' : '' }}>Pending</option>
+                                <option value="2" {{ $svSelStatus === '2' ? 'selected' : '' }}>Approved</option>
+                            </select>
                         </div>
-
-                        <div class="sv-filter-item" data-filter="store">
+                         <div class="sv-filter-item" data-filter="store">
                             <label class="sv-filter-item-label">Store</label>
                             <select name="store" id="filter_store" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Store">
                                 <option value="">Store</option>
@@ -193,7 +208,24 @@
                                 @endforeach
                             </select>
                         </div>
-
+                         <div class="sv-filter-item" data-filter="client_type">
+                            <label class="sv-filter-item-label">Client Type</label>
+                            <select name="client_type" id="filter_client_type" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Client type" data-clears="filter_client_type_pk,filter_buyer_name">
+                                <option value="" {{ $selectedClientType === '' ? 'selected' : '' }}>Client Type</option>
+                                @foreach($filterClientTypes as $value => $label)
+                                    <option value="{{ $value }}" {{ $selectedClientType === $value ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="sv-filter-item" data-filter="client_type_pk">
+                            <label class="sv-filter-item-label">Client Category</label>
+                            <select name="client_type_pk" id="filter_client_type_pk" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Client category" data-clears="filter_buyer_name">
+                                <option value="">Client Category</option>
+                                @foreach(($filterClientTypePkOptions ?? collect()) as $option)
+                                    <option value="{{ $option['value'] }}" {{ (string) ($selectedClientTypePk ?? '') === (string) $option['value'] ? 'selected' : '' }}>{{ $option['text'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                         <div class="sv-filter-item" data-filter="buyer">
                             <label class="sv-filter-item-label">Buyer Name</label>
                             <select name="buyer_name" id="filter_buyer_name" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Buyer name">
@@ -207,36 +239,6 @@
                                 @endforeach
                             </select>
                         </div>
-
-                        <div class="sv-filter-item" data-filter="status">
-                            <label class="sv-filter-item-label">Status</label>
-                            <select name="status" id="filter_status" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Status">
-                                <option value="">Status</option>
-                                <option value="0" {{ $svSelStatus === '0' ? 'selected' : '' }}>Pending</option>
-                                <option value="2" {{ $svSelStatus === '2' ? 'selected' : '' }}>Approved</option>
-                            </select>
-                        </div>
-
-                        <div class="sv-filter-item" data-filter="client_type">
-                            <label class="sv-filter-item-label">Client Type</label>
-                            <select name="client_type" id="filter_client_type" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Client type" data-clears="filter_client_type_pk,filter_buyer_name">
-                                <option value="" {{ $selectedClientType === '' ? 'selected' : '' }}>Client Type</option>
-                                @foreach($filterClientTypes as $value => $label)
-                                    <option value="{{ $value }}" {{ $selectedClientType === $value ? 'selected' : '' }}>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="sv-filter-item" data-filter="client_type_pk">
-                            <label class="sv-filter-item-label">Client Category</label>
-                            <select name="client_type_pk" id="filter_client_type_pk" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Client category" data-clears="filter_buyer_name">
-                                <option value="">Client Category</option>
-                                @foreach(($filterClientTypePkOptions ?? collect()) as $option)
-                                    <option value="{{ $option['value'] }}" {{ (string) ($selectedClientTypePk ?? '') === (string) $option['value'] ? 'selected' : '' }}>{{ $option['text'] }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
                         <div class="sv-filter-item" data-filter="return_status">
                             <label class="sv-filter-item-label">Return Status</label>
                             <select name="return_status" id="filter_return_status" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Return status">
@@ -244,6 +246,14 @@
                                 <option value="returned" {{ request('return_status') === 'returned' ? 'selected' : '' }}>Returned</option>
                                 <option value="not_returned" {{ request('return_status') === 'not_returned' ? 'selected' : '' }}>Not returned</option>
                             </select>
+                        </div>
+                        <div class="sv-filter-item" data-filter="date">
+                            <label class="sv-filter-item-label">Date Range</label>
+                            <div class="d-flex align-items-center gap-1">
+                                <input type="date" name="start_date" id="filter_start_date" class="form-control sv-filter-date sv-auto-filter" value="{{ request('start_date') }}" aria-label="Start date">
+                                <span class="sv-filter-dash">–</span>
+                                <input type="date" name="end_date" id="filter_end_date" class="form-control sv-filter-date sv-auto-filter" value="{{ request('end_date') }}" aria-label="End date" @if(request()->filled('start_date')) min="{{ request('start_date') }}" @endif>
+                            </div>
                         </div>
                     </div>
 
@@ -419,10 +429,91 @@
         var form = document.getElementById('svFilterForm');
         if (!form) return;
 
-        // ── Auto-apply: any filter change submits the form (clearing dependent children first) ──
+        // ── Auto-apply: refresh the grid in place, never reload the page ──
+        // The DataTable builds its ajax URL from window.location.search (see
+        // components/mess-master-datatables), so pushing the filters into the URL
+        // with history.replaceState and reloading the table gives the server the
+        // same query string a submit would have — without the round trip.
+        var CATEGORY_OPTIONS_BY_TYPE = @json($filterClientTypePkMap ?? []);
+        var BUYER_NAMES_URL = @json(route('admin.mess.material-management.filter-buyer-names'));
+
+        function svTable() {
+            var $ = window.jQuery;
+            if (!$ || !$.fn.DataTable || !$.fn.DataTable.isDataTable('#sellingVouchersTable')) return null;
+            return $('#sellingVouchersTable').DataTable();
+        }
+
+        function currentQuery() {
+            var params = new URLSearchParams();
+            new FormData(form).forEach(function (value, key) {
+                if (value !== null && String(value).trim() !== '') params.set(key, value);
+            });
+            return params.toString();
+        }
+
+        /** Mirror the filters into the address bar so the grid's ajax — and a
+         *  refresh, a bookmark or the Download/Print links — all see them. */
+        function syncUrl() {
+            var qs = currentQuery();
+            var url = window.location.pathname + (qs ? '?' + qs : '');
+            window.history.replaceState({}, '', url);
+        }
+
+        function refreshGrid() {
+            syncUrl();
+            var dt = svTable();
+            if (!dt) { window.location.reload(); return; }   // grid missing: fall back
+            dt.ajax.reload(null, true);                       // true = back to page 1
+        }
+
+        function fillSelect(el, options, placeholder) {
+            if (!el) return;
+            // These selects are Choices-managed, which ignores innerHTML — go
+            // through the helper so the widget rebuilds with the new list.
+            if (window.SvFilterChoices && window.SvFilterChoices.isManaged(el)) {
+                window.SvFilterChoices.setOptions(el, options, placeholder);
+                return;
+            }
+            var html = '<option value="">' + placeholder + '</option>';
+            (options || []).forEach(function (opt) {
+                html += '<option value="' + String(opt.value).replace(/"/g, '&quot;') + '">'
+                    + String(opt.text).replace(/</g, '&lt;') + '</option>';
+            });
+            el.innerHTML = html;
+        }
+
+        /** Client Category depends on Client Type — served from the embedded map,
+         *  so no request is needed. */
+        function repopulateCategories() {
+            var type = (document.getElementById('filter_client_type') || {}).value || '';
+            fillSelect(document.getElementById('filter_client_type_pk'),
+                CATEGORY_OPTIONS_BY_TYPE[type] || [], 'Client Category');
+        }
+
+        /** Buyer Name depends on Client Category — that list is not knowable up
+         *  front, so it comes from the existing buyer-names endpoint. */
+        function repopulateBuyers() {
+            var buyerEl = document.getElementById('filter_buyer_name');
+            if (!buyerEl) return;
+            var type = (document.getElementById('filter_client_type') || {}).value || '';
+            var pk = (document.getElementById('filter_client_type_pk') || {}).value || '';
+            if (!type || !pk) { fillSelect(buyerEl, [], 'Buyer Name'); return; }
+
+            // filter-buyer-names shares the page's own builder, so it covers every
+            // client type — employee buckets and OT courses included, which the
+            // create form's buyer-names endpoint does not.
+            fetch(BUYER_NAMES_URL + '?client_type=' + encodeURIComponent(type)
+                    + '&client_type_pk=' + encodeURIComponent(pk),
+                { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
+                .then(function (r) { return r.json(); })
+                .then(function (res) { fillSelect(buyerEl, res.options || [], 'Buyer Name'); })
+                .catch(function () { fillSelect(buyerEl, [], 'Buyer Name'); });
+        }
+
         form.addEventListener('change', function (e) {
             var t = e.target;
             if (!t || !t.classList || !t.classList.contains('sv-auto-filter')) return;
+
             var clears = t.getAttribute('data-clears');
             if (clears) {
                 clears.split(',').forEach(function (id) {
@@ -430,8 +521,34 @@
                     if (el) el.value = ''; // programmatic reset — does not re-fire change
                 });
             }
-            form.submit();
+
+            // A full reload used to re-render these dependent lists; rebuild them
+            // here instead, or they would keep the previous type's options.
+            if (t.id === 'filter_client_type') { repopulateCategories(); repopulateBuyers(); }
+            else if (t.id === 'filter_client_type_pk') { repopulateBuyers(); }
+
+            refreshGrid();
         });
+
+        // "Remove Filter" clears in place too, for the same reason.
+        var resetLink = form.querySelector('.programme-dt-btn-reset');
+        if (resetLink) {
+            resetLink.addEventListener('click', function (e) {
+                e.preventDefault();
+                form.reset();
+                form.querySelectorAll('select, input[type="date"]').forEach(function (el) {
+                    el.value = '';
+                    // form.reset() restores the native <select>, but the Choices
+                    // widget keeps showing the old item until it is told.
+                    if (window.SvFilterChoices && window.SvFilterChoices.isManaged(el)) {
+                        window.SvFilterChoices.clear(el);
+                    }
+                });
+                repopulateCategories();
+                fillSelect(document.getElementById('filter_buyer_name'), [], 'Buyer Name');
+                refreshGrid();
+            });
+        }
 
         // ── Responsive overflow: keep the toolbar to one row; move trailing filters into "+Filter" ──
         var itemsWrap = document.getElementById('svFilterItems');
@@ -469,9 +586,21 @@
 
         layout();
         window.addEventListener('resize', scheduleLayout);
-        // Re-run once styles/fonts settle so the first measurement is accurate.
-        window.setTimeout(layout, 150);
-        window.setTimeout(layout, 500);
+
+        // Re-measure when the row's available width actually changes — sidebar
+        // collapse, zoom, split-screen. Observes the form's PARENT, whose width
+        // layout() never alters; observing the items row we mutate would re-fire
+        // on every move.
+        if (window.ResizeObserver && form.parentElement) {
+            new ResizeObserver(scheduleLayout).observe(form.parentElement);
+        }
+
+        // Choices.js is fetched from a CDN and rewrites these selects long after
+        // DOMContentLoaded, changing their widths. Without a re-measure past that
+        // point the row keeps every filter inline and overflows the screen.
+        window.addEventListener('load', scheduleLayout);
+        [150, 500, 1000, 2000, 3000].forEach(function (ms) { window.setTimeout(layout, ms); });
+
     })();
     </script>
     @endpush
@@ -535,89 +664,83 @@
     opacity: 0.75;
 }
 
-/* Filter dropdowns: Choices.js — match native + chevron */
-#filter_status + .choices,
-#filter_store + .choices {
+/* Filter dropdowns: the searchable widget must be visually identical to the
+   native pill it replaced (.sv-filter-select-native above) — same box, same
+   chevron, same focus ring. Adding search must not change the design. */
+.sv-master-page .choices.sv-filter-choices {
     margin-bottom: 0;
+    width: 150px;
+    flex-shrink: 0;
 }
-#filter_status + .choices .choices__inner,
-#filter_store + .choices .choices__inner {
-    min-height: calc(1.5em + 0.5rem + calc(var(--bs-border-width) * 2));
-    padding: 0.25rem 2.25rem 0.25rem 0.5rem;
-    font-size: 0.765625rem;
-    line-height: 1.5;
-    border: var(--bs-border-width) solid #e0e6eb;
-    border-radius: var(--bs-border-radius-sm);
+.sv-master-page .choices.sv-filter-choices .choices__inner {
+    min-height: 40px;
+    padding: 0 2.25rem 0 0.75rem;
+    display: flex;
+    align-items: center;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
     background-color: #fff;
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
     background-repeat: no-repeat;
-    background-position: right 0.65rem center;
+    background-position: right 0.75rem center;
     background-size: 16px 12px;
     box-shadow: none;
-    color: #526b7a;
+    font-size: .9375rem;
+    color: #344054;
 }
-#filter_status + .choices .choices__list--multiple,
-#filter_store + .choices .choices__list--multiple {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 0.2rem;
-    max-height: none;
-    overflow-y: hidden;
-    overflow-x: hidden;
-    margin: 0;
-    padding-right: 0.15rem;
+/* Choices adds its own dropdown arrow; the chevron above is the native one. */
+.sv-master-page .choices.sv-filter-choices[data-type*="select-one"]::after {
+    display: none;
+}
+.sv-master-page .choices.sv-filter-choices .choices__list--single {
+    padding: 0;
+}
+.sv-master-page .choices.sv-filter-choices .choices__list--single .choices__item {
+    font-size: .9375rem;
+    color: #344054;
     white-space: nowrap;
-}
-#filter_status + .choices .choices__input,
-#filter_store + .choices .choices__input {
-    margin: 0;
-}
-#filter_status + .choices .choices__placeholder,
-#filter_store + .choices .choices__placeholder {
-    color: #526b7a;
-    opacity: 0.65;
-}
-#filter_status + .choices.is-open .choices__inner,
-#filter_status + .choices.is-focused .choices__inner,
-#filter_store + .choices.is-open .choices__inner,
-#filter_store + .choices.is-focused .choices__inner {
-    border-color: #b1adff;
-    box-shadow: 0 0 0 0.25rem rgba(99, 91, 255, 0.25);
-}
-#filter_status + .choices .choices__list--dropdown,
-#filter_store + .choices .choices__list--dropdown {
-    z-index: 1050;
-    border: var(--bs-border-width) solid #e0e6eb;
-    border-radius: var(--bs-border-radius-sm);
-    font-size: 0.765625rem;
-}
-#filter_status + .choices .choices__item,
-#filter_store + .choices .choices__item {
-    font-size: 0.765625rem;
-    color: #526b7a;
-}
-.sv-selling-voucher-filters #filter_status + .choices .choices__list--multiple .choices__item,
-.sv-selling-voucher-filters #filter_store + .choices .choices__list--multiple .choices__item {
-    background-color: #eef2f5;
-    border: 1px solid #e0e6eb;
-    color: #526b7a;
-    border-radius: var(--bs-border-radius-sm);
-    font-size: 0.7rem;
-    margin-bottom: 0.125rem;
-    max-width: 9.5rem;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
 }
-.sv-selling-voucher-filters #filter_status + .choices .choices__button,
-.sv-selling-voucher-filters #filter_store + .choices .choices__button {
-    border-left: 1px solid #d9e0e6;
-    margin-left: 0.35rem;
-    padding-left: 0.35rem;
+.sv-master-page .choices.sv-filter-choices .choices__placeholder {
+    color: #344054;
+    opacity: 1;
 }
-.sv-selling-voucher-filters #filter_status + .choices .choices__list--multiple .choices__item.is-highlighted,
-.sv-selling-voucher-filters #filter_store + .choices .choices__list--multiple .choices__item.is-highlighted {
-    background-color: #e3e9ee;
+.sv-master-page .choices.sv-filter-choices.is-open .choices__inner,
+.sv-master-page .choices.sv-filter-choices.is-focused .choices__inner {
+    border-color: var(--ds-primary, #004a93);
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, .12);
+}
+/* Open state keeps the same rounded box rather than squaring off. */
+.sv-master-page .choices.sv-filter-choices.is-open .choices__inner {
+    border-radius: 8px;
+}
+.sv-master-page .choices.sv-filter-choices .choices__list--dropdown {
+    z-index: 1050;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    font-size: .9375rem;
+    margin-top: 0.25rem;
+}
+.sv-master-page .choices.sv-filter-choices .choices__list--dropdown .choices__item {
+    font-size: .9375rem;
+    color: #344054;
+}
+/* The search field inside the dropdown — the only visible addition. */
+.sv-master-page .choices.sv-filter-choices .choices__list--dropdown .choices__input {
+    min-height: 34px;
+    margin: 0.5rem;
+    padding: 0 0.5rem;
+    width: calc(100% - 1rem);
+    border: 1px solid #d0d5dd;
+    border-radius: 6px;
+    font-size: .875rem;
+    color: #344054;
+    background-color: #fff;
+}
+/* Inside the "+Filter" popover the filters are full width, as before. */
+.sv-more-menu .sv-filter-item .choices.sv-filter-choices {
+    width: 100%;
 }
 
 #addSellingVoucherModal .modal-dialog,
@@ -2591,137 +2714,77 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Filter dropdowns (Choices.js): same exact word-token search as selling voucher modals
+    // Every filter dropdown is a searchable single-select. The block that used to
+    // live here was a MULTI-select config (removeItemButton and friends) that no
+    // longer suited the auto-apply toolbar, so it had been switched off with
+    // `var filterStatus = null` — leaving the filters with no search at all.
     if (typeof Choices !== 'undefined') {
-        // Selling Voucher filters are now plain native single-selects with auto-submit,
-        // so the Choices multi-select init below is intentionally skipped.
-        var filterStatus = null;
-        var filterStore = null;
+        function svFilterChoicesConfig(selectEl) {
+            var placeholderOption = selectEl.options && selectEl.options[0];
+            var label = (placeholderOption ? placeholderOption.text : '') || 'options';
 
-        if (filterStatus) {
-            try {
-                if (filterStatus.tomselect) {
-                    filterStatus.tomselect.destroy();
-                }
-                if (filterStatus.choicesInstance) {
-                    try { filterStatus.choicesInstance.destroy(); } catch (e) {}
-                }
-                createChoicesInstance(filterStatus, {
-                    allowEmptyOption: true,
-                    dropdownParent: 'body',
-                    placeholder: 'All Status',
-                    searchField: ['text'],
-                    controlInput: '<input>',
-                    highlight: false,
-                    removeItemButton: true,
-                    exactWordTokenSearch: true,
-                    searchFields: ['label'],
-                    searchPlaceholderValue: 'Search status...',
-                    onInitialize: function () {
-                        this.activeOption = null;
-                    },
-                    onDropdownOpen: function (dropdown) {
-                        var self = this;
-                        function clearInputAndCursor() {
-                            var input = self.control_input || (dropdown && dropdown.querySelector('input'));
-                            if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
-                            if (typeof self.onSearchChange === 'function') self.onSearchChange('');
-                            if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
-                            if (input) {
-                                input.value = '';
-                                safeFocus(input);
-                                try { input.setSelectionRange(0, 0); } catch (e) {}
-                                input.scrollLeft = 0;
-                            }
-                        }
-                        // Keep selected values; reset only search input each open
-                        clearInputAndCursor();
-                        setTimeout(function () {
-                            clearInputAndCursor();
-                        }, 0);
-                        setTimeout(function () {
-                            clearInputAndCursor();
-                        }, 50);
-                        setTimeout(function () {
-                            clearInputAndCursor();
-                        }, 100);
-                        setTimeout(function () {
-                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
-                            opts.forEach(function (opt) {
-                                opt.classList.remove('active');
-                                opt.classList.remove('selected');
-                                opt.setAttribute('aria-selected', 'false');
-                            });
-                        }, 0);
-                    }
-                });
-                syncFilterChoicesMultiFromNative(filterStatus);
-            } catch (e) {
-                console.error('Choices initialization failed for status filter:', e);
-            }
+            return {
+                allowEmptyOption: true,
+                placeholder: label,
+                searchEnabled: true,
+                searchFields: ['label'],
+                exactWordTokenSearch: true,
+                searchPlaceholderValue: 'Search ' + label.toLowerCase() + '...',
+                highlight: false
+            };
         }
 
-        if (filterStore) {
-            try {
-                if (filterStore.tomselect) {
-                    filterStore.tomselect.destroy();
-                }
-                if (filterStore.choicesInstance) {
-                    try { filterStore.choicesInstance.destroy(); } catch (e) {}
-                }
-                createChoicesInstance(filterStore, {
-                    allowEmptyOption: true,
-                    dropdownParent: 'body',
-                    placeholder: 'All Stores',
-                    searchField: ['text'],
-                    controlInput: '<input>',
-                    highlight: false,
-                    removeItemButton: true,
-                    exactWordTokenSearch: true,
-                    searchFields: ['label'],
-                    searchPlaceholderValue: 'Search store...',
-                    onInitialize: function () {
-                        this.activeOption = null;
-                    },
-                    onDropdownOpen: function (dropdown) {
-                        var self = this;
-                        function clearInputAndCursor() {
-                            var input = self.control_input || (dropdown && dropdown.querySelector('input'));
-                            if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
-                            if (typeof self.onSearchChange === 'function') self.onSearchChange('');
-                            if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
-                            if (input) {
-                                input.value = '';
-                                safeFocus(input);
-                                try { input.setSelectionRange(0, 0); } catch (e) {}
-                                input.scrollLeft = 0;
-                            }
-                        }
-                        // Keep selected values; reset only search input each open
-                        clearInputAndCursor();
-                        setTimeout(function () {
-                            clearInputAndCursor();
-                        }, 0);
-                        setTimeout(function () {
-                            clearInputAndCursor();
-                        }, 50);
-                        setTimeout(function () {
-                            clearInputAndCursor();
-                        }, 100);
-                        setTimeout(function () {
-                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
-                            opts.forEach(function (opt) {
-                                opt.classList.remove('active');
-                                opt.classList.remove('selected');
-                                opt.setAttribute('aria-selected', 'false');
-                            });
-                        }, 0);
-                    }
-                });
-                syncFilterChoicesMultiFromNative(filterStore);
-            } catch (e) {
-                console.error('Choices initialization failed for store filter:', e);
-            }
+        function svInitFilterChoices(selectEl) {
+            if (!selectEl) return null;
+            if (selectEl.choicesInstance) return selectEl.choicesInstance;
+
+            var inst = createChoicesInstance(selectEl, svFilterChoicesConfig(selectEl));
+
+            // Choices moves the <select> INSIDE its wrapper, so `select + .choices`
+            // never matches. Tag the wrapper instead so the skin can reach it.
+            var wrapper = (inst && inst.wrapper) || selectEl.closest('.choices');
+            if (wrapper && wrapper.classList) wrapper.classList.add('sv-filter-choices');
+
+            return inst;
         }
+
+        Array.prototype.forEach.call(
+            document.querySelectorAll('.sv-filter-select-native'),
+            function (selectEl) { svInitFilterChoices(selectEl); }
+        );
+
+        // A Choices-managed <select> ignores innerHTML, so the dependent filters
+        // (Client Category, Buyer Name) have to be rebuilt through here.
+        window.SvFilterChoices = {
+            isManaged: function (selectEl) {
+                return !!(selectEl && selectEl.choicesInstance);
+            },
+            setOptions: function (selectEl, options, placeholder) {
+                if (!selectEl) return;
+                var html = '<option value="">' + placeholder + '</option>';
+                (options || []).forEach(function (opt) {
+                    html += '<option value="' + String(opt.value).replace(/"/g, '&quot;') + '">'
+                        + String(opt.text).replace(/</g, '&lt;') + '</option>';
+                });
+
+                // Destroy, swap the native options, re-init. Patching in place
+                // (setChoices) leaves stale entries behind when the list shrinks.
+                var inst = selectEl.choicesInstance;
+                if (inst && typeof inst.destroy === 'function') {
+                    try { inst.destroy(); } catch (e) {}
+                }
+                selectEl.innerHTML = html;
+                svInitFilterChoices(selectEl);
+            },
+            clear: function (selectEl) {
+                if (!selectEl) return;
+                selectEl.value = '';
+                var inst = selectEl.choicesInstance;
+                if (inst && typeof inst.setValue === 'function') {
+                    try { inst.setValue(''); } catch (e) {}
+                }
+            }
+        };
     } else {
         console.warn('Choices.js library not loaded on Selling Voucher page');
     }

@@ -1554,6 +1554,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     // Material Management (formerly Kitchen Issue)
     Route::get('material-management/students-by-course/{course_pk}', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getStudentsByCourse'])->name('material-management.students-by-course');
     Route::get('material-management/buyer-names', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getBuyerNames'])->name('material-management.buyer-names');
+    Route::get('material-management/filter-buyer-names', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'filterBuyerNames'])->name('material-management.filter-buyer-names');
     Route::get('material-management/store/{storeIdentifier}/items', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getStoreItems'])->name('material-management.store.items');
     Route::get('material-management/selling-vouchers/datatable', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'sellingVouchersDatatable'])->name('material-management.selling-vouchers-datatable');
     Route::get('material-management/selling-vouchers/export', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'export'])->name('material-management.selling-vouchers-export');
@@ -1577,6 +1578,9 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     Route::get('my-bills', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'myBillsIndex'])->name('my-bills.index');
     Route::get('process-mess-bills-employee', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'index'])->name('process-mess-bills-employee.index');
     Route::get('process-mess-bills-employee/modal-data', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'modalData'])->name('process-mess-bills-employee.modal-data');
+    // Must stay above the {id} routes below, or "generate-invoice" would be read as an id.
+    Route::get('process-mess-bills-employee/generate-invoice', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'generateInvoicePage'])->name('process-mess-bills-employee.generate-invoice-page');
+    Route::get('process-mess-bills-employee/generate-invoice/export', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'exportGenerateInvoice'])->name('process-mess-bills-employee.generate-invoice-export');
     Route::get('process-mess-bills-employee/{id}/payment-details', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'paymentDetails'])->name('process-mess-bills-employee.payment-details');
     Route::post('process-mess-bills-employee/{id}/generate-invoice', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'generateInvoice'])->name('process-mess-bills-employee.generate-invoice');
     Route::post('process-mess-bills-employee/{id}/generate-payment', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'generatePayment'])->name('process-mess-bills-employee.generate-payment');

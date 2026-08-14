@@ -1,289 +1,17 @@
 @extends('admin.layouts.master')
 @php
-    $messEmblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
-    $messLbsnaaLogoSrc = asset('images/lbsnaa_logo.jpg');
-    if (! is_file(public_path('images/lbsnaa_logo.jpg'))) {
-        $messLbsnaaLogoSrc = is_file(public_path('images/lbsnaa_logo.png'))
-            ? asset('images/lbsnaa_logo.png')
-            : 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
-    }
+    // Print/PDF branding uses LOCAL assets — the emblem used to be pulled from
+    // upload.wikimedia.org, which renders as a broken image on an offline network.
+    $messEmblemSrc = asset('admin_assets/images/logos/ashoka.png');
+    $messLbsnaaLogoSrc = asset('admin_assets/images/logos/logo-web.png');
 @endphp
 @section('title', 'Low Stock Report')
-@section('content')
-@include('admin.mess.reports.partials.report-styles')
-<div class="container-fluid low-stock-report py-3 py-md-4">
-    <x-breadcrum title="Low Stock Report"></x-breadcrum>
 
-    @php $lsExportQ = request()->query(); $lsExportQuery = $lsExportQ ? '?' . http_build_query($lsExportQ) : ''; @endphp
-    {{-- Download / Print bar --}}
-    <div class="d-flex justify-content-end gap-2 mb-3 no-print">
-        <a href="{{ route('admin.mess.reports.low-stock.pdf') }}{{ $lsExportQuery }}" class="btn ls-export-btn"
-            title="Download (PDF)">
-            <i class="material-symbols-rounded">download</i><span>Download</span>
-        </a>
-        <button type="button" class="btn ls-export-btn" onclick="printLowStockReport()"
-            title="Print (or Save as PDF)">
-            <i class="material-symbols-rounded">print</i><span>Print</span>
-        </button>
-    </div>
-    <!-- Report Table -->
-    <div class="card border-0 shadow-sm rounded-3 overflow-hidden low-stock-report-card">
-        <div class="card-body">
-            <div class="mb-3">
-                <div class="d-flex align-items-center gap-2 ls-filter-toolbar">
-                    <form method="GET" action="{{ route('admin.mess.reports.low-stock') }}" id="lsFilterForm"
-                        class="d-flex align-items-center gap-2 flex-wrap ls-filter-form">
-                        <input type="hidden" name="refresh" value="1">
-                        <span class="programme-dt-filters-label flex-shrink-0">Filter</span>
-                        <div class="ls-filter-item">
-                            <input type="date" id="till_date" name="till_date"
-                                class="form-control ls-filter-date ls-auto-filter" value="{{ $tillDate }}"
-                                aria-label="Till date">
-                        </div>
-                        <div class="ls-filter-item">
-                            <select id="store_id" name="store_id[]"
-                                class="form-select choices-select low-stock-store-multiselect ls-auto-filter" multiple
-                                data-placeholder="All Stores">
-                                @foreach($stores as $store)
-                                <option value="{{ $store->id }}" @selected(in_array((int) $store->id, $selectedStoreIds
-                                    ?? [], true))>{{ $store->store_name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <a href="{{ route('admin.mess.reports.low-stock') }}" id="lsRemoveFilter"
-                            class="programme-dt-btn-reset flex-shrink-0 d-inline-flex align-items-center justify-content-center text-decoration-none"
-                            title="Remove all filters">Remove Filter</a>
-                    </form>
-                    <div class="d-flex align-items-center gap-2 ms-auto flex-shrink-0">
-                        <button type="button" class="btn programme-dt-btn-columns" id="lsColumnsBtn"
-                            data-bs-toggle="modal" data-bs-target="#lsColumnsModal" title="Show / hide columns">
-                            <i class="material-symbols-rounded">view_column</i><span>Columns</span>
-                        </button>
-                        @include('mess.partials.search-toggle', ['tableId' => 'lowStockReportTable'])
-                    </div>
-                </div>
-                {{-- Column visibility modal --}}
-                <div class="modal fade" id="lsColumnsModal" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content rounded-4 border-0 shadow">
-                            <div class="modal-header border-0 pb-2">
-                                <h5 class="modal-title fw-bold">Column Visibility</h5><button type="button"
-                                    class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body pt-0">
-                                <hr class="mt-0">
-                                <div class="d-flex flex-column gap-2">
-                                    <label
-                                        class="d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input
-                                            type="checkbox" class="form-check-input m-0 ls-col-toggle" data-col="unit"
-                                            checked> <span>Unit</span></label>
-                                </div>
-                            </div>
-                            <div class="modal-footer border-0"><button type="button"
-                                    class="btn btn-outline-primary rounded-3 px-4"
-                                    data-bs-dismiss="modal">Close</button></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="report-header text-center mb-4 pb-3 border-bottom border-body-secondary border-opacity-25">
-                <h4 class="fw-bold text-uppercase mb-3 fs-5 text-body-emphasis">Low Stock Report</h4>
-                <div class="d-flex flex-wrap justify-content-center gap-2 gap-md-3">
-                    <span
-                        class="badge text-bg-body-secondary text-body-emphasis fw-normal rounded-pill px-3 py-2 border border-body-secondary border-opacity-50">
-                        <span class="material-symbols-rounded icon-16 align-text-bottom me-1">event</span>
-                        Till: {{ date('d-F-Y', strtotime($tillDate)) }}
-                    </span>
-                    <span class="badge text-bg-primary fw-normal rounded-pill px-3 py-2">
-                        <span class="material-symbols-rounded icon-16 align-text-bottom me-1">store</span>
-                        {{ $selectedStoreName ?? 'All Stores' }}
-                    </span>
-                </div>
-            </div>
-
-            <div class="card border border-body-secondary border-opacity-25 rounded-4 overflow-hidden">
-                <div
-                    class="card-header bg-body-tertiary border-bottom border-body-secondary border-opacity-25 d-flex justify-content-between align-items-center flex-wrap gap-2 py-3 px-4">
-                    <span class="fw-semibold text-body-emphasis d-inline-flex align-items-center gap-2">
-                        <span class="material-symbols-rounded icon-20 text-primary">inventory_2</span>
-                        Items at or below minimum stock
-                    </span>
-                    <span class="badge text-bg-body-secondary text-body-emphasis rounded-pill px-3 py-2 border border-body-secondary border-opacity-50 fw-semibold" id="lowStockReportCount">
-                        Total: 0 items
-                    </span>
-                </div>
-
-                <div class="programme-dt-panel">
-                    <div class="table-responsive">
-                    <table class="table table-hover programme-dt-table align-middle mb-0" id="lowStockReportTable">
-                        <thead class="text-nowrap">
-                            <tr>
-                                <th class="text-center text-uppercase small fw-bold text-body-secondary py-3">S. No.</th>
-                                <th class="text-uppercase small fw-bold text-body-secondary py-3">Item Name</th>
-                                <th class="text-center text-uppercase small fw-bold text-body-secondary py-3" style="min-width: 90px;">Unit</th>
-                                <th class="text-end text-uppercase small fw-bold text-body-secondary py-3" style="min-width: 120px;">Available Qty</th>
-                                <th class="text-end text-uppercase small fw-bold text-body-secondary py-3" style="min-width: 120px;">Alert Qty</th>
-                                <th class="text-center text-uppercase small fw-bold text-body-secondary py-3 pe-3" style="min-width: 150px;">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                    </div>
-                </div>
-
-                {{-- Footer: pagination (left) + "Showing [N] of M items" (right), populated by the global enhancer --}}
-                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 px-4 py-3" data-dt-footer-for="lowStockReportTable"></div>
-            </div>
-        </div>
-    </div>
-    </div>
-
-@include('components.mess-master-datatables', [
-    'tableId' => 'lowStockReportTable',
-    'searchPlaceholder' => 'Search items...',
-    'orderColumn' => 1,
-    'actionColumnIndex' => -1,
-    'infoLabel' => 'items',
-    'ordering' => true,
-    'columnManager' => false,
-    'colReorder' => false,
-    'searchHighlight' => false,
-    'pageLength' => 25,
-    'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
-    'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
-    'serverSide' => true,
-    'ajaxUrlBase' => route('admin.mess.reports.low-stock', request()->query()),
-    'ajaxJsonCallback' => 'lowStockReportOnDraw',
-])
-<script>
-    function lowStockReportOnDraw(json) {
-        var countEl = document.getElementById('lowStockReportCount');
-        if (countEl) countEl.textContent = 'Total: ' + (json.recordsFiltered ?? 0) + ' items';
-
-        var table = document.getElementById('lowStockReportTable');
-        if (!table) return;
-        table.querySelectorAll('tbody tr').forEach(function (row) {
-            var statusCell = row.children[5];
-            row.classList.remove('table-danger');
-            if (statusCell && /Out of Stock|Below Minimum/.test(statusCell.textContent)) {
-                row.classList.add('table-danger');
-            }
-        });
-    }
-</script>
-
+@push('styles')
 <style>
-    .low-stock-report .mess-official-header {
-        border-bottom: 2px solid #004a93;
-        padding-bottom: 10px;
-    }
+    /* Page chrome per docs/new-design-index-page.md §1–§4; all values from --ds-* tokens. */
 
-    .low-stock-report .mess-official-header-table td {
-        border: 0;
-        vertical-align: middle;
-    }
-
-    .low-stock-report .mess-official-emblem-img {
-        width: 42px;
-        height: 42px;
-        object-fit: contain;
-        display: block;
-    }
-
-    .low-stock-report .mess-official-seal-img {
-        width: auto;
-        max-width: 160px;
-        max-height: 72px;
-        object-fit: contain;
-        display: inline-block;
-    }
-
-    .low-stock-report .mess-official-line-1 {
-        font-size: 0.82rem;
-        color: #004a93;
-        letter-spacing: 0.04em;
-        line-height: 1.3;
-    }
-
-    .low-stock-report .mess-official-line-2 {
-        font-size: 1rem;
-        color: #111;
-        line-height: 1.25;
-        margin-top: 2px;
-    }
-
-    .low-stock-report .mess-official-line-3 {
-        font-size: 0.95rem;
-        color: #5c6370;
-        line-height: 1.3;
-        margin-top: 2px;
-    }
-
-    .low-stock-report .material-symbols-rounded {
-        line-height: 1;
-        vertical-align: middle;
-    }
-
-    .low-stock-report .icon-16 {
-        font-size: 16px;
-    }
-
-    .low-stock-report .icon-18 {
-        font-size: 18px;
-    }
-
-    .low-stock-report .icon-20 {
-        font-size: 20px;
-    }
-
-    .low-stock-report .icon-24 {
-        font-size: 24px;
-    }
-
-    .low-stock-report .icon-48 {
-        font-size: 48px;
-    }
-
-    .low-stock-report .low-stock-store-multiselect+.ts-wrapper {
-        min-height: 38px;
-    }
-
-    @media print {
-        .no-print {
-            display: none !important;
-        }
-
-        body {
-            font-size: 12px;
-            background: #fff !important;
-        }
-
-        .card {
-            border: 0 !important;
-            box-shadow: none !important;
-        }
-
-        table {
-            font-size: 11px;
-            page-break-inside: auto;
-        }
-
-        table thead {
-            display: table-header-group;
-        }
-
-        th,
-        td {
-            padding: 6px !important;
-        }
-
-        @page {
-            margin: 1cm;
-            size: A4 portrait;
-        }
-    }
-
-    /* ── New-design chrome: Download/Print bar + single-row filter toolbar (token-based per design.md) ── */
+    /* Download / Print bar (§1) */
     .low-stock-report .ls-export-btn {
         background: var(--ds-surface, #fff);
         border: 1px solid var(--ds-line, #e5e7eb);
@@ -303,19 +31,34 @@
         border-color: var(--ds-primary, #004a93);
     }
 
-    .low-stock-report .ls-export-btn .material-symbols-rounded {
-        font-size: 1.15rem;
+    .low-stock-report .ls-export-btn .material-symbols-rounded { font-size: 1.15rem; }
+
+    /* Report context (Till date / Store) — sits where the status pills go in §1 */
+    .low-stock-report .ls-context-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--ds-space-1, 0.25rem);
+        background: var(--ds-surface, #fff);
+        border: 1px solid var(--ds-line, #e5e7eb);
+        border-radius: var(--ds-radius, 4px);
+        padding: 0.35rem 0.75rem;
+        font-size: 0.82rem;
+        color: var(--ds-ink, #1f2937);
     }
 
+    .low-stock-report .ls-context-chip .material-symbols-rounded {
+        font-size: 1rem;
+        color: var(--ds-primary, #004a93);
+    }
+
+    /* Toolbar (§2) */
     .low-stock-report .ls-filter-toolbar,
     .low-stock-report .ls-filter-form {
         flex-wrap: wrap;
         gap: 0.5rem;
     }
 
-    .low-stock-report .ls-filter-item {
-        flex-shrink: 0;
-    }
+    .low-stock-report .ls-filter-item { flex-shrink: 0; }
 
     .low-stock-report .ls-filter-date {
         min-height: var(--ds-control-h, 40px);
@@ -327,48 +70,295 @@
     }
 
     .low-stock-report .ls-filter-toolbar .form-select,
-    .low-stock-report .ls-filter-toolbar .ts-wrapper {
-        min-width: 11rem;
+    .low-stock-report .ls-filter-toolbar .ts-wrapper { min-width: 11rem; }
+
+    .low-stock-report .low-stock-store-multiselect + .ts-wrapper { min-height: var(--ds-control-h, 40px); }
+
+    .low-stock-report .ls-colvis-item {
+        cursor: pointer;
+        transition: border-color .15s ease, background-color .15s ease;
     }
 
-    .low-stock-report .ls-search-input {
-        min-height: var(--ds-control-h, 40px);
-        height: var(--ds-control-h, 40px);
-        width: 13rem;
+    .low-stock-report .ls-colvis-item:hover {
+        border-color: var(--ds-primary, #004384);
+        background-color: rgba(0, 67, 132, .04);
+    }
+
+    /* The custom `dom` renders f/l/i/p into these wrappers; the global enhancer then
+       moves them into the search slot + .programme-dt-footer, leaving empty boxes.
+       (docs/design.md — "Applying the design to a mess-master index page", step 2.) */
+    .low-stock-report .dt-top:empty,
+    .low-stock-report .dt-foot:empty { display: none; }
+
+    /* Status badges: soft tints, rounded-1 — the theme ships the *-subtle fills but
+       not the text-*-emphasis colours, so tint them here (§3b). */
+    .low-stock-report .ls-state {
+        display: inline-block;
+        padding: 0.3rem 0.6rem;
         border-radius: var(--ds-radius, 4px);
-        border: 1px solid var(--ds-line, #e5e7eb);
-        font-size: 0.85rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        line-height: 1.2;
+        white-space: nowrap;
     }
 
-    /* On-screen: hide the print-oriented report header + inner card header (mock goes straight to the table) */
-    .low-stock-report .report-header {
-        display: none !important;
+    .low-stock-report .ls-state--out { background: #fee4e2; color: #b02a37; }
+    .low-stock-report .ls-state--low { background: #fef0c7; color: #b54708; }
+    .low-stock-report .ls-state--ok { background: #dcfae6; color: #146c43; }
+
+    .low-stock-report .material-symbols-rounded {
+        line-height: 1;
+        vertical-align: middle;
     }
 
-    .low-stock-report .card .card-header.bg-body-tertiary {
-        display: none !important;
-    }
-    </style>
+    .low-stock-report .icon-16 { font-size: 16px; }
 
-    {{-- Tom Select (enhanced dropdowns) --}}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
-    <script>
+    @media print {
+        .no-print { display: none !important; }
+
+        body {
+            font-size: 12px;
+            background: #fff !important;
+        }
+
+        .card {
+            border: 0 !important;
+            box-shadow: none !important;
+        }
+
+        table {
+            font-size: 11px;
+            page-break-inside: auto;
+        }
+
+        table thead { display: table-header-group; }
+
+        th,
+        td { padding: 6px !important; }
+
+        @page {
+            margin: 1cm;
+            size: A4 portrait;
+        }
+    }
+</style>
+@endpush
+
+@section('content')
+@include('admin.mess.reports.partials.report-styles')
+<div class="container-fluid low-stock-report py-3 py-md-4">
+    <x-breadcrum title="Low Stock Report" :showBack="false"></x-breadcrum>
+
+    {{-- §1 — report context (left) · Download / Print (right), ABOVE the card --}}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 no-print">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="ls-context-chip">
+                <span class="material-symbols-rounded" aria-hidden="true">event</span>
+                Till: {{ date('d-F-Y', strtotime($tillDate)) }}
+            </span>
+            <span class="ls-context-chip">
+                <span class="material-symbols-rounded" aria-hidden="true">store</span>
+                {{ $selectedStoreName ?? 'All Stores' }}
+            </span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            {{-- href is the no-JS fallback; lsBuildExportUrl() rewrites it on click so the
+                 PDF carries the live search term, sort and hidden columns. --}}
+            <a href="{{ route('admin.mess.reports.low-stock.pdf', request()->query()) }}"
+               id="lsDownloadBtn" class="btn ls-export-btn" title="Download (PDF)">
+                <i class="material-symbols-rounded">download</i><span>Download</span>
+            </a>
+            <button type="button" class="btn ls-export-btn" id="lsPrintBtn" title="Print (or Save as PDF)">
+                <i class="material-symbols-rounded">print</i><span>Print</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-3 low-stock-report-card">
+        <div class="card-body">
+            {{-- §2 — filters left, Columns + search right --}}
+            <div class="d-flex align-items-center gap-2 mb-3 ls-filter-toolbar no-print">
+                <form method="GET" action="{{ route('admin.mess.reports.low-stock') }}" id="lsFilterForm"
+                    class="d-flex align-items-center gap-2 flex-wrap ls-filter-form">
+                    <input type="hidden" name="refresh" value="1">
+                    <span class="programme-dt-filters-label flex-shrink-0">Filter</span>
+                    <div class="ls-filter-item">
+                        <input type="date" id="till_date" name="till_date"
+                            class="form-control ls-filter-date ls-auto-filter" value="{{ $tillDate }}"
+                            aria-label="Till date">
+                    </div>
+                    <div class="ls-filter-item">
+                        <select id="store_id" name="store_id[]"
+                            class="form-select choices-select low-stock-store-multiselect ls-auto-filter" multiple
+                            data-placeholder="All Stores">
+                            @foreach($stores as $store)
+                                <option value="{{ $store->id }}" @selected(in_array((int) $store->id, $selectedStoreIds ?? [], true))>{{ $store->store_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <a href="{{ route('admin.mess.reports.low-stock') }}" id="lsRemoveFilter"
+                        class="programme-dt-btn-reset flex-shrink-0 d-inline-flex align-items-center justify-content-center text-decoration-none"
+                        title="Remove all filters">Remove Filter</a>
+                </form>
+                <div class="d-flex align-items-center gap-2 ms-auto flex-shrink-0">
+                    <button type="button" class="btn programme-dt-btn-columns" id="lsColumnsBtn"
+                        data-bs-toggle="modal" data-bs-target="#lsColumnsModal" title="Show / hide columns">
+                        <i class="material-symbols-rounded">view_column</i><span>Columns</span>
+                    </button>
+                    @include('mess.partials.search-toggle', ['tableId' => 'lowStockReportTable'])
+                </div>
+            </div>
+
+            {{-- §3 — table panel --}}
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" id="lowStockReportTable">
+                        <thead>
+                            <tr>
+                                <th class="text-center">S. No.</th>
+                                <th>Item Name</th>
+                                <th class="text-center" style="min-width: 90px;">Unit</th>
+                                <th class="text-end" style="min-width: 120px;">Available Qty</th>
+                                <th class="text-end" style="min-width: 120px;">Alert Qty</th>
+                                <th class="text-center" style="min-width: 150px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            {{-- §4A — pagination (left) + "Showing [N] of M items" (right), filled by the global enhancer --}}
+            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3"
+                data-dt-footer-for="lowStockReportTable"></div>
+        </div>
+    </div>
+
+    {{-- Column visibility modal — drives the DataTable's own column().visible() --}}
+    <div class="modal fade" id="lsColumnsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-0 pb-2">
+                    <h5 class="modal-title fw-bold">Column Visibility</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-0">
+                    <hr class="mt-0">
+                    <div class="d-flex flex-column gap-2">
+                        <label class="ls-colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input type="checkbox" class="form-check-input m-0 ls-col-toggle" data-col-index="2" checked> <span>Unit</span></label>
+                        <label class="ls-colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input type="checkbox" class="form-check-input m-0 ls-col-toggle" data-col-index="3" checked> <span>Available Qty</span></label>
+                        <label class="ls-colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input type="checkbox" class="form-check-input m-0 ls-col-toggle" data-col-index="4" checked> <span>Alert Qty</span></label>
+                        <label class="ls-colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0"><input type="checkbox" class="form-check-input m-0 ls-col-toggle" data-col-index="5" checked> <span>Status</span></label>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@include('components.mess-master-datatables', [
+    'tableId' => 'lowStockReportTable',
+    'searchPlaceholder' => 'Search items...',
+    'orderColumn' => 1,
+    'actionColumnIndex' => -1,
+    'infoLabel' => 'items',
+    'ordering' => true,
+    'columnManager' => false,
+    'colReorder' => false,
+    'searchHighlight' => false,
+    'pageLength' => 25,
+    'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+    'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
+    'serverSide' => true,
+    // The server sorts only these columns (ReportController@buildLowStockReportDatatableResponse
+    // maps 1/3/4); leaving the others orderable showed a caret that silently sorted by
+    // Item Name instead. Alignment is set here too — the JSON rows are plain strings,
+    // so without a className the body cells ignored the header alignment.
+    'serverSideColumnDefs' => [
+        ['targets' => 0, 'orderable' => false, 'className' => 'text-center'],
+        ['targets' => 2, 'orderable' => false, 'className' => 'text-center'],
+        ['targets' => [3, 4], 'className' => 'text-end'],
+        ['targets' => 5, 'orderable' => false, 'className' => 'text-center'],
+    ],
+    'ajaxUrlBase' => route('admin.mess.reports.low-stock', request()->query()),
+    'ajaxJsonCallback' => 'lowStockReportOnDraw',
+])
+
+{{-- Tom Select (enhanced dropdowns) --}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
+<script>
+    function lowStockReportOnDraw(json) {
+        var table = document.getElementById('lowStockReportTable');
+        if (!table) return;
+        // Critical rows keep their tint; the status text is the same string the
+        // controller emits, so this stays in step with the badge.
+        table.querySelectorAll('tbody tr').forEach(function (row) {
+            row.classList.remove('table-danger');
+            var statusCell = row.querySelector('.ls-state');
+            if (statusCell && /Out of Stock|Below Minimum/.test(statusCell.textContent)) {
+                row.classList.add('table-danger');
+            }
+        });
+    }
+
+    function lsDataTable() {
+        if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) return null;
+        if (!window.jQuery.fn.DataTable.isDataTable('#lowStockReportTable')) return null;
+        return window.jQuery('#lowStockReportTable').DataTable();
+    }
+
+    function lsHiddenColumnIndexes(dt) {
+        var hidden = [];
+        if (!dt) return hidden;
+        dt.columns().every(function (idx) {
+            if (!this.visible()) hidden.push(idx);
+        });
+        return hidden;
+    }
+
+    // Export URL = the filter form + whatever the grid is actually showing
+    // (search term, sort, hidden columns) — docs/new-design-index-page.md §1.
+    function lsBuildExportUrl(base) {
+        var url = new URL(base, window.location.origin);
+        var form = document.getElementById('lsFilterForm');
+        if (form) {
+            new FormData(form).forEach(function (value, key) {
+                if (key === 'refresh' || value === '' || value === null) return;
+                url.searchParams.append(key, value);
+            });
+        }
+
+        var dt = lsDataTable();
+        if (dt) {
+            var term = (dt.search() || '').trim();
+            if (term) url.searchParams.set('search', term);
+            var order = dt.order();
+            if (order && order.length) {
+                url.searchParams.set('sort_col', order[0][0]);
+                url.searchParams.set('sort_dir', order[0][1]);
+            }
+            var hidden = lsHiddenColumnIndexes(dt);
+            if (hidden.length) url.searchParams.set('hide_cols', hidden.join(','));
+        }
+
+        return url.toString();
+    }
+
     function printLowStockReport() {
-        var tableEl = document.getElementById('lowStockReportTable');
-        if (!tableEl || typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable.isDataTable('#lowStockReportTable')) {
-            window.print();
-            return;
-        }
-
-        var dtApi = window.jQuery('#lowStockReportTable').DataTable();
+        var dt = lsDataTable();
         var urlFn = (window.messMasterDataTableAjaxUrlByTable || {})['lowStockReportTable'];
-        if (typeof urlFn !== 'function') {
+        if (!dt || typeof urlFn !== 'function') {
             window.print();
             return;
         }
 
-        var ajaxData = dtApi.ajax.params();
+        // Print the WHOLE filtered result set, not just the page on screen.
+        var ajaxData = dt.ajax.params();
         ajaxData.start = 0;
         ajaxData.length = -1;
 
@@ -379,23 +369,33 @@
             dataType: 'json',
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         }).done(function (json) {
-            renderLowStockPrintWindow((json && json.data) || []);
+            renderLowStockPrintWindow((json && json.data) || [], lsHiddenColumnIndexes(dt));
         }).fail(function () {
             window.print();
         });
     }
 
-    function renderLowStockPrintWindow(rows) {
-        var theadHtml = document.querySelector('#lowStockReportTable thead') ? document.querySelector('#lowStockReportTable thead').innerHTML : '';
+    function renderLowStockPrintWindow(rows, hiddenColumns) {
+        hiddenColumns = hiddenColumns || [];
+        var isHidden = function (idx) { return hiddenColumns.indexOf(idx) !== -1; };
+        var alignFor = { 0: 'text-center', 2: 'text-center', 3: 'text-end', 4: 'text-end', 5: 'text-center' };
+
+        var headEl = document.querySelector('#lowStockReportTable thead tr');
+        var headHtml = '';
+        if (headEl) {
+            Array.prototype.forEach.call(headEl.children, function (th, idx) {
+                if (isHidden(idx)) return;
+                headHtml += '<th class="' + (alignFor[idx] || '') + '">' + th.textContent.trim() + '</th>';
+            });
+        }
+
         var bodyHtml = rows.map(function (row) {
-            return '<tr' + (/Out of Stock|Below Minimum/.test(row[5] || '') ? ' class="table-danger"' : '') + '>' +
-                '<td class="text-center">' + row[0] + '</td>' +
-                '<td>' + row[1] + '</td>' +
-                '<td class="text-center">' + row[2] + '</td>' +
-                '<td class="text-end">' + row[3] + '</td>' +
-                '<td class="text-end">' + row[4] + '</td>' +
-                '<td class="text-center">' + row[5] + '</td>' +
-                '</tr>';
+            var cells = '';
+            for (var i = 0; i < 6; i++) {
+                if (isHidden(i)) continue;
+                cells += '<td class="' + (alignFor[i] || '') + '">' + (row[i] || '') + '</td>';
+            }
+            return '<tr' + (/Out of Stock|Below Minimum/.test(row[5] || '') ? ' class="table-danger"' : '') + '>' + cells + '</tr>';
         }).join('');
 
         var tillDateText = @json(date('d-F-Y', strtotime($tillDate)));
@@ -537,18 +537,19 @@
     .text-center { text-align: center; }
     .text-end { text-align: right; }
 
-    .badge {
+    /* rounded-1 (4px), never pills — sargam-app.css mandate */
+    .ls-state {
       display: inline-block;
       padding: 3px 8px;
-      border-radius: 999px;
+      border-radius: 4px;
       font-size: 9px;
       font-weight: 600;
       line-height: 1.2;
       white-space: nowrap;
     }
-    .text-bg-danger { background: #dc3545; color: #fff; }
-    .text-bg-warning { background: #f59e0b; color: #1f2937; }
-    .text-bg-success { background: #198754; color: #fff; }
+    .ls-state--out { background: #fee4e2; color: #b02a37; }
+    .ls-state--low { background: #fef0c7; color: #b54708; }
+    .ls-state--ok { background: #dcfae6; color: #146c43; }
 
     .footer {
       border-top: 1px solid #dee2e6;
@@ -599,7 +600,7 @@
       </div>
 
       <table class="low-stock-data">
-        <thead>${theadHtml}</thead>
+        <thead><tr>${headHtml}</tr></thead>
         <tbody>${bodyHtml}</tbody>
       </table>
 
@@ -621,60 +622,81 @@
         printWindow.document.close();
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
-        if (typeof window.TomSelect === 'undefined') return;
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof window.TomSelect !== 'undefined') {
+            document
+                .querySelectorAll('.low-stock-report select.choices-select')
+                .forEach(function (el) {
+                    if (el.dataset.tomselectInitialized === 'true') return;
 
-        document
-            .querySelectorAll('.low-stock-report select.choices-select')
-            .forEach(function(el) {
-                if (el.dataset.tomselectInitialized === 'true') return;
+                    var placeholder = el.getAttribute('data-placeholder') || 'Select';
+                    var isMultiple = el.hasAttribute('multiple');
 
-                var placeholder = el.getAttribute('data-placeholder') || 'Select';
-                var isMultiple = el.hasAttribute('multiple');
+                    new TomSelect(el, {
+                        create: false,
+                        allowEmptyOption: !isMultiple,
+                        placeholder: placeholder,
+                        maxItems: isMultiple ? null : 1,
+                        maxOptions: 500,
+                        plugins: isMultiple ? ['remove_button', 'dropdown_input'] : ['dropdown_input'],
+                        sortField: { field: 'text', direction: 'asc' }
+                    });
 
-                new TomSelect(el, {
-                    create: false,
-                    allowEmptyOption: !isMultiple,
-                    placeholder: placeholder,
-                    maxItems: isMultiple ? null : 1,
-                    maxOptions: 500,
-                    plugins: isMultiple ? ['remove_button', 'dropdown_input'] : ['dropdown_input'],
-                    sortField: {
-                        field: 'text',
-                        direction: 'asc'
-                    }
+                    el.dataset.tomselectInitialized = 'true';
                 });
+        }
 
-                el.dataset.tomselectInitialized = 'true';
-            });
-    });
-
-    // New-design toolbar: debounced auto-apply (GET reload) + client-side search + column visibility.
-    document.addEventListener('DOMContentLoaded', function() {
+        // Toolbar: debounced auto-apply (GET reload) on any filter change.
         var form = document.getElementById('lsFilterForm');
         if (form) {
             var lsTimer = null;
-            form.addEventListener('change', function(e) {
-                if (!e.target || !e.target.classList || !e.target.classList.contains('ls-auto-filter'))
-                    return;
+            form.addEventListener('change', function (e) {
+                if (!e.target || !e.target.classList || !e.target.classList.contains('ls-auto-filter')) return;
                 if (lsTimer) clearTimeout(lsTimer);
-                lsTimer = setTimeout(function() {
-                    form.submit();
-                }, 500);
+                lsTimer = setTimeout(function () { form.submit(); }, 500);
             });
         }
-        // Search is DataTables' own box, relocated into .programme-dt-search by
-        // public/js/datatable-global-ui.js — it is server-side here, so it filters
-        // the whole result set rather than just the rows on screen.
-        document.querySelectorAll('.ls-col-toggle').forEach(function(cb) {
-            cb.addEventListener('change', function() {
-                var col = cb.getAttribute('data-col');
-                document.querySelectorAll('.low-stock-report [data-col="' + col + '"]').forEach(
-                    function(el) {
-                        el.style.display = cb.checked ? '' : 'none';
-                    });
+
+        // Column visibility drives the DataTable itself — the old handler toggled
+        // [data-col="…"] elements that this grid never rendered, so it did nothing.
+        document.querySelectorAll('.ls-col-toggle').forEach(function (cb) {
+            cb.addEventListener('change', function () {
+                var dt = lsDataTable();
+                if (!dt) return;
+                var idx = parseInt(cb.getAttribute('data-col-index'), 10);
+                if (isNaN(idx)) return;
+                dt.column(idx).visible(cb.checked);
             });
         });
+
+        // Keep the checkboxes in step if the table is rebuilt.
+        var columnsModal = document.getElementById('lsColumnsModal');
+        if (columnsModal) {
+            columnsModal.addEventListener('show.bs.modal', function () {
+                var dt = lsDataTable();
+                if (!dt) return;
+                document.querySelectorAll('.ls-col-toggle').forEach(function (cb) {
+                    var idx = parseInt(cb.getAttribute('data-col-index'), 10);
+                    if (isNaN(idx)) return;
+                    cb.checked = dt.column(idx).visible();
+                });
+            });
+        }
+
+        var downloadBtn = document.getElementById('lsDownloadBtn');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', function () {
+                this.href = lsBuildExportUrl(@json(route('admin.mess.reports.low-stock.pdf')));
+            });
+        }
+
+        var printBtn = document.getElementById('lsPrintBtn');
+        if (printBtn) {
+            printBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                printLowStockReport();
+            });
+        }
     });
-    </script>
-    @endsection
+</script>
+@endsection

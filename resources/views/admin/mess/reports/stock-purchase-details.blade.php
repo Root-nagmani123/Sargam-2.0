@@ -80,6 +80,9 @@
                                     @endforeach
                                 </select>
                             </div>
+                            {{-- Rows-per-page lives in the filter form so sprApplyFilters() carries it
+                                 (and resets to page 1) exactly like every other filter. --}}
+                            <input type="hidden" name="per_page" id="sprPerPageHidden" value="{{ (int) request('per_page', 50) }}">
                             <a href="{{ route('admin.mess.reports.stock-purchase-details') }}" id="sprRemoveFilter" class="programme-dt-btn-reset flex-shrink-0 d-inline-flex align-items-center justify-content-center text-decoration-none" title="Remove all filters">Remove Filter</a>
                             {{-- Search sits INSIDE the filter form: sprApplyFilters() serialises the
                                  form, so the term reaches the server and narrows the whole report
@@ -217,6 +220,14 @@
                 if (tableWrap) ajaxLoad(window.location.href);
             });
 
+            // Rows-per-page select — re-rendered by every AJAX swap, so listen on the document.
+            document.addEventListener('change', function (e) {
+                if (!e.target || e.target.id !== 'sprPerPage') return;
+                var hidden = document.getElementById('sprPerPageHidden');
+                if (hidden) hidden.value = e.target.value;
+                sprApplyFilters();
+            });
+
             var sprSearchEl = document.getElementById('sprSearch');
             if (sprSearchEl) {
                 var sprSearchTimer = null;
@@ -346,6 +357,9 @@
                     if (toEl) toEl.value = todayStr;
                     var rangeEl = document.getElementById('spr_date_range');
                     if (rangeEl && rangeEl._flatpickr) rangeEl._flatpickr.setDate([todayStr, todayStr], false);
+                    // Base URL carries no per_page → the server falls back to 50; keep the hidden field in step.
+                    var perPageHidden = document.getElementById('sprPerPageHidden');
+                    if (perPageHidden) perPageHidden.value = '50';
                     if (window.history && window.history.pushState) { try { window.history.pushState({ sprFilter: true }, '', baseUrl); } catch (e2) {} }
                     ajaxLoad(baseUrl);
                 });
@@ -353,16 +367,78 @@
         });
     </script>
 <script>
+// Print prints the WHOLE filtered report, not just the page on screen: it re-requests
+// the table partial with print_all=1 (server returns every line for the active filters)
+// and prints that. Falls back to the on-screen page if the fetch fails.
 function printStockPurchaseTable() {
-    var tableEl = document.querySelector('.stock-purchase-report .stock-purchase-table-wrapper table.stock-purchase-table');
-    if (!tableEl) {
-        tableEl = document.querySelector('.stock-purchase-report .report-content table');
-    }
-    if (!tableEl) {
+    var onScreenTable = document.querySelector('.stock-purchase-report .stock-purchase-table-wrapper table.stock-purchase-table')
+        || document.querySelector('.stock-purchase-report .report-content table');
+    if (!onScreenTable) {
         alert('No table data found to print.');
         return;
     }
+
+    // Open the window on the click itself — opening it later, inside the fetch
+    // callback, trips pop-up blockers.
+    var printWindow = window.open('', '_blank');
+    if (printWindow) {
+        printWindow.document.open();
+        printWindow.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Preparing print…</title></head>'
+            + '<body style="font-family:system-ui,sans-serif;padding:24px;color:#334155;">'
+            + 'Preparing the full report for printing…</body></html>');
+        printWindow.document.close();
+    }
+
+    var url = new URL(window.location.href);
+    url.searchParams.set('ajax', '1');
+    url.searchParams.set('print_all', '1');
+    url.searchParams.delete('page');
+
+    fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } })
+        .then(function (r) { return r.text(); })
+        .then(function (html) {
+            var doc = new DOMParser().parseFromString(html, 'text/html');
+            var fullTable = doc.querySelector('table.stock-purchase-table');
+            renderStockPurchasePrint(printWindow, fullTable || onScreenTable, !fullTable);
+        })
+        .catch(function (e) {
+            console.error('Stock purchase print (full data) failed; printing current page', e);
+            renderStockPurchasePrint(printWindow, onScreenTable, true);
+        });
+}
+
+// Drop the columns the user unchecked in the Columns modal, then repair the
+// colspan on the vendor / bill / grand-total rows so they still span the table.
+function sprStripHiddenColumnsForPrint(table) {
+    var hidden = [];
+    document.querySelectorAll('.spr-col-toggle').forEach(function (cb) {
+        if (!cb.checked) hidden.push(cb.getAttribute('data-col'));
+    });
+    if (!hidden.length) return;
+
+    var headRow = table.querySelector('thead tr');
+    if (!headRow) return;
+    var removedIdx = [];
+    Array.prototype.slice.call(headRow.children).forEach(function (th, i) {
+        if (hidden.indexOf(th.getAttribute('data-col')) !== -1) removedIdx.push(i);
+    });
+
+    // Recompute spans before removing cells — every spanning cell starts at column 0.
+    table.querySelectorAll('tbody td[colspan]').forEach(function (td) {
+        var base = parseInt(td.getAttribute('data-colspan-base') || td.getAttribute('colspan'), 10) || 1;
+        var gone = removedIdx.filter(function (i) { return i < base; }).length;
+        td.removeAttribute('data-colspan-base');
+        td.setAttribute('colspan', Math.max(1, base - gone));
+    });
+
+    hidden.forEach(function (col) {
+        table.querySelectorAll('[data-col="' + col + '"]').forEach(function (el) { el.remove(); });
+    });
+}
+
+function renderStockPurchasePrint(printWindow, tableEl, isCurrentPageOnly) {
     var table = tableEl.cloneNode(true);
+    sprStripHiddenColumnsForPrint(table);
 
     // Clean clone for print
     var clonedThead = table.querySelector('thead');
@@ -396,8 +472,8 @@ function printStockPurchaseTable() {
         icon.remove();
     });
 
-    var printWindow = window.open('', '_blank');
     if (!printWindow) {
+        // Pop-up blocked — fall back to printing the page itself.
         window.print();
         return;
     }
@@ -603,7 +679,8 @@ function printStockPurchaseTable() {
 '<div class="report-meta">\n' +
 '    <strong>' + vendorHeaderLabel + '</strong> ' + vendorLine + ' &nbsp;&nbsp;|&nbsp;&nbsp; ' +
 '    <strong>Store:</strong> ' + storeDetails + ' &nbsp;&nbsp;|&nbsp;&nbsp; ' +
-'    <strong>Printed:</strong> ' + new Date().toLocaleDateString('en-IN') + ' ' + new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}) + '\n' +
+'    <strong>Printed:</strong> ' + new Date().toLocaleDateString('en-IN') + ' ' + new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}) +
+    (isCurrentPageOnly ? ' &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Note:</strong> current page only' : '') + '\n' +
 '</div>\n' +
 '\n' +
     (vendorDetailsHtml ? '<p style="font-size:10px;font-weight:600;margin:0 0 4px;">Vendor Details</p>\n' + vendorDetailsHtml + '\n' : '') +
@@ -923,6 +1000,26 @@ function printStockPurchaseTable() {
     min-height: var(--ds-control-h, 40px); height: var(--ds-control-h, 40px); width: 14rem;
     border-radius: var(--ds-radius, 4px); border: 1px solid var(--ds-line, #e5e7eb); font-size: .85rem;
 }
+/* Footer bar: pager left, "Showing [n] of N items" right — same chrome as the other report pages. */
+.stock-purchase-report .ssr-pagination-bar {
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    font-size: 0.8125rem;
+}
+.stock-purchase-report .ssr-pagination-bar .pagination {
+    margin-bottom: 0;
+    --bs-pagination-font-size: 0.8125rem;
+}
+.stock-purchase-report .ssr-pagination-bar .page-link { transition: all 0.15s ease; }
+.stock-purchase-report .ssr-pagination-bar .page-link:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.stock-purchase-report .ssr-perpage-select { width: auto; min-width: 4.25rem; }
+/* Keep only the page-number links from Laravel's paginator (its own "Showing X to Y of Z results"
+   text is replaced by the count we render on the right). */
+.stock-purchase-report .ssr-pagination-links p { display: none !important; }
+.stock-purchase-report .ssr-pagination-links nav > div { justify-content: flex-start !important; }
 .stock-purchase-report .spr-colvis-item { cursor: pointer; transition: border-color .15s ease, background-color .15s ease; }
 .stock-purchase-report .spr-colvis-item:hover { border-color: var(--ds-primary, #004384); background-color: rgba(0, 67, 132, .04); }
 /* Report context strip — clean, token-based (print/PDF export keeps its own template) */

@@ -14,7 +14,14 @@
         </div>
     @endif
     @if(!request('print_all'))
-    @php $cwExportQ = request()->query(); $cwExportQuery = $cwExportQ ? '?' . http_build_query($cwExportQ) : ''; @endphp
+    @php
+        // Exports and the print window take the FILTERS only — pagination / transport params
+        // would otherwise ride along and (for print_all) re-enter the browser-print branch.
+        $cwExportQ = collect(request()->query())
+            ->except(['page', 'ajax', 'print_all', 'refresh', 'per_page'])
+            ->all();
+        $cwExportQuery = $cwExportQ ? '?' . http_build_query($cwExportQ) : '';
+    @endphp
     {{-- Download / Print bar --}}
     <div class="d-flex justify-content-end gap-2 mb-3 no-print">
         <a href="{{ route('admin.mess.reports.category-wise-print-slip.excel') }}{{ $cwExportQuery }}" class="btn cw-export-btn" title="Download (Excel)">
@@ -120,6 +127,9 @@
                         </select>
                     </div>
                 </div>
+                {{-- Buyers-per-page rides in the filter form so cwApplyFilters() carries it
+                     (and resets to page 1) exactly like every other filter. --}}
+                <input type="hidden" name="per_page" id="cwPerPageHidden" value="{{ (int) request('per_page', 8) }}">
                 <a href="{{ route('admin.mess.reports.category-wise-print-slip') }}" id="cwRemoveFilter" class="programme-dt-btn-reset flex-shrink-0 align-self-center d-inline-flex align-items-center justify-content-center text-decoration-none" title="Remove all filters">Remove Filter</a>
                 <div class="d-flex align-items-center gap-2 ms-auto flex-shrink-0 align-self-center">
                     <input type="search" name="search" id="cwSearch" class="form-control cw-search-input" placeholder="Search item…" autocomplete="off" value="{{ request('search') }}">
@@ -468,6 +478,26 @@
         border: 1px solid var(--ds-line, #e5e7eb);
         font-size: 0.85rem;
     }
+    /* Footer bar: pager left, "Showing [n] of N buyers" right — same chrome as the other report pages. */
+    .cw-report-page .ssr-pagination-bar {
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        font-size: 0.8125rem;
+    }
+    .cw-report-page .ssr-pagination-bar .pagination {
+        margin-bottom: 0;
+        --bs-pagination-font-size: 0.8125rem;
+    }
+    .cw-report-page .ssr-pagination-bar .page-link { transition: all 0.15s ease; }
+    .cw-report-page .ssr-pagination-bar .page-link:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+    .cw-report-page .ssr-perpage-select { width: auto; min-width: 4.25rem; }
+    /* Keep only the page-number links from Laravel's paginator (its own "Showing X to Y of Z results"
+       text is replaced by the count we render on the right). */
+    .cw-report-page .ssr-pagination-links p { display: none !important; }
+    .cw-report-page .ssr-pagination-links nav > div { justify-content: flex-start !important; }
     /* LBSNAA branding header + blue title band are for the PRINT/PDF layout — hide them on the
        normal on-screen view (the clean mock goes straight to the buyer sections). They still show
        in print_all mode (browser print) and the dedicated print window builds its own header. */
@@ -488,12 +518,15 @@ window.addEventListener('load', function() {
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js" defer></script>
 
 <script>
+// Print opens the standalone print view, which always renders EVERY buyer for the current
+// filters (not just the page on screen). Pagination / transport params are dropped.
+var CW_NON_FILTER_PARAMS = ['page', 'ajax', 'print_all', 'refresh', 'per_page'];
 function printCategoryWiseSlip() {
     var base = @json(route('admin.mess.reports.category-wise-print-slip.print'));
     var url = new URL(base, window.location.origin);
-    var params = new URLSearchParams(window.location.search);
-    params.forEach(function (value, key) {
-        url.searchParams.set(key, value);
+    new URLSearchParams(window.location.search).forEach(function (value, key) {
+        if (CW_NON_FILTER_PARAMS.indexOf(key) !== -1) return;
+        url.searchParams.append(key, value);
     });
     window.open(url.toString(), '_blank');
 }
@@ -565,6 +598,14 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     }
+    // Buyers-per-page select — re-rendered by every AJAX swap, so listen on the document.
+    document.addEventListener('change', function (e) {
+        if (!e.target || e.target.id !== 'cwPerPage') return;
+        var hidden = document.getElementById('cwPerPageHidden');
+        if (hidden) hidden.value = e.target.value;
+        cwApplyFilters();
+    });
+
     var cwRemove = document.getElementById('cwRemoveFilter');
     if (cwRemove) {
         cwRemove.addEventListener('click', function (e) {

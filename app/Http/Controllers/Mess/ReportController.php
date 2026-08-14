@@ -165,8 +165,12 @@ class ReportController extends Controller
         $lineCount = (int) ($meta['lineCount'] ?? 0);
         $reportGrandTotalAmount = (float) ($meta['grandTotal'] ?? 0);
 
+        // Server-side pagination with the standard rows-per-page control.
+        // print_all=1 returns every line for the current filter (browser print).
         $printAll = $request->boolean('print_all');
-        $perPage = $printAll ? max(1, $lineCount) : 50;
+        $perPage = $printAll
+            ? max(1, $lineCount)
+            : $this->stockPurchaseDetailsPerPage($request);
         $currentPage = $printAll ? 1 : LengthAwarePaginator::resolveCurrentPage();
         $offset = max(0, ($currentPage - 1) * $perPage);
         $pageLines = $this->fetchStockPurchaseDetailLines(
@@ -196,6 +200,7 @@ class ReportController extends Controller
             'reportPage'             => $reportPage,
             'reportGrandTotalAmount' => $reportGrandTotalAmount,
             'reportLineCount'        => $lineCount,
+            'reportPerPageOptions'   => self::STOCK_PURCHASE_DETAILS_PER_PAGE_OPTIONS,
             'stores'                 => $stores,
             'vendors'                => $vendors,
             'selectedVendors'        => $meta['selectedVendors'] ?? collect(),
@@ -223,6 +228,22 @@ class ReportController extends Controller
         return response()
             ->view('admin.mess.reports.stock-purchase-details', $viewData)
             ->withHeaders($timingHeaders);
+    }
+
+    /**
+     * Rows-per-page options for the Stock Purchase Details footer control.
+     */
+    private const STOCK_PURCHASE_DETAILS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 200];
+
+    private const STOCK_PURCHASE_DETAILS_PER_PAGE_DEFAULT = 50;
+
+    private function stockPurchaseDetailsPerPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', self::STOCK_PURCHASE_DETAILS_PER_PAGE_DEFAULT);
+
+        return in_array($perPage, self::STOCK_PURCHASE_DETAILS_PER_PAGE_OPTIONS, true)
+            ? $perPage
+            : self::STOCK_PURCHASE_DETAILS_PER_PAGE_DEFAULT;
     }
 
     /**
@@ -299,6 +320,11 @@ class ReportController extends Controller
     }
 
     private const PURCHASE_SALE_VIEW_TYPES_ORDER = ['item_wise', 'subcategory_wise', 'category_wise'];
+
+    /** Rows-per-page options for the Item Report footer control. */
+    private const PURCHASE_SALE_PER_PAGE_OPTIONS = [10, 25, 50, 100, 200];
+
+    private const PURCHASE_SALE_PER_PAGE_DEFAULT = 10;
 
     /**
      * @return array<int, string>
@@ -399,6 +425,8 @@ class ReportController extends Controller
      */
     private function finalizePurchaseSaleQuantityViewSections(array $sections, Request $request): array
     {
+        $search = $this->purchaseSaleQuantitySearchTerm($request);
+
         $out = [];
         foreach ($sections as $section) {
             $viewType = $section['viewType'];
@@ -407,15 +435,61 @@ class ReportController extends Controller
                 'purchase_qty' => 'purchase_qty',
                 'sale_qty' => 'sale_qty',
             ], 'item_name', 'asc');
+
+            // Search narrows the whole section — rows, groups, pager total and the
+            // grand total — not just the page on screen.
+            if ($search !== null) {
+                $reportData = $this->filterPurchaseSaleQuantityRowsBySearch($reportData, $search);
+            }
+
             $out[] = [
                 'viewType' => $viewType,
                 'viewLabel' => $section['viewLabel'],
                 'reportData' => $reportData,
                 'groupedData' => $this->buildPurchaseSaleGroupedDataForView($viewType, $reportData, collect()),
+                // Captured BEFORE pagination: the blade used to sum $section['reportData'],
+                // which paginate() had already replaced with the current page's slice — so
+                // item-wise printed a page subtotal under a "Grand Total" label.
+                'grandPurchaseQty' => (float) array_sum(array_map(
+                    static fn ($r) => (float) ($r['purchase_qty'] ?? 0),
+                    $reportData
+                )),
+                'grandSaleQty' => (float) array_sum(array_map(
+                    static fn ($r) => (float) ($r['sale_qty'] ?? 0),
+                    $reportData
+                )),
             ];
         }
 
         return $out;
+    }
+
+    /**
+     * Item / category search for the Item Report toolbar.
+     */
+    private function purchaseSaleQuantitySearchTerm(Request $request): ?string
+    {
+        $term = trim((string) $request->input('search', ''));
+
+        return $term === '' ? null : $term;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function filterPurchaseSaleQuantityRowsBySearch(array $rows, string $search): array
+    {
+        $tokens = DataTableSearchHelper::tokens($search);
+        if ($tokens === []) {
+            return array_values($rows);
+        }
+
+        return array_values(array_filter($rows, static function ($row) use ($tokens) {
+            $haystack = trim(((string) ($row['item_name'] ?? '')) . ' ' . ((string) ($row['category_name'] ?? '')));
+
+            return DataTableSearchHelper::haystackMatchesAllTokens($haystack, $tokens);
+        }));
     }
 
     /**
@@ -1447,9 +1521,14 @@ class ReportController extends Controller
         $storeIds = $this->normalizedIdList($request, 'store_id');
 
         $viewTypes = $this->normalizedPurchaseSaleViewTypes($request);
+        // The toolbar search narrows the grid, so it must narrow the workbook too.
+        $search = $this->purchaseSaleQuantitySearchTerm($request);
         $viewSections = [];
         foreach ($viewTypes as $viewType) {
             [, $reportData] = $this->buildPurchaseSaleQuantityData($fromDate, $toDate, $viewType, $categoryId, $itemIds, $storeIds);
+            if ($search !== null) {
+                $reportData = $this->filterPurchaseSaleQuantityRowsBySearch($reportData, $search);
+            }
             $viewSections[] = ['viewType' => $viewType, 'reportData' => $reportData];
         }
         $combinedViewLabel = implode(', ', array_map(fn ($v) => $this->purchaseSaleViewTypeLabel($v), $viewTypes));
@@ -1519,15 +1598,7 @@ class ReportController extends Controller
      */
     public function categoryWisePrintSlipExcel(Request $request)
     {
-        $cwSlugs = $this->categoryWiseNormalizedSlugList($request);
-        $cwPks = $this->categoryWiseClientTypePkUnion($request);
-        $cwBuyers = $this->normalizedBuyerNameList($request);
-
-        $filtersApplied = $request->filled('from_date')
-            || $request->filled('to_date')
-            || ($cwSlugs !== [])
-            || ($cwPks !== [])
-            || ($cwBuyers !== []);
+        $filtersApplied = $this->categoryWisePrintSlipFiltersApplied($request);
         if (! $filtersApplied) {
             return redirect()->route('admin.mess.reports.category-wise-print-slip')
                 ->with('error', 'Please apply filters before exporting.');
@@ -1555,15 +1626,7 @@ class ReportController extends Controller
      */
     public function categoryWisePrintSlipPdf(Request $request)
     {
-        $cwSlugs = $this->categoryWiseNormalizedSlugList($request);
-        $cwPks = $this->categoryWiseClientTypePkUnion($request);
-        $cwBuyers = $this->normalizedBuyerNameList($request);
-
-        $filtersApplied = $request->filled('from_date')
-            || $request->filled('to_date')
-            || ($cwSlugs !== [])
-            || ($cwPks !== [])
-            || ($cwBuyers !== []);
+        $filtersApplied = $this->categoryWisePrintSlipFiltersApplied($request);
         if (! $filtersApplied) {
             return redirect()->route('admin.mess.reports.category-wise-print-slip')
                 ->with('error', 'Please apply filters before exporting.');
@@ -1608,15 +1671,7 @@ class ReportController extends Controller
      */
     public function categoryWisePrintSlipPrint(Request $request)
     {
-        $cwSlugs = $this->categoryWiseNormalizedSlugList($request);
-        $cwPks = $this->categoryWiseClientTypePkUnion($request);
-        $cwBuyers = $this->normalizedBuyerNameList($request);
-
-        $filtersApplied = $request->filled('from_date')
-            || $request->filled('to_date')
-            || ($cwSlugs !== [])
-            || ($cwPks !== [])
-            || ($cwBuyers !== []);
+        $filtersApplied = $this->categoryWisePrintSlipFiltersApplied($request);
         if (! $filtersApplied) {
             return redirect()->route('admin.mess.reports.category-wise-print-slip')
                 ->with('error', 'Please apply filters before printing.');
@@ -1637,8 +1692,11 @@ class ReportController extends Controller
             'toDateFormatted' => $toDateFormatted,
             'otCourses' => $report['otCourses'],
             'grandTotal' => (float) $report['grandTotal'],
-            'emblemSrc' => $this->messPdfIndiaEmblemForDompdf(),
-            'lbsnaaLogoSrc' => $this->messPdfLbsnaaLogoForDompdf(),
+            // Plain URLs, NOT the DomPDF data-URI helpers: the branding header repeats once per
+            // buyer (page break per buyer), so an embedded logo is duplicated N times — 198 buyers
+            // turned a 2 MB page into 80 MB. A browser window can just fetch each image once.
+            'emblemSrc' => asset('admin_assets/images/logos/ashoka.png'),
+            'lbsnaaLogoSrc' => asset('admin_assets/images/logos/logo-web.png'),
         ]);
     }
 
@@ -2090,6 +2148,53 @@ class ReportController extends Controller
     }
 
     /**
+     * The Sale Voucher report renders nothing until at least one filter is set.
+     * Screen, Excel, PDF and print all gate on this same answer.
+     */
+    private function categoryWisePrintSlipFiltersApplied(Request $request): bool
+    {
+        return $request->filled('from_date')
+            || $request->filled('to_date')
+            || $this->categoryWiseNormalizedSlugList($request) !== []
+            || $this->categoryWiseClientTypePkUnion($request) !== []
+            || $this->normalizedBuyerNameList($request) !== []
+            || $this->categoryWisePrintSlipSearchTerm($request) !== null;
+    }
+
+    /**
+     * Rows-per-page (buyer sections) for the report footer control.
+     */
+    private const SALE_VOUCHER_BUYERS_PER_PAGE_OPTIONS = [8, 10, 25, 50, 100];
+
+    private function categoryWisePrintSlipPerPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', self::SALE_VOUCHER_BUYERS_PER_PAGE);
+
+        return in_array($perPage, self::SALE_VOUCHER_BUYERS_PER_PAGE_OPTIONS, true)
+            ? $perPage
+            : self::SALE_VOUCHER_BUYERS_PER_PAGE;
+    }
+
+    /**
+     * Item-name search for the Sale Voucher report toolbar. Narrows the whole report
+     * (buyer list, rows, totals and exports) — not just the page on screen.
+     */
+    private function categoryWisePrintSlipSearchTerm(Request $request): ?string
+    {
+        $term = trim((string) $request->input('search', ''));
+
+        return $term === '' ? null : $term;
+    }
+
+    /**
+     * LIKE pattern with the wildcards escaped so "50%" or "a_b" search literally.
+     */
+    private function categoryWisePrintSlipSearchLike(string $term): string
+    {
+        return '%' . str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $term) . '%';
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function categoryWisePrintSlipFilterContext(Request $request): array
@@ -2102,6 +2207,7 @@ class ReportController extends Controller
             'buyerNames' => $this->normalizedBuyerNameList($request),
             'fromDate' => $request->filled('from_date') ? $request->from_date : null,
             'toDate' => $request->filled('to_date') ? $request->to_date : null,
+            'search' => $this->categoryWisePrintSlipSearchTerm($request),
             'clientTypeSlugToInt' => [
                 ClientType::TYPE_EMPLOYEE => KitchenIssueMaster::CLIENT_EMPLOYEE,
                 ClientType::TYPE_OT      => KitchenIssueMaster::CLIENT_OT,
@@ -2167,6 +2273,16 @@ class ReportController extends Controller
             \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED,
         ]);
 
+        // Item search: keep only vouchers holding a matching item inside the selected dates,
+        // so the buyer list, the pager count and the totals all agree with the rows shown.
+        if (($ctx['search'] ?? null) !== null) {
+            $like = $this->categoryWisePrintSlipSearchLike($ctx['search']);
+            $query->whereHas('items', function ($itemQ) use ($ctx, $like) {
+                $this->applyCategoryWisePrintSlipSvItemDateConstraint($itemQ, $ctx['fromDate'], $ctx['toDate']);
+                $itemQ->where('item_name', 'like', $like);
+            });
+        }
+
         $fromDate = $ctx['fromDate'];
         $toDate = $ctx['toDate'];
         if ($fromDate && $toDate) {
@@ -2194,6 +2310,11 @@ class ReportController extends Controller
     {
         $query->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
             ->whereHas('items');
+
+        if (($ctx['search'] ?? null) !== null) {
+            $like = $this->categoryWisePrintSlipSearchLike($ctx['search']);
+            $query->whereHas('items', fn ($itemQ) => $itemQ->where('item_name', 'like', $like));
+        }
 
         if ($request->filled('from_date')) {
             $query->where('issue_date', '>=', $request->from_date);
@@ -2240,13 +2361,19 @@ class ReportController extends Controller
     {
         $fromDate = $ctx['fromDate'];
         $toDate = $ctx['toDate'];
+        $searchLike = ($ctx['search'] ?? null) !== null
+            ? $this->categoryWisePrintSlipSearchLike($ctx['search'])
+            : null;
         $subcategoryColumns = ItemSubcategory::listSelectColumns();
 
         $query->with([
             'store:id,store_name',
             'clientTypeCategory:id,client_type,client_name',
-            'items' => function ($itemQ) use ($fromDate, $toDate) {
+            'items' => function ($itemQ) use ($fromDate, $toDate, $searchLike) {
                 $this->applyCategoryWisePrintSlipSvItemDateConstraint($itemQ, $fromDate, $toDate);
+                if ($searchLike !== null) {
+                    $itemQ->where('item_name', 'like', $searchLike);
+                }
                 $itemQ->orderBy('issue_date', 'desc')
                     ->orderBy('id', 'desc')
                     ->select([
@@ -2267,14 +2394,16 @@ class ReportController extends Controller
     /**
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      */
-    private function applyCategoryWisePrintSlipKiEagerLoad($query): void
+    private function applyCategoryWisePrintSlipKiEagerLoad($query, ?string $searchLike = null): void
     {
         $subcategoryColumns = ItemSubcategory::listSelectColumns();
 
         $query->with([
             'store:id,store_name',
             'clientTypeCategory:id,client_type,client_name',
-            'items' => fn ($itemQ) => $itemQ->orderBy('pk')
+            'items' => fn ($itemQ) => $itemQ
+                ->when($searchLike !== null, fn ($q) => $q->where('item_name', 'like', $searchLike))
+                ->orderBy('pk')
                 ->select([
                     'pk',
                     'kitchen_issue_master_pk',
@@ -2397,14 +2526,25 @@ class ReportController extends Controller
      * @param  array<int>  $svIds
      * @param  array<int>  $kiPks
      */
-    private function computeCategoryWisePrintSlipGrandTotal(array $svIds, array $kiPks, ?string $fromDate, ?string $toDate): float
-    {
+    private function computeCategoryWisePrintSlipGrandTotal(
+        array $svIds,
+        array $kiPks,
+        ?string $fromDate,
+        ?string $toDate,
+        ?string $search = null
+    ): float {
         $total = 0.0;
+        // Must mirror the item search applied to the rendered rows, or GRAND TOTAL would
+        // sum items the report is not showing.
+        $searchLike = $search !== null ? $this->categoryWisePrintSlipSearchLike($search) : null;
 
         foreach (array_chunk($svIds, 500) as $chunk) {
             $query = DB::table('sv_date_range_report_items as svi')
                 ->whereIn('svi.sv_date_range_report_id', $chunk);
             $this->applyCategoryWisePrintSlipSvItemDateConstraint($query, $fromDate, $toDate);
+            if ($searchLike !== null) {
+                $query->where('svi.item_name', 'like', $searchLike);
+            }
             $row = $query->selectRaw('COALESCE(SUM(
                 GREATEST(0, COALESCE(svi.quantity, 0) - COALESCE(svi.return_quantity, 0)) * COALESCE(svi.rate, 0)
             ), 0) as grand_total')->first();
@@ -2414,6 +2554,7 @@ class ReportController extends Controller
         foreach (array_chunk($kiPks, 500) as $chunk) {
             $row = DB::table('kitchen_issue_items as kii')
                 ->whereIn('kii.kitchen_issue_master_pk', $chunk)
+                ->when($searchLike !== null, fn ($q) => $q->where('kii.item_name', 'like', $searchLike))
                 ->selectRaw('COALESCE(SUM(
                     GREATEST(0, COALESCE(kii.quantity, 0) - COALESCE(kii.return_quantity, 0)) * COALESCE(kii.rate, 0)
                 ), 0) as grand_total')
@@ -2451,7 +2592,8 @@ class ReportController extends Controller
             $svHeaders->pluck('id')->map(fn ($id) => (int) $id)->all(),
             $kiHeaders->pluck('pk')->map(fn ($pk) => (int) $pk)->all(),
             $ctx['fromDate'],
-            $ctx['toDate']
+            $ctx['toDate'],
+            $ctx['search'] ?? null
         );
 
         return $index;
@@ -2571,7 +2713,10 @@ class ReportController extends Controller
                     'store_type',
                 ])
                 ->whereIn('pk', $kiPks);
-            $this->applyCategoryWisePrintSlipKiEagerLoad($kiQuery);
+            $this->applyCategoryWisePrintSlipKiEagerLoad(
+                $kiQuery,
+                ($ctx['search'] ?? null) !== null ? $this->categoryWisePrintSlipSearchLike($ctx['search']) : null
+            );
             $kiVouchers = $kiQuery->get();
             $slugMap = self::kitchenIssueClientTypeToSlug();
             foreach ($kiVouchers as $voucher) {
@@ -2638,15 +2783,7 @@ class ReportController extends Controller
      */
     public function categoryWisePrintSlip(Request $request)
     {
-        $cwSlugs = $this->categoryWiseNormalizedSlugList($request);
-        $cwPks = $this->categoryWiseClientTypePkUnion($request);
-        $cwBuyers = $this->normalizedBuyerNameList($request);
-
-        $filtersApplied = $request->filled('from_date')
-            || $request->filled('to_date')
-            || ($cwSlugs !== [])
-            || ($cwPks !== [])
-            || ($cwBuyers !== []);
+        $filtersApplied = $this->categoryWisePrintSlipFiltersApplied($request);
 
         if (! $filtersApplied) {
             $groupedSections = collect();
@@ -2700,12 +2837,14 @@ class ReportController extends Controller
         }
 
         $startedAt = microtime(true);
-        $cacheKey = 'sale-voucher-report:v4:meta:' . md5(json_encode([
+        // v5: the item search now narrows the buyer index / grand total, so it must key the cache.
+        $cacheKey = 'sale-voucher-report:v5:meta:' . md5(json_encode([
             $request->input('from_date'),
             $request->input('to_date'),
-            $cwSlugs,
-            $cwPks,
-            $cwBuyers,
+            $this->categoryWiseNormalizedSlugList($request),
+            $this->categoryWiseClientTypePkUnion($request),
+            $this->normalizedBuyerNameList($request),
+            $this->categoryWisePrintSlipSearchTerm($request),
         ]));
         $loadMeta = fn () => $this->loadCategoryWisePrintSlipMeta($request);
 
@@ -2732,7 +2871,7 @@ class ReportController extends Controller
         $printAll = $request->boolean('print_all');
 
         $reportLineCount = count($buyerSectionIndex);
-        $perPage = $printAll ? max(1, $reportLineCount) : self::SALE_VOUCHER_BUYERS_PER_PAGE;
+        $perPage = $printAll ? max(1, $reportLineCount) : $this->categoryWisePrintSlipPerPage($request);
         $currentPage = $printAll ? 1 : LengthAwarePaginator::resolveCurrentPage();
         $pageEntries = array_slice($buyerSectionIndex, ($currentPage - 1) * $perPage, $perPage);
         $pageSectionsCollection = $this->fetchCategoryWisePrintSlipBuyerSections($request, $pageEntries);
@@ -2776,6 +2915,7 @@ class ReportController extends Controller
             : collect();
 
         $filtersApplied = true;
+        $reportPerPageOptions = self::SALE_VOUCHER_BUYERS_PER_PAGE_OPTIONS;
         $grandTotal = (float) ($meta['grandTotal'] ?? 0);
         $reportTimingMs = (int) round((microtime(true) - $startedAt) * 1000);
         $reportCacheStatus = $cacheHit ? 'hit' : 'miss';
@@ -2793,6 +2933,7 @@ class ReportController extends Controller
             'reportPage',
             'sectionsToShow',
             'reportLineCount',
+            'reportPerPageOptions',
             'allBuyersSections',
             'printAll',
             'clientTypes',
@@ -3332,26 +3473,14 @@ class ReportController extends Controller
     {
         [$rawItems, $cacheHit] = $this->loadLowStockReportData($request, $tillDate, $selectedStoreIds);
 
-        $sortRequest = $this->requestWithDatatableOrderTranslated($request, [
-            1 => 'item_name',
-            3 => 'remaining_quantity',
-            4 => 'alert_quantity',
-        ], 'item_name');
+        $sortRequest = $this->requestWithDatatableOrderTranslated(
+            $request,
+            self::LOW_STOCK_SORT_COLUMN_MAP,
+            'item_name'
+        );
 
-        $items = $this->sortMessReportRows($rawItems, $sortRequest, [
-            'item_name' => 'item_name',
-            'remaining_quantity' => 'remaining_quantity',
-            'alert_quantity' => 'alert_quantity',
-        ], 'item_name', 'asc');
-
-        $searchTokens = DataTableSearchHelper::tokens((string) $request->input('search.value', ''));
-        if ($searchTokens !== []) {
-            $items = array_values(array_filter($items, function ($row) use ($searchTokens) {
-                $haystack = (string) ($row['item_name'] ?? '');
-
-                return DataTableSearchHelper::haystackMatchesAllTokens($haystack, $searchTokens);
-            }));
-        }
+        $items = $this->sortMessReportRows($rawItems, $sortRequest, self::LOW_STOCK_SORT_FIELD_MAP, 'item_name', 'asc');
+        $items = $this->filterLowStockRowsBySearch($items, (string) $request->input('search.value', ''));
 
         $recordsTotal = count($rawItems);
         $recordsFiltered = count($items);
@@ -3370,12 +3499,13 @@ class ReportController extends Controller
             $remaining = (float) ($row['remaining_quantity'] ?? 0);
             $alert = (float) ($row['alert_quantity'] ?? 0);
 
+            // Soft state badge at rounded-1 — sargam-app.css mandates no rounded-pill.
             if ($remaining <= 0) {
-                $statusBadge = '<span class="badge text-bg-danger rounded-pill px-3 py-2">Out of Stock</span>';
+                $statusBadge = '<span class="ls-state ls-state--out">Out of Stock</span>';
             } elseif ($remaining <= $alert) {
-                $statusBadge = '<span class="badge text-bg-warning text-dark rounded-pill px-3 py-2">Below Minimum</span>';
+                $statusBadge = '<span class="ls-state ls-state--low">Below Minimum</span>';
             } else {
-                $statusBadge = '<span class="badge text-bg-success rounded-pill px-3 py-2">OK</span>';
+                $statusBadge = '<span class="ls-state ls-state--ok">OK</span>';
             }
 
             $data[] = [
@@ -3406,6 +3536,55 @@ class ReportController extends Controller
     /**
      * Low Stock Report - PDF Export
      */
+    /**
+     * DataTables column index → row key, for the Low Stock grid and its PDF export.
+     */
+    private const LOW_STOCK_SORT_COLUMN_MAP = [
+        1 => 'item_name',
+        3 => 'remaining_quantity',
+        4 => 'alert_quantity',
+    ];
+
+    private const LOW_STOCK_SORT_FIELD_MAP = [
+        'item_name' => 'item_name',
+        'remaining_quantity' => 'remaining_quantity',
+        'alert_quantity' => 'alert_quantity',
+    ];
+
+    /**
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function filterLowStockRowsBySearch(array $rows, string $search): array
+    {
+        $tokens = DataTableSearchHelper::tokens($search);
+        if ($tokens === []) {
+            return array_values($rows);
+        }
+
+        return array_values(array_filter($rows, static function ($row) use ($tokens) {
+            return DataTableSearchHelper::haystackMatchesAllTokens((string) ($row['item_name'] ?? ''), $tokens);
+        }));
+    }
+
+    /**
+     * Column indexes the user hid in the Columns modal, passed through as hide_cols=2,5.
+     *
+     * @return array<int, int>
+     */
+    private function lowStockHiddenColumns(Request $request): array
+    {
+        $raw = (string) $request->input('hide_cols', '');
+        if (trim($raw) === '') {
+            return [];
+        }
+
+        return array_values(array_unique(array_filter(
+            array_map(static fn ($v) => (int) trim((string) $v), explode(',', $raw)),
+            static fn (int $idx) => $idx >= 0 && $idx <= 5
+        )));
+    }
+
     public function lowStockPdf(Request $request)
     {
         $tillDate = $request->filled('till_date')
@@ -3415,6 +3594,17 @@ class ReportController extends Controller
         $selectedStoreIds = $this->normalizedIdList($request, 'store_id');
         $storeFilter = $selectedStoreIds === [] ? null : $selectedStoreIds;
         $items = self::getLowStockAlertItems($tillDate, $storeFilter);
+
+        // Mirror what the grid is showing: same search, same sort, same hidden columns
+        // (docs/new-design-index-page.md §1 — exports must match the screen).
+        $sortRequest = $request->duplicate();
+        $sortColumn = $request->filled('sort_col') ? (int) $request->input('sort_col') : null;
+        $sortRequest->query->set(
+            'sort',
+            self::LOW_STOCK_SORT_COLUMN_MAP[$sortColumn] ?? 'item_name'
+        );
+        $items = $this->sortMessReportRows($items, $sortRequest, self::LOW_STOCK_SORT_FIELD_MAP, 'item_name', 'asc');
+        $items = $this->filterLowStockRowsBySearch($items, (string) $request->input('search', ''));
 
         $selectedStoreName = $selectedStoreIds === []
             ? null
@@ -3427,6 +3617,8 @@ class ReportController extends Controller
             'items' => $items,
             'tillDate' => $tillDate,
             'selectedStoreName' => $selectedStoreName,
+            'searchTerm' => trim((string) $request->input('search', '')),
+            'hiddenColumns' => $this->lowStockHiddenColumns($request),
         ];
 
         $pdf = Pdf::loadView('admin.mess.reports.pdf.low-stock-pdf', $data)
@@ -3502,12 +3694,18 @@ class ReportController extends Controller
             $request
         );
 
-        $allowedPerPage = [10, 25, 50, 100];
-        $perPage = (int) $request->input('per_page', 10);
-        if (! in_array($perPage, $allowedPerPage, true)) {
-            $perPage = 10;
+        // Must match the options the footer renders — 200 was offered on screen but
+        // missing here, so picking it silently dropped the user back to 10 rows.
+        $perPage = (int) $request->input('per_page', self::PURCHASE_SALE_PER_PAGE_DEFAULT);
+        if (! in_array($perPage, self::PURCHASE_SALE_PER_PAGE_OPTIONS, true)) {
+            $perPage = self::PURCHASE_SALE_PER_PAGE_DEFAULT;
         }
-        $viewTypeSections = $this->paginatePurchaseSaleQuantitySections($viewTypeSections, $request, $perPage);
+
+        // print_all=1 renders every row for the current filters (browser print).
+        $printAll = $request->boolean('print_all');
+        if (! $printAll) {
+            $viewTypeSections = $this->paginatePurchaseSaleQuantitySections($viewTypeSections, $request, $perPage);
+        }
 
         $categories = ItemCategory::active()->orderBy('category_name')->get(['id', 'category_name']);
 
@@ -3521,6 +3719,7 @@ class ReportController extends Controller
         foreach ($viewTypeSections as $section) {
             $reportLineCount += count($section['reportData'] ?? []);
         }
+        $perPageOptions = self::PURCHASE_SALE_PER_PAGE_OPTIONS;
 
         return response()
             ->view('admin.mess.reports.purchase-sale-quantity', compact(
@@ -3536,7 +3735,9 @@ class ReportController extends Controller
                 'storeIds',
                 'selectedStoreName',
                 'selectedItemNamesLabel',
-                'perPage'
+                'perPage',
+                'perPageOptions',
+                'printAll'
             ))
             ->withHeaders($this->messReportTimingHeaders(
                 $startedAt,

@@ -21,8 +21,9 @@ class ProcessMessBillsExport implements FromCollection, WithHeadings, WithCustom
         3 => 'Invoice Date',
         4 => 'Client Type',
         5 => 'Total',
-        6 => 'Payment Type',
-        7 => 'Status',
+        6 => 'Total Due Amount',
+        7 => 'Payment Type',
+        8 => 'Status',
     ];
 
     protected array $reportRows;
@@ -85,17 +86,7 @@ class ProcessMessBillsExport implements FromCollection, WithHeadings, WithCustom
 
     public function headings(): array
     {
-        return [
-            'S.No.',
-            'Buyer Name',
-            'Slip No.',
-            'Invoice Date',
-            'Client Type',
-            'Total',
-            'Total Due Amount',
-            'Payment Type',
-            'Status',
-        ];
+        return $this->headings;
     }
 
     public function startCell(): string

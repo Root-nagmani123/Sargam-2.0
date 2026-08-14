@@ -116,14 +116,14 @@
     align-items: center;
     gap: 0.25rem;
 }
-#addProcessMessBillsModal #modalBillsTableBody .modal-bills-skeleton-row {
+#modalBillsTableBody .modal-bills-skeleton-row {
     pointer-events: none;
 }
-#addProcessMessBillsModal #modalBillsTableBody .modal-bills-skeleton-row td {
+#modalBillsTableBody .modal-bills-skeleton-row td {
     height: 3.25rem;
     vertical-align: middle;
 }
-#addProcessMessBillsModal .modal-bills-skeleton {
+.modal-bills-skeleton {
     display: block;
     width: 100%;
     height: 0.875rem;
@@ -132,49 +132,24 @@
     background-size: 220% 100%;
     animation: modal-bills-skeleton-shimmer 1.25s ease-in-out infinite;
 }
-#addProcessMessBillsModal .modal-bills-skeleton--check {
-    width: 1rem;
-    height: 1rem;
-    margin: 0 auto;
-}
-#addProcessMessBillsModal .modal-bills-skeleton--sn {
-    width: 2rem;
-}
-#addProcessMessBillsModal .modal-bills-skeleton--buyer {
-    width: min(11rem, 100%);
-}
-#addProcessMessBillsModal .modal-bills-skeleton--invoice {
-    width: min(7rem, 100%);
-}
-#addProcessMessBillsModal .modal-bills-skeleton--payment {
-    width: min(8rem, 100%);
-}
-#addProcessMessBillsModal .modal-bills-skeleton--total {
-    width: min(5rem, 100%);
-    margin-left: auto;
-}
-#addProcessMessBillsModal .modal-bills-skeleton--status {
-    width: min(5.5rem, 100%);
-    margin: 0 auto;
-}
-#addProcessMessBillsModal .modal-bills-skeleton--action {
-    width: min(7.5rem, 100%);
-    height: 1.5rem;
-    margin: 0 auto;
-}
-#addProcessMessBillsModal .modal-bills-skeleton--receipt {
-    width: 2rem;
-    height: 1.5rem;
-    margin: 0 auto;
-}
+.modal-bills-skeleton--sn      { width: 1.5rem; }
+.modal-bills-skeleton--buyer   { width: min(11rem, 100%); }
+.modal-bills-skeleton--invoice { width: min(9rem, 100%); }
+.modal-bills-skeleton--payment { width: min(8rem, 100%); }
+/* Amounts are right-aligned in the real rows, so their bars are too. */
+.modal-bills-skeleton--total   { width: min(5rem, 100%); margin-left: auto; }
+.modal-bills-skeleton--status  { width: min(4.5rem, 100%); height: 1.25rem; border-radius: 999px; margin: 0 auto; }
+.modal-bills-skeleton--action  { width: min(9rem, 100%); height: 2rem; margin: 0 auto; }
+
+/* The footer keeps its shape while loading, so the pager gets a bar too. */
+.modal-bills-skeleton--pager { width: 9rem; height: 1.75rem; }
+
 @keyframes modal-bills-skeleton-shimmer {
     0% { background-position: 100% 0; }
     100% { background-position: -120% 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-    #addProcessMessBillsModal .modal-bills-skeleton {
-        animation: none;
-    }
+    .modal-bills-skeleton { animation: none; }
 }
 /* Use Material icons instead of DataTables unicode arrows (often invisible on Windows) */
 #processMessBillsTable.dataTable thead > tr > th.sorting:before,
@@ -451,6 +426,74 @@
 .pmbe-export-btn .material-symbols-rounded { font-size: 1.15rem; }
 
 /* ---- Filter toolbar (single row, auto-apply, +Filter overflow) ---- */
+/* ---- Compact toolbar, per the design ----------------------------------- */
+/* Every control in this row is sized from --ds-control-h, so one scoped
+   override shrinks the pills, the date range, Remove Filter, Columns and the
+   search together. Scoped to the toolbar so the rest of the app keeps 40px. */
+.pmbe-page .pmbe-toolbar { --ds-control-h: 32px; }
+.pmbe-page .pmbe-toolbar .programme-dt-filters-label { font-size: .8rem; }
+/* These three hard-code 40px in custom.css, so they need it spelled out. */
+.pmbe-page .pmbe-toolbar .programme-dt-btn-reset,
+.pmbe-page .pmbe-toolbar .programme-dt-btn-columns {
+    height: var(--ds-control-h);
+    padding: 0 .7rem;
+    font-size: .8rem;
+}
+.pmbe-page .pmbe-toolbar .programme-dt-search .dataTables_filter input {
+    height: var(--ds-control-h);
+    font-size: .8rem;
+    padding: 0 .75rem 0 2.1rem !important;
+}
+.pmbe-page .pmbe-toolbar .programme-dt-search .dataTables_filter label::before {
+    left: .7rem;
+    font-size: .85rem;
+}
+
+/* Columns: primary-coloured with the icon after the label, as in the design. */
+.pmbe-page .pmbe-toolbar .programme-dt-btn-columns {
+    flex-direction: row-reverse;
+    gap: .35rem;
+    color: var(--ds-primary, #004a93);
+}
+.pmbe-page .pmbe-toolbar .programme-dt-btn-columns:hover {
+    background: rgba(0, 74, 147, .06);
+    border-color: var(--ds-primary, #004a93);
+    color: var(--ds-primary, #004a93);
+}
+.pmbe-page .pmbe-toolbar .programme-dt-btn-columns i { font-size: .95rem; }
+
+/* Search collapses to an icon and slides open on click. */
+.pmbe-page .pmbe-search-toggle {
+    width: var(--ds-control-h);
+    height: var(--ds-control-h);
+    flex-shrink: 0;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--ds-line, #d0d5dd);
+    border-radius: var(--ds-radius, 4px);
+    background: var(--ds-surface, #fff);
+    color: var(--ds-primary, #004a93);
+}
+.pmbe-page .pmbe-search-toggle:hover,
+.pmbe-page .pmbe-search-wrap.is-open .pmbe-search-toggle {
+    background: rgba(0, 74, 147, .06);
+    border-color: var(--ds-primary, #004a93);
+}
+.pmbe-page .pmbe-search-toggle i { font-size: 1rem; line-height: 1; }
+/* Collapsed by default. Width, not display: the DataTables filter input must
+   stay in the DOM and keep working while hidden. */
+.pmbe-page .pmbe-search-wrap .programme-dt-search {
+    width: 0;
+    overflow: hidden;
+    transition: width .18s ease, margin-left .18s ease;
+}
+.pmbe-page .pmbe-search-wrap.is-open .programme-dt-search {
+    width: 15rem;
+    margin-left: .5rem;
+}
+
 .pmbe-toolbar { gap: .5rem; }
 .pmbe-filter-form { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; overflow: visible; }
 .pmbe-filter-items { flex-wrap: nowrap; flex-shrink: 0; overflow: visible; gap: .5rem; }
@@ -462,32 +505,99 @@
     height: var(--ds-control-h, 40px);
     border-radius: var(--ds-radius, 4px);
     border: 1px solid var(--ds-line, #d0d5dd);
-    font-size: .85rem;
-    padding: .25rem .6rem;
+    font-size: .8rem;
+    padding: .25rem .5rem;
 }
 .pmbe-filter-date { width: 8.5rem; }
 .pmbe-filter-dash { color: var(--ds-ink-muted, #667085); padding: 0 .1rem; }
-/* Choices multi-selects inside the toolbar → compact, ~40px, fixed min width */
-.pmbe-page .pmbe-filter-item .choices { margin-bottom: 0; min-width: 9.5rem; }
-.pmbe-page .pmbe-filter-item .choices__inner {
-    min-height: var(--ds-control-h, 40px);
+/* Searchable filter pills (Select2) — must be indistinguishable from the plain
+   .form-select pills above: same height, border, radius, type and chevron. */
+/* Content-sized, like the design's compact pills — a fixed width would push
+   Client Type / Client Category / Buyer into the "+Filter" overflow. The cap is
+   wide enough for a real buyer name ("BALVIR SINGH (MGSIPA)" needs ~195px);
+   anything longer ellipsises and keeps its title tooltip. */
+.pmbe-page .pmbe-filter-item .select2-container.pmbe-filter-select2 {
+    width: auto !important;
+    min-width: 5.5rem;
+    max-width: 14rem;
+    display: inline-block;      /* Select2's default `inline` ignores width */
+    flex-shrink: 0;
+}
+.pmbe-page .pmbe-filter-item .select2-container.pmbe-filter-select2 .select2-selection--single {
+    height: var(--ds-control-h, 40px);
+    display: flex;
+    align-items: center;
+    padding: 0 1.5rem 0 .5rem;
     border-radius: var(--ds-radius, 4px);
     border: 1px solid var(--ds-line, #d0d5dd);
-    padding: .15rem .5rem;
+    background-color: var(--ds-surface, #fff);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right .5rem center;
+    background-size: 12px 9px;
+    box-shadow: none;
+    outline: none;
+}
+.pmbe-page .pmbe-filter-item .select2-container.pmbe-filter-select2 .select2-selection__rendered {
+    padding: 0;
+    /* The admin theme pins this inner box to height/line-height 40px, which
+       overflows the compact pill and pushes the text above it. */
+    height: 100%;
+    display: flex;
+    align-items: center;
+    line-height: 1.4;
+    font-size: .8rem;
+    color: var(--ds-ink, #344054);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pmbe-page .pmbe-filter-item .select2-container.pmbe-filter-select2 .select2-selection__placeholder {
+    color: var(--ds-ink, #344054);
+}
+/* Select2 draws its own caret; the chevron above is the native one. */
+.pmbe-page .pmbe-filter-item .select2-container.pmbe-filter-select2 .select2-selection__arrow { display: none; }
+.pmbe-page .pmbe-filter-item .select2-container.pmbe-filter-select2.select2-container--open .select2-selection--single,
+.pmbe-page .pmbe-filter-item .select2-container.pmbe-filter-select2.select2-container--focus .select2-selection--single {
+    border-color: var(--ds-primary, #004a93);
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, .12);
+}
+
+/* Dropdown panel + its search field — the only visible addition. */
+.select2-dropdown.pmbe-filter-select2-dropdown {
+    /* The pill is sized to its label; the panel must stay readable regardless
+       (Buyer lists full names). It is absolutely positioned, so it may exceed. */
+    min-width: 15rem;
+    border: 1px solid var(--ds-line, #d0d5dd);
+    border-radius: var(--ds-radius, 4px);
     font-size: .85rem;
+    color: var(--ds-ink, #344054);
+    overflow: hidden;
+}
+.select2-dropdown.pmbe-filter-select2-dropdown .select2-search__field {
+    min-height: 32px;
+    padding: 0 .5rem;
+    border: 1px solid var(--ds-line, #d0d5dd);
+    border-radius: var(--ds-radius, 4px);
+    font-size: .82rem;
+}
+.select2-dropdown.pmbe-filter-select2-dropdown .select2-results__option--highlighted[aria-selected] {
+    background-color: #f2f7fc;
+    color: var(--ds-primary, #004a93);
 }
 /* +Filter overflow pill */
 .pmbe-more-filters {
     display: inline-flex; align-items: center; gap: .25rem;
     min-height: var(--ds-control-h, 40px);
-    padding: 0 .85rem;
-    border: 1px solid var(--ds-line, #d0d5dd);
+    padding: 0 .5rem;
+    border: 0;
     border-radius: var(--ds-radius, 4px);
-    background: var(--ds-surface, #fff);
+    background: transparent;
     color: var(--ds-primary, #004a93);
-    font-size: .85rem; font-weight: 600; white-space: nowrap; cursor: pointer;
+    font-size: .8rem; font-weight: 600; white-space: nowrap; cursor: pointer;
+    text-decoration: underline;
 }
-.pmbe-more-filters:hover { background: var(--ds-surface-2, #f8fafc); }
+.pmbe-more-filters:hover { background: rgba(0, 74, 147, .06); }
 .pmbe-more-filters.dropdown-toggle::after { display: none !important; }
 .pmbe-more-menu { padding: .75rem; min-width: 16rem; }
 .pmbe-more-menu .pmbe-filter-item { width: 100%; margin-bottom: .6rem; }
@@ -501,8 +611,29 @@
     font-size: .75rem; font-weight: 600; line-height: 1.4;
 }
 .pmbe-badge--paid    { background: #ecfdf3; color: #027a48; }
-.pmbe-badge--partial { background: #fffaeb; color: #b54708; }
-.pmbe-badge--unpaid  { background: #fff4ed; color: #b93815; }
+.pmbe-badge--partial { background: #ffead5; color: #b93815; }
+.pmbe-badge--unpaid  { background: #fef0c7; color: #b54708; }
+
+/* Row action: icon over caption, matching the design (and the estate grids). */
+.pmbe-page .pmbe-act {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 56px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ds-primary, #004a93);
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+}
+.pmbe-page .pmbe-act:hover { color: var(--ds-primary, #004a93); text-decoration: none; }
+.pmbe-page .pmbe-act__icon { display: flex; align-items: center; justify-content: center; height: 22px; }
+.pmbe-page .pmbe-act__icon > i { font-size: 1.15rem; line-height: 1; }
+.pmbe-page .pmbe-act__label { white-space: nowrap; }
 
 /* ---- DataTable chrome: search relocated into toolbar, footer below ---- */
 .pmbe-page .dt-top:empty, .pmbe-page .dt-foot:empty { display: none; margin: 0; }
@@ -526,8 +657,8 @@
     height: var(--ds-control-h, 40px);
     border-radius: var(--ds-radius, 4px);
     border: 1px solid var(--ds-line, #d0d5dd);
-    font-size: .85rem;
-    padding: .25rem .6rem;
+    font-size: .8rem;
+    padding: .25rem .5rem;
     background: var(--ds-surface, #fff);
     cursor: pointer;
 }
@@ -537,12 +668,53 @@
 .pmbe-page .pmbe-more-menu { overflow: visible; min-width: 17rem; padding: .85rem; }
 .pmbe-page .pmbe-more-menu .pmbe-filter-item { width: 100%; margin-bottom: .7rem; }
 .pmbe-page .pmbe-more-menu .pmbe-filter-item:last-child { margin-bottom: 0; }
-.pmbe-page .pmbe-more-menu .choices,
 .pmbe-page .pmbe-more-menu .form-select,
 .pmbe-page .pmbe-more-menu .pmbe-filter-range { width: 100%; min-width: 0; }
+/* Inside the "+Filter" popover the pills go full width, as the plain ones do. */
+.pmbe-page .pmbe-more-menu .pmbe-filter-item .select2-container.pmbe-filter-select2 { width: 100% !important; }
 .pmbe-page .pmbe-more-filters.pmbe-more-filters-active { border-color: var(--ds-primary, #004a93); color: var(--ds-primary, #004a93); background: rgba(0,74,147,.06); }
 
 /* ---- Alignment: labels only inside the +Filter popover; main row = clean single-height controls ---- */
 .pmbe-page .pmbe-filter-items .pmbe-filter-item-label { display: none; }
 .pmbe-page .pmbe-more-menu .pmbe-filter-item-label { display: block; }
 .pmbe-page .pmbe-filter-items .pmbe-filter-item { flex-direction: row; align-items: center; }
+
+/* ---- "Generate Invoice & Process Payment" modal ------------------------- */
+/* The modal carries .pmbe-page, so the pill/toolbar rules above already apply;
+   these only cover what is specific to it. */
+.pmbe-page .pmbe-modal-toolbar { flex-wrap: nowrap; }
+.pmbe-page .pmbe-modal-toolbar .pmbe-filter-date { width: 8rem; }
+.pmbe-page .pmbe-modal-search { width: 0; overflow: hidden; transition: width .18s ease, margin-left .18s ease; }
+.pmbe-page .pmbe-search-wrap.is-open .pmbe-modal-search { width: 13rem; margin-left: .5rem; }
+.pmbe-page .pmbe-modal-search input {
+    height: var(--ds-control-h, 40px);
+    border-radius: var(--ds-radius, 4px);
+    border: 1px solid var(--ds-line, #d0d5dd);
+    font-size: .8rem;
+}
+
+/* Header band: light grey with dark labels, as the design shows. */
+#modalBillsTable thead th {
+    background: var(--ds-surface-2, #f2f4f7);
+    color: var(--ds-ink, #344054);
+    border-bottom: 1px solid var(--ds-line, #d0d5dd);
+    font-size: .8rem;
+}
+#modalBillsTable thead th .mess-report-sort-icon { color: #98a2b3; opacity: 1; }
+#modalBillsTable thead th.mess-sort-th:hover { background: #e9edf3 !important; }
+#modalBillsTable tbody td { font-size: .82rem; }
+
+/* Status column stacks the payment pill over the "Invoice Sent" pill. */
+.pmbe-status-stack { display: inline-flex; flex-direction: column; align-items: center; gap: .25rem; }
+.pmbe-badge--sent { background: #d1e9ff; color: #175cd3; }
+
+/* Row actions: icon over caption, three across. */
+.pmbe-act-group { display: inline-flex; align-items: flex-start; gap: .85rem; }
+.pmbe-page .pmbe-act-group .pmbe-act { min-width: 44px; }
+.pmbe-page .pmbe-act-group .pmbe-act[disabled] { opacity: .45; cursor: not-allowed; }
+.pmbe-page .pmbe-act--invoice { color: var(--ds-primary, #004a93); }
+.pmbe-page .pmbe-act--payment { color: var(--ds-danger, #ef4444); }
+.pmbe-page .pmbe-act--receipt { color: var(--ds-warning, #b54708); }
+.pmbe-page .pmbe-act--invoice:hover { color: var(--ds-primary, #004a93); }
+.pmbe-page .pmbe-act--payment:hover { color: var(--ds-danger, #ef4444); }
+.pmbe-page .pmbe-act--receipt:hover { color: var(--ds-warning, #b54708); }

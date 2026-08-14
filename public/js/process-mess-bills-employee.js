@@ -301,6 +301,74 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // ── Toolbar filter pills (Select2) ──────────────────────────────────────
+    // Select2's JS ships with the admin footer; this page loads its CSS. These
+    // are single-value pills — the design shows one compact "Status / Client
+    // Type / Client Category / Buyer" control each, not a chip list.
+    // A pill is only as wide as its value, so picking one changes the toolbar's
+    // width. Tell the overflow layout, or the row silently scrolls sideways
+    // instead of collapsing an item into "+N Filter".
+    function pmbeFiltersResized() {
+        window.dispatchEvent(new Event('pmbe:filters-resized'));
+    }
+
+    function pmbeInitFilterSelect2(el) {
+        var $ = window.jQuery;
+        if (!el || !$ || !$.fn || !$.fn.select2) return;
+        if ($(el).data('select2')) return;
+
+        var first = el.options && el.options[0];
+        var label = el.getAttribute('data-placeholder') || (first ? first.text : '') || 'Select';
+
+        var opts = {
+            width: 'resolve',
+            placeholder: label,
+            allowClear: false,
+            minimumResultsForSearch: 0,          // always offer the search box
+            dropdownCssClass: 'pmbe-filter-select2-dropdown'
+        };
+        // Select2 appends its panel to <body>, which puts it *behind* a Bootstrap
+        // modal — the pill then looks dead because the backdrop eats the click.
+        var modal = el.closest('.modal');
+        if (modal) opts.dropdownParent = $(modal);
+
+        $(el).select2(opts);
+
+        // containerCssClass does not land on this Select2 build, and `width:
+        // resolve` writes an inline pixel width — so tag the container by hand
+        // and let the stylesheet's !important width win.
+        var s2 = $(el).data('select2');
+        if (s2 && s2.$container) s2.$container.addClass('pmbe-filter-select2');
+
+        // Select2 raises jQuery-only events; the auto-apply handler listens for a
+        // NATIVE change, which cannot hear those. Bridge it. Bound to Select2's
+        // own events rather than 'change' so it cannot re-enter itself.
+        $(el).on('select2:select select2:unselect select2:clear', function () {
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            pmbeFiltersResized();
+        });
+    }
+
+    /** Repaint a filter pill after its <option>s were rewritten. */
+    function pmbeSyncFilterWidget(el, selected) {
+        if (!el) return;
+        if (selected !== undefined && selected !== null) {
+            var want = Array.isArray(selected) ? (selected[0] || '') : selected;
+            if (want && el.value !== String(want)) el.value = String(want);
+        }
+        var $ = window.jQuery;
+        if ($ && $(el).data('select2')) {
+            $(el).trigger('change.select2');   // repaint only — no change event
+        } else {
+            pmbeInitFilterSelect2(el);
+        }
+        pmbeFiltersResized();
+    }
+
+    document
+        .querySelectorAll('.process-mess-bills-employee-report select.pmbe-filter-select')
+        .forEach(function (el) { pmbeInitFilterSelect2(el); });
+
     if (typeof window.Choices !== 'undefined') {
         document
             .querySelectorAll('.process-mess-bills-employee-report select.choices-select')
@@ -309,24 +377,45 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-    // Ensure modal dropdowns are (re)initialized with Choices when the modal opens
+    // The bills panel is rendered on its own page ("Generate Invoice & Process
+    // Payment"); the modal is kept for anywhere still opening it. Same IDs, so
+    // one init serves both — it just runs on load rather than on shown.bs.modal.
     var addProcessMessBillsModalEl = document.getElementById('addProcessMessBillsModal');
+    var pmbeBillsPanelRoot = addProcessMessBillsModalEl || document.getElementById('pmbeBillsPanel');
+
+    function initBillsPanel() {
+        if (!pmbeBillsPanelRoot) return;
+        // Only the mode-of-payment is still a Choices control; the filter row
+        // uses the same Select2 pills as the index.
+        initChoicesElement(document.getElementById('modal_mode_of_payment'));
+        // In the modal this must wait for shown.bs.modal: Select2 measures a
+        // hidden container as zero-width.
+        pmbeBillsPanelRoot
+            .querySelectorAll('select.pmbe-filter-select')
+            .forEach(function (el) { pmbeInitFilterSelect2(el); });
+        if (window.pmbeModalLayoutFilters) window.pmbeModalLayoutFilters();
+
+        initModalBillsColumnManager();
+        updateModalBillsSortHeaderIcons();
+
+        setTimeout(function() {
+            if (typeof fillModalClientTypePk === 'function') {
+                fillModalClientTypePk();
+            }
+        }, 50);
+
+        // No Load Bills button in the design: fetch straight away.
+        setTimeout(function () { loadModalBills(1); }, 120);
+    }
+
+    if (!addProcessMessBillsModalEl && pmbeBillsPanelRoot) {
+        // Standalone page — nothing will ever fire shown.bs.modal.
+        setTimeout(initBillsPanel, 0);
+    }
+
     if (addProcessMessBillsModalEl && typeof bootstrap !== 'undefined') {
         addProcessMessBillsModalEl.addEventListener('shown.bs.modal', function () {
-            ['modal_client_type', 'modal_client_type_pk', 'modal_buyer_name', 'modal_mode_of_payment'].forEach(function (id) {
-                var el = document.getElementById(id);
-                initChoicesElement(el);
-            });
-
-            initModalBillsColumnManager();
-            updateModalBillsSortHeaderIcons();
-
-            // After Choices.js initialization, populate the modal dropdowns
-            setTimeout(function() {
-                if (typeof fillModalClientTypePk === 'function') {
-                    fillModalClientTypePk();
-                }
-            }, 50);
+            initBillsPanel();
         });
     }
 
@@ -335,6 +424,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var modalBillsTotal = 0;
     var modalBillsFrom = 0;
     var modalBillsTo = 0;
+    var modalBillsPerPage = 10;      // as applied by the server, not as requested
     var modalBillsSortCol = 'buyer_name';
     var modalBillsSortDir = 'asc';
     var modalAllBuyerNames = PMBE_CFG.allBuyerNames || [];
@@ -434,6 +524,9 @@ document.addEventListener('DOMContentLoaded', function() {
         return url;
     }
     window.buildModalBillsDataUrl = buildModalBillsDataUrl;
+    // The print function is inline in the view (it writes a literal </script>),
+    // so it can only reach these through window.
+    window.getFilteredModalBills = function () { return getFilteredModalBills(); };
 
     function applyModalLifetimeDuePatch(dues) {
         if (!dues || !dues.length) {
@@ -514,34 +607,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function renderModalBillsSkeleton() {
         var tbody = document.getElementById('modalBillsTableBody');
-        var modalSelectAllEl = document.getElementById('modalSelectAll');
-        var bulkActionsBar = document.getElementById('modalBulkActionsBar');
         var paginationInfo = document.getElementById('modalPaginationInfo');
-        var paginationNav = document.getElementById('modalPaginationNav');
+        var paginationList = document.getElementById('modalPaginationList');
         if (!tbody) return;
 
+        // One bar per column of the real row, so nothing shifts when the data
+        // lands. Only the first row is announced; the rest are decorative.
         var skeletonRow = function (rowIndex) {
             var srText = rowIndex === 0
                 ? '<span class="visually-hidden" role="status">Loading bills</span>'
                 : '';
             return '<tr class="modal-bills-skeleton-row" aria-hidden="' + (rowIndex === 0 ? 'false' : 'true') + '">' +
-                '<td>' + srText + '<span class="modal-bills-skeleton modal-bills-skeleton--check"></span></td>' +
-                '<td><span class="modal-bills-skeleton modal-bills-skeleton--sn"></span></td>' +
+                '<td>' + srText + '<span class="modal-bills-skeleton modal-bills-skeleton--sn"></span></td>' +
                 '<td><span class="modal-bills-skeleton modal-bills-skeleton--buyer"></span></td>' +
                 '<td><span class="modal-bills-skeleton modal-bills-skeleton--invoice"></span></td>' +
                 '<td><span class="modal-bills-skeleton modal-bills-skeleton--payment"></span></td>' +
                 '<td><span class="modal-bills-skeleton modal-bills-skeleton--total"></span></td>' +
+                '<td><span class="modal-bills-skeleton modal-bills-skeleton--total"></span></td>' +
                 '<td><span class="modal-bills-skeleton modal-bills-skeleton--status"></span></td>' +
                 '<td><span class="modal-bills-skeleton modal-bills-skeleton--action"></span></td>' +
-                '<td><span class="modal-bills-skeleton modal-bills-skeleton--receipt"></span></td>' +
                 '</tr>';
         };
 
-        tbody.innerHTML = [0, 1, 2, 3, 4].map(skeletonRow).join('');
-        if (modalSelectAllEl) modalSelectAllEl.checked = false;
-        if (bulkActionsBar) bulkActionsBar.classList.add('d-none');
-        if (paginationInfo) paginationInfo.textContent = 'Loading bills...';
-        if (paginationNav) paginationNav.classList.add('d-none');
+        // As many placeholder rows as the page is about to show, capped so a
+        // 200-row page does not paint 200 shimmering bars.
+        var perPage = parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
+        var rows = Math.max(3, Math.min(perPage || 10, 10));
+        var html = '';
+        for (var i = 0; i < rows; i++) html += skeletonRow(i);
+        tbody.innerHTML = html;
+
+        // The footer stays put — it carries the count and page-size control —
+        // so its pager gets a placeholder rather than disappearing.
+        if (paginationList) {
+            paginationList.innerHTML = '<li class="paginate_button page-item disabled">' +
+                '<span class="modal-bills-skeleton modal-bills-skeleton--pager"></span></li>';
+        }
+        if (paginationInfo) paginationInfo.textContent = 'loading…';
+
         setModalBillsLoading(true);
         applyModalBillsColumnVisibility();
     }
@@ -567,6 +670,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 modalBillsFrom = parseInt(pagination.from || (modalBillsTotal ? 1 : 0), 10);
                 modalBillsTo = parseInt(pagination.to || modalBillsData.length || 0, 10);
                 modalBillsCurrentPage = parseInt(pagination.page || modalBillsCurrentPage || 1, 10);
+                modalBillsPerPage = parseInt(pagination.per_page, 10) || modalBillsPerPage;
+                // Show what was actually applied, so the footer never claims a
+                // page size the server refused.
+                var perPageSel = document.getElementById('modalPerPage');
+                if (perPageSel && String(modalBillsPerPage) !== perPageSel.value
+                    && [].some.call(perPageSel.options, function (o) { return o.value === String(modalBillsPerPage); })) {
+                    perPageSel.value = String(modalBillsPerPage);
+                }
                 updateModalBillsSortHeaderIcons();
                 renderModalTable();
 
@@ -585,16 +696,21 @@ document.addEventListener('DOMContentLoaded', function() {
                                 .filter(function (name) { return !!name; })
                         ));
 
-                        buyerSelect.innerHTML = '';
+                        var keep = buyerSelect.value;
+                        buyerSelect.innerHTML = '<option value="">Buyer</option>';
 
                         buyers.forEach(function (name) {
                             var opt = document.createElement('option');
                             opt.value = name;
                             opt.textContent = name;
+                            if (name === keep) opt.selected = true;
                             buyerSelect.appendChild(opt);
                         });
 
-                        if (buyerSelect.choicesInstance) {
+                        var $buyer = window.jQuery;
+                        if ($buyer && $buyer(buyerSelect).data('select2')) {
+                            $buyer(buyerSelect).trigger('change.select2');   // repaint, no change event
+                        } else if (buyerSelect.choicesInstance) {
                             var values = Array.from(buyerSelect.options).map(function (o) {
                                 return { value: o.value, label: o.text, selected: o.selected };
                             });
@@ -618,39 +734,98 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function focusAddProcessMessBillsModal() {
         var addModalEl = document.getElementById('addProcessMessBillsModal');
-        if (!addModalEl || typeof bootstrap === 'undefined') return;
+        if (!addModalEl || typeof bootstrap === 'undefined') {
+            // Standalone page: nothing to re-open, just refresh the list.
+            if (pmbeBillsPanelRoot) loadModalBills(modalBillsCurrentPage);
+            return;
+        }
         var wasVisible = addModalEl.classList.contains('show');
         var addInst = bootstrap.Modal.getOrCreateInstance(addModalEl);
         addInst.show();
         if (wasVisible) loadModalBills();
     }
 
-    function getFilteredModalBills() {
-        return modalBillsData || [];
+    /** addEventListener on an element that may not exist on this page. */
+    function pmbeOn(id, evt, fn) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener(evt, fn);
+        return el;
     }
 
+    function pmbeModalStatusOf(b) {
+        var due = parseFloat(b.total_due_amount != null ? b.total_due_amount : b.due) || 0;
+        var paid = parseFloat(b.paid) || 0;
+        if (due <= 0) return 'paid';
+        return paid > 0 ? 'partial' : 'unpaid';
+    }
+
+    // Status and Invoice Sent are not part of the bills endpoint's query, so
+    // they narrow the page that was loaded rather than the whole result set.
+    function getFilteredModalBills() {
+        var rows = modalBillsData || [];
+        var status = (document.getElementById('modal_status') || {}).value || '';
+        var sent = (document.getElementById('modal_invoice_sent') || {}).value || '';
+        if (status) {
+            rows = rows.filter(function (b) { return pmbeModalStatusOf(b) === status; });
+        }
+        if (sent) {
+            rows = rows.filter(function (b) {
+                return sent === 'sent' ? !!b.invoice_notification_sent : !b.invoice_notification_sent;
+            });
+        }
+        return rows;
+    }
+
+    /**
+     * Build the same pager datatable-global-ui.js renders for every other grid:
+     * previous / numbered pages / next as .paginate_button .page-item items.
+     * This table is paginated by hand, so the markup is produced here instead.
+     */
     function updateModalPaginationNav(totalPages, filteredLength) {
         var nav = document.getElementById('modalPaginationNav');
-        var prevBtn = document.getElementById('modalPaginationPrev');
-        var nextBtn = document.getElementById('modalPaginationNext');
-        var prevLi = document.getElementById('modalPaginationPrevLi');
-        var nextLi = document.getElementById('modalPaginationNextLi');
-        var pageLi = document.getElementById('modalPaginationPageLi');
-        var label = document.getElementById('modalPaginationPageLabel');
-        if (!nav || !prevBtn || !nextBtn || !label) return;
+        var list = document.getElementById('modalPaginationList');
+        if (!nav || !list) return;
+
+        // The footer also carries "Showing [N] of M items", so it stays visible
+        // even when there is only one page.
+        nav.classList.remove('d-none');
         if (totalPages <= 1 || !filteredLength) {
-            nav.classList.add('d-none');
+            list.innerHTML = '';
             return;
         }
-        nav.classList.remove('d-none');
-        label.textContent = 'Page ' + modalBillsCurrentPage + ' of ' + totalPages;
-        var onFirst = modalBillsCurrentPage <= 1;
-        var onLast = modalBillsCurrentPage >= totalPages;
-        prevBtn.disabled = onFirst;
-        nextBtn.disabled = onLast;
-        if (prevLi) prevLi.classList.toggle('disabled', onFirst);
-        if (nextLi) nextLi.classList.toggle('disabled', onLast);
-        if (pageLi) pageLi.classList.add('disabled');
+
+        // A window of pages around the current one, so a long list does not
+        // render hundreds of buttons.
+        var span = 2;
+        var from = Math.max(1, modalBillsCurrentPage - span);
+        var to = Math.min(totalPages, modalBillsCurrentPage + span);
+        if (to - from < span * 2) {
+            from = Math.max(1, to - span * 2);
+            to = Math.min(totalPages, from + span * 2);
+        }
+
+        var html = '';
+        function item(label, page, cls, disabled, active) {
+            html += '<li class="paginate_button page-item ' + cls
+                + (disabled ? ' disabled' : '') + (active ? ' active' : '') + '">'
+                + '<a href="javascript:void(0)" class="page-link" data-page="' + page + '">' + label + '</a></li>';
+        }
+
+        item('Previous', modalBillsCurrentPage - 1, 'previous', modalBillsCurrentPage <= 1, false);
+        if (from > 1) {
+            item('1', 1, '', false, false);
+            if (from > 2) html += '<li class="paginate_button page-item disabled"><span class="page-link">…</span></li>';
+        }
+        for (var i = from; i <= to; i++) {
+            item(String(i), i, '', false, i === modalBillsCurrentPage);
+        }
+        if (to < totalPages) {
+            if (to < totalPages - 1) html += '<li class="paginate_button page-item disabled"><span class="page-link">…</span></li>';
+            item(String(totalPages), totalPages, '', false, false);
+        }
+        item('Next', modalBillsCurrentPage + 1, 'next', modalBillsCurrentPage >= totalPages, false);
+
+        list.innerHTML = html;
     }
 
     function formatInvoiceNotificationStatusCell(b) {
@@ -729,7 +904,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 $table: $table,
                 colReorder: false,
                 lockedColumns: [0],
-                skipColumns: [7, 8]
+                // 8 columns now: 0 S.No … 6 Status, 7 Action. Action is not a
+                // data column, so it is never toggleable.
+                skipColumns: [7]
             });
         } else {
             window.MessColumnManager.get('modalBillsTable').apply();
@@ -743,20 +920,38 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function pmbeModalMoney(v) {
+        var n = parseFloat(String(v == null ? 0 : v).replace(/[^0-9.\-]/g, '')) || 0;
+        return '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    /** Payment status pill, plus an "Invoice Sent" pill when one has gone out. */
+    function pmbeModalStatusCell(b) {
+        var status = pmbeModalStatusOf(b);
+        var label = status === 'paid' ? 'Paid' : (status === 'partial' ? 'Partial' : 'Unpaid');
+        var html = '<span class="pmbe-badge pmbe-badge--' + status + '">' + label + '</span>';
+        if (b && b.invoice_notification_sent) {
+            html += '<span class="pmbe-badge pmbe-badge--sent">' +
+                (b.invoice_notification_fully_sent ? 'Invoice Sent' : 'Invoice Sent (partial)') + '</span>';
+        }
+        return '<div class="pmbe-status-stack">' + html + '</div>';
+    }
+
     function renderModalTable() {
         var tbody = document.getElementById('modalBillsTableBody');
         var modalSelectAllEl = document.getElementById('modalSelectAll');
         setModalBillsLoading(false);
         if (modalSelectAllEl) modalSelectAllEl.checked = false;
         var filtered = getFilteredModalBills();
-        var perPage = parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
+        var perPage = modalBillsPerPage
+            || parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
         var totalPages = modalBillsTotal ? Math.ceil(modalBillsTotal / perPage) : 0;
         modalBillsCurrentPage = Math.max(1, Math.min(modalBillsCurrentPage, totalPages || 1));
         var start = modalBillsFrom ? modalBillsFrom - 1 : 0;
         var pageData = filtered;
 
         if (pageData.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">No unpaid bills found. Adjust date range and click Load Bills.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No bills match these filters.</td></tr>';
         } else {
             tbody.innerHTML = pageData.map(function(b, i) {
                 var sn = b.sno || (start + i + 1);
@@ -766,32 +961,41 @@ document.addEventListener('DOMContentLoaded', function() {
                     var receiptDt = b.date_to || getModalDateYmd('modal_date_to') || '';
                     printUrl += (printUrl.indexOf('?') >= 0 ? '&' : '?') + 'date_from=' + encodeURIComponent(receiptDf) + '&date_to=' + encodeURIComponent(receiptDt);
                 }
-                var statusCell = formatInvoiceNotificationStatusCell(b);
+                var name = (b.buyer_name || '').replace(/"/g, '&quot;');
                 var invoiceFullySent = !!b.invoice_notification_fully_sent;
-                var invoiceBtnClass = invoiceFullySent ? 'btn btn-outline-secondary generate-invoice-btn' : 'btn btn-outline-primary generate-invoice-btn';
-                var invoiceBtnTitle = invoiceFullySent
+                var invoiceTitle = invoiceFullySent
                     ? 'Invoice already sent for all items in this range'
                     : (b.invoice_notification_partial ? 'Send invoice for new item(s)' : 'Generate Invoice');
-                var invoiceBtnAttrs = 'data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '" title="' + invoiceBtnTitle + '"' + (invoiceFullySent ? ' disabled data-invoice-sent="1"' : '');
-                return '<tr class="' + (i % 2 === 0 ? 'table-light' : '') + '">' +
-                    '<td><input type="checkbox" class="form-check-input modal-bill-check" data-id="' + b.id + '" data-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '"></td>' +
+                return '<tr>' +
                     '<td>' + sn + '</td>' +
                     '<td>' + (b.buyer_name || '—') + '</td>' +
                     '<td>' + (b.invoice_no || '—') + '</td>' +
                     '<td>' + (b.payment_type || '—') + '</td>' +
-                    '<td class="text-end">' + (b.total || '0') + '</td>' +
-                    '<td class="text-end fw-semibold">' + (b.total_due_amount || '0.00') + '</td>' +
-                    '<td class="text-center">' + statusCell + '</td>' +
-                    '<td class="text-center"><div class="btn-group btn-group-sm">' +
-                    '<button type="button" class="' + invoiceBtnClass + '" ' + invoiceBtnAttrs + '>Invoice</button>' +
-                    '<button type="button" class="btn btn-outline-success generate-payment-btn" data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '" title="Mark as Paid">Payment</button>' +
-                    '</div></td>' +
-                    '<td class="text-center"><a href="' + printUrl + '" target="_blank" class="btn  btn-outline-secondary" title="Print receipt"><i class="material-symbols-rounded" style="font-size:1.1rem;">receipt</i></a></td>' +
+                    '<td class="text-end">' + pmbeModalMoney(b.total) + '</td>' +
+                    '<td class="text-end fw-semibold">' + pmbeModalMoney(b.total_due_amount) + '</td>' +
+                    '<td class="text-center">' + pmbeModalStatusCell(b) + '</td>' +
+                    '<td class="text-center">' +
+                        '<div class="pmbe-act-group">' +
+                            '<button type="button" class="pmbe-act pmbe-act--invoice generate-invoice-btn" data-bill-id="' + b.id + '" data-buyer-name="' + name + '" title="' + invoiceTitle + '"' + (invoiceFullySent ? ' disabled data-invoice-sent="1"' : '') + '>' +
+                                '<span class="pmbe-act__icon"><i class="material-symbols-rounded">request_quote</i></span>' +
+                                '<span class="pmbe-act__label">Invoice</span>' +
+                            '</button>' +
+                            '<button type="button" class="pmbe-act pmbe-act--payment generate-payment-btn" data-bill-id="' + b.id + '" data-buyer-name="' + name + '" title="Mark as Paid">' +
+                                '<span class="pmbe-act__icon"><i class="material-symbols-rounded">currency_rupee</i></span>' +
+                                '<span class="pmbe-act__label">Payment</span>' +
+                            '</button>' +
+                            '<a href="' + printUrl + '" target="_blank" class="pmbe-act pmbe-act--receipt" title="Print receipt">' +
+                                '<span class="pmbe-act__icon"><i class="material-symbols-rounded">receipt_long</i></span>' +
+                                '<span class="pmbe-act__label">Receipt</span>' +
+                            '</a>' +
+                        '</div>' +
+                    '</td>' +
                     '</tr>';
             }).join('');
         }
 
-        document.getElementById('modalPaginationInfo').textContent = 'Showing ' + modalBillsFrom + ' to ' + modalBillsTo + ' of ' + modalBillsTotal + ' entries';
+        var infoEl = document.getElementById('modalPaginationInfo');
+        if (infoEl) infoEl.textContent = 'of ' + modalBillsTotal + ' items';
         updateModalPaginationNav(totalPages, modalBillsTotal);
         updateBulkActionsBar();
         applyModalBillsColumnVisibility();
@@ -812,6 +1016,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function clearChoicesSelection(el) {
         if (!el) return;
+        var $s2 = window.jQuery;
+        if ($s2 && $s2.fn && $s2.fn.select2 && $s2(el).data('select2')) {
+            el.value = '';
+            $s2(el).trigger('change.select2');
+            return;
+        }
         if (el.choicesInstance) {
             var inst = el.choicesInstance;
             if (el.multiple && typeof inst.removeActiveItems === 'function') {
@@ -862,8 +1072,16 @@ document.addEventListener('DOMContentLoaded', function() {
         var bn = document.getElementById('modal_buyer_name');
         clearChoicesSelection(bn);
         if (bn && !bn.choicesInstance) {
-            bn.innerHTML = '';
+            bn.innerHTML = '<option value="">Buyer</option>';
+            var $bn = window.jQuery;
+            if ($bn && $bn(bn).data('select2')) $bn(bn).trigger('change.select2');
         }
+
+        // Client Category and the two design-added pills reset too, or "Remove
+        // Filter" leaves the grid narrowed by a filter the user cannot see.
+        ['modal_client_type_pk', 'modal_status', 'modal_invoice_sent'].forEach(function (id) {
+            clearChoicesSelection(document.getElementById(id));
+        });
         var mp = document.getElementById('modal_mode_of_payment');
         if (mp) {
             mp.value = 'deduct_from_salary';
@@ -881,10 +1099,12 @@ document.addEventListener('DOMContentLoaded', function() {
         loadModalBills();
     }
 
-    document.getElementById('addProcessMessBillsModal').addEventListener('show.bs.modal', function() {
-        updateModalBillsSortHeaderIcons();
-        loadModalBills();
-    });
+    if (addProcessMessBillsModalEl) {
+        addProcessMessBillsModalEl.addEventListener('show.bs.modal', function() {
+            updateModalBillsSortHeaderIcons();
+            loadModalBills();
+        });
+    }
     updateModalBillsSortHeaderIcons();
     var payNowModalForAddRedirect = document.getElementById('payNowModal');
     if (payNowModalForAddRedirect) {
@@ -892,12 +1112,30 @@ document.addEventListener('DOMContentLoaded', function() {
             focusAddProcessMessBillsModal();
         });
     }
-    document.getElementById('modalLoadBillsBtn').addEventListener('click', function() { loadModalBills(1); });
-    document.getElementById('modalClearFiltersBtn').addEventListener('click', clearModalFilters);
-    document.getElementById('modalSearch').addEventListener('input', function() {
-        loadModalBills(1);
+    pmbeOn('modalClearFiltersBtn', 'click', clearModalFilters);
+
+    // No Load Bills button in the design: any filter change reloads the list.
+    // Debounced so a cascade (client type -> category -> buyer) fires once.
+    var pmbeModalFilterTimer = null;
+    pmbeOn('addModalFilterForm', 'change', function (e) {
+        var t = e.target;
+        if (!t || !t.classList || !t.classList.contains('pmbe-modal-auto-filter')) return;
+        pmbeModalClearDependents(t);
+        if (pmbeModalFilterTimer) clearTimeout(pmbeModalFilterTimer);
+        pmbeModalFilterTimer = setTimeout(function () { loadModalBills(1); }, 500);
     });
-    document.getElementById('modalPerPage').addEventListener('change', function() {
+
+    function pmbeModalClearDependents(el) {
+        (el.getAttribute('data-clears') || '').split(',').forEach(function (id) {
+            id = id.trim();
+            var dep = id && document.getElementById(id);
+            if (!dep) return;
+            dep.value = '';
+            var $ = window.jQuery;
+            if ($ && $(dep).data('select2')) $(dep).trigger('change.select2');
+        });
+    }
+    pmbeOn('modalSearch', 'input', function() {
         loadModalBills(1);
     });
     document.querySelectorAll('#modalBillsTable .mess-sort-th[data-sort]').forEach(function (th) {
@@ -914,18 +1152,18 @@ document.addEventListener('DOMContentLoaded', function() {
             loadModalBills(1);
         });
     });
-    document.getElementById('modalPaginationPrev').addEventListener('click', function() {
-        if (modalBillsCurrentPage > 1) {
-            loadModalBills(modalBillsCurrentPage - 1);
-        }
-    });
-    document.getElementById('modalPaginationNext').addEventListener('click', function() {
-        var perPage = parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
+    pmbeOn('modalPaginationList', 'click', function (e) {
+        var link = e.target.closest('.page-link[data-page]');
+        if (!link || link.closest('.page-item').classList.contains('disabled')) return;
+        var page = parseInt(link.getAttribute('data-page'), 10);
+        var perPage = modalBillsPerPage
+            || parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
         var totalPages = modalBillsTotal ? Math.ceil(modalBillsTotal / perPage) : 0;
-        if (modalBillsCurrentPage < totalPages) {
-            loadModalBills(modalBillsCurrentPage + 1);
-        }
+        if (!page || page < 1 || (totalPages && page > totalPages)) return;
+        loadModalBills(page);
     });
+
+    pmbeOn('modalPerPage', 'change', function () { loadModalBills(1); });
 
     // --- Client Type / Buyer dependent dropdowns in modal (similar to Sale Voucher Report) ---
     (function initModalClientTypeFilters() {
@@ -1332,23 +1570,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function fillClientTypePk(preserve) {
             var slug = clientTypeSlug.value;
-            var currentClientPk = preserve ? preservedClientTypePk : '';
+            // The controller always hands these back as arrays; the pill holds one.
+            var currentClientPk = preserve
+                ? (Array.isArray(preservedClientTypePk) ? (preservedClientTypePk[0] || '') : (preservedClientTypePk || ''))
+                : '';
             console.log('=== fillClientTypePk START ===');
             console.log('slug:', slug, 'preserve:', preserve, 'currentClientPk:', currentClientPk);
             
-            // If Choices.js exists, destroy it first to rebuild clean
-            if (clientTypePk.choicesInstance) {
-                console.log('Destroying existing Choices.js instance for clientTypePk...');
-                try {
-                    clientTypePk.choicesInstance.destroy();
-                    clientTypePk.choicesInstance = null;
-                    clientTypePk.dataset.choicesInitialized = 'false';
-                } catch (e) {
-                    console.error('Error destroying Choices instance:', e);
-                }
-            }
             
-            clientTypePk.innerHTML = '<option value=\"\">All</option>';
+            clientTypePk.innerHTML = '<option value=\"\">Client Category</option>';
 
             if ((slug === 'ot' || slug === 'course') && otCourseOptions.length) {
                 otCourseOptions.forEach(function (o) {
@@ -1378,17 +1608,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('fillClientTypePk - Total options:', clientTypePk.options.length);
             
             // Re-initialize Choices.js after options are added
-            if (typeof window.Choices !== 'undefined') {
-                initChoicesElement(clientTypePk);
-                if (currentClientPk && clientTypePk.choicesInstance) {
-                    console.log('fillClientTypePk - Setting choice to:', currentClientPk);
-                    try {
-                        clientTypePk.choicesInstance.setChoiceByValue(currentClientPk);
-                    } catch (e) {
-                        console.error('Error setting choice value:', e);
-                    }
-                }
-            }
+            pmbeSyncFilterWidget(clientTypePk, currentClientPk);
             
             console.log('fillClientTypePk - Calling fillBuyerSelect(true)...');
             fillBuyerSelect(true);
@@ -1396,40 +1616,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function fillBuyerSelect(preserve) {
             // Get selected slugs (now multiselect)
-            var selectedSlugs = [];
-            if (clientTypeSlug.choicesInstance) {
-                selectedSlugs = clientTypeSlug.choicesInstance.getValue(true);
-            } else {
-                selectedSlugs = Array.from(clientTypeSlug.selectedOptions).map(function(opt) { return opt.value; });
-            }
+            var selectedSlugs = Array.from(clientTypeSlug.selectedOptions)
+                .map(function (opt) { return opt.value; })
+                .filter(Boolean);
             
             // Get selected pks (now multiselect)
-            var selectedPks = [];
-            if (clientTypePk.choicesInstance) {
-                selectedPks = clientTypePk.choicesInstance.getValue(true);
-            } else {
-                selectedPks = Array.from(clientTypePk.selectedOptions).map(function(opt) { return opt.value; });
-            }
+            var selectedPks = Array.from(clientTypePk.selectedOptions)
+                .map(function (opt) { return opt.value; })
+                .filter(Boolean);
             
             var currentBuyer = preserve ? preservedBuyerName : [];
             console.log('=== fillBuyerSelect START ===');
             console.log('selectedSlugs:', selectedSlugs, 'selectedPks:', selectedPks, 'preserve:', preserve);
-            console.log('buyerSelect.choicesInstance exists?', !!buyerSelect.choicesInstance);
             
-            // If Choices.js exists, destroy it first to rebuild clean
-            if (buyerSelect.choicesInstance) {
-                console.log('Destroying existing Choices.js instance...');
-                try {
-                    buyerSelect.choicesInstance.destroy();
-                    buyerSelect.choicesInstance = null;
-                    buyerSelect.dataset.choicesInitialized = 'false';
-                } catch (e) {
-                    console.error('Error destroying Choices instance:', e);
-                }
-            }
             
-            // Clear existing options
-            buyerSelect.innerHTML = '';
+            // Clear existing options. The blank first option IS the placeholder:
+            // without it a single-select would silently pick the first buyer.
+            buyerSelect.innerHTML = '<option value="">Buyer</option>';
 
             function addOptions(list) {
                 console.log('addOptions called with', list ? list.length : 0, 'items');
@@ -1497,19 +1700,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         } else {
                         addOptions(buyers);
                         }
-                        if (typeof window.Choices !== 'undefined') {
-                            initChoicesElement(buyerSelect);
-                            if (Array.isArray(currentBuyer) && currentBuyer.length && buyerSelect.choicesInstance) {
-                                buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
-                            }
-                        }
+                        pmbeSyncFilterWidget(buyerSelect, currentBuyer);
                     })
                     .catch(function () {
                         fallbackFromServerLists();
                         // still init Choices
-                        if (typeof window.Choices !== 'undefined') {
-                            initChoicesElement(buyerSelect);
-                        }
+                        pmbeSyncFilterWidget(buyerSelect, currentBuyer);
                     });
             }
 
@@ -1549,16 +1745,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 addOptions(unique);
                 
-                if (typeof window.Choices !== 'undefined') {
-                    initChoicesElement(buyerSelect);
-                    if (Array.isArray(currentBuyer) && currentBuyer.length && buyerSelect.choicesInstance) {
-                        try {
-                            buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
-                        } catch (e) {
-                            console.error('Error setting buyer values:', e);
-                        }
-                    }
-                }
+                pmbeSyncFilterWidget(buyerSelect, currentBuyer);
                 return;
             }
             
@@ -1609,18 +1796,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                         addOptions(students);
                         // Re-initialize Choices.js after async data load
-                        if (typeof window.Choices !== 'undefined') {
-                            initChoicesElement(buyerSelect);
-                            if (Array.isArray(currentBuyer) && currentBuyer.length) {
-                                buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
-                            }
-                        }
+                        pmbeSyncFilterWidget(buyerSelect, currentBuyer);
                     })
                     .catch(function () {
                         // ignore; leave All Buyers only - still need to init Choices
-                        if (typeof window.Choices !== 'undefined') {
-                            initChoicesElement(buyerSelect);
-                        }
+                        pmbeSyncFilterWidget(buyerSelect, currentBuyer);
                     });
                 return; // Exit early for async case
             } else if (slug === 'ot' && !selectedPk) {
@@ -1635,12 +1815,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 var dateToYmd2 = (dt2 && dt2.value) ? toYmd(dt2.value) : '';
 
                 function initBuyerChoicesAfterAsync() {
-                    if (typeof window.Choices !== 'undefined') {
-                        initChoicesElement(buyerSelect);
-                        if (Array.isArray(currentBuyer) && currentBuyer.length && buyerSelect.choicesInstance) {
-                            try { buyerSelect.choicesInstance.setChoiceByValue(currentBuyer); } catch (e) {}
-                        }
-                    }
+                    pmbeSyncFilterWidget(buyerSelect, currentBuyer);
                 }
 
                 function loadStudentsAllOtCourses() {
@@ -1732,12 +1907,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                             addOptions(buyers);
 
-                            if (typeof window.Choices !== 'undefined') {
-                                initChoicesElement(buyerSelect);
-                                if (currentBuyer && buyerSelect.choicesInstance) {
-                                    buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
-                                }
-                            }
+                            pmbeSyncFilterWidget(buyerSelect, currentBuyer);
                         })
                         .catch(function () {
                             // Fallback to the report-based endpoint (still respects selected course + dates)
@@ -1785,17 +1955,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('fillBuyerSelect - Re-initializing Choices.js...');
             
             // Re-initialize Choices.js after options are added
-            if (typeof window.Choices !== 'undefined') {
-                initChoicesElement(buyerSelect);
-                if (currentBuyer && buyerSelect.choicesInstance) {
-                    console.log('fillBuyerSelect - Setting choice to:', currentBuyer);
-                    try {
-                        buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
-                    } catch (e) {
-                        console.error('Error setting choice value:', e);
-                    }
-                }
-            }
+            pmbeSyncFilterWidget(buyerSelect, currentBuyer);
         }
 
         clientTypeSlug.addEventListener('change', function () {
@@ -1814,19 +1974,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 100);
     })();
 
-    document.getElementById('modalSelectAll').addEventListener('change', function() {
-        document.querySelectorAll('#addProcessMessBillsModal .modal-bill-check').forEach(function(cb) {
-            cb.checked = this.checked;
-        }.bind(this));
-        updateBulkActionsBar();
-    });
 
-    document.getElementById('addProcessMessBillsModal').addEventListener('click', function(e) {
-        var target = e.target.closest('.modal-bill-check');
-        if (target && target.classList.contains('modal-bill-check')) {
-            updateBulkActionsBar();
-        }
-    });
+    if (pmbeBillsPanelRoot) {
+        pmbeBillsPanelRoot.addEventListener('click', function(e) {
+            var target = e.target.closest('.modal-bill-check');
+            if (target && target.classList.contains('modal-bill-check')) {
+                updateBulkActionsBar();
+            }
+        });
+    }
 
     function doGenerateInvoice(billId, buyerName, btnEl) {
         if (!billId) { showToast('Bill ID not found.', 'error'); return; }
@@ -2023,7 +2179,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-    document.getElementById('paymentDetailsPayNowBtn').addEventListener('click', function() {
+    pmbeOn('paymentDetailsPayNowBtn', 'click', function() {
         var content = document.getElementById('paymentDetailsContent');
         var dueRaw = content && content.getAttribute('data-due-amount-raw');
         var due = dueRaw !== null && dueRaw !== '' ? parseFloat(dueRaw) : 0;
@@ -2047,7 +2203,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    document.getElementById('paymentDetailsPrintBtn').addEventListener('click', function() {
+    pmbeOn('paymentDetailsPrintBtn', 'click', function() {
         var content = document.getElementById('paymentDetailsContent');
         var receiptId = paymentDetailsBillId;
         if (String(receiptId || '').indexOf('combined-') === 0) {
@@ -2064,12 +2220,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    document.getElementById('payNowPaymentMode').addEventListener('change', function() {
+    pmbeOn('payNowPaymentMode', 'change', function() {
         var modal = document.getElementById('payNowModal');
         if (modal) modal.classList.toggle('payment-mode-cheque', this.value === 'cheque');
     });
 
-    document.getElementById('payNowSaveBtn').addEventListener('click', function() {
+    pmbeOn('payNowSaveBtn', 'click', function() {
         var billId = paymentDetailsBillId;
         if (!billId) { showToast('No bill selected.', 'error'); return; }
         var content = document.getElementById('paymentDetailsContent');
@@ -2139,36 +2295,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, true);
 
     // Bulk actions
-    document.getElementById('modalBulkInvoiceBtn').addEventListener('click', function() {
-        var ids = Array.from(document.querySelectorAll('#addProcessMessBillsModal .modal-bill-check:checked')).map(function(c) { return c.getAttribute('data-id'); });
-        if (ids.length === 0) { showToast('Select at least one bill.', 'error'); return; }
-        var toSend = ids.filter(function(id) {
-            var b = (modalBillsData || []).find(function(x) { return String(x.id) === String(id); });
-            return canSendInvoiceNotification(b);
-        });
-        var skipped = ids.length - toSend.length;
-        if (toSend.length === 0) {
-            showToast('Already sent invoice for all items in the selected date range.', 'error');
-            return;
-        }
-        if (!confirm('Generate invoice for ' + toSend.length + ' selected bill(s)?')) return;
-        if (skipped > 0) {
-            showToast('Skipping ' + skipped + ' bill(s): all items already notified.', 'error');
-        }
-        toSend.forEach(function(id) {
-            doGenerateInvoice(id, '', null);
-        });
-        showToast('Processing ' + toSend.length + ' invoice(s)...');
-    });
 
-    document.getElementById('modalBulkPaymentBtn').addEventListener('click', function() {
-        var checked = document.querySelectorAll('#addProcessMessBillsModal .modal-bill-check:checked');
-        if (checked.length === 0) { showToast('Select at least one bill.', 'error'); return; }
-        if (!confirm('Mark ' + checked.length + ' selected bill(s) as paid?')) return;
-        checked.forEach(function(cb) {
-            doGeneratePayment(cb.getAttribute('data-id'), cb.getAttribute('data-name'), null);
-        });
-    });
 });
 
 /* ===== index form script ===== */
@@ -2199,6 +2326,57 @@ document.addEventListener('DOMContentLoaded', function () {
     var pmbeForm = document.getElementById('mainFilterForm');
     if (!pmbeForm) return;
     var pmbeTimer = null;
+
+    // This grid is server-rendered (no DataTables ajax feed), so applying a
+    // filter re-fetches THIS page and swaps in the parts that change — rows and
+    // the stat cards — instead of reloading the browser.
+    function pmbeQueryString() {
+        var params = new URLSearchParams();
+        new FormData(pmbeForm).forEach(function (value, key) {
+            if (value === null || String(value).trim() === '') return;
+            params.append(key, value);   // append: multi-selects send repeated keys
+        });
+        return params.toString();
+    }
+
+    function pmbeSetBusy(busy) {
+        var host = document.getElementById('processMessBillsTable');
+        if (host) host.style.opacity = busy ? '0.55' : '';
+    }
+
+    function pmbeApplyFilters() {
+        var qs = pmbeQueryString();
+        var url = window.location.pathname + (qs ? '?' + qs : '');
+        // Keep the URL in step so refresh, bookmarking and the Download/Print
+        // links (which read the same query) all agree with what is on screen.
+        window.history.replaceState({}, '', url);
+        pmbeSetBusy(true);
+
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } })
+            .then(function (r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.text();
+            })
+            .then(function (html) {
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+
+                var freshBody = doc.querySelector('#processMessBillsTable tbody');
+                var liveBody = document.querySelector('#processMessBillsTable tbody');
+                if (freshBody && liveBody) liveBody.replaceWith(freshBody);
+
+                ['total-bills', 'unpaid', 'paid', 'total-amount', 'total-due-amount'].forEach(function (key) {
+                    var id = 'process-mess-stats-' + key;
+                    var fresh = doc.getElementById(id);
+                    var live = document.getElementById(id);
+                    if (fresh && live) live.textContent = fresh.textContent;
+                });
+            })
+            .catch(function () {
+                // Never strand the user on a stale grid: fall back to a reload.
+                window.location.href = url;
+            })
+            .then(function () { pmbeSetBusy(false); });
+    }
     function pmbeClearDependents(el) {
         var ids = (el.getAttribute('data-clears') || '').split(',');
         ids.forEach(function (id) {
@@ -2206,7 +2384,11 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!id) return;
             var dep = document.getElementById(id);
             if (!dep) return;
-            if (dep.choicesInstance && typeof dep.choicesInstance.removeActiveItems === 'function') {
+            var $dep = window.jQuery;
+            if ($dep && $dep.fn && $dep.fn.select2 && $dep(dep).data('select2')) {
+                dep.value = '';
+                $dep(dep).trigger('change.select2');
+            } else if (dep.choicesInstance && typeof dep.choicesInstance.removeActiveItems === 'function') {
                 try { dep.choicesInstance.removeActiveItems(); } catch (e) {}
             } else {
                 Array.prototype.forEach.call(dep.options || [], function (o) { o.selected = false; });
@@ -2219,55 +2401,80 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!t || !t.classList || !t.classList.contains('pmbe-auto-filter')) return;
         pmbeClearDependents(t);
         if (pmbeTimer) clearTimeout(pmbeTimer);
-        pmbeTimer = setTimeout(function () { pmbeForm.submit(); }, 600);
+        pmbeTimer = setTimeout(pmbeApplyFilters, 600);
     });
 });
 
-/* ===== Column-visibility bridge: pmbeColumnVisibilityModal <-> MessColumnManager =====
-   Added for the design.md redesign (mirrors the selling-voucher-date-range page). */
+/* ===== Column-visibility bridge: modal <-> MessColumnManager =====
+   Added for the design.md redesign (mirrors the selling-voucher-date-range page).
+   Parameterised so both grids on this module can use it: the index's server-side
+   table and the Generate Invoice page's hand-rendered bills table. */
 (function () {
-    var TABLE_ID = 'processMessBillsTable';
-    var grid = document.getElementById('pmbeColumnToggleGrid');
-    var modalEl = document.getElementById('pmbeColumnVisibilityModal');
-    if (!grid || !modalEl) return;
-    function getMgr() { return (window.MessColumnManager && typeof window.MessColumnManager.get === 'function') ? window.MessColumnManager.get(TABLE_ID) : null; }
-    function visibleCount(mgr) { return mgr.baseColumns.filter(function (c) { return mgr.state.visibility[String(c.index)] !== false; }).length; }
-    function buildGrid() {
-        var mgr = getMgr();
-        if (!mgr || !mgr.baseColumns || !mgr.baseColumns.length) return false;
-        grid.innerHTML = '';
-        (mgr.state.order || []).forEach(function (idx) {
-            var col = mgr.baseColumns.filter(function (c) { return c.index === idx; })[0];
-            if (!col) return;
-            var isVisible = mgr.state.visibility[String(col.index)] !== false;
-            var inputId = 'pmbecolvis_' + col.index;
-            var cell = document.createElement('div'); cell.className = 'col-12 col-sm-6 col-md-4';
-            var label = document.createElement('label');
-            label.className = 'colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100';
-            label.setAttribute('for', inputId);
-            var cb = document.createElement('input'); cb.type = 'checkbox'; cb.className = 'form-check-input m-0'; cb.id = inputId; cb.checked = isVisible;
-            if (col.locked) cb.disabled = true;
-            cb.addEventListener('change', function () {
-                var m = getMgr(); if (!m) return;
-                if (!cb.checked && visibleCount(m) <= 1) { cb.checked = true; window.alert('At least one column must remain visible.'); return; }
-                m.state.visibility[String(col.index)] = cb.checked; m.saveState(); m.apply();
+    function bindColumnVisibility(tableId, modalId, gridId, inputPrefix) {
+        var grid = document.getElementById(gridId);
+        var modalEl = document.getElementById(modalId);
+        if (!grid || !modalEl) return;
+
+        function getMgr() {
+            return (window.MessColumnManager && typeof window.MessColumnManager.get === 'function')
+                ? window.MessColumnManager.get(tableId) : null;
+        }
+        function visibleCount(mgr) {
+            return mgr.baseColumns.filter(function (c) { return mgr.state.visibility[String(c.index)] !== false; }).length;
+        }
+        function buildGrid() {
+            var mgr = getMgr();
+            if (!mgr || !mgr.baseColumns || !mgr.baseColumns.length) return false;
+            grid.innerHTML = '';
+            (mgr.state.order || []).forEach(function (idx) {
+                var col = mgr.baseColumns.filter(function (c) { return c.index === idx; })[0];
+                if (!col) return;
+                var isVisible = mgr.state.visibility[String(col.index)] !== false;
+                var inputId = inputPrefix + col.index;
+                var cell = document.createElement('div'); cell.className = 'col-12 col-sm-6 col-md-4';
+                var label = document.createElement('label');
+                label.className = 'colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100';
+                label.setAttribute('for', inputId);
+                var cb = document.createElement('input'); cb.type = 'checkbox'; cb.className = 'form-check-input m-0'; cb.id = inputId; cb.checked = isVisible;
+                if (col.locked) cb.disabled = true;
+                cb.addEventListener('change', function () {
+                    var m = getMgr(); if (!m) return;
+                    if (!cb.checked && visibleCount(m) <= 1) { cb.checked = true; window.alert('At least one column must remain visible.'); return; }
+                    m.state.visibility[String(col.index)] = cb.checked; m.saveState(); m.apply();
+                });
+                var span = document.createElement('span'); span.textContent = col.label;
+                label.appendChild(cb); label.appendChild(span); cell.appendChild(label); grid.appendChild(cell);
             });
-            var span = document.createElement('span'); span.textContent = col.label;
-            label.appendChild(cb); label.appendChild(span); cell.appendChild(label); grid.appendChild(cell);
+            return true;
+        }
+
+        modalEl.addEventListener('show.bs.modal', function () {
+            // The manager is created after the grid first renders, so poll briefly.
+            if (buildGrid()) return;
+            var tries = 0;
+            var timer = setInterval(function () { if (buildGrid() || ++tries > 20) clearInterval(timer); }, 100);
         });
-        return true;
     }
-    modalEl.addEventListener('show.bs.modal', function () {
-        if (buildGrid()) return;
-        var tries = 0;
-        var timer = setInterval(function () { if (buildGrid() || ++tries > 20) clearInterval(timer); }, 100);
-    });
+
+    bindColumnVisibility('processMessBillsTable', 'pmbeColumnVisibilityModal', 'pmbeColumnToggleGrid', 'pmbecolvis_');
+    bindColumnVisibility('modalBillsTable', 'modalBillsColumnVisibilityModal', 'modalBillsColumnToggleGrid', 'mbcolvis_');
 })();
 
 /* ===== Responsive "+Filter" overflow — filters that don't fit collapse into a popover =====
    Added for the design.md redesign (mirrors the selling-voucher-date-range toolbar). */
 document.addEventListener('DOMContentLoaded', function () {
     var pmbeForm = document.getElementById('mainFilterForm');
+    // The design's filter popover has a close control.
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-pmbe-close-more]');
+        if (!btn) return;
+        var toggle = document.getElementById('pmbeMoreFilterToggle');
+        if (toggle && window.bootstrap && window.bootstrap.Dropdown) {
+            var dd = window.bootstrap.Dropdown.getInstance(toggle) || new window.bootstrap.Dropdown(toggle);
+            dd.hide();
+        }
+    });
+
     var itemsWrap = document.getElementById('pmbeFilterItems');
     var moreWrap = document.getElementById('pmbeMoreFilterWrap');
     var moreMenu = document.getElementById('pmbeMoreFilterItems');
@@ -2294,6 +2501,159 @@ document.addEventListener('DOMContentLoaded', function () {
     function scheduleLayout() { if (raf) return; raf = window.requestAnimationFrame(function () { raf = null; layout(); }); }
     layout();
     window.addEventListener('resize', scheduleLayout);
+    // Pills grow to fit the value they hold, so re-flow when one changes.
+    window.addEventListener('pmbe:filters-resized', scheduleLayout);
     window.setTimeout(layout, 200);
     window.setTimeout(layout, 600);
+});
+
+/* ===== Collapsible search =====
+   The design shows search as an icon that opens a field. The real input is the
+   one DataTables injects into .programme-dt-search, so this only reveals it —
+   the slot is width-collapsed, never removed, so filtering keeps working. */
+document.addEventListener('DOMContentLoaded', function () {
+    var wrap = document.getElementById('pmbeSearchWrap');
+    var toggle = document.getElementById('pmbeSearchToggle');
+    if (!wrap || !toggle) return;
+
+    function input() { return wrap.querySelector('.programme-dt-search input'); }
+
+    function setOpen(open) {
+        wrap.classList.toggle('is-open', open);
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        // Opening steals width from the filter row, so let it re-flow.
+        window.dispatchEvent(new Event('pmbe:filters-resized'));
+        if (open) {
+            var el = input();
+            if (el) el.focus();
+        }
+    }
+
+    toggle.addEventListener('click', function () {
+        setOpen(!wrap.classList.contains('is-open'));
+    });
+
+    // Collapsing on a stray click would hide an active search term, so only
+    // close when the field is empty.
+    document.addEventListener('click', function (e) {
+        if (!wrap.classList.contains('is-open')) return;
+        if (wrap.contains(e.target)) return;
+        var el = input();
+        if (el && el.value.trim() !== '') return;
+        setOpen(false);
+    });
+
+    // A term restored from DataTables state must be visible on load.
+    window.setTimeout(function () {
+        var el = input();
+        if (el && el.value.trim() !== '') setOpen(true);
+    }, 700);
+});
+
+/* ===== Modal filter toolbar: overflow + collapsible search =====
+   Same behaviour as the page's toolbar, against the modal's own IDs. The modal
+   is narrower, so more filters collapse into "+N Filter" — that is the design's
+   "+2 Filter". */
+document.addEventListener('DOMContentLoaded', function () {
+    var form = document.getElementById('pmbeModalFilterForm');
+    var itemsWrap = document.getElementById('pmbeModalFilterItems');
+    var moreWrap = document.getElementById('pmbeModalMoreFilterWrap');
+    var moreMenu = document.getElementById('pmbeModalMoreFilterItems');
+    var moreToggle = document.getElementById('pmbeModalMoreFilterToggle');
+    if (!form || !itemsWrap || !moreWrap || !moreMenu || !moreToggle) return;
+
+    var allItems = Array.prototype.slice.call(itemsWrap.querySelectorAll('.pmbe-filter-item'));
+    function fits() { return form.scrollWidth <= form.clientWidth + 1; }
+
+    function layout() {
+        // A hidden modal has no width; measuring then would collapse everything.
+        if (!form.clientWidth) return;
+        allItems.forEach(function (it) { itemsWrap.appendChild(it); });
+        moreWrap.classList.add('d-none');
+        if (fits()) return;
+        moreWrap.classList.remove('d-none');
+        var moved = 0;
+        for (var i = allItems.length - 1; i >= 0; i--) {
+            if (fits()) break;
+            moreMenu.insertBefore(allItems[i], moreMenu.firstChild);
+            moved++;
+        }
+        moreToggle.textContent = moved > 0 ? ('+' + moved + ' Filter') : '+ Filter';
+        moreToggle.classList.toggle('pmbe-more-filters-active', moved > 0);
+        if (moved === 0) moreWrap.classList.add('d-none');
+    }
+
+    var raf = null;
+    function schedule() {
+        if (raf) return;
+        raf = window.requestAnimationFrame(function () { raf = null; layout(); });
+    }
+    window.pmbeModalLayoutFilters = function () { layout(); window.setTimeout(layout, 150); };
+    window.addEventListener('resize', schedule);
+    // Pills grow to fit the value they hold.
+    window.addEventListener('pmbe:filters-resized', schedule);
+
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('[data-pmbe-modal-close-more]')) {
+            var dd = window.bootstrap && window.bootstrap.Dropdown
+                ? (window.bootstrap.Dropdown.getInstance(moreToggle) || new window.bootstrap.Dropdown(moreToggle))
+                : null;
+            if (dd) dd.hide();
+        }
+    });
+
+    // --- Collapsible search (the input is the modal's own #modalSearch) ---
+    var wrap = document.getElementById('pmbeModalSearchWrap');
+    var toggle = document.getElementById('pmbeModalSearchToggle');
+    if (!wrap || !toggle) return;
+    var input = document.getElementById('modalSearch');
+
+    function setOpen(open) {
+        wrap.classList.toggle('is-open', open);
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        // The field slides open over 180ms; re-flow once it has its real width,
+        // or the filters never make room and the input overlaps Remove Filter.
+        schedule();
+        window.setTimeout(layout, 250);
+        if (open && input) input.focus();
+    }
+    toggle.addEventListener('click', function () { setOpen(!wrap.classList.contains('is-open')); });
+    document.addEventListener('click', function (e) {
+        if (!wrap.classList.contains('is-open') || wrap.contains(e.target)) return;
+        if (input && input.value.trim() !== '') return;   // never hide an active term
+        setOpen(false);
+    });
+});
+
+/* ===== Generate Invoice page: Download (Excel) =====
+   The grid's filters live in the form, not in the URL, so the link is rebuilt
+   from the same query the table was fetched with — the download can never show
+   a different set of bills than the screen. */
+document.addEventListener('DOMContentLoaded', function () {
+    var btn = document.getElementById('generateInvoiceDownloadBtn');
+    if (!btn) return;
+
+    btn.addEventListener('click', function (e) {
+        if (typeof window.buildModalBillsDataUrl !== 'function') return;   // plain href fallback
+        e.preventDefault();
+
+        // Reuse the grid's own URL builder, then swap the endpoint and drop the
+        // paging params — the export always covers every matching bill.
+        var qs = window.buildModalBillsDataUrl({ forPrint: true }).split('?')[1] || '';
+        var params = new URLSearchParams(qs);
+        ['page', 'per_page', 'for_print'].forEach(function (k) { params.delete(k); });
+
+        // Respect hidden columns, the way the index's export does.
+        var mgr = window.MessColumnManager && window.MessColumnManager.get
+            ? window.MessColumnManager.get('modalBillsTable') : null;
+        if (mgr && mgr.baseColumns) {
+            var visible = mgr.baseColumns
+                .filter(function (c) { return mgr.state.visibility[String(c.index)] !== false; })
+                .map(function (c) { return c.index; });
+            if (visible.length) params.set('visible_columns', visible.join(','));
+        }
+
+        var base = (window.PMBE_CFG && PMBE_CFG.generateInvoiceExportUrl) || btn.getAttribute('href');
+        window.location.href = base + '?' + params.toString();
+    });
 });

@@ -3,6 +3,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css" />
 <style>
     /* ── Mess Store Allocation — new design chrome (built on --ds-* tokens + programme-dt system) ── */
     .mess-store-allocation-page .store-alloc-card {
@@ -57,9 +58,55 @@
 
     #storeAllocColumnToggleGrid .colvis-item .form-check-input { cursor: pointer; flex-shrink: 0; }
 
-    /* Row actions cell */
+    /* ── Row actions: icon over caption, equal widths (docs/new-design-index-page.md §3b).
+       Equal min-width keeps the glyph row on one baseline whatever the caption says. ── */
     .mess-store-allocation-page #storeAllocationTable .store-alloc-actions-cell { vertical-align: middle !important; }
-    .mess-store-allocation-page #storeAllocationTable .store-alloc-actions-cell .btn-edit-allocation { color: var(--ds-primary, #004a93) !important; }
+
+    .mess-store-allocation-page .alloc-act-group {
+        display: inline-flex;
+        align-items: stretch;
+        gap: 0.25rem;
+    }
+
+    .mess-store-allocation-page .alloc-act-form {
+        display: flex;
+        margin: 0;
+        padding: 0;
+    }
+
+    .mess-store-allocation-page .alloc-act {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 4px;
+        min-width: 52px;
+        padding: 0;
+        margin: 0;
+        font-size: 0.72rem;
+        font-weight: 500;
+        line-height: 1;
+        background: transparent;
+        border: 0;
+        cursor: pointer;
+    }
+
+    .mess-store-allocation-page .alloc-act__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 22px;
+    }
+
+    .mess-store-allocation-page .alloc-act__icon .material-symbols-rounded {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+
+    .mess-store-allocation-page .alloc-act__label { white-space: nowrap; }
+
+    .mess-store-allocation-page .alloc-act--edit { color: #2563eb; }
+    .mess-store-allocation-page .alloc-act--del { color: var(--bs-danger, #d92d20); }
 
     /* Pagination → arrows + numbers only (drop First/Last, swap word labels). */
     .mess-store-allocation-page .programme-dt-footer .paginate_button.first,
@@ -111,9 +158,10 @@
         margin-bottom: .375rem;
     }
 
-    /* Top "Allocation Details" controls — date input + Choices-enhanced store select */
-    .store-alloc-modal .alloc-details-card .form-control,
-    .store-alloc-modal .alloc-details-card .choices__inner {
+    /* Store Name + Date row (direct child of the body, so the small item-table
+       controls inside .alloc-items-box are not caught by these rules). */
+    .store-alloc-modal .modal-body > .row .form-control,
+    .store-alloc-modal .modal-body > .row .choices__inner {
         min-height: 44px;
         border-radius: 8px;
         border: 1px solid var(--ds-line, #d0d5dd);
@@ -122,32 +170,123 @@
         padding: .5rem .875rem;
     }
 
-    .store-alloc-modal .alloc-details-card .choices__inner {
+    .store-alloc-modal .modal-body > .row .choices__inner {
         display: flex;
         align-items: center;
         background: #fff;
     }
 
-    .store-alloc-modal .alloc-details-card .form-control::placeholder { color: #98a2b3; }
+    .store-alloc-modal .modal-body > .row .form-control::placeholder { color: #98a2b3; }
 
-    .store-alloc-modal .alloc-details-card .form-control:focus,
-    .store-alloc-modal .alloc-details-card .choices.is-focused .choices__inner {
+    .store-alloc-modal .modal-body > .row .form-control:focus,
+    .store-alloc-modal .modal-body > .row .choices.is-focused .choices__inner {
         border-color: var(--ds-primary, #004a93);
         box-shadow: 0 0 0 3px rgba(0, 74, 147, .12);
     }
 
-    /* Section cards: soften the theme card to a hairline + white header */
-    .store-alloc-modal .modal-body .card {
-        border: 1px solid var(--ds-line, #e5e7eb);
-        border-radius: 10px;
-        box-shadow: none;
+    .store-alloc-modal .alloc-req { color: #dc3545; }
+
+    /* ── Item lines: bordered box + grey header + blue total strip.
+       Same component set as the Purchase Order / Selling Voucher modals. ── */
+    .store-alloc-modal .alloc-items-box {
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        overflow: hidden;
     }
 
-    .store-alloc-modal .modal-body .card-header {
+    .store-alloc-modal .alloc-items-table { margin: 0; font-size: .75rem; }
+
+    .store-alloc-modal .alloc-items-table > thead > tr > th {
+        padding: .5rem;
+        font-size: .71875rem;
+        font-weight: 600;
+        color: #212529;
+        white-space: nowrap;
+        vertical-align: middle;
+        background: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .store-alloc-modal .alloc-items-table > tbody > tr > td {
+        padding: .3125rem .375rem;
+        vertical-align: middle;
         background: #fff;
-        border-bottom: 1px solid var(--ds-line, #e5e7eb);
-        border-top-left-radius: 10px;
-        border-top-right-radius: 10px;
+        border-bottom: 1px solid #f1f3f5;
+    }
+
+    .store-alloc-modal .alloc-items-table > tbody > tr:last-child > td { border-bottom: 0; }
+
+    .store-alloc-modal .alloc-items-table th:first-child,
+    .store-alloc-modal .alloc-items-table td:first-child { padding-left: .625rem; }
+
+    .store-alloc-modal .alloc-items-table th:last-child,
+    .store-alloc-modal .alloc-items-table td:last-child { padding-right: .625rem; }
+
+    .store-alloc-modal .alloc-items-table .form-control,
+    .store-alloc-modal .alloc-items-table .form-select {
+        height: 28px !important;
+        min-height: 28px !important;
+        padding: .1875rem .375rem;
+        font-size: .71875rem !important;
+    }
+
+    .store-alloc-modal .alloc-items-table .choices__inner {
+        height: 28px;
+        min-height: 28px !important;
+        padding: 0 1.5rem 0 .375rem !important;
+        font-size: .71875rem !important;
+    }
+
+    .store-alloc-modal .alloc-items-table .choices__list--single .choices__item { font-size: .71875rem; }
+
+    .store-alloc-modal .alloc-items-table input[readonly] {
+        background-color: #fff;
+        color: #495057;
+    }
+
+    /* Row actions — remove on every row, add on the last row only */
+    .store-alloc-modal .alloc-icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        font-size: 15px;
+        font-weight: 600;
+        line-height: 1;
+        color: #fff;
+        border: 0;
+        border-radius: 4px;
+    }
+
+    .store-alloc-modal .alloc-icon-btn + .alloc-icon-btn { margin-left: .375rem; }
+
+    .store-alloc-modal .alloc-icon-btn--remove { background: #dc3545; }
+    .store-alloc-modal .alloc-icon-btn--remove:hover:not(:disabled) { background: #bb2d3b; }
+    .store-alloc-modal .alloc-icon-btn--remove:disabled { opacity: .45; }
+
+    .store-alloc-modal .alloc-icon-btn--add { background: #0d6efd; }
+    .store-alloc-modal .alloc-icon-btn--add:hover { background: #0b5ed7; }
+
+    #allocationItemsBody tr:not(:last-child) .alloc-add-row,
+    #editAllocationItemsBody tr:not(:last-child) .alloc-add-row { visibility: hidden; }
+
+    /* Total strip */
+    .store-alloc-modal .alloc-total-bar {
+        padding: .4375rem .75rem;
+        font-size: .78125rem;
+        font-weight: 600;
+        text-align: right;
+        color: var(--ds-primary, #004384);
+        background: #e7f0fb;
+        border-top: 1px solid #dee2e6;
+    }
+
+    #allocGrandTotal,
+    #editAllocGrandTotal {
+        font-weight: 700;
+        color: var(--ds-primary, #004384);
     }
 
     /* Footer buttons — red-outlined Cancel + solid blue submit (both 44px / 8px / 600) */
@@ -170,6 +309,115 @@
         background: #fff5f5;
         color: var(--ds-secondary, #d92d20);
     }
+
+    /* ── Add / Edit modal internals: scrollable body + Choices dropdown layering ──
+       Moved here from a second style block in the content section, because
+       design.md rule 4 puts page CSS in the styles stack. */
+    #createStoreAllocationModal .modal-dialog,
+    #editStoreAllocationModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
+
+    #createStoreAllocationModal .modal-content,
+    #editStoreAllocationModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; overflow: visible; }
+
+    #createStoreAllocationModal .modal-body,
+    #editStoreAllocationModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); scrollbar-gutter: stable; overscroll-behavior: contain; }
+
+    /* Item Details: keep dropdown above table/layout layers */
+    .alloc-items-table-wrap {
+        position: relative;
+        overflow: visible !important;
+        z-index: 1;
+    }
+    .alloc-items-table-wrap .table { margin-bottom: 0; }
+
+    #createStoreAllocationModal .modal-body .card-body,
+    #editStoreAllocationModal .modal-body .card-body { overflow: visible; }
+
+    #createStoreAllocationModal .modal-body .card:has(#allocationItemsTable),
+    #editStoreAllocationModal .modal-body .card:has(#editAllocationItemsTable) { overflow: visible; }
+
+    #createStoreAllocationModal #allocationItemsTable td:first-child,
+    #editStoreAllocationModal #editAllocationItemsTable td:first-child { position: relative; min-width: 0; }
+
+    #createStoreAllocationModal #allocationItemsTable .choices,
+    #editStoreAllocationModal #editAllocationItemsTable .choices { max-width: 100%; width: 100%; min-width: 0; }
+
+    #createStoreAllocationModal #allocationItemsTable .alloc-item-choices-outer.form-select,
+    #editStoreAllocationModal #editAllocationItemsTable .alloc-item-choices-outer.form-select { padding: 0; background-image: none; }
+
+    #createStoreAllocationModal #allocationItemsTable .alloc-item-choices-outer.form-select:focus-within,
+    #editStoreAllocationModal #editAllocationItemsTable .alloc-item-choices-outer.form-select:focus-within {
+        border-color: var(--bs-border-color);
+        outline: 0;
+        box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+    }
+
+    #createStoreAllocationModal #allocationItemsTable tbody tr:has(.choices.is-open),
+    #editStoreAllocationModal #editAllocationItemsTable tbody tr:has(.choices.is-open) { position: relative; z-index: 3000; }
+
+    #createStoreAllocationModal #allocationItemsTable .choices.is-open,
+    #editStoreAllocationModal #editAllocationItemsTable .choices.is-open { position: relative; z-index: 3001; }
+
+    #createStoreAllocationModal #allocationItemsTable .choices__list--dropdown.alloc-item-dd-fixed,
+    #editStoreAllocationModal #editAllocationItemsTable .choices__list--dropdown.alloc-item-dd-fixed {
+        z-index: 20050 !important;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        overflow: visible !important;
+    }
+
+    #createStoreAllocationModal #allocationItemsTable .choices[data-type*="select-one"] .choices__list--dropdown .choices__input,
+    #editStoreAllocationModal #editAllocationItemsTable .choices[data-type*="select-one"] .choices__list--dropdown .choices__input {
+        display: block !important;
+        visibility: visible !important;
+        width: 100% !important;
+        box-sizing: border-box;
+        margin: 0 !important;
+        min-height: calc(1.5em + 0.5rem + 2px);
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        color: var(--bs-body-color);
+        background-color: var(--bs-body-bg);
+        border: 0;
+        border-bottom: 1px solid var(--bs-border-color);
+        border-radius: 0;
+    }
+
+    /* Default modal Choices stacking (Store Name etc.) */
+    #createStoreAllocationModal .choices,
+    #editStoreAllocationModal .choices { position: relative; }
+
+    #createStoreAllocationModal .choices.is-open,
+    #editStoreAllocationModal .choices.is-open { z-index: 20040; }
+
+    #createStoreAllocationModal .choices__list--dropdown,
+    #editStoreAllocationModal .choices__list--dropdown { z-index: 20041 !important; }
+
+    /* Remove row: × perfectly centered in cell */
+    #createStoreAllocationModal #allocationItemsTable td.alloc-action-cell,
+    #editStoreAllocationModal #editAllocationItemsTable td.alloc-action-cell {
+        white-space: nowrap;
+        vertical-align: middle !important;
+        text-align: center !important;
+    }
+
+    #createStoreAllocationModal #allocationItemsTable td,
+    #editStoreAllocationModal #editAllocationItemsTable td { vertical-align: middle; }
+
+    /* Dropdown open: let list escape modal-body overflow; footer stays under body layer */
+    #createStoreAllocationModal .modal-body.alloc-dropdown-open,
+    #editStoreAllocationModal .modal-body.alloc-dropdown-open {
+        overflow: visible !important;
+        position: relative;
+        z-index: 2;
+    }
+
+    /* CSS fallback if JS dropdown events are missed */
+    #createStoreAllocationModal .modal-body:has(.choices.is-open),
+    #editStoreAllocationModal .modal-body:has(.choices.is-open) { overflow: visible !important; }
+
+    #createStoreAllocationModal .modal-footer,
+    #editStoreAllocationModal .modal-footer { position: relative; z-index: 1; }
 </style>
 @endpush
 
@@ -218,7 +466,7 @@
                                 <th>Store Name</th>
                                 <th>Item Name</th>
                                 <th>Item Type</th>
-                                <th>Number of Items</th>
+                                <th>Number of Item</th>
                                 <th>Date</th>
                                 <th>Total</th>
                                 <th>Action</th>
@@ -254,146 +502,14 @@
     ],
 ])
 @include('mess.partials.modal-dropdown-stability')
+{{-- Branded delete dialog + the global success toast for session('success')
+     (docs/design.md "Delete confirmation + success toast"). The delete <form>s are
+     built in StoreAllocationController with class="mess-delete-form". --}}
+@include('mess.partials.delete-confirm')
 
 
 {{-- Create Store Allocation Modal --}}
-<style>
-.mess-store-allocation-page #storeAllocationTable .store-alloc-actions-cell { vertical-align: middle !important; }
-.mess-store-allocation-page #storeAllocationTable .store-alloc-actions-cell .d-inline-flex { min-height: 2rem; }
-#createStoreAllocationModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
-#createStoreAllocationModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
-#createStoreAllocationModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); scrollbar-gutter: stable; overscroll-behavior: contain; }
-#editStoreAllocationModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
-#editStoreAllocationModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
-#editStoreAllocationModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); scrollbar-gutter: stable; overscroll-behavior: contain; }
-/* Item Details: keep dropdown above table/layout layers */
-.alloc-items-table-wrap {
-    position: relative;
-    overflow: visible !important;
-    z-index: 1;
-}
-.alloc-items-table-wrap .table { margin-bottom: 0; }
-#createStoreAllocationModal .modal-body .card-body,
-#editStoreAllocationModal .modal-body .card-body {
-    overflow: visible;
-}
-#createStoreAllocationModal .modal-body .card:has(#allocationItemsTable),
-#editStoreAllocationModal .modal-body .card:has(#editAllocationItemsTable) {
-    overflow: visible;
-}
-#createStoreAllocationModal #allocationItemsTable td:first-child,
-#editStoreAllocationModal #editAllocationItemsTable td:first-child { position: relative; min-width: 0; }
-#createStoreAllocationModal #allocationItemsTable .choices,
-#editStoreAllocationModal #editAllocationItemsTable .choices {
-    max-width: 100%;
-    width: 100%;
-    min-width: 0;
-}
-#createStoreAllocationModal #allocationItemsTable .alloc-item-choices-outer.form-select,
-#editStoreAllocationModal #editAllocationItemsTable .alloc-item-choices-outer.form-select {
-    padding: 0;
-    background-image: none;
-}
-#createStoreAllocationModal #allocationItemsTable .alloc-item-choices-outer.form-select:focus-within,
-#editStoreAllocationModal #editAllocationItemsTable .alloc-item-choices-outer.form-select:focus-within {
-    border-color: var(--bs-border-color);
-    outline: 0;
-    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
-}
-#createStoreAllocationModal #allocationItemsTable tbody tr:has(.choices.is-open),
-#editStoreAllocationModal #editAllocationItemsTable tbody tr:has(.choices.is-open) {
-    position: relative;
-    z-index: 3000;
-}
-#createStoreAllocationModal #allocationItemsTable .choices.is-open,
-#editStoreAllocationModal #editAllocationItemsTable .choices.is-open {
-    position: relative;
-    z-index: 3001;
-}
-#createStoreAllocationModal #allocationItemsTable .choices__list--dropdown.alloc-item-dd-fixed,
-#editStoreAllocationModal #editAllocationItemsTable .choices__list--dropdown.alloc-item-dd-fixed {
-    z-index: 20050 !important;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-    overflow: visible !important;
-}
-#createStoreAllocationModal #allocationItemsTable .choices[data-type*="select-one"] .choices__list--dropdown .choices__input,
-#editStoreAllocationModal #editAllocationItemsTable .choices[data-type*="select-one"] .choices__list--dropdown .choices__input {
-    display: block !important;
-    visibility: visible !important;
-    width: 100% !important;
-    box-sizing: border-box;
-    margin: 0 !important;
-    min-height: calc(1.5em + 0.5rem + 2px);
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-    line-height: 1.5;
-    color: var(--bs-body-color);
-    background-color: var(--bs-body-bg);
-    border: 0;
-    border-bottom: 1px solid var(--bs-border-color);
-    border-radius: 0;
-}
-/* Default modal Choices stacking (Store Name etc.) */
-#createStoreAllocationModal .choices,
-#editStoreAllocationModal .choices {
-    position: relative;
-}
-#createStoreAllocationModal .choices.is-open,
-#editStoreAllocationModal .choices.is-open {
-    z-index: 20040;
-}
-#createStoreAllocationModal .choices__list--dropdown,
-#editStoreAllocationModal .choices__list--dropdown {
-    z-index: 20041 !important;
-}
-/* Remove row: × perfectly centered in cell */
-#createStoreAllocationModal #allocationItemsTable td.alloc-action-cell,
-#editStoreAllocationModal #editAllocationItemsTable td.alloc-action-cell {
-    width: 52px;
-    vertical-align: middle !important;
-    text-align: center !important;
-    padding: 0.35rem 0.25rem !important;
-}
-#createStoreAllocationModal #allocationItemsTable td.alloc-action-cell .alloc-remove-row,
-#editStoreAllocationModal #editAllocationItemsTable td.alloc-action-cell .alloc-remove-row {
-    width: 2rem;
-    height: 2rem;
-    min-width: 2rem;
-    padding: 0;
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    font-size: 1.15rem;
-}
-#createStoreAllocationModal #allocationItemsTable td,
-#editStoreAllocationModal #editAllocationItemsTable td {
-    vertical-align: middle;
-}
-/* Dropdown open: let list escape modal-body overflow; footer stays under body layer */
-#createStoreAllocationModal .modal-body.alloc-dropdown-open,
-#editStoreAllocationModal .modal-body.alloc-dropdown-open {
-    overflow: visible !important;
-    position: relative;
-    z-index: 2;
-}
-/* CSS fallback if JS dropdown events are missed */
-#createStoreAllocationModal .modal-body:has(.choices.is-open),
-#editStoreAllocationModal .modal-body:has(.choices.is-open) {
-    overflow: visible !important;
-}
-#createStoreAllocationModal .modal-footer,
-#editStoreAllocationModal .modal-footer {
-    position: relative;
-    z-index: 1;
-}
-#createStoreAllocationModal .modal-content,
-#editStoreAllocationModal .modal-content {
-    overflow: visible;
-}
-</style>
-{{-- Choices.js for enhanced dropdowns --}}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
+{{-- Choices.js for enhanced dropdowns (CSS is pushed to <head> with the page styles) --}}
 <script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
 <div class="modal fade store-alloc-modal" id="createStoreAllocationModal" tabindex="-1" aria-labelledby="createStoreAllocationModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
@@ -405,67 +521,60 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="card alloc-details-card mb-4">
-                        <div class="card-header bg-white py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Allocation Details</h6>
+                    {{-- Same shape as the Purchase Order / Selling Voucher add-edit modals:
+                         plain field row → bordered items box → blue total strip. --}}
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="createAllocSubStore">Store Name <span class="alloc-req">*</span></label>
+                            <select name="sub_store_id" id="createAllocSubStore" class="form-select choices-select" data-placeholder="Select Store" required>
+                                <option value="">Select Store</option>
+                                @foreach($subStores as $store)
+                                    <option value="{{ $store->id }}">{{ $store->sub_store_name }}</option>
+                                @endforeach
+                            </select>
                         </div>
-                        <div class="card-body">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Store Name <span class="text-danger">*</span></label>
-                                    <select name="sub_store_id" class="form-select choices-select" data-placeholder="Select Sub Store" required>
-                                        <option value="">Select Sub Store</option>
-                                        @foreach($subStores as $store)
-                                            <option value="{{ $store->id }}">{{ $store->sub_store_name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Date <span class="text-danger">*</span></label>
-                                    <input type="date" name="allocation_date" class="form-control" value="{{ date('Y-m-d') }}" required>
-                                </div>
-                            </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="createAllocDate">Date <span class="alloc-req">*</span></label>
+                            <input type="date" name="allocation_date" id="createAllocDate" class="form-control" value="{{ date('Y-m-d') }}" required>
                         </div>
                     </div>
 
-                    <div class="card mb-4">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="addAllocationItemRow">+ Add Item</button>
+                    <div class="alloc-items-box">
+                        <div class="alloc-items-table-wrap">
+                            <table class="table alloc-items-table mb-0" id="allocationItemsTable" style="table-layout: fixed;">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="width: 30%;">Item<span class="alloc-req">*</span></th>
+                                        <th scope="col" style="width: 13%;">Item Qty.<span class="alloc-req">*</span></th>
+                                        <th scope="col" style="width: 14%;">Item Unit</th>
+                                        <th scope="col" style="width: 15%;">Unit Price<span class="alloc-req">*</span></th>
+                                        <th scope="col" style="width: 16%;">Total Price</th>
+                                        <th scope="col" style="width: 86px;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="allocationItemsBody">
+                                    <tr class="allocation-item-row">
+                                        <td class="align-middle">
+                                            <select name="items[0][item_subcategory_id]" class="form-select form-select-sm alloc-item-select choices-select w-100" data-placeholder="Select Item" required>
+                                                <option value="">Item</option>
+                                                @foreach($itemSubcategories as $sub)
+                                                    <option value="{{ $sub['id'] }}" data-unit="{{ e($sub['unit_measurement']) }}">{{ $sub['item_name'] }}</option>
+                                                @endforeach
+                                            </select>
+                                        </td>
+                                        <td class="align-middle"><input type="number" name="items[0][quantity]" class="form-control form-control-sm alloc-qty" step="0.01" min="0.01" placeholder="-" required></td>
+                                        <td class="align-middle"><input type="text" name="items[0][unit]" class="form-control form-control-sm alloc-unit" readonly placeholder="-"></td>
+                                        <td class="align-middle"><input type="number" name="items[0][unit_price]" class="form-control form-control-sm alloc-unit-price" step="0.01" min="0" placeholder="-" required></td>
+                                        <td class="align-middle"><input type="text" class="form-control form-control-sm alloc-line-total" readonly placeholder="-"></td>
+                                        <td class="alloc-action-cell">
+                                            <button type="button" class="alloc-icon-btn alloc-icon-btn--remove alloc-remove-row" title="Remove line" aria-label="Remove line" disabled>&minus;</button>
+                                            <button type="button" class="alloc-icon-btn alloc-icon-btn--add alloc-add-row" title="Add line" aria-label="Add line">+</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="card-body p-0">
-                            <div class="alloc-items-table-wrap">
-                                <table class="table table-bordered mb-0" id="allocationItemsTable" style="table-layout: fixed;">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 280px; min-width: 280px;">Item Name <span class="text-danger">*</span></th>
-                                            <th style="min-width: 90px;">Item Quantity <span class="text-danger">*</span></th>
-                                            <th style="min-width: 80px;">Item Unit <span class="text-danger">*</span></th>
-                                            <th style="min-width: 100px;">Unit Price <span class="text-danger">*</span></th>
-                                            <th style="min-width: 110px;">Total Price <span class="text-danger">*</span></th>
-                                            <th style="width: 50px;"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="allocationItemsBody">
-                                        <tr class="allocation-item-row">
-                                            <td class="align-middle" style="width: 280px;">
-                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm alloc-item-select choices-select w-100" data-placeholder="Select Item" required>
-                                                    <option value="">Select Item</option>
-                                                    @foreach($itemSubcategories as $sub)
-                                                        <option value="{{ $sub['id'] }}" data-unit="{{ e($sub['unit_measurement']) }}">{{ $sub['item_name'] }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </td>
-                                            <td class="align-middle"><input type="number" name="items[0][quantity]" class="form-control form-control-sm alloc-qty" step="0.01" min="0.01" placeholder="0" required></td>
-                                            <td class="align-middle"><input type="text" name="items[0][unit]" class="form-control form-control-sm alloc-unit" readonly placeholder="—"></td>
-                                            <td class="align-middle"><input type="number" name="items[0][unit_price]" class="form-control form-control-sm alloc-unit-price" step="0.01" min="0" placeholder="0" required></td>
-                                            <td class="align-middle"><input type="text" class="form-control form-control-sm alloc-line-total bg-light" readonly placeholder="0.00"></td>
-                                            <td class="alloc-action-cell"><button type="button" class="btn btn-sm btn-outline-danger alloc-remove-row" disabled title="Remove">×</button></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                        <div class="alloc-total-bar">Total: <span id="allocGrandTotal">0.00</span>/-</div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -489,50 +598,40 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="card alloc-details-card mb-4">
-                        <div class="card-header bg-white py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Allocation Details</h6>
+                    {{-- Identical layout to the Add modal above (design.md: create and edit look alike). --}}
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="editSubStoreId">Store Name <span class="alloc-req">*</span></label>
+                            <select name="sub_store_id" id="editSubStoreId" class="form-select choices-select" data-placeholder="Select Store" required>
+                                <option value="">Select Store</option>
+                                @foreach($subStores as $store)
+                                    <option value="{{ $store->id }}">{{ $store->sub_store_name }}</option>
+                                @endforeach
+                            </select>
                         </div>
-                        <div class="card-body">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Store Name <span class="text-danger">*</span></label>
-                                    <select name="sub_store_id" id="editSubStoreId" class="form-select choices-select" data-placeholder="Select Sub Store" required>
-                                        <option value="">Select Sub Store</option>
-                                        @foreach($subStores as $store)
-                                            <option value="{{ $store->id }}">{{ $store->sub_store_name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Date <span class="text-danger">*</span></label>
-                                    <input type="date" name="allocation_date" id="editAllocationDate" class="form-control" required>
-                                </div>
-                            </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="editAllocationDate">Date <span class="alloc-req">*</span></label>
+                            <input type="date" name="allocation_date" id="editAllocationDate" class="form-control" required>
                         </div>
                     </div>
-                    <div class="card mb-4">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="addEditAllocationItemRow">+ Add Item</button>
+
+                    <div class="alloc-items-box">
+                        <div class="alloc-items-table-wrap">
+                            <table class="table alloc-items-table mb-0" id="editAllocationItemsTable" style="table-layout: fixed;">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" style="width: 30%;">Item<span class="alloc-req">*</span></th>
+                                        <th scope="col" style="width: 13%;">Item Qty.<span class="alloc-req">*</span></th>
+                                        <th scope="col" style="width: 14%;">Item Unit</th>
+                                        <th scope="col" style="width: 15%;">Unit Price<span class="alloc-req">*</span></th>
+                                        <th scope="col" style="width: 16%;">Total Price</th>
+                                        <th scope="col" style="width: 86px;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="editAllocationItemsBody"></tbody>
+                            </table>
                         </div>
-                        <div class="card-body p-0">
-                            <div class="alloc-items-table-wrap">
-                                <table class="table table-bordered mb-0" id="editAllocationItemsTable" style="table-layout: fixed;">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 280px; min-width: 280px;">Item Name <span class="text-danger">*</span></th>
-                                            <th style="min-width: 90px;">Item Quantity <span class="text-danger">*</span></th>
-                                            <th style="min-width: 80px;">Item Unit <span class="text-danger">*</span></th>
-                                            <th style="min-width: 100px;">Unit Price <span class="text-danger">*</span></th>
-                                            <th style="min-width: 110px;">Total Price <span class="text-danger">*</span></th>
-                                            <th style="width: 50px;"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="editAllocationItemsBody"></tbody>
-                                </table>
-                            </div>
-                        </div>
+                        <div class="alloc-total-bar">Total: <span id="editAllocGrandTotal">0.00</span>/-</div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -548,6 +647,16 @@
 (function() {
     const itemSubcategories = @json($itemSubcategories);
     const editBaseUrl = "{{ url('admin/mess/storeallocations') }}";
+
+    // Validation feedback uses the branded SweetAlert dialog (loaded globally with the
+    // layout), not a native alert() — design.md keeps browser dialogs off these screens.
+    function allocNotify(message, title) {
+        if (typeof window.Swal !== 'undefined' && typeof window.Swal.fire === 'function') {
+            window.Swal.fire({ icon: 'warning', title: title || 'Check the form', text: message });
+            return;
+        }
+        window.alert(message);
+    }
     let createRowIndex = 1;
     let editRowIndex = 0;
 
@@ -759,17 +868,20 @@
         const lineTotal = editItem ? editItem.total_price : '';
         return `
         <tr class="allocation-item-row edit-alloc-item-row">
-            <td class="align-middle" style="width: 280px;">
+            <td class="align-middle">
                 <select name="items[${index}][item_subcategory_id]" class="form-select form-select-sm alloc-item-select choices-select w-100" data-placeholder="Select Item" required>
-                    <option value="">Select Item</option>
+                    <option value="">Item</option>
                     ${options}
                 </select>
             </td>
-            <td class="align-middle"><input type="number" name="items[${index}][quantity]" class="form-control form-control-sm alloc-qty" step="0.01" min="0.01" placeholder="0" value="${qty}" required></td>
-            <td class="align-middle"><input type="text" name="items[${index}][unit]" class="form-control form-control-sm alloc-unit" readonly placeholder="—" value="${unit}"></td>
-            <td class="align-middle"><input type="number" name="items[${index}][unit_price]" class="form-control form-control-sm alloc-unit-price" step="0.01" min="0" placeholder="0" value="${price}" required></td>
-            <td class="align-middle"><input type="text" class="form-control form-control-sm alloc-line-total bg-light" readonly placeholder="0.00" value="${lineTotal}"></td>
-            <td class="alloc-action-cell"><button type="button" class="btn btn-sm btn-outline-danger alloc-remove-row" title="Remove">×</button></td>
+            <td class="align-middle"><input type="number" name="items[${index}][quantity]" class="form-control form-control-sm alloc-qty" step="0.01" min="0.01" placeholder="-" value="${qty}" required></td>
+            <td class="align-middle"><input type="text" name="items[${index}][unit]" class="form-control form-control-sm alloc-unit" readonly placeholder="-" value="${unit}"></td>
+            <td class="align-middle"><input type="number" name="items[${index}][unit_price]" class="form-control form-control-sm alloc-unit-price" step="0.01" min="0" placeholder="-" value="${price}" required></td>
+            <td class="align-middle"><input type="text" class="form-control form-control-sm alloc-line-total" readonly placeholder="-" value="${lineTotal}"></td>
+            <td class="alloc-action-cell">
+                <button type="button" class="alloc-icon-btn alloc-icon-btn--remove alloc-remove-row" title="Remove line" aria-label="Remove line">&minus;</button>
+                <button type="button" class="alloc-icon-btn alloc-icon-btn--add alloc-add-row" title="Add line" aria-label="Add line">+</button>
+            </td>
         </tr>`;
     }
 
@@ -808,6 +920,39 @@
         const total = qty * price;
         const totalInput = row.querySelector('.alloc-line-total');
         if (totalInput) totalInput.value = total.toFixed(2);
+        updateGrandTotal(row.closest('tbody'));
+    }
+
+    /** Blue strip under each items table — rendered as "Total: 0.00/-". */
+    function updateGrandTotal(tbody) {
+        if (!tbody) return;
+        var targetId = tbody.id === 'editAllocationItemsBody' ? 'editAllocGrandTotal' : 'allocGrandTotal';
+        var sum = 0;
+        tbody.querySelectorAll('.allocation-item-row .alloc-line-total').forEach(function (input) {
+            sum += parseFloat(input.value) || 0;
+        });
+        var el = document.getElementById(targetId);
+        if (el) el.textContent = sum.toFixed(2);
+    }
+
+    function addCreateItemRow() {
+        const tbody = document.getElementById('allocationItemsBody');
+        tbody.insertAdjacentHTML('beforeend', getItemRowHtml(createRowIndex, null));
+        const row = tbody.lastElementChild;
+        if (row) initChoices(row);
+        createRowIndex++;
+        updateCreateRemoveButtons();
+        updateGrandTotal(tbody);
+    }
+
+    function addEditItemRow() {
+        const tbody = document.getElementById('editAllocationItemsBody');
+        tbody.insertAdjacentHTML('beforeend', getItemRowHtml(editRowIndex, null));
+        const row = tbody.lastElementChild;
+        if (row) initChoices(row);
+        editRowIndex++;
+        updateEditRemoveButtons();
+        updateGrandTotal(tbody);
     }
 
     function updateCreateRemoveButtons() {
@@ -858,20 +1003,20 @@
         const subStore = form.querySelector('select[name="sub_store_id"]');
         if (!subStore || !String(subStore.value || '').trim()) {
             e.preventDefault();
-            alert('Please select a store.');
+            allocNotify('Please select a store.');
             return false;
         }
         const dateInput = form.querySelector('input[name="allocation_date"]');
         if (!dateInput || !String(dateInput.value || '').trim()) {
             e.preventDefault();
-            alert('Please select a date.');
+            allocNotify('Please select a date.');
             return false;
         }
 
         const rows = Array.from(tbody.querySelectorAll('.allocation-item-row'));
         if (!rows.length) {
             e.preventDefault();
-            alert('Please add at least one item line with an item selected.');
+            allocNotify('Please add at least one item line with an item selected.');
             return false;
         }
         for (let i = 0; i < rows.length; i++) {
@@ -879,7 +1024,7 @@
             const sel = row.querySelector('.alloc-item-select');
             if (!sel || !String(sel.value || '').trim()) {
                 e.preventDefault();
-                alert('Please select an item on each line, or remove incomplete rows using the × button.');
+                allocNotify('Please select an item on each line, or remove incomplete rows using the × button.');
                 var wrap = sel && (sel.closest('.choices') || sel.closest('td'));
                 if (wrap && typeof wrap.scrollIntoView === 'function') {
                     wrap.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -892,13 +1037,13 @@
             const p = price ? parseFloat(price.value) : NaN;
             if (!qty || qty.value === '' || !Number.isFinite(q) || q < 0.01) {
                 e.preventDefault();
-                alert('Enter a valid quantity (minimum 0.01) for each item.');
+                allocNotify('Enter a valid quantity (minimum 0.01) for each item.');
                 qty && qty.focus();
                 return false;
             }
             if (!price || price.value === '' || !Number.isFinite(p) || p < 0) {
                 e.preventDefault();
-                alert('Enter a valid unit price for each item.');
+                allocNotify('Enter a valid unit price for each item.');
                 price && price.focus();
                 return false;
             }
@@ -914,19 +1059,10 @@
         const action = this.getAttribute('action');
         if (!action || action === '') {
             e.preventDefault();
-            alert('Form is not ready. Please close this dialog and open Edit again.');
+            allocNotify('Form is not ready. Please close this dialog and open Edit again.');
             return;
         }
         validateMessAllocationForm(this, '#editAllocationItemsBody', e);
-    });
-
-    document.getElementById('addAllocationItemRow').addEventListener('click', function() {
-        const tbody = document.getElementById('allocationItemsBody');
-        tbody.insertAdjacentHTML('beforeend', getItemRowHtml(createRowIndex, null));
-        const row = tbody.lastElementChild;
-        if (row) initChoices(row);
-        createRowIndex++;
-        updateCreateRemoveButtons();
     });
 
     document.getElementById('allocationItemsBody').addEventListener('change', function(e) {
@@ -941,13 +1077,20 @@
             if (row) calcLineTotal(row);
         }
     });
+    // closest() (not e.target) so a click on the − / + glyph still counts.
     document.getElementById('allocationItemsBody').addEventListener('click', function(e) {
-        if (e.target.classList.contains('alloc-remove-row')) {
+        if (e.target.closest('.alloc-add-row')) {
+            addCreateItemRow();
+            return;
+        }
+        if (e.target.closest('.alloc-remove-row')) {
             const row = e.target.closest('.allocation-item-row');
             if (row && document.querySelectorAll('#allocationItemsBody .allocation-item-row').length > 1) {
                 destroyChoices(row.querySelector('.alloc-item-select'));
+                const tbody = row.closest('tbody');
                 row.remove();
                 updateCreateRemoveButtons();
+                updateGrandTotal(tbody);
             }
         }
     });
@@ -994,17 +1137,8 @@
                 const editBsModal = bootstrap.Modal.getOrCreateInstance(editModalEl);
                 editBsModal.show();
             })
-            .catch(err => { console.error(err); alert('Failed to load store allocation.'); });
+            .catch(err => { console.error(err); allocNotify('Failed to load store allocation.', 'Could not open Edit'); });
     }, true);
-
-    document.getElementById('addEditAllocationItemRow').addEventListener('click', function() {
-        const tbody = document.getElementById('editAllocationItemsBody');
-        tbody.insertAdjacentHTML('beforeend', getItemRowHtml(editRowIndex, null));
-        const row = tbody.lastElementChild;
-        if (row) initChoices(row);
-        editRowIndex++;
-        updateEditRemoveButtons();
-    });
 
     document.getElementById('editAllocationItemsBody').addEventListener('change', function(e) {
         if (e.target.classList.contains('alloc-item-select')) {
@@ -1019,12 +1153,18 @@
         }
     });
     document.getElementById('editAllocationItemsBody').addEventListener('click', function(e) {
-        if (e.target.classList.contains('alloc-remove-row')) {
+        if (e.target.closest('.alloc-add-row')) {
+            addEditItemRow();
+            return;
+        }
+        if (e.target.closest('.alloc-remove-row')) {
             const row = e.target.closest('.allocation-item-row');
             if (row && document.querySelectorAll('#editAllocationItemsBody .allocation-item-row').length > 1) {
                 destroyChoices(row.querySelector('.alloc-item-select'));
+                const tbody = row.closest('tbody');
                 row.remove();
                 updateEditRemoveButtons();
+                updateGrandTotal(tbody);
             }
         }
     });
@@ -1035,7 +1175,7 @@
         createModal.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && allocTable.contains(document.activeElement)) {
                 e.preventDefault();
-                document.getElementById('addAllocationItemRow').click();
+                addCreateItemRow();
             }
         });
     }
@@ -1161,7 +1301,11 @@
                 if (!m) return;
                 if (!cb.checked && visibleCount(m) <= 1) {
                     cb.checked = true;
-                    window.alert('At least one column must remain visible.');
+                    if (typeof window.Swal !== 'undefined' && typeof window.Swal.fire === 'function') {
+                        window.Swal.fire({ icon: 'warning', title: 'Columns', text: 'At least one column must remain visible.' });
+                    } else {
+                        window.alert('At least one column must remain visible.');
+                    }
                     return;
                 }
                 m.state.visibility[String(col.index)] = cb.checked;

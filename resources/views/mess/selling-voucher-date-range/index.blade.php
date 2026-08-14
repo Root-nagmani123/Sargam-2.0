@@ -3,6 +3,10 @@
 
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+{{-- Select2 powers the filter dropdowns. Its JS is global (admin footer); the
+     CSS is per-page by convention, and this page did not load it before. --}}
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}" />
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}" />
 <link rel="stylesheet" href="{{ asset('css/mess-selling-voucher-date-range.css') }}?v={{ @filemtime(public_path('css/mess-selling-voucher-date-range.css')) }}" />
 @endpush
 
@@ -53,18 +57,21 @@ $selectedClientType = (string) request()->input('client_type', '');
                 <form method="GET" action="{{ route('admin.mess.selling-voucher-date-range.index') }}" id="sellingVoucherFilterForm" class="d-flex align-items-center gap-2 sv-filter-form">
                     <input type="hidden" name="refresh" value="1">
                     <span class="programme-dt-filters-label flex-shrink-0">Filter</span>
-
+                    {{-- Every filter lives inside #svdrFilterItems: the overflow
+                         manager only collects `.sv-filter-item` from within this
+                         wrapper, so anything left outside it can never move into
+                         "+Filter" and would pin the row wider than the screen. --}}
                     <div id="svdrFilterItems" class="d-flex align-items-center gap-2 sv-filter-items">
-                        <div class="sv-filter-item" data-filter="date">
-                            <label class="sv-filter-item-label">Date Range</label>
-                            <div class="d-flex align-items-center gap-1">
-                                <input type="date" name="start_date" id="filter_start_date" class="form-control sv-filter-date sv-auto-filter" value="{{ request('start_date') }}" aria-label="Start date">
-                                <span class="sv-filter-dash">–</span>
-                                <input type="date" name="end_date" id="filter_end_date" class="form-control sv-filter-date sv-auto-filter" value="{{ request('end_date') }}" aria-label="End date" @if(request()->filled('start_date')) min="{{ request('start_date') }}" @endif>
-                            </div>
+<div class="sv-filter-item" data-filter="status">
+                            <label class="sv-filter-item-label">Status</label>
+                            <select name="status" id="filter_status" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Status">
+                                <option value="">Status</option>
+                                <option value="0" {{ $svSelStatus === '0' ? 'selected' : '' }}>Pending</option>
+                                <option value="1" {{ $svSelStatus === '1' ? 'selected' : '' }}>Final</option>
+                                <option value="2" {{ $svSelStatus === '2' ? 'selected' : '' }}>Approved</option>
+                            </select>
                         </div>
-
-                        <div class="sv-filter-item" data-filter="store">
+                          <div class="sv-filter-item" data-filter="store">
                             <label class="sv-filter-item-label">Store</label>
                             <select name="store" id="filter_store" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Store">
                                 <option value="">Store</option>
@@ -73,8 +80,26 @@ $selectedClientType = (string) request()->input('client_type', '');
                                 @endforeach
                             </select>
                         </div>
-
-                        <div class="sv-filter-item" data-filter="buyer">
+                         <div class="sv-filter-item" data-filter="client_type">
+                            <label class="sv-filter-item-label">Client Type</label>
+                            <select name="client_type" id="filter_client_type" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Client type" data-clears="filter_client_type_pk,filter_buyer_name">
+                                <option value="" {{ $selectedClientType === '' ? 'selected' : '' }}>Client Type</option>
+                                @foreach(\App\Models\Mess\ClientType::clientTypes() as $slug => $label)
+                                    <option value="{{ $slug }}" {{ $selectedClientType === $slug ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        
+                        <div class="sv-filter-item" data-filter="client_type_pk">
+                            <label class="sv-filter-item-label">Client Category</label>
+                            <select name="client_type_pk" id="filter_client_type_pk" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Client category" data-clears="filter_buyer_name">
+                                <option value="">Client Category</option>
+                                @foreach(($filterClientTypePkOptions ?? collect()) as $option)
+                                    <option value="{{ $option['value'] }}" {{ (string) ($selectedClientTypePk ?? '') === (string) $option['value'] ? 'selected' : '' }}>{{ $option['text'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                          <div class="sv-filter-item" data-filter="buyer">
                             <label class="sv-filter-item-label">Buyer Name</label>
                             <select name="buyer_name" id="filter_buyer_name" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Buyer name">
                                 <option value="">Buyer Name</option>
@@ -87,37 +112,6 @@ $selectedClientType = (string) request()->input('client_type', '');
                                 @endforeach
                             </select>
                         </div>
-
-                        <div class="sv-filter-item" data-filter="status">
-                            <label class="sv-filter-item-label">Status</label>
-                            <select name="status" id="filter_status" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Status">
-                                <option value="">Status</option>
-                                <option value="0" {{ $svSelStatus === '0' ? 'selected' : '' }}>Pending</option>
-                                <option value="1" {{ $svSelStatus === '1' ? 'selected' : '' }}>Final</option>
-                                <option value="2" {{ $svSelStatus === '2' ? 'selected' : '' }}>Approved</option>
-                            </select>
-                        </div>
-
-                        <div class="sv-filter-item" data-filter="client_type">
-                            <label class="sv-filter-item-label">Client Type</label>
-                            <select name="client_type" id="filter_client_type" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Client type" data-clears="filter_client_type_pk,filter_buyer_name">
-                                <option value="" {{ $selectedClientType === '' ? 'selected' : '' }}>Client Type</option>
-                                @foreach(\App\Models\Mess\ClientType::clientTypes() as $slug => $label)
-                                    <option value="{{ $slug }}" {{ $selectedClientType === $slug ? 'selected' : '' }}>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="sv-filter-item" data-filter="client_type_pk">
-                            <label class="sv-filter-item-label">Client Category</label>
-                            <select name="client_type_pk" id="filter_client_type_pk" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Client category" data-clears="filter_buyer_name">
-                                <option value="">Client Category</option>
-                                @foreach(($filterClientTypePkOptions ?? collect()) as $option)
-                                    <option value="{{ $option['value'] }}" {{ (string) ($selectedClientTypePk ?? '') === (string) $option['value'] ? 'selected' : '' }}>{{ $option['text'] }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
                         <div class="sv-filter-item" data-filter="return_status">
                             <label class="sv-filter-item-label">Return Status</label>
                             <select name="return_status" id="filter_return_status" class="form-select sv-filter-select-native sv-auto-filter" aria-label="Return status">
@@ -126,6 +120,25 @@ $selectedClientType = (string) request()->input('client_type', '');
                                 <option value="not_returned" {{ $selectedReturnStatus === 'not_returned' ? 'selected' : '' }}>Not returned</option>
                             </select>
                         </div>
+                        <div class="sv-filter-item" data-filter="date">
+                            <label class="sv-filter-item-label">Date Range</label>
+                            <div class="d-flex align-items-center gap-1">
+                                <input type="date" name="start_date" id="filter_start_date" class="form-control sv-filter-date sv-auto-filter" value="{{ request('start_date') }}" aria-label="Start date">
+                                <span class="sv-filter-dash">–</span>
+                                <input type="date" name="end_date" id="filter_end_date" class="form-control sv-filter-date sv-auto-filter" value="{{ request('end_date') }}" aria-label="End date" @if(request()->filled('start_date')) min="{{ request('start_date') }}" @endif>
+                            </div>
+                        </div>
+
+                      
+
+                      
+
+                        
+
+                       
+
+
+                        
                     </div>
 
                     <div class="dropdown flex-shrink-0 d-none" id="svdrMoreFilterWrap">

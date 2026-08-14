@@ -172,35 +172,44 @@ class StoreAllocationController extends Controller
         $categoryName = e($row->category_name ?? 'N/A');
         $quantity = e((string) $row->quantity);
         $totalDisplay = ($row->total_price !== null && $row->total_price !== '')
-            ? e(number_format((float) $row->total_price, 2))
+            ? '₹' . e(number_format((float) $row->total_price, 2))
             : '—';
         $dateDisplay = '—';
         if (! empty($row->allocation_date)) {
             try {
-                $dateDisplay = e(\Carbon\Carbon::parse($row->allocation_date)->format('d-m-Y'));
+                $dateDisplay = e(\Carbon\Carbon::parse($row->allocation_date)->format('d/m/Y'));
             } catch (\Throwable $e) {
                 $dateDisplay = e((string) $row->allocation_date);
             }
         }
 
+        // Row actions are icon-over-caption stacks of equal width
+        // (docs/new-design-index-page.md §3b).
         $allocationId = (int) $row->allocation_id;
-        $editBtn = '<button type="button" class="btn btn-sm btn-info btn-edit-allocation text-primary bg-transparent border-0 p-0 d-inline-flex align-items-center justify-content-center" data-allocation-id="' . $allocationId . '" title="Edit allocation">'
-            . '<span class="material-symbols-rounded" style="font-size: 1.1rem;">edit</span>'
+        $editBtn = '<button type="button" class="alloc-act alloc-act--edit btn-edit-allocation" data-allocation-id="' . $allocationId . '" title="Edit allocation">'
+            . '<span class="alloc-act__icon"><span class="material-symbols-rounded">edit</span></span>'
+            . '<span class="alloc-act__label">Edit</span>'
             . '</button>';
 
         $deleteForm = '';
         if ($canDelete) {
             $deleteUrl = route('admin.mess.storeallocations.destroy', $allocationId);
-            $deleteForm = '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline-flex align-items-center justify-content-center m-0" onsubmit="return confirm(\'Are you sure you want to delete this store allocation?\');">'
+            // mess-delete-form + data-confirm-* → the branded dialog in
+            // mess/partials/delete-confirm.blade.php (docs/design.md "Delete
+            // confirmation + success toast"). No native confirm().
+            $deleteForm = '<form action="' . e($deleteUrl) . '" method="POST" class="mess-delete-form alloc-act-form"'
+                . ' data-confirm-title="Delete?"'
+                . ' data-confirm-message="Are you sure you want to delete this store allocation?">'
                 . '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">'
                 . '<input type="hidden" name="_method" value="DELETE">'
-                . '<button type="submit" class="btn btn-sm btn-outline-danger bg-transparent border-0 p-0 text-primary d-inline-flex align-items-center justify-content-center" title="Delete allocation">'
-                . '<span class="material-symbols-rounded" style="font-size: 1.1rem;">delete</span>'
+                . '<button type="submit" class="alloc-act alloc-act--del" title="Delete allocation">'
+                . '<span class="alloc-act__icon"><span class="material-symbols-rounded">delete</span></span>'
+                . '<span class="alloc-act__label">Delete</span>'
                 . '</button>'
                 . '</form>';
         }
 
-        $actions = '<div class="d-inline-flex align-items-center justify-content-center gap-2">' . $editBtn . $deleteForm . '</div>';
+        $actions = '<div class="alloc-act-group" role="group" aria-label="Row actions">' . $editBtn . $deleteForm . '</div>';
 
         return [
             '<span class="col-sno">' . $sno . '</span>',

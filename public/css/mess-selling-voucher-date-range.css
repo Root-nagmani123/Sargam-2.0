@@ -30,6 +30,83 @@
     .svdr-master-page .sv-filter-select-native:focus, .svdr-master-page .sv-filter-date:focus { border-color: var(--ds-primary, #004a93); box-shadow: 0 0 0 3px rgba(0, 74, 147, .12); }
     .svdr-master-page .sv-filter-dash { color: #98a2b3; }
 
+    /* The searchable widget must look exactly like the native pill above — same
+       box, same chevron, same focus ring. Swapping Choices for Select2 must not
+       change the design. */
+    /* Select2 recomputes its container width after init, so pin it both ways —
+       the design's pills are a uniform 150px, not content-sized. */
+    .svdr-master-page .select2-container.sv-filter-select2 {
+        /* Something on this page resets .select2-container to display:inline, on
+           which width is inert — the pill rendered at its content width (94px)
+           while computing 150px. */
+        display: inline-block;
+        width: 150px !important;
+        min-width: 150px !important;
+        max-width: 150px !important;
+        flex-shrink: 0;
+    }
+    .svdr-master-page .select2-container.sv-filter-select2 .select2-selection--single {
+        height: 40px;
+        display: flex;
+        align-items: center;
+        padding: 0 2.25rem 0 0.75rem;
+        border: 1px solid #d0d5dd;
+        border-radius: 8px;
+        background-color: #fff;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 0.75rem center;
+        background-size: 16px 12px;
+        box-shadow: none;
+        outline: none;
+    }
+    .svdr-master-page .select2-container.sv-filter-select2 .select2-selection__rendered {
+        padding: 0;
+        line-height: 1.4;
+        font-size: .9375rem;
+        color: #344054;
+    }
+    .svdr-master-page .select2-container.sv-filter-select2 .select2-selection__placeholder { color: #344054; }
+    /* Select2 draws its own caret; the chevron above is the native one. */
+    .svdr-master-page .select2-container.sv-filter-select2 .select2-selection__arrow { display: none; }
+    .svdr-master-page .select2-container.sv-filter-select2.select2-container--open .select2-selection--single,
+    .svdr-master-page .select2-container.sv-filter-select2.select2-container--focus .select2-selection--single {
+        border-color: var(--ds-primary, #004a93);
+        box-shadow: 0 0 0 3px rgba(0, 74, 147, .12);
+    }
+
+    /* Dropdown panel + its search field — the only visible addition. */
+    .select2-dropdown.sv-filter-select2-dropdown {
+        border: 1px solid #d0d5dd;
+        border-radius: 8px;
+        font-size: .9375rem;
+        color: #344054;
+        overflow: hidden;
+    }
+    .select2-dropdown.sv-filter-select2-dropdown .select2-search__field {
+        min-height: 34px;
+        padding: 0 0.5rem;
+        border: 1px solid #d0d5dd;
+        border-radius: 6px;
+        font-size: .875rem;
+        color: #344054;
+    }
+    .select2-dropdown.sv-filter-select2-dropdown .select2-results__option {
+        font-size: .9375rem;
+        color: #344054;
+    }
+    .select2-dropdown.sv-filter-select2-dropdown .select2-results__option--highlighted[aria-selected] {
+        background-color: #f2f7fc;
+        color: var(--ds-primary, #004a93);
+    }
+
+    /* Inside the "+Filter" popover the filters are full width, as before. */
+    .sv-more-menu .sv-filter-item .select2-container.sv-filter-select2 {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+    }
+
     /* Single-row responsive toolbar */
     .svdr-master-page .sv-toolbar { flex-wrap: nowrap; }
     .svdr-master-page .sv-filter-form { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; overflow: visible; }

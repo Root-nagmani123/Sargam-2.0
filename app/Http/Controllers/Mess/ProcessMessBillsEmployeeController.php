@@ -294,6 +294,28 @@ class ProcessMessBillsEmployeeController extends Controller
         ));
     }
 
+    /**
+     * "Generate Invoice & Process Payment" — the same screen the index used to
+     * open as a modal, on its own page.
+     *
+     * It renders index()'s payload rather than rebuilding it: the shared
+     * partials read a dozen of those variables (client types, categories, OT
+     * courses, each buyer-name list), and duplicating that lookup is how the two
+     * screens drift apart. The bills themselves come from the modal-data
+     * endpoint, so the grid this page shows is not the one index() computed.
+     */
+    public function generateInvoicePage(Request $request)
+    {
+        $response = $this->index($request);
+
+        // index() answers DataTables/JSON requests too; only a view can be re-rendered.
+        if (! $response instanceof \Illuminate\View\View) {
+            return $response;
+        }
+
+        return view('admin.mess.process-mess-bills-employee.generate-invoice', $response->getData());
+    }
+
     private function processMessBillsDatatableResponse(
         Request $request,
         Collection $combinedBills,
@@ -3004,6 +3026,81 @@ class ProcessMessBillsEmployeeController extends Controller
         );
     }
 
+    /** Column order of the Generate Invoice grid, minus the Action column. */
+    private const GENERATE_INVOICE_EXPORT_COLUMNS = [
+        0 => 'S.No.',
+        1 => 'Buyer Name',
+        2 => 'Slip Number',
+        3 => 'Payment Type',
+        4 => 'Total',
+        5 => 'Total Due Amount',
+        6 => 'Status',
+    ];
+
+    /**
+     * Excel for the "Generate Invoice & Process Payment" grid.
+     *
+     * Runs the same modalData() pipeline the page's table is drawn from, so the
+     * download can never disagree with what is on screen. for_print widens the
+     * page size, exactly as the Print button does.
+     */
+    public function exportGenerateInvoice(Request $request)
+    {
+        $request->merge(['for_print' => 1, 'page' => 1, 'per_page' => 10000]);
+        $response = $this->modalData($request);
+        $payload = method_exists($response, 'getData') ? (array) $response->getData(true) : [];
+        $bills = $payload['bills'] ?? [];
+
+        $all = array_keys(self::GENERATE_INVOICE_EXPORT_COLUMNS);
+        $visible = ProcessMessBillsExport::parseVisibleColumnIndexes($request->query('visible_columns'));
+        $visible = array_values(array_intersect($visible, $all)) ?: $all;
+        $headings = array_map(fn ($i) => self::GENERATE_INVOICE_EXPORT_COLUMNS[$i], $visible);
+
+        $rows = [];
+        foreach ($bills as $index => $bill) {
+            $due = (float) str_replace(',', '', (string) ($bill['total_due_amount'] ?? 0));
+            $paid = (float) str_replace(',', '', (string) ($bill['paid_amount'] ?? 0));
+            $status = $due <= 0 ? 'Paid' : ($paid > 0 ? 'Partial' : 'Unpaid');
+            // The grid stacks an "Invoice Sent" pill under the status; keep the
+            // same information here so Excel and Print agree.
+            if (! empty($bill['invoice_notification_sent'])) {
+                $status .= empty($bill['invoice_notification_fully_sent'])
+                    ? ' · Invoice Sent (partial)'
+                    : ' · Invoice Sent';
+            }
+
+            $full = [
+                $bill['sno'] ?? ($index + 1),
+                $bill['buyer_name'] ?? '—',
+                $bill['invoice_no'] ?? '—',
+                $bill['payment_type'] ?? '—',
+                $bill['total'] ?? '0.00',
+                $bill['total_due_amount'] ?? '0.00',
+                $status,
+            ];
+            $rows[] = array_map(fn ($i) => $full[$i] ?? '', $visible);
+        }
+
+        $dateFrom = $request->filled('date_from')
+            ? ($this->parseDate($request->date_from) ?? now()->startOfMonth()->format('Y-m-d'))
+            : now()->startOfMonth()->format('Y-m-d');
+        $dateTo = $request->filled('date_to')
+            ? ($this->parseDate($request->date_to) ?? now()->endOfMonth()->format('Y-m-d'))
+            : now()->endOfMonth()->format('Y-m-d');
+
+        $fileName = 'generate-invoice-bills-' . $dateFrom . '-to-' . $dateTo . '-' . now()->format('Y-m-d_His') . '.xlsx';
+
+        return Excel::download(
+            new ProcessMessBillsExport(
+                $rows,
+                Carbon::parse($dateFrom)->format('d-m-Y'),
+                Carbon::parse($dateTo)->format('d-m-Y'),
+                $headings
+            ),
+            $fileName
+        );
+    }
+
     public function printReceipt(Request $request, $id)
     {
         $paymentOnly = $request->boolean('payment_only');
@@ -3632,8 +3729,12 @@ class ProcessMessBillsEmployeeController extends Controller
         if ($forPrint) {
             $page = 1;
             $perPage = min(max(1, $perPage), 10000);
-        } elseif ($perPage < 1 || $perPage > 100) {
-            $perPage = 10;
+        } else {
+            // Clamp to the bounds rather than falling back to 10: an
+            // out-of-range size used to come back as 10 rows with no hint that
+            // the request had been overridden, so picking 200 in the footer
+            // looked like the page size was being ignored.
+            $perPage = min(max(1, $perPage), 200);
         }
         $search = trim((string) $request->input('search', ''));
         $sortColumn = (string) $request->input('sort_column', 'buyer_name');

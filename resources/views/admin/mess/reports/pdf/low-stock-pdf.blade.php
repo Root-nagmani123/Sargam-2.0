@@ -2,7 +2,25 @@
     $tillLabel = $tillDate ? date('d-F-Y', strtotime($tillDate)) : '-';
     $storeLabel = $selectedStoreName ?? 'All Stores';
     $printedOn = now()->format('d/m/Y') . ' ' . now()->format('g:i:s A');
+
+    // Local emblem, base64'd for DomPDF. This used to point at upload.wikimedia.org,
+    // which needs outbound internet at render time and silently drops the image without it.
     $emblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
+    foreach ([public_path('admin_assets/images/logos/ashoka.png'), public_path('images/ashoka.png')] as $emblemPath) {
+        if (is_file($emblemPath) && is_readable($emblemPath)) {
+            $rawEmblem = @file_get_contents($emblemPath);
+            if ($rawEmblem !== false) {
+                $emblemSrc = 'data:image/png;base64,' . base64_encode($rawEmblem);
+                break;
+            }
+        }
+    }
+
+    // Column visibility + search come from the grid so the PDF matches the screen.
+    $hiddenColumns = is_array($hiddenColumns ?? null) ? $hiddenColumns : [];
+    $showCol = fn (int $idx) => ! in_array($idx, $hiddenColumns, true);
+    $visibleColCount = count(array_filter(range(0, 5), $showCol));
+    $searchTerm = trim((string) ($searchTerm ?? ''));
 
     $lbsnaaLogoSrc = 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
     foreach ([public_path('images/lbsnaa_logo.jpg'), public_path('images/lbsnaa_logo.png')] as $logoPath) {
@@ -263,6 +281,9 @@
 
 <div class="report-meta-print">
     <div class="meta-line"><strong>Printed on:</strong> {{ $printedOn }}</div>
+    @if($searchTerm !== '')
+        <div class="meta-line"><strong>Search:</strong> {{ $searchTerm }}</div>
+    @endif
     @if($itemCount > 0)
         <div class="meta-line">
             <strong>Summary:</strong>
@@ -279,12 +300,12 @@
     <table class="low-stock-data">
         <thead>
         <tr>
-            <th class="text-center" style="width: 40px;">Sr.</th>
-            <th>Item name</th>
-            <th class="text-center" style="width: 68px;">Unit</th>
-            <th class="text-end" style="width: 92px;">Available qty</th>
-            <th class="text-end" style="width: 92px;">Alert qty</th>
-            <th class="text-center" style="width: 100px;">Status</th>
+            @if($showCol(0))<th class="text-center" style="width: 40px;">Sr.</th>@endif
+            @if($showCol(1))<th>Item name</th>@endif
+            @if($showCol(2))<th class="text-center" style="width: 68px;">Unit</th>@endif
+            @if($showCol(3))<th class="text-end" style="width: 92px;">Available qty</th>@endif
+            @if($showCol(4))<th class="text-end" style="width: 92px;">Alert qty</th>@endif
+            @if($showCol(5))<th class="text-center" style="width: 100px;">Status</th>@endif
         </tr>
         </thead>
         <tbody>
@@ -294,26 +315,28 @@
                 $alert = (float) ($row['alert_quantity'] ?? 0);
             @endphp
             <tr class="{{ $remaining < $alert ? 'row-danger' : '' }}">
-                <td class="text-center">{{ $index + 1 }}</td>
-                <td>{{ $row['item_name'] ?? '-' }}</td>
-                <td class="text-center">{{ $row['unit'] ?? 'Unit' }}</td>
-                <td class="text-end">{{ number_format($remaining, 2) }}</td>
-                <td class="text-end">{{ number_format($alert, 2) }}</td>
-                <td class="text-center">
-                    @if($remaining <= 0)
-                        Out of Stock
-                    @elseif($remaining <= $alert)
-                        Below Minimum
-                    @else
-                        OK
-                    @endif
-                </td>
+                @if($showCol(0))<td class="text-center">{{ $index + 1 }}</td>@endif
+                @if($showCol(1))<td>{{ $row['item_name'] ?? '-' }}</td>@endif
+                @if($showCol(2))<td class="text-center">{{ $row['unit'] ?? 'Unit' }}</td>@endif
+                @if($showCol(3))<td class="text-end">{{ number_format($remaining, 2) }}</td>@endif
+                @if($showCol(4))<td class="text-end">{{ number_format($alert, 2) }}</td>@endif
+                @if($showCol(5))
+                    <td class="text-center">
+                        @if($remaining <= 0)
+                            Out of Stock
+                        @elseif($remaining <= $alert)
+                            Below Minimum
+                        @else
+                            OK
+                        @endif
+                    </td>
+                @endif
             </tr>
         @endforeach
         </tbody>
         <tfoot>
         <tr>
-            <td colspan="6" class="text-end">Total items: {{ $itemCount }}</td>
+            <td colspan="{{ max(1, $visibleColCount) }}" class="text-end">Total items: {{ $itemCount }}</td>
         </tr>
         </tfoot>
     </table>

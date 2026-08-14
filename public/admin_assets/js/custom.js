@@ -1006,7 +1006,11 @@ $(document).ready(function () {
         });
     });
 
-    $(".select2").select2();
+    // Only <select> elements: Select2 gives its OWN container span the class
+    // "select2", so a bare $(".select2") re-initialises Select2 on top of its
+    // own widgets for anything initialised before this file runs — leaving a
+    // dead duplicate container that swallows clicks.
+    $("select.select2").select2();
 });
 
 

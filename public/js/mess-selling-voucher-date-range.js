@@ -88,13 +88,65 @@ var SVDR_CFG = window.SVDR_CFG || {};
     (function () {
         var form = document.getElementById('sellingVoucherFilterForm');
         if (!form) return;
+        // The DataTable builds its ajax URL from window.location.search (see
+        // components/mess-master-datatables), so mirroring the filters into the
+        // URL and reloading the table gives the server the same query string a
+        // submit would have — without reloading the page.
+        function svdrTable() {
+            var $ = window.jQuery;
+            if (!$ || !$.fn.DataTable || !$.fn.DataTable.isDataTable('#sellingVoucherDateRangeTable')) return null;
+            return $('#sellingVoucherDateRangeTable').DataTable();
+        }
+
+        function svdrSyncUrl() {
+            var params = new URLSearchParams();
+            new FormData(form).forEach(function (value, key) {
+                if (value !== null && String(value).trim() !== '') params.set(key, value);
+            });
+            var qs = params.toString();
+            window.history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : ''));
+        }
+
+        function svdrRefreshGrid() {
+            svdrSyncUrl();
+            var dt = svdrTable();
+            if (!dt) { window.location.reload(); return; }   // grid missing: fall back
+            dt.ajax.reload(null, true);                       // true = back to page 1
+        }
+        window.svdrRefreshGrid = svdrRefreshGrid;
+
         form.addEventListener('change', function (e) {
             var t = e.target;
             if (!t || !t.classList || !t.classList.contains('sv-auto-filter')) return;
             var clears = t.getAttribute('data-clears');
-            if (clears) { clears.split(',').forEach(function (id) { var el = document.getElementById(id.trim()); if (el) el.value = ''; }); }
-            form.submit();
+            if (clears) {
+                clears.split(',').forEach(function (id) {
+                    var el = document.getElementById(id.trim());
+                    if (!el) return;
+                    el.value = '';
+                    if (window.SvdrFilterSelects && window.SvdrFilterSelects.isManaged(el)) {
+                        window.SvdrFilterSelects.clear(el);
+                    }
+                });
+            }
+            svdrRefreshGrid();
         });
+
+        // "Remove Filter" clears in place too, rather than being the one control
+        // that still reloads.
+        var resetLink = form.querySelector('.programme-dt-btn-reset');
+        if (resetLink) {
+            resetLink.addEventListener('click', function (e) {
+                e.preventDefault();
+                form.querySelectorAll('select, input[type="date"]').forEach(function (el) {
+                    el.value = '';
+                    if (window.SvdrFilterSelects && window.SvdrFilterSelects.isManaged(el)) {
+                        window.SvdrFilterSelects.clear(el);
+                    }
+                });
+                svdrRefreshGrid();
+            });
+        }
 
         var itemsWrap = document.getElementById('svdrFilterItems');
         var moreWrap = document.getElementById('svdrMoreFilterWrap');
@@ -4105,8 +4157,96 @@ var SVDR_CFG = window.SVDR_CFG || {};
         var typePkOptionsBySlug = SVDR_CFG.typePkOptionsBySlug || {};
         var otCourseOptions = SVDR_CFG.otCourseOptions || [];
 
+        // ── Searchable filter dropdowns (Select2) ───────────────────────────
+        // Select2's JS is loaded globally by the admin footer; its CSS is pulled
+        // in by this page. The modals on this page still use Choices — only the
+        // toolbar filters were switched.
+        function svdrInitFilterSelect2(selectEl) {
+            var $ = window.jQuery;
+            if (!selectEl || !$ || !$.fn || !$.fn.select2) return null;
+            // Guard on our own marker as well as Select2's: this runs from the
+            // init sweep AND from setOptions, and a double init leaves a dead
+            // container behind that swallows clicks.
+            if (selectEl.dataset.svdrSelect2 === '1' || $(selectEl).data('select2')) return $(selectEl);
+            selectEl.dataset.svdrSelect2 = '1';
+
+            var first = selectEl.options && selectEl.options[0];
+            var label = (first ? first.text : '') || 'Select';
+
+            $(selectEl).select2({
+                width: '150px',
+                placeholder: label,
+                allowClear: false,
+                minimumResultsForSearch: 0,          // always offer the search box
+                dropdownCssClass: 'sv-filter-select2-dropdown'
+            });
+
+            // containerCssClass is unreliable here, so tag the container Select2
+            // actually built — the skin keys off this class.
+            var s2 = $(selectEl).data('select2');
+            if (s2 && s2.$container) s2.$container.addClass('sv-filter-select2');
+
+            // Select2 raises jQuery-only events. The auto-apply handler binds a
+            // NATIVE change listener, which cannot hear those, so re-emit one.
+            // Bound to Select2's own events rather than 'change' so this cannot
+            // re-enter itself.
+            $(selectEl).on('select2:select select2:unselect select2:clear', function () {
+                selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+
+            return $(selectEl);
+        }
+
+        // The cascade and the auto-apply handler rebuild these selects; Select2
+        // renders from the native <option>s, so a rewrite plus 'change.select2'
+        // is all it needs (no destroy/re-init).
+        window.SvdrFilterSelects = {
+            isManaged: function (selectEl) {
+                var $ = window.jQuery;
+                return !!(selectEl && $ && $(selectEl).data('select2'));
+            },
+            setOptions: function (selectEl, options, placeholder, selectedValue) {
+                if (!selectEl) return;
+                var html = '<option value="">' + placeholder + '</option>';
+                (options || []).forEach(function (opt) {
+                    var value = String(opt.value || '');
+                    var chosen = (selectedValue !== undefined && selectedValue !== null
+                        && String(selectedValue) === value) ? ' selected' : '';
+                    html += '<option value="' + value.replace(/"/g, '&quot;') + '"' + chosen + '>'
+                        + String(opt.text || '').replace(/</g, '&lt;') + '</option>';
+                });
+                selectEl.innerHTML = html;
+
+                var $ = window.jQuery;
+                if ($ && $(selectEl).data('select2')) {
+                    $(selectEl).trigger('change.select2');   // repaint only, no change event
+                } else {
+                    svdrInitFilterSelect2(selectEl);
+                }
+            },
+            clear: function (selectEl) {
+                if (!selectEl) return;
+                selectEl.value = '';
+                var $ = window.jQuery;
+                if ($ && $(selectEl).data('select2')) {
+                    $(selectEl).val('').trigger('change.select2');
+                }
+            }
+        };
+
+        Array.prototype.forEach.call(
+            document.querySelectorAll('.sv-filter-select-native'),
+            function (selectEl) { svdrInitFilterSelect2(selectEl); }
+        );
+
         function fillSelect(selectEl, options, placeholder, selectedValue) {
             if (!selectEl) return;
+            // A Choices-managed <select> ignores innerHTML, so hand the rebuild
+            // to the helper (destroy → swap options → re-init).
+            if (window.SvdrFilterSelects && window.SvdrFilterSelects.isManaged(selectEl)) {
+                window.SvdrFilterSelects.setOptions(selectEl, options, placeholder, selectedValue);
+                return;
+            }
             selectEl.innerHTML = '';
             var defaultOpt = document.createElement('option');
             defaultOpt.value = '';
