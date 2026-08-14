@@ -3,7 +3,9 @@
 namespace App\Services\Mess;
 
 use App\Models\KitchenIssueMaster;
+use App\Models\Mess\ItemSubcategory;
 use App\Support\RedisBackedCache;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -59,6 +61,181 @@ class AvailableQuantityService
 
             return self::computeAvailableQuantitiesForStore($storeType, $storeId);
         }
+    }
+
+    /**
+     * FIFO price tiers + available quantity for every item purchased/allocated into a store/sub-store.
+     * Moved here verbatim from KitchenIssueController::getStoreItems() and
+     * SellingVoucherDateRangeController::getStoreItemsData(), which were byte-identical.
+     *
+     * @return Collection<int, array{id:int,item_name:string,unit_measurement:string,standard_cost:float,available_quantity:float,price_tiers:array}>
+     */
+    public static function fifoPriceTiersForStore(string $storeType, int $storeId): Collection
+    {
+        $items = collect();
+
+        if ($storeType === 'sub_store') {
+            // FIFO: get allocation items ordered by date (oldest first) for price tiers
+            $fifoRows = DB::table('mess_store_allocation_items as sai')
+                ->join('mess_store_allocations as sa', 'sai.store_allocation_id', '=', 'sa.id')
+                ->where('sa.sub_store_id', $storeId)
+                ->orderByRaw('COALESCE(sa.allocation_date, sa.created_at) ASC')
+                ->orderBy('sa.id')
+                ->orderBy('sai.id')
+                ->select('sai.item_subcategory_id', 'sai.quantity', 'sai.unit_price')
+                ->get();
+
+            $tiersByItem = [];
+            foreach ($fifoRows as $r) {
+                $id = (int) ($r->item_subcategory_id ?? 0);
+                if ($id <= 0) continue;
+                if (!isset($tiersByItem[$id])) $tiersByItem[$id] = [];
+                $tiersByItem[$id][] = ['quantity' => (float) $r->quantity, 'unit_price' => (float) $r->unit_price];
+            }
+
+            $allocatedItems = DB::table('mess_store_allocation_items as sai')
+                ->join('mess_store_allocations as sa', 'sai.store_allocation_id', '=', 'sa.id')
+                ->where('sa.sub_store_id', $storeId)
+                ->select(
+                    'sai.item_subcategory_id',
+                    DB::raw('SUM(sai.quantity) as total_quantity'),
+                    DB::raw('SUM(sai.quantity * sai.unit_price) / NULLIF(SUM(sai.quantity), 0) as avg_unit_price')
+                )
+                ->groupBy('sai.item_subcategory_id')
+                ->get()
+                ->keyBy('item_subcategory_id');
+
+            $availableMap = self::availableQuantitiesForStore($storeType, $storeId);
+
+            if ($allocatedItems->isNotEmpty()) {
+                $itemIds = $allocatedItems->keys();
+                $items = ItemSubcategory::whereIn('id', $itemIds)
+                    ->active()
+                    ->get()
+                    ->map(function ($s) use ($allocatedItems, $availableMap, $tiersByItem) {
+                        $allocated = $allocatedItems->get($s->id);
+                        $storeRate = $allocated && isset($allocated->avg_unit_price) ? (float) $allocated->avg_unit_price : null;
+                        $rawTiers = $tiersByItem[$s->id] ?? [];
+                        $available = (float) ($availableMap[$s->id] ?? 0);
+                        $totalAllocated = array_sum(array_column($rawTiers, 'quantity'));
+                        $issued = max(0, $totalAllocated - $available);
+                        $adjustedTiers = [];
+                        $remainingIssued = $issued;
+                        foreach ($rawTiers as $t) {
+                            $qty = (float) ($t['quantity'] ?? 0);
+                            $take = min($remainingIssued, $qty);
+                            $remaining = $qty - $take;
+                            $remainingIssued -= $take;
+                            if ($remaining > 0) {
+                                $adjustedTiers[] = ['quantity' => $remaining, 'unit_price' => (float) ($t['unit_price'] ?? 0)];
+                            }
+                        }
+                        $tiers = $adjustedTiers;
+                        $firstPrice = !empty($tiers) ? $tiers[0]['unit_price'] : null;
+                        return [
+                            'id' => $s->id,
+                            'item_name' => $s->item_name ?? $s->name ?? '—',
+                            'unit_measurement' => $s->unit_measurement ?? '—',
+                            'standard_cost' => $firstPrice ?? ($storeRate !== null ? $storeRate : ($s->standard_cost ?? 0)),
+                            'available_quantity' => $available,
+                            'price_tiers' => $tiers,
+                        ];
+                    });
+            }
+        } else {
+            // Main store: FIFO from purchase orders (oldest first by po_date = purchase date)
+            // IMPORTANT: Use unit price INCLUDING tax so that selling vouchers
+            // reflect the tax-applied purchase cost in their Rate / Total.
+            $fifoRows = DB::table('mess_purchase_order_items as poi')
+                ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
+                ->where('po.store_id', $storeId)
+                ->where('po.status', 'approved')
+                ->whereNotNull('poi.item_subcategory_id')
+                ->where('poi.item_subcategory_id', '>', 0)
+                ->orderBy('po.po_date', 'asc')
+                ->orderBy('po.id')
+                ->orderBy('poi.id')
+                ->select(
+                    'poi.item_subcategory_id',
+                    'poi.quantity',
+                    'poi.unit_price',
+                    'poi.tax_percent'
+                )
+                ->get();
+
+            $tiersByItem = [];
+            foreach ($fifoRows as $r) {
+                $id = (int) ($r->item_subcategory_id ?? 0);
+                if ($id <= 0) {
+                    continue;
+                }
+                if (!isset($tiersByItem[$id])) {
+                    $tiersByItem[$id] = [];
+                }
+                $unitPrice = (float) $r->unit_price;
+                $taxPercent = isset($r->tax_percent) ? (float) $r->tax_percent : 0.0;
+                $effectiveUnitPrice = $unitPrice * (1 + $taxPercent / 100);
+                $tiersByItem[$id][] = [
+                    'quantity' => (float) $r->quantity,
+                    'unit_price' => $effectiveUnitPrice,
+                ];
+            }
+
+            $purchasedItems = DB::table('mess_purchase_order_items as poi')
+                ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
+                ->where('po.store_id', $storeId)
+                ->where('po.status', 'approved')
+                ->select(
+                    'poi.item_subcategory_id',
+                    DB::raw('SUM(poi.quantity) as total_quantity'),
+                    // Average unit price INCLUDING tax, matching FIFO tiers above
+                    DB::raw('SUM(poi.quantity * poi.unit_price * (1 + COALESCE(poi.tax_percent, 0) / 100)) / NULLIF(SUM(poi.quantity), 0) as avg_unit_price')
+                )
+                ->groupBy('poi.item_subcategory_id')
+                ->get()
+                ->keyBy('item_subcategory_id');
+
+            $availableMap = self::availableQuantitiesForStore($storeType, $storeId);
+
+            if ($purchasedItems->isNotEmpty()) {
+                $itemIds = $purchasedItems->keys();
+                $items = ItemSubcategory::whereIn('id', $itemIds)
+                    ->active()
+                    ->get()
+                    ->map(function ($s) use ($purchasedItems, $availableMap, $tiersByItem) {
+                        $purchased = $purchasedItems->get($s->id);
+                        $storeRate = $purchased && isset($purchased->avg_unit_price) ? (float) $purchased->avg_unit_price : null;
+                        $rawTiers = $tiersByItem[$s->id] ?? [];
+                        $available = (float) ($availableMap[$s->id] ?? 0);
+                        // Adjust tiers: subtract already-sold qty (FIFO) to get remaining per tier
+                        $totalPurchased = array_sum(array_column($rawTiers, 'quantity'));
+                        $issued = max(0, $totalPurchased - $available);
+                        $adjustedTiers = [];
+                        $remainingIssued = $issued;
+                        foreach ($rawTiers as $t) {
+                            $qty = (float) ($t['quantity'] ?? 0);
+                            $take = min($remainingIssued, $qty);
+                            $remaining = $qty - $take;
+                            $remainingIssued -= $take;
+                            if ($remaining > 0) {
+                                $adjustedTiers[] = ['quantity' => $remaining, 'unit_price' => (float) ($t['unit_price'] ?? 0)];
+                            }
+                        }
+                        $tiers = $adjustedTiers;
+                        $firstPrice = !empty($tiers) ? $tiers[0]['unit_price'] : null;
+                        return [
+                            'id' => $s->id,
+                            'item_name' => $s->item_name ?? $s->name ?? '—',
+                            'unit_measurement' => $s->unit_measurement ?? '—',
+                            'standard_cost' => $firstPrice ?? ($storeRate !== null ? $storeRate : ($s->standard_cost ?? 0)),
+                            'available_quantity' => $available,
+                            'price_tiers' => $tiers,
+                        ];
+                    });
+            }
+        }
+
+        return $items->values();
     }
 
     /**
