@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Mess\Concerns\AuthorizesMessDeletes;
 use App\Http\Controllers\Mess\Concerns\BuildsMasterDataDatatable;
 use App\Models\Mess\Vendor;
 use App\Support\DataTableRedisCache;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 
 class VendorController extends Controller
 {
+    use AuthorizesMessDeletes;
     use BuildsMasterDataDatatable;
 
     private const LIST_CACHE_EPOCH_KEY = 'mess_vendor_master_list_epoch';
@@ -158,6 +160,8 @@ class VendorController extends Controller
 
     public function destroy($id)
     {
+        $this->abortUnlessCanDeleteMessRecord(['Super Admin', 'Mess-Admin'], 'You are not authorized to delete vendors.');
+
         $vendor = Vendor::findOrFail($id);
         $vendor->delete();
 

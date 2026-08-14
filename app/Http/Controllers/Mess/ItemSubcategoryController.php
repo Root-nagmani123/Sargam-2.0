@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Mess\Concerns\AuthorizesMessDeletes;
 use App\Http\Controllers\Mess\Concerns\GeneratesUniqueCode;
 use App\Models\Mess\ItemCategory;
 use App\Models\Mess\ItemSubcategory;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\Schema;
 
 class ItemSubcategoryController extends Controller
 {
+    use AuthorizesMessDeletes;
     use GeneratesUniqueCode;
     private const DT_LIST_EPOCH_KEY = 'mess_item_subcategory_dt_list_epoch';
 
@@ -271,6 +273,8 @@ class ItemSubcategoryController extends Controller
 
     public function destroy($id)
     {
+        $this->abortUnlessCanDeleteMessRecord(['Admin', 'Mess-Admin'], 'You are not authorized to delete item subcategories.');
+
         $itemsubcategory = ItemSubcategory::findOrFail($id);
         $itemsubcategory->delete();
 

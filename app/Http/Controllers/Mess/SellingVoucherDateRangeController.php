@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Mess\Concerns\AuthorizesMessDeletes;
 use App\Support\DataTableRedisCache;
 use App\Support\DataTableSearchHelper;
 use App\Models\Mess\SellingVoucherDateRangeReport;
@@ -33,6 +34,8 @@ use Illuminate\Support\MessageBag;
  */
 class SellingVoucherDateRangeController extends Controller
 {
+    use AuthorizesMessDeletes;
+
     private const SV_DATE_RANGE_DT_LIST_EPOCH = 'selling_voucher_date_range_dt_list_epoch';
 
     /**
@@ -1951,6 +1954,8 @@ class SellingVoucherDateRangeController extends Controller
 
     public function destroy($id)
     {
+        $this->abortUnlessCanDeleteMessRecord(['Admin', 'Mess-Admin'], 'You are not authorized to delete date range reports.');
+
         $report = SellingVoucherDateRangeReport::findOrFail($id);
         $report->items()->delete();
         $report->delete();

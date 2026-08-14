@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Mess\Concerns\AuthorizesMessDeletes;
 use App\Http\Controllers\Mess\Concerns\BuildsMasterDataDatatable;
 use App\Support\DataTableRedisCache;
 use Illuminate\Http\JsonResponse;
@@ -11,6 +12,7 @@ use App\Models\Mess\SubStore;
 
 class SubStoreController extends Controller
 {
+    use AuthorizesMessDeletes;
     use BuildsMasterDataDatatable;
 
     private const LIST_CACHE_EPOCH_KEY = 'mess_sub_store_master_list_epoch';
@@ -128,6 +130,8 @@ class SubStoreController extends Controller
 
     public function destroy($id)
     {
+        $this->abortUnlessCanDeleteMessRecord(['Super Admin', 'Mess-Admin'], 'You are not authorized to delete sub-stores.');
+
         $subStore = SubStore::findOrFail($id);
         $subStore->delete();
 

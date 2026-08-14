@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Mess\Concerns\AuthorizesMessDeletes;
 use App\Http\Controllers\Mess\Concerns\GeneratesUniqueCode;
 use App\Support\DataTableRedisCache;
 use App\Support\DataTableSearchHelper;
@@ -21,6 +22,7 @@ use Illuminate\Validation\ValidationException;
 
 class PurchaseOrderController extends Controller
 {
+    use AuthorizesMessDeletes;
     use GeneratesUniqueCode;
 
     private const PURCHASE_ORDER_DT_LIST_EPOCH = 'purchase_order_dt_list_epoch';
@@ -508,6 +510,8 @@ class PurchaseOrderController extends Controller
 
     public function destroy($id)
     {
+        $this->abortUnlessCanDeleteMessRecord(['Super Admin', 'Mess-Admin'], 'You are not authorized to delete purchase orders.');
+
         $purchaseOrder = PurchaseOrder::findOrFail($id);
         $purchaseOrder->items()->delete();
         $purchaseOrder->delete();

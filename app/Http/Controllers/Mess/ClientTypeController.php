@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Mess\Concerns\AuthorizesMessDeletes;
 use App\Http\Controllers\Mess\Concerns\BuildsMasterDataDatatable;
 use App\Support\DataTableRedisCache;
 use Illuminate\Http\JsonResponse;
@@ -12,6 +13,7 @@ use App\Models\Mess\ClientType;
 
 class ClientTypeController extends Controller
 {
+    use AuthorizesMessDeletes;
     use BuildsMasterDataDatatable;
 
     private const LIST_CACHE_EPOCH_KEY = 'mess_client_type_master_list_epoch';
@@ -134,6 +136,8 @@ class ClientTypeController extends Controller
 
     public function destroy($id)
     {
+        $this->abortUnlessCanDeleteMessRecord(['Super Admin', 'Mess-Admin'], 'You are not authorized to delete client types.');
+
         $clientType = ClientType::findOrFail($id);
         $clientType->delete();
 

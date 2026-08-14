@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Mess\Concerns\AuthorizesMessDeletes;
 use App\Http\Controllers\Mess\Concerns\BuildsMasterDataDatatable;
 use App\Http\Controllers\Mess\Concerns\GeneratesUniqueCode;
 use App\Support\DataTableRedisCache;
@@ -12,6 +13,7 @@ use App\Models\Mess\Store;
 
 class StoreController extends Controller
 {
+    use AuthorizesMessDeletes;
     use BuildsMasterDataDatatable;
     use GeneratesUniqueCode;
 
@@ -147,6 +149,8 @@ class StoreController extends Controller
 
     public function destroy($id)
     {
+        $this->abortUnlessCanDeleteMessRecord(['Super Admin', 'Mess-Admin'], 'You are not authorized to delete stores.');
+
         $store = Store::findOrFail($id);
         $store->delete();
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Mess\Concerns\AuthorizesMessDeletes;
 use App\Support\DataTableRedisCache;
 use App\Support\DataTableSearchHelper;
 use App\Models\KitchenIssueMaster;
@@ -31,6 +32,8 @@ use Carbon\Carbon;
 
 class KitchenIssueController extends Controller
 {
+    use AuthorizesMessDeletes;
+
     private const SELLING_VOUCHER_DT_LIST_EPOCH = 'selling_voucher_dt_list_epoch';
 
     private const INDEX_MASTER_CACHE_EPOCH = 'kitchen_issue_index_master_epoch';
@@ -2060,6 +2063,8 @@ class KitchenIssueController extends Controller
      */
     public function destroy($id)
     {
+        $this->abortUnlessCanDeleteMessRecord(['Admin', 'Mess-Admin'], 'You are not authorized to delete selling vouchers.');
+
         $kitchenIssue = KitchenIssueMaster::findOrFail($id);
 
         try {

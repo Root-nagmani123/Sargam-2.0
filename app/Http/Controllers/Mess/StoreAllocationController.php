@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Mess\Concerns\AuthorizesMessDeletes;
 use App\Models\Mess\StoreAllocation;
 use App\Models\Mess\StoreAllocationItem;
 use App\Models\Mess\SubStore;
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\Schema;
 
 class StoreAllocationController extends Controller
 {
+    use AuthorizesMessDeletes;
     /**
      * Invalidate the available-quantity cache after mutations that change
      * mess_store_allocation_items (create/update/delete).
@@ -322,6 +324,8 @@ class StoreAllocationController extends Controller
 
     public function destroy($id)
     {
+        $this->abortUnlessCanDeleteMessRecord(['Admin', 'Mess-Admin'], 'You are not authorized to delete store allocations.');
+
         $allocation = StoreAllocation::whereNotNull('sub_store_id')->findOrFail($id);
         $allocation->items()->delete();
         $allocation->delete();
