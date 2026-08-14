@@ -45,6 +45,11 @@
         'doc_nps_subscription' => 'admin_assets/sample/joining_documents/nps_blank_form.pdf',
         'doc_employee_info_sheet' => 'admin_assets/sample/joining_documents/employee_info_blank_form.pdf',
     ];
+
+    // Reference-only guidance document shown above the tables (not an upload slot).
+    // Same static-asset pattern as $staticBlankForms — hidden if the file is absent.
+    $faqDocPath = 'admin_assets/sample/joining_documents/joining_documents_faq.html';
+    $faqDocUrl  = file_exists(public_path($faqDocPath)) ? asset($faqDocPath) : null;
 @endphp
 
 @if(! $readonly)
@@ -52,6 +57,29 @@
         <i class="bi bi-exclamation-triangle me-2"></i>
         Documents marked <strong>Mandatory</strong> must be uploaded before final submission.
         Accepted formats: <strong>PDF, JPG, PNG</strong> (max 5MB each).
+    </div>
+@endif
+
+@if(! $readonly && $faqDocUrl)
+    <div class="card border-0 shadow-sm mb-4" style="border-left:5px solid #004a93 !important; background:#f6faff;">
+        <div class="card-body p-3 d-flex align-items-center flex-wrap gap-3">
+            <span class="d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                  style="width:32px;height:32px;background:#004a93;color:#fff;"><i class="bi bi-question-lg"></i></span>
+            <div class="flex-grow-1" style="min-width:220px;">
+                <h6 class="fw-bold text-primary mb-1 text-uppercase" style="letter-spacing:0.5px;">
+                    Joining Documents &ndash; Frequently Asked Questions
+                </h6>
+                <p class="small text-secondary mb-0">
+                    Read this before filling the forms below. It explains each declaration
+                    (family details, close relations, dowry, home town, property returns, surety bond,
+                    CGEGIS, NPS and EIS) and answers common queries.
+                </p>
+            </div>
+            <a href="{{ $faqDocUrl }}" target="_blank" rel="noopener"
+               class="btn btn-primary btn-sm text-nowrap">
+                <i class="bi bi-journal-text me-1"></i>View FAQ
+            </a>
+        </div>
     </div>
 @endif
 
