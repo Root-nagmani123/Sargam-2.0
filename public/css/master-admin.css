@@ -1,0 +1,744 @@
+/* ============================================================================
+ * Master module — shared admin index/modal layer (`mst-*`)
+ *
+ * Used by every modernized master listing screen (Appellation Master, Faculty
+ * Expertise Master, …). Scoped under `.mst-page` (page root) and `.mst-modal`
+ * (modal root) so it can beat Bootstrap without `!important` and still can't
+ * leak. Page-level IDs stay page-unique; only these component classes are
+ * shared.
+ *
+ * Built on the --ds-* tokens from public/css/sargam-app.css (see docs/design.md).
+ * Page chrome (`programme-dt-*`) lives in custom.css — see
+ * docs/new-design-index-page.md.
+ * ========================================================================= */
+
+/* ── Status badge ────────────────────────────────────────────────────────────
+ * The theme ships the *-subtle backgrounds but not the matching
+ * text-*-emphasis colours, so the label would render black. Tint it here. */
+.mst-page .status-pill {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.mst-page .status-pill.bg-success-subtle {
+    color: #146c43;
+}
+
+.mst-page .status-pill.bg-danger-subtle {
+    color: #b02a37;
+}
+
+/* ── Row actions: Edit · status switch · Delete ──────────────────────────────
+ * One fixed-height icon strip so the glyphs and the switch share a baseline,
+ * and equal min-widths so the captions ("Edit" vs "Deactivate") can't skew the
+ * spacing. The switch must NOT be wrapped in .form-check.form-switch here:
+ * custom.css pulls .form-check-input -2.375rem left inside one, which collapses
+ * it in a switch-above-caption layout. */
+.mst-page .mst-act-group {
+    display: inline-flex;
+    align-items: stretch;
+    gap: var(--ds-space-1);
+}
+
+.mst-page .mst-act {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    min-width: 62px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    text-decoration: none; /* the stack is also used on <a> (Edit / View) */
+}
+
+.mst-page .mst-act:hover {
+    text-decoration: none;
+}
+
+.mst-page .mst-act__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+}
+
+.mst-page .mst-act__icon > i {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.mst-page .mst-act__icon .form-check-input {
+    margin: 0;
+    float: none;
+    cursor: pointer;
+}
+
+.mst-page .mst-act__label {
+    white-space: nowrap;
+}
+
+.mst-page .mst-act--edit {
+    color: #2563eb;
+}
+
+.mst-page .mst-act--view {
+    color: #0e7490;
+}
+
+.mst-page .mst-act--toggle {
+    color: #475467;
+}
+
+.mst-page .mst-act--del {
+    color: var(--bs-danger);
+}
+
+.mst-page .mst-act--del.is-disabled {
+    color: #98a2b3;
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* A wrapping <form> around Delete must add no box of its own. */
+.mst-page .mst-del-form {
+    display: flex;
+    margin: 0;
+    padding: 0;
+}
+
+/* ── Pinned Action column (opt-in) ───────────────────────────────────────────
+ * For grids wide enough to scroll inside `.table-responsive`, the row controls
+ * must not scroll out of reach. Add `mst-table-pin-action` to the <table> and
+ * the last column stays fixed to the right edge. Backgrounds are explicit
+ * because a sticky cell would otherwise let the scrolled content show through. */
+/* Chrome ignores position:sticky on cells of a border-collapse:collapse table
+ * (Bootstrap's default), so the pinned grid opts into separate borders. Cells
+ * only carry a bottom border, so nothing doubles up visually. */
+.mst-page .mst-table-pin-action {
+    border-collapse: separate;
+    border-spacing: 0;
+    /* The theme ships `.table { overflow: hidden }`, which makes the TABLE the
+     * nearest scroll container for a sticky cell — so it sticks to a box that
+     * never scrolls, i.e. not at all. Hand that role back to .table-responsive. */
+    overflow: visible;
+}
+
+.mst-page .mst-table-pin-action th:last-child,
+.mst-page .mst-table-pin-action td:last-child {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+}
+
+.mst-page .mst-table-pin-action tbody td:last-child {
+    background: var(--ds-surface);
+}
+
+.mst-page .mst-table-pin-action tbody tr:hover td:last-child {
+    background: #f7f9fc;
+}
+
+.mst-page .mst-table-pin-action thead th:last-child {
+    background: #f2f4f7;
+    z-index: 3;
+}
+
+/* Hairline so the pinned cell reads as pinned while the rest scrolls under it. */
+.mst-page .mst-table-pin-action th:last-child::before,
+.mst-page .mst-table-pin-action td:last-child::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--ds-line);
+}
+
+/* ── Add / Edit modal ───────────────────────────────────────────────────────
+ * Create and Edit share one modal and look alike: same header, same tinted
+ * field card, same footer pair. Only the contents and submit caption differ. */
+.mst-modal .modal-content {
+    border-radius: var(--ds-radius-card);
+}
+
+.mst-modal .mst-field-card,
+.mst-page  .mst-field-card {
+    background: #eef1fc;
+    border-radius: var(--ds-radius-card);
+    padding: var(--ds-space-3);
+}
+
+.mst-modal .mst-form-label,
+.mst-page  .mst-form-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ds-ink);
+    margin-bottom: var(--ds-space-1);
+}
+
+.mst-modal .mst-req,
+.mst-page  .mst-req {
+    color: #dc2626;
+}
+
+.mst-modal .mst-control,
+.mst-page  .mst-control {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-card);
+    min-height: var(--ds-control-h);
+}
+
+/* The scoped border above out-specifies Bootstrap's .is-invalid, so restate it. */
+.mst-modal .mst-control.is-invalid,
+.mst-page  .mst-control.is-invalid {
+    border-color: #dc2626;
+}
+
+.mst-modal .mst-btn-cancel,
+.mst-page  .mst-btn-cancel {
+    color: #dc2626;
+    border: 1px solid #fca5a5;
+    background: var(--ds-surface);
+    border-radius: var(--ds-radius);
+    font-weight: 600;
+}
+
+.mst-modal .mst-btn-cancel:hover,
+.mst-page  .mst-btn-cancel:hover {
+    background: #fff5f5;
+    color: #b91c1c;
+}
+
+.mst-modal .mst-btn-submit,
+.mst-page  .mst-btn-submit {
+    color: #fff;
+    background: #004384;
+    border: 1px solid #004384;
+    border-radius: var(--ds-radius);
+    font-weight: 600;
+}
+
+.mst-modal .mst-btn-submit:hover,
+.mst-page  .mst-btn-submit:hover {
+    color: #fff;
+    background: #003468;
+    border-color: #003468;
+}
+
+/* ── Full-page form: cards, section titles, footer ──────────────────────────
+ * Used by the Faculty create / edit / view screens. `.mst-form-card` is the
+ * surface each wizard step renders into; the footer is the button row pinned
+ * to the bottom-right of the active step's card. */
+.mst-page .mst-form-card {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-card);
+    box-shadow: var(--ds-shadow-sm);
+    margin-bottom: var(--ds-space-3);
+}
+
+.mst-page .mst-form-card > .card-body {
+    padding: var(--ds-space-4);
+}
+
+.mst-page .mst-form-section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ds-ink);
+    margin-bottom: var(--ds-space-3);
+}
+
+.mst-page .mst-form-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--ds-space-2);
+    margin-top: var(--ds-space-4);
+}
+
+.mst-page .mst-btn-cancel,
+.mst-page .mst-btn-submit {
+    min-height: var(--ds-control-h);
+}
+
+/* ── Step wizard ────────────────────────────────────────────────────────────
+ * Vertical rail of numbered steps on the left, the active step's card(s) on
+ * the right. Panes are plain `.mst-form-card`s tagged `data-mst-step`, so the
+ * form markup (and every JS hook bound to it) is untouched — only visibility
+ * moves. Every field stays in the DOM, so a single submit still posts the
+ * whole form. */
+.mst-page .mst-wizard {
+    display: grid;
+    grid-template-columns: 15rem minmax(0, 1fr);
+    gap: var(--ds-space-4);
+    align-items: start;
+}
+
+@media (max-width: 991.98px) {
+    .mst-page .mst-wizard {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.mst-page .mst-wizard__rail {
+    position: sticky;
+    top: var(--ds-space-4);
+}
+
+.mst-page .mst-steps {
+    list-style: none;
+    margin: 0;
+    padding: var(--ds-space-2) 0;
+}
+
+.mst-page .mst-step {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    padding: var(--ds-space-2) 0;
+    color: var(--ds-ink-muted);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+/* Connector between the numbered markers. Anchored to the marker's centre
+ * (1rem = half of the 2rem marker) so it lines up at any font size. */
+.mst-page .mst-step + .mst-step::before {
+    content: '';
+    position: absolute;
+    left: 1rem;
+    bottom: calc(100% - var(--ds-space-2));
+    height: var(--ds-space-3);
+    width: 2px;
+    background: var(--ds-line);
+    transform: translateX(-1px);
+}
+
+.mst-page .mst-step.is-done + .mst-step::before,
+.mst-page .mst-step.is-done + .mst-step.is-done::before {
+    background: #16a34a;
+}
+
+.mst-page .mst-step__index {
+    flex: 0 0 auto;
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-line);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ds-ink-muted);
+    line-height: 1;
+}
+
+.mst-page .mst-step.is-active {
+    color: var(--ds-ink);
+    font-weight: 600;
+}
+
+.mst-page .mst-step.is-active .mst-step__index {
+    border: 2px solid #16a34a;
+    color: var(--ds-ink);
+}
+
+.mst-page .mst-step.is-done {
+    color: var(--ds-ink);
+}
+
+.mst-page .mst-step.is-done .mst-step__index {
+    background: #16a34a;
+    border-color: #16a34a;
+    color: #fff;
+}
+
+/* The number is swapped for a tick once the step is complete. Hiding the digit
+ * with font-size:0 leaves it rendering next to the ::after glyph in Chrome, so
+ * it gets its own element to hide outright. */
+.mst-page .mst-step.is-done .mst-step__num {
+    display: none;
+}
+
+.mst-page .mst-step.is-done .mst-step__index::after {
+    content: '✓';
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.mst-page .mst-step:focus-visible {
+    outline: none;
+}
+
+.mst-page .mst-step:focus-visible .mst-step__index {
+    box-shadow: var(--ds-focus-ring);
+}
+
+/* Only the active step's cards are on screen. */
+.mst-page .mst-form-card[data-mst-step] {
+    display: none;
+}
+
+.mst-page .mst-form-card[data-mst-step].is-active {
+    display: block;
+}
+
+/* Printing wants the whole form, not just the step you happen to be on. */
+@media print {
+    .mst-page .mst-wizard {
+        display: block;
+    }
+
+    .mst-page .mst-wizard__rail,
+    .mst-page .mst-form-footer {
+        display: none !important;
+    }
+
+    .mst-page .mst-form-card[data-mst-step] {
+        display: block !important;
+    }
+}
+
+/* ── Detail view: hero + facts grid + cards ─────────────────────────────────
+ * The documented shape for a record detail screen (docs/new-design-index-page
+ * .md §3d): a tinted hero carrying the headline facts, then one card per
+ * section, with any repeating rows rendered as a programme-dt table. All
+ * measurements come from the --ds-* tokens (docs/design.md). */
+.mst-page .mst-hero,
+.mst-modal .mst-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ds-space-4);
+    background: #e8ecfb;
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-card);
+    padding: var(--ds-space-4);
+    margin-bottom: var(--ds-space-4);
+}
+
+/* Avatar: the initials are the base layer and the photograph covers them, so a
+ * record with no photo — or one whose file has gone missing (the <img> removes
+ * itself on error) — falls back to the letters instead of a broken image. */
+.mst-page .mst-hero__avatar {
+    position: relative;
+    width: 7.5rem;
+    height: 7.5rem;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: var(--ds-radius-card);
+    border: 1px solid var(--ds-line);
+    background: var(--ds-surface);
+}
+
+.mst-page .mst-hero__initials {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    color: var(--ds-primary);
+    user-select: none;
+}
+
+.mst-page .mst-hero__photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: var(--ds-surface);
+}
+
+.mst-page .mst-hero__main {
+    flex: 1 1 20rem;
+    min-width: 0;
+}
+
+.mst-page .mst-hero__title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--ds-ink);
+    margin: 0 0 var(--ds-space-1);
+}
+
+.mst-page .mst-hero__code {
+    font-weight: 600;
+    color: var(--ds-ink-muted);
+}
+
+/* Facts: a label over its value. `--hero` is flex rather than grid because a
+ * repeat(auto-fit) grid collapses to one column inside the hero's
+ * shrink-to-fit flex child, which doubles the hero's height. */
+.mst-page .mst-facts,
+.mst-modal .mst-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: var(--ds-space-3) var(--ds-space-4);
+}
+
+.mst-page .mst-facts--hero {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ds-space-2) 3.5rem;
+    margin-top: var(--ds-space-3);
+}
+
+.mst-page .mst-fact__label,
+.mst-modal .mst-fact__label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--ds-ink-muted);
+    margin-bottom: var(--ds-space-1);
+}
+
+.mst-page .mst-fact__value,
+.mst-modal .mst-fact__value {
+    display: block;
+    font-size: 0.9375rem;
+    color: var(--ds-ink);
+    overflow-wrap: anywhere;
+}
+
+/* A *-subtle tint on top of the hero reads as a smudge, so the hero's badge is
+ * white with a hairline; the colour-coded ones stay in the tables. */
+.mst-page .mst-hero .status-pill {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-line);
+    color: var(--ds-ink);
+}
+
+.mst-page .mst-card {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-card);
+    box-shadow: var(--ds-shadow-sm);
+    padding: var(--ds-space-4);
+    margin-bottom: var(--ds-space-4);
+}
+
+.mst-page .mst-card__title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ds-ink);
+    margin: 0 0 var(--ds-space-3);
+    padding-bottom: var(--ds-space-2);
+    border-bottom: 1px solid var(--ds-line);
+}
+
+.mst-page .mst-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ds-space-2);
+}
+
+.mst-page .mst-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--ds-space-1) var(--ds-space-3);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius);
+    background: var(--ds-surface-2);
+    font-size: 0.875rem;
+    color: var(--ds-ink);
+}
+
+@media print {
+    .mst-page .no-print {
+        display: none !important;
+    }
+
+    .mst-page .mst-card,
+    .mst-page .mst-hero {
+        box-shadow: none;
+        break-inside: avoid;
+    }
+}
+
+/* ── Blank (print-and-fill) form ─────────────────────────────────────────────
+ * The paper counterpart of the detail view: same cards and section titles, but
+ * every value is a rule to write on instead of data. Mirrors the detail page
+ * field for field so a filled-in sheet maps onto the screen record. */
+.mst-page .mst-blank-line {
+    display: block;
+    min-height: 1.75rem;
+    border-bottom: 1px solid var(--ds-ink-muted);
+    margin-top: var(--ds-space-1);
+}
+
+.mst-page .mst-blank-photo {
+    width: 7.5rem;
+    height: 9.5rem;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--ds-space-2);
+    border: 1px dashed var(--ds-ink-muted);
+    border-radius: var(--ds-radius-card);
+    background: var(--ds-surface);
+    font-size: 0.75rem;
+    line-height: 1.3;
+    color: var(--ds-ink-muted);
+}
+
+/* Repeating sections print as a grid to write inside, not as ruled lines. */
+.mst-page .mst-blank-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.mst-page .mst-blank-table th,
+.mst-page .mst-blank-table td {
+    border: 1px solid var(--ds-line);
+    padding: var(--ds-space-2);
+    vertical-align: middle;
+}
+
+.mst-page .mst-blank-table thead th {
+    background: var(--ds-surface-2);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--ds-ink-muted);
+    white-space: nowrap;
+}
+
+.mst-page .mst-blank-table tbody td {
+    height: 2.5rem;
+}
+
+.mst-page .mst-blank-table tbody td:first-child {
+    width: 3.5rem;
+    text-align: center;
+    color: var(--ds-ink-muted);
+}
+
+/* ── Printed letterhead (components/print-letterhead.blade.php) ─────────────
+ * Off-screen by default; the print block below swaps it in where the page's
+ * breadcrumb heading sits. Declared BEFORE that block: both rules have the
+ * same specificity, so whichever comes last wins. */
+.mst-page .mst-print-header {
+    display: none;
+}
+
+/* Print isolation. These two sheets mark themselves `.print-area`; without this
+ * the browser prints the whole admin shell around them. Guarded with :has() so
+ * only a page that opts in is affected. */
+@media print {
+    /* !important is load-bearing here: several theme/shell elements (the
+     * offcanvas, the mini side panel, simplebar's tracks) carry their own
+     * visibility declarations that otherwise win and print alongside the sheet. */
+    body:has(.mst-page.print-area) * {
+        visibility: hidden !important;
+    }
+
+    body:has(.mst-page.print-area) .print-area,
+    body:has(.mst-page.print-area) .print-area * {
+        visibility: visible !important;
+    }
+
+    body:has(.mst-page.print-area) .print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        padding: 0;
+    }
+
+    /* The header and the mini side panel ship their own
+     * `visibility: visible !important` from the theme (styles.css, inside a
+     * min-width media query) and out-rank the blanket rule above, so they get
+     * removed outright — display:none on the container takes its whole subtree
+     * with it, whatever the descendants declare. */
+    body:has(.mst-page.print-area) header,
+    body:has(.mst-page.print-area) aside.side-mini-panel,
+    body:has(.mst-page.print-area) .offcanvas {
+        display: none !important;
+    }
+
+    /* Keep the page title on the printout, drop the navigation trail above it —
+     * "Home / Setup / HR Management" means nothing on paper. */
+    /* On paper the breadcrumb heading is replaced wholesale by the institute
+     * letterhead — the trail, the action buttons and the card around them all
+     * go, and <x-print-letterhead> takes their place. */
+    body:has(.mst-page.print-area) .modern-breadcrumb-wrapper {
+        display: none !important;
+    }
+
+    .mst-page .mst-print-header {
+        display: block !important;
+        border-bottom: 2px solid var(--ds-primary);
+        padding-bottom: var(--ds-space-2);
+        margin-bottom: var(--ds-space-4);
+    }
+
+    .mst-page .mst-print-header__row {
+        display: flex;
+        align-items: center;
+        gap: var(--ds-space-3);
+    }
+
+    .mst-page .mst-print-header__mark {
+        width: 3rem;
+        height: 3rem;
+        flex: 0 0 auto;
+        object-fit: contain;
+    }
+
+    .mst-page .mst-print-header__brand {
+        flex: 1 1 auto;
+        text-align: center;
+        line-height: 1.3;
+    }
+
+    .mst-page .mst-print-header__gov {
+        font-size: 0.6875rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--ds-primary);
+    }
+
+    .mst-page .mst-print-header__name {
+        font-size: 1.0625rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--ds-ink);
+    }
+
+    .mst-page .mst-print-header__full {
+        font-size: 0.75rem;
+        color: var(--ds-ink-muted);
+    }
+
+    .mst-page .mst-print-header__title {
+        margin-top: var(--ds-space-2);
+        text-align: center;
+        font-size: 0.9375rem;
+        font-weight: 700;
+        color: var(--ds-ink);
+    }
+}

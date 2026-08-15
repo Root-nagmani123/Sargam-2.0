@@ -3,97 +3,67 @@
 @section('title', 'Faculty')
 
 @push('styles')
-    <style>
-        .faculty-index-page .card-faculty-accent {
-            border-left: 4px solid #004a93;
-        }
-        @media (min-width: 768px) {
-            .faculty-index-page .faculty-actions .btn {
-                white-space: nowrap;
-            }
-        }
-        .btn-faculty-export {
-            border-color: #004a93;
-            color: #004a93;
-        }
-        .btn-faculty-export:hover,
-        .btn-faculty-export:focus,
-        .btn-faculty-export:active {
-            background-color: #004a93;
-            border-color: #004a93;
-            color: #fff !important;
-        }
-    </style>
+<link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
 @endpush
 
 @section('setup_content')
-<div class="container-fluid">
-<x-breadcrum title="Faculty"></x-breadcrum>
-    <!--<x-session_message />-->
+<div class="container-fluid mst-page">
+    <x-breadcrum title="Faculty" :showBack="false">
+        <a href="{{ route('faculty.create') }}"
+           class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
+           aria-label="Add New Faculty">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+            <span>Add Faculty</span>
+        </a>
+    </x-breadcrum>
+
+    {{-- The status toggle (public/admin_assets/js/custom.js) writes its result here. --}}
     <div id="status-msg"></div>
 
-    <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card" style="border-left:4px solid #004a93;">
-            <div class="card-body">
-                <div>
-                    <div class="row">
-                        <div class="col-6">
-                            <h4 class="fw-semibold text-primary mb-0" style="color:#004a93 !important;">
-                                Faculty
-                            </h4>
-                        </div>
+    {{-- Secondary actions sit above the card, right-aligned, in the same chrome
+         as the toolbar's Columns button. --}}
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
+        <a href="{{ route('faculty.excel.export') }}" class="btn programme-dt-btn-columns border-0 text-primary"
+           title="Export Faculty Excel" aria-label="Export Faculty Excel">
+            <i class="bi bi-download" aria-hidden="true"></i>
+            <span>Export Excel</span>
+        </a>
+        <a href="{{ route('faculty.printBlank') }}" class="btn programme-dt-btn-columns border-0 text-primary"
+           title="Print Blank Form" aria-label="Print Blank Form">
+            <i class="bi bi-printer" aria-hidden="true"></i>
+            <span>Print Blank Form</span>
+        </a>
+    </div>
 
-                        <div class="col-6">
-                            <div class="d-flex justify-content-end align-items-center gap-3">
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
 
-                                <!-- Add Faculty -->
-                                <a href="{{ route('faculty.create') }}"
-                                    class="btn btn-primary d-flex align-items-center gap-1 shadow-sm"
-                                    style="background-color:#004a93; border-color:#004a93;"
-                                    aria-label="Add New Faculty">
-                                    <span class="material-symbols-rounded fs-5">add</span>
-                                    Add Faculty
-                                </a>
-
-                                <!-- Export Excel -->
-                                <a href="{{ route('faculty.excel.export') }}"
-                                    class="btn btn-outline-primary btn-faculty-export d-flex align-items-center gap-1 shadow-sm"
-                                    aria-label="Export Faculty Excel">
-                                    <span class="material-symbols-rounded fs-5">export_notes</span>
-                                    Export Excel
-                                </a>
-                                <a href="{{ route('faculty.printBlank') }}"  class="btn btn-outline-success">
-									<i class="material-icons">print</i> Print Blank Form
-								</a>
-
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr>
-
-                    <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4">
-                        <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
-                            <button type="button" class="btn programme-dt-btn-columns" id="facultyBtnColumns"
-                                data-bs-toggle="modal" data-bs-target="#facultyColumnVisibilityModal"
-                                title="Show / hide columns">
-                                <span>Columns</span>
-                                <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
-                            </button>
-                            <div id="facultyDtSearch" class="programme-dt-search" data-dt-search-for="faculty-table"></div>
-                        </div>
-                    </div>
-
-                    <div class="programme-dt-panel">
-                        <div class="table-responsive">
-                            {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
-                        </div>
-                        <div id="facultyDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
-                            data-dt-footer-for="faculty-table"></div>
-                    </div>
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="facultyBtnColumns"
+                            data-bs-toggle="modal" data-bs-target="#facultyColumnVisibilityModal"
+                            title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div id="facultyDtSearch" class="programme-dt-search" data-dt-search-for="faculty-table"></div>
                 </div>
             </div>
+
+            {{-- Search box, pagination and the "Showing N of M items" count are
+                 relocated into #facultyDtSearch / #facultyDtFooter by the global
+                 enhancer (public/js/datatable-global-ui.js). Don't rebuild them. --}}
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    {{-- mst-table-pin-action: nine columns don't fit, so the panel
+                         scrolls — the Action column stays pinned to the right. --}}
+                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table mst-table-pin-action']) !!}
+                </div>
+                <div id="facultyDtFooter"
+                     class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                     data-dt-footer-for="faculty-table"></div>
+            </div>
+
         </div>
     </div>
 
@@ -101,7 +71,7 @@
     <div class="modal fade" id="facultyColumnVisibilityModal" tabindex="-1"
         aria-labelledby="facultyColumnVisibilityLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-content rounded-3 border-0 shadow">
                 <div class="modal-header border-0 pb-2">
                     <h5 class="modal-title fw-bold" id="facultyColumnVisibilityLabel">Column Visibility</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -111,30 +81,30 @@
                     <div class="row g-3" id="facultyColumnToggleGrid"></div>
                 </div>
                 <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
     </div>
+</div>
 @endsection
 
 @push('scripts')
     {!! $dataTable->scripts() !!}
 
-{{-- Search box, pagination and the "Showing N of M items" count are relocated into
-     #facultyDtSearch / #facultyDtFooter by the global enhancer
-     (public/js/datatable-global-ui.js) via the data-dt-search-for /
-     data-dt-footer-for hooks above. Do NOT add a page-local copy of that logic. --}}
-
 <script>
-/* ---- Column show / hide (DataTables API), matching the other listing pages ---- */
+/* ---- Column show / hide (DataTables API), matching the other listing pages ----
+   Stores LABELS, not indices: an index shifts the moment a column is added and
+   would then hide the wrong one. A label that no longer matches any header is
+   simply ignored, so a renamed column comes back visible. Keyed by user id so
+   two people sharing a machine don't inherit each other's hidden columns. */
 $(function () {
     var TABLE_ID = '#faculty-table';
-    var facultyColStorageKey = 'facultyGrid:hiddenColumns:v1';
+    var FACULTY_COLVIS_KEY = 'sargam.faculty.hiddenCols.{{ auth()->id() ?? 'guest' }}';
 
     function facultyGetHiddenCols() {
         try {
-            var raw = localStorage.getItem(facultyColStorageKey);
+            var raw = window.localStorage.getItem(FACULTY_COLVIS_KEY);
             var arr = raw ? JSON.parse(raw) : [];
             return Array.isArray(arr) ? arr : [];
         } catch (e) {
@@ -143,60 +113,67 @@ $(function () {
     }
 
     function facultyPersistHiddenCols(arr) {
-        try { localStorage.setItem(facultyColStorageKey, JSON.stringify(arr)); } catch (e) {}
+        try {
+            window.localStorage.setItem(FACULTY_COLVIS_KEY, JSON.stringify(arr));
+        } catch (e) { /* private mode — the preference just won't persist */ }
     }
 
     function setupFacultyColumns(dt) {
         if (!dt) {
             return;
         }
+
         var hidden = facultyGetHiddenCols();
-
-        // Apply saved visibility — DataTables keeps this across redraws / ajax reloads.
-        dt.columns().every(function () {
-            var idx = this.index();
-            this.visible(hidden.indexOf(idx) === -1, false);
-        });
-        dt.columns.adjust();
-
         var $grid = $('#facultyColumnToggleGrid');
-        if (!$grid.length) {
-            return;
+        if ($grid.length) {
+            $grid.empty();
         }
-        $grid.empty();
 
         dt.columns().every(function () {
             var idx = this.index();
-            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
-            if (!title) {
+            var label = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (!label) {
+                return;
+            }
+
+            // Apply the saved choice — DataTables keeps it across redraws / reloads.
+            this.visible(hidden.indexOf(label) === -1, false);
+
+            if (!$grid.length) {
                 return;
             }
 
             var inputId = 'facultycolvis_' + idx;
-            var $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
-            var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-1 px-3 py-2 mb-0 w-100"></label>')
-                .attr('for', inputId);
-            var $cb = $('<input type="checkbox" class="form-check-input m-0">')
-                .attr('id', inputId)
-                .prop('checked', hidden.indexOf(idx) === -1);
+            var $checkbox = $('<input type="checkbox" class="form-check-input m-0">')
+                .attr({ id: inputId, 'data-col': idx, 'data-label': label })
+                .prop('checked', hidden.indexOf(label) === -1);
 
-            $cb.on('change', function () {
-                var h = facultyGetHiddenCols();
-                var pos = h.indexOf(idx);
+            $checkbox.on('change', function () {
+                var current = facultyGetHiddenCols();
+                var pos = current.indexOf(label);
+
                 if (this.checked) {
-                    if (pos !== -1) h.splice(pos, 1);
-                } else {
-                    if (pos === -1) h.push(idx);
+                    if (pos !== -1) { current.splice(pos, 1); }
+                } else if (pos === -1) {
+                    current.push(label);
                 }
-                facultyPersistHiddenCols(h);
+
+                facultyPersistHiddenCols(current);
                 dt.column(idx).visible(this.checked, false);
                 dt.columns.adjust();
             });
 
-            $label.append($cb).append($('<span></span>').text(title));
-            $cell.append($label);
-            $grid.append($cell);
+            $grid.append(
+                $('<div class="col-12 col-sm-6 col-md-4"></div>').append(
+                    $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                        .attr({ 'for': inputId, title: label })
+                        .append($checkbox)
+                        .append($('<span></span>').text(label))
+                )
+            );
         });
+
+        dt.columns.adjust();
     }
 
     // Yajra initialises the table itself. Handle both orders: if it is already up

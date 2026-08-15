@@ -18,9 +18,12 @@ class FacultyTypeMasterController extends Controller
 
     public function index(Request $request)
     {
+        // The grid is a client-side DataTable now (paging / search / sort all run
+        // in the browser), so the whole set is handed over in one go and the
+        // cache key no longer varies by page. Key bumped to v2 so a cached v1
+        // paginator can't be served into the new view.
         $epoch = DataTableRedisCache::readListEpoch(self::LIST_CACHE_EPOCH_KEY);
-        $page = max(1, (int) $request->query('page', 1));
-        $cacheKey = 'master_fac_type_list:v1:' . md5(json_encode(['epoch' => $epoch, 'page' => $page]));
+        $cacheKey = 'master_fac_type_list:v2:' . md5(json_encode(['epoch' => $epoch]));
 
         $facultyTypes = DataTableRedisCache::remember(
             $cacheKey,
@@ -29,7 +32,7 @@ class FacultyTypeMasterController extends Controller
                 'seconds' => 'FACULTY_TYPE_MASTER_LIST_CACHE_SECONDS',
             ],
             'FacultyTypeMasterController@index',
-            fn () => FacultyTypeMaster::paginate(10)
+            fn () => FacultyTypeMaster::orderByDesc('pk')->get()
         );
 
         return view('admin.master.faculty_type.index', compact('facultyTypes'));
@@ -42,9 +45,16 @@ class FacultyTypeMasterController extends Controller
 
     public function store(Request $request)
     {
+        // Lengths match the columns: faculty_type_name varchar(100),
+        // shot_faculty_type_name varchar(50).
         $request->validate([
-            'faculty_type_name' => 'required|string|max:255',
-            'shot_faculty_type_name' => 'required|string|max:255',
+            'faculty_type_name' => 'required|string|max:100',
+            'shot_faculty_type_name' => 'required|string|max:50',
+        ], [
+            'faculty_type_name.required' => 'Faculty type name is required.',
+            'faculty_type_name.max' => 'Faculty type name must not exceed 100 characters.',
+            'shot_faculty_type_name.required' => 'Short name is required.',
+            'shot_faculty_type_name.max' => 'Short name must not exceed 50 characters.',
         ]);
 
         try {

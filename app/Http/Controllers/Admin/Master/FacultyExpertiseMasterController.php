@@ -21,9 +21,12 @@ class FacultyExpertiseMasterController extends Controller
 
     public function index(Request $request)
     {
+        // The grid is a client-side DataTable now (paging / search / sort all run
+        // in the browser), so the whole set is handed over in one go and the
+        // cache key no longer varies by page. Key bumped to v2 so a cached v1
+        // paginator can't be served into the new view.
         $epoch = DataTableRedisCache::readListEpoch(self::LIST_CACHE_EPOCH_KEY);
-        $page = max(1, (int) $request->query('page', 1));
-        $cacheKey = 'master_fac_exp_list:v1:' . md5(json_encode(['epoch' => $epoch, 'page' => $page]));
+        $cacheKey = 'master_fac_exp_list:v2:' . md5(json_encode(['epoch' => $epoch]));
 
         $faculties = DataTableRedisCache::remember(
             $cacheKey,
@@ -32,7 +35,7 @@ class FacultyExpertiseMasterController extends Controller
                 'seconds' => 'FACULTY_EXPERTISE_MASTER_LIST_CACHE_SECONDS',
             ],
             'FacultyExpertiseMasterController@index',
-            fn () => FacultyExpertiseMaster::latest('pk')->paginate(10)
+            fn () => FacultyExpertiseMaster::latest('pk')->get()
         );
 
         return view('admin.master.faculty_expertise_master.index', compact('faculties'));
@@ -43,15 +46,27 @@ class FacultyExpertiseMasterController extends Controller
     }
 
     public function store(Request $request) {
+        $pk = $request->id ? decrypt($request->id) : null;
+
         $request->validate([
-            'expertise_name' => 'required|string|max:255|unique:faculty_expertise_master,expertise_name',
+            // max:50 matches the column (varchar(50)); the unique rule has to
+            // ignore the row being edited or re-saving it fails on its own name.
+            'expertise_name' => [
+                'required',
+                'string',
+                'max:50',
+                \Illuminate\Validation\Rule::unique('faculty_expertise_master', 'expertise_name')->ignore($pk, 'pk'),
+            ],
+        ], [
+            'expertise_name.required' => 'Expertise name is required.',
+            'expertise_name.max'      => 'Expertise name must not exceed 50 characters.',
+            'expertise_name.unique'   => 'This expertise name already exists.',
         ]);
 
-        if( $request->id ) {
+        if( $pk ) {
 
             // Update existing record
-            $id = decrypt($request->id);
-            $expertise = FacultyExpertiseMaster::find($id);
+            $expertise = FacultyExpertiseMaster::find($pk);
         }
         else {
             // Create new record
@@ -59,7 +74,8 @@ class FacultyExpertiseMasterController extends Controller
             $expertise->created_date = now();
         }
         $expertise->expertise_name = $request->expertise_name;
-        $expertise->created_by = auth()->user()->id;
+        // User's primary key is `pk`, not `id` — ->id resolves to null here.
+        $expertise->created_by = auth()->user()?->getKey();
         $expertise->save();
 
         self::bumpListCacheEpoch();

@@ -63,6 +63,8 @@ class FacultyDataTable extends DataTable
             ->addColumn('mobile_number', function($row) {
                 return $row->mobile_no ?? '';
             })
+            // Action: Edit · View · status switch · Delete, as equal-width
+            // icon-over-label stacks (public/css/master-admin.css, `.mst-act`).
             ->addColumn('action', function ($row) {
                 $id = encrypt($row->pk);
                 $csrf = csrf_token();
@@ -71,38 +73,60 @@ class FacultyDataTable extends DataTable
                 $viewUrl = route('faculty.show', ['id' => $id]);
                 $deleteUrl = route('faculty.destroy', ['id' => $id]);
                 $isActive = $row->active_inactive == 1;
-                $disabledAttr = $isActive ? 'disabled' : '';
-                $deleteTitle = $isActive ? 'Deactivate faculty first to enable deletion' : 'Delete';
-                $deleteStyle = $isActive ? 'opacity:0.5;cursor:not-allowed;' : 'cursor:pointer;';
+                $name = htmlspecialchars((string) $row->full_name, ENT_QUOTES);
 
-                return '
-                    <div class="d-flex align-items-center gap-2" style="white-space:nowrap;">
-                        <a href="'.$editUrl.'" class="btn bg-transparent border-0 p-0 text-primary" title="Edit">
-                            <i class="material-icons" style="font-size:20px;">edit</i>
-                        </a>
-                        <a href="'.$viewUrl.'" class="btn bg-transparent border-0 p-0 text-info" title="View">
-                            <i class="material-icons" style="font-size:20px;">visibility</i>
-                        </a>
-                        <button type="button" class="btn bg-transparent border-0 p-0 text-danger delete-faculty-btn"
-                            data-url="'.$deleteUrl.'"
-                            data-name="'.htmlspecialchars($row->full_name, ENT_QUOTES).'"
-                            data-token="'.$csrf.'"
-                            title="'.$deleteTitle.'" '.$disabledAttr.' style="'.$deleteStyle.'">
-                            <i class="material-icons" style="font-size:20px;">delete</i>
-                        </button>
-                    </div>
-                ';
+                $html = '<div class="mst-act-group" role="group" aria-label="Row actions">';
+
+                $html .= '<a href="' . $editUrl . '" class="mst-act mst-act--edit" title="Edit ' . $name . '">'
+                    . '<span class="mst-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>'
+                    . '<span class="mst-act__label">Edit</span>'
+                    . '</a>';
+
+                $html .= '<a href="' . $viewUrl . '" class="mst-act mst-act--view" title="View ' . $name . '">'
+                    . '<span class="mst-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span>'
+                    . '<span class="mst-act__label">View</span>'
+                    . '</a>';
+
+                // No .form-check/.form-switch wrapper here — custom.css pulls the
+                // input -2.375rem left inside one, which breaks the stacked layout.
+                $html .= '<label class="mst-act mst-act--toggle">'
+                    . '<span class="mst-act__icon">'
+                    . '<input class="form-check-input status-toggle" type="checkbox" role="switch"'
+                    . ' data-table="faculty_master" data-column="active_inactive"'
+                    . ' data-id="' . $row->pk . '"' . ($isActive ? ' checked' : '')
+                    . ' aria-label="' . ($isActive ? 'Deactivate' : 'Activate') . ' ' . $name . '">'
+                    . '</span>'
+                    . '<span class="mst-act__label">' . ($isActive ? 'Deactivate' : 'Activate') . '</span>'
+                    . '</label>';
+
+                // Deletion is refused while the record is active — show that
+                // rather than a red icon that always fails.
+                if ($isActive) {
+                    $html .= '<span class="mst-act mst-act--del is-disabled" aria-disabled="true"'
+                        . ' title="Deactivate faculty first to enable deletion">'
+                        . '<span class="mst-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>'
+                        . '<span class="mst-act__label">Delete</span>'
+                        . '</span>';
+                } else {
+                    $html .= '<button type="button" class="mst-act mst-act--del delete-faculty-btn"'
+                        . ' data-url="' . $deleteUrl . '"'
+                        . ' data-name="' . $name . '"'
+                        . ' data-token="' . $csrf . '"'
+                        . ' title="Delete ' . $name . '">'
+                        . '<span class="mst-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>'
+                        . '<span class="mst-act__label">Delete</span>'
+                        . '</button>';
+                }
+
+                return $html . '</div>';
             })
+            // Status: display-only soft badge. The control lives in the action stack.
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return "
-                <div class='form-check form-switch d-inline-block'>
-                    <input class='form-check-input status-toggle' type='checkbox' role='switch'
-                        data-table='faculty_master'
-                        data-column='active_inactive'
-                        data-id='{$row->pk}' {$checked}>
-                </div>
-                ";
+                $isActive = $row->active_inactive == 1;
+
+                return '<span class="status-pill badge rounded-1 ' . ($isActive ? 'bg-success-subtle' : 'bg-danger-subtle') . '">'
+                    . ($isActive ? 'Active' : 'Inactive')
+                    . '</span>';
             })
             ->filterColumn('full_name', function ($query, $keyword) {
                 $query->where('full_name', 'like', "%{$keyword}%");
@@ -181,6 +205,12 @@ class FacultyDataTable extends DataTable
                     // page a client-side header sort, same as hostel_floor/hostel_building.
                     ->parameters([
                         'order' => [],
+                        // footer.blade.php turns DataTables Responsive on globally. With
+                        // nine columns it collapses from the right, which puts Status and
+                        // the whole Action stack behind a "+" expander — the row controls
+                        // must never be hidden. Off here; the .table-responsive wrapper in
+                        // the panel scrolls instead, and the Columns modal trims the rest.
+                        'responsive' => false,
                         'ordering' => true,
                         'searching' => true,
                         'lengthChange' => true,
@@ -246,14 +276,16 @@ class FacultyDataTable extends DataTable
                 ->searchable(true)
                 ->orderable(false),
             Column::computed('status')
+                ->title('Status')
                 ->exportable(false)
                 ->printable(false)
-                ->addClass('text-center'),
+                ->addClass('text-nowrap'),
             Column::computed('action')
+                ->title('Action')
                 ->exportable(false)
                 ->printable(false)
-                ->addClass('text-center')
-                ->width(120)
+                ->addClass('text-nowrap')
+                ->width(260)
         ];
     }
 
