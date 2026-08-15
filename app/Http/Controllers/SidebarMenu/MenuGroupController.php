@@ -32,6 +32,62 @@ class MenuGroupController extends Controller
         return view('SidebarMenu.menu_groups.index', $pageData);
     }
 
+    /**
+     * Download / Print — one action, two formats, off the same query and the
+     * same column definitions, so the CSV and the printout can't drift apart
+     * (docs/new-design-index-page.md §1). ?category_id, ?q and ?cols are stamped
+     * on by the grid so the export carries what the user is looking at.
+     */
+    public function export(Request $request)
+    {
+        $format = $request->input('format') === 'print' ? 'print' : 'csv';
+        $columns = $this->service->exportColumns($request->input('cols'));
+        $rows = $this->service->exportRows($request);
+
+        if ($format === 'print') {
+            $bits = [];
+            $categoryId = $request->input('category_id');
+            if (filled($categoryId) && ctype_digit((string) $categoryId)) {
+                $category = \App\Models\SidebarMenu\SidebarCategory::find((int) $categoryId);
+                if ($category) {
+                    $bits[] = '<strong>Category:</strong> '.e($category->name);
+                }
+            }
+            $search = trim((string) $request->input('q', ''));
+            if ($search !== '') {
+                $bits[] = '<strong>Search:</strong> '.e($search);
+            }
+
+            return view('SidebarMenu.menu_groups.export_print', [
+                'rows' => $rows,
+                'columns' => $columns,
+                'filterLine' => empty($bits) ? null : implode(' &nbsp;|&nbsp; ', $bits),
+                'exportDate' => now()->format('d-m-Y H:i'),
+            ]);
+        }
+
+        $filename = 'sidebar-menu-groups-'.now()->format('Y-m-d-His').'.csv';
+
+        return response()->streamDownload(function () use ($rows, $columns) {
+            $handle = fopen('php://output', 'w');
+            // BOM: without it Excel reads the file as ANSI and mangles any
+            // non-ASCII group name.
+            fwrite($handle, "\xEF\xBB\xBF");
+            fputcsv($handle, array_column($columns, 'heading'));
+
+            foreach ($rows as $index => $row) {
+                fputcsv($handle, array_map(
+                    fn (array $col) => (string) $col['value']($row, $index),
+                    $columns
+                ));
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
     public function store(MenuGroupRequest $request)
     {
         $this->service->store($request->validated());
@@ -69,7 +125,7 @@ class MenuGroupController extends Controller
     {
         $this->service->status($id, $request->is_active);
         $this->flushSidebarCaches();
-        $status = $request->is_active == 1 ? 'Activated' : 'Deactivated';
+        $status = $request->is_active == 1 ? 'Deactivated' : 'Activated';
         return response()->json([
             'success' => true,
             'message' => 'Menu Group '.$status.' Successfully'

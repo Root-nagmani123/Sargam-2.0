@@ -30,13 +30,56 @@ class SidebarCategoryController extends Controller
         if ($request->ajax()) {
             return $this->service->getDatatable($request);
         }
-        $pageData = $this->service->pageData();
-        return view('SidebarMenu.categories.index',$pageData);
+        return view('SidebarMenu.categories.index');
     }
 
     public function create()
     {
         return view('SidebarMenu.categories.create');
+    }
+
+    /**
+     * Download / Print — one action, two formats, off the same query and the
+     * same column definitions, so the CSV and the printout can't drift apart
+     * (docs/new-design-index-page.md §1). ?q and ?cols are stamped on by the
+     * grid so the export carries what the user is looking at.
+     */
+    public function export(Request $request)
+    {
+        $format = $request->input('format') === 'print' ? 'print' : 'csv';
+        $columns = $this->service->exportColumns($request->input('cols'));
+        $rows = $this->service->exportRows($request);
+        $search = trim((string) $request->input('q', ''));
+
+        if ($format === 'print') {
+            return view('SidebarMenu.categories.export_print', [
+                'rows' => $rows,
+                'columns' => $columns,
+                'search' => $search,
+                'exportDate' => now()->format('d-m-Y H:i'),
+            ]);
+        }
+
+        $filename = 'sidebar-categories-'.now()->format('Y-m-d-His').'.csv';
+
+        return response()->streamDownload(function () use ($rows, $columns) {
+            $handle = fopen('php://output', 'w');
+            // BOM: without it Excel reads the file as ANSI and mangles any
+            // non-ASCII category name.
+            fwrite($handle, "\xEF\xBB\xBF");
+            fputcsv($handle, array_column($columns, 'heading'));
+
+            foreach ($rows as $index => $row) {
+                fputcsv($handle, array_map(
+                    fn (array $col) => (string) $col['value']($row, $index),
+                    $columns
+                ));
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 
     public function store(CategoryRequest $request)

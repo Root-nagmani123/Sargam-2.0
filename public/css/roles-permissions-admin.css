@@ -1,0 +1,492 @@
+/* ============================================================================
+   Roles & Permissions — admin pages
+   ----------------------------------------------------------------------------
+   The `rp-*` component layer for this module (Roles list, Assign Permission,
+   Assign Dashboard). It implements the "new design" row-action stack
+   (docs/new-design-index-page.md §3b) and the Add/Edit modal (§3c), on top of
+   the `programme-dt-*` chrome in custom.css and the `--ds-*` tokens in
+   sargam-app.css.
+
+   Scoping:
+     .rp-page   — page root, put it on the container-fluid
+     .rp-modal  — modal root, put it on .modal-content
+   Both are required so these rules can beat Bootstrap's without !important
+   while still being unable to leak into other modules.
+
+   ⚠️ NOT to be confused with roles-admin.css / `.roles-page`, which belongs to
+   the separate User Management Roles screen
+   (admin/user_management/roles/index.blade.php). Two different screens list
+   Spatie roles; keep their CSS apart.
+
+   Load with:
+     <link rel="stylesheet" href="{{ asset('css/roles-permissions-admin.css') }}?v={{ @filemtime(public_path('css/roles-permissions-admin.css')) ?: time() }}">
+   ========================================================================= */
+
+/* ── Cell decorations ── */
+.rp-page .rp-role-name {
+    font-weight: 600;
+    color: var(--ds-ink, #101828);
+}
+
+.rp-page .rp-count {
+    display: inline-block;
+    min-width: 28px;
+    padding: 0.15rem 0.55rem;
+    border-radius: var(--ds-radius, 4px);
+    background: rgba(0, 67, 132, 0.08);
+    color: #004384;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-align: center;
+}
+.rp-page .rp-count--zero {
+    background: var(--ds-surface-2, #f8fafc);
+    border: 1px solid var(--ds-line, #e5e7eb);
+    color: #98a2b3;
+}
+
+.rp-page .rp-muted { color: #98a2b3; user-select: none; }
+
+.rp-page .rp-slug {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-radius: var(--ds-radius, 4px);
+    background: var(--ds-surface-2, #f8fafc);
+    font-family: var(--bs-font-monospace, monospace);
+    font-size: 0.8125rem;
+    color: #475467;
+}
+
+/* ── Status column: soft badge (display only) ──
+   The theme ships the *-subtle backgrounds but not the text-*-emphasis
+   colours, so the label would render black. Tint it here. */
+.rp-page .status-pill {
+    padding: 0.4em 0.85em;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+.rp-page .status-pill.bg-success-subtle { color: #146c43; }
+.rp-page .status-pill.bg-danger-subtle  { color: #b02a37; }
+
+/* ── Status pills: count chip riding along inside the pill ── */
+.rp-page .programme-status-pill .rp-pill-count {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0 0.45rem;
+    border-radius: var(--ds-radius, 4px);
+    background: rgba(0, 67, 132, 0.08);
+    color: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.5;
+}
+.rp-page .programme-status-pill.active .rp-pill-count {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+/* ── Which role am I editing? ── */
+.rp-page .rp-role-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem 0.85rem;
+    padding: 0.75rem 1.1rem;
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-left: 4px solid #004384;
+    border-radius: var(--ds-radius-card, 8px);
+    background: #fff;
+}
+.rp-page .rp-role-banner__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ds-ink-muted, #667085);
+}
+.rp-page .rp-role-banner__name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--ds-ink, #101828);
+}
+.rp-page .rp-role-banner__meta {
+    margin-left: auto;
+    font-size: 0.8125rem;
+    color: var(--ds-ink-muted, #667085);
+}
+
+/* ── Row actions: icon over label ──
+   Each action is an equal-width column holding a fixed-height icon strip above
+   its caption. Equal widths keep the icon row evenly spaced even though the
+   captions differ in length; the fixed strip keeps the glyphs on one baseline. */
+.rp-page .rp-act-group {
+    display: inline-flex;
+    align-items: stretch;   /* equal heights → icon strips stay in line */
+    justify-content: flex-start;
+    gap: 0.25rem;
+}
+
+.rp-page .rp-act {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    min-width: 84px;        /* ≈ the widest caption ("Permissions") */
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+}
+
+.rp-page .rp-act__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+}
+.rp-page .rp-act__icon > i {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.rp-page .rp-act__label { white-space: nowrap; }
+
+.rp-page .rp-act--permission { color: #067647; }
+.rp-page .rp-act--dashboard { color: #1570ef; }
+.rp-page .rp-act--edit { color: #2563eb; }
+/* No min-width override: every action in a group must measure the same, or the
+   icon row comes out unevenly spaced (§3b trap 2). Assign Dashboard puts a
+   toggle between Edit and Delete, so it inherits the group's 84px. */
+.rp-page .rp-act--toggle { color: #475467; }
+
+/* The switch deliberately has NO .form-check/.form-switch ancestor — that
+   combination pulls the input -2.375rem left (custom.css:107-112) for the
+   switch-beside-label layout and would knock it off-centre here. Pin it anyway. */
+.rp-page .rp-act__icon .form-check-input {
+    margin: 0;
+    float: none;
+}
+
+/* Keep the Action header over its content. */
+.rp-page .programme-dt-table th:last-child,
+.rp-page .programme-dt-table td:last-child {
+    text-align: left;
+    white-space: nowrap;
+}
+
+/* .programme-dt-table wraps its 2nd column at 420px — right for a long-text
+   grid, pointless for a role name. */
+.rp-page .programme-dt-table tbody td:nth-child(2) {
+    max-width: none;
+    white-space: nowrap;
+}
+
+/* ── Empty state ── */
+.rp-page .rp-empty {
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: var(--ds-ink-muted, #667085);
+}
+.rp-page .rp-empty i {
+    font-size: 2.5rem;
+    opacity: 0.35;
+}
+
+/* ============================================================================
+   Add / Edit modal (§3c)
+   One visual language for both modes: a tinted field card holding the labelled
+   controls, a red Cancel and a solid brand submit.
+   ========================================================================= */
+
+.rp-modal { border-radius: 12px; }
+
+.rp-modal .rp-modal-header {
+    border-bottom: 1px solid #eaecf0;
+    padding: 1rem 1.25rem;
+    align-items: flex-start;
+}
+.rp-modal .rp-modal-header .modal-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--ds-ink, #101828);
+    margin: 0;
+}
+/* One line under the title saying which mode you are in — the two modes are
+   otherwise distinguishable only by the submit caption. */
+.rp-modal .rp-modal-sub {
+    margin: 2px 0 0;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--ds-ink-muted, #667085);
+}
+
+.rp-modal .rp-modal-body { padding: 1.25rem; }
+
+.rp-modal .rp-field-card {
+    position: relative;
+    background: #eef1fc;
+    border-radius: 10px;
+    padding: 1.25rem;
+}
+
+/* Two columns so the form reads as a form and not as a tall single stack.
+   The grid gap owns the spacing — the cells carry no margin of their own, so a
+   field can be moved between rows without leaving a gap behind. */
+.rp-modal .rp-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.1rem 1.25rem;
+}
+.rp-modal .rp-form-grid > .form-group { margin-bottom: 0; }
+.rp-modal .rp-form-grid--full { grid-column: 1 / -1; }
+
+@media (max-width: 575.98px) {
+    .rp-modal .rp-form-grid { grid-template-columns: 1fr; }
+}
+
+.rp-modal .rp-form-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+.rp-modal .rp-req { color: #dc2626; margin-left: 1px; }
+
+.rp-modal .rp-control {
+    background-color: #fff;
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--ds-ink, #101828);
+    box-shadow: none;
+}
+.rp-modal .rp-control::placeholder { color: #9ca3af; }
+.rp-modal .rp-control:focus {
+    border-color: #004384;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
+}
+
+.rp-modal .rp-form-help {
+    margin: 0.375rem 0 0;
+    font-size: 0.75rem;
+    color: var(--ds-ink-muted, #667085);
+}
+
+/* jquery-validate appends its message to .form-group; keep it on its own line
+   under the control rather than inline with the help text. */
+.rp-modal .rp-field-card .invalid-feedback { display: block; }
+
+.rp-modal .rp-modal-footer {
+    border-top: 0;
+    justify-content: end;
+    gap: 0.75rem;
+    padding: 0.25rem 1.25rem 1.25rem;
+}
+.rp-modal .rp-btn-cancel {
+    min-width: 108px;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    background: #fff;
+    color: #dc2626;
+    font-weight: 500;
+}
+.rp-modal .rp-btn-cancel:hover {
+    background: #fef2f2;
+    border-color: #f87171;
+}
+.rp-modal .rp-btn-submit {
+    min-width: 140px;
+    border: 1px solid #004384;
+    border-radius: 8px;
+    background: #004384;
+    color: #fff;
+    font-weight: 600;
+}
+.rp-modal .rp-btn-submit:hover {
+    background: #00356a;
+    border-color: #00356a;
+}
+.rp-modal .rp-btn-submit:disabled {
+    background: #004384;
+    border-color: #004384;
+    opacity: 0.65;
+}
+
+/* ============================================================================
+   Assign Dashboard — card icon chips, colour swatches and the live preview
+   ----------------------------------------------------------------------------
+   The stat-icon-* tints mirror dashboard-stat-cards.css, which is NOT loaded on
+   this page. They are scoped to the module roots so they cannot collide with
+   the real dashboard's copies.
+   ========================================================================= */
+
+.rp-page .stat-icon-blue,  .rp-modal .stat-icon-blue  { background: rgba(47, 128, 237, 0.12); color: #2f80ed; }
+.rp-page .stat-icon-green, .rp-modal .stat-icon-green { background: rgba(39, 174, 96, 0.12);  color: #27ae60; }
+.rp-page .stat-icon-amber, .rp-modal .stat-icon-amber { background: rgba(232, 163, 23, 0.12); color: #c98a0e; }
+.rp-page .stat-icon-rose,  .rp-modal .stat-icon-rose  { background: rgba(220, 53, 69, 0.10);  color: #dc3545; }
+.rp-page .stat-icon-navy,  .rp-modal .stat-icon-navy  { background: rgba(30, 58, 95, 0.12);   color: #1e3a5f; }
+
+/* The icon chip in the grid's Icon column. */
+.rp-page .rp-card-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--ds-radius, 4px);
+    flex-shrink: 0;
+}
+.rp-page .rp-card-icon > i { font-size: 1.05rem; line-height: 1; }
+
+/* Colour name beside its swatch in the Colour column. */
+.rp-page .rp-swatch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8125rem;
+    color: #475467;
+    white-space: nowrap;
+}
+.rp-page .rp-swatch__dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+/* ── Live preview of the card being added / edited ── */
+.rp-modal .rp-preview-card {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: #fff;
+    border: 1px solid var(--ds-line, #e9ecef);
+    border-radius: 12px;
+    padding: 10px 16px;
+    min-width: 210px;
+    box-shadow: var(--ds-shadow, 0 2px 10px rgba(0, 0, 0, 0.06));
+}
+.rp-modal .rp-preview-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    font-size: 17px;
+    flex-shrink: 0;
+    border-radius: 0.75rem;
+}
+.rp-modal .rp-preview-body { display: flex; flex-direction: column; gap: 1px; }
+.rp-modal .rp-preview-label {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.3;
+    color: #6c757d;
+    max-width: 130px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.rp-modal .rp-preview-count {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+    color: #212529;
+}
+
+/* ============================================================================
+   Choices.js icon select inside the modal
+   ⚠️ No `classNames` override in the JS: Choices 10.x assigns those values
+   straight to `className`, so it only accepts single-class STRINGS — an array
+   of Bootstrap classes comes out as one comma-joined name and nothing matches.
+   Styling lives here instead.
+   ========================================================================= */
+
+.rp-modal .choices { width: 100%; margin-bottom: 0; }
+
+/* Never combine .form-select with .choices__inner — Bootstrap's chevron plus
+   Choices' own arrow renders TWO arrows. */
+.rp-modal .choices .choices__inner {
+    background-image: none;
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 38px;
+    padding: 0.375rem 2rem 0.375rem 0.75rem;
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-radius: 8px;
+    background-color: #fff;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    overflow: hidden;
+}
+.rp-modal .choices.is-focused .choices__inner,
+.rp-modal .choices.is-open .choices__inner {
+    border-color: #004384;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
+}
+.rp-modal .choices.is-invalid .choices__inner {
+    border-color: var(--bs-form-invalid-border-color, #dc3545);
+}
+.rp-modal .choices__list--dropdown {
+    z-index: 2000;
+    border-radius: 8px;
+    margin-top: 2px;
+    border: 1px solid #d7e1ef;
+    overflow: hidden;
+    max-height: 260px;
+}
+.rp-modal .choices__list--dropdown .choices__list { max-height: 210px; overflow-y: auto; }
+.rp-modal .choices__list--dropdown .choices__input {
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    margin: 0.5rem;
+    width: calc(100% - 1rem);
+}
+.rp-modal .choices__list--dropdown .choices__item--choice { padding: 0.4rem 0.75rem; }
+.rp-modal .choices__list--dropdown .choices__item--choice.is-highlighted {
+    background-color: #edf4ff;
+    color: #0d47a1;
+}
+
+.rp-modal .rp-icon-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    width: 100%;
+}
+.rp-modal .rp-icon-option .rp-icon-glyph {
+    font-size: 1.05rem;
+    color: #004384;
+    width: 1.2rem;
+    text-align: center;
+    flex: 0 0 1.2rem;
+}
+.rp-modal .rp-icon-option .rp-icon-label {
+    font-size: 0.875rem;
+    color: #1f2a37;
+}
+
+/* Spinner on the modal submit buttons. */
+.rp-modal .rp-spin { animation: rp-spin 1s linear infinite; display: inline-block; }
+@keyframes rp-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ── Print: the grid only ── */
+@media print {
+    .modern-breadcrumb-wrapper,
+    .rp-page .programme-dt-toolbar,
+    .rp-page .rp-secondary-actions,
+    .rp-page .programme-dt-footer,
+    .rp-page .programme-dt-table th:last-child,
+    .rp-page .programme-dt-table td:last-child { display: none !important; }
+}

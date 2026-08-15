@@ -248,6 +248,13 @@ body.custom-loaded {
 #centcomColumnToggleGrid .colvis-item,
 #issueMgmtColumnToggleGrid .colvis-item,
 #escalationColumnToggleGrid .colvis-item,
+#sidebarCatColumnToggleGrid .colvis-item,
+#sidebarGroupColumnToggleGrid .colvis-item,
+#sidebarMenuColumnToggleGrid .colvis-item,
+#rolesColumnToggleGrid .colvis-item,
+#rpPermColumnToggleGrid .colvis-item,
+#rpCardColumnToggleGrid .colvis-item,
+#ulColumnToggleGrid .colvis-item,
 #facultyColumnToggleGrid .colvis-item {
     cursor: pointer;
     transition: border-color 0.15s ease, background-color 0.15s ease;
@@ -266,6 +273,13 @@ body.custom-loaded {
 #centcomColumnToggleGrid .colvis-item:hover,
 #issueMgmtColumnToggleGrid .colvis-item:hover,
 #escalationColumnToggleGrid .colvis-item:hover,
+#sidebarCatColumnToggleGrid .colvis-item:hover,
+#sidebarGroupColumnToggleGrid .colvis-item:hover,
+#sidebarMenuColumnToggleGrid .colvis-item:hover,
+#rolesColumnToggleGrid .colvis-item:hover,
+#rpPermColumnToggleGrid .colvis-item:hover,
+#rpCardColumnToggleGrid .colvis-item:hover,
+#ulColumnToggleGrid .colvis-item:hover,
 #facultyColumnToggleGrid .colvis-item:hover {
     border-color: #004a93 !important;
     background-color: rgba(0, 74, 147, 0.04);
@@ -284,6 +298,13 @@ body.custom-loaded {
 #centcomColumnToggleGrid .colvis-item .form-check-input,
 #issueMgmtColumnToggleGrid .colvis-item .form-check-input,
 #escalationColumnToggleGrid .colvis-item .form-check-input,
+#sidebarCatColumnToggleGrid .colvis-item .form-check-input,
+#sidebarGroupColumnToggleGrid .colvis-item .form-check-input,
+#sidebarMenuColumnToggleGrid .colvis-item .form-check-input,
+#rolesColumnToggleGrid .colvis-item .form-check-input,
+#rpPermColumnToggleGrid .colvis-item .form-check-input,
+#rpCardColumnToggleGrid .colvis-item .form-check-input,
+#ulColumnToggleGrid .colvis-item .form-check-input,
 #facultyColumnToggleGrid .colvis-item .form-check-input {
     cursor: pointer;
     flex-shrink: 0;
