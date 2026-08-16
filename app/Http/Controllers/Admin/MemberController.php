@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\DataTables\MemberDataTable;
+use App\Http\Controllers\Concerns\ExportsBrandedGrid;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -18,6 +19,8 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Models\AppellationMaster;
 class MemberController extends Controller
 {
+    use ExportsBrandedGrid;
+
     public function index(MemberDataTable $dataTable)
     {
         return $dataTable->render('admin.member.index');
@@ -411,6 +414,118 @@ class MemberController extends Controller
             'message' => "Step $step validated.",
         ], 200);
     }
+    /**
+     * The listing's export columns - deliberately the same six the grid shows,
+     * in the same order, so a downloaded report can be reconciled against the
+     * screen it came from (docs/new-design-index-page.md section 1).
+     *
+     * One definition feeds CSV, Excel, PDF and Print; none of them may build
+     * their own column list.
+     *
+     * @return array<string, array{heading:string, class:string, value:callable}>
+     */
+    private function exportColumnDefs(): array
+    {
+        return [
+            'sno' => [
+                'heading' => 'S. No.',
+                'class' => 'col-sno',
+                'value' => fn ($row, int $index) => $index + 1,
+            ],
+            'employee_name' => [
+                'heading' => 'Employee Name',
+                'class' => 'col-name',
+                'value' => function ($row) {
+                    $appellation = $row->appellation ? ($row->appellationMaster->appettation_name ?? null) : null;
+
+                    $parts = array_filter(
+                        array_map(
+                            fn ($part) => trim((string) $part),
+                            [$appellation, $row->first_name, $row->middle_name, $row->last_name]
+                        ),
+                        fn ($part) => $part !== ''
+                    );
+
+                    return implode(' ', $parts);
+                },
+            ],
+            'employee_id' => [
+                'heading' => 'Employee ID',
+                'class' => 'col-empid',
+                'value' => fn ($row) => (string) $row->emp_id,
+            ],
+            'mobile_no' => [
+                'heading' => 'Mobile No',
+                'class' => 'col-mobile',
+                'value' => fn ($row) => (string) $row->mobile,
+            ],
+            'email' => [
+                'heading' => 'Email',
+                'class' => 'col-email',
+                'value' => fn ($row) => (string) $row->email,
+            ],
+            'status' => [
+                'heading' => 'Status',
+                'class' => 'col-status',
+                'value' => fn ($row) => ((int) $row->status === 1) ? 'Active' : 'Inactive',
+            ],
+        ];
+    }
+
+    /**
+     * Member listing -> CSV / Excel / PDF / Print, all through
+     * {@see \App\Http\Controllers\Concerns\ExportsBrandedGrid}.
+     *
+     * The four run off one query and one column list, and honour whatever the
+     * grid is showing: the search box and the Columns modal, plus a
+     * ?status_filter= when one is deep-linked. Print is a server-rendered
+     * branded view, not window.print() over the screen.
+     */
+    public function export(Request $request, string $format = 'csv')
+    {
+        $format = strtolower($format);
+        abort_unless(in_array($format, ['csv', 'excel', 'pdf', 'print'], true), 404);
+
+        $statusFilter = MemberDataTable::resolveStatusFilter();
+        $search = trim((string) $request->query('q', ''));
+
+        $query = EmployeeMaster::query()->with('appellationMaster');
+        MemberDataTable::applyListingFilters($query, $statusFilter, $search);
+        $rows = $query->orderBy('pk', 'desc')->get();
+
+        // One filter description, rendered by all four formats.
+        $filterParts = array_filter([
+            $statusFilter !== '' ? 'Status: ' . ucfirst($statusFilter) : null,
+            $search !== '' ? 'Search: ' . $search : null,
+        ]);
+
+        return $this->brandedGridResponse(
+            $format,
+            'Members',
+            'Members',
+            $rows,
+            $this->resolveExportColumns($this->exportColumnDefs(), $request),
+            $filterParts === [] ? null : implode('  |  ', $filterParts),
+            [
+                'emptyText' => 'No members to export',
+                'centeredKeys' => ['sno', 'status'],
+                'textKeys' => ['employee_id', 'mobile_no'],
+                'columnStyles' => '
+        .col-sno    { width: 7%;  text-align: center; }
+        .col-name   { width: 27%; }
+        .col-empid  { width: 15%; }
+        .col-mobile { width: 14%; }
+        .col-email  { width: 26%; }
+        .col-status { width: 11%; text-align: center; }',
+            ]
+        );
+    }
+
+    /**
+     * The legacy full-profile dump (every employee_master column). Kept alongside
+     * the grid exports above because it is a different report, not a format of
+     * the same one — dropping it would lose data the six-column exports don't carry.
+     */
     public function excelExport(Request $request)
     {
         $fileName = 'members-'.date('d-m-Y').'.xlsx';

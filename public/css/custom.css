@@ -248,6 +248,12 @@ body.custom-loaded {
 #centcomColumnToggleGrid .colvis-item,
 #issueMgmtColumnToggleGrid .colvis-item,
 #escalationColumnToggleGrid .colvis-item,
+#egmColumnToggleGrid .colvis-item,
+#dsgColumnToggleGrid .colvis-item,
+#cstColumnToggleGrid .colvis-item,
+#dpmColumnToggleGrid .colvis-item,
+#etmColumnToggleGrid .colvis-item,
+#memberColumnToggleGrid .colvis-item,
 #facultyColumnToggleGrid .colvis-item {
     cursor: pointer;
     transition: border-color 0.15s ease, background-color 0.15s ease;
@@ -266,6 +272,12 @@ body.custom-loaded {
 #centcomColumnToggleGrid .colvis-item:hover,
 #issueMgmtColumnToggleGrid .colvis-item:hover,
 #escalationColumnToggleGrid .colvis-item:hover,
+#egmColumnToggleGrid .colvis-item:hover,
+#dsgColumnToggleGrid .colvis-item:hover,
+#cstColumnToggleGrid .colvis-item:hover,
+#dpmColumnToggleGrid .colvis-item:hover,
+#etmColumnToggleGrid .colvis-item:hover,
+#memberColumnToggleGrid .colvis-item:hover,
 #facultyColumnToggleGrid .colvis-item:hover {
     border-color: #004a93 !important;
     background-color: rgba(0, 74, 147, 0.04);
@@ -284,6 +296,12 @@ body.custom-loaded {
 #centcomColumnToggleGrid .colvis-item .form-check-input,
 #issueMgmtColumnToggleGrid .colvis-item .form-check-input,
 #escalationColumnToggleGrid .colvis-item .form-check-input,
+#egmColumnToggleGrid .colvis-item .form-check-input,
+#dsgColumnToggleGrid .colvis-item .form-check-input,
+#cstColumnToggleGrid .colvis-item .form-check-input,
+#dpmColumnToggleGrid .colvis-item .form-check-input,
+#etmColumnToggleGrid .colvis-item .form-check-input,
+#memberColumnToggleGrid .colvis-item .form-check-input,
 #facultyColumnToggleGrid .colvis-item .form-check-input {
     cursor: pointer;
     flex-shrink: 0;

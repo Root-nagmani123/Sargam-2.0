@@ -402,6 +402,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('update', 'update')->name('update');
         Route::post('{id}/toggle-status', 'toggleStatus')->name('toggle-status');
         Route::get('excel-export', 'excelExport')->name('excel.export');
+        // Grid exports: one query, one column list, four formats.
+        Route::get('export/{format}', 'export')->name('export')
+            ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
         Route::delete('delete/{id}', 'destroy')->name('destroy');
     });
 

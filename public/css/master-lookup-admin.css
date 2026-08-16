@@ -1,0 +1,248 @@
+/*
+ * Lookup masters (admin) — the simple name + status grids under admin/master:
+ * Employee Type, Employee Group and Department Master.
+ *
+ * Several screens share this look, so it is a module stylesheet rather than an
+ * inline <style> copied per page (docs/new-design-index-page.md "Where the CSS
+ * lives"), named <module>-<audience>.css per §7.
+ *
+ * Roots — the prefix is per module, not per page (§7):
+ *   .mst-page    the listing (container-fluid)
+ *   .mst-modal   the Add/Edit modal, which lives OUTSIDE .mst-page in the DOM
+ *
+ * Anything both use is scoped to BOTH roots. §3d records this exact bug twice:
+ * a component written under one root silently renders unstyled in the other.
+ *
+ * Tokens are the --ds-* set from public/css/sargam-app.css (docs/design.md);
+ * the literal hexes below are the ones §3b/§3c specify by value.
+ */
+
+/* ── Status column: soft badge, display only (§3b) ─────────────────────────── */
+
+/* The theme ships the *-subtle backgrounds but not the matching
+   text-*-emphasis colours, so the label would render black. */
+.mst-page .status-pill {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.35rem 0.7rem;
+    letter-spacing: 0.01em;
+}
+
+.mst-page .status-pill.bg-success-subtle {
+    color: #146c43;
+}
+
+.mst-page .status-pill.bg-danger-subtle {
+    color: #b02a37;
+}
+
+/* ── Action column: equal-width icon-over-label stacks (§3b) ───────────────── */
+
+.mst-page .mst-act-group {
+    display: inline-flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: var(--ds-space-1, 0.25rem);
+}
+
+.mst-page .mst-act {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    /* Wide enough for the longest caption ("Deactivate") so no stack is sized by
+       its own text — every action must measure the same, or the icon row comes
+       out unevenly spaced. */
+    min-width: 62px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    border-radius: var(--ds-radius, 4px);
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.mst-page .mst-act:focus-visible {
+    outline: 0;
+    box-shadow: var(--ds-focus-ring, 0 0 0 0.2rem rgba(0, 67, 132, 0.2));
+}
+
+/* One fixed-height strip for glyphs AND the switch, so they share a baseline. */
+.mst-page .mst-act__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+}
+
+.mst-page .mst-act__icon > i {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+/* No .form-check wrapper here (§3b trap 1) — the switch skin is keyed on
+   .form-check-input.status-toggle[type="checkbox"] and applies without one. */
+.mst-page .mst-act__icon .form-check-input {
+    margin: 0;
+    float: none;
+}
+
+.mst-page .mst-act__label {
+    white-space: nowrap;
+}
+
+.mst-page .mst-act--edit {
+    color: #2563eb;
+}
+
+.mst-page .mst-act--toggle {
+    color: #475467;
+}
+
+.mst-page .mst-act:hover .mst-act__label {
+    text-decoration: underline;
+}
+
+/* ── Add / Edit modal (§3c) ────────────────────────────────────────────────── */
+
+.mst-modal .modal-content {
+    border: 0;
+    border-radius: 12px;
+}
+
+.mst-modal .mst-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ds-space-3, 1rem);
+    border-bottom: 1px solid #eaecf0;
+    padding: var(--ds-space-3, 1rem) var(--ds-space-4, 1.5rem);
+}
+
+.mst-modal .mst-modal-title {
+    margin: 0;
+    color: var(--ds-ink, #1f2937);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.mst-modal .mst-modal-body {
+    padding: var(--ds-space-4, 1.5rem);
+}
+
+/* One tinted card per record. */
+.mst-modal .mst-field-card,
+.mst-page .mst-field-card {
+    background: #eef1fc;
+    border-radius: 10px;
+    padding: 1rem;
+}
+
+.mst-modal .mst-form-label,
+.mst-page .mst-form-label {
+    display: block;
+    margin-bottom: var(--ds-space-2, 0.5rem);
+    color: #1f2937;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.mst-modal .mst-req,
+.mst-page .mst-req {
+    color: #dc2626;
+}
+
+/* Scoped to the modal root so it beats .form-control without !important. */
+.mst-modal .mst-control,
+.mst-page .mst-control {
+    width: 100%;
+    min-height: 2.625rem;
+    padding: 0.5rem 0.75rem;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    color: var(--ds-ink, #1f2937);
+    font-size: 0.875rem;
+}
+
+.mst-modal .mst-control:focus,
+.mst-page .mst-control:focus {
+    border-color: var(--ds-primary, #004384);
+    box-shadow: var(--ds-focus-ring, 0 0 0 0.2rem rgba(0, 67, 132, 0.2));
+    outline: 0;
+}
+
+.mst-modal .mst-control.is-invalid,
+.mst-page .mst-control.is-invalid {
+    border-color: var(--bs-danger, #b12923);
+}
+
+.mst-modal .mst-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ds-space-3, 1rem);
+    border-top: 0;
+    padding: 0 var(--ds-space-4, 1.5rem) var(--ds-space-4, 1.5rem);
+}
+
+.mst-modal .mst-btn-cancel,
+.mst-page .mst-btn-cancel,
+.mst-modal .mst-btn-submit,
+.mst-page .mst-btn-submit {
+    min-width: 120px;
+    min-height: 2.625rem;
+    padding: 0.5rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.mst-modal .mst-btn-cancel,
+.mst-page .mst-btn-cancel {
+    border: 1px solid #fca5a5;
+    background: #ffffff;
+    color: #dc2626;
+}
+
+.mst-modal .mst-btn-cancel:hover,
+.mst-modal .mst-btn-cancel:focus,
+.mst-page .mst-btn-cancel:hover,
+.mst-page .mst-btn-cancel:focus {
+    background: #fef2f2;
+    border-color: #f87171;
+    color: #b91c1c;
+}
+
+.mst-modal .mst-btn-submit,
+.mst-page .mst-btn-submit {
+    border: 1px solid #004384;
+    background: #004384;
+    color: #ffffff;
+}
+
+.mst-modal .mst-btn-submit:hover,
+.mst-modal .mst-btn-submit:focus,
+.mst-page .mst-btn-submit:hover,
+.mst-page .mst-btn-submit:focus {
+    background: #003468;
+    border-color: #003468;
+    color: #ffffff;
+}
+
+.mst-modal .mst-btn-submit:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.mst-modal .invalid-feedback {
+    display: block;
+    min-height: 1rem;
+    font-size: 0.8125rem;
+}
