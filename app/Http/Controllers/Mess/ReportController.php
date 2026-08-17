@@ -606,6 +606,26 @@ class ReportController extends Controller
     }
 
     /**
+     * Shared base join for Selling Voucher (kitchen_issue_items -> kitchen_issue_master) aggregations.
+     * Callers add their own where/select/groupBy on top.
+     */
+    private static function kitchenIssueItemsBaseQuery(): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('kitchen_issue_items as kii')
+            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk');
+    }
+
+    /**
+     * Shared base join for Selling Voucher Date Range (sv_date_range_report_items -> sv_date_range_reports) aggregations.
+     * Callers add their own where/select/groupBy on top.
+     */
+    private static function svDateRangeItemsBaseQuery(): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('sv_date_range_report_items as svi')
+            ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id');
+    }
+
+    /**
      * @param  array{fromDate: string, toDate: string, vendorIds: array<int>, storeIds: array<int>}  $filters
      */
     private function stockPurchaseDetailLinesBaseQuery(array $filters): \Illuminate\Database\Query\Builder
@@ -2960,8 +2980,7 @@ class ReportController extends Controller
             ->get()
             ->keyBy('item_subcategory_id');
 
-        $issuedKiAgg = DB::table('kitchen_issue_items as kii')
-            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+        $issuedKiAgg = $this->kitchenIssueItemsBaseQuery()
             ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
             ->where('kim.store_type', 'store')
             ->where('kim.issue_date', '<=', $tillDate)
@@ -2975,8 +2994,7 @@ class ReportController extends Controller
             ->get()
             ->keyBy('item_subcategory_id');
 
-        $issuedSvAgg = DB::table('sv_date_range_report_items as svi')
-            ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+        $issuedSvAgg = $this->svDateRangeItemsBaseQuery()
             ->where('svr.store_type', 'store')
             ->where('svi.issue_date', '<=', $tillDate)
             ->whereNotNull('svi.item_subcategory_id')
@@ -3160,8 +3178,7 @@ class ReportController extends Controller
             ->get()
             ->keyBy('item_subcategory_id');
 
-        $issuedKiAgg = DB::table('kitchen_issue_items as kii')
-            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+        $issuedKiAgg = self::kitchenIssueItemsBaseQuery()
             ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
             ->where('kim.store_type', 'store')
             ->where('kim.issue_date', '<=', $tillDate)
@@ -3172,8 +3189,7 @@ class ReportController extends Controller
             ->get()
             ->keyBy('item_subcategory_id');
 
-        $issuedSvAgg = DB::table('sv_date_range_report_items as svi')
-            ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+        $issuedSvAgg = self::svDateRangeItemsBaseQuery()
             ->where('svr.store_type', 'store')
             ->where('svi.issue_date', '<=', $tillDate)
             ->whereIn('svi.item_subcategory_id', $itemIds)
@@ -3537,8 +3553,7 @@ class ReportController extends Controller
             ->get()
             ->keyBy('item_subcategory_id');
 
-        $saleKiAgg = DB::table('kitchen_issue_items as kii')
-            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+        $saleKiAgg = $this->kitchenIssueItemsBaseQuery()
             ->join('mess_item_subcategories as mis_ki', 'mis_ki.id', '=', 'kii.item_subcategory_id')
             ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
             ->where('kim.store_type', 'store')
@@ -3555,8 +3570,7 @@ class ReportController extends Controller
             ->get()
             ->keyBy('item_subcategory_id');
 
-        $saleSvAgg = DB::table('sv_date_range_report_items as svi')
-            ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+        $saleSvAgg = $this->svDateRangeItemsBaseQuery()
             ->join('mess_item_subcategories as mis_sv', 'mis_sv.id', '=', 'svi.item_subcategory_id')
             ->where('svr.store_type', 'store')
             ->where('svi.issue_date', '>=', $fromDate)
