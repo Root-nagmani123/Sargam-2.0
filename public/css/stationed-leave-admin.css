@@ -1,0 +1,557 @@
+/*
+ * Stationed Leave Master (admin) — listing and its Configure / Edit form.
+ *
+ * A module stylesheet rather than the inline <style> block this page used to
+ * carry (docs/new-design-index-page.md "Where the CSS lives"), named
+ * <module>-<audience>.css per §7. Root: .stationed-leave-page.
+ *
+ * NOTE the `programme-dt-*` classes this page also uses are a different layer —
+ * shared DataTables chrome in public/css/custom.css (§7).
+ */
+
+    .stationed-leave-page .sl-filter-select {
+        width: 180px;
+        min-height: 40px;
+        height: 40px;
+        border: 1px solid #d0d5dd;
+        border-radius: 8px;
+        font-size: 0.9375rem;
+        color: #344054;
+        padding: 0.5rem 2.25rem 0.5rem 0.875rem;
+        background-position: right 0.75rem center;
+    }
+
+    .stationed-leave-page .sl-filter-select:focus {
+        border-color: #004a93;
+        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+    }
+
+    .stationed-leave-page .sl-daterange-wrap {
+        position: relative;
+    }
+
+    .stationed-leave-page .sl-daterange-input {
+        width: 215px;
+        padding-left: 2.25rem;
+        padding-right: 0.875rem;
+        cursor: pointer;
+        background-image: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .stationed-leave-page .sl-daterange-input::placeholder {
+        color: #344054;
+    }
+
+    .stationed-leave-page .sl-daterange-icon {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #667085;
+        font-size: 0.95rem;
+        pointer-events: none;
+    }
+
+    .stationed-leave-page .sl-download-btn {
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0 1.1rem;
+        font-size: 0.9375rem;
+        font-weight: 500;
+        color: #004a93;
+        border-radius: 8px;
+        background: #fff;
+    }
+
+    .stationed-leave-page .sl-download-btn:hover {
+        color: #004a93;
+        background: #fff;
+    }
+
+    .stationed-leave-page .sl-download-btn i {
+        font-size: 1rem;
+        line-height: 1;
+    }
+
+    .stationed-leave-page .sl-status-tabs {
+        display: inline-flex;
+        gap: 0.2rem;
+        padding: 0.28rem;
+        border-radius: 10px;
+        background: #f2f4f7;
+    }
+
+    .stationed-leave-page .sl-status-tab {
+        border: 0;
+        background: transparent;
+        color: #475467;
+        font-weight: 600;
+        font-size: 1rem;
+        padding: 0.6rem 1.35rem;
+        border-radius: 8px;
+    }
+
+    .stationed-leave-page .sl-status-tab.active {
+        background: #004a93;
+        color: #fff;
+    }
+
+    @media (max-width: 767.98px) {
+        .stationed-leave-page .sl-filter-select,
+        .stationed-leave-page .sl-daterange-input {
+            width: 100%;
+        }
+    }
+
+/* ── Action column: equal-width icon-over-label stacks (§3b) ───────────────
+   Replaces the icon-only buttons this page used to render. */
+
+.stationed-leave-page .programme-dt-table thead th:last-child,
+.stationed-leave-page .programme-dt-table tbody td:last-child {
+    text-align: center;
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+}
+
+.stationed-leave-page .slm-act-group {
+    display: inline-flex;
+    /* flex-start, not stretch: the stacks are a mix of <a>, <label> and <span>,
+       and stretching them to a common height starts their icon strips at
+       different tops (§3b wants one baseline). */
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.stationed-leave-page .slm-act {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    /* Wide enough for "Deactivate", so no stack is sized by its own caption. */
+    min-width: 62px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* One fixed-height strip for glyphs AND the switch, so they share a baseline. */
+.stationed-leave-page .slm-act__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+}
+
+.stationed-leave-page .slm-act__icon > i {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+/* No .form-check wrapper here (§3b trap 1) — the switch skin is keyed on the
+   input itself and still applies. */
+.stationed-leave-page .slm-act__icon .form-check-input {
+    margin: 0;
+    float: none;
+    cursor: pointer;
+}
+
+.stationed-leave-page .slm-act__label {
+    white-space: nowrap;
+}
+
+.stationed-leave-page .slm-act--edit {
+    color: #2563eb;
+}
+
+.stationed-leave-page .slm-act--toggle {
+    color: #475467;
+}
+
+.stationed-leave-page .slm-act--del {
+    color: var(--bs-danger, #b12923);
+}
+
+/* Delete is refused while the row is active — muted, not always-failing. */
+.stationed-leave-page .slm-act--del.is-disabled {
+    color: #98a2b3;
+    opacity: 0.65;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.stationed-leave-page .slm-act:not(.is-disabled):hover .slm-act__label {
+    text-decoration: underline;
+}
+
+.stationed-leave-page .slm-act:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.2);
+}
+
+/* ── Status column: soft badge, display only (§3b) ─────────────────────────
+   The theme ships the *-subtle backgrounds but not the matching
+   text-*-emphasis colours, so the label would render black. */
+.stationed-leave-page .status-pill {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.stationed-leave-page .status-pill.bg-success-subtle {
+    color: #146c43;
+}
+
+.stationed-leave-page .status-pill.bg-danger-subtle {
+    color: #b02a37;
+}
+
+/* ── Configure / Edit Stationed Leave — full-page form (§3d) ───────────────
+   Add and Edit share this page (the $isEditing flag switches the captions),
+   so it gets the section-card treatment rather than a modal: a course row, an
+   approval choice and a faculty table are more than a dialog should carry.
+   The rules below came from that page's inline <style> block. */
+    .stationed-leave-config .config-table {
+        border: 1px solid #e4e7ec;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .stationed-leave-config .config-table thead th {
+        background-color: #f2f4f7;
+        color: #667085;
+        font-weight: 600;
+        font-size: 0.8125rem;
+        border-bottom: 1px solid #e4e7ec;
+        border-top: 0;
+        padding: 0.75rem 1.25rem;
+        vertical-align: middle;
+    }
+    .stationed-leave-config .config-table tbody td {
+        padding: 0.9rem 1.25rem;
+        border-bottom: 1px solid #eef2f6;
+        color: #344054;
+        vertical-align: middle;
+    }
+    .stationed-leave-config .config-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+    .stationed-leave-config .leave-grid-label {
+        font-weight: 600;
+        color: #344054;
+        font-size: 0.9rem;
+        margin-bottom: 0.4rem;
+    }
+    .stationed-leave-config .sl-approval-radios {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        min-height: 40px;
+    }
+    .stationed-leave-config .sl-approval-radios .form-check {
+        margin: 0;
+        min-height: auto;
+        padding-left: 1.6rem;
+    }
+    .stationed-leave-config .sl-approval-radios .form-check-input {
+        width: 1.05rem;
+        height: 1.05rem;
+        margin-top: 0.15rem;
+        margin-left: -1.6rem;
+        cursor: pointer;
+    }
+    .stationed-leave-config .sl-approval-radios .form-check-input:checked {
+        background-color: #004a93;
+        border-color: #004a93;
+    }
+    .stationed-leave-config .sl-approval-radios .form-check-label {
+        font-weight: 500;
+        color: #344054;
+        cursor: pointer;
+    }
+    .stationed-leave-config .btn-add-faculty {
+        border: 1px solid #004a93;
+        color: #004a93;
+        font-weight: 600;
+        border-radius: 8px;
+        padding: 0.5rem 1.1rem;
+        background: #fff;
+    }
+    .stationed-leave-config .btn-add-faculty:hover {
+        background: #f0f6ff;
+        color: #004a93;
+    }
+    .stationed-leave-config .sl-remove-btn {
+        width: 2rem;
+        height: 2rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 6px;
+        background: #fef3f2;
+        color: #d92d20;
+        line-height: 1;
+    }
+    .stationed-leave-config .sl-remove-btn:hover {
+        background: #fee4e2;
+        color: #b42318;
+    }
+    .stationed-leave-config .sl-authority-check {
+        width: 1.15rem;
+        height: 1.15rem;
+        margin: 0;
+        float: none;
+        cursor: pointer;
+    }
+    .stationed-leave-config .sl-authority-check:checked {
+        background-color: #004a93;
+        border-color: #004a93;
+    }
+    .stationed-leave-config .sl-authority-check:focus {
+        border-color: #004a93;
+        box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
+    }
+    .stationed-leave-config .btn-cancel-outline {
+        background: #fff;
+        border: 1px solid #004a93;
+        color: #004a93;
+        font-weight: 600;
+        padding: 0.5rem 1.5rem;
+        border-radius: 8px;
+    }
+    .stationed-leave-config .btn-cancel-outline:hover {
+        background: #f0f6ff;
+        color: #004a93;
+    }
+    .stationed-leave-config .btn-apply {
+        background: #004a93;
+        border-color: #004a93;
+        color: #fff;
+        font-weight: 600;
+        padding: 0.5rem 1.5rem;
+        border-radius: 8px;
+    }
+    .stationed-leave-config .btn-apply:hover {
+        background: #003d7a;
+        border-color: #003d7a;
+        color: #fff;
+    }
+
+    #addFacultyModal .choices {
+        width: 100%;
+        margin-bottom: 0;
+    }
+    #addFacultyModal .choices[data-type*="select-one"]::after {
+        display: none;
+    }
+    #addFacultyModal .choices__list--dropdown,
+    #addFacultyModal .choices__list[aria-expanded] {
+        z-index: 1060;
+    }
+
+/* Section cards + form footer for the Configure / Edit page (§3d), matching the
+   treatment on PT Exemption so the two configuration screens read alike. */
+
+.stationed-leave-config .sl-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.stationed-leave-config .sl-section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0 0 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.stationed-leave-config .sl-section-title {
+    margin: 0;
+    color: #1f2937;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.stationed-leave-config .sl-field-label,
+.sl-modal .sl-field-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    color: #344054;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.stationed-leave-config .sl-req,
+.sl-modal .sl-req {
+    color: var(--bs-danger, #b12923);
+}
+
+.stationed-leave-config .sl-control,
+.sl-modal .sl-control {
+    width: 100%;
+    min-height: 2.625rem;
+    padding: 0.5rem 0.75rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    color: #1f2937;
+    font-size: 0.875rem;
+}
+
+.stationed-leave-config select.sl-control,
+.sl-modal select.sl-control {
+    appearance: auto;
+}
+
+.stationed-leave-config .sl-control:focus,
+.sl-modal .sl-control:focus {
+    border-color: #004384;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.2);
+    outline: 0;
+}
+
+/* A readonly field still has to read as a field, not as an error. */
+.stationed-leave-config .sl-control:disabled,
+.stationed-leave-config .sl-control[readonly] {
+    background: #f9fafb;
+    color: #475467;
+}
+
+/* Footer: equal, flush-right pair — the same treatment as the modals (§3d). */
+.stationed-leave-config .sl-form-footer,
+.sl-modal .sl-modal-footer {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    align-items: stretch;
+    gap: 1rem;
+    width: fit-content;
+    max-width: 100%;
+    margin-inline-start: auto;
+    margin-inline-end: 0;
+}
+
+.stationed-leave-config .sl-form-footer {
+    padding-bottom: 0.5rem;
+}
+
+.sl-modal .sl-modal-footer {
+    padding: 0 1.5rem 1.5rem;
+    border-top: 0;
+}
+
+.stationed-leave-config .sl-form-footer > .btn,
+.sl-modal .sl-modal-footer > .btn {
+    width: 100%;
+    white-space: nowrap;
+}
+
+.stationed-leave-config .sl-btn-cancel,
+.stationed-leave-config .sl-btn-submit,
+.sl-modal .sl-btn-cancel,
+.sl-modal .sl-btn-submit {
+    min-width: 120px;
+    min-height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.stationed-leave-config .sl-btn-cancel,
+.sl-modal .sl-btn-cancel {
+    background: #fff;
+    border: 1px solid #f2c4c0;
+    color: var(--bs-danger, #b12923);
+}
+
+.stationed-leave-config .sl-btn-cancel:hover,
+.stationed-leave-config .sl-btn-cancel:focus,
+.sl-modal .sl-btn-cancel:hover,
+.sl-modal .sl-btn-cancel:focus {
+    background: #fff5f4;
+    border-color: #e79c96;
+    color: #8f201b;
+}
+
+.stationed-leave-config .sl-btn-submit,
+.sl-modal .sl-btn-submit {
+    background: #004384;
+    border: 1px solid #004384;
+    color: #fff;
+}
+
+.stationed-leave-config .sl-btn-submit:hover:not(:disabled),
+.stationed-leave-config .sl-btn-submit:focus:not(:disabled),
+.sl-modal .sl-btn-submit:hover,
+.sl-modal .sl-btn-submit:focus {
+    background: #003468;
+    border-color: #003468;
+    color: #fff;
+}
+
+.stationed-leave-config .sl-btn-submit:disabled {
+    opacity: 0.65;
+}
+
+/* ── Add Faculty modal (§3c) ─────────────────────────────────────────────── */
+
+.sl-modal .modal-content {
+    border: 0;
+    border-radius: 12px;
+}
+
+.sl-modal .sl-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #eaecf0;
+}
+
+.sl-modal .sl-modal-title {
+    margin: 0;
+    color: #1f2937;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.sl-modal .sl-modal-body {
+    padding: 1.5rem;
+}
+
+.sl-modal .sl-field-card {
+    background: #eef1fc;
+    border-radius: 10px;
+    padding: 1rem;
+}
+
+.sl-modal select.sl-control[multiple] {
+    min-height: 12rem;
+}

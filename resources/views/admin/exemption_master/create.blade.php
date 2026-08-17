@@ -1,62 +1,17 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Configure PT Exemption')
+@section('title', ($isEditing ?? false) ? 'Edit PT Exemption' : 'Configure PT Exemption')
+
+@push('styles')
+{{-- Shared with the PT Exemption listing: same module (docs/new-design-index-page.md §7). --}}
+<link rel="stylesheet"
+    href="{{ asset('css/pt-exemption-admin.css') }}?v={{ @filemtime(public_path('css/pt-exemption-admin.css')) }}">
+@endpush
 
 @section('setup_content')
-<style>
-    .pt-exemption-config .config-table {
-        border: 1px solid #e4e7ec;
-        border-radius: 8px;
-        overflow: hidden;
-    }
-    .pt-exemption-config .config-table thead th {
-        background-color: #f2f4f7;
-        color: #667085;
-        font-weight: 600;
-        font-size: 0.8125rem;
-        border-bottom: 1px solid #e4e7ec;
-        border-top: 0;
-        padding: 0.75rem 1.25rem;
-        vertical-align: middle;
-    }
-    .pt-exemption-config .config-table tbody td {
-        padding: 1rem 1.25rem;
-        border-bottom: 1px solid #eef2f6;
-        color: #344054;
-        vertical-align: middle;
-    }
-    .pt-exemption-config .config-table tbody tr:last-child td {
-        border-bottom: 0;
-    }
-    .pt-exemption-config .days-input-group {
-        max-width: 240px;
-    }
-    .pt-exemption-config .days-input-group .form-control {
-        border-right: 0;
-    }
-    .pt-exemption-config .days-input-group .form-control:focus {
-        box-shadow: none;
-        border-color: #004a93;
-    }
-    .pt-exemption-config .days-input-group:focus-within {
-        border-radius: 0.375rem;
-        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
-    }
-    .pt-exemption-config .days-input-group .input-group-text {
-        background: #f2f4f7;
-        color: #667085;
-        border-left: 0;
-        min-width: 76px;
-        justify-content: center;
-        font-size: 0.875rem;
-    }
-    .pt-exemption-config .form-label {
-        color: #344054;
-    }
-</style>
 
 <div class="container-fluid pt-exemption-config">
-    <x-breadcrum title="Configure PT Exemption" :showBack="true" />
+    <x-breadcrum :title="($isEditing ?? false) ? 'Edit PT Exemption' : 'Configure PT Exemption'" :showBack="true" />
 
     <x-session_message />
 
@@ -87,15 +42,19 @@
             : '';
     @endphp
 
-    <div class="card border-0 shadow-sm rounded-3">
-        <div class="card-body p-3 p-md-4">
-            <form method="POST" action="{{ route('admin.pt-exemption-master.store') }}" id="exemption-config-form">
-                @csrf
+    <form method="POST" action="{{ route('admin.pt-exemption-master.store') }}" id="exemption-config-form">
+        @csrf
 
-                <div class="row g-4 mb-4">
+        {{-- Course & schedule (§3d) --}}
+        <div class="pem-card">
+            <div class="pem-section">
+                <h2 class="pem-section-title">Course &amp; Schedule</h2>
+            </div>
+
+            <div class="row g-4">
                     <div class="col-12 col-md-3">
-                        <label for="course_master_pk" class="form-label fw-semibold">Select Course <span class="text-danger">*</span></label>
-                        <select id="course_master_pk" name="course_master_pk" class="form-select" required
+                        <label for="course_master_pk" class="pem-field-label">Select Course <span class="pem-req">*</span></label>
+                        <select id="course_master_pk" name="course_master_pk" class="pem-control" required
                             @if(($isEditing ?? false) || $courses->isEmpty()) disabled @endif>
                             <option value="">Select Course</option>
                             @foreach ($courses as $course)
@@ -113,15 +72,15 @@
                         @endif
                     </div>
                     <div class="col-12 col-md-3">
-                        <label for="effective_from" class="form-label fw-semibold">Effective From <span class="text-danger">*</span></label>
-                        <input type="date" id="effective_from" name="effective_from" class="form-control" required
+                        <label for="effective_from" class="pem-field-label">Effective From <span class="pem-req">*</span></label>
+                        <input type="date" id="effective_from" name="effective_from" class="pem-control" required
                             placeholder="Select the date"
                             value="{{ old('effective_from', $effectiveFrom ? \Carbon\Carbon::parse($effectiveFrom)->format('Y-m-d') : '') }}"
                             @if($isEditing ?? false) readonly @endif>
                     </div>
                     <div class="col-12 col-md-3">
-                        <label for="apply_cutoff_time" class="form-label fw-semibold">PT Start Time <span class="text-danger">*</span></label>
-                        <input type="time" id="apply_cutoff_time" name="apply_cutoff_time" class="form-control" required
+                        <label for="apply_cutoff_time" class="pem-field-label">PT Start Time <span class="pem-req">*</span></label>
+                        <input type="time" id="apply_cutoff_time" name="apply_cutoff_time" class="pem-control" required
                             placeholder="Select the time"
                             value="{{ $cutoffValue }}"
                             readonly>
@@ -130,17 +89,20 @@
                         </small>
                     </div>
                     <div class="col-12 col-md-3">
-                        <label for="pt_end_time_display" class="form-label fw-semibold">PT End Time</label>
-                        <input type="time" id="pt_end_time_display" class="form-control"
+                        <label for="pt_end_time_display" class="pem-field-label">PT End Time</label>
+                        <input type="time" id="pt_end_time_display" class="pem-control"
                             value="{{ $ptEndTimeValue }}"
                             readonly>
                     </div>
                 </div>
+            </div>
 
-                <h3 class="h6 fw-semibold mb-2">PT Exemption Count (Per Academic Year)</h3>
-                <hr class="mt-0 mb-3">
+        <div class="pem-card">
+            <div class="pem-section">
+                <h2 class="pem-section-title">PT Exemption Count (Per Academic Year)</h2>
+            </div>
 
-                <div class="table-responsive mb-4">
+                <div class="table-responsive">
                     <table class="table config-table align-middle mb-0">
                         <thead>
                             <tr>
@@ -177,18 +139,17 @@
                     </table>
                 </div>
 
-                <div class="d-flex flex-wrap justify-content-end gap-2">
-                    <a href="{{ route('admin.pt-exemption-master.index') }}" class="btn btn-outline-primary px-4 rounded-1 fw-semibold">
-                        Cancel
-                    </a>
-                    <button type="submit" class="btn btn-primary px-4 rounded-1 fw-semibold"
-                        @if(!($isEditing ?? false) && $courses->isEmpty()) disabled @endif>
-                        Save
-                    </button>
-                </div>
-            </form>
         </div>
-    </div>
+
+        {{-- Footer: an equal, flush-right pair, same treatment as the modals (§3d). --}}
+        <div class="pem-form-footer">
+            <a href="{{ route('admin.pt-exemption-master.index') }}" class="btn pem-btn-cancel">Cancel</a>
+            <button type="submit" class="btn pem-btn-submit"
+                @if(!($isEditing ?? false) && $courses->isEmpty()) disabled @endif>
+                {{ ($isEditing ?? false) ? 'Update PT Exemption' : 'Save PT Exemption' }}
+            </button>
+        </div>
+    </form>
 </div>
 @endsection
 

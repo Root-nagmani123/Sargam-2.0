@@ -354,36 +354,63 @@ class StationedLeaveMasterController extends Controller
             })
             ->addColumn('approval_required_display', fn ($row) => (int) $row->is_faculty_approval_required === 1 ? 'Yes' : 'No')
             ->addColumn('faculty_count_display', fn ($row) => (int) ($row->approvers_count ?? 0))
+            // Status: soft badge, display only (docs/new-design-index-page.md
+            // §3b). data-order lets a client-side sort order by state.
             ->addColumn('status', function ($row) {
-                if ((int) $row->active_inactive === 1) {
-                    return '<span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>';
-                }
+                $isActive = (int) $row->active_inactive === 1;
 
-                return '<span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>';
+                return '<span class="status-pill badge rounded-1 '
+                    . ($isActive ? 'bg-success-subtle' : 'bg-danger-subtle') . '"'
+                    . ' data-order="' . (int) $isActive . '">'
+                    . ($isActive ? 'Active' : 'Inactive')
+                    . '</span>';
             })
+
+            // Action: Edit · the status switch · Delete, equal stacks of an icon
+            // over a caption (§3b).
             ->addColumn('action', function ($row) {
+                $isActive = (int) $row->active_inactive === 1;
+                // The caption names the ACTION, not the state: the state is
+                // already shown by the badge one column over.
+                $toggleLabel = $isActive ? 'Deactivate' : 'Activate';
+
                 $url = route('admin.stationed-leave-master.create', [
                     'course_master_pk' => $row->course_master_pk,
                     'effective_from' => $row->effective_from?->format('Y-m-d'),
                 ]);
 
-                $checked = (int) $row->active_inactive === 1 ? 'checked' : '';
+                $editBtn = '<a href="' . e($url) . '" class="slm-act slm-act--edit"'
+                    . ' title="Edit" aria-label="Edit stationed leave configuration">'
+                    . '<span class="slm-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>'
+                    . '<span class="slm-act__label">Edit</span></a>';
 
-                $editBtn = '<a href="' . $url . '" class="programme-action-btn" aria-label="Edit" title="Edit">'
-                    . '<i class="bi bi-pencil" aria-hidden="true"></i></a>';
+                // No .form-check/.form-switch wrapper (§3b trap 1): custom.css
+                // pulls a .form-check-input inside one left by -2.375rem, which is
+                // right for switch-beside-label and wrong for this layout.
+                $toggle = '<label class="slm-act slm-act--toggle" title="' . $toggleLabel . '">'
+                    . '<span class="slm-act__icon">'
+                    . '<input class="form-check-input plain-status-toggle stationed-leave-status-toggle"'
+                    . ' type="checkbox" role="switch" data-id="' . (int) $row->pk . '" ' . ($isActive ? 'checked' : '')
+                    . ' aria-label="' . $toggleLabel . ' stationed leave configuration">'
+                    . '</span>'
+                    . '<span class="slm-act__label">' . $toggleLabel . '</span></label>';
 
-                $toggle = '<div class="form-check form-switch programme-action-switch mb-0">'
-                    . '<input class="form-check-input plain-status-toggle stationed-leave-status-toggle" type="checkbox" role="switch" '
-                    . 'data-id="' . $row->pk . '" ' . $checked . '></div>';
+                // destroy() only accepts an inactive row, so an active one gets a
+                // muted, inert control that says why rather than one that fails.
+                // It used to be omitted entirely, which changed the column's shape
+                // from row to row.
+                $deleteBtn = $isActive
+                    ? '<span class="slm-act slm-act--del is-disabled" aria-disabled="true"'
+                        . ' title="Deactivate this configuration before deleting">'
+                        . '<span class="slm-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
+                        . '<span class="slm-act__label">Delete</span></span>'
+                    : '<a href="javascript:void(0)" class="slm-act slm-act--del stationed-leave-delete-btn"'
+                        . ' data-id="' . (int) $row->pk . '" title="Delete"'
+                        . ' aria-label="Delete stationed leave configuration">'
+                        . '<span class="slm-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
+                        . '<span class="slm-act__label">Delete</span></a>';
 
-                $deleteBtn = '';
-                if ((int) $row->active_inactive === 0) {
-                    $deleteBtn = '<a href="javascript:void(0)" class="programme-action-btn programme-action-btn--danger stationed-leave-delete-btn" '
-                        . 'data-id="' . $row->pk . '" aria-label="Delete" title="Delete">'
-                        . '<i class="bi bi-trash3" aria-hidden="true"></i></a>';
-                }
-
-                return '<div class="d-inline-flex align-items-center justify-content-center programme-action-group" role="group" aria-label="Row actions">'
+                return '<div class="slm-act-group" role="group" aria-label="Row actions">'
                     . $editBtn . $toggle . $deleteBtn . '</div>';
             })
             ->rawColumns(['status', 'action'])

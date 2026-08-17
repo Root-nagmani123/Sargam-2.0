@@ -1,151 +1,15 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Configure Stationed Leave')
+@section('title', ($isEditing ?? false) ? 'Edit Stationed Leave' : 'Configure Stationed Leave')
 
 @push('styles')
+{{-- Shared with the Stationed Leave listing: same module (docs/new-design-index-page.md §7). --}}
+<link rel="stylesheet"
+    href="{{ asset('css/stationed-leave-admin.css') }}?v={{ @filemtime(public_path('css/stationed-leave-admin.css')) }}">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 @endpush
 
 @section('setup_content')
-<style>
-    .stationed-leave-config .config-table {
-        border: 1px solid #e4e7ec;
-        border-radius: 8px;
-        overflow: hidden;
-    }
-    .stationed-leave-config .config-table thead th {
-        background-color: #f2f4f7;
-        color: #667085;
-        font-weight: 600;
-        font-size: 0.8125rem;
-        border-bottom: 1px solid #e4e7ec;
-        border-top: 0;
-        padding: 0.75rem 1.25rem;
-        vertical-align: middle;
-    }
-    .stationed-leave-config .config-table tbody td {
-        padding: 0.9rem 1.25rem;
-        border-bottom: 1px solid #eef2f6;
-        color: #344054;
-        vertical-align: middle;
-    }
-    .stationed-leave-config .config-table tbody tr:last-child td {
-        border-bottom: 0;
-    }
-    .stationed-leave-config .leave-grid-label {
-        font-weight: 600;
-        color: #344054;
-        font-size: 0.9rem;
-        margin-bottom: 0.4rem;
-    }
-    .stationed-leave-config .sl-approval-radios {
-        display: flex;
-        align-items: center;
-        gap: 2rem;
-        min-height: 40px;
-    }
-    .stationed-leave-config .sl-approval-radios .form-check {
-        margin: 0;
-        min-height: auto;
-        padding-left: 1.6rem;
-    }
-    .stationed-leave-config .sl-approval-radios .form-check-input {
-        width: 1.05rem;
-        height: 1.05rem;
-        margin-top: 0.15rem;
-        margin-left: -1.6rem;
-        cursor: pointer;
-    }
-    .stationed-leave-config .sl-approval-radios .form-check-input:checked {
-        background-color: #004a93;
-        border-color: #004a93;
-    }
-    .stationed-leave-config .sl-approval-radios .form-check-label {
-        font-weight: 500;
-        color: #344054;
-        cursor: pointer;
-    }
-    .stationed-leave-config .btn-add-faculty {
-        border: 1px solid #004a93;
-        color: #004a93;
-        font-weight: 600;
-        border-radius: 8px;
-        padding: 0.5rem 1.1rem;
-        background: #fff;
-    }
-    .stationed-leave-config .btn-add-faculty:hover {
-        background: #f0f6ff;
-        color: #004a93;
-    }
-    .stationed-leave-config .sl-remove-btn {
-        width: 2rem;
-        height: 2rem;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border: 0;
-        border-radius: 6px;
-        background: #fef3f2;
-        color: #d92d20;
-        line-height: 1;
-    }
-    .stationed-leave-config .sl-remove-btn:hover {
-        background: #fee4e2;
-        color: #b42318;
-    }
-    .stationed-leave-config .sl-authority-check {
-        width: 1.15rem;
-        height: 1.15rem;
-        margin: 0;
-        float: none;
-        cursor: pointer;
-    }
-    .stationed-leave-config .sl-authority-check:checked {
-        background-color: #004a93;
-        border-color: #004a93;
-    }
-    .stationed-leave-config .sl-authority-check:focus {
-        border-color: #004a93;
-        box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
-    }
-    .stationed-leave-config .btn-cancel-outline {
-        background: #fff;
-        border: 1px solid #004a93;
-        color: #004a93;
-        font-weight: 600;
-        padding: 0.5rem 1.5rem;
-        border-radius: 8px;
-    }
-    .stationed-leave-config .btn-cancel-outline:hover {
-        background: #f0f6ff;
-        color: #004a93;
-    }
-    .stationed-leave-config .btn-apply {
-        background: #004a93;
-        border-color: #004a93;
-        color: #fff;
-        font-weight: 600;
-        padding: 0.5rem 1.5rem;
-        border-radius: 8px;
-    }
-    .stationed-leave-config .btn-apply:hover {
-        background: #003d7a;
-        border-color: #003d7a;
-        color: #fff;
-    }
-
-    #addFacultyModal .choices {
-        width: 100%;
-        margin-bottom: 0;
-    }
-    #addFacultyModal .choices[data-type*="select-one"]::after {
-        display: none;
-    }
-    #addFacultyModal .choices__list--dropdown,
-    #addFacultyModal .choices__list[aria-expanded] {
-        z-index: 1060;
-    }
-</style>
 
 @php
     $approvalRequired = old('is_faculty_approval_required', $config ? (int) $config->is_faculty_approval_required : 1);
@@ -186,7 +50,7 @@
 @endphp
 
 <div class="container-fluid stationed-leave-config">
-    <x-breadcrum title="Configure Stationed Leave" :showBack="true" />
+    <x-breadcrum :title="($isEditing ?? false) ? 'Edit Stationed Leave' : 'Configure Stationed Leave'" :showBack="true" />
 
     <x-session_message />
 
@@ -204,15 +68,19 @@
         </div>
     @endif
 
-    <div class="card border-0 shadow-sm rounded-3">
-        <div class="card-body p-3 p-md-4">
-            <form method="POST" action="{{ route('admin.stationed-leave-master.store') }}" id="stationed-leave-form">
-                @csrf
+    <form method="POST" action="{{ route('admin.stationed-leave-master.store') }}" id="stationed-leave-form">
+        @csrf
 
-                <div class="row g-4 mb-4">
+        {{-- Course & schedule (§3d) --}}
+        <div class="sl-card">
+            <div class="sl-section">
+                <h2 class="sl-section-title">Course &amp; Schedule</h2>
+            </div>
+
+                <div class="row g-4">
                     <div class="col-12 col-md-3">
-                        <label for="course_master_pk" class="leave-grid-label d-block">Select Course <span class="text-danger">*</span></label>
-                        <select id="course_master_pk" name="course_master_pk" class="form-select" required
+                        <label for="course_master_pk" class="sl-field-label">Select Course <span class="sl-req">*</span></label>
+                        <select id="course_master_pk" name="course_master_pk" class="sl-control" required
                             @if(($isEditing ?? false) || $courses->isEmpty()) disabled @endif>
                             <option value="">Select Course</option>
                             @foreach ($courses as $course)
@@ -233,28 +101,35 @@
                         @enderror
                     </div>
                     <div class="col-12 col-md-3">
-                        <label for="effective_from" class="leave-grid-label d-block">Effective From <span class="text-danger">*</span></label>
-                        <input type="date" id="effective_from" name="effective_from" class="form-control" required
+                        <label for="effective_from" class="sl-field-label">Effective From <span class="sl-req">*</span></label>
+                        <input type="date" id="effective_from" name="effective_from" class="sl-control" required
                             placeholder="Select the date"
                             value="{{ old('effective_from', $effectiveFrom ? \Carbon\Carbon::parse($effectiveFrom)->format('Y-m-d') : '') }}"
                             @if($isEditing ?? false) readonly @endif>
                     </div>
                     <div class="col-12 col-md-3">
-                        <label for="apply_cutoff_time" class="leave-grid-label d-block">PT Start Time</label>
-                        <input type="time" id="apply_cutoff_time" name="apply_cutoff_time" class="form-control"
+                        <label for="apply_cutoff_time" class="sl-field-label">PT Start Time</label>
+                        <input type="time" id="apply_cutoff_time" name="apply_cutoff_time" class="sl-control"
                             placeholder="Select the time"
                             value="{{ $cutoffValue }}">
                     </div>
                     <div class="col-12 col-md-3">
-                        <label for="pt_end_time_display" class="leave-grid-label d-block">PT End Time</label>
-                        <input type="time" id="pt_end_time_display" class="form-control"
+                        <label for="pt_end_time_display" class="sl-field-label">PT End Time</label>
+                        <input type="time" id="pt_end_time_display" class="sl-control"
                             value="{{ $ptEndTimeValue }}"
                             readonly>
                     </div>
-                </div>
 
-                <div class="mb-4">
-                    <label class="leave-grid-label d-block">Approval <span class="text-danger">*</span></label>
+            </div>
+        </div>
+
+        <div class="sl-card">
+            <div class="sl-section">
+                <h2 class="sl-section-title">Approval</h2>
+            </div>
+
+                <div class="mb-3">
+                    <label class="sl-field-label">Approval required <span class="sl-req">*</span></label>
                     <div class="sl-approval-radios">
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="approval_required_choice"
@@ -272,17 +147,19 @@
                         {{ (int) $approvalRequired === 0 ? 'disabled' : '' }}>
                 </div>
 
-                <div id="faculty-approval-section">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-                        <h3 class="h6 fw-semibold mb-0">Faculty Approval List</h3>
+                </div>
+
+                <div id="faculty-approval-section" class="sl-card">
+                    <div class="sl-section">
+                        <h2 class="sl-section-title">Faculty Approval List</h2>
                         <button type="button" class="btn btn-add-faculty d-inline-flex align-items-center gap-2"
                             data-bs-toggle="modal" data-bs-target="#addFacultyModal">
-                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">person_add</i>
-                            Add Faculty
+                            <i class="bi bi-person-plus" aria-hidden="true"></i>
+                            <span>Add Faculty</span>
                         </button>
                     </div>
 
-                    <div class="table-responsive mb-4">
+                    <div class="table-responsive">
                         <table class="table config-table align-middle mb-0" id="faculty-approval-table">
                             <thead>
                                 <tr>
@@ -312,7 +189,7 @@
                                         </td>
                                         <td class="text-end">
                                             <button type="button" class="sl-remove-btn remove-faculty-row" title="Remove" aria-label="Remove">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">remove</i>
+                                                <i class="bi bi-x-lg" aria-hidden="true"></i>
                                             </button>
                                         </td>
                                     </tr>
@@ -326,26 +203,29 @@
                     </div>
                 </div>
 
-                <div class="d-flex flex-wrap justify-content-end gap-2">
-                    <a href="{{ route('admin.stationed-leave-master.index') }}" class="btn btn-cancel-outline">Cancel</a>
-                    <button type="submit" class="btn btn-apply"
-                        @if(!($isEditing ?? false) && $courses->isEmpty()) disabled @endif>Save</button>
-                </div>
-            </form>
+
+        {{-- Footer: an equal, flush-right pair, same treatment as the modals (§3d). --}}
+        <div class="sl-form-footer">
+            <a href="{{ route('admin.stationed-leave-master.index') }}" class="btn sl-btn-cancel">Cancel</a>
+            <button type="submit" class="btn sl-btn-submit"
+                @if(!($isEditing ?? false) && $courses->isEmpty()) disabled @endif>
+                {{ ($isEditing ?? false) ? 'Update Stationed Leave' : 'Save Stationed Leave' }}
+            </button>
         </div>
-    </div>
+    </form>
 </div>
 
-<div class="modal fade" id="addFacultyModal" tabindex="-1" aria-labelledby="addFacultyModalLabel" aria-hidden="true">
+<div class="modal fade sl-modal" id="addFacultyModal" tabindex="-1" aria-labelledby="addFacultyModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-3">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-semibold" id="addFacultyModalLabel">Add Faculty</h5>
+        <div class="modal-content shadow-lg">
+            <div class="sl-modal-header">
+                <h5 class="sl-modal-title" id="addFacultyModalLabel">Add Faculty</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <label for="faculty_picker" class="form-label">Select Faculty <span class="text-muted small">(you can select multiple)</span></label>
-                <select id="faculty_picker" class="form-select" multiple>
+            <div class="sl-modal-body">
+                <div class="sl-field-card">
+                <label for="faculty_picker" class="sl-field-label">Select Faculty <span class="text-muted small fw-normal">(you can select multiple)</span></label>
+                <select id="faculty_picker" class="sl-control" multiple>
                     @foreach ($faculties as $faculty)
                         <option value="{{ $faculty['pk'] }}"
                             data-name="{{ $faculty['name'] }}"
@@ -355,10 +235,11 @@
                         </option>
                     @endforeach
                 </select>
+                </div>
             </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="confirmAddFaculty">Add</button>
+            <div class="sl-modal-footer">
+                <button type="button" class="btn sl-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn sl-btn-submit" id="confirmAddFaculty">Add Faculty</button>
             </div>
         </div>
     </div>

@@ -5,106 +5,13 @@
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-<style>
-    .stationed-leave-page .sl-filter-select {
-        width: 180px;
-        min-height: 40px;
-        height: 40px;
-        border: 1px solid #d0d5dd;
-        border-radius: 8px;
-        font-size: 0.9375rem;
-        color: #344054;
-        padding: 0.5rem 2.25rem 0.5rem 0.875rem;
-        background-position: right 0.75rem center;
-    }
+@endpush
 
-    .stationed-leave-page .sl-filter-select:focus {
-        border-color: #004a93;
-        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
-    }
-
-    .stationed-leave-page .sl-daterange-wrap {
-        position: relative;
-    }
-
-    .stationed-leave-page .sl-daterange-input {
-        width: 215px;
-        padding-left: 2.25rem;
-        padding-right: 0.875rem;
-        cursor: pointer;
-        background-image: none;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .stationed-leave-page .sl-daterange-input::placeholder {
-        color: #344054;
-    }
-
-    .stationed-leave-page .sl-daterange-icon {
-        position: absolute;
-        left: 0.75rem;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #667085;
-        font-size: 0.95rem;
-        pointer-events: none;
-    }
-
-    .stationed-leave-page .sl-download-btn {
-        height: 40px;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0 1.1rem;
-        font-size: 0.9375rem;
-        font-weight: 500;
-        color: #004a93;
-        border-radius: 8px;
-        background: #fff;
-    }
-
-    .stationed-leave-page .sl-download-btn:hover {
-        color: #004a93;
-        background: #fff;
-    }
-
-    .stationed-leave-page .sl-download-btn i {
-        font-size: 1rem;
-        line-height: 1;
-    }
-
-    .stationed-leave-page .sl-status-tabs {
-        display: inline-flex;
-        gap: 0.2rem;
-        padding: 0.28rem;
-        border-radius: 10px;
-        background: #f2f4f7;
-    }
-
-    .stationed-leave-page .sl-status-tab {
-        border: 0;
-        background: transparent;
-        color: #475467;
-        font-weight: 600;
-        font-size: 1rem;
-        padding: 0.6rem 1.35rem;
-        border-radius: 8px;
-    }
-
-    .stationed-leave-page .sl-status-tab.active {
-        background: #004a93;
-        color: #fff;
-    }
-
-    @media (max-width: 767.98px) {
-        .stationed-leave-page .sl-filter-select,
-        .stationed-leave-page .sl-daterange-input {
-            width: 100%;
-        }
-    }
-</style>
+@push('styles')
+{{-- Module stylesheet (docs/new-design-index-page.md §7) — this page used to
+     carry the same rules in an inline <style> block. --}}
+<link rel="stylesheet"
+    href="{{ asset('css/stationed-leave-admin.css') }}?v={{ @filemtime(public_path('css/stationed-leave-admin.css')) }}">
 @endpush
 
 @section('setup_content')
@@ -285,6 +192,9 @@ $(function () {
         processing: true,
         serverSide: true,
         searching: true,
+        // ‹ 1 2 3 › — datatable-global-ui.js defaults every table to
+        // full_numbers (First/Last), which the shared footer does not use (§4).
+        pagingType: 'simple_numbers',
         order: [[0, 'desc']],
         ajax: {
             url: "{{ route('admin.stationed-leave-master.index') }}",
