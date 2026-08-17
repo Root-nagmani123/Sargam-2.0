@@ -37,64 +37,67 @@ class MemoConclusionMasterDataTable extends DataTable
             }
         }, true)
 
+        // Action: Edit · the status switch · Delete, three equal stacks of an
+        // icon over a caption (docs/new-design-index-page.md §3b).
         ->addColumn('actions', function ($row) {
-
+            $isActive  = (int) $row->active_inactive === 1;
             $deleteUrl = route('master.memo.conclusion.master.delete', $row->pk);
-            $isActive  = ($row->active_inactive == 1);
+            // The caption names the ACTION, not the state: the state is already
+            // shown by the badge one column over.
+            $toggleLabel = $isActive ? 'Deactivate' : 'Activate';
 
-            /* 🔹 DELETE BUTTON LOGIC */
-            if ($isActive) {
-                $deleteButton = '
-                    <button type="button"
-                        class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
-                        disabled
-                        title="Cannot delete active memo conclusion">
-                        <span class="material-icons material-symbols-rounded" style="font-size:18px;">delete</span>
-                        <span class="d-none d-md-inline">Delete</span>
-                    </button>';
-            } else {
-                $deleteButton = '
-                    <button type="button"
-                        class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 deleteBtn"
-                        data-url="' . $deleteUrl . '"
-                        data-id="' . $row->pk . '">
-                        <span class="material-icons material-symbols-rounded" style="font-size:18px;">delete</span>
-                        <span class="d-none d-md-inline">Delete</span>
-                    </button>';
-            }
+            $edit = '<button type="button" class="mtm-act mtm-act--edit editshowConclusionAlert"'
+                . ' data-pk="' . (int) $row->pk . '"'
+                . ' data-discussion_name="' . e($row->discussion_name) . '"'
+                . ' data-pt_discusion="' . e($row->pt_discusion) . '"'
+                . ' data-active_inactive="' . (int) $row->active_inactive . '"'
+                . ' title="Edit" aria-label="Edit memo conclusion">'
+                . '<span class="mtm-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>'
+                . '<span class="mtm-act__label">Edit</span></button>';
 
-            return '
-                <div class="d-inline-flex align-items-center gap-2" role="group">
+            // No .form-check/.form-switch wrapper (§3b trap 1): custom.css pulls
+            // a .form-check-input inside one left by -2.375rem, which is right
+            // for switch-beside-label and wrong for this layout. custom.js binds
+            // .status-toggle globally off these data-* attributes.
+            $toggle = '<label class="mtm-act mtm-act--toggle" title="' . $toggleLabel . '">'
+                . '<span class="mtm-act__icon">'
+                . '<input class="form-check-input status-toggle" type="checkbox" role="switch"'
+                . ' data-table="memo_conclusion_master" data-column="active_inactive"'
+                . ' data-id="' . (int) $row->pk . '" ' . ($isActive ? 'checked' : '')
+                . ' aria-label="' . $toggleLabel . ' memo conclusion">'
+                . '</span>'
+                . '<span class="mtm-act__label">' . $toggleLabel . '</span></label>';
 
-                    <!-- Edit -->
-                    <a href="javascript:void(0)"
-                        class="editshowConclusionAlert btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
-                        data-pk="' . $row->pk . '"
-                        data-discussion_name="' . e($row->discussion_name) . '"
-                        data-pt_discusion="' . e($row->pt_discusion) . '"
-                        data-active_inactive="' . $row->active_inactive . '">
-                        <span class="material-icons material-symbols-rounded" style="font-size:18px;">edit</span>
-                        <span class="d-none d-md-inline">Edit</span>
-                    </a>
+            // Mirror destroy()'s own refusal: an active conclusion cannot be
+            // deleted, so the control is muted and inert rather than
+            // red-and-always-failing.
+            $delete = $isActive
+                ? '<span class="mtm-act mtm-act--del is-disabled" aria-disabled="true"'
+                    . ' title="Deactivate this memo conclusion before deleting">'
+                    . '<span class="mtm-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
+                    . '<span class="mtm-act__label">Delete</span></span>'
+                : '<button type="button" class="mtm-act mtm-act--del deleteBtn"'
+                    . ' data-url="' . e($deleteUrl) . '" data-id="' . (int) $row->pk . '"'
+                    . ' title="Delete" aria-label="Delete memo conclusion">'
+                    . '<span class="mtm-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
+                    . '<span class="mtm-act__label">Delete</span></button>';
 
-                    <!-- Delete -->
-                    ' . $deleteButton . '
-
-                </div>';
+            return '<div class="mtm-act-group" role="group" aria-label="Row actions">'
+                . $edit . $toggle . $delete
+                . '</div>';
         })
 
+        // Status: soft badge, display only (§3b). data-order lets a client-side
+        // sort order by state.
         ->addColumn('status', function ($row) {
-            return '
-                <div class="form-check form-switch d-inline-block">
-                    <input class="form-check-input status-toggle"
-                        type="checkbox"
-                        data-table="memo_conclusion_master"
-                        data-column="active_inactive"
-                        data-id="' . $row->pk . '"
-                        ' . ($row->active_inactive == 1 ? 'checked' : '') . '>
-                </div>';
-        })
+            $isActive = (int) $row->active_inactive === 1;
 
+            return '<span class="status-pill badge rounded-1 '
+                . ($isActive ? 'bg-success-subtle' : 'bg-danger-subtle') . '"'
+                . ' data-order="' . (int) $isActive . '">'
+                . ($isActive ? 'Active' : 'Inactive')
+                . '</span>';
+        })
         ->rawColumns(['discussion_name', 'pt_discusion', 'actions', 'status']);
 }
 
@@ -118,6 +121,16 @@ class MemoConclusionMasterDataTable extends DataTable
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
+                // ‹ 1 2 3 › — First/Last are not part of the shared footer (§4).
+                'pagingType' => 'simple_numbers',
+                'language' => [
+                    // The same glyphs vendor/pagination/custom.blade.php uses,
+                    // which is what makes the two footer variants match (§4).
+                    'paginate' => [
+                        'previous' => '&lsaquo;',
+                        'next' => '&rsaquo;',
+                    ],
+                ],
             ]);
     }
 

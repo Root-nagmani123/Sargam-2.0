@@ -33,11 +33,15 @@ class MemoConclusionMasterController extends Controller
             $validated = $request->validate([
                 'discussion_name' => 'required|string|max:100',
                 'pt_discusion'    => 'nullable|string',
-                'active_inactive' => 'required',
+                'active_inactive' => 'required|in:1,2',
             ]);
 
-            // 2️⃣ Ensure active_inactive is stored as integer 0 or 1
-            $validated['active_inactive'] = $validated['active_inactive'] ? 1 : 0;
+            // 2️⃣ Ensure active_inactive is stored as integer 0 or 1.
+            //    The form posts 1 = Active, 2 = Inactive. The previous cast was
+            //    `$value ? 1 : 0`, and "2" is truthy — so picking Inactive saved
+            //    the record as Active. Compare against the Active value instead,
+            //    which also matches the 1/0 the grid's status switch writes.
+            $validated['active_inactive'] = (int) $validated['active_inactive'] === 1 ? 1 : 0;
 
             // 3️⃣ Update or Create
             if ($request->filled('id')) {

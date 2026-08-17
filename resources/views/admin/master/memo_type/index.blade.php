@@ -2,333 +2,298 @@
 
 @section('title', 'Memo Type Master')
 
-@section('setup_content')
-<div class="container-fluid">
-    <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card" >
-            <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
-                            <h4>Memo Type Master</h4>
-                        </div>
-                        <div class="col-6">
-                            <div class="d-flex justify-content-end align-items-center gap-2">
-                                <!-- Add Group Mapping -->
-                                <!-- <a href="javascript:void(0);" id="showMemoAlert"
-                                    class="btn btn-primary d-flex align-items-center">
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 24px;">add</i>
-                                    Add Memo Type
-                                </a> -->
-                                <button id="showMemoAlert" class="btn btn-primary">
-                                    Add Memo Type
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <hr>
+@push('styles')
+{{-- Module stylesheet (docs/new-design-index-page.md §7). --}}
+<link rel="stylesheet"
+    href="{{ asset('css/memo-masters-admin.css') }}?v={{ @filemtime(public_path('css/memo-masters-admin.css')) }}">
+@endpush
 
-                    {!! $dataTable->table(['class' => 'table']) !!}
+@section('setup_content')
+<div class="container-fluid mtm-master-page">
+    <x-breadcrum title="Memo Type Master" :showBack="false">
+        <button type="button" id="showMemoAlert"
+            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-semibold shadow-sm">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <span>Add Memo Type</span>
+        </button>
+    </x-breadcrum>
+
+    <x-session_message />
+
+    <div class="datatables">
+        <div class="card mtm-dt-card border-0 shadow-sm rounded-1 overflow-hidden">
+            <div class="card-body p-3 p-md-4">
+
+                {{-- Toolbar (§2). Both slots are filled by datatable-global-ui.js:
+                     it moves the DataTables search box into .programme-dt-search and
+                     the pager + count into .programme-dt-footer below. --}}
+                <div class="programme-dt-toolbar d-flex flex-wrap align-items-center justify-content-end gap-2 mb-4">
+                    <button type="button" class="btn programme-dt-btn-columns" id="mtmColumnsToggle"
+                        data-bs-toggle="modal" data-bs-target="#mtmColumnsModal"
+                        title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div class="programme-dt-search" data-dt-search-for="memotypemaster-table"></div>
                 </div>
+
+                <div class="programme-dt-panel">
+                    <div class="table-responsive">
+                        {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
+                    </div>
+                </div>
+
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                    data-dt-footer-for="memotypemaster-table"></div>
             </div>
         </div>
-        <!-- end Zero Configuration -->
     </div>
 </div>
 
+{{-- Add / Edit share one modal: they look ALIKE and differ only in the title,
+     the submit caption and whether a document already exists (§3c). --}}
+<div class="modal fade mtm-modal" id="mtmFormModal" tabindex="-1" aria-labelledby="mtmFormModalLabel"
+    aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <form id="mtmForm" enctype="multipart/form-data" novalidate>
+                <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="pk" id="mtm_pk" value="">
+
+                <div class="mtm-modal-header">
+                    <h5 class="mtm-modal-title" id="mtmFormModalLabel">Add Memo Type</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="mtm-modal-body">
+                    <div id="mtmFormAlert" class="alert d-none mb-3" role="alert"></div>
+
+                    <div class="mtm-field-card">
+                        <div class="mtm-field">
+                            <label for="mtm_memo_type_name" class="mtm-field-label">
+                                Memo Type Name <span class="mtm-req">*</span>
+                            </label>
+                            <input type="text" name="memo_type_name" id="mtm_memo_type_name"
+                                class="mtm-control" maxlength="100" placeholder="eg. Show Cause"
+                                autocomplete="off">
+                            <small class="text-danger d-none mt-1" id="mtm_memo_type_name_error">Memo Type Name is required</small>
+                        </div>
+
+                        <div class="mtm-field">
+                            <label for="mtm_memo_doc_upload" class="mtm-field-label" id="mtm_doc_label">Upload Document</label>
+                            <input type="file" name="memo_doc_upload" id="mtm_memo_doc_upload"
+                                class="mtm-control" accept=".pdf,.doc,.docx">
+                            <small class="text-muted d-block mt-1">Accepted formats: .pdf, .doc, .docx (max 2 MB).</small>
+                            <small class="text-danger d-none mt-1" id="mtm_memo_doc_upload_error"></small>
+                            <a href="#" target="_blank" rel="noopener" class="mtm-existing-doc d-none" id="mtm_existing_doc">
+                                <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                                <span>View existing document</span>
+                            </a>
+                        </div>
+
+                        <div class="mtm-field">
+                            <label for="mtm_active_inactive" class="mtm-field-label">
+                                Status <span class="mtm-req">*</span>
+                            </label>
+                            <select name="active_inactive" id="mtm_active_inactive" class="mtm-control">
+                                <option value="">Select Status</option>
+                                <option value="1">Active</option>
+                                <option value="2">Inactive</option>
+                            </select>
+                            <small class="text-danger d-none mt-1" id="mtm_active_inactive_error">Status is required</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mtm-modal-footer">
+                    <button type="button" class="btn mtm-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn mtm-btn-submit" id="mtmSubmit">Add Memo Type</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- Column Visibility --}}
+<div class="modal fade mtm-modal" id="mtmColumnsModal" tabindex="-1" aria-labelledby="mtmColumnsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="mtm-modal-header">
+                <h5 class="mtm-modal-title" id="mtmColumnsModalLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="mtm-modal-body">
+                <div class="mtm-col-grid" id="mtmColumnsGrid"></div>
+            </div>
+            <div class="mtm-modal-footer">
+                <button type="button" class="btn mtm-btn-cancel" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
-    {!! $dataTable->scripts() !!}
-
+{!! $dataTable->scripts() !!}
 
 <script>
-document.getElementById('showMemoAlert').addEventListener('click', function () {
+$(function () {
+    const storeUrl = "{{ route('master.memo.type.master.store') }}";
+    const csrfToken = "{{ csrf_token() }}";
+    const formModalEl = document.getElementById('mtmFormModal');
 
-    Swal.fire({
-        title: '<strong>Add Memo Type</strong>',
-        html: `
-            <form id="memoTypeForm" enctype="multipart/form-data">
-                <input type="hidden" name="_token" value="{{ csrf_token() }}">
-
-                <!-- Memo Type Name -->
-                <div class="row mb-2">
-                    <label class="col-auto fw-semibold">
-                        Memo Type Name <span class="text-danger">*</span>
-                    </label>
-                    <div class="col">
-                        <input type="text" name="memo_type_name" id="memo_type_name" class="form-control">
-                        <small class="text-danger d-none" id="memo_type_name_error">Required</small>
-                    </div>
-                </div>
-
-                <!-- Upload Document -->
-                <div class="row mb-2">
-                    <label class="col-auto fw-semibold">
-                        Upload Document
-                    </label>
-                    <div class="col">
-                        <input type="file" name="memo_doc_upload" id="memo_doc_upload"
-                               class="form-control" accept=".pdf,.doc,.docx">
-                        <small class="text-danger d-none" id="memo_doc_upload_error"></small>
-                    </div>
-                </div>
-
-                <!-- Status -->
-                <div class="row mb-2">
-                    <label class="col-auto fw-semibold">
-                        Status <span class="text-danger">*</span>
-                    </label>
-                    <div class="col">
-                        <select name="active_inactive" id="active_inactive" class="form-control">
-                            <option value="">Select</option>
-                            <option value="1">Active</option>
-                            <option value="2">Inactive</option>
-                        </select>
-                        <small class="text-danger d-none" id="active_inactive_error">Required</small>
-                    </div>
-                </div>
-            </form>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Submit',
-        cancelButtonText: 'Cancel',
-        focusConfirm: false,
-        allowOutsideClick: () => !Swal.isLoading(),
-
-        preConfirm: () => {
-            const popup = Swal.getPopup();
-
-            const name = popup.querySelector('#memo_type_name');
-            const status = popup.querySelector('#active_inactive');
-
-            const nameError = popup.querySelector('#memo_type_name_error');
-            const statusError = popup.querySelector('#active_inactive_error');
-
-            // Reset errors
-            [nameError, statusError].forEach(e => e.classList.add('d-none'));
-
-            let isValid = true;
-
-            if (!name.value.trim()) {
-                nameError.classList.remove('d-none');
-                isValid = false;
-            }
-
-            if (!status.value) {
-                statusError.classList.remove('d-none');
-                isValid = false;
-            }
-
-            if (!isValid) {
-                return false; // ⛔ prevent submit
-            }
-
-            const formData = new FormData(popup.querySelector('#memoTypeForm'));
-
-            Swal.showLoading();
-
-            return fetch("{{ route('master.memo.type.master.store') }}", {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': "{{ csrf_token() }}",
-                    'Accept': 'application/json'
-                },
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => Promise.reject(err));
-                }
-                return response.json();
-            })
-            .catch(error => {
-                if (error.errors) {
-                    if (error.errors.memo_type_name) {
-                        nameError.textContent = error.errors.memo_type_name[0];
-                        nameError.classList.remove('d-none');
-                    }
-                    if (error.errors.active_inactive) {
-                        statusError.textContent = error.errors.active_inactive[0];
-                        statusError.classList.remove('d-none');
-                    }
-                } else {
-                    Swal.showValidationMessage('Server error or session expired');
-                }
-            });
-        }
-    }).then(result => {
-        if (result.isConfirmed && result.value?.status) {
-            Swal.fire('Success', result.value.message, 'success');
-
-            // Reload DataTable
-            if ($.fn.DataTable.isDataTable('#memotypemaster-table')) {
-                $('#memotypemaster-table').DataTable().ajax.reload(null, false);
-            }
+    // The modals are appended to <body> so their backdrop stacks above the page
+    // chrome rather than inside the card.
+    document.querySelectorAll('.mtm-modal').forEach(function (el) {
+        if (el.parentElement && el.parentElement !== document.body) {
+            document.body.appendChild(el);
         }
     });
-});
 
-$(document).on('click', '.editMemo', function () {
+    function showFormModal() {
+        bootstrap.Modal.getOrCreateInstance(formModalEl).show();
+    }
 
-    const pk      = $(this).data('pk');
-    const name    = $(this).data('name');
-    const status  = $(this).data('status');
-    const fileUrl = $(this).data('file');
-    const BASE_URL = "{{ url('/') }}";
+    function hideFormModal() {
+        bootstrap.Modal.getOrCreateInstance(formModalEl).hide();
+    }
 
-    Swal.fire({
-        title: '<strong>Edit Memo Type</strong>',
-        html: `
-            <form id="memoTypeForm" enctype="multipart/form-data">
-                <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="pk" value="${pk}">
+    function reloadTable() {
+        if ($.fn.DataTable.isDataTable('#memotypemaster-table')) {
+            $('#memotypemaster-table').DataTable().ajax.reload(null, false);
+        }
+    }
 
-                <!-- Memo Type Name -->
-                <div class="row mb-2">
-                    <label class="col-auto fw-semibold">
-                        Memo Type Name <span class="text-danger">*</span>
-                    </label>
-                    <div class="col">
-                        <input type="text" name="memo_type_name" id="memo_type_name"
-                               class="form-control" value="${name}">
-                        <small class="text-danger d-none" id="memo_type_name_error">Required</small>
-                    </div>
-                </div>
+    function clearErrors() {
+        $('#mtmFormAlert').addClass('d-none').removeClass('alert-danger').empty();
+        $('#mtmForm small.text-danger').addClass('d-none');
+        $('#mtmForm .mtm-control').removeClass('is-invalid');
+    }
 
-                <!-- Upload Document -->
-                <div class="row mb-2">
-                <label class="col-auto fw-semibold">Replace Document</label>
-                <div class="col">
-                    <input type="file" name="memo_doc_upload" id="memo_doc_upload"
-                           class="form-control" accept=".pdf,.doc,.docx">
-                    
-                    <small class="text-danger d-none" id="memo_doc_upload_error"></small>
-                    ${fileUrl ? `<div class="mt-1">
-                                    <a href="${BASE_URL}/${fileUrl}" target="_blank" class="text-primary">
-                                        View Existing Document
-                                    </a>
-                                  </div>` : ''}
-                </div>
-        
-                <!-- Status -->
-                <div class="row mb-2">
-                    <label class="col-auto fw-semibold">
-                        Status <span class="text-danger">*</span>
-                    </label>
-                    <div class="col">
-                        <select name="active_inactive" id="active_inactive" class="form-control">
-                            <option value="">Select</option>
-                            <option value="1" ${status == 1 ? 'selected' : ''}>Active</option>
-                            <option value="2" ${status == 2 ? 'selected' : ''}>Inactive</option>
-                        </select>
-                        <small class="text-danger d-none" id="active_inactive_error">Required</small>
-                    </div>
-                </div>
-            </form>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Update',
-        cancelButtonText: 'Cancel',
-        focusConfirm: false,
-        allowOutsideClick: () => !Swal.isLoading(),
+    function fieldError(id, message) {
+        const $msg = $('#' + id + '_error');
+        if (message) { $msg.text(message); }
+        $msg.removeClass('d-none');
+        $('#' + id).addClass('is-invalid');
+    }
 
-        preConfirm: () => {
-                const popup = Swal.getPopup();
+    function resetForm(mode) {
+        clearErrors();
+        $('#mtmForm')[0].reset();
+        $('#mtm_pk').val('');
+        $('#mtm_existing_doc').addClass('d-none').attr('href', '#');
+        $('#mtmFormModalLabel').text(mode === 'edit' ? 'Edit Memo Type' : 'Add Memo Type');
+        $('#mtmSubmit').text(mode === 'edit' ? 'Update Memo Type' : 'Add Memo Type');
+        $('#mtm_doc_label').text(mode === 'edit' ? 'Replace Document' : 'Upload Document');
+    }
 
-                const nameInput  = popup.querySelector('#memo_type_name');
-                const fileInput  = popup.querySelector('#memo_doc_upload');
-                const statusInput = popup.querySelector('#active_inactive');
+    $('#showMemoAlert').on('click', function () {
+        resetForm('add');
+        showFormModal();
+    });
 
-                const nameError   = popup.querySelector('#memo_type_name_error');
-                const fileError   = popup.querySelector('#memo_doc_upload_error');
-                const statusError = popup.querySelector('#active_inactive_error');
+    $(document).on('click', '.editMemo', function () {
+        const $btn = $(this);
+        resetForm('edit');
 
-                // Hide all errors first
-                [nameError, fileError, statusError].forEach(e => e.classList.add('d-none'));
+        $('#mtm_pk').val($btn.data('pk'));
+        $('#mtm_memo_type_name').val($btn.data('name') || '');
 
-                let valid = true;
+        // The grid's switch writes 0 for inactive while this form posts 2
+        // (store() validates in:1,2), so anything that is not Active maps to
+        // Inactive — otherwise a row deactivated from the grid opened with an
+        // empty Status and the user had to re-pick it to save.
+        $('#mtm_active_inactive').val(String($btn.data('status')) === '1' ? '1' : '2');
 
-                // Memo name required
-                if (!nameInput.value.trim()) {
-                    nameError.classList.remove('d-none');
-                    valid = false;
-                }
+        const file = $btn.data('file');
+        if (file) {
+            $('#mtm_existing_doc').attr('href', file).removeClass('d-none');
+        }
 
-                
-                if (!statusInput.value) {
-                    statusError.classList.remove('d-none');
-                    valid = false;
-                }
+        showFormModal();
+    });
 
-                if (!valid) return false;
+    formModalEl.addEventListener('shown.bs.modal', function () {
+        $('#mtm_memo_type_name').trigger('focus');
+    });
 
-                const formData = new FormData(popup.querySelector('#memoTypeForm'));
+    $('#mtmForm').on('submit', function (e) {
+        e.preventDefault();
+        clearErrors();
 
-                Swal.showLoading();
+        let valid = true;
+        if (!$('#mtm_memo_type_name').val().trim()) {
+            fieldError('mtm_memo_type_name', 'Memo Type Name is required');
+            valid = false;
+        }
+        if (!$('#mtm_active_inactive').val()) {
+            fieldError('mtm_active_inactive', 'Status is required');
+            valid = false;
+        }
+        if (!valid) { return; }
 
-                return fetch("{{ route('master.memo.type.master.store') }}", {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': "{{ csrf_token() }}",
-                        'Accept': 'application/json'
-                    },
-                    body: formData
-                })
-                .then(res => res.json())
-                .catch(() => {
-                    Swal.showValidationMessage('Server error occurred');
+        const $submit = $('#mtmSubmit').prop('disabled', true);
+        const isEdit = !!$('#mtm_pk').val();
+
+        fetch(storeUrl, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+            body: new FormData(this)
+        })
+        .then(res => res.json().then(body => ({ ok: res.ok, body })))
+        .then(({ ok, body }) => {
+            $submit.prop('disabled', false);
+
+            if (ok && body.status) {
+                hideFormModal();
+                reloadTable();
+                Swal.fire(isEdit ? 'Updated!' : 'Success', body.message, 'success');
+                return;
+            }
+
+            // 422 → per-field messages; anything else → one alert in the modal.
+            if (body.errors) {
+                Object.keys(body.errors).forEach(function (key) {
+                    const id = 'mtm_' + key;
+                    if (document.getElementById(id)) {
+                        fieldError(id, body.errors[key][0]);
+                    }
                 });
+            } else {
+                $('#mtmFormAlert').removeClass('d-none').addClass('alert-danger')
+                    .text(body.message || 'Server error or session expired');
             }
-
-    }).then(result => {
-        if (result.isConfirmed && result.value?.status) {
-            Swal.fire('Updated!', result.value.message, 'success');
-
-            if ($.fn.DataTable.isDataTable('#memotypemaster-table')) {
-                $('#memotypemaster-table').DataTable().ajax.reload(null, false);
-            }
-        }
+        })
+        .catch(function () {
+            $submit.prop('disabled', false);
+            $('#mtmFormAlert').removeClass('d-none').addClass('alert-danger')
+                .text('Server error or session expired');
+        });
     });
-});
 
-$(document).on('click', '.deleteBtn', function (e) {
-    e.preventDefault();
+    $(document).on('click', '.deleteBtn', function () {
+        const btn = $(this);
+        const url = btn.data('url');
 
-    const btn = $(this);
-    const url = btn.data('url');
-    const pk  = btn.data('pk');
-
-    Swal.fire({
-        title: 'Are you sure?',
-        text: 'This record is permanent deleted',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, delete it!',
-        cancelButtonText: 'Cancel'
-    }).then((result) => {
-        if (result.isConfirmed) {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'This record is permanently deleted',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel'
+        }).then(function (result) {
+            if (!result.isConfirmed) { return; }
 
             $.ajax({
                 url: url,
                 type: 'POST',
-                data: {
-                    _method: 'DELETE',
-                    _token: $('meta[name="csrf-token"]').attr('content')
-                },
-                beforeSend: function () {
-                    btn.prop('disabled', true);
-                },
+                data: { _method: 'DELETE', _token: csrfToken },
+                beforeSend: function () { btn.prop('disabled', true); },
                 success: function (res) {
                     if (res.status) {
                         Swal.fire('Deleted!', res.message, 'success');
-
-                        // ✅ Reload DataTable without page reload
-                        $('#memotypemaster-table')
-                            .DataTable()
-                            .ajax.reload(null, false);
+                        reloadTable();
                     } else {
                         Swal.fire('Error!', res.message, 'error');
                         btn.prop('disabled', false);
@@ -339,12 +304,31 @@ $(document).on('click', '.deleteBtn', function (e) {
                     btn.prop('disabled', false);
                 }
             });
+        });
+    });
 
-        }
+    // Column visibility chips, built from the live table once it exists.
+    $('#memotypemaster-table').on('init.dt', function () {
+        const table = $('#memotypemaster-table').DataTable();
+        const $grid = $('#mtmColumnsGrid').empty();
+
+        table.columns().every(function (idx) {
+            const title = $.trim($(this.header()).text()) || ('Column ' + (idx + 1));
+            const visible = this.visible();
+            $grid.append(
+                '<label class="mtm-col-chip' + (visible ? ' is-checked' : '') + '" for="mtmColToggle' + idx + '">' +
+                    '<input class="form-check-input mtm-col-toggle" type="checkbox" ' + (visible ? 'checked ' : '') +
+                           'id="mtmColToggle' + idx + '" data-column="' + idx + '">' +
+                    '<span>' + title + '</span>' +
+                '</label>'
+            );
+        });
+
+        $grid.off('change.mtm').on('change.mtm', '.mtm-col-toggle', function () {
+            table.column($(this).data('column')).visible(this.checked);
+            $(this).closest('.mtm-col-chip').toggleClass('is-checked', this.checked);
+        });
     });
 });
-
-
 </script>
-
 @endpush

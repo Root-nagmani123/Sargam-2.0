@@ -1,0 +1,448 @@
+/*
+ * Faculty MDO / Escort Exception view (admin + faculty login).
+ *
+ * A module stylesheet rather than the inline <style> block this page used to
+ * carry (docs/new-design-index-page.md "Where the CSS lives"), named
+ * <module>-<audience>.css per §7. Root: .fme-page.
+ *
+ * The report is grouped cards rather than a grid, so most of this has no
+ * shared equivalent. The palette below overrides the page's own blue/orange
+ * gradients with the brand navy.
+ *
+ * NOTE the second <style> in the blade is the PRINT document's own stylesheet
+ * (printContent() copies .card-body into a new window) and stays there.
+ */
+/* GIGW Compliant Modern Design */
+    :root {
+        --primary-blue: #004a93;
+        --primary-light: #0066cc;
+        --light-bg: #e8eef7;
+        --very-light: #f0f3f7;
+        --text-primary: #1f2937;
+        --text-secondary: #4b5563;
+        --text-muted: #6b7280;
+        --border-color: #d1d5db;
+        --divider: #e5e7eb;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --error-color: #ef4444;
+        --transition: all 0.3s ease-in-out;
+    }
+/* Summary Card Enhancement */
+    .fme-page .exception-summary-card {
+        background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-light) 100%);
+        border-radius: 12px;
+        padding: 24px;
+        color: white;
+        box-shadow: 0 4px 12px rgba(0, 74, 147, 0.15);
+        margin-bottom: 32px;
+        transition: var(--transition);
+    }
+.fme-page .exception-summary-card:hover {
+        box-shadow: 0 8px 24px rgba(0, 74, 147, 0.25);
+        transform: translateY(-2px);
+    }
+.fme-page .summary-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+.fme-page .summary-stat-label {
+        font-size: 13px;
+        font-weight: 500;
+        opacity: 0.9;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }
+.fme-page .summary-stat-value {
+        font-size: 32px;
+        font-weight: 700;
+        letter-spacing: -1px;
+    }
+/* Table Header Enhancement */
+    .fme-page .table-header {
+        background: var(--very-light);
+        border-bottom: 2px solid var(--primary-blue);
+        padding: 16px;
+        border-radius: 8px 8px 0 0;
+        margin-bottom: 0;
+    }
+.fme-page .table-header h6 {
+        margin: 0;
+        color: var(--primary-blue);
+        font-weight: 600;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+.fme-page .table-header .material-icons {
+        font-size: 20px;
+    }
+/* Modern Table Styling */
+    .fme-page .exception-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: 100%;
+        margin: 0;
+        background: white;
+    }
+.fme-page .exception-table thead {
+        background: var(--very-light);
+    }
+.fme-page .exception-table thead th {
+        background: var(--very-light);
+        color: var(--primary-blue);
+        font-weight: 600;
+        font-size: 13px;
+        padding: 14px 16px;
+        text-align: left;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid var(--primary-blue);
+        white-space: nowrap;
+    }
+.fme-page .exception-table tbody td {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--divider);
+        color: var(--text-primary);
+        font-size: 14px;
+    }
+.fme-page .exception-table tbody tr {
+        transition: var(--transition);
+    }
+.fme-page .exception-table tbody tr:hover {
+        background: var(--very-light);
+    }
+.fme-page .exception-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+/* Faculty/Course Section Container */
+    .fme-page .section-container {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        margin-bottom: 24px;
+        overflow: hidden;
+        border-top: 4px solid var(--primary-blue);
+        transition: var(--transition);
+    }
+.fme-page .section-container:hover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    }
+/* Faculty Header */
+    .fme-page .faculty-header {
+        background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-light) 100%);
+        color: white;
+        padding: 18px 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+.fme-page .faculty-header h5 {
+        margin: 0;
+        font-weight: 600;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+.fme-page .faculty-header .material-icons {
+        font-size: 22px;
+    }
+/* Course Section Header */
+    .fme-page .course-section {
+        border-bottom: 1px solid var(--divider);
+        padding: 20px 24px;
+        background: white;
+        position: relative;
+    }
+.fme-page .course-section:last-child {
+        border-bottom: none;
+    }
+.fme-page .course-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 18px;
+    }
+.fme-page .course-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text-primary);
+        font-weight: 600;
+        font-size: 15px;
+    }
+.fme-page .course-title .material-icons {
+        font-size: 20px;
+        color: var(--primary-blue);
+    }
+/* Badge Enhancement */
+    .fme-page .exception-badge {
+        background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+        color: white;
+        font-weight: 700;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 13px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+    }
+.fme-page .exception-badge .material-icons {
+        font-size: 16px;
+    }
+/* Student Records Table */
+    .fme-page .student-records-section {
+        padding: 20px 24px;
+    }
+.fme-page .student-records-section .table-header {
+        margin-left: -24px;
+        margin-right: -24px;
+        margin-top: -20px;
+        width: calc(100% + 48px);
+        border-radius: 0;
+        margin-bottom: 18px;
+    }
+/* Empty State */
+    .fme-page .empty-state {
+        text-align: center;
+        padding: 48px 24px;
+        background: var(--very-light);
+        border-radius: 8px;
+    }
+.fme-page .empty-state .material-icons {
+        font-size: 56px;
+        color: var(--text-muted);
+        margin-bottom: 16px;
+        opacity: 0.6;
+    }
+.fme-page .empty-state p {
+        color: var(--text-muted);
+        font-size: 15px;
+        margin: 0;
+    }
+/* Faculty View Container */
+    .fme-page .faculty-view-container {
+        padding: 24px 0;
+    }
+/* Filter Section Enhancement */
+    .fme-page .filter-section {
+        background: white;
+        padding: 20px 24px;
+        border-radius: 8px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+.fme-page .filter-section .form-label {
+        color: var(--text-primary);
+        font-weight: 600;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+.fme-page .filter-section .form-select {
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 10px 12px;
+        font-size: 14px;
+        transition: var(--transition);
+        min-height: 40px;
+    }
+.fme-page .filter-section .form-select:hover {
+        border-color: var(--primary-blue);
+        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.1);
+    }
+.fme-page .filter-section .form-select:focus {
+        border-color: var(--primary-blue);
+        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.1);
+    }
+/* Responsive Adjustments */
+    @media (max-width: 768px) {
+    .fme-page .summary-stat-value {
+                font-size: 24px;
+            }
+    .fme-page .exception-table thead th,
+    .fme-page .exception-table tbody td {
+                font-size: 12px;
+                padding: 10px 12px;
+            }
+    .fme-page .course-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+    .fme-page .exception-badge {
+                align-self: flex-start;
+            }
+    .fme-page .faculty-header {
+                padding: 14px 16px;
+                gap: 8px;
+            }
+    .fme-page .faculty-header h5 {
+                font-size: 14px;
+            }
+}
+/* Print Styles */
+    @media print {
+    * {
+                margin: 0;
+                padding: 0;
+            }
+    body {
+                background: white;
+                color: var(--text-primary);
+            }
+    .fme-page .container-fluid,
+    .fme-page .card-body {
+                box-shadow: none !important;
+                border: none !important;
+                background: white !important;
+            }
+    .fme-page .breadcrumb,
+    .fme-page .filter-section,
+    .fme-page .btn,
+    .fme-page button,
+    .fme-page .d-flex.justify-content-end {
+                display: none !important;
+            }
+    .fme-page .card {
+                border: none !important;
+                box-shadow: none !important;
+            }
+    .fme-page hr {
+                border: 1px solid var(--divider) !important;
+                margin: 20px 0 !important;
+            }
+    .fme-page .exception-summary-card {
+                box-shadow: none;
+                border: 1px solid var(--border-color);
+                background: white !important;
+                color: var(--text-primary) !important;
+                page-break-inside: avoid;
+            }
+    .fme-page .section-container {
+                box-shadow: none;
+                border: 1px solid var(--border-color);
+                page-break-inside: avoid;
+                background: white !important;
+            }
+    .fme-page .exception-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                margin: 10px 0 !important;
+            }
+    .fme-page .exception-table thead th {
+                background: var(--very-light) !important;
+                border: 1px solid var(--border-color) !important;
+                padding: 10px !important;
+            }
+    .fme-page .exception-table tbody td {
+                border: 1px solid var(--divider) !important;
+                padding: 10px !important;
+            }
+    .fme-page .table-header {
+                background: var(--very-light) !important;
+                border: 1px solid var(--border-color) !important;
+                page-break-inside: avoid;
+            }
+    .fme-page .faculty-header {
+                background: var(--very-light) !important;
+                color: var(--text-primary) !important;
+                border: 1px solid var(--border-color) !important;
+                page-break-inside: avoid;
+            }
+    .fme-page .course-section {
+                page-break-inside: avoid;
+                border: 1px solid var(--border-color) !important;
+            }
+    .fme-page h4,
+    .fme-page h5,
+    .fme-page h6 {
+                color: var(--text-primary) !important;
+                page-break-after: avoid;
+            }
+    .fme-page .summary-stat-value,
+    .fme-page .exception-badge {
+                color: var(--text-primary) !important;
+            }
+}
+/* Print Window Specific */
+    .fme-page .print-hide {
+        display: none !important;
+    }
+
+/* ── Brand alignment ───────────────────────────────────────────────────────
+   The page shipped its own blue gradients (#004a93 → #0066cc) and an amber
+   badge, which appear nowhere else in the product. These restate the same
+   components in the shared palette; they come last so they win on order. */
+
+.fme-page .faculty-header {
+    background: #004384;
+    border-radius: 10px 10px 0 0;
+}
+
+.fme-page .exception-summary-card {
+    background: #004384;
+    box-shadow: none;
+}
+
+.fme-page .exception-summary-card:hover {
+    box-shadow: none;
+    transform: none;
+}
+
+/* A soft badge like every other status pill in the product (§3b), not a
+   solid amber chip. */
+.fme-page .exception-badge {
+    background: #eef1fc;
+    color: #004384;
+    border: 1px solid #d7e0ee;
+    border-radius: 999px;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    box-shadow: none;
+}
+
+/* Table header in the shared grey rather than a second blue. */
+.fme-page .exception-table thead th {
+    background: #f2f4f7;
+    color: #475467;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    border-bottom: 1px solid #e4e7ec;
+}
+
+.fme-page .exception-table tbody tr:hover td {
+    background: rgba(0, 67, 132, 0.03);
+}
+
+/* Export pill, matching the other listing pages (§1). */
+.fme-page .fme-export-btn {
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 1rem;
+    border: 0;
+    border-radius: 8px;
+    background: #fff;
+    color: #004384;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.fme-page .fme-export-btn:hover,
+.fme-page .fme-export-btn:focus {
+    background: #eef3f9;
+    color: #003468;
+}

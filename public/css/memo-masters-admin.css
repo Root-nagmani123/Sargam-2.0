@@ -1,0 +1,408 @@
+/*
+ * Memo masters (admin) — Memo Type Master and its Add / Edit /
+ * Column-visibility modals.
+ *
+ * A module stylesheet rather than rules inlined per page
+ * (docs/new-design-index-page.md "Where the CSS lives"), named
+ * <module>-<audience>.css per §7.
+ *
+ * Roots — the prefix is per module, not per page (§7):
+ *   .mtm-master-page   the listing page
+ *   .mtm-modal         a modal, which lives OUTSIDE the page root in the DOM
+ *
+ * NOTE the `programme-dt-*` classes this page also uses are a different layer —
+ * shared DataTables chrome in public/css/custom.css (§7). This file only adds
+ * what that layer does not cover.
+ */
+
+/* ── Status column: soft badge, display only (§3b) ─────────────────────────── */
+
+/* The theme ships the *-subtle backgrounds but not the matching
+   text-*-emphasis colours, so the label would render black. */
+.mtm-master-page .status-pill {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.mtm-master-page .status-pill.bg-success-subtle {
+    color: #146c43;
+}
+
+.mtm-master-page .status-pill.bg-danger-subtle {
+    color: #b02a37;
+}
+
+/* ── Document column ───────────────────────────────────────────────────────── */
+
+.mtm-master-page .mtm-doc-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #004384;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.mtm-master-page .mtm-doc-link:hover {
+    text-decoration: underline;
+}
+
+.mtm-master-page .mtm-doc-empty {
+    color: #98a2b3;
+}
+
+/* ── Action column: equal-width icon-over-label stacks (§3b) ───────────────── */
+
+.mtm-master-page .mtm-act-group {
+    display: inline-flex;
+    /* flex-start, not stretch: the stacks are a mix of <a>, <label> and <span>,
+       and stretching them to a common height starts their icon strips at
+       different tops (§3b wants one baseline). */
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.mtm-master-page .mtm-act {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    /* Wide enough for "Deactivate", so no stack is sized by its own caption —
+       otherwise the icon row comes out unevenly spaced (§3b). */
+    min-width: 62px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* One fixed-height strip for glyphs AND the switch, so they share a baseline. */
+.mtm-master-page .mtm-act__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+}
+
+.mtm-master-page .mtm-act__icon > i {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+/* No .form-check wrapper here (§3b trap 1) — the switch skin is keyed on the
+   input itself and still applies. */
+.mtm-master-page .mtm-act__icon .form-check-input {
+    margin: 0;
+    float: none;
+    cursor: pointer;
+}
+
+.mtm-master-page .mtm-act__label {
+    white-space: nowrap;
+}
+
+.mtm-master-page .mtm-act--edit {
+    color: #2563eb;
+}
+
+.mtm-master-page .mtm-act--toggle {
+    color: #475467;
+}
+
+.mtm-master-page .mtm-act--del {
+    color: var(--bs-danger, #b12923);
+}
+
+/* Delete is refused while the row is active — muted, not red-and-always-failing. */
+.mtm-master-page .mtm-act--del.is-disabled {
+    color: #98a2b3;
+    opacity: 0.65;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.mtm-master-page .mtm-act:not(.is-disabled):hover .mtm-act__label {
+    text-decoration: underline;
+}
+
+.mtm-master-page .mtm-act:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.2);
+}
+
+/* The Actions cell is the widest thing on these rows; trimming its own padding
+   keeps the last stack's caption inside the panel. */
+.mtm-master-page .programme-dt-table thead th:last-child,
+.mtm-master-page .programme-dt-table tbody td:last-child {
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+}
+
+/* ── Footer (§4) ───────────────────────────────────────────────────────────
+   datatable-global-ui.js fills the slots; these two DataTables defaults would
+   otherwise break "Showing [10] of N items" over two lines. */
+.mtm-master-page .programme-dt-count {
+    flex-wrap: nowrap !important;
+    white-space: nowrap;
+}
+
+.mtm-master-page .programme-dt-count .dataTables_info,
+.mtm-master-page .programme-dt-count .dataTables_length {
+    padding-top: 0 !important;
+    margin: 0 !important;
+}
+
+/* The theme paints an active page number with a blue gradient marked
+   !important, which outranks the shared footer rule. */
+.mtm-master-page .programme-dt-footer .pagination .page-item.active .page-link {
+    background-image: none !important;
+    background-color: #fff !important;
+    border-color: #7367f0 !important;
+    color: #344054 !important;
+    font-weight: 600;
+}
+
+.mtm-master-page .programme-dt-footer .pagination .page-item:not(.active):not(.disabled) .page-link {
+    background-image: none !important;
+    background-color: transparent !important;
+    color: #667085 !important;
+}
+
+/* ── Column Visibility modal — grid of bordered checkbox chips ─────────────── */
+
+.mtm-col-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.mtm-col-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    color: #1f2937;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+}
+
+.mtm-col-chip:hover {
+    border-color: #b6c0cc;
+    background: #f8fafc;
+}
+
+.mtm-col-chip.is-checked {
+    border-color: #004384;
+    box-shadow: inset 0 0 0 1px #004384;
+}
+
+@media (max-width: 479.98px) {
+    .mtm-col-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ── Modal chrome (§3c) ────────────────────────────────────────────────────
+   Add and Edit look ALIKE: same header, same tinted field card, same
+   labels/controls, same footer pair. Only the caption on the submit differs. */
+
+.mtm-modal .modal-content {
+    border: 0;
+    border-radius: 12px;
+}
+
+.mtm-modal .mtm-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #eaecf0;
+}
+
+.mtm-modal .mtm-modal-title {
+    margin: 0;
+    color: #1f2937;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.mtm-modal .mtm-modal-body {
+    padding: 1.5rem;
+}
+
+/* One tinted card per record (§3c). */
+.mtm-modal .mtm-field-card {
+    background: #eef1fc;
+    border-radius: 10px;
+    padding: 1rem;
+}
+
+.mtm-modal .mtm-field + .mtm-field {
+    margin-top: 1rem;
+}
+
+.mtm-modal .mtm-field-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    color: #344054;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.mtm-modal .mtm-req {
+    color: var(--bs-danger, #b12923);
+}
+
+.mtm-modal .mtm-control {
+    width: 100%;
+    min-height: 2.625rem;
+    padding: 0.5rem 0.75rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    color: #1f2937;
+    font-size: 0.875rem;
+}
+
+.mtm-modal select.mtm-control {
+    appearance: auto;
+}
+
+.mtm-modal .mtm-control:focus {
+    border-color: #004384;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.2);
+    outline: 0;
+}
+
+.mtm-modal .mtm-control.is-invalid {
+    border-color: var(--bs-danger, #b12923);
+}
+
+/* The file input's own button, so it does not tower over the other controls. */
+.mtm-modal input[type="file"].mtm-control {
+    padding: 0.35rem 0.75rem;
+}
+
+.mtm-modal .mtm-existing-doc {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.5rem;
+    color: #004384;
+    font-size: 0.8125rem;
+    font-weight: 500;
+}
+
+/* Footer: an equal, flush-right pair (§3c). width:fit-content keeps the grid as
+   wide as its content while staying block-level, so the auto start margin can
+   push it to the trailing edge — an inline-grid would be aligned by the
+   parent's text-align and ignore the margin. */
+.mtm-modal .mtm-modal-footer {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    align-items: stretch;
+    gap: 1rem;
+    width: fit-content;
+    max-width: 100%;
+    margin-inline-start: auto;
+    margin-inline-end: 0;
+    padding: 0 1.5rem 1.5rem;
+    border-top: 0;
+}
+
+.mtm-modal .mtm-modal-footer > .btn {
+    width: 100%;
+    white-space: nowrap;
+}
+
+.mtm-modal .mtm-btn-cancel,
+.mtm-modal .mtm-btn-submit {
+    min-width: 120px;
+    min-height: 2.75rem;
+    padding: 0.5rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.mtm-modal .mtm-btn-cancel {
+    background: #fff;
+    border: 1px solid #f2c4c0;
+    color: var(--bs-danger, #b12923);
+}
+
+.mtm-modal .mtm-btn-cancel:hover,
+.mtm-modal .mtm-btn-cancel:focus {
+    background: #fff5f4;
+    border-color: #e79c96;
+    color: #8f201b;
+}
+
+.mtm-modal .mtm-btn-submit {
+    background: #004384;
+    border: 1px solid #004384;
+    color: #fff;
+}
+
+.mtm-modal .mtm-btn-submit:hover,
+.mtm-modal .mtm-btn-submit:focus {
+    background: #003468;
+    border-color: #003468;
+    color: #fff;
+}
+
+/* Course Memo Decision Mapping joins this module: same components, one more
+   page root. Its Delete is a <form>-wrapped submit rather than a plain button,
+   so the stack styling has to apply to the inner button too. */
+.mtm-master-page .mtm-act--del {
+    display: inline-flex;
+    align-items: flex-start;
+    padding: 0;
+    margin: 0;
+}
+
+.mtm-master-page .mtm-act__btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    min-width: 62px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    color: var(--bs-danger, #b12923);
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.mtm-master-page .mtm-act__btn:hover .mtm-act__label {
+    text-decoration: underline;
+}
+
+.mtm-master-page .mtm-act__btn:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.2);
+}

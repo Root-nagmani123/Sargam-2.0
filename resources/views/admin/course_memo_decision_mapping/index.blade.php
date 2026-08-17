@@ -4,70 +4,23 @@
 
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+{{-- Shared with Memo Type / Memo Conclusion Master: same module, same
+     components (docs/new-design-index-page.md §7). --}}
+<link rel="stylesheet"
+    href="{{ asset('css/memo-masters-admin.css') }}?v={{ @filemtime(public_path('css/memo-masters-admin.css')) }}">
 @endpush
 
 @section('setup_content')
-<div class="container-fluid">
-    <x-breadcrum title="Course Memo Decision Mapping" />
-    <div class="datatables">
-        <div class="card" >
-            <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
-                            <h4>Course Memo Decision Mapping</h4>
-                        </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <!-- <a href="{{ route('course.memo.decision.create') }}" class="btn btn-primary">+Add New
-                                    Mapping</a> -->
-                                <button type="button" id="showConclusionAlert" class="btn btn-primary">
-                                    +Add New Mapping
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="row g-3 align-items-end mb-3">
-                       
-                        <div class="col-md-4">
-                            <label class="form-label">Course</label>
-                            <select id="courseFilter" class="form-select">
-                                <option value="">-- All Courses --</option>
-                                @foreach($CourseMaster as $course)
-                                <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Memo Conclusion</label>
-                            <select id="memoConclusionFilter" class="form-select">
-                                <option value="">-- All Memo Conclusions --</option>
-                                @foreach($MemoConclusionMaster as $memo)
-                                <option value="{{ $memo->pk }}">{{ $memo->discussion_name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <button type="button" id="resetMemoFilters" class="btn btn-outline-secondary">
-                                Reset Filters
-                            </button>
-                        </div>
-                    </div>
-                    <div>
-                        <table class="table w-100" id="memoDecisionTable">
-                            <thead style="background-color: #af2910;">
-                                <tr>
-                                    <th>S.No.</th>
-                                    <th>Course Name</th>
-                                    <th>Memo Decision</th>
-                                    <th>Memo Conclusion</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                        </table>
+<div class="container-fluid mtm-master-page">
+    <x-breadcrum title="Course Memo Decision Mapping" :showBack="false">
+        <button type="button" id="showConclusionAlert"
+            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-semibold shadow-sm">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <span>Add New Mapping</span>
+        </button>
+    </x-breadcrum>
 
+    <x-session_message />
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
         <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white" role="group" aria-label="Filter mappings by status">
             <li class="nav-item" role="presentation">
@@ -103,6 +56,14 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="programme-dt-filter-select">
+                        <select id="cmdmConclusionFilter" class="form-select js-programme-choice">
+                            <option value="">Memo Conclusion</option>
+                            @foreach($MemoConclusionMaster ?? [] as $memo)
+                            <option value="{{ $memo->pk }}">{{ $memo->discussion_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <button type="button" class="btn programme-dt-btn-reset" id="cmdmResetFilters">
                         Reset Filters
                     </button>
@@ -131,8 +92,9 @@
                         </tr>
                     </thead>
                 </table>
-                <div id="cmdmDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="memoDecisionTable"></div>
             </div>
+
+            <div id="cmdmDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="memoDecisionTable"></div>
         </div>
     </div>
 </div>
@@ -318,18 +280,26 @@
             if (courseVal) {
                 data.course_filter = courseVal;
             }
+            const conclusionVal = $('#cmdmConclusionFilter').val();
+            if (conclusionVal) {
+                data.memo_conclusion_filter = conclusionVal;
+            }
         });
 
         if (!$.fn.DataTable.isDataTable(tableSelector)) {
             const memoDecisionTable = $(tableSelector).DataTable({
                 processing: true,
                 serverSide: true,
+                // ‹ 1 2 3 › — First/Last are not part of the shared footer (§4).
+                pagingType: 'simple_numbers',
+                language: {
+                    paginate: { previous: '&lsaquo;', next: '&rsaquo;' }
+                },
+                // The filters ride on preXhr.dt above, which is bound before init so
+                // the first request carries them too; a second `data` callback here
+                // would only re-read the controls the old markup used to own.
                 ajax: {
-                    url: "{{ route('course.memo.decision.index') }}",
-                    data: function(d) {
-                        d.course_filter = $('#courseFilter').val();
-                        d.memo_conclusion_filter = $('#memoConclusionFilter').val();
-                    }
+                    url: "{{ route('course.memo.decision.index') }}"
                 },
                 order: [[0, 'desc']],
                 columns: [{
@@ -368,15 +338,9 @@
                 ]
             });
 
-            // Reload table when filters change
-            $('#courseFilter, #memoConclusionFilter').on('change', function() {
-                memoDecisionTable.ajax.reload();
-            });
-
-            // Reset filters
-            $('#resetMemoFilters').on('click', function() {
-                $('#courseFilter').val('');
-                $('#memoConclusionFilter').val('');
+            // Reload when the Memo Conclusion filter changes; the Course filter and
+            // Reset are bound further down, next to the Choices.js setup.
+            $('#cmdmConclusionFilter').on('change', function() {
                 memoDecisionTable.ajax.reload();
             });
         }
@@ -588,110 +552,34 @@
         $('#cmdmResetFilters').on('click', function() {
             cmdmCurrentFilter = 'active';
             cmdmSetActiveTab($('#cmdmFilterActive'));
+            $('#cmdmConclusionFilter').val('');
             cmdmLoadCoursesByStatus('active');
         });
 
-        function iconOnlyBtn($btn, iconClass, extraClass) {
-            $btn.removeClass('btn btn-sm btn-outline-warning btn-outline-danger btn-outline-secondary d-flex align-items-center gap-1');
-            $btn.addClass('programme-action-btn ' + (extraClass || ''));
-            $btn.find('.material-icons').remove();
-            $btn.find('span').remove();
-            if (!$btn.find('.bi').length) {
-                $btn.append('<i class="bi ' + iconClass + '" aria-hidden="true"></i>');
-            }
-        }
+        // The status badge and the Edit · switch · Delete group are rendered
+        // server-side now (CourseMemoDecisionMappController::index, §3b). This
+        // used to strip the captions off the server's buttons, rebuild the badge
+        // and re-wrap the switch in bespoke bi-toggle-on/off icons on every draw.
+        // Kept as a no-op so the draw callbacks below keep their shape.
+        function decorateCmdmRows() {}
 
-        function buildToggleControl($toggle) {
-            const $label = $('<label>', {
-                class: 'programme-action-toggle-icon cmdm-action-toggle mb-0',
-                'aria-label': 'Toggle mapping status'
-            });
-
-            $toggle.detach().addClass('cmdm-status-toggle-input').appendTo($label);
-            $label.append('<i class="bi bi-toggle-off cmdm-toggle-icon cmdm-toggle-icon--off" aria-hidden="true"></i>');
-            $label.append('<i class="bi bi-toggle-on cmdm-toggle-icon cmdm-toggle-icon--on" aria-hidden="true"></i>');
-
-            return $label;
-        }
-
-        function decorateCmdmRows() {
-            $(tableSelector + ' tbody tr').each(function() {
-                const $row = $(this);
-                if ($row.hasClass('cmdm-row-decorated')) {
-                    return;
-                }
-
-                const $cells = $row.find('td');
-                if ($cells.length < 6) {
-                    return;
-                }
-
-                const $courseCell = $cells.eq(1);
-                const $memoCell = $cells.eq(2);
-                const $conclusionCell = $cells.eq(3);
-                const $statusCell = $cells.eq(4);
-                const $actionCell = $cells.eq(5);
-
-                $courseCell.addClass('cmdm-col-course');
-                $memoCell.addClass('cmdm-col-memo-decision');
-                $conclusionCell.addClass('cmdm-col-memo-conclusion');
-
-                const $toggle = $statusCell.find('.status-toggle').first();
-                const isActive = $toggle.length ? $toggle.is(':checked') : false;
-
-                $statusCell.empty().append(
-                    $('<span>', {
-                        class: 'badge rounded-1 programme-status-badge cmdm-status-badge ' +
-                            (isActive ? 'programme-status-badge--active' : 'programme-status-badge--inactive'),
-                        text: isActive ? 'Active' : 'Inactive'
-                    })
-                );
-
-                const $editBtn = $actionCell.find('.editConclusion').first().detach();
-                const $deleteForm = $actionCell.find('form').first().detach();
-                const $disabledDelete = $actionCell.find('button[disabled]').not('.editConclusion').first().detach();
-
-                const $group = $('<div>', {
-                    class: 'd-inline-flex align-items-center programme-action-group',
-                    role: 'group',
-                    'aria-label': 'Course memo mapping actions'
-                });
-
-                if ($editBtn.length) {
-                    iconOnlyBtn($editBtn, 'bi-pencil');
-                    $group.append($editBtn);
-                }
-
-                if ($toggle.length) {
-                    $group.append(buildToggleControl($toggle));
-                }
-
-                if ($deleteForm.length) {
-                    const $deleteBtn = $deleteForm.find('button[type="submit"]').first();
-                    if ($deleteBtn.length) {
-                        iconOnlyBtn($deleteBtn, 'bi-trash3', 'programme-action-btn--danger');
-                        $deleteForm.addClass('d-inline m-0');
-                        $group.append($deleteForm);
-                    }
-                } else if ($disabledDelete.length) {
-                    iconOnlyBtn($disabledDelete, 'bi-trash3', 'programme-action-btn--danger is-disabled');
-                    $disabledDelete.prop('disabled', true).attr('aria-disabled', 'true');
-                    $group.append($disabledDelete);
-                }
-
-                $actionCell.empty().append($group);
-                $row.addClass('cmdm-row-decorated');
-            });
-        }
-
+        // Only used when the user CANCELS the confirm dialog: the switch has
+        // already flipped visually, so the badge and the caption are put back
+        // in step with it. A confirmed change reloads the table, which
+        // re-renders both from the server.
         function updateCmdmRowBadge($checkbox, isActive) {
             const $badge = $checkbox.closest('tr').find('.cmdm-status-badge');
             if ($badge.length) {
                 $badge
-                    .removeClass('programme-status-badge--active programme-status-badge--inactive')
-                    .addClass(isActive ? 'programme-status-badge--active' : 'programme-status-badge--inactive')
+                    .removeClass('bg-success-subtle bg-danger-subtle')
+                    .addClass(isActive ? 'bg-success-subtle' : 'bg-danger-subtle')
                     .text(isActive ? 'Active' : 'Inactive');
             }
+            // The caption names the ACTION, so it is the inverse of the state.
+            $checkbox.closest('.mtm-act--toggle')
+                     .attr('title', isActive ? 'Deactivate' : 'Activate')
+                     .find('.mtm-act__label')
+                     .text(isActive ? 'Deactivate' : 'Activate');
         }
 
         $(tableSelector).on('draw.dt', function() {

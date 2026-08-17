@@ -19,10 +19,14 @@ class MemoTypeMasterDataTable extends DataTable
             ->addIndexColumn()
             ->editColumn('memo_type_name', fn($row) => $row->memo_type_name ?? 'N/A')
             ->editColumn('document', function ($row) {
-                if ($row->memo_doc_upload) {
-                    return '<a href="' . asset('storage/' . $row->memo_doc_upload) . '" target="_blank">View</a>';
+                if (! $row->memo_doc_upload) {
+                    return '<span class="mtm-doc-empty">—</span>';
                 }
-                return 'N/A';
+
+                return '<a class="mtm-doc-link" target="_blank" rel="noopener"'
+                    . ' href="' . e(asset('storage/' . $row->memo_doc_upload)) . '">'
+                    . '<i class="bi bi-file-earmark-text" aria-hidden="true"></i>'
+                    . '<span>View</span></a>';
             })
             ->filterColumn('memo_type_name', function ($query, $keyword) {
                 $query->where('memo_type_name', 'like', "%{$keyword}%");
@@ -36,63 +40,65 @@ class MemoTypeMasterDataTable extends DataTable
                     });
                 }
             }, true)
+            // Action: Edit · the status switch · Delete, three equal stacks of an
+            // icon over a caption (docs/new-design-index-page.md §3b).
             ->addColumn('actions', function ($row) {
+                $isActive = (int) $row->active_inactive === 1;
+                // The caption names the ACTION, not the state: the state is
+                // already shown by the badge one column over.
+                $toggleLabel = $isActive ? 'Deactivate' : 'Activate';
+                $deleteUrl = route('master.memo.type.master.delete', ['id' => encrypt($row->pk)]);
 
-    $editUrl   = route('master.memo.type.master.edit', ['id' => $row->pk]);
-    $deleteUrl = route('master.memo.type.master.delete', ['id' => encrypt($row->pk)]);
-    $isActive  = ($row->active_inactive == 1);
+                $edit = '<button type="button" class="mtm-act mtm-act--edit editMemo"'
+                    . ' data-pk="' . (int) $row->pk . '"'
+                    . ' data-name="' . e($row->memo_type_name) . '"'
+                    . ' data-status="' . (int) $row->active_inactive . '"'
+                    . ' data-file="' . ($row->memo_doc_upload ? e(asset('storage/' . $row->memo_doc_upload)) : '') . '"'
+                    . ' title="Edit" aria-label="Edit memo type">'
+                    . '<span class="mtm-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>'
+                    . '<span class="mtm-act__label">Edit</span></button>';
 
-    // 🔹 Delete button logic (NO Blade here)
-    if ($isActive) {
-        $deleteButton = '
-            <button type="button"
-                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
-                disabled
-                title="Cannot delete active memo type">
-                <span class="material-icons material-symbols-rounded" style="font-size:18px;">
-                    delete
-                </span>
-                <span class="d-none d-md-inline">Delete</span>
-            </button>';
-    } else {
-        $deleteButton = '
-            <button type="button"
-                class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 deleteBtn"
-                data-pk="' . $row->pk . '"
-                data-url="' . $deleteUrl . '"
-                aria-label="Delete memo type">
-                <span class="material-icons material-symbols-rounded" style="font-size:18px;">
-                    delete
-                </span>
-                <span class="d-none d-md-inline">Delete</span>
-            </button>';
-    }
+                // No .form-check/.form-switch wrapper (§3b trap 1): custom.css
+                // pulls a .form-check-input inside one left by -2.375rem, which
+                // is right for switch-beside-label and wrong for this layout.
+                // custom.js binds .status-toggle globally off these data-* attrs.
+                $toggle = '<label class="mtm-act mtm-act--toggle" title="' . $toggleLabel . '">'
+                    . '<span class="mtm-act__icon">'
+                    . '<input class="form-check-input status-toggle" type="checkbox" role="switch"'
+                    . ' data-table="memo_type_master" data-column="active_inactive"'
+                    . ' data-id="' . (int) $row->pk . '" ' . ($isActive ? 'checked' : '')
+                    . ' aria-label="' . $toggleLabel . ' memo type">'
+                    . '</span>'
+                    . '<span class="mtm-act__label">' . $toggleLabel . '</span></label>';
 
-    return '
-        <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Memo type actions">
+                // Mirror the rule this page already enforced: an active memo type
+                // cannot be deleted, so the control is muted and inert.
+                $delete = $isActive
+                    ? '<span class="mtm-act mtm-act--del is-disabled" aria-disabled="true"'
+                        . ' title="Deactivate this memo type before deleting">'
+                        . '<span class="mtm-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
+                        . '<span class="mtm-act__label">Delete</span></span>'
+                    : '<button type="button" class="mtm-act mtm-act--del deleteBtn"'
+                        . ' data-pk="' . (int) $row->pk . '" data-url="' . e($deleteUrl) . '"'
+                        . ' title="Delete" aria-label="Delete memo type">'
+                        . '<span class="mtm-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
+                        . '<span class="mtm-act__label">Delete</span></button>';
 
-            <!-- Edit -->
-            <a href="javascript:void(0);"
-                class="editMemo btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
-                data-pk="' . $row->pk . '"
-                data-name="' . e($row->memo_type_name) . '"
-                data-status="' . $row->active_inactive . '"
-                data-file="' . ($row->memo_doc_upload ? asset('storage/' . $row->memo_doc_upload) : '') . '">
-                <span class="material-icons material-symbols-rounded" style="font-size:18px;">edit</span>
-                <span class="d-none d-md-inline">Edit</span>
-            </a>
+                return '<div class="mtm-act-group" role="group" aria-label="Row actions">'
+                    . $edit . $toggle . $delete
+                    . '</div>';
+            })
 
-            <!-- Delete -->
-            ' . $deleteButton . '
-
-        </div>';
-})
-
+            // Status: soft badge, display only (§3b). data-order lets a
+            // client-side sort order by state.
             ->addColumn('status', function ($row) {
-                return '<div class="form-check form-switch d-inline-block">
-                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                data-table="memo_type_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . ($row->active_inactive == 1 ? 'checked' : '') . '>
-                        </div>';
+                $isActive = (int) $row->active_inactive === 1;
+
+                return '<span class="status-pill badge rounded-1 '
+                    . ($isActive ? 'bg-success-subtle' : 'bg-danger-subtle') . '"'
+                    . ' data-order="' . (int) $isActive . '">'
+                    . ($isActive ? 'Active' : 'Inactive')
+                    . '</span>';
             })
             ->rawColumns(['memo_type_name', 'document', 'actions', 'status']);
     }
@@ -116,13 +122,15 @@ class MemoTypeMasterDataTable extends DataTable
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
+                // ‹ 1 2 3 › — First/Last are not part of the shared footer (§4).
+                'pagingType' => 'simple_numbers',
                 'language' => [
+                    // The same glyphs vendor/pagination/custom.blade.php uses,
+                    // which is what makes the two footer variants match (§4).
                     'paginate' => [
-                        'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 24px;">chevron_left</i>',
-                        'next' => '<i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 24px;">chevron_right</i>'
-                    ]
+                        'previous' => '&lsaquo;',
+                        'next' => '&rsaquo;',
+                    ],
                 ],
             ]);
     }

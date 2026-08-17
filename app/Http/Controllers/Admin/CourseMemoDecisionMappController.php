@@ -72,63 +72,80 @@ class CourseMemoDecisionMappController extends Controller
                     return $row->memoConclusion->discussion_name ?? '-';
                 })
 
+                // Status: soft badge, display only (docs/new-design-index-page.md
+                // §3b). The switch that changes it lives in the action group; a
+                // decorateCmdmRows() in the blade used to rebuild both on every
+                // draw, which is why the two disagreed after an ajax reload.
                 ->addColumn('status', function ($row) {
-                    return '<div class="form-check form-switch d-inline-block">
-                    <input class="form-check-input status-toggle"
-                        type="checkbox"
-                        data-table="course_memo_decision_mapp"
-                        data-column="active_inactive"
-                        data-id="' . $row->getKey() . '"
-                        ' . ($row->active_inactive == 1 ? 'checked' : '') . '>
-                </div>';
+                    $isActive = (int) $row->active_inactive === 1;
+
+                    return '<span class="status-pill cmdm-status-badge badge rounded-1 '
+                        . ($isActive ? 'bg-success-subtle' : 'bg-danger-subtle') . '"'
+                        . ' data-order="' . (int) $isActive . '">'
+                        . ($isActive ? 'Active' : 'Inactive')
+                        . '</span>';
                 })
 
+                // Action: Edit · the status switch · Delete, three equal stacks of
+                // an icon over a caption (§3b).
                 ->addColumn('action', function ($row) {
-
-                    $editUrl   = route('course.memo.decision.edit', encrypt($row->pk));
+                    $isActive = (int) $row->active_inactive === 1;
                     $deleteUrl = route('course.memo.decision.delete', encrypt($row->pk));
+                    // The caption names the ACTION, not the state: the state is
+                    // already shown by the badge one column over.
+                    $toggleLabel = $isActive ? 'Deactivate' : 'Activate';
 
-                    // The edit modal's dropdowns only carry running courses / active memo
-                    // types, so an Archived-tab row has no matching <option> and the field
-                    // would open blank. The names ride along so the modal can restore the
-                    // saved value as a labelled option.
-                    $editBtn = '
-                <a href="javascript:void(0)"
-                    class="btn btn-sm btn-outline-warning d-flex align-items-center gap-1 editConclusion"
-                    data-id="' . $row->pk . '"
-                    data-course="' . $row->course_master_pk . '"
-                    data-course-name="' . e($row->course->course_name ?? '') . '"
-                    data-memo="' . $row->memo_type_master_pk . '"
-                    data-memo-name="' . e($row->memo->memo_type_name ?? '') . '"
-                    data-conclusion="' . $row->memo_conclusion_master_pk . '"
-                    data-conclusion-name="' . e($row->memoConclusion->discussion_name ?? '') . '"
-                    data-status="' . $row->active_inactive . '">
-                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
-                    <span class="d-none d-md-inline">Edit</span>
-                </a>';
+                    // The edit modal's dropdowns only carry running courses / active
+                    // memo types, so an Archived-tab row has no matching <option> and
+                    // the field would open blank. The names ride along so the modal
+                    // can restore the saved value as a labelled option.
+                    $edit = '<button type="button" class="mtm-act mtm-act--edit editConclusion"'
+                        . ' data-id="' . (int) $row->pk . '"'
+                        . ' data-course="' . e($row->course_master_pk) . '"'
+                        . ' data-course-name="' . e($row->course->course_name ?? '') . '"'
+                        . ' data-memo="' . e($row->memo_type_master_pk) . '"'
+                        . ' data-memo-name="' . e($row->memo->memo_type_name ?? '') . '"'
+                        . ' data-conclusion="' . e($row->memo_conclusion_master_pk) . '"'
+                        . ' data-conclusion-name="' . e($row->memoConclusion->discussion_name ?? '') . '"'
+                        . ' data-status="' . (int) $row->active_inactive . '"'
+                        . ' title="Edit" aria-label="Edit mapping">'
+                        . '<span class="mtm-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>'
+                        . '<span class="mtm-act__label">Edit</span></button>';
 
-                    if ($row->active_inactive == 1) {
-                        $deleteBtn = '
-                    <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" disabled>
-                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                        <span class="d-none d-md-inline">Delete</span>
-                    </button>';
-                    } else {
-                        $deleteBtn = '
-                    <form action="' . $deleteUrl . '" method="POST" class="d-inline">
-                        ' . csrf_field() . method_field('DELETE') . '
-                        <button type="submit"
-                            class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
-                            onclick="return confirm(\'Are you sure you want to delete this memo type?\');">
-                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                            <span class="d-none d-md-inline">Delete</span>
-                        </button>
-                    </form>';
-                    }
+                    // No .form-check/.form-switch wrapper (§3b trap 1): custom.css
+                    // pulls a .form-check-input inside one left by -2.375rem, which
+                    // is right for switch-beside-label and wrong for this layout.
+                    // custom.js binds .status-toggle globally off these data-* attrs.
+                    $toggle = '<label class="mtm-act mtm-act--toggle" title="' . $toggleLabel . '">'
+                        . '<span class="mtm-act__icon">'
+                        . '<input class="form-check-input status-toggle" type="checkbox" role="switch"'
+                        . ' data-table="course_memo_decision_mapp" data-column="active_inactive"'
+                        . ' data-id="' . (int) $row->getKey() . '" ' . ($isActive ? 'checked' : '')
+                        . ' aria-label="' . $toggleLabel . ' mapping">'
+                        . '</span>'
+                        . '<span class="mtm-act__label">' . $toggleLabel . '</span></label>';
 
-                    return '<div class="d-inline-flex gap-2">' . $editBtn . $deleteBtn . '</div>';
+                    // Mirror the rule this page already enforced: an active mapping
+                    // cannot be deleted, so the control is muted and inert rather
+                    // than red-and-always-failing.
+                    $delete = $isActive
+                        ? '<span class="mtm-act mtm-act--del is-disabled" aria-disabled="true"'
+                            . ' title="Deactivate this mapping before deleting">'
+                            . '<span class="mtm-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
+                            . '<span class="mtm-act__label">Delete</span></span>'
+                        : '<form action="' . e($deleteUrl) . '" method="POST" class="mtm-act mtm-act--del cmdm-delete-form">'
+                            . csrf_field() . method_field('DELETE')
+                            . '<button type="submit" class="mtm-act__btn" title="Delete"'
+                            . ' aria-label="Delete mapping"'
+                            . ' onclick="return confirm(\'Are you sure you want to delete this mapping?\');">'
+                            . '<span class="mtm-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
+                            . '<span class="mtm-act__label">Delete</span>'
+                            . '</button></form>';
+
+                    return '<div class="mtm-act-group" role="group" aria-label="Row actions">'
+                        . $edit . $toggle . $delete
+                        . '</div>';
                 })
-
                 ->rawColumns(['status', 'action'])
                 ->make(true);
         }
