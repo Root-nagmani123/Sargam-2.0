@@ -3,7 +3,10 @@
 @section('title', 'Hostel Building')
 
 @push('styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+{{-- Shared by the four OT Hostel pages (docs/new-design-index-page.md §7). --}}
+<link rel="stylesheet"
+    href="{{ asset('css/ot-hostel-admin.css') }}?v={{ @filemtime(public_path('css/ot-hostel-admin.css')) }}">
 @endpush
 
 @section('setup_content')
@@ -58,44 +61,45 @@
 </div>
 
 <!-- Add / Edit Hostel Building Modal -->
-<div class="modal fade" id="hbFormModal" tabindex="-1" aria-labelledby="hbFormModalLabel" aria-hidden="true"
+<div class="modal fade oth-modal" id="hbFormModal" tabindex="-1" aria-labelledby="hbFormModalLabel" aria-hidden="true"
      data-bs-backdrop="static" data-bs-keyboard="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-content shadow-lg">
             <form id="hbBuildingForm" action="{{ route('master.hostel.building.store') }}" method="POST" novalidate>
                 @csrf
                 <input type="hidden" name="pk" id="hbPk" value="">
-                <div class="modal-header border-bottom">
-                    <h5 class="modal-title fw-bold mb-0" id="hbFormModalLabel">Add Hostel Building</h5>
+                <div class="oth-modal-header">
+                    <h5 class="oth-modal-title" id="hbFormModalLabel">Add Hostel Building</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="oth-modal-body">
                     <div id="hbFormAlert" class="alert d-none mb-3" role="alert"></div>
 
-                    <div class="mb-3">
-                        <label for="hbBuildingName" class="form-label fw-semibold">Building Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="hbBuildingName" name="building_name"
+                    <div class="oth-field-card">
+                    <div class="oth-field">
+                        <label for="hbBuildingName" class="oth-field-label">Building Name <span class="oth-req">*</span></label>
+                        <input type="text" class="oth-control" id="hbBuildingName" name="building_name"
                                placeholder="eg. Naramada Hostel" maxlength="255" required>
                         <div class="invalid-feedback" data-field="building_name"></div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="hbFloors" class="form-label fw-semibold">Number of Floors <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control" id="hbFloors" name="no_of_floors"
+                    <div class="oth-field">
+                        <label for="hbFloors" class="oth-field-label">Number of Floors <span class="oth-req">*</span></label>
+                        <input type="number" class="oth-control" id="hbFloors" name="no_of_floors"
                                placeholder="eg. 25" min="0" required>
                         <div class="invalid-feedback" data-field="no_of_floors"></div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="hbRooms" class="form-label fw-semibold">Number of Rooms <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control" id="hbRooms" name="no_of_rooms"
+                    <div class="oth-field">
+                        <label for="hbRooms" class="oth-field-label">Number of Rooms <span class="oth-req">*</span></label>
+                        <input type="number" class="oth-control" id="hbRooms" name="no_of_rooms"
                                placeholder="eg. 24" min="0" required>
                         <div class="invalid-feedback" data-field="no_of_rooms"></div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="hbType" class="form-label fw-semibold">Building Type <span class="text-danger">*</span></label>
-                        <select class="form-select" id="hbType" name="building_type" required>
+                    <div class="oth-field">
+                        <label for="hbType" class="oth-field-label">Building Type <span class="oth-req">*</span></label>
+                        <select class="oth-control" id="hbType" name="building_type" required>
                             <option value="">Select Type</option>
                             @foreach(($buildingType ?? []) as $value => $label)
                                 <option value="{{ $value }}">{{ $label }}</option>
@@ -104,19 +108,20 @@
                         <div class="invalid-feedback" data-field="building_type"></div>
                     </div>
 
-                    <div class="mb-0">
-                        <label for="hbStatus" class="form-label fw-semibold">Building Status <span class="text-danger">*</span></label>
-                        <select class="form-select" id="hbStatus" name="active_inactive" required>
+                    <div class="oth-field">
+                        <label for="hbStatus" class="oth-field-label">Building Status <span class="oth-req">*</span></label>
+                        <select class="oth-control" id="hbStatus" name="active_inactive" required>
                             <option value="">Select Status</option>
                             <option value="1">Active</option>
                             <option value="0">Inactive</option>
                         </select>
                         <div class="invalid-feedback" data-field="active_inactive"></div>
+                    </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 gap-2 justify-content-end">
-                    <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary rounded-1 px-4" id="hbSubmitBtn">Add Hostel Building</button>
+                <div class="oth-modal-footer">
+                    <button type="button" class="btn oth-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn oth-btn-submit" id="hbSubmitBtn">Add Hostel Building</button>
                 </div>
             </form>
         </div>

@@ -50,13 +50,24 @@ class OTHostelRoomDetailsDataTable extends DataTable
                     : '<span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>';
             })
             ->addColumn('action', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return '<div class="d-inline-flex align-items-center justify-content-center programme-action-group" role="group" aria-label="Row actions">
-                            <div class="form-check form-switch programme-action-switch mb-0">
-                                <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                    data-table="ot_hostel_room_details" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
-                            </div>
-                        </div>';
+                $isActive = (int) $row->active_inactive === 1;
+                $checked = $isActive ? 'checked' : '';
+                $toggleLabel = $isActive ? 'Deactivate' : 'Activate';
+
+                // This grid is assignment-only: no Edit, no Delete, so the switch is
+                // the single action — captioned like every other stack (§3b), and
+                // without a .form-check/.form-switch wrapper (trap 1).
+                return '<div class="oth-act-group" role="group" aria-label="Assignment actions">'
+                        . '<label class="oth-act oth-act--toggle" title="' . $toggleLabel . '">'
+                        . '<span class="oth-act__icon">'
+                        . '<input class="form-check-input status-toggle" type="checkbox" role="switch"'
+                        . ' data-table="ot_hostel_room_details" data-column="active_inactive"'
+                        . ' data-id="' . (int) $row->pk . '" ' . $checked
+                        . ' aria-label="' . $toggleLabel . ' this assignment">'
+                        . '</span>'
+                        . '<span class="oth-act__label">' . $toggleLabel . '</span>'
+                        . '</label>'
+                        . '</div>';
             })
             ->rawColumns(['student_name', 'hostel_room_name', 'course_name', 'status', 'action']);
     }

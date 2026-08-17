@@ -3,7 +3,10 @@
 @section('title', 'Assign Student Hostel')
 
 @push('styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+{{-- Shared by the four OT Hostel pages (docs/new-design-index-page.md §7). --}}
+<link rel="stylesheet"
+    href="{{ asset('css/ot-hostel-admin.css') }}?v={{ @filemtime(public_path('css/ot-hostel-admin.css')) }}">
 <style>
     .assign-student-page .as-upload-dropzone,
     #importModal .as-upload-dropzone {
@@ -97,18 +100,18 @@
 </div>
 
 <!-- Import Excel Modal (functionality unchanged) -->
-<div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true"
+<div class="modal fade oth-modal" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true"
     data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-content shadow-lg">
             <form method="POST" enctype="multipart/form-data" id="importExcelForm">
                 @csrf
-                <div class="modal-header border-bottom">
-                    <h5 class="modal-title fw-bold mb-0" id="importModalLabel">Assign Student Hostel via Import</h5>
+                <div class="oth-modal-header">
+                    <h5 class="oth-modal-title" id="importModalLabel">Assign Student Hostel via Import</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <div class="modal-body">
+                <div class="oth-modal-body">
                     {{-- Progress --}}
                     <div class="progress rounded-1 mb-4" style="height: 6px;" role="progressbar"
                          aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
@@ -119,11 +122,11 @@
                     <div id="asImportStep1">
 
                         {{-- Course Selector --}}
-                        <div class="mb-3">
-                            <label for="importCourse" class="form-label fw-semibold">
-                                Select Course <span class="text-danger">*</span>
+                        <div class="oth-field-card mb-3">
+                            <label for="importCourse" class="oth-field-label">
+                                Select Course <span class="oth-req">*</span>
                             </label>
-                            <select name="course_master_pk" id="importCourse" class="form-select" required>
+                            <select name="course_master_pk" id="importCourse" class="oth-control" required>
                                 <option value="">-- Select Course --</option>
                                 @foreach ($courses as $pk => $name)
                                     <option value="{{ $pk }}">{{ $name }}</option>
@@ -179,10 +182,10 @@
                     </div>
                 </div>
 
-                <div class="modal-footer border-0 gap-2 justify-content-end">
-                    <button type="button" class="btn btn-outline-primary rounded-1 px-4 btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary rounded-1 px-4" id="asImportNext">Next</button>
-                    <button type="button" class="btn btn-primary rounded-1 px-4 d-none" id="asImportAssign">Assign Students Hostel</button>
+                <div class="oth-modal-footer">
+                    <button type="button" class="btn oth-btn-cancel btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn oth-btn-submit" id="asImportNext">Next</button>
+                    <button type="button" class="btn oth-btn-submit d-none" id="asImportAssign">Assign Students Hostel</button>
                 </div>
             </form>
         </div>

@@ -1,0 +1,291 @@
+/*
+ * OT Hostel (admin) — the four pages under the OT Hostel menu:
+ *
+ *   .hostel-building-page   Building Master        (master/hostel-building-master)
+ *   .hostel-floor-page      Hostel Floor          (master/hostel-floor-master)
+ *   .hostel-room-page       Hostel Floor Room Map (hostel-building-floor-room-map)
+ *   .assign-student-page    Assign Student Hostel (hostel-building-map/assign-student)
+ *
+ * The layouts were already on the new design; this sheet adds the two pieces they
+ * were missing — the §3b row-action stacks and the §3c modal chrome — in one
+ * `.oth-*` vocabulary rather than four copies (docs/new-design-index-page.md §7).
+ *
+ * NOTE `programme-dt-*` / `programme-status-badge` are a different layer — shared
+ * DataTables chrome in public/css/custom.css. This file only adds what that layer
+ * does not cover.
+ */
+
+/* ── Action column: equal-width icon-over-label stacks (§3b) ───────────────
+   The actions stay VISIBLE in the cell — Edit · the status switch · Delete —
+   captioned, never icon-only and never behind a kebab. Three of these grids are
+   Yajra, so the same markup is built server-side in the DataTable classes. */
+
+:is(.hostel-building-page, .hostel-floor-page, .hostel-room-page, .assign-student-page) .programme-dt-table thead th:last-child,
+:is(.hostel-building-page, .hostel-floor-page, .hostel-room-page, .assign-student-page) .programme-dt-table tbody td:last-child {
+    text-align: center;
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+}
+
+:is(.hostel-building-page, .hostel-floor-page, .hostel-room-page, .assign-student-page) .oth-act-group {
+    display: inline-flex;
+    /* flex-start, not stretch: the stacks are a mix of <button>, <label>, <span>
+       and <form>, and stretching them to a common height starts their icon
+       strips at different tops (§3b wants one baseline). */
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+/* The Delete action is wrapped in a <form>; it must add no box of its own. */
+:is(.hostel-building-page, .hostel-floor-page, .hostel-room-page, .assign-student-page) .oth-act,
+:is(.hostel-building-page, .hostel-floor-page, .hostel-room-page, .assign-student-page) .oth-act__btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    /* Wide enough for "Deactivate", so no stack is sized by its own caption. */
+    min-width: 62px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* One fixed-height strip for glyphs AND the switch, so they share a baseline. */
+:is(.hostel-building-page, .hostel-floor-page, .hostel-room-page, .assign-student-page) .oth-act__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+}
+
+:is(.hostel-building-page, .hostel-floor-page, .hostel-room-page, .assign-student-page) .oth-act__icon > i {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+/* No .form-check/.form-switch wrapper here (§3b trap 1) — custom.css drags a
+   .form-check-input inside one 2.375rem to the left, which is right for the
+   switch-beside-label layout and wrong for switch-above-caption. The switch skin
+   is keyed on the input itself and still applies without the wrapper. */
+:is(.hostel-building-page, .hostel-floor-page, .hostel-room-page, .assign-student-page) .oth-act__icon .form-check-input {
+    margin: 0;
+    float: none;
+    cursor: pointer;
+}
+
+:is(.hostel-building-page, .hostel-floor-page, .hostel-room-page, .assign-student-page) .oth-act__label {
+    white-space: nowrap;
+}
+
+:is(.hostel-building-page, .hostel-floor-page, .hostel-room-page, .assign-student-page) .oth-act--edit {
+    color: #2563eb;
+}
+
+:is(.hostel-building-page, .hostel-floor-page, .hostel-room-page, .assign-student-page) .oth-act--toggle {
+    color: #475467;
+}
+
+:is(.hostel-building-page, .hostel-floor-page, .hostel-room-page, .assign-student-page) .oth-act--del .oth-act__btn {
+    color: var(--bs-danger, #b12923);
+}
+
+/* Delete is refused while the row is active — muted, not red-and-always-failing. */
+:is(.hostel-building-page, .hostel-floor-page, .hostel-room-page, .assign-student-page) .oth-act--del.is-disabled {
+    color: #98a2b3;
+    opacity: 0.65;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+:is(.hostel-building-page, .hostel-floor-page, .hostel-room-page, .assign-student-page) .oth-act:not(.is-disabled):hover .oth-act__label,
+:is(.hostel-building-page, .hostel-floor-page, .hostel-room-page, .assign-student-page) .oth-act__btn:hover .oth-act__label {
+    text-decoration: underline;
+}
+
+:is(.hostel-building-page, .hostel-floor-page, .hostel-room-page, .assign-student-page) .oth-act:focus-visible,
+:is(.hostel-building-page, .hostel-floor-page, .hostel-room-page, .assign-student-page) .oth-act__btn:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.2);
+}
+
+/* ── Add / Edit modals (§3c) ───────────────────────────────────────────────
+   Add and Edit are the same dialog on all four pages, so "alike" is free; what
+   was missing was the header divider, the tinted field card, the red-outline
+   Cancel and the equal flush-right footer pair.
+
+   Scoped on .oth-modal, not the page roots: these rules must beat Bootstrap's
+   .form-control/.form-select/.modal-* without !important, and the prefix keeps
+   them off the Column Visibility dialog next door. */
+
+/* These pages sit under a sticky page chrome, so the dialog has to clear it. */
+.oth-modal.show {
+    z-index: 1110 !important;
+}
+
+body.modal-open:has(.oth-modal.show) .modal-backdrop.show {
+    z-index: 1105 !important;
+}
+
+.oth-modal .modal-content {
+    border: 0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.oth-modal .oth-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #eaecf0;
+}
+
+.oth-modal .oth-modal-title {
+    margin: 0;
+    color: #101828;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.oth-modal .oth-modal-body {
+    padding: 1.25rem;
+}
+
+/* One tinted card holding the record's fields (§3c). */
+.oth-modal .oth-field-card {
+    padding: 1rem;
+    background: #eef1fc;
+    border-radius: 10px;
+}
+
+.oth-modal .oth-field + .oth-field {
+    margin-top: 1rem;
+}
+
+.oth-modal .oth-field-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: #344054;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.oth-modal .oth-req {
+    color: #dc2626;
+}
+
+.oth-modal .oth-control {
+    display: block;
+    width: 100%;
+    min-height: 2.625rem;
+    padding: 0.5rem 0.75rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    color: #101828;
+    font-size: 0.875rem;
+    box-shadow: none;
+}
+
+.oth-modal select.oth-control {
+    /* Bootstrap's caret, since .form-select is no longer in play. */
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23667085' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 14px 11px;
+    padding-right: 2.25rem;
+}
+
+.oth-modal .oth-control:focus {
+    border-color: #004384;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
+    outline: 0;
+}
+
+.oth-modal .oth-control.is-invalid {
+    border-color: #dc2626;
+    /* Bootstrap's own is-invalid draws a background icon sized for .form-control. */
+    background-image: none;
+}
+
+.oth-modal select.oth-control.is-invalid {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23667085' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+}
+
+/* The existing JS toggles .invalid-feedback via Bootstrap's own d-block, so keep
+   that element working while restyling it. */
+.oth-modal .invalid-feedback {
+    margin-top: 0.3rem;
+    color: #dc2626;
+    font-size: 0.75rem;
+}
+
+/* Footer: an equal pair, flush right — the alignment asked for on the
+   group-mapping dialogs, kept the same across the admin's modals. */
+.oth-modal .oth-modal-footer {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    align-items: stretch;
+    gap: 0.75rem;
+    width: fit-content;
+    max-width: 100%;
+    margin-inline-start: auto;
+    padding: 1rem 1.25rem 1.25rem;
+    border-top: 0;
+}
+
+.oth-modal .oth-btn-cancel,
+.oth-modal .oth-btn-submit {
+    width: 100%;
+    min-width: 9rem;
+    min-height: 2.625rem;
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.oth-modal .oth-btn-cancel {
+    background: #fff;
+    border: 1px solid #fca5a5;
+    color: #dc2626;
+}
+
+.oth-modal .oth-btn-cancel:hover {
+    background: #fef2f2;
+    border-color: #dc2626;
+    color: #dc2626;
+}
+
+.oth-modal .oth-btn-submit {
+    background: #004384;
+    border: 1px solid #004384;
+    color: #fff;
+}
+
+.oth-modal .oth-btn-submit:hover {
+    background: #00376d;
+    border-color: #00376d;
+    color: #fff;
+}
+
+/* A scrollable dialog (the Room Map form is the tall one) must scroll its own
+   body, or the footer is pushed off-screen. */
+.oth-modal .modal-dialog-scrollable .oth-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}

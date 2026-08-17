@@ -3,7 +3,10 @@
 @section('title', 'Hostel Floor Room Map')
 
 @push('styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+{{-- Shared by the four OT Hostel pages (docs/new-design-index-page.md §7). --}}
+<link rel="stylesheet"
+    href="{{ asset('css/ot-hostel-admin.css') }}?v={{ @filemtime(public_path('css/ot-hostel-admin.css')) }}">
 <style>
     /* Inline-editable comment: looks like text, editable on focus */
     .hostel-room-page .comment-input {
@@ -158,8 +161,13 @@
                                                 $roomMiddle = explode('-', $roomSuffix)[0] ?? '';
                                             }
                                         @endphp
-                                        <div class="d-inline-flex align-items-center justify-content-center programme-action-group" role="group" aria-label="Row actions">
-                                            <button type="button" class="programme-action-btn hr-edit-btn" aria-label="Edit room"
+                                        @php $hrIsActive = $row->active_inactive == 1; @endphp
+                                        {{-- Edit · the status switch · Delete, each an icon over a
+                                             caption (§3b). The .hr-edit-btn hook and its data-*
+                                             payload are what the modal reads. --}}
+                                        <div class="oth-act-group" role="group" aria-label="Room actions">
+                                            <button type="button" class="oth-act oth-act--edit hr-edit-btn"
+                                                    title="Edit" aria-label="Edit room"
                                                     data-id="{{ encrypt($row->pk) }}"
                                                     data-building="{{ $row->building_master_pk }}"
                                                     data-floor="{{ $row->floor_master_pk }}"
@@ -168,20 +176,33 @@
                                                     data-capacity="{{ $row->capacity }}"
                                                     data-comment="{{ $row->comment }}"
                                                     data-status="{{ (int) $row->active_inactive }}">
-                                                <i class="bi bi-pencil" aria-hidden="true"></i>
+                                                <span class="oth-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
+                                                <span class="oth-act__label">Edit</span>
                                             </button>
-                                            <div class="form-check form-switch programme-action-switch mb-0">
-                                                <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                       data-table="building_floor_room_mapping" data-column="active_inactive"
-                                                       data-id="{{ $row->pk }}" {{ $row->active_inactive == 1 ? 'checked' : '' }}>
-                                            </div>
+
+                                            {{-- No .form-check/.form-switch wrapper (§3b trap 1):
+                                                 custom.css pulls a .form-check-input inside one left
+                                                 by -2.375rem. custom.js binds .status-toggle globally
+                                                 off these data-* attributes. --}}
+                                            <label class="oth-act oth-act--toggle"
+                                                   title="{{ $hrIsActive ? 'Deactivate' : 'Activate' }}">
+                                                <span class="oth-act__icon">
+                                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                           data-table="building_floor_room_mapping" data-column="active_inactive"
+                                                           data-id="{{ $row->pk }}" {{ $hrIsActive ? 'checked' : '' }}
+                                                           aria-label="{{ $hrIsActive ? 'Deactivate' : 'Activate' }} room">
+                                                </span>
+                                                <span class="oth-act__label">{{ $hrIsActive ? 'Deactivate' : 'Activate' }}</span>
+                                            </label>
+
                                             <form action="{{ route('hostel.building.floor.room.map.destroy', encrypt($row->pk)) }}"
-                                                  method="POST" class="d-inline-flex m-0"
+                                                  method="POST" class="oth-act oth-act--del"
                                                   onsubmit="return confirm('Are you sure you want to delete this room mapping?')">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="programme-action-btn programme-action-btn--danger" aria-label="Delete room">
-                                                    <i class="bi bi-trash3" aria-hidden="true"></i>
+                                                <button type="submit" class="oth-act__btn" title="Delete" aria-label="Delete room">
+                                                    <span class="oth-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
+                                                    <span class="oth-act__label">Delete</span>
                                                 </button>
                                             </form>
                                         </div>
@@ -220,23 +241,24 @@
 </div>
 
 <!-- Add / Edit Hostel Floor Room Modal -->
-<div class="modal fade" id="hrFormModal" tabindex="-1" aria-labelledby="hrFormModalLabel" aria-hidden="true"
+<div class="modal fade oth-modal" id="hrFormModal" tabindex="-1" aria-labelledby="hrFormModalLabel" aria-hidden="true"
      data-bs-backdrop="static" data-bs-keyboard="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-content shadow-lg">
             <form id="hrRoomForm" action="{{ route('hostel.building.floor.room.map.store') }}" method="POST" novalidate>
                 @csrf
                 <input type="hidden" name="pk" id="hrPk" value="">
-                <div class="modal-header border-bottom">
-                    <h5 class="modal-title fw-bold mb-0" id="hrFormModalLabel">Add Hostel Floor Room</h5>
+                <div class="oth-modal-header">
+                    <h5 class="oth-modal-title" id="hrFormModalLabel">Add Hostel Floor Room</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="oth-modal-body">
                     <div id="hrFormAlert" class="alert d-none mb-3" role="alert"></div>
 
-                    <div class="mb-3">
-                        <label for="hrBuilding" class="form-label fw-semibold">Building <span class="text-danger">*</span></label>
-                        <select class="form-select" id="hrBuilding" name="building_master_pk" required>
+                    <div class="oth-field-card">
+                    <div class="oth-field">
+                        <label for="hrBuilding" class="oth-field-label">Building <span class="oth-req">*</span></label>
+                        <select class="oth-control" id="hrBuilding" name="building_master_pk" required>
                             <option value="">Select Building</option>
                             @foreach($buildings as $building)
                                 <option value="{{ $building->pk }}">{{ $building->building_name }}</option>
@@ -245,9 +267,9 @@
                         <div class="invalid-feedback" data-field="building_master_pk"></div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="hrFloor" class="form-label fw-semibold">Floor <span class="text-danger">*</span></label>
-                        <select class="form-select" id="hrFloor" name="floor_master_pk" required>
+                    <div class="oth-field">
+                        <label for="hrFloor" class="oth-field-label">Floor <span class="oth-req">*</span></label>
+                        <select class="oth-control" id="hrFloor" name="floor_master_pk" required>
                             <option value="">Select Floor</option>
                             @foreach($floors as $floor)
                                 <option value="{{ $floor->pk }}">{{ $floor->floor_name }}</option>
@@ -256,9 +278,9 @@
                         <div class="invalid-feedback" data-field="floor_master_pk"></div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="hrRoomType" class="form-label fw-semibold">Room Type <span class="text-danger">*</span></label>
-                        <select class="form-select" id="hrRoomType" name="room_type" required>
+                    <div class="oth-field">
+                        <label for="hrRoomType" class="oth-field-label">Room Type <span class="oth-req">*</span></label>
+                        <select class="oth-control" id="hrRoomType" name="room_type" required>
                             <option value="">Select Type</option>
                             @foreach($roomTypes as $key => $type)
                                 <option value="{{ $key }}">{{ $type }}</option>
@@ -267,23 +289,23 @@
                         <div class="invalid-feedback" data-field="room_type"></div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="hrRoomName" class="form-label fw-semibold">Room Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="hrRoomName" name="room_name"
+                    <div class="oth-field">
+                        <label for="hrRoomName" class="oth-field-label">Room Name <span class="oth-req">*</span></label>
+                        <input type="text" class="oth-control" id="hrRoomName" name="room_name"
                                placeholder="eg. Naramada Hostel" maxlength="255" required>
                         <div class="invalid-feedback" data-field="room_name"></div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="hrCapacity" class="form-label fw-semibold">Capacity of Room <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control" id="hrCapacity" name="capacity"
+                    <div class="oth-field">
+                        <label for="hrCapacity" class="oth-field-label">Capacity of Room <span class="oth-req">*</span></label>
+                        <input type="number" class="oth-control" id="hrCapacity" name="capacity"
                                placeholder="eg. 25" min="1" required>
                         <div class="invalid-feedback" data-field="capacity"></div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="hrStatus" class="form-label fw-semibold">Building Status <span class="text-danger">*</span></label>
-                        <select class="form-select" id="hrStatus" name="active_inactive" required>
+                    <div class="oth-field">
+                        <label for="hrStatus" class="oth-field-label">Building Status <span class="oth-req">*</span></label>
+                        <select class="oth-control" id="hrStatus" name="active_inactive" required>
                             <option value="">Select Status</option>
                             <option value="1">Active</option>
                             <option value="0">Inactive</option>
@@ -291,16 +313,17 @@
                         <div class="invalid-feedback" data-field="active_inactive"></div>
                     </div>
 
-                    <div class="mb-0">
-                        <label for="hrComment" class="form-label fw-semibold">Comments</label>
-                        <input type="text" class="form-control" id="hrComment" name="comment"
+                    <div class="oth-field">
+                        <label for="hrComment" class="oth-field-label">Comments</label>
+                        <input type="text" class="oth-control" id="hrComment" name="comment"
                                placeholder="eg. Lorem ipsum dolor sit amet" maxlength="255">
                         <div class="invalid-feedback" data-field="comment"></div>
+                    </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 gap-2 justify-content-end">
-                    <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary rounded-1 px-4" id="hrSubmitBtn">Add Hostel Floor Room</button>
+                <div class="oth-modal-footer">
+                    <button type="button" class="btn oth-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn oth-btn-submit" id="hrSubmitBtn">Add Hostel Floor Room</button>
                 </div>
             </form>
         </div>

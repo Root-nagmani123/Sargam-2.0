@@ -37,36 +37,57 @@ class BuildingMasterDataTable extends DataTable
                 $deleteUrl = route('master.hostel.building.destroy', ['id' => encrypt($row->pk)]);
                 $isActive  = (int) $row->active_inactive === 1;
                 $checked   = $isActive ? 'checked' : '';
-                $deleteDisabled = $isActive ? 'disabled' : '';
+                $toggleLabel = $isActive ? 'Deactivate' : 'Activate';
                 $csrf = csrf_token();
 
-                $editBtn = '<button type="button" class="programme-action-btn hb-edit-btn" aria-label="Edit building"'
+                // Edit · the status switch · Delete, each an icon over a caption
+                // (docs/new-design-index-page.md §3b). The .hb-edit-btn hook and the
+                // data-* payload the modal reads are unchanged.
+                $editBtn = '<button type="button" class="oth-act oth-act--edit hb-edit-btn" title="Edit" aria-label="Edit building"'
                         . ' data-id="' . encrypt($row->pk) . '"'
                         . ' data-name="' . e($row->building_name) . '"'
                         . ' data-floors="' . e($row->no_of_floors) . '"'
                         . ' data-rooms="' . e($row->no_of_rooms) . '"'
                         . ' data-type="' . e($row->building_type) . '"'
                         . ' data-status="' . (int) $row->active_inactive . '">'
-                        . '<i class="bi bi-pencil" aria-hidden="true"></i>'
+                        . '<span class="oth-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>'
+                        . '<span class="oth-act__label">Edit</span>'
                         . '</button>';
 
-                $deleteHtml = '<form action="' . $deleteUrl . '" method="POST" class="d-inline-flex m-0" onsubmit="return confirm(\'Are you sure you want to delete this building?\')">'
-                        . '<input type="hidden" name="_token" value="' . $csrf . '">'
-                        . '<input type="hidden" name="_method" value="DELETE">'
-                        . '<button type="submit" class="programme-action-btn programme-action-btn--danger" aria-label="Delete building" ' . $deleteDisabled . '>'
-                        . '<i class="bi bi-trash3" aria-hidden="true"></i>'
-                        . '</button>'
-                        . '</form>';
+                // No .form-check/.form-switch wrapper (§3b trap 1). custom.js binds
+                // .status-toggle globally off these data-* attributes.
+                $toggle = '<label class="oth-act oth-act--toggle" title="' . $toggleLabel . '">'
+                        . '<span class="oth-act__icon">'
+                        . '<input class="form-check-input status-toggle" type="checkbox" role="switch"'
+                        . ' data-table="building_master" data-column="active_inactive"'
+                        . ' data-id="' . (int) $row->pk . '" ' . $checked
+                        . ' aria-label="' . $toggleLabel . ' building">'
+                        . '</span>'
+                        . '<span class="oth-act__label">' . $toggleLabel . '</span>'
+                        . '</label>';
 
-                return '
-                <div class="d-inline-flex align-items-center justify-content-center programme-action-group" role="group" aria-label="Row actions">
-                    ' . $editBtn . '
-                    <div class="form-check form-switch programme-action-switch mb-0">
-                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                            data-table="building_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
-                    </div>
-                    ' . $deleteHtml . '
-                </div>';
+                // An active building cannot be deleted — a muted, inert stack says
+                // why, instead of a live control that would fail.
+                if ($isActive) {
+                    $deleteHtml = '<span class="oth-act oth-act--del is-disabled" aria-disabled="true"'
+                            . ' title="Deactivate this building before deleting">'
+                            . '<span class="oth-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
+                            . '<span class="oth-act__label">Delete</span>'
+                            . '</span>';
+                } else {
+                    $deleteHtml = '<form action="' . $deleteUrl . '" method="POST" class="oth-act oth-act--del" onsubmit="return confirm(\'Are you sure you want to delete this building?\')">'
+                            . '<input type="hidden" name="_token" value="' . $csrf . '">'
+                            . '<input type="hidden" name="_method" value="DELETE">'
+                            . '<button type="submit" class="oth-act__btn" title="Delete" aria-label="Delete building">'
+                            . '<span class="oth-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
+                            . '<span class="oth-act__label">Delete</span>'
+                            . '</button>'
+                            . '</form>';
+                }
+
+                return '<div class="oth-act-group" role="group" aria-label="Building actions">'
+                        . $editBtn . $toggle . $deleteHtml
+                        . '</div>';
             })
             ->setRowId('pk')
             ->filterColumn('building_name', function ($query, $keyword) {
