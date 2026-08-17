@@ -1,0 +1,349 @@
+/*
+ * Basic setup masters (admin) — Venue Master, Class Session Master and Stream.
+ *
+ * Three small listings with the same shape (a paginated table, a status switch
+ * and Edit/Delete), so they share one module stylesheet rather than three
+ * near-identical copies (docs/new-design-index-page.md "Where the CSS lives",
+ * §7).
+ *
+ * Roots — one per page, components named once:
+ *   .vm-master-page    Venue Master
+ *   .csm-master-page   Class Session Master
+ *   .stm-master-page   Stream
+ *
+ * NOTE the `programme-dt-*` classes these pages also use are a different layer —
+ * shared DataTables chrome in public/css/custom.css (§7). This file only adds
+ * what that layer does not cover.
+ */
+
+/* ── Status column: soft badge, display only (§3b) ─────────────────────────
+   The theme ships the *-subtle backgrounds but not the matching
+   text-*-emphasis colours, so the label would render black. */
+
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .status-pill {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .status-pill.bg-success-subtle {
+    color: #146c43;
+}
+
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .status-pill.bg-danger-subtle {
+    color: #b02a37;
+}
+
+/* ── Action column: equal-width icon-over-label stacks (§3b) ───────────────
+   The actions stay VISIBLE in the cell — Edit · the status switch · Delete —
+   never collapsed behind a kebab. Edit opens the modal; the switch keeps the
+   inline toggle; Delete is guarded. */
+
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .programme-dt-table thead th:last-child,
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .programme-dt-table tbody td:last-child {
+    text-align: center;
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+}
+
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .bm-act-group {
+    display: inline-flex;
+    /* flex-start, not stretch: the stacks are a mix of <button>, <label>,
+       <span> and <form>, and stretching them to a common height starts their
+       icon strips at different tops (§3b wants one baseline). */
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+/* The Delete action is wrapped in a <form>; it must add no box of its own. */
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .bm-act,
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .bm-act__btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    /* Wide enough for "Deactivate", so no stack is sized by its own caption. */
+    min-width: 62px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* One fixed-height strip for glyphs AND the switch, so they share a baseline. */
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .bm-act__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+}
+
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .bm-act__icon > i {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+/* No .form-check wrapper here (§3b trap 1) — the switch skin is keyed on the
+   input itself and still applies, without the -2.375rem pull that wrapper
+   would bring. */
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .bm-act__icon .form-check-input {
+    margin: 0;
+    float: none;
+    cursor: pointer;
+}
+
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .bm-act__label {
+    white-space: nowrap;
+}
+
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .bm-act--edit {
+    color: #2563eb;
+}
+
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .bm-act--toggle {
+    color: #475467;
+}
+
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .bm-act--del .bm-act__btn {
+    color: var(--bs-danger, #b12923);
+}
+
+/* Delete is refused while the row is active — muted, not red-and-always-failing. */
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .bm-act--del.is-disabled {
+    color: #98a2b3;
+    opacity: 0.65;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .bm-act:not(.is-disabled):hover .bm-act__label,
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .bm-act__btn:hover .bm-act__label {
+    text-decoration: underline;
+}
+
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .bm-act:focus-visible,
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .bm-act__btn:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.2);
+}
+
+/* ── Footer (§4 variant B) ─────────────────────────────────────────────────
+   These are Laravel paginators, not DataTables, so the footer is hand-written
+   and reuses the shared class names to match the grids that are. */
+
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .programme-dt-count {
+    color: #667085;
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .programme-dt-footer .pagination {
+    margin: 0;
+    gap: 0.25rem;
+}
+
+/* A wide free-text column would otherwise push the row into a scroll. */
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .bm-col-wrap {
+    max-width: 420px;
+    white-space: normal;
+}
+
+/* The rows-per-page select (§4B). Named .dataTables_length/.dataTables_info so
+   these hand-written footers read the same as the JS-filled ones. */
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .programme-dt-count .dataTables_length {
+    /* DataTables' own sheet gives this a 16px bottom margin, which would push
+       the select below the pager's baseline. */
+    margin-bottom: 0;
+}
+
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .programme-dt-count .dataTables_length label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0;
+    font-weight: 400;
+}
+
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .programme-dt-count select {
+    width: auto;
+    min-width: 4.5rem;
+    padding: 0.25rem 1.75rem 0.25rem 0.6rem;
+    border-color: #d0d5dd;
+    border-radius: 6px;
+    color: #344054;
+}
+
+:is(.vm-master-page, .csm-master-page, .stm-master-page) .programme-dt-count .dataTables_info {
+    /* …and 0.755em of top padding, same story. */
+    padding-top: 0;
+    margin-bottom: 0;
+}
+
+/* ── Add / Edit modals (§3c) ───────────────────────────────────────────────
+   Add and Edit are dialogs, not pages. One modal per screen serves both modes
+   (Stream keeps a second one because its Add takes several names at once);
+   the mode only changes the title, the form action and the submit caption.
+
+   Scoped on .bm-modal, not the page roots: these rules must beat Bootstrap's
+   .form-control/.modal-* without !important, and the prefix keeps them from
+   leaking to any other dialog on the page. */
+
+.bm-modal .modal-content {
+    border: 0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.bm-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #eaecf0;
+}
+
+.bm-modal-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #101828;
+}
+
+.bm-modal-body {
+    padding: 1.25rem;
+}
+
+.bm-field-card {
+    padding: 1rem;
+    background: #eef1fc;
+    border-radius: 10px;
+}
+
+.bm-field-card + .bm-field-card {
+    margin-top: 0.75rem;
+}
+
+.bm-form-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.bm-req {
+    color: #dc2626;
+}
+
+.bm-modal .bm-control {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: #101828;
+}
+
+.bm-modal .bm-control:focus {
+    outline: 0;
+    border-color: #004384;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
+}
+
+.bm-modal .bm-control.is-invalid {
+    border-color: #dc2626;
+}
+
+.bm-field-error {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.75rem;
+    color: #dc2626;
+}
+
+/* Repeatable cards (Stream's Add): − and + as a matched 30×30 pair. */
+.bm-field-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.bm-field-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 7px;
+    color: #fff;
+    line-height: 1;
+}
+
+.bm-field-btn--remove {
+    background: #ef4444;
+}
+
+.bm-field-btn--add {
+    background: #2563eb;
+}
+
+/* An equal pair, flush right — the alignment asked for on the group-mapping
+   dialogs, kept the same here so every modal in the admin reads alike. Equal
+   columns rather than two natural widths, so "Cancel" and "Update Stream" are
+   the same size. */
+.bm-modal-footer {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    align-items: stretch;
+    gap: 0.75rem;
+    width: fit-content;
+    max-width: 100%;
+    margin-inline-start: auto;
+    padding: 1rem 1.25rem 1.25rem;
+}
+
+.bm-modal .bm-btn-cancel,
+.bm-modal .bm-btn-submit {
+    width: 100%;
+    min-width: 8.5rem;
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.bm-modal .bm-btn-cancel {
+    background: #fff;
+    border: 1px solid #fca5a5;
+    color: #dc2626;
+}
+
+.bm-modal .bm-btn-submit {
+    background: #004384;
+    border: 1px solid #004384;
+    color: #fff;
+}
+
+.bm-modal .bm-btn-submit:hover {
+    background: #00376d;
+    border-color: #00376d;
+    color: #fff;
+}

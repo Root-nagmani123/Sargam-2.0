@@ -11,6 +11,9 @@ class VenueMasterController extends Controller
 {
     private const INDEX_LIST_EPOCH_KEY = 'venue_master_index_list_epoch';
 
+    /** Whitelist for the footer's rows-per-page select (docs/new-design-index-page.md §4B). */
+    public const PER_PAGE_OPTIONS = [10, 25, 50, 100];
+
     public static function bumpIndexCacheEpoch(): void
     {
         DataTableRedisCache::bumpListEpoch(self::INDEX_LIST_EPOCH_KEY, 'VenueMasterController');
@@ -18,7 +21,12 @@ class VenueMasterController extends Controller
 
     public function index(Request $request)
     {
-        $perPage = 10;
+        // Whitelisted, and already part of the cache key below — otherwise every
+        // page size would be served page 1 of the first size that was cached.
+        $perPage = (int) $request->input('per_page', 10);
+        if (! in_array($perPage, self::PER_PAGE_OPTIONS, true)) {
+            $perPage = 10;
+        }
 
         $epoch = DataTableRedisCache::readListEpoch(self::INDEX_LIST_EPOCH_KEY);
         $cacheKey = 'venue_master_index:v1:' . md5(json_encode([
@@ -45,7 +53,11 @@ class VenueMasterController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
-        return view('admin.venueMaster.index', compact('venues'));
+        return view('admin.venueMaster.index', [
+            'venues' => $venues,
+            'perPage' => $perPage,
+            'perPageOptions' => self::PER_PAGE_OPTIONS,
+        ]);
     }
 
     /**

@@ -50,9 +50,22 @@ class ClassSessionMasterRequest extends FormRequest
     
     public function prepareForValidation()
     {
+        // Only normalise values that are actually there: strtotime('') is false
+        // and date('H:i:s', false) is a real time, so a blank field used to
+        // survive the `required` rule and save as 05:30:00.
+        $normalise = function ($value) {
+            if (blank($value)) {
+                return $value;
+            }
+
+            $timestamp = strtotime($value);
+
+            return $timestamp === false ? $value : date('H:i:s', $timestamp);
+        };
+
         $this->merge([
-            'start_time' => date('H:i:s', strtotime($this->start_time)),
-            'end_time' => date('H:i:s', strtotime($this->end_time)),
+            'start_time' => $normalise($this->start_time),
+            'end_time' => $normalise($this->end_time),
         ]);
     }
     

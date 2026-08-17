@@ -9,10 +9,25 @@ use App\Http\Requests\ClassSessionMasterRequest;
 
 class ClassSessionMasterController extends Controller
 {
-    function index() {
+    /** Whitelist for the footer's rows-per-page select (docs/new-design-index-page.md §4B). */
+    public const PER_PAGE_OPTIONS = [10, 25, 50, 100];
 
-        $classSessionMaster = ClassSessionMaster::paginate(10);
-        return view('admin.master.class_session_master.index', compact('classSessionMaster'));
+    function index(Request $request) {
+
+        $perPage = (int) $request->input('per_page', 10);
+        if (! in_array($perPage, self::PER_PAGE_OPTIONS, true)) {
+            $perPage = 10;
+        }
+
+        // withQueryString(), or the pager links drop per_page and page 2 snaps
+        // back to 10 rows.
+        $classSessionMaster = ClassSessionMaster::paginate($perPage)->withQueryString();
+
+        return view('admin.master.class_session_master.index', [
+            'classSessionMaster' => $classSessionMaster,
+            'perPage' => $perPage,
+            'perPageOptions' => self::PER_PAGE_OPTIONS,
+        ]);
     }
     function create() {
         return view('admin.master.class_session_master.create');
