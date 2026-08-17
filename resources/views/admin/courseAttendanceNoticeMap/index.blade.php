@@ -1610,7 +1610,7 @@ $(function () {
     function renderTemplatePreview(tpl) {
         if (tpl && (tpl.content || tpl.director_name)) {
             $('#anTplCourse').text($('#anCourse option:selected').text());
-            $('#anTplType').text('SHOW CAUSE NOTICE');
+          
             $('#anTplDate').text((new Date()).toLocaleDateString('en-GB'));
             $('#anTplContent').html(tpl.content || '');
             $('#anTplDirector').text(tpl.director_name || '');
@@ -1784,7 +1784,6 @@ $(function () {
     function renderEditNoticePreview(tpl, ctx) {
         if (tpl && (tpl.content || tpl.director_name)) {
             $('#editNoticeTplCourse').text(ctx.course_name || '');
-            $('#editNoticeTplType').text('SHOW CAUSE NOTICE');
             $('#editNoticeTplDate').text(ctx.date_ ? new Date(ctx.date_).toLocaleDateString('en-GB') : '');
             $('#editNoticeInfoDate').text(ctx.date_ ? new Date(ctx.date_).toLocaleDateString('en-GB') : '');
             $('#editNoticeInfoTopic').text(ctx.topic_name || '');

@@ -56,7 +56,7 @@
         </div>
 
         <p><strong>ALBY VARGHESE, A42</strong><br>
-            Remarks: Show Cause Notice for 22.11.13</p>
+          </p>
 
         <p class="text-end"><strong>Rajesh Arya</strong><br>Deputy Director Sr. & I/C Discipline 88th F.C.</p>
 
