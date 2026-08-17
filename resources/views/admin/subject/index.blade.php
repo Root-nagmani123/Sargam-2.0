@@ -8,7 +8,7 @@
 
 @section('setup_content')
 <div class="container-fluid sm-subject-page">
-    <x-breadcrum title="Subject Master">
+    <x-breadcrum title="Subject Master" :showBack="false">
         <button type="button"
             class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-semibold text-nowrap shadow-sm"
             data-bs-toggle="modal"
@@ -53,7 +53,7 @@
                                     <th scope="col">Major Subject Name</th>
                                     <th scope="col" class="text-nowrap">Short Name</th>
                                     <th scope="col" class="text-nowrap">Status</th>
-                                    <th scope="col" class="text-nowrap text-end sm-col-actions">Action</th>
+                                    <th scope="col" class="text-nowrap text-center sm-col-actions">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -64,49 +64,60 @@
                                     <td class="sm-col-short">{{ $subject->sub_short_name }}</td>
                                     <td class="sm-subject-status-cell">
                                         @if ($subject->active_inactive == 1)
-                                        <span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>
+                                        <span class="status-pill badge rounded-1 bg-success-subtle" data-order="1">Active</span>
                                         @else
-                                        <span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>
+                                        <span class="status-pill badge rounded-1 bg-danger-subtle" data-order="0">Inactive</span>
                                         @endif
                                     </td>
-                                    <td class="text-end sm-col-actions">
-                                        <div class="sm-subject-actions" role="group" aria-label="Subject actions">
+                                    <td class="sm-col-actions">
+                                        {{-- Icon over caption, every stack the same width
+                                             (docs/new-design-index-page.md §3b). --}}
+                                        @php $smIsActive = $subject->active_inactive == 1; @endphp
+                                        <div class="sm-act-group" role="group" aria-label="Subject actions">
                                             <button type="button"
-                                                class="btn btn-sm sm-action-btn sm-action-edit sm-edit-subject-btn"
+                                                class="sm-act sm-act--edit sm-edit-subject-btn"
                                                 data-id="{{ $subject->pk }}"
-                                                aria-label="Edit subject">
-                                                <i class="bi bi-pencil" aria-hidden="true"></i>
+                                                title="Edit" aria-label="Edit subject">
+                                                <span class="sm-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
+                                                <span class="sm-act__label">Edit</span>
                                             </button>
 
-                                            <span class="sm-action-switch-wrap">
-                                                <div class="form-check form-switch sm-action-switch mb-0">
+                                            {{-- No .form-check/.form-switch wrapper (§3b trap 1):
+                                                 custom.css pulls a .form-check-input inside one left
+                                                 by -2.375rem. custom.js binds .status-toggle globally
+                                                 off these data-* attributes. --}}
+                                            <label class="sm-act sm-act--toggle"
+                                                title="{{ $smIsActive ? 'Deactivate' : 'Activate' }}">
+                                                <span class="sm-act__icon">
                                                     <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                                         data-table="subject_master" data-column="active_inactive"
                                                         data-id="{{ $subject->pk }}"
-                                                        {{ $subject->active_inactive == 1 ? 'checked' : '' }}
-                                                        aria-label="Toggle subject status">
-                                                </div>
-                                            </span>
+                                                        {{ $smIsActive ? 'checked' : '' }}
+                                                        aria-label="{{ $smIsActive ? 'Deactivate' : 'Activate' }} subject">
+                                                </span>
+                                                {{-- The caption names the ACTION, not the state: the
+                                                     state is already shown by the badge one column over. --}}
+                                                <span class="sm-act__label">{{ $smIsActive ? 'Deactivate' : 'Activate' }}</span>
+                                            </label>
 
-                                            @if ($subject->active_inactive == 1)
-                                            <button type="button"
-                                                class="btn btn-sm sm-action-btn sm-action-delete"
-                                                disabled
-                                                aria-disabled="true"
-                                                title="Cannot delete active subject"
-                                                aria-label="Delete subject (disabled while active)">
-                                                <i class="bi bi-trash" aria-hidden="true"></i>
-                                            </button>
+                                            @if ($smIsActive)
+                                            {{-- destroy() refuses to delete an active subject — mirror
+                                                 that guard here rather than offering a control that fails. --}}
+                                            <span class="sm-act sm-act--del is-disabled" aria-disabled="true"
+                                                title="Deactivate this subject before deleting">
+                                                <span class="sm-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
+                                                <span class="sm-act__label">Delete</span>
+                                            </span>
                                             @else
                                             <form action="{{ route('subject.destroy', $subject->pk) }}" method="POST"
-                                                class="d-inline m-0 sm-delete-form"
+                                                class="sm-act sm-act--del sm-delete-form"
                                                 onsubmit="return confirm('Are you sure you want to delete this subject?');">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit"
-                                                    class="btn btn-sm sm-action-btn sm-action-delete"
-                                                    aria-label="Delete subject">
-                                                    <i class="bi bi-trash" aria-hidden="true"></i>
+                                                <button type="submit" class="sm-act__btn"
+                                                    title="Delete" aria-label="Delete subject">
+                                                    <span class="sm-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
+                                                    <span class="sm-act__label">Delete</span>
                                                 </button>
                                             </form>
                                             @endif
@@ -322,9 +333,9 @@ window.statusToggleUrl = "{{ route('admin.toggleStatus') }}";
         }
         var $cell = $row.find('.sm-subject-status-cell');
         if (String(status) === '1') {
-            $cell.html('<span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>');
+            $cell.html('<span class="status-pill badge rounded-1 bg-success-subtle" data-order="1">Active</span>');
         } else {
-            $cell.html('<span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>');
+            $cell.html('<span class="status-pill badge rounded-1 bg-danger-subtle" data-order="0">Inactive</span>');
         }
     }
 

@@ -73,107 +73,135 @@
     min-width: 180px;
 }
 
+/* -- Action column: equal-width icon-over-label stacks (3b) ---------------
+   Replaces the icon-only buttons this page used to render. Every stack is the
+   same width so the icon row keeps an even rhythm whatever the captions. */
+
 .sm-module-page .sm-module-table .sm-col-actions,
 .sm-module-page .sm-module-table th.sm-col-actions {
-    min-width: 9rem;
+    min-width: 12rem;
+    white-space: nowrap;
+    text-align: center;
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+}
+
+.sm-module-page .sm-act-group {
+    display: inline-flex;
+    /* flex-start, not stretch: the stacks are a mix of <button>, <label>,
+       <span> and <form>, and stretching them to a common height starts their
+       icon strips at different tops (3b wants one baseline). */
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+/* The Delete action is wrapped in a <form>; it must add no box of its own. */
+.sm-module-page .sm-act,
+.sm-module-page .sm-act__btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    /* Wide enough for "Deactivate", so no stack is sized by its own caption. */
+    min-width: 62px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* One fixed-height strip for glyphs AND the switch, so they share a baseline. */
+.sm-module-page .sm-act__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+}
+
+.sm-module-page .sm-act__icon > i {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+/* No .form-check wrapper here (3b trap 1) - the switch skin is keyed on the
+   input itself and still applies. */
+.sm-module-page .sm-act__icon .form-check-input {
+    width: 2.25rem;
+    height: 1.125rem;
+    margin: 0;
+    float: none;
+    cursor: pointer;
+    border-color: #d0d5dd;
+}
+
+.sm-module-page .sm-act__icon .form-check-input:checked {
+    background-color: #12b76a;
+    border-color: #12b76a;
+}
+
+.sm-module-page .sm-act__icon .form-check-input:focus {
+    box-shadow: 0 0 0 3px rgba(18, 183, 106, 0.2);
+}
+
+.sm-module-page .sm-act__label {
     white-space: nowrap;
 }
 
-.sm-module-page .sm-module-actions {
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.625rem;
-    flex-wrap: nowrap;
+.sm-module-page .sm-act--edit {
+    color: #2563eb;
 }
 
-.sm-module-page .sm-module-actions > a,
-.sm-module-page .sm-module-actions > form,
-.sm-module-page .sm-module-actions > .sm-action-switch-wrap {
-    flex: 0 0 auto;
+.sm-module-page .sm-act--toggle {
+    color: #475467;
 }
 
-.sm-module-page .sm-action-btn {
-    width: 2rem;
-    height: 2rem;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
-    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
-    flex-shrink: 0;
+.sm-module-page .sm-act--del .sm-act__btn {
+    color: var(--bs-danger, #b12923);
 }
 
-.sm-module-page .sm-action-btn:hover:not(:disabled) {
-    transform: translateY(-1px);
-}
-
-.sm-module-page .sm-action-btn:disabled {
-    opacity: 0.45;
+/* Delete is refused while the row is active - muted, not always-failing. */
+.sm-module-page .sm-act--del.is-disabled {
+    color: #98a2b3;
+    opacity: 0.65;
     cursor: not-allowed;
+    pointer-events: none;
 }
 
-.sm-module-page .sm-action-edit {
-    color: var(--sm-primary);
+.sm-module-page .sm-act:not(.is-disabled):hover .sm-act__label,
+.sm-module-page .sm-act__btn:hover .sm-act__label {
+    text-decoration: underline;
 }
 
-.sm-module-page .sm-action-edit:hover {
-    background: #f0f6fc;
-    color: var(--sm-primary-dark);
+.sm-module-page .sm-act:focus-visible,
+.sm-module-page .sm-act__btn:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.2);
 }
 
-.sm-module-page .sm-action-delete {
-    color: #d92d20;
+/* -- Status column: soft badge, display only (3b) -------------------------
+   The theme ships the *-subtle backgrounds but not the matching
+   text-*-emphasis colours, so the label would render black. */
+.sm-module-page .status-pill {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
 }
 
-.sm-module-page .sm-action-delete:hover:not(:disabled) {
-    background: #fef3f2;
-    color: #b42318;
+.sm-module-page .status-pill.bg-success-subtle {
+    color: #146c43;
 }
 
-.sm-module-page .sm-action-switch-wrap {
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.75rem;
-    min-height: 2rem;
-}
-
-.sm-module-page .sm-action-switch {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    margin: 0 !important;
-    min-height: 2rem;
-    min-width: 2.75rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.sm-module-page .sm-action-switch .form-check-input {
-    width: 2.5rem !important;
-    height: 1.25rem !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    float: none !important;
-    position: relative;
-    cursor: pointer;
-    border-color: #d0d5dd;
-    flex-shrink: 0;
-}
-
-.sm-module-page .sm-action-switch .form-check-input:checked {
-    background-color: var(--sm-primary);
-    border-color: var(--sm-primary);
-}
-
-.sm-module-page .sm-action-switch .form-check-input:focus {
-    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.2);
+.sm-module-page .status-pill.bg-danger-subtle {
+    color: #b02a37;
 }
 
 .sm-module-page .programme-dt-footer .pagination .page-item.active .page-link,
@@ -228,13 +256,19 @@
 }
 
 /* Add / Edit Module modals */
+/* -- Modal chrome (3c) ----------------------------------------------------
+   Add and Edit look ALIKE: same header with a divider, same tinted field
+   card, same labels/controls, same equal flush-right footer pair. Only the
+   title, the submit caption and the pre-filled values differ. */
+
 .sm-module-form-modal {
-    --sm-primary: #004a93;
-    --sm-border: #e4e7ec;
-    --sm-text: #344054;
-    --sm-heading: #101828;
+    --smm-primary: #004384;
+    --smm-border: #e5e7eb;
+    --smm-text: #344054;
+    --smm-heading: #1f2937;
 }
 
+/* The listing sits under a sticky page chrome, so these need to clear it. */
 .sm-module-form-modal.show,
 .sm-edit-module-modal.show {
     z-index: 1110 !important;
@@ -251,71 +285,133 @@ body.modal-open:has(.sm-edit-module-modal.show) .modal-backdrop.show {
 }
 
 .sm-module-form-modal .sm-module-modal-content {
-    border-radius: 16px;
+    border: 0;
+    border-radius: 12px;
     overflow: hidden;
 }
 
-.sm-module-form-modal .sm-module-modal-header {
-    padding: 1.25rem 1.5rem 0;
+.sm-module-form-modal .sm-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #eaecf0;
 }
 
-.sm-module-form-modal .sm-module-modal-title {
-    font-size: 1.125rem;
+.sm-module-form-modal .sm-modal-title {
+    margin: 0;
+    color: var(--smm-heading);
+    font-size: 1rem;
     font-weight: 700;
-    color: var(--sm-heading);
-    letter-spacing: -0.01em;
 }
 
-.sm-module-form-modal .sm-module-modal-body {
-    padding: 1rem 1.5rem 1.5rem;
+.sm-module-form-modal .sm-modal-body {
+    padding: 1.5rem;
 }
 
-.sm-module-form-modal .sm-module-modal-fields .form-label {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--sm-text);
+/* One tinted card per record (3c). */
+.sm-module-form-modal .sm-field-card {
+    background: #eef1fc;
+    border-radius: 10px;
+    padding: 1rem;
+}
+
+.sm-module-form-modal .sm-field + .sm-field {
+    margin-top: 1rem;
+}
+
+.sm-module-form-modal .sm-field-label {
+    display: block;
     margin-bottom: 0.375rem;
+    color: var(--smm-text);
+    font-size: 0.8125rem;
+    font-weight: 600;
 }
 
-.sm-module-form-modal .sm-module-modal-fields .form-control,
-.sm-module-form-modal .sm-module-modal-fields .form-select {
-    min-height: 44px;
-    border: 1px solid var(--sm-border);
+.sm-module-form-modal .sm-req {
+    color: var(--bs-danger, #b12923);
+}
+
+.sm-module-form-modal .sm-control {
+    width: 100%;
+    min-height: 2.625rem;
+    padding: 0.5rem 0.75rem;
+    background: #fff;
+    border: 1px solid var(--smm-border);
     border-radius: 8px;
-    font-size: 0.9375rem;
-    color: var(--sm-heading);
-    padding: 0.625rem 0.875rem;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    color: var(--smm-heading);
+    font-size: 0.875rem;
 }
 
-.sm-module-form-modal .sm-module-modal-fields .form-control::placeholder {
+.sm-module-form-modal select.sm-control {
+    appearance: auto;
+}
+
+.sm-module-form-modal .sm-control::placeholder {
     color: #98a2b3;
 }
 
-.sm-module-form-modal .sm-module-modal-fields .form-control:focus,
-.sm-module-form-modal .sm-module-modal-fields .form-select:focus {
-    border-color: var(--sm-primary);
-    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+.sm-module-form-modal .sm-control:focus {
+    border-color: var(--smm-primary);
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.2);
+    outline: 0;
 }
 
-.sm-module-form-modal .sm-module-modal-actions .sm-btn-cancel {
-    color: var(--sm-primary);
-    border: 1px solid var(--sm-primary);
+/* Footer: an equal, flush-right pair (3c). width:fit-content keeps the grid
+   as wide as its content while staying block-level, so the auto start margin
+   can push it to the trailing edge. */
+.sm-module-form-modal .sm-modal-footer {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    align-items: stretch;
+    gap: 1rem;
+    width: fit-content;
+    max-width: 100%;
+    margin-inline-start: auto;
+    margin-inline-end: 0;
+    padding: 0 1.5rem 1.5rem;
+}
+
+.sm-module-form-modal .sm-modal-footer > .btn {
+    width: 100%;
+    white-space: nowrap;
+}
+
+.sm-module-form-modal .sm-btn-cancel,
+.sm-module-form-modal .sm-btn-submit {
+    min-width: 120px;
+    min-height: 2.75rem;
+    padding: 0.5rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.sm-module-form-modal .sm-btn-cancel {
     background: #fff;
+    border: 1px solid #f2c4c0;
+    color: var(--bs-danger, #b12923);
 }
 
-.sm-module-form-modal .sm-module-modal-actions .sm-btn-cancel:hover {
-    background: #f0f6fc;
-    color: var(--sm-primary);
-    border-color: var(--sm-primary);
+.sm-module-form-modal .sm-btn-cancel:hover,
+.sm-module-form-modal .sm-btn-cancel:focus {
+    background: #fff5f4;
+    border-color: #e79c96;
+    color: #8f201b;
 }
 
-.sm-module-form-modal .sm-module-modal-actions .sm-btn-submit {
-    background: var(--sm-primary);
-    border-color: var(--sm-primary);
+.sm-module-form-modal .sm-btn-submit {
+    background: var(--smm-primary);
+    border: 1px solid var(--smm-primary);
+    color: #fff;
 }
 
-.sm-module-form-modal .sm-module-modal-actions .sm-btn-submit:hover {
-    background: #003366;
-    border-color: #003366;
+.sm-module-form-modal .sm-btn-submit:hover,
+.sm-module-form-modal .sm-btn-submit:focus {
+    background: #003468;
+    border-color: #003468;
+    color: #fff;
 }

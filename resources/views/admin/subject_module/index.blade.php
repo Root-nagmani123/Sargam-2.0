@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Subject Module - Sargam | Lal Bahadur')
+@section('title', 'Subject Module')
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/subject-module-admin.css') }}?v={{ @filemtime(public_path('css/subject-module-admin.css')) ?: time() }}">
@@ -8,7 +8,7 @@
 
 @section('setup_content')
 <div class="container-fluid sm-module-page">
-    <x-breadcrum title="Subject Module">
+    <x-breadcrum title="Subject Module" :showBack="false">
         <button type="button"
             class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-2 fw-semibold text-nowrap shadow-sm"
             data-bs-toggle="modal"
@@ -52,7 +52,7 @@
                                     <th scope="col" class="text-nowrap">S. No.</th>
                                     <th scope="col">Module Name</th>
                                     <th scope="col" class="text-nowrap">Status</th>
-                                    <th scope="col" class="text-nowrap text-end sm-col-actions">Action</th>
+                                    <th scope="col" class="text-nowrap text-center sm-col-actions">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -64,49 +64,60 @@
                                     <td class="sm-col-name">{{ $module->module_name }}</td>
                                     <td class="sm-module-status-cell">
                                         @if ($module->active_inactive == 1)
-                                        <span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>
+                                        <span class="status-pill badge rounded-1 bg-success-subtle" data-order="1">Active</span>
                                         @else
-                                        <span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>
+                                        <span class="status-pill badge rounded-1 bg-danger-subtle" data-order="0">Inactive</span>
                                         @endif
                                     </td>
-                                    <td class="text-end sm-col-actions">
-                                        <div class="sm-module-actions" role="group" aria-label="Subject module actions">
+                                    <td class="sm-col-actions">
+                                        {{-- Icon over caption, every stack the same width
+                                             (docs/new-design-index-page.md §3b). --}}
+                                        @php $smIsActive = $module->active_inactive == 1; @endphp
+                                        <div class="sm-act-group" role="group" aria-label="Subject module actions">
                                             <button type="button"
-                                                class="btn btn-sm sm-action-btn sm-action-edit sm-edit-module-btn"
+                                                class="sm-act sm-act--edit sm-edit-module-btn"
                                                 data-id="{{ $module->pk }}"
-                                                aria-label="Edit subject module">
-                                                <i class="bi bi-pencil" aria-hidden="true"></i>
+                                                title="Edit" aria-label="Edit subject module">
+                                                <span class="sm-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
+                                                <span class="sm-act__label">Edit</span>
                                             </button>
 
-                                            <span class="sm-action-switch-wrap">
-                                                <div class="form-check form-switch sm-action-switch mb-0">
+                                            {{-- No .form-check/.form-switch wrapper (§3b trap 1):
+                                                 custom.css pulls a .form-check-input inside one left
+                                                 by -2.375rem. custom.js binds .status-toggle globally
+                                                 off these data-* attributes. --}}
+                                            <label class="sm-act sm-act--toggle"
+                                                title="{{ $smIsActive ? 'Deactivate' : 'Activate' }}">
+                                                <span class="sm-act__icon">
                                                     <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                                         data-table="subject_module_master" data-column="active_inactive"
                                                         data-id="{{ $module->pk }}"
-                                                        {{ $module->active_inactive == 1 ? 'checked' : '' }}
-                                                        aria-label="Toggle subject module status">
-                                                </div>
-                                            </span>
+                                                        {{ $smIsActive ? 'checked' : '' }}
+                                                        aria-label="{{ $smIsActive ? 'Deactivate' : 'Activate' }} subject module">
+                                                </span>
+                                                {{-- The caption names the ACTION, not the state: the state
+                                                     is already shown by the badge one column over. --}}
+                                                <span class="sm-act__label">{{ $smIsActive ? 'Deactivate' : 'Activate' }}</span>
+                                            </label>
 
-                                            @if ($module->active_inactive == 1)
-                                            <button type="button"
-                                                class="btn btn-sm sm-action-btn sm-action-delete"
-                                                disabled
-                                                aria-disabled="true"
-                                                title="Cannot delete active subject module"
-                                                aria-label="Delete subject module (disabled while active)">
-                                                <i class="bi bi-trash" aria-hidden="true"></i>
-                                            </button>
+                                            @if ($smIsActive)
+                                            {{-- destroy() refuses to delete an active module — mirror that
+                                                 guard here rather than offering a control that fails. --}}
+                                            <span class="sm-act sm-act--del is-disabled" aria-disabled="true"
+                                                title="Deactivate this subject module before deleting">
+                                                <span class="sm-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
+                                                <span class="sm-act__label">Delete</span>
+                                            </span>
                                             @else
                                             <form action="{{ route('subject-module.destroy', $module->pk) }}" method="POST"
-                                                class="d-inline m-0 sm-delete-form"
+                                                class="sm-act sm-act--del sm-delete-form"
                                                 onsubmit="return confirm('Are you sure you want to delete this Subject Module?');">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit"
-                                                    class="btn btn-sm sm-action-btn sm-action-delete"
-                                                    aria-label="Delete subject module">
-                                                    <i class="bi bi-trash" aria-hidden="true"></i>
+                                                <button type="submit" class="sm-act__btn"
+                                                    title="Delete" aria-label="Delete subject module">
+                                                    <span class="sm-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
+                                                    <span class="sm-act__label">Delete</span>
                                                 </button>
                                             </form>
                                             @endif
@@ -322,9 +333,9 @@ window.statusToggleUrl = "{{ route('admin.toggleStatus') }}";
         }
         var $cell = $row.find('.sm-module-status-cell');
         if (String(status) === '1') {
-            $cell.html('<span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>');
+            $cell.html('<span class="status-pill badge rounded-1 bg-success-subtle" data-order="1">Active</span>');
         } else {
-            $cell.html('<span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>');
+            $cell.html('<span class="status-pill badge rounded-1 bg-danger-subtle" data-order="0">Inactive</span>');
         }
     }
 
