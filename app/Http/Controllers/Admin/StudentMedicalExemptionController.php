@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\StudentMedicalExemption;
+use App\Models\StudentMedicalExemptionComment;
 use App\Models\CourseMaster;
 use App\Models\StudentMaster;
 use App\Models\ExemptionCategoryMaster;
@@ -514,6 +515,61 @@ class StudentMedicalExemptionController extends Controller
     }
 
     /**
+     * Advisory check (not a validation gate): does this student already have ANY
+     * exemption — same or different medical case — whose date-time range overlaps
+     * the one being entered? Used by the form to warn the user before submit;
+     * unlike checkOverlap() (which only blocks an exact same-type duplicate), this
+     * treats any true interval overlap as worth flagging so staff can see there's
+     * already a record for that student in the same window before adding another.
+     */
+    public function checkTimeConflict(Request $request)
+    {
+        $studentId = $request->query('student_master_pk');
+        $fromDate = $this->combineDateTime($request->query('arrival_date'), $request->query('arrival_time'));
+        $toDate = $this->combineDateTime($request->query('departure_date'), $request->query('departure_time'));
+        $excludeId = $request->query('exclude_id');
+
+        if (empty($studentId) || empty($fromDate)) {
+            return response()->json(['conflict' => false]);
+        }
+
+        $query = StudentMedicalExemption::where('student_master_pk', $studentId);
+        if (!empty($excludeId)) {
+            try {
+                $query->where('pk', '!=', decrypt($excludeId));
+            } catch (\Exception $e) {
+                // Ignore an invalid/undecryptable exclude_id — treat as add mode.
+            }
+        }
+
+        try {
+            $newFrom = \Carbon\Carbon::parse($fromDate);
+            $newTo = $toDate ? \Carbon\Carbon::parse($toDate) : \Carbon\Carbon::create(2099, 12, 31, 23, 59, 59);
+        } catch (\Exception $e) {
+            return response()->json(['conflict' => false]);
+        }
+
+        foreach ($query->get() as $exemption) {
+            $existingFrom = \Carbon\Carbon::parse($exemption->from_date);
+            $existingTo = $exemption->to_date ? \Carbon\Carbon::parse($exemption->to_date) : \Carbon\Carbon::create(2099, 12, 31, 23, 59, 59);
+
+            // True interval overlap: new_start < existing_end AND new_end > existing_start.
+            $overlaps = $newFrom < $existingTo && $newTo > $existingFrom;
+
+            if ($overlaps) {
+                return response()->json([
+                    'conflict' => true,
+                    'message' => "This student already has a '{$exemption->opd_category}' exemption in this time range (from "
+                        . $existingFrom->format('d M Y H:i') . ' to '
+                        . ($exemption->to_date ? $existingTo->format('d M Y H:i') : 'Ongoing') . ').',
+                ]);
+            }
+        }
+
+        return response()->json(['conflict' => false]);
+    }
+
+    /**
      * Invalidate every cached DataTable ID list by bumping the version prefix.
      * Called after any create / update / delete so new rows appear immediately.
      */
@@ -557,6 +613,9 @@ class StudentMedicalExemptionController extends Controller
             'from_date' => 'required|date',
             'to_date' => 'nullable|date|after_or_equal:from_date',
             'pt_outdoor_advise' => 'nullable|string|max:255',
+            'pt_comments' => 'nullable|array',
+            'pt_comments.*.comment' => 'nullable|string|max:1000',
+            'pt_comments.*.comment_date' => 'required_with:pt_comments.*.comment|date',
             'exemption_medical_speciality_pk' => 'required|numeric',
             'Description' => 'nullable|string',
             'active_inactive' => 'nullable|boolean',
@@ -579,6 +638,10 @@ class StudentMedicalExemptionController extends Controller
         $validated['days'] = $this->computeDays($validated['from_date'], $validated['to_date']);
         // Strip the split-input helpers (not table columns).
         unset($validated['arrival_date'], $validated['arrival_time'], $validated['departure_date'], $validated['departure_time']);
+        // Comments are saved to the related table after the record is created — pull
+        // them out of $validated so they don't hit StudentMedicalExemption::create().
+        $comments = $validated['pt_comments'] ?? [];
+        unset($validated['pt_comments']);
 
         // Check for overlapping time ranges for the same student and same exemption type
         $overlapError = $this->checkOverlap(
@@ -618,6 +681,18 @@ class StudentMedicalExemptionController extends Controller
         }
 
         $medicalExemption = StudentMedicalExemption::create($validated);
+
+        foreach ($comments as $comment) {
+            if (trim((string) ($comment['comment'] ?? '')) === '') {
+                continue;
+            }
+            StudentMedicalExemptionComment::create([
+                'student_medical_exemption_pk' => $medicalExemption->pk,
+                'comment' => $comment['comment'],
+                'comment_date' => $comment['comment_date'],
+                'created_by' => auth()->id(),
+            ]);
+        }
 
         // New row must appear immediately — drop the cached DataTable ID lists.
         $this->flushListCache();
@@ -672,6 +747,7 @@ class StudentMedicalExemptionController extends Controller
             'speciality',
             'course',
             'employee',
+            'comments',
         ])->findOrFail(decrypt($id));
 
         $from = $record->from_date ? Carbon::parse($record->from_date) : null;
@@ -700,6 +776,12 @@ class StudentMedicalExemptionController extends Controller
             'days' => $record->days ?? 'N/A',
             'description' => $record->Description ?: '—',
             'pt_outdoor_advise' => $record->pt_outdoor_advise ?: '—',
+            'pt_comments' => $record->comments->map(function ($c) {
+                return [
+                    'comment' => $c->comment,
+                    'comment_date' => Carbon::parse($c->comment_date)->format('d-m-Y'),
+                ];
+            })->values(),
             'document_url' => $record->Doc_upload ? asset('storage/' . $record->Doc_upload) : null,
             'status' => $record->active_inactive == 1 ? 'Active' : 'Inactive',
             'created_date' => $record->created_date
@@ -711,7 +793,7 @@ class StudentMedicalExemptionController extends Controller
 
     public function edit($id)
     {
-        $record = StudentMedicalExemption::findOrFail(decrypt($id));
+        $record = StudentMedicalExemption::with('comments')->findOrFail(decrypt($id));
         $courses = CourseMaster::where('active_inactive', '1')
             ->where('end_date', '>=', now()->toDateString())
             ->orderBy('course_name')
@@ -782,6 +864,10 @@ class StudentMedicalExemptionController extends Controller
             'from_date' => 'required|date',
             'to_date' => 'nullable|date|after_or_equal:from_date',
             'pt_outdoor_advise' => 'nullable|string|max:255',
+            'pt_comments' => 'nullable|array',
+            'pt_comments.*.pk' => 'nullable|numeric',
+            'pt_comments.*.comment' => 'nullable|string|max:1000',
+            'pt_comments.*.comment_date' => 'required_with:pt_comments.*.comment|date',
             'exemption_medical_speciality_pk' => 'required|numeric',
             'Description' => 'nullable|string',
             'active_inactive' => 'required|boolean',
@@ -801,6 +887,8 @@ class StudentMedicalExemptionController extends Controller
 
         $validated['days'] = $this->computeDays($validated['from_date'], $validated['to_date']);
         unset($validated['arrival_date'], $validated['arrival_time'], $validated['departure_date'], $validated['departure_time']);
+        $comments = $validated['pt_comments'] ?? [];
+        unset($validated['pt_comments']);
 
         $record = StudentMedicalExemption::findOrFail(decrypt($id));
 
@@ -834,6 +922,35 @@ class StudentMedicalExemptionController extends Controller
         }
 
         $record->update($validated);
+
+        // Sync comments: update existing rows (by pk), insert new ones (no pk),
+        // and delete any that were removed on the form.
+        $submittedIds = [];
+        foreach ($comments as $comment) {
+            if (trim((string) ($comment['comment'] ?? '')) === '') {
+                continue;
+            }
+            if (!empty($comment['pk'])) {
+                StudentMedicalExemptionComment::where('pk', $comment['pk'])
+                    ->where('student_medical_exemption_pk', $record->pk)
+                    ->update([
+                        'comment' => $comment['comment'],
+                        'comment_date' => $comment['comment_date'],
+                    ]);
+                $submittedIds[] = (int) $comment['pk'];
+            } else {
+                $new = StudentMedicalExemptionComment::create([
+                    'student_medical_exemption_pk' => $record->pk,
+                    'comment' => $comment['comment'],
+                    'comment_date' => $comment['comment_date'],
+                    'created_by' => auth()->id(),
+                ]);
+                $submittedIds[] = $new->pk;
+            }
+        }
+        StudentMedicalExemptionComment::where('student_medical_exemption_pk', $record->pk)
+            ->whereNotIn('pk', $submittedIds)
+            ->delete();
 
         // Reflect the edit immediately in the DataTable.
         $this->flushListCache();

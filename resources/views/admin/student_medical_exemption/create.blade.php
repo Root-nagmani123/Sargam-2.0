@@ -71,6 +71,14 @@
     padding-top: var(--ds-space-3);
     border-top: 1px solid var(--ds-line);
 }
+/* Advisory time-conflict banner — a brief highlight pulse so it isn't missed. */
+.sme-conflict-pulse {
+    animation: smeConflictPulse 1s ease-in-out 2;
+}
+@keyframes smeConflictPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.6); }
+    50% { box-shadow: 0 0 0 6px rgba(255, 193, 7, 0); }
+}
 </style>
 
 @php
@@ -231,6 +239,14 @@
                         </div>
                     </div>
 
+                    <div class="col-12 sme-remarks-row" id="smePtCommentSection" style="display:none;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0">Doctor's Comments</label>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="smeAddCommentBtn">+ Add Comment</button>
+                        </div>
+                        <div id="smePtCommentsList"></div>
+                    </div>
+
                     <div class="col-12">
                         <label class="form-label">Attachment</label>
                         <input type="file" name="Doc_upload" id="Doc_upload" class="form-control"
@@ -300,6 +316,47 @@ $(document).ready(function() {
     $('#smeMedicalCase').on('change', applyPtTimesIfExempted);
     $('#courseDropdown').on('change', applyPtTimesIfExempted);
 
+    // Medical Case = PT Exemption -> show the Doctor's Comments section; keep at
+    // least one (dated today, editable) row present whenever it's visible.
+    var smeCommentRowSeq = 0;
+    function todayYmd() {
+        var d = new Date();
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function addCommentRow(comment, date) {
+        var idx = smeCommentRowSeq++;
+        var $row = $(
+            '<div class="row g-3 mb-2 sme-comment-row" data-row="' + idx + '">' +
+                '<div class="col-md-8">' +
+                    '<textarea name="pt_comments[' + idx + '][comment]" class="form-control" rows="2" placeholder="eg. You can go for normal exercise">' + $('<div>').text(comment || '').html() + '</textarea>' +
+                '</div>' +
+                '<div class="col-md-3">' +
+                    '<input type="date" name="pt_comments[' + idx + '][comment_date]" class="form-control" value="' + (date || todayYmd()) + '">' +
+                '</div>' +
+                '<div class="col-md-1 d-flex align-items-start">' +
+                    '<button type="button" class="btn btn-sm btn-outline-danger sme-remove-comment-btn" title="Remove">&times;</button>' +
+                '</div>' +
+            '</div>'
+        );
+        $('#smePtCommentsList').append($row);
+    }
+    $('#smeAddCommentBtn').on('click', function() { addCommentRow('', todayYmd()); });
+    $(document).on('click', '.sme-remove-comment-btn', function() {
+        $(this).closest('.sme-comment-row').remove();
+    });
+    function togglePtCommentRow() {
+        var isPtExemption = $('#smeMedicalCase').val() === 'PT Exemption';
+        $('#smePtCommentSection').toggle(isPtExemption);
+        if (isPtExemption && $('#smePtCommentsList .sme-comment-row').length === 0) {
+            addCommentRow('', todayYmd());
+        }
+        if (!isPtExemption) {
+            $('#smePtCommentsList').empty();
+        }
+    }
+    $('#smeMedicalCase').on('change', togglePtCommentRow);
+    togglePtCommentRow();
+
     // Exemption Category = Cat-A (From PT) -> force Medical Case to "PT Exemption" and freeze it.
     // Kept enabled (not `disabled`) so the value still posts to the server; the dropdown
     // is just blocked from opening while frozen.
@@ -314,6 +371,7 @@ $(document).ready(function() {
             $medicalCase.val('PT Exemption');
             if ($medicalCase.hasClass('select2-hidden-accessible')) { $medicalCase.trigger('change.select2'); }
             applyPtTimesIfExempted();
+            togglePtCommentRow();
         }
     }
     $('#smeExemptionCategory').on('change', applyMedicalCaseLockForCategory);
@@ -341,6 +399,34 @@ $(document).ready(function() {
         if (el) el.addEventListener('change', recalcDays);
     });
     recalcDays();
+
+    // Advisory warning: does this student already have ANY exemption overlapping
+    // this date-time range? Purely informational — never blocks typing or submit.
+    var smeConflictTimer = null;
+    function checkTimeConflict() {
+        var studentId = $('#studentDropdown').val();
+        var arrivalDate = $('#arrivalDate').val();
+        if (!studentId || !arrivalDate) { $('#smeConflictWarning').remove(); return; }
+
+        $.get('{{ route("student.medical.exemption.checkTimeConflict") }}', {
+            student_master_pk: studentId,
+            arrival_date: arrivalDate,
+            arrival_time: $('#arrivalTime').val(),
+            departure_date: $('#departureDate').val(),
+            departure_time: $('#departureTime').val()
+        }).done(function(res) {
+            $('#smeConflictWarning').remove();
+            if (res && res.conflict) {
+                $('.sme-form').prepend('<div id="smeConflictWarning" class="alert alert-warning py-2 px-3 mb-3 sme-conflict-pulse fw-bold">'
+                    + '<i class="bi bi-exclamation-triangle-fill me-1"></i> ' + res.message + '</div>');
+                document.getElementById('smeConflictWarning').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    }
+    $(document).on('change', '#studentDropdown, #arrivalDate, #arrivalTime, #departureDate, #departureTime', function() {
+        clearTimeout(smeConflictTimer);
+        smeConflictTimer = setTimeout(checkTimeConflict, 300);
+    });
 
     // Attachment validation
     var ALLOWED_EXT  = ['pdf','jpg','jpeg','png','doc','docx'];

@@ -227,6 +227,15 @@ select.sme-filter-control {
 #smeFormBody .ds-card,
 #smeFormBody .ds-card-body { border: 0; box-shadow: none; padding: 0; background: transparent; }
 #smeFormBody .sme-section-title:first-child { margin-top: 0; }
+/* Advisory time-conflict banner — a brief highlight pulse so it isn't missed. */
+#smeConflictWarning.sme-conflict-pulse,
+.sme-conflict-pulse {
+    animation: smeConflictPulse 1s ease-in-out 2;
+}
+@keyframes smeConflictPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.6); }
+    50% { box-shadow: 0 0 0 6px rgba(255, 193, 7, 0); }
+}
 #smeFormBody .is-invalid { border-color: var(--bs-danger); }
 #smeFormBody .form-control,
 #smeFormBody .form-select { min-height: 44px; border-radius: var(--ds-radius-2); }
@@ -1333,6 +1342,57 @@ $(document).ready(function() {
         }
         $form.on('change', '#smeMedicalCase, #courseDropdown', applyPtTimesIfExempted);
 
+        // Medical Case = PT Exemption -> show the Doctor's Comments section; keep at
+        // least one (dated today, editable) row present whenever it's visible.
+        var smeCommentRowSeq = 0;
+        function todayYmd(){
+            var d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+        function addCommentRow(comment, date, pk){
+            var idx = smeCommentRowSeq++;
+            var pkField = pk ? '<input type="hidden" name="pt_comments[' + idx + '][pk]" value="' + pk + '">' : '';
+            var $row = $(
+                '<div class="row g-3 mb-2 sme-comment-row" data-row="' + idx + '">' +
+                    pkField +
+                    '<div class="col-md-8">' +
+                        '<textarea name="pt_comments[' + idx + '][comment]" class="form-control" rows="2" placeholder="eg. You can go for normal exercise">' + $('<div>').text(comment || '').html() + '</textarea>' +
+                    '</div>' +
+                    '<div class="col-md-3">' +
+                        '<input type="date" name="pt_comments[' + idx + '][comment_date]" class="form-control" value="' + (date || todayYmd()) + '">' +
+                    '</div>' +
+                    '<div class="col-md-1 d-flex align-items-start">' +
+                        '<button type="button" class="btn btn-sm btn-outline-danger sme-remove-comment-btn" title="Remove">&times;</button>' +
+                    '</div>' +
+                '</div>'
+            );
+            $form.find('#smePtCommentsList').append($row);
+        }
+        $form.on('click', '#smeAddCommentBtn', function(){ addCommentRow('', todayYmd()); });
+        $form.on('click', '.sme-remove-comment-btn', function(){
+            $(this).closest('.sme-comment-row').remove();
+        });
+        function togglePtCommentRow(){
+            var $section = $form.find('#smePtCommentSection');
+            if (!$section.length) return;
+            var isPtExemption = $form.find('#smeMedicalCase').val() === 'PT Exemption';
+            $section.toggle(isPtExemption);
+            if (isPtExemption && $form.find('#smePtCommentsList .sme-comment-row').length === 0) {
+                addCommentRow('', todayYmd());
+            }
+            if (!isPtExemption) {
+                $form.find('#smePtCommentsList').empty();
+            }
+        }
+        // Prefill existing comments (edit mode) before wiring the toggle so they
+        // aren't wiped out if the record's medical case is already PT Exemption.
+        try {
+            var existingComments = JSON.parse($form.find('#smePtCommentsList').attr('data-existing') || '[]');
+            existingComments.forEach(function(c){ addCommentRow(c.comment, c.comment_date, c.pk); });
+        } catch (e) { /* no-op */ }
+        $form.on('change', '#smeMedicalCase', togglePtCommentRow);
+        togglePtCommentRow();
+
         // Exemption Category = Cat-A (From PT) -> force Medical Case to "PT Exemption" and freeze it.
         // Kept enabled (not `disabled`) so the value still posts to the server; the dropdown
         // is just blocked from opening while frozen.
@@ -1347,6 +1407,7 @@ $(document).ready(function() {
                 $medicalCase.val('PT Exemption');
                 if ($medicalCase.hasClass('select2-hidden-accessible')) { $medicalCase.trigger('change.select2'); }
                 applyPtTimesIfExempted();
+                togglePtCommentRow();
             }
         }
         $form.on('change', '#smeExemptionCategory', applyMedicalCaseLockForCategory);
@@ -1354,6 +1415,39 @@ $(document).ready(function() {
             if ($(this).data('smeFrozen')) { e.preventDefault(); }
         });
         applyMedicalCaseLockForCategory();
+
+        // Advisory warning: does this student already have ANY exemption overlapping
+        // this date-time range? Purely informational — never blocks typing or submit.
+        var smeConflictTimer = null;
+        function checkTimeConflict(){
+            var studentId = $form.find('#studentDropdown').val();
+            var arrivalDate = $form.find('#arrivalDate').val();
+            if (!studentId || !arrivalDate) { $('#smeConflictWarning').remove(); return; }
+
+            var actionUrl = $form.attr('action') || '';
+            var excludeMatch = actionUrl.match(/\/update\/([^/?]+)/);
+
+            $.get("{{ route('student.medical.exemption.checkTimeConflict') }}", {
+                student_master_pk: studentId,
+                arrival_date: arrivalDate,
+                arrival_time: $form.find('#arrivalTime').val(),
+                departure_date: $form.find('#departureDate').val(),
+                departure_time: $form.find('#departureTime').val(),
+                exclude_id: excludeMatch ? excludeMatch[1] : ''
+            }).done(function(res){
+                $('#smeConflictWarning').remove();
+                if (res && res.conflict) {
+                    var $alert = $('<div id="smeConflictWarning" class="alert alert-warning py-2 px-3 mb-3 sme-conflict-pulse fw-bold">'
+                        + '<i class="bi bi-exclamation-triangle-fill me-1"></i> ' + res.message + '</div>');
+                    $form.prepend($alert);
+                    $alert[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+        }
+        $form.on('change', '#studentDropdown, #arrivalDate, #arrivalTime, #departureDate, #departureTime', function(){
+            clearTimeout(smeConflictTimer);
+            smeConflictTimer = setTimeout(checkTimeConflict, 300);
+        });
     }
 
     function submitModalForm(){
@@ -1555,6 +1649,16 @@ $(document).ready(function() {
                 '<div class="col-md-6"><div class="sme-view-field"><span class="sme-view-label">PT/Outdoor Advise</span>' +
                     '<div class="sme-view-text">' + smeEsc(data.pt_outdoor_advise) + '</div></div></div>' +
             '</div>' +
+            (data.pt_comments && data.pt_comments.length ?
+            '<h6 class="sme-view-section-title">Doctor\'s Comments</h6>' +
+            data.pt_comments.map(function(c) {
+                return '<div class="row g-3 mt-1">' +
+                    '<div class="col-md-8"><div class="sme-view-field"><span class="sme-view-label">Comment</span>' +
+                        '<div class="sme-view-text">' + smeEsc(c.comment) + '</div></div></div>' +
+                    '<div class="col-md-4"><div class="sme-view-field"><span class="sme-view-label">Date</span>' +
+                        '<div class="sme-view-text">' + smeEsc(c.comment_date) + '</div></div></div>' +
+                '</div>';
+            }).join('') : '') +
             '<h6 class="sme-view-section-title">Attachment</h6>' +
             '<div>' + docHtml + '</div>';
     }

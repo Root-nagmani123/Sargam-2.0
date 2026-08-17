@@ -61,4 +61,11 @@ public function creator()
 {
     return $this->belongsTo(\App\Models\User::class, 'created_by');
 }
+
+public function comments()
+{
+    return $this->hasMany(StudentMedicalExemptionComment::class, 'student_medical_exemption_pk', 'pk')
+        ->orderBy('comment_date')
+        ->orderBy('pk');
+}
 }
