@@ -69,12 +69,15 @@ class GroupMappingDataTable extends DataTable
                 return $row->Faculty->full_name ?? '-';
             })
             ->addColumn('student_count', fn ($row) => $row->student_course_group_map_count ?? '0')
+            // Status: soft badge, display only. data-order lets a client-side sort
+            // order by state (docs/new-design-index-page.md 3b).
             ->addColumn('status', function ($row) {
-                if ((int) $row->active_inactive === 1) {
-                    return '<span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>';
-                }
+                $isActive = (int) $row->active_inactive === 1;
 
-                return '<span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>';
+                return '<span class="status-pill badge rounded-1 ' . ($isActive ? 'bg-success-subtle' : 'bg-danger-subtle') . '"'
+                    . ' data-order="' . (int) $isActive . '">'
+                    . ($isActive ? 'Active' : 'Inactive')
+                    . '</span>';
             })
             ->addColumn('action', function ($row) {
                 $id = encrypt($row->pk);
@@ -86,29 +89,43 @@ class GroupMappingDataTable extends DataTable
                 $checked = $isActive ? 'checked' : '';
                 $csrf = csrf_token();
 
-                $viewHtml = '<a href="javascript:void(0)" class="programme-action-btn gm-action-btn view-student" data-id="' . e($id) . '" aria-label="View students"><i class="bi bi-eye" aria-hidden="true"></i></a>';
+                // The caption names the ACTION, not the state (3b).
+                $toggleLabel = $isActive ? 'Deactivate' : 'Activate';
 
-                $downloadHtml = '<a href="' . e(route('group.mapping.export.student.list', $id)) . '" class="programme-action-btn gm-action-btn" aria-label="Download student list"><i class="bi bi-download" aria-hidden="true"></i></a>';
+                $viewHtml = '<a href="javascript:void(0)" class="prog-act prog-act--view view-student" data-id="' . e($id) . '" aria-label="View students" title="View students">'
+                    . '<span class="prog-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span>'
+                    . '<span class="prog-act__label">View</span></a>';
 
+                $downloadHtml = '<a href="' . e(route('group.mapping.export.student.list', $id)) . '" class="prog-act prog-act--download" aria-label="Download student list" title="Download student list">'
+                    . '<span class="prog-act__icon"><i class="bi bi-download" aria-hidden="true"></i></span>'
+                    . '<span class="prog-act__label">Download</span></a>';
+
+                // Delete mirrors the server's own refusal: an active mapping cannot
+                // be deleted, so the control is disabled rather than always-failing.
                 $deleteHtml = $isActive
-                    ? '<button type="button" class="programme-action-btn gm-action-btn programme-action-btn--danger" disabled aria-disabled="true" title="Cannot delete active group mapping"><i class="bi bi-trash" aria-hidden="true"></i></button>'
-                    : '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline-flex m-0 gm-delete-form">'
+                    ? '<span class="prog-act prog-act--del is-disabled" aria-disabled="true" title="Deactivate this group mapping before deleting">'
+                        . '<span class="prog-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
+                        . '<span class="prog-act__label">Delete</span></span>'
+                    : '<form action="' . e($deleteUrl) . '" method="POST" class="prog-act prog-act--del gm-delete-form">'
                         . '<input type="hidden" name="_token" value="' . e($csrf) . '">'
                         . '<input type="hidden" name="_method" value="DELETE">'
-                        . '<button type="submit" class="programme-action-btn gm-action-btn programme-action-btn--danger delete-btn" aria-label="Delete group mapping" onclick="return confirm(\'Are you sure you want to delete this group name mapping?\');">'
-                        . '<i class="bi bi-trash" aria-hidden="true"></i>'
+                        . '<button type="submit" class="prog-act__btn delete-btn" aria-label="Delete group mapping" onclick="return confirm(\'Are you sure you want to delete this group name mapping?\');">'
+                        . '<span class="prog-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
+                        . '<span class="prog-act__label">Delete</span>'
                         . '</button></form>';
 
-                $toggleHtml = '<label class="programme-action-toggle-icon mb-0" aria-label="Toggle group mapping status">'
-                    . '<input class="status-toggle plain-status-toggle gm-status-toggle-input" type="checkbox" role="switch"'
+                // The standard switch skin applies without any .form-check wrapper
+                // (3b, trap 1), so the bespoke bi-toggle-on/off icons are gone.
+                $toggleHtml = '<label class="prog-act prog-act--toggle" title="' . $toggleLabel . ' group mapping">'
+                    . '<span class="prog-act__icon">'
+                    . '<input class="form-check-input status-toggle plain-status-toggle" type="checkbox" role="switch"'
                     . ' data-table="group_type_master_course_master_map" data-column="active_inactive" data-id="' . e($row->pk) . '" ' . $checked . '>'
-                    . '<i class="bi bi-toggle-off gm-toggle-icon gm-toggle-icon--off" aria-hidden="true"></i>'
-                    . '<i class="bi bi-toggle-on gm-toggle-icon gm-toggle-icon--on" aria-hidden="true"></i>'
+                    . '</span>'
+                    . '<span class="prog-act__label">' . $toggleLabel . '</span>'
                     . '</label>';
-
-                return '<div class="d-inline-flex align-items-center justify-content-center programme-action-group gm-action-group" role="group" aria-label="Row actions">'
+                return '<div class="prog-act-group gm-action-group" role="group" aria-label="Row actions">'
                     . $viewHtml
-                    . '<button type="button" class="programme-action-btn gm-action-btn edit-btn gm-edit-btn" aria-label="Edit group mapping"'
+                    . '<button type="button" class="prog-act prog-act--edit edit-btn gm-edit-btn" aria-label="Edit group mapping" title="Edit"'
                     . ' data-id="' . e($id) . '"'
                     . ' data-course-id="' . e($row->course_name) . '"'
                     . ' data-course-name="' . e($courseLabel) . '"'
@@ -117,7 +134,8 @@ class GroupMappingDataTable extends DataTable
                     . ' data-group-name="' . e($row->group_name ?? '') . '"'
                     . ' data-facility-id="' . e($row->facility_id ?? '') . '"'
                     . ' data-faculty-name="' . e($facultyLabel) . '">'
-                    . '<i class="bi bi-pencil" aria-hidden="true"></i></button>'
+                    . '<span class="prog-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>'
+                    . '<span class="prog-act__label">Edit</span></button>'
                     . $toggleHtml
                     . $downloadHtml
                     . $deleteHtml

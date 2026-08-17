@@ -64,12 +64,15 @@ class CourseMasterDataTable extends DataTable
             ->addColumn('end_date', function ($row) {
                 return $row->end_date ? Carbon::parse($row->end_date)->format('d-m-Y') : '';
             })
+            // Status: soft badge, display only. data-order lets a client-side sort
+            // order by state (docs/new-design-index-page.md §3b).
             ->addColumn('status', function ($row) {
-                if ((int) $row->active_inactive === 1) {
-                    return '<span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>';
-                }
+                $isActive = (int) $row->active_inactive === 1;
 
-                return '<span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>';
+                return '<span class="status-pill badge rounded-1 ' . ($isActive ? 'bg-success-subtle' : 'bg-danger-subtle') . '"'
+                    . ' data-order="' . (int) $isActive . '">'
+                    . ($isActive ? 'Active' : 'Inactive')
+                    . '</span>';
             })
             ->addColumn('action', function ($row) {
                 $editUrl = route('programme.edit', ['id' => encrypt($row->pk)]);
@@ -79,22 +82,40 @@ class CourseMasterDataTable extends DataTable
                 $checked = $isActive ? 'checked' : '';
                 $csrf = csrf_token();
 
-                $deleteHtml = '<form action="'.$deleteUrl.'" method="POST" class="d-inline-flex m-0 programme-delete-form">'
+                // The caption names the ACTION, not the state — the badge one column
+                // over already shows the state (§3b).
+                $toggleLabel = $isActive ? 'Deactivate' : 'Activate';
+
+                // View · Edit · switch · Delete as equal-width icon-over-label stacks.
+                // NOTE the deliberate absence of a .form-check.form-switch wrapper
+                // around the switch — it would yank the input -2.375rem left of its
+                // caption (§3b, trap 1).
+                $deleteHtml = '<form action="'.$deleteUrl.'" method="POST" class="prog-act prog-act--del programme-delete-form">'
                         .'<input type="hidden" name="_token" value="'.$csrf.'">'
                         .'<input type="hidden" name="_method" value="DELETE">'
-                        .'<button type="submit" class="programme-action-btn programme-action-btn--danger programme-delete-btn" aria-label="Delete course">'
-                        .'<i class="bi bi-trash3" aria-hidden="true"></i>'
+                        .'<button type="submit" class="prog-act__btn programme-delete-btn" aria-label="Delete course">'
+                        .'<span class="prog-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
+                        .'<span class="prog-act__label">Delete</span>'
                         .'</button>'
                         .'</form>';
 
                 return '
-                <div class="d-inline-flex align-items-center justify-content-center programme-action-group" role="group" aria-label="Row actions">
-                    <a href="'.$viewUrl.'" class="programme-action-btn" aria-label="View course"><i class="bi bi-eye" aria-hidden="true"></i></a>
-                    <a href="'.$editUrl.'" class="programme-action-btn" aria-label="Edit course"><i class="bi bi-pencil" aria-hidden="true"></i></a>
-                    <div class="form-check form-switch programme-action-switch mb-0">
-                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                            data-table="course_master" data-column="active_inactive" data-id="'.$row->pk.'" '.$checked.'>
-                    </div>
+                <div class="prog-act-group" role="group" aria-label="Row actions">
+                    <a href="'.$viewUrl.'" class="prog-act prog-act--view" aria-label="View course" title="View">
+                        <span class="prog-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span>
+                        <span class="prog-act__label">View</span>
+                    </a>
+                    <a href="'.$editUrl.'" class="prog-act prog-act--edit" aria-label="Edit course" title="Edit">
+                        <span class="prog-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
+                        <span class="prog-act__label">Edit</span>
+                    </a>
+                    <label class="prog-act prog-act--toggle" title="'.$toggleLabel.' course">
+                        <span class="prog-act__icon">
+                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                data-table="course_master" data-column="active_inactive" data-id="'.(int) $row->pk.'" '.$checked.'>
+                        </span>
+                        <span class="prog-act__label">'.$toggleLabel.'</span>
+                    </label>
                     '.$deleteHtml.'
                 </div>';
             })
@@ -134,32 +155,44 @@ class CourseMasterDataTable extends DataTable
      * @param \App\Models\CourseMaster $model
      * @return \Illuminate\Database\Eloquent\Builder
      */
+    /**
+     * The grid's own scoping — role-visible courses, the Active/Archived pill and
+     * the Course Name filter.
+     *
+     * Shared with CourseController::export() so a download can never show a
+     * different set of rows than the screen it was started from.
+     *
+     * @param  QueryBuilder  $query
+     */
+    public static function applyListingScope($query, ?string $statusFilter = null, ?string $courseFilter = null)
+    {
+        $data_course_id = get_Role_by_course();
+        if (! empty($data_course_id)) {
+            $query->whereIn('pk', $data_course_id);
+        }
+
+        $currentDate = Carbon::now()->format('Y-m-d');
+
+        if ($statusFilter === 'archive') {
+            // Archived courses: end_date has already passed (expired courses)
+            $query->where('end_date', '<', $currentDate);
+        } else {
+            // Active courses: end_date is today or in the future (current and upcoming)
+            $query->where('end_date', '>=', $currentDate);
+        }
+
+        if (! empty($courseFilter)) {
+            $query->where('pk', $courseFilter);
+        }
+
+        return $query;
+    }
+
     public function query(CourseMaster $model): QueryBuilder
     {
         $query = $model->newQuery();
 
-        $data_course_id = get_Role_by_course();
-        if (!empty($data_course_id)) {
-            $query->whereIn('pk', $data_course_id);
-        }
-
-        // Apply status filter if provided
-        $statusFilter = request('status_filter');
-        $courseFilter = request('course_filter');
-        $currentDate = Carbon::now()->format('Y-m-d');
-
-        if ($statusFilter === 'active' || !$statusFilter) {
-            // Active courses: end_date is today or in the future (current and upcoming courses)
-            $query->where('end_date', '>=', $currentDate);
-        } elseif ($statusFilter === 'archive') {
-            // Archived courses: end_date has already passed (expired courses)
-            $query->where('end_date', '<', $currentDate);
-        }
-
-        // Apply course filter if provided
-        if (!empty($courseFilter)) {
-            $query->where('pk', $courseFilter);
-        }
+        self::applyListingScope($query, request('status_filter'), request('course_filter'));
 
         // Default newest-first, but ONLY when the user hasn't clicked a column
         // to sort — otherwise this base order would dominate (pk is unique, so a
@@ -185,9 +218,12 @@ class CourseMasterDataTable extends DataTable
             ->minifiedAjax() // This will use the current route for ajax
             // ->orderBy(1)
             ->selectStyleSingle()
-            ->responsive(true)
+            // Responsive would collapse the Actions column into a "+" detail row
+            // once the icon-over-label stacks widened it; the programme-dt chrome
+            // scrolls inside .table-responsive instead.
+            ->responsive(false)
             ->parameters([
-                'responsive' => true,
+                'responsive' => false,
                 'scrollX' => false,
                 'autoWidth' => false,
                 'ordering' => true,
@@ -212,15 +248,12 @@ class CourseMasterDataTable extends DataTable
                     'infoEmpty' => 'of 0 items',
                     'infoFiltered' => 'of _MAX_ items',
                 ],
-            ])
-            ->buttons([
-                Button::make('excel'),
-                Button::make('csv'),
-                Button::make('pdf'),
-                Button::make('print'),
-                Button::make('reset'),
-                Button::make('reload'),
             ]);
+            // NOTE: no ->buttons() here. Button::make('reset') / ('reload') are not
+            // real button types; they throw during init, and jQuery then skips every
+            // later init.dt handler — which silently kills the global enhancer, so
+            // the search box, pagination and item count never get relocated. The
+            // grid's exports are the server-side Download/Print pair instead (§1).
     }
 
     /**

@@ -69,45 +69,58 @@ class CourseGroupTypeController extends Controller
             })
 
             // Status Toggle
+            // Status: soft badge, display only. data-order lets a client-side sort
+            // order by state (docs/new-design-index-page.md 3b).
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
+                $isActive = (int) $row->active_inactive === 1;
+
+                return '<span class="status-pill badge rounded-1 ' . ($isActive ? 'bg-success-subtle' : 'bg-danger-subtle') . '"'
+                    . ' data-order="' . (int) $isActive . '">'
+                    . ($isActive ? 'Active' : 'Inactive')
+                    . '</span>';
+            })
+
+            // Action: Edit - switch - Delete as equal-width icon-over-label stacks.
+            // The switch carries NO .form-check.form-switch wrapper: that rule yanks
+            // the input -2.375rem left of its caption (3b, trap 1). Delete is guarded
+            // the way the server guards it - an active row cannot be deleted, so the
+            // control is rendered disabled rather than red-and-always-failing.
+            ->addColumn('action', function ($row) {
+                $isActive = (int) $row->active_inactive === 1;
+                $checked = $isActive ? 'checked' : '';
+                // The caption names the ACTION, not the state.
+                $toggleLabel = $isActive ? 'Deactivate' : 'Activate';
+
+                $deleteHtml = $isActive
+                    ? '<span class="prog-act prog-act--del is-disabled" aria-disabled="true"
+                            title="Deactivate this group type before deleting">
+                            <span class="prog-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
+                            <span class="prog-act__label">Delete</span>
+                       </span>'
+                    : '<button type="button" class="prog-act prog-act--del delete-btn" data-id="' . (int) $row->pk . '"
+                            aria-disabled="false" title="Delete group type">
+                            <span class="prog-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
+                            <span class="prog-act__label">Delete</span>
+                       </button>';
 
                 return '
-                <div class="form-check form-switch d-inline-block">
-                    <input class="form-check-input plain-status-toggle" type="checkbox" role="switch"
-                        data-table="course_group_type_master"
-                        data-column="active_inactive"
-                        data-id="' . $row->pk . '"
-                        ' . $checked . '>
+                <div class="prog-act-group" role="group" aria-label="Row actions">
+                    <button type="button" class="prog-act prog-act--edit edit-btn" title="Edit"
+                        data-id="' . (int) $row->pk . '" data-type-name="' . e((string) $row->type_name) . '">
+                        <span class="prog-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
+                        <span class="prog-act__label">Edit</span>
+                    </button>
+                    <label class="prog-act prog-act--toggle" title="' . $toggleLabel . ' group type">
+                        <span class="prog-act__icon">
+                            <input class="form-check-input plain-status-toggle" type="checkbox" role="switch"
+                                data-table="course_group_type_master" data-column="active_inactive"
+                                data-id="' . (int) $row->pk . '" ' . $checked . '>
+                        </span>
+                        <span class="prog-act__label">' . $toggleLabel . '</span>
+                    </label>
+                    ' . $deleteHtml . '
                 </div>';
             })
-
-            // Action Dropdown
-            ->addColumn('action', function ($row) {
-
-                $disabled = $row->active_inactive == 1 ? 'disabled aria-disabled="true"' : '';
-
-                return '
-    <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Row actions">
-
-        <!-- Edit Action -->
-        <a href="javascript:void(0)" data-id="' . $row->pk . '" data-type-name="' . $row->type_name . '" 
-           class="btn btn-sm edit-btn btn-outline-primary d-inline-flex align-items-center gap-1"
-           aria-label="Edit course group type">
-            <i class="material-icons material-symbols-rounded bg-transparent border-0 p-0" style="font-size:18px;">edit</i>
-        </a>
-
-        <!-- Delete Action -->
-        
-            <a href="javascript:void(0)"
-                data-id="' . $row->pk . '"
-                class="btn btn-sm btn-outline-danger delete-btn d-inline-flex align-items-center gap-1 ' . $disabled . '"
-                aria-disabled="' . ($row->active_inactive == 1 ? 'true' : 'false') . '">
-                    <i class="material-icons material-symbols-rounded bg-transparent border-0 p-0" style="font-size:18px;">delete</i>
-                </a>
-    </div>';
-            })
-
 
             // Allow HTML
             ->rawColumns(['status', 'action'])

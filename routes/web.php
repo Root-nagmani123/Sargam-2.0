@@ -442,6 +442,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('store', 'store')->name('store');
         Route::delete('delete/{id}', 'destroy')->name('destroy');
         Route::get('get-courses-by-status', 'getCoursesByStatus')->name('get.courses.by.status');
+        // Grid exports: one query, one column list, four formats.
+        Route::get('export/{format}', 'export')->name('export')
+            ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
     });
 
     // batch route

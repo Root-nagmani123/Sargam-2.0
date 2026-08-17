@@ -1,0 +1,664 @@
+/*
+ * Programme / Course Master (admin) — index, create, edit and the detail view.
+ *
+ * Four screens share this look, so it is a module stylesheet rather than an
+ * inline <style> copied per page (docs/new-design-index-page.md "Where the CSS
+ * lives"), named <module>-<audience>.css per §7.
+ *
+ * Roots — the prefix is per module, not per page (§7):
+ *   .prog-page    a full page (listing, form, detail)
+ *   .prog-modal   a modal, which lives OUTSIDE .prog-page in the DOM
+ *
+ * Anything used by both is scoped to BOTH roots. §3d records this exact bug
+ * twice: a component written under one root renders unstyled in the other.
+ *
+ * NOTE the existing `programme-*` classes are a different layer — shared
+ * DataTables chrome in public/css/custom.css (§7). This file only adds the
+ * module's own `prog-*` components.
+ *
+ * Tokens are the --ds-* set from public/css/sargam-app.css (docs/design.md);
+ * the literal hexes are the ones §3b/§3c/§3d specify by value.
+ */
+
+/* ── Status column: soft badge, display only (§3b) ─────────────────────────── */
+
+/* The theme ships the *-subtle backgrounds but not the matching
+   text-*-emphasis colours, so the label would render black. */
+:is(.prog-page, .prog-modal) .status-pill {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.35rem 0.7rem;
+    letter-spacing: 0.01em;
+}
+
+:is(.prog-page, .prog-modal) .status-pill.bg-success-subtle {
+    color: #146c43;
+}
+
+:is(.prog-page, .prog-modal) .status-pill.bg-danger-subtle {
+    color: #b02a37;
+}
+
+/* ── Action column: equal-width icon-over-label stacks (§3b) ───────────────── */
+
+/* align-items: flex-start, not stretch: the stacks are a mix of <a>, <button>,
+   <label>, <span> and <form>, and stretching them to a common height makes their
+   icon strips start at different tops (§3b wants one baseline). */
+/* The Actions cell is the widest thing on these rows; trimming its own padding
+   keeps the last stack's caption inside the panel instead of clipping it. */
+:is(.prog-page, .prog-modal) .programme-dt-table thead th:last-child,
+:is(.prog-page, .prog-modal) .programme-dt-table tbody td:last-child {
+    padding-left: var(--ds-space-1, 0.25rem);
+    padding-right: var(--ds-space-1, 0.25rem);
+}
+
+:is(.prog-page, .prog-modal) .prog-act-group {
+    display: inline-flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: var(--ds-space-1, 0.25rem);
+}
+
+/* The Delete action is wrapped in a <form>; it must add no box of its own. */
+:is(.prog-page, .prog-modal) .prog-act,
+:is(.prog-page, .prog-modal) .prog-act__btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    /* Wide enough for the longest caption ("Deactivate") so no stack is sized by
+       its own text — every action must measure the same, or the icon row comes
+       out unevenly spaced. */
+    min-width: 62px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    border-radius: var(--ds-radius, 4px);
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+:is(.prog-page, .prog-modal) .prog-act--del {
+    /* the wrapping <form> adds no box of its own */
+    display: inline-flex;
+    align-items: flex-start;
+    padding: 0;
+    margin: 0;
+}
+
+:is(.prog-page, .prog-modal) .prog-act:focus-visible,
+:is(.prog-page, .prog-modal) .prog-act__btn:focus-visible {
+    outline: 0;
+    box-shadow: var(--ds-focus-ring, 0 0 0 0.2rem rgba(0, 67, 132, 0.2));
+}
+
+/* One fixed-height strip for glyphs AND the switch, so they share a baseline. */
+:is(.prog-page, .prog-modal) .prog-act__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+}
+
+:is(.prog-page, .prog-modal) .prog-act__icon > i {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+/* No .form-check wrapper here (§3b trap 1) — the switch skin is keyed on
+   .form-check-input.status-toggle[type="checkbox"] and applies without one. */
+:is(.prog-page, .prog-modal) .prog-act__icon .form-check-input {
+    margin: 0;
+    float: none;
+}
+
+:is(.prog-page, .prog-modal) .prog-act__label {
+    white-space: nowrap;
+}
+
+:is(.prog-page, .prog-modal) .prog-act--view {
+    color: var(--ds-primary, #004384);
+}
+
+:is(.prog-page, .prog-modal) .prog-act--edit {
+    color: #2563eb;
+}
+
+:is(.prog-page, .prog-modal) .prog-act--toggle {
+    color: #475467;
+}
+
+:is(.prog-page, .prog-modal) .prog-act--download {
+    color: #0f766e;
+}
+
+/* Two shapes of the same action: a <form>-wrapped submit (the grids, where
+   Delete is a real DELETE request) and a plain <button> (the student list,
+   where a JS confirm fires the AJAX). Colour both. */
+:is(.prog-page, .prog-modal) .prog-act--del .prog-act__btn,
+:is(.prog-page, .prog-modal) button.prog-act--del {
+    color: var(--bs-danger, #b12923);
+}
+
+/* Delete disabled by the server's own rule — muted, not red-and-always-failing. */
+:is(.prog-page, .prog-modal) .prog-act--del.is-disabled {
+    color: #98a2b3;
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+
+:is(.prog-page, .prog-modal) .prog-act:hover .prog-act__label,
+:is(.prog-page, .prog-modal) .prog-act__btn:hover .prog-act__label {
+    text-decoration: underline;
+}
+
+/* ── Modal chrome (§3c) ────────────────────────────────────────────────────
+   Create and Edit look ALIKE: same header, same tinted field card, same
+   labels/controls, same footer pair. Only the contents and the submit caption
+   differ. Scoped to .prog-modal, which is the modal's own root — modals live
+   OUTSIDE .prog-page in the DOM (§3d). */
+
+.prog-modal .modal-content {
+    border: 0;
+    border-radius: 12px;
+}
+
+.prog-modal .prog-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ds-space-3, 1rem);
+    border-bottom: 1px solid #eaecf0;
+    padding: var(--ds-space-3, 1rem) var(--ds-space-4, 1.5rem);
+}
+
+.prog-modal .prog-modal-title {
+    margin: 0;
+    color: var(--ds-ink, #1f2937);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.prog-modal .prog-modal-body {
+    padding: var(--ds-space-4, 1.5rem);
+}
+
+/* ⚠️ Bootstrap keys the scrollable-modal behaviour on `.modal-body`
+   (`.modal-dialog-scrollable .modal-body { overflow-y: auto }`), and this body
+   is `.prog-modal-body`. Without the rule below nothing scrolls: the content
+   overflows the max-height:100% content box, `overflow: hidden` clips it, and
+   the footer — pager, selection count, Close / Send — is cut off below the
+   viewport. `min-height: 0` is required too, or the flex item refuses to shrink
+   under its content and the overflow never engages. */
+.prog-modal .modal-dialog-scrollable .prog-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* One tinted card per record. */
+.prog-modal .prog-field-card,
+.prog-page .prog-field-card {
+    background: #eef1fc;
+    border-radius: 10px;
+    padding: 1rem;
+}
+
+.prog-modal .prog-field-card + .prog-field-card {
+    margin-top: var(--ds-space-3, 1rem);
+}
+
+.prog-modal .prog-field + .prog-field {
+    margin-top: var(--ds-space-3, 1rem);
+}
+
+.prog-modal .invalid-feedback {
+    display: block;
+    min-height: 1rem;
+    font-size: 0.8125rem;
+}
+
+/* A native select needs the same skin as .prog-control. */
+.prog-modal select.prog-control {
+    appearance: auto;
+}
+
+/* ── Form + detail language (§3c tokens, §3d layout) ───────────────────────── */
+
+.prog-page .prog-card,
+.prog-modal .prog-card {
+    background: var(--ds-surface, #fff);
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-radius: 10px;
+    padding: var(--ds-space-4, 1.5rem);
+    margin-bottom: var(--ds-space-4, 1.5rem);
+}
+
+.prog-page .prog-section,
+.prog-modal .prog-section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ds-space-3, 1rem);
+    margin: 0 0 var(--ds-space-3, 1rem);
+    padding-bottom: var(--ds-space-2, 0.5rem);
+    border-bottom: 1px solid var(--ds-line, #e5e7eb);
+}
+
+.prog-page .prog-section-title,
+.prog-modal .prog-section-title {
+    margin: 0;
+    color: var(--ds-ink, #1f2937);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.prog-page .prog-section-note {
+    margin: 0.15rem 0 0;
+    color: #667085;
+    font-size: 0.8125rem;
+}
+
+/* A 3-column grid collapsing to 2 then 1 (§3d). */
+.prog-page .prog-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--ds-space-3, 1rem) var(--ds-space-4, 1.5rem);
+}
+
+.prog-page .prog-form-grid--full {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 991.98px) {
+    .prog-page .prog-form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 575.98px) {
+    .prog-page .prog-form-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.prog-page .prog-field-label,
+.prog-modal .prog-field-label {
+    display: block;
+    margin-bottom: var(--ds-space-2, 0.5rem);
+    color: #1f2937;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.prog-page .prog-req,
+.prog-modal .prog-req {
+    color: #dc2626;
+}
+
+.prog-page .prog-control,
+.prog-modal .prog-control {
+    width: 100%;
+    min-height: 2.625rem;
+    padding: 0.5rem 0.75rem;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    color: var(--ds-ink, #1f2937);
+    font-size: 0.875rem;
+}
+
+.prog-page .prog-control:focus,
+.prog-modal .prog-control:focus {
+    border-color: var(--ds-primary, #004384);
+    box-shadow: var(--ds-focus-ring, 0 0 0 0.2rem rgba(0, 67, 132, 0.2));
+    outline: 0;
+}
+
+.prog-page .prog-control.is-invalid,
+.prog-modal .prog-control.is-invalid {
+    border-color: var(--bs-danger, #b12923);
+}
+
+/* Both footers are right-aligned — a form's (§3d) and a modal's (§3c). */
+.prog-page .prog-form-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--ds-space-3, 1rem);
+    padding-bottom: var(--ds-space-2, 0.5rem);
+}
+
+/* The footer is a RIGHT-ALIGNED, EQUAL pair (§3c).
+
+   grid + 1fr columns makes the buttons equal: each takes the width of the
+   widest, so "Cancel" no longer sits at its 130px minimum beside a 216px
+   "Create Group Mapping". width:fit-content keeps the grid as wide as its
+   content (not the whole modal) while staying block-level, so the auto start
+   margin can push it to the trailing edge — an inline-grid would be aligned by
+   the parent's text-align instead and ignore the margin entirely. A d-none
+   button (the bulk modal's second submit) is not a grid item, so the pair stays
+   even in both of that modal's steps. */
+.prog-modal .prog-modal-footer {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    align-items: stretch;
+    gap: var(--ds-space-3, 1rem);
+    width: fit-content;
+    max-width: 100%;
+    /* auto start / 0 end = flush right, with the padding below as the inset */
+    margin-inline-start: auto;
+    margin-inline-end: 0;
+    /* was 0 — the buttons sat flush against the modal's bottom edge */
+    padding: 0 var(--ds-space-4, 1.5rem) var(--ds-space-4, 1.5rem);
+    border-top: 0;
+}
+
+/* Equal columns are narrower than the longest caption's natural width, so
+   without this the caption wraps and that one button grows to 60px while its
+   partner stays 44px. */
+.prog-modal .prog-modal-footer > .btn {
+    width: 100%;
+    white-space: nowrap;
+}
+
+/* custom.css caps this dialog at 28rem. Equal columns are then (448 − 48
+   padding − 16 gap) / 2 = 192px, but "Update Group Mapping" needs 219px, so the
+   caption was clipped at the button's right edge. 34rem gives each column 240px
+   — room for the longest caption either modal uses, with the pair still equal
+   and flush right. Scoped by .prog-modal so only the redesigned modal moves. */
+.prog-modal.gm-mapping-modal .modal-dialog {
+    max-width: 34rem;
+}
+
+.prog-modal .prog-btn-cancel,
+.prog-page .prog-btn-submit,
+.prog-modal .prog-btn-submit {
+    min-width: 130px;
+    min-height: 2.75rem;
+    padding: 0.5rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.prog-page .prog-btn-cancel,
+.prog-modal .prog-btn-cancel {
+    border: 1px solid #fca5a5;
+    background: #ffffff;
+    color: #dc2626;
+}
+
+.prog-page .prog-btn-cancel:hover,
+.prog-page .prog-btn-cancel:focus,
+.prog-modal .prog-btn-cancel:hover,
+.prog-modal .prog-btn-cancel:focus {
+    background: #fef2f2;
+    border-color: #f87171;
+    color: #b91c1c;
+}
+
+.prog-page .prog-btn-submit,
+.prog-modal .prog-btn-submit {
+    border: 1px solid #004384;
+    background: #004384;
+    color: #ffffff;
+}
+
+.prog-page .prog-btn-submit:hover,
+.prog-page .prog-btn-submit:focus,
+.prog-modal .prog-btn-submit:hover,
+.prog-modal .prog-btn-submit:focus {
+    background: #003468;
+    border-color: #003468;
+    color: #ffffff;
+}
+
+/* ── Detail view: hero + facts grid (§3d) ──────────────────────────────────── */
+
+.prog-page .prog-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ds-space-3, 1rem) var(--ds-space-5, 2rem);
+    background: #f5f8fc;
+    border: 1px solid #e3ebf6;
+    border-radius: 10px;
+    padding: var(--ds-space-4, 1.5rem);
+    margin-bottom: var(--ds-space-4, 1.5rem);
+}
+
+.prog-page .prog-hero-name {
+    margin: 0;
+    color: var(--ds-ink, #1f2937);
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+:is(.prog-page, .prog-modal) .prog-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: var(--ds-space-3, 1rem) var(--ds-space-4, 1.5rem);
+}
+
+:is(.prog-page, .prog-modal) .prog-fact {
+    min-width: 0;
+}
+
+:is(.prog-page, .prog-modal) .prog-fact__label {
+    display: block;
+    margin-bottom: 0.2rem;
+    color: #667085;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+:is(.prog-page, .prog-modal) .prog-fact__value {
+    color: var(--ds-ink, #1f2937);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+:is(.prog-page, .prog-modal) .prog-fact__value.is-empty {
+    color: #98a2b3;
+    font-weight: 500;
+}
+
+:is(.prog-page, .prog-modal) .prog-fact--wide {
+    grid-column: 1 / -1;
+}
+
+/* The hero's facts row is flex, not grid: inside the hero's shrink-to-fit flex
+   child an auto-fit grid collapses to one column and doubles the hero's height
+   (§3d). Declared AFTER .prog-facts — same specificity, so order decides. */
+:is(.prog-page, .prog-modal) .prog-facts--hero {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 3.5rem;
+    margin-top: 0.4rem;
+}
+
+/* A *-subtle tint on the tinted hero reads as a smudge, so the hero badge is
+   white with a light border; the colour-coded badges stay in the tables (§3d).
+   It carries NO bg-*-subtle utility — those are !important and would win. */
+.prog-page .prog-hero .status-pill {
+    background: #ffffff;
+    border: 1px solid #d7e0ee;
+    color: var(--ds-ink, #1f2937);
+}
+
+.prog-page .prog-hero .status-pill.is-active {
+    color: #146c43;
+}
+
+.prog-page .prog-hero .status-pill.is-archived {
+    color: #b02a37;
+}
+
+.prog-page .prog-people {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ds-space-2, 0.5rem);
+}
+
+.prog-page .prog-person {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid #cddcf0;
+    border-radius: 999px;
+    background: rgba(0, 67, 132, 0.05);
+    color: var(--ds-primary, #004384);
+    font-size: 0.8125rem;
+    font-weight: 500;
+}
+
+/* ── Student Details: the student list inside #studentDetailsModal ─────────
+   The list is a server-rendered partial reloaded over AJAX
+   (group_mapping/student_list_ajax.blade.php). It used to carry its own inline
+   <style>, which meant every reload re-injected unscoped `.btn-outline-primary`
+   and `.table-hover tr:hover` rules into the whole page; the rules live here
+   instead, and the table/panel/footer chrome now comes from the shared
+   .programme-dt-* layer (§3, §4) so it matches the grid behind the modal. */
+
+.prog-modal .prog-student-panel {
+    border: 1px solid #e4e7ec;
+}
+
+/* The wrapper is the horizontal scroller (the modal body scrolls vertically),
+   so it must not clip the panel's rounded corners. */
+.prog-modal .student-table-wrapper {
+    overflow-x: auto;
+    overflow-y: visible;
+}
+
+/* Checkbox column: just wide enough for the control, and not sized by the
+   header cell's default 1rem padding on both sides. */
+.prog-modal .prog-student-check {
+    width: 44px;
+    padding-right: 0 !important;
+}
+
+/* td:first-child is muted grey by the shared rule (it expects a S. No. there);
+   here the first cell is the checkbox and the second is the number. */
+.prog-modal .prog-student-table tbody td:nth-child(2) {
+    color: #667085;
+    font-weight: 500;
+    max-width: none;
+}
+
+/* Only the columns that must never break get nowrap. A blanket nowrap pushes the
+   table past the modal's width on a 1280-wide screen, and the first thing to
+   scroll out of sight is the Action column — the one control the user came for.
+   Name and Email wrap instead, which keeps the whole row reachable. */
+.prog-modal .prog-student-table tbody td:nth-child(2),
+.prog-modal .prog-student-table tbody td:nth-child(4),
+.prog-modal .prog-student-table tbody td:nth-child(6),
+.prog-modal .prog-student-table tbody td:last-child {
+    white-space: nowrap;
+}
+
+.prog-modal .prog-student-table .form-check-input {
+    margin: 0;
+    float: none;
+}
+
+/* The row overshot the modal by 13px at 992-1280px, which put the whole table
+   into horizontal scroll and pushed Edit/Remove out of view — for 13px. Two
+   trims reclaim ~20px and the table fits again at those widths.
+   (`position: sticky` on the Action cell was the obvious alternative; measured,
+   it does not hold in this table — cell sticky is ignored here whichever way the
+   wrapper's overflow is declared — so it is not used.)
+
+   62px is the §3b width for a five-stack row ending in "Deactivate"; the widest
+   caption here is "Remove", so 56px keeps the pair even without the slack. */
+.prog-modal .prog-student-table .prog-act {
+    min-width: 56px;
+}
+
+.prog-modal .prog-student-check {
+    padding-left: 0.75rem !important;
+}
+
+/* Two stacks, not five: 62px each is the §3b minimum and keeps Edit and Remove
+   on the same baseline as the action column on the index page. */
+.prog-modal .prog-student-table .prog-act-group {
+    justify-content: center;
+    width: 100%;
+}
+
+.prog-modal .programme-dt-footer {
+    border-radius: 0;
+}
+
+/* Split footer — Student Details keeps a selection count on the left while the
+   button pair keeps the equal-width, flush-right treatment of every other
+   modal. Declared after the base footer rule, so it wins on order. */
+.prog-modal .prog-modal-footer--split {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ds-space-3, 1rem);
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding: var(--ds-space-3, 1rem) var(--ds-space-4, 1.5rem);
+    border-top: 1px solid #eaecf0;
+}
+
+.prog-modal .prog-modal-footer__note {
+    color: #667085;
+    font-size: 0.8125rem;
+}
+
+.prog-modal .prog-modal-footer__actions {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    align-items: stretch;
+    gap: var(--ds-space-3, 1rem);
+    margin-inline-start: auto;
+}
+
+.prog-modal .prog-modal-footer__actions > .btn {
+    width: 100%;
+    white-space: nowrap;
+}
+
+/* The composer's two channel buttons: same equal/right pair, but inside the
+   field card — no divider and no outer padding of its own. */
+.prog-modal .prog-modal-footer--inline {
+    margin-top: var(--ds-space-3, 1rem);
+    padding: 0;
+    border-top: 0;
+}
+
+/* SMS and Email are both real sends, so both carry submit weight; the channel
+   is what the colour distinguishes (teal = the module's non-primary action). */
+.prog-modal .prog-btn-submit.prog-btn-sms {
+    background: #0f766e;
+    border-color: #0f766e;
+}
+
+.prog-modal .prog-btn-submit.prog-btn-sms:hover,
+.prog-modal .prog-btn-submit.prog-btn-sms:focus {
+    background: #115e59;
+    border-color: #115e59;
+}
