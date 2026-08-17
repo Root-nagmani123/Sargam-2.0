@@ -372,14 +372,16 @@ $(document).ready(function () {
 
     /* ── Column title -> export field key, used to restrict Download to checked columns ── */
     var COLUMN_KEY_MAP = {
-        'S. No.':            'sno',
-        'Date':               'date',
-        'Department Name':    'dept_name',
-        'Sub-Module Name':    'sub_module_name',
-        'Issue Raised By':    'reporter',
-        'Issue Description':  'description',
-        'Attachment':         'attachment',
-        'Status':             'status'
+        'S. No.':              'sno',
+        'Date':                 'date',
+        'Department Name':      'dept_name',
+        'Sub-Module Name':      'sub_module_name',
+        'Issue Raised By':      'reporter',
+        'Reporter Department':  'reporter_department',
+        'Reporter Role':        'reporter_role',
+        'Issue Description':    'description',
+        'Attachment':           'attachment',
+        'Status':               'status'
     };
 
     /* ── Keep Export links (CSV + Excel) in sync with active filters + visible columns ── */

@@ -5,6 +5,7 @@ namespace App\DataTables;
 use App\Models\IssueReport;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Yajra\DataTables\EloquentDataTable;
@@ -29,6 +30,12 @@ class IssueReportDataTable extends DataTable
                 $name = trim(($row->reporter_first ?? '') . ' ' . ($row->reporter_last ?? ''));
                 return e($name !== '' ? $name : ($row->reporter_username ?? ('User #' . $row->reported_by)));
             })
+            ->addColumn('reporter_department', fn ($row) => $row->reporter_department
+                ? e($row->reporter_department)
+                : '<span class="text-body-secondary">—</span>')
+            ->addColumn('reporter_role', fn ($row) => $row->reporter_role
+                ? e($row->reporter_role)
+                : '<span class="text-body-secondary">—</span>')
             ->addColumn('description', function ($row) {
                 $full = (string) $row->description;
                 return '<span title="' . e($full) . '">' . e(Str::limit($full, 70)) . '</span>';
@@ -76,7 +83,15 @@ class IssueReportDataTable extends DataTable
                             ->orWhere('issue_reports.description', 'like', $like)
                             ->orWhere('uc.first_name', 'like', $like)
                             ->orWhere('uc.last_name', 'like', $like)
-                            ->orWhere('uc.user_name', 'like', $like);
+                            ->orWhere('uc.user_name', 'like', $like)
+                            ->orWhere('dm.department_name', 'like', $like)
+                            ->orWhereExists(function ($sub) use ($like) {
+                                $sub->select(DB::raw(1))
+                                    ->from('employee_role_mapping as erm_search')
+                                    ->join('user_role_master as urm_search', 'urm_search.pk', '=', 'erm_search.user_role_master_pk')
+                                    ->whereColumn('erm_search.user_credentials_pk', 'uc.pk')
+                                    ->where('urm_search.user_role_display_name', 'like', $like);
+                            });
                     });
                 }
             }, true)
@@ -84,9 +99,10 @@ class IssueReportDataTable extends DataTable
             ->orderColumn('dept_name', 'issue_reports.module_name $1')
             ->orderColumn('sub_module_name', 'issue_reports.sub_module $1')
             ->orderColumn('reporter', 'uc.first_name $1')
+            ->orderColumn('reporter_department', 'dm.department_name $1')
             ->orderColumn('description', 'issue_reports.description $1')
             ->orderColumn('status', 'issue_reports.status $1')
-            ->rawColumns(['sub_module_name', 'description', 'attachment', 'status', 'action'])
+            ->rawColumns(['sub_module_name', 'description', 'attachment', 'status', 'action', 'reporter_department', 'reporter_role'])
             ->setRowId('id');
     }
 
@@ -94,11 +110,18 @@ class IssueReportDataTable extends DataTable
     {
         $query = $model->newQuery()
             ->leftJoin('user_credentials as uc', 'uc.user_id', '=', 'issue_reports.reported_by')
+            ->leftJoin('employee_master as em', 'em.pk', '=', 'issue_reports.reported_by')
+            ->leftJoin('department_master as dm', 'dm.pk', '=', 'em.department_master_pk')
             ->select([
                 'issue_reports.*',
                 'uc.first_name as reporter_first',
                 'uc.last_name  as reporter_last',
                 'uc.user_name  as reporter_username',
+                'dm.department_name as reporter_department',
+                DB::raw("(SELECT GROUP_CONCAT(urm.user_role_display_name ORDER BY urm.pk SEPARATOR ', ')
+                          FROM employee_role_mapping erm
+                          INNER JOIN user_role_master urm ON urm.pk = erm.user_role_master_pk
+                          WHERE erm.user_credentials_pk = uc.pk) as reporter_role"),
             ]);
 
         $statusFilter = request('status_filter');
@@ -174,6 +197,8 @@ class IssueReportDataTable extends DataTable
             Column::make('dept_name')->title('Department Name')->orderable(true)->searchable(true),
             Column::make('sub_module_name')->title('Sub-Module Name')->orderable(true)->searchable(true),
             Column::make('reporter')->title('Issue Raised By')->orderable(true)->searchable(true),
+            Column::make('reporter_department')->title('Reporter Department')->orderable(true)->searchable(true),
+            Column::make('reporter_role')->title('Reporter Role')->orderable(false)->searchable(true),
             Column::make('description')->title('Issue Description')->orderable(false)->searchable(true),
             Column::computed('attachment')->title('Attachment')->orderable(false)->searchable(false)->width(100)->addClass('text-center'),
             Column::computed('status')->title('Status')->orderable(true)->searchable(false)->width(120)->addClass('text-center'),
