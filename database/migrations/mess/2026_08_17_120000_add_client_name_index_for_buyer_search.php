@@ -8,17 +8,17 @@ use Illuminate\Support\Facades\Schema;
  * Index for client_name on kitchen_issue_master / sv_date_range_reports
  * (SQL performance review 17 Aug 2026).
  *
- * ProcessMessBillsEmployeeController::getSummaryStats() searches this column
- * with a leading-wildcard "client_name LIKE '%text%'" substring match. A
- * "try prefix match first" optimization was attempted and reverted: it
- * silently dropped valid matches whenever the search term appeared mid-string
- * rather than at the start (e.g. searching "CONFRENCE" missed rows like
- * "IST CONFRENCE"), so getSummaryStats() still does a plain substring scan
- * and this index does not speed it up — a true fix needs FULLTEXT search,
- * which is out of scope here. This index is added defensively for any other
- * exact/prefix lookups on client_name (e.g. MessBuyerClientFilter's
- * `client_name = ?` / `client_name LIKE 'text (%'` patterns) and as
- * groundwork for a future FULLTEXT migration.
+ * NOT a fix for ProcessMessBillsEmployeeController::getSummaryStats(): that method
+ * searches client_name with a leading-wildcard "LIKE '%text%'" substring match,
+ * which this (or any btree) index cannot serve. A "try prefix match first"
+ * optimization was attempted there and reverted, because it silently dropped
+ * valid matches whenever the search term appeared mid-string rather than at the
+ * start (e.g. searching "CONFRENCE" missed rows like "IST CONFRENCE") — a real
+ * fix needs FULLTEXT search, which is out of scope here.
+ *
+ * This index instead speeds up other exact/prefix lookups on client_name (e.g.
+ * MessBuyerClientFilter's `client_name = ?` / `client_name LIKE 'text (%'`
+ * patterns) and is groundwork for a future FULLTEXT migration.
  *
  * Additive only: no existing index is touched.
  */

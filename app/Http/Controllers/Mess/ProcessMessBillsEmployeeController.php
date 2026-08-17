@@ -72,6 +72,9 @@ class ProcessMessBillsEmployeeController extends Controller
 
     private array $receiverUserIdByStudentNameCache = [];
 
+    /** Per-request memoization for FacultyMaster::exists() checks by client pk (avoids repeat DB hits per bill). */
+    private array $facultyMasterExistsByClientIdCache = [];
+
     /** First working store per request: redis, then file if Redis extension/server unavailable. */
     private ?string $processMessBillsResolvedCacheStore = null;
 
@@ -944,7 +947,7 @@ class ProcessMessBillsEmployeeController extends Controller
         }
 
         if ($slug === 'employee' && $clientId > 0) {
-            if (FacultyMaster::where('pk', $clientId)->exists()) {
+            if ($this->facultyMasterExistsForClientId($clientId)) {
                 return (int) ($this->resolveReceiverUserIdFromFacultyClientId($clientId) ?? 0);
             }
 
@@ -4161,6 +4164,19 @@ class ProcessMessBillsEmployeeController extends Controller
         return [$bill, false];
     }
 
+    /** Memoized per client pk: avoids one FacultyMaster query per bill when resolving many bills for distinct buyers. */
+    private function facultyMasterExistsForClientId(int $clientId): bool
+    {
+        if (array_key_exists($clientId, $this->facultyMasterExistsByClientIdCache)) {
+            return $this->facultyMasterExistsByClientIdCache[$clientId];
+        }
+
+        $exists = FacultyMaster::where('pk', $clientId)->exists();
+        $this->facultyMasterExistsByClientIdCache[$clientId] = $exists;
+
+        return $exists;
+    }
+
     /**
      * Resolve receiver user_id (user_credentials.user_id) for the bill's buyer for notifications.
      *
@@ -4184,7 +4200,7 @@ class ProcessMessBillsEmployeeController extends Controller
             // Employee (1): client_id = employee_master.pk = user_credentials.user_id
             if ($clientType === KitchenIssueMaster::CLIENT_EMPLOYEE) {
                 if ($clientId > 0) {
-                    if (FacultyMaster::where('pk', $clientId)->exists()) {
+                    if ($this->facultyMasterExistsForClientId($clientId)) {
                         return $this->resolveReceiverUserIdFromFacultyClientId($clientId);
                     }
 
@@ -4214,7 +4230,7 @@ class ProcessMessBillsEmployeeController extends Controller
         $clientId = isset($bill->client_id) ? (int) $bill->client_id : 0;
 
         if ($slug === 'employee' && $clientId > 0) {
-            if (FacultyMaster::where('pk', $clientId)->exists()) {
+            if ($this->facultyMasterExistsForClientId($clientId)) {
                 return $this->resolveReceiverUserIdFromFacultyClientId($clientId);
             }
 
@@ -5160,7 +5176,6 @@ class ProcessMessBillsEmployeeController extends Controller
             }
             $remainingDueCombined = $this->billDueAmount($actualTotalDue, $amount);
             $this->bumpProcessMessBillsCombinedCache();
-
 
             return response()->json([
                 'success' => true,

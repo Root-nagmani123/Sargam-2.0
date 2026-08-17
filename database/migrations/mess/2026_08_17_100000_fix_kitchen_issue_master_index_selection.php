@@ -10,8 +10,14 @@ use Illuminate\Support\Facades\Schema;
  * (SQL performance review 17 Aug 2026 — see slow query log 2026-08-14).
  *
  * Step 1: ANALYZE TABLE refreshes stale statistics; usually enough on its own.
- * Step 2: only if the optimizer still avoids the composite index afterwards,
- * drop the redundant single-column indexes it's subsumed by.
+ * Step 2: drop kitchen_issue_type-only index — every caller that filters on
+ * kitchen_issue_type also uses it as their leading predicate, so it's fully
+ * subsumed by the composite [kitchen_issue_type, issue_date, pk] index.
+ *
+ * kim_issue_date_index (issue_date alone) is kept: KitchenIssueController::
+ * getKitchenIssueRecords() filters/sorts on issue_date without a
+ * kitchen_issue_type predicate, so it is not covered by the composite index
+ * and still needs the standalone index (code review PR #301, trap #25).
  */
 return new class extends Migration
 {
@@ -26,10 +32,6 @@ return new class extends Migration
         if ($this->indexExists('kitchen_issue_master', 'kitchen_issue_master_kitchen_issue_type_index')) {
             DB::statement('ALTER TABLE kitchen_issue_master DROP INDEX kitchen_issue_master_kitchen_issue_type_index');
         }
-
-        if ($this->indexExists('kitchen_issue_master', 'kim_issue_date_index')) {
-            DB::statement('ALTER TABLE kitchen_issue_master DROP INDEX kim_issue_date_index');
-        }
     }
 
     public function down(): void
@@ -40,10 +42,6 @@ return new class extends Migration
 
         if (! $this->indexExists('kitchen_issue_master', 'kitchen_issue_master_kitchen_issue_type_index')) {
             DB::statement('ALTER TABLE kitchen_issue_master ADD INDEX kitchen_issue_master_kitchen_issue_type_index (kitchen_issue_type)');
-        }
-
-        if (! $this->indexExists('kitchen_issue_master', 'kim_issue_date_index')) {
-            DB::statement('ALTER TABLE kitchen_issue_master ADD INDEX kim_issue_date_index (issue_date)');
         }
     }
 
