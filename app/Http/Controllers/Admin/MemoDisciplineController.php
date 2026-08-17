@@ -41,12 +41,8 @@ class MemoDisciplineController extends Controller
             ->select('cm.*')
             ->get();
     } else {
-        $courseQuery = CourseMaster::where('active_inactive', 1)
-            ->where('end_date', '>=', now()->toDateString());
-        if (!empty($data_course_id)) {
-            $courseQuery->whereIn('pk', $data_course_id);
-        }
-        $courses = $courseQuery->orderBy('course_name')->get();
+        // Running courses owned by this user's supporting section only.
+        $courses = CourseMaster::runningForUserSection()->orderBy('course_name')->get();
     }
 
     // Filters
@@ -733,16 +729,8 @@ private function buildDisciplineExportData(Request $request): array
 
     public function create()
     {
-        $data_course_id = get_Role_by_course();
-
-        $query = CourseMaster::where('active_inactive', 1)
-            ->where('end_date', '>=', now()->toDateString());
-
-        if (!empty($data_course_id)) {
-            $query->whereIn('pk', $data_course_id);
-        }
-
-        $activeCourses = $query->orderBy('course_name')->get();
+        // Running courses owned by this user's supporting section only.
+        $activeCourses = CourseMaster::runningForUserSection()->orderBy('course_name')->get();
 
             $disciplines = DisciplineMaster::where('active_inactive', 1)
                 ->get();

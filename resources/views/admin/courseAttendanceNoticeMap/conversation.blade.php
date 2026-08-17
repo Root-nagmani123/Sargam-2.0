@@ -14,25 +14,12 @@
     @endif
     <div class="card">
         <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between gap-3 mb-2">
-                <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                    <img src="{{ asset('images/ashoka.png') }}" alt="National Emblem of India"
-                        style="height:64px;width:auto;object-fit:contain;">
-                    <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo"
-                        style="height:64px;width:auto;object-fit:contain;">
-                </div>
-                <div class="text-center flex-grow-1 px-2">
-                    <h5 class="fw-bold mb-1">{{ $template_details->course_name ?? 'Course Name' }}</h5>
-                    <p class="mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
-                </div>
-                <div class="flex-shrink-0">
-                    <img src="{{ asset('images/azadi.png') }}" alt="Azadi Ka Amrit Mahotsav"
-                        style="height:64px;width:auto;object-fit:contain;">
-                </div>
+            <div class="text-center mb-2">
+                <h5 class="fw-bold mb-1">{{ $template_details->course_name ?? 'Course Name' }}</h5>
+                <p class="mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
             </div>
             <hr>
 
-            <p class="mb-1">{{ $type == 'memo' ? 'SHOW CAUSE MEMO' : 'SHOW CAUSE NOTICE' }}</p>
             <p><strong>Date:</strong>
                 {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}
             </p>
@@ -82,10 +69,7 @@
 
             <p>
                 <strong>{{ $template_details->display_name ?? 'Student Name' }},
-                    {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>
-                Remarks: {{ $type == 'memo' ? 'Show Cause Memo' : 'Show Cause Notice' }} for absence in
-                {{ $template_details->subject_topic ?? 'the session' }} on
-                {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}
+                    {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong>
             </p>
 
             <div class="text-end">

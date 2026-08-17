@@ -42,6 +42,36 @@ class CourseMaster extends Model
         });
     }
 
+    /**
+     * Programme picker for the Memo/Notice module: enabled courses that have already
+     * started and have not yet ended, limited to the supporting section(s) the
+     * signed-in user belongs to.
+     *
+     * scopeActiveRunning() is deliberately not reused here — it only looks at end_date,
+     * so a programme starting next month still comes back, and the module must never
+     * offer a course that has not begun (no attendance/timetable exists to memo against).
+     *
+     * Section scoping comes from course_master.user_role_master_pk ("Supporting Section"
+     * on the programme form) matched against the user's Spatie roles. get_Role_by_course()
+     * returns [] for Admin / Super Admin / PA — meaning no restriction — and [-1] for a
+     * user whose section owns no course, so an empty array must be read as "see all".
+     */
+    public function scopeRunningForUserSection($query)
+    {
+        $today = now()->toDateString();
+
+        $query->where('active_inactive', 1)
+            ->where('start_year', '<=', $today)
+            ->where('end_date', '>=', $today);
+
+        $sectionCourseIds = get_Role_by_course();
+        if (! empty($sectionCourseIds)) {
+            $query->whereIn('pk', $sectionCourseIds);
+        }
+
+        return $query;
+    }
+
     public function courseCordinatorMater()
     {
         return $this->hasMany(CourseCordinatorMaster::class, 'courses_master_pk', 'pk');

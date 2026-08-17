@@ -35,30 +35,11 @@ class MemoNoticeController extends Controller
 
         $templates = $query->paginate(20);
 
-        // Current date for filtering
-        $currentDate = now()->toDateString();
-
-        // Only active + ongoing + upcoming courses
-        $courses = CourseMaster::where('active_inactive', 1);
-            $courses->where(function ($q) use ($currentDate) {
-
-                // Ongoing courses: start_year <= today AND (end_date is null OR end_date >= today)
-                $q->where(function ($ongoing) use ($currentDate) {
-                    $ongoing->where('start_year', '<=', $currentDate)
-                        ->where(function ($end) use ($currentDate) {
-                            $end->whereNull('end_date')
-                                ->orWhere('end_date', '>=', $currentDate);
-                        });
-                })
-
-                    // OR upcoming courses: start_year > today
-                    ->orWhere('start_year', '>', $currentDate);
-
-            });
-            if(!empty($data_course_id)){
-                $courses->whereIn('pk',$data_course_id);
-            }
-            $courses = $courses->orderBy('course_name')
+        // Only courses that are running right now and belong to this user's supporting
+        // section. Upcoming courses used to be included here; the module must not offer
+        // a programme that has not started yet.
+        $courses = CourseMaster::runningForUserSection()
+            ->orderBy('course_name')
             ->get(['pk', 'course_name']);
 
         return view('admin.courseAttendanceNoticeMap.memo_notice_index', compact('templates', 'courses'));
@@ -67,30 +48,10 @@ class MemoNoticeController extends Controller
     // Show create form
     public function create()
     {
-        $currentDate = now()->toDateString();
-
-        $courses = CourseMaster::where('active_inactive', 1);
-        $data_course_id =  get_Role_by_course();
-        if(!empty($data_course_id)){
-            $courses->whereIn('pk',$data_course_id);
-        }
-        $courses->where(function ($q) use ($currentDate) {
-
-                // Ongoing courses
-                $q->where(function ($ongoing) use ($currentDate) {
-                    $ongoing->where('start_year', '<=', $currentDate)
-                        ->where(function ($end) use ($currentDate) {
-                            $end->whereNull('end_date')
-                                ->orWhere('end_date', '>=', $currentDate);
-                        });
-                })
-
-                    // OR upcoming courses
-                    ->orWhere(function ($upcoming) use ($currentDate) {
-                        $upcoming->where('start_year', '>', $currentDate);
-                    });
-            });
-        $courses = $courses->orderBy('course_name')
+        // Running courses from this user's supporting section only — upcoming
+        // programmes are no longer offered here.
+        $courses = CourseMaster::runningForUserSection()
+            ->orderBy('course_name')
             ->get(['pk', 'course_name', 'start_year', 'end_date']);
 
         // Disciplines (for the discipline-specific "Discipline Memo" template); filtered by course client-side.
@@ -185,30 +146,22 @@ class MemoNoticeController extends Controller
     {
         $template = MemoNoticeTemplate::findOrFail($id);
 
-        $currentDate = now()->format('Y-m-d');
-
-        // Fetch only active + ongoing + upcoming courses
-        $courses = CourseMaster::where('active_inactive', 1);
-        $data_course_id =  get_Role_by_course();
-        if(!empty($data_course_id)){
-            $courses->whereIn('pk',$data_course_id);
-        }
-        $courses->where(function ($q) use ($currentDate) {
-
-                // **Ongoing courses**: start_year <= today AND (end_date is null OR end_date >= today)
-                $q->where(function ($ongoing) use ($currentDate) {
-                    $ongoing->where('start_year', '<=', $currentDate)
-                        ->where(function ($end) use ($currentDate) {
-                            $end->whereNull('end_date')
-                                ->orWhere('end_date', '>=', $currentDate);
-                        });
-                })
-
-                    // **OR upcoming courses**: start_year > today
-                    ->orWhere('start_year', '>', $currentDate);
-            });
-        $courses = $courses->orderBy('course_name')
+        // Running courses from this user's supporting section only — upcoming
+        // programmes are no longer offered here.
+        $courses = CourseMaster::runningForUserSection()
+            ->orderBy('course_name')
             ->get(['pk', 'course_name']);
+
+        // The course this template was already saved against may have ended or sit
+        // outside the section list. Keep it in the options so editing an old template
+        // does not silently blank its course on save.
+        if (! empty($template->course_master_pk) && ! $courses->contains('pk', $template->course_master_pk)) {
+            $assignedCourse = CourseMaster::where('pk', $template->course_master_pk)
+                ->first(['pk', 'course_name']);
+            if ($assignedCourse) {
+                $courses = $courses->push($assignedCourse)->sortBy('course_name')->values();
+            }
+        }
 
         $disciplines = \App\Models\DisciplineMaster::where('active_inactive', 1)
             ->orderBy('discipline_name')

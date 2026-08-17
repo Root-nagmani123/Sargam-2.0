@@ -40,6 +40,11 @@ class CourseAttendanceNoticeMapController extends Controller
     $isOfficerTrainee = isOfficerTraineeUser();
     $ownStudentPk = $isOfficerTrainee ? Auth::user()->user_id : null;
 
+    // Staff only see rows for courses owned by their supporting section, matching the
+    // Programme Name dropdown. Skipped for Officer Trainees — their own student filter
+    // already applies, and their role is never a course's supporting section.
+    $sectionCourseIds = $isOfficerTrainee ? [] : get_Role_by_course();
+
     // Get initial notice records with course name
     // Start from student_notice_status so direct notices (course_student_attendance_pk=0) are included
     $noticesQuery = DB::table('student_notice_status as sns')
@@ -79,6 +84,10 @@ class CourseAttendanceNoticeMapController extends Controller
     // Apply filters on notices query
     if ($isOfficerTrainee) {
         $noticesQuery->where('sns.student_pk', $ownStudentPk);
+    }
+
+    if (!empty($sectionCourseIds)) {
+        $noticesQuery->whereIn('sns.course_master_pk', $sectionCourseIds);
     }
 
     if ($programNameFilter) {
@@ -170,6 +179,10 @@ class CourseAttendanceNoticeMapController extends Controller
 
         if ($isOfficerTrainee) {
             $memoQuery->where('student_memo_status.student_pk', $ownStudentPk);
+        }
+
+        if (!empty($sectionCourseIds)) {
+            $memoQuery->whereIn('student_memo_status.course_master_pk', $sectionCourseIds);
         }
 
         if ($programNameFilter) {
@@ -312,9 +325,9 @@ class CourseAttendanceNoticeMapController extends Controller
     // Conclusion types for the chat panel's "End Chat" action.
     $conclusions = \App\Models\MemoConclusionMaster::where('active_inactive', 1)->get();
     
-    // Get courses for Program Name filter - only active courses (active_inactive = 1 and end_date > now)
-    $courses = CourseMaster::where('active_inactive', 1)
-        ->where('end_date', '>=', now()->toDateString())
+    // Programme Name filter + the Add Notice modal's course picker: running courses
+    // belonging to this user's supporting section only — no future or other-section ones.
+    $courses = CourseMaster::runningForUserSection()
         ->orderBy('course_name', 'asc')
         ->get();
 
@@ -432,6 +445,9 @@ $noticeCount = $memos->groupBy(function($item) {
         $isOfficerTrainee = isOfficerTraineeUser();
         $ownStudentPk = $isOfficerTrainee ? Auth::user()->user_id : null;
 
+        // Exports must not reach past the listing: same supporting-section limit.
+        $sectionCourseIds = $isOfficerTrainee ? [] : get_Role_by_course();
+
         // Get initial notice records with course name
         $noticesQuery = DB::table('course_student_attendance as csa')
             ->join('student_notice_status as sns', 'sns.course_student_attendance_pk', '=', 'csa.pk')
@@ -473,6 +489,10 @@ $noticeCount = $memos->groupBy(function($item) {
         // Apply filters on notices query
         if ($isOfficerTrainee) {
             $noticesQuery->where('sns.student_pk', $ownStudentPk);
+        }
+
+        if (!empty($sectionCourseIds)) {
+            $noticesQuery->whereIn('sns.course_master_pk', $sectionCourseIds);
         }
 
         if ($programNameFilter) {
@@ -554,6 +574,9 @@ $noticeCount = $memos->groupBy(function($item) {
 
             if ($isOfficerTrainee) {
                 $memoQuery->where('student_memo_status.student_pk', $ownStudentPk);
+            }
+            if (!empty($sectionCourseIds)) {
+                $memoQuery->whereIn('student_memo_status.course_master_pk', $sectionCourseIds);
             }
             if ($programNameFilter) {
                 $memoQuery->where('student_memo_status.course_master_pk', $programNameFilter);
@@ -741,8 +764,8 @@ if($memos[0]->status == 2){
     }
 public function create(Request $request)
 {
-    $activeCourses = CourseMaster::where('active_inactive', '1')
-        ->where('end_date', '>=', now()->toDateString())
+    $activeCourses = CourseMaster::runningForUserSection()
+        ->orderBy('course_name', 'asc')
         ->get();
 // print_r($activeCourses);die;
     return view('admin.courseAttendanceNoticeMap.create', compact('activeCourses'));
@@ -3399,18 +3422,9 @@ public function send_direct_notice_save(Request $request)
             ->groupBy('class_session')
             ->get();
 
-        // Only active courses, and only those assigned to this CC — Admin/Super
-        // Admin/PA get an empty restriction list back (see all active courses).
-        $data_course_id = get_Role_by_course();
-
-        $courseMasters = CourseMaster::where('active_inactive', 1)
-            ->where(function ($q) {
-                $q->whereNull('end_date')
-                    ->orWhere('end_date', '>=', now()->toDateString());
-            })
-            ->when(!empty($data_course_id), function ($q) use ($data_course_id) {
-                $q->whereIn('pk', $data_course_id);
-            })
+        // Only courses that are actually running now, and only those owned by this
+        // user's supporting section — Admin/Super Admin/PA are not restricted.
+        $courseMasters = CourseMaster::runningForUserSection()
             ->orderBy('couse_short_name')
             ->select('couse_short_name', 'course_name', 'pk')
             ->get()

@@ -8,13 +8,15 @@
 <x-breadcrum title="Conversation" />
             <x-session_message />
 
-            <div class="bg-white p-4 rounded shadow-sm mt-3" >
+            <div class="card mt-3">
+                <div class="card-body">
 
-                <h5 class="text-center fw-bold mb-3">{{ $template_details->course_name ?? 'Course Name' }}</h5>
-            <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+            <div class="text-center mb-2">
+                <h5 class="fw-bold mb-1">{{ $template_details->course_name ?? 'Course Name' }}</h5>
+                <p class="mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+            </div>
             <hr>
 
-            <p class="mb-1">{{ $type == 'memo' ? 'SHOW CAUSE MEMO' : 'SHOW CAUSE NOTICE' }}</p>
             <p><strong>Date:</strong> {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }} </p>
 
             <div class="table-responsive mb-3">
@@ -40,13 +42,14 @@
                 </table>
             </div>
 
-            <div class="mb-4">
+            {{-- Template HTML comes from the rich-text editor and can carry fixed-width tables/images,
+                 so keep it inside its own scroll container instead of letting it stretch the page. --}}
+            <div class="mb-4 table-responsive">
                 {!! $template_details->content ?? '<p>It has been brought to the notice of the undersigned that you were absent without prior authorization from following session(s).</p>' !!}
             </div>
 
             <p>
-                <strong>{{ $template_details->display_name ?? 'Student Name' }}, {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>
-                Remarks: {{ $type == 'memo' ? 'Show Cause Memo' : 'Show Cause Notice' }} for {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}
+                <strong>{{ $template_details->display_name ?? 'Student Name' }}, {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong>
             </p>
 
             <div class="text-end">
@@ -172,6 +175,7 @@
                 @endif
                 @endif
 
+                </div>
             </div>
 </div>
 
