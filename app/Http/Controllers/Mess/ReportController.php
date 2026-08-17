@@ -67,6 +67,9 @@ class ReportController extends Controller
         'seconds' => 'STOCK_BALANCE_TILL_DATE_CACHE_SECONDS',
     ];
 
+    /** Fallback Redis TTL (seconds) for Stock Balance Till Date report when STOCK_BALANCE_TILL_DATE_CACHE_SECONDS is unset. */
+    private const STOCK_BALANCE_TILL_DATE_CACHE_TTL = 3600;
+
     private const SALE_VOUCHER_BUYERS_PER_PAGE = 8;
     private const STOCK_BALANCE_TILL_DATE_PER_PAGE = 50;
 
@@ -1015,7 +1018,7 @@ class ReportController extends Controller
      * @param  callable(): mixed  $callback
      * @return array{0: mixed, 1: bool}
      */
-    private function rememberMessReportCache(string $cacheKey, array $envKeys, string $logLabel, callable $callback): array
+    private function rememberMessReportCache(string $cacheKey, array $envKeys, string $logLabel, callable $callback, ?int $ttlSeconds = null): array
     {
         $enabled = ! in_array(
             strtolower((string) env($envKeys['enabled'], 'true')),
@@ -1043,7 +1046,7 @@ class ReportController extends Controller
         }
 
         return [
-            DataTableRedisCache::remember($cacheKey, $envKeys, $logLabel, $callback),
+            DataTableRedisCache::remember($cacheKey, $envKeys, $logLabel, $callback, $ttlSeconds),
             false,
         ];
     }
@@ -1051,7 +1054,7 @@ class ReportController extends Controller
     /**
      * @param  array{enabled: string, seconds: string}  $envKeys
      */
-    private function putMessReportCache(string $cacheKey, mixed $payload, array $envKeys, string $logLabel): void
+    private function putMessReportCache(string $cacheKey, mixed $payload, array $envKeys, string $logLabel, ?int $ttlSeconds = null): void
     {
         $enabled = ! in_array(
             strtolower((string) env($envKeys['enabled'], 'true')),
@@ -1062,7 +1065,7 @@ class ReportController extends Controller
             return;
         }
 
-        $ttl = max(30, (int) env($envKeys['seconds'], 300));
+        $ttl = max(30, $ttlSeconds ?? (int) env($envKeys['seconds'], 300));
         try {
             RedisBackedCache::repositoryForStore(RedisBackedCache::projectDefaultStoreName())
                 ->put($cacheKey, $payload, $ttl);
@@ -1328,7 +1331,7 @@ class ReportController extends Controller
     {
         $tillDate = $request->filled('till_date') ? $request->till_date : now()->format('Y-m-d');
         $storeIds = $this->normalizedIdList($request, 'store_id');
-        $reportData = $this->buildStockBalanceTillDateData($tillDate, $storeIds);
+        [$reportData, ] = $this->loadStockBalanceTillDateReportData($request, $tillDate, $storeIds);
         $selectedStoreName = $this->resolveStoreNamesLabel($storeIds);
 
         $fileName = 'stock-balance-till-date-' . $tillDate . '-' . now()->format('Y-m-d_His') . '.xlsx';
@@ -1349,9 +1352,10 @@ class ReportController extends Controller
 
         $tillDate = $request->filled('till_date') ? $request->till_date : now()->format('Y-m-d');
         $storeIds = $this->normalizedIdList($request, 'store_id');
+        [$reportData, ] = $this->loadStockBalanceTillDateReportData($request, $tillDate, $storeIds);
 
         $data = [
-            'reportData' => $this->buildStockBalanceTillDateData($tillDate, $storeIds),
+            'reportData' => $reportData,
             'tillDate' => $tillDate,
             'selectedStoreName' => $this->resolveStoreNamesLabel($storeIds),
             'emblemSrc' => $this->messPdfIndiaEmblemForDompdf(),
@@ -2836,7 +2840,8 @@ class ReportController extends Controller
                 $cacheKey,
                 $rawReportData,
                 self::STOCK_BALANCE_TILL_DATE_CACHE_ENV_KEYS,
-                'ReportController@stockBalanceTillDate'
+                'ReportController@stockBalanceTillDate',
+                self::STOCK_BALANCE_TILL_DATE_CACHE_TTL
             );
             $cacheHit = false;
         } else {
@@ -2844,7 +2849,8 @@ class ReportController extends Controller
                 $cacheKey,
                 self::STOCK_BALANCE_TILL_DATE_CACHE_ENV_KEYS,
                 'ReportController@stockBalanceTillDate',
-                $loadReport
+                $loadReport,
+                self::STOCK_BALANCE_TILL_DATE_CACHE_TTL
             );
         }
 
