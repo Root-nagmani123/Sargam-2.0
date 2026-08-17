@@ -1,8 +1,8 @@
-<div class="modal fade mee-add-modal" id="meeEditModal" tabindex="-1"
+<div class="modal fade mee-modal mee-add-modal" id="meeEditModal" tabindex="-1"
     aria-labelledby="meeEditModalLabel" aria-hidden="true"
     data-bs-backdrop="static" data-bs-keyboard="true">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div class="modal-content cgt-form-modal mee-form-modal border-0 shadow-lg rounded-4">
+        <div class="modal-content mee-form-modal shadow-lg">
             <form method="POST"
                 action="{{ route('mdo-escrot-exemption.update') }}"
                 id="meeEditForm"
@@ -10,14 +10,12 @@
                 @csrf
                 <input type="hidden" name="pk" id="meeEditRecordPk" value="">
 
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold" id="meeEditModalLabel">Edit MDO/ Escort Exemption</h5>
+                <div class="mee-modal-header">
+                    <h5 class="mee-modal-title" id="meeEditModalLabel">Edit MDO/ Escort Exemption</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <div class="modal-body pt-3">
-                    <hr class="mt-0 mb-4 opacity-50">
-
+                <div class="mee-modal-body">
                     <div id="meeEditFormAlert" class="alert d-none mb-3" role="alert"></div>
 
                     {{-- Read-only context: Student + Course --}}
@@ -31,12 +29,13 @@
                         </div>
                     </div>
 
+                    <div class="mee-field-card">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label for="meeEditDutyType" class="form-label cgt-field-label mb-2">
-                                Duty Type <span class="text-danger">*</span>
+                            <label for="meeEditDutyType" class="mee-field-label">
+                                Duty Type <span class="mee-req">*</span>
                             </label>
-                            <select name="mdo_duty_type_master_pk" id="meeEditDutyType" class="form-select rounded-1" required>
+                            <select name="mdo_duty_type_master_pk" id="meeEditDutyType" class="mee-control" required>
                                 <option value="">Select Duty Type</option>
                                 @foreach($MDODutyTypeMaster ?? [] as $pk => $name)
                                 <option value="{{ $pk }}">{{ $name }}</option>
@@ -46,10 +45,10 @@
                         </div>
 
                         <div class="col-md-6 d-none" id="meeEditFacultyContainer">
-                            <label for="meeEditFaculty" class="form-label cgt-field-label mb-2">
-                                Faculty <span class="text-danger">*</span>
+                            <label for="meeEditFaculty" class="mee-field-label">
+                                Faculty <span class="mee-req">*</span>
                             </label>
-                            <select name="faculty_master_pk[]" id="meeEditFaculty" class="form-select rounded-1 mee-faculty-select2" multiple>
+                            <select name="faculty_master_pk[]" id="meeEditFaculty" class="mee-control mee-faculty-select2" multiple>
                                 @foreach($facultyMaster ?? [] as $pk => $name)
                                 <option value="{{ $pk }}">{{ $name }}</option>
                                 @endforeach
@@ -58,45 +57,37 @@
                         </div>
 
                         <div class="col-12">
-                            <label for="meeEditDate" class="form-label cgt-field-label mb-2">
-                                Start Date <span class="text-danger">*</span>
+                            <label for="meeEditDate" class="mee-field-label">
+                                Start Date <span class="mee-req">*</span>
                             </label>
-                            <div class="position-relative mee-datetime-wrap">
-                                <input type="date" name="mdo_date" id="meeEditDate" class="form-control rounded-1" required>
-                                <i class="bi bi-calendar3 mee-field-icon" aria-hidden="true"></i>
-                            </div>
+                            <input type="date" name="mdo_date" id="meeEditDate" class="mee-control" required>
                             <small class="text-danger d-none mt-1" id="meeEditErrorDate">Start date is required.</small>
                         </div>
 
                         <div class="col-md-6">
-                            <label for="meeEditTimeFrom" class="form-label cgt-field-label mb-2">
-                                Start Time <span class="text-danger">*</span>
+                            <label for="meeEditTimeFrom" class="mee-field-label">
+                                Start Time <span class="mee-req">*</span>
                             </label>
-                            <div class="position-relative mee-datetime-wrap">
-                                <input type="time" name="Time_from" id="meeEditTimeFrom" class="form-control rounded-1" required>
-                                <i class="bi bi-clock mee-field-icon" aria-hidden="true"></i>
-                            </div>
+                            <input type="time" name="Time_from" id="meeEditTimeFrom" class="mee-control" required>
                             <small class="text-danger d-none mt-1" id="meeEditErrorTimeFrom">Start time is required.</small>
                         </div>
 
                         <div class="col-md-6">
-                            <label for="meeEditTimeTo" class="form-label cgt-field-label mb-2">
-                                End Time <span class="text-danger">*</span>
+                            <label for="meeEditTimeTo" class="mee-field-label">
+                                End Time <span class="mee-req">*</span>
                             </label>
-                            <div class="position-relative mee-datetime-wrap">
-                                <input type="time" name="Time_to" id="meeEditTimeTo" class="form-control rounded-1" required>
-                                <i class="bi bi-clock mee-field-icon" aria-hidden="true"></i>
-                            </div>
+                            <input type="time" name="Time_to" id="meeEditTimeTo" class="mee-control" required>
                             <small class="text-danger d-none mt-1" id="meeEditErrorTimeTo">End time is required.</small>
                         </div>
                     </div>
+                    </div>
                 </div>
 
-                <div class="modal-footer border-0 gap-2 justify-content-end pt-0">
-                    <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">
+                <div class="mee-modal-footer">
+                    <button type="button" class="btn mee-btn-cancel" data-bs-dismiss="modal">
                         Cancel
                     </button>
-                    <button type="submit" class="btn btn-primary rounded-1 px-4" id="meeEditSubmitBtn">
+                    <button type="submit" class="btn mee-btn-submit" id="meeEditSubmitBtn">
                         Update MDO/ Escort Exemption
                     </button>
                 </div>

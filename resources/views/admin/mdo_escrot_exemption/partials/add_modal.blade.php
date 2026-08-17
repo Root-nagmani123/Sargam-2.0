@@ -1,8 +1,8 @@
-<div class="modal fade mee-add-modal" id="meeAddModal" tabindex="-1"
+<div class="modal fade mee-modal mee-add-modal" id="meeAddModal" tabindex="-1"
     aria-labelledby="meeAddModalLabel" aria-hidden="true"
     data-bs-backdrop="static" data-bs-keyboard="true">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div class="modal-content cgt-form-modal mee-form-modal border-0 shadow-lg rounded-4">
+        <div class="modal-content mee-form-modal shadow-lg">
             <form method="POST"
                 action="{{ route('mdo-escrot-exemption.store') }}"
                 id="mdoDutyTypeForm"
@@ -10,14 +10,12 @@
                 @csrf
                 <input type="hidden" name="pk" id="meeRecordPk" value="">
 
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold" id="meeAddModalLabel">Add MDO/ Escort Exemption</h5>
+                <div class="mee-modal-header">
+                    <h5 class="mee-modal-title" id="meeAddModalLabel">Add MDO/ Escort Exemption</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <div class="modal-body pt-3">
-                    <hr class="mt-0 mb-4 opacity-50">
-
+                <div class="mee-modal-body">
                     <div id="meeAddFormAlert" class="alert d-none mb-3" role="alert"></div>
 
                     <div id="meeEditStudentInfo" class="alert alert-light border d-none align-items-center gap-2 mb-3 py-3" role="status">
@@ -30,12 +28,13 @@
                         </div>
                     </div>
 
+                    <div class="mee-field-card">
                     <div class="row g-3">
                         <div class="col-md-6 mee-add-only-field">
-                            <label for="meeCourseDropdown" class="form-label cgt-field-label mb-2">
-                                Course Name <span class="text-danger">*</span>
+                            <label for="meeCourseDropdown" class="mee-field-label">
+                                Course Name <span class="mee-req">*</span>
                             </label>
-                            <select name="course_master_pk" id="meeCourseDropdown" class="form-select rounded-3" required>
+                            <select name="course_master_pk" id="meeCourseDropdown" class="mee-control" required>
                                 <option value="">Select Course Name</option>
                                 @foreach($formCourses ?? [] as $pk => $name)
                                 <option value="{{ $pk }}">{{ $name }}</option>
@@ -45,10 +44,10 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label for="mdo_duty_type_master_pk" class="form-label cgt-field-label mb-2">
-                                Duty Type <span class="text-danger">*</span>
+                            <label for="mdo_duty_type_master_pk" class="mee-field-label">
+                                Duty Type <span class="mee-req">*</span>
                             </label>
-                            <select name="mdo_duty_type_master_pk" id="mdo_duty_type_master_pk" class="form-select rounded-3" required>
+                            <select name="mdo_duty_type_master_pk" id="mdo_duty_type_master_pk" class="mee-control" required>
                                 <option value="">Select Duty Type</option>
                                 @foreach($MDODutyTypeMaster ?? [] as $pk => $name)
                                 <option value="{{ $pk }}">{{ $name }}</option>
@@ -58,19 +57,19 @@
                         </div>
 
                         <div class="col-md-12 d-none" id="duty_other_container">
-                            <label for="duty_other" class="form-label cgt-field-label mb-2">
-                                Duty Other <span class="text-danger">*</span>
+                            <label for="duty_other" class="mee-field-label">
+                                Duty Other <span class="mee-req">*</span>
                             </label>
-                            <input type="text" name="duty_other" id="duty_other" class="form-control rounded-3"
+                            <input type="text" name="duty_other" id="duty_other" class="mee-control"
                                 placeholder="Enter duty name" maxlength="255">
                             <small class="text-danger d-none mt-1" id="meeErrorDutyOther">Duty other is required.</small>
                         </div>
 
                         <div class="col-12 d-none" id="faculty_field_container">
-                            <label for="faculty_master_pk" class="form-label cgt-field-label mb-2">
-                                Faculty <span class="text-danger">*</span>
+                            <label for="faculty_master_pk" class="mee-field-label">
+                                Faculty <span class="mee-req">*</span>
                             </label>
-                            <select name="faculty_master_pk[]" id="faculty_master_pk" class="form-select rounded-3 mee-faculty-select2" multiple>
+                            <select name="faculty_master_pk[]" id="faculty_master_pk" class="mee-control mee-faculty-select2" multiple>
                                 @foreach($facultyMaster ?? [] as $pk => $name)
                                 <option value="{{ $pk }}">{{ $name }}</option>
                                 @endforeach
@@ -79,45 +78,36 @@
                         </div>
 
                         <div class="col-12">
-                            <label for="mdo_date" class="form-label cgt-field-label mb-2">
-                                Start Date <span class="text-danger">*</span>
+                            <label for="mdo_date" class="mee-field-label">
+                                Start Date <span class="mee-req">*</span>
                             </label>
-                            <div class="position-relative mee-datetime-wrap">
-                                <input type="date" name="mdo_date" id="mdo_date" class="form-control rounded-3" required>
-                                <i class="bi bi-calendar3 mee-field-icon" aria-hidden="true"></i>
-                            </div>
+                            <input type="date" name="mdo_date" id="mdo_date" class="mee-control" required>
                             <small class="text-danger d-none mt-1" id="meeErrorDate">Start date is required.</small>
                         </div>
 
                         <div class="col-md-6">
-                            <label for="Time_from" class="form-label cgt-field-label mb-2">
-                                Start Time <span class="text-danger">*</span>
+                            <label for="Time_from" class="mee-field-label">
+                                Start Time <span class="mee-req">*</span>
                             </label>
-                            <div class="position-relative mee-datetime-wrap">
-                                <input type="time" name="Time_from" id="Time_from" class="form-control rounded-3" required>
-                                <i class="bi bi-clock mee-field-icon" aria-hidden="true"></i>
-                            </div>
+                            <input type="time" name="Time_from" id="Time_from" class="mee-control" required>
                             <small class="text-danger d-none mt-1" id="meeErrorTimeFrom">Start time is required.</small>
                         </div>
 
                         <div class="col-md-6">
-                            <label for="Time_to" class="form-label cgt-field-label mb-2">
-                                End Time <span class="text-danger">*</span>
+                            <label for="Time_to" class="mee-field-label">
+                                End Time <span class="mee-req">*</span>
                             </label>
-                            <div class="position-relative mee-datetime-wrap">
-                                <input type="time" name="Time_to" id="Time_to" class="form-control rounded-3" required>
-                                <i class="bi bi-clock mee-field-icon" aria-hidden="true"></i>
-                            </div>
+                            <input type="time" name="Time_to" id="Time_to" class="mee-control" required>
                             <small class="text-danger d-none mt-1" id="meeErrorTimeTo">End time is required.</small>
                         </div>
 
                         <div class="col-12 mee-add-only-field">
-                            <label for="meeAssignStudentsTrigger" class="form-label cgt-field-label mb-2">
-                                Assign Students <span class="text-danger">*</span>
+                            <label for="meeAssignStudentsTrigger" class="mee-field-label">
+                                Assign Students <span class="mee-req">*</span>
                             </label>
                             <button type="button"
                                 id="meeAssignStudentsTrigger"
-                                class="form-select rounded-3 text-start mee-assign-students-trigger"
+                                class="mee-control text-start mee-assign-students-trigger"
                                 aria-haspopup="dialog"
                                 aria-controls="meeStudentListModal">
                                 <span class="text-muted" id="meeAssignStudentsLabel">Select Students</span>
@@ -128,18 +118,19 @@
                         </div>
 
                         <div class="col-12 mee-add-only-field">
-                            <label for="textarea" class="form-label cgt-field-label mb-2">Description</label>
-                            <textarea class="form-control rounded-3" id="textarea" name="Remark" rows="3"
+                            <label for="textarea" class="mee-field-label">Description</label>
+                            <textarea class="mee-control" id="textarea" name="Remark" rows="3"
                                 placeholder="Enter a remark or description (optional)"></textarea>
                         </div>
                     </div>
+                    </div>
                 </div>
 
-                <div class="modal-footer border-0 gap-2 justify-content-end pt-0">
-                    <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">
+                <div class="mee-modal-footer">
+                    <button type="button" class="btn mee-btn-cancel" data-bs-dismiss="modal">
                         Cancel
                     </button>
-                    <button type="submit" class="btn btn-primary rounded-3 px-4" id="meeAddSubmitBtn">
+                    <button type="submit" class="btn mee-btn-submit" id="meeAddSubmitBtn">
                         Add MDO/ Escort Exemption
                     </button>
                 </div>

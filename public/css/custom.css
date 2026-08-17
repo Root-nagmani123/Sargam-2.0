@@ -1284,76 +1284,11 @@ body.custom-loaded {
     border: 1px solid #e4e7ec;
 }
 
-.eccm-master-page #exceptiongetcategory tbody td .d-inline-flex[role="group"] {
-    gap: 0.75rem;
-    justify-content: center;
-}
-
-.eccm-master-page #exceptiongetcategory .edit-btn,
-.eccm-master-page #exceptiongetcategory .delete-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    padding: 0 !important;
-    border: 0 !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    color: #004a93;
-    line-height: 1;
-    transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.eccm-master-page #exceptiongetcategory .edit-btn:hover,
-.eccm-master-page #exceptiongetcategory .delete-btn:hover:not([aria-disabled="true"]) {
-    opacity: 0.72;
-    transform: translateY(-1px);
-    color: #004a93;
-}
-
-.eccm-master-page #exceptiongetcategory .delete-btn {
-    color: #d92d20;
-}
-
-.eccm-master-page #exceptiongetcategory .delete-btn:hover:not([aria-disabled="true"]) {
-    color: #b42318;
-}
-
-.eccm-master-page #exceptiongetcategory .delete-btn[aria-disabled="true"],
-.eccm-master-page #exceptiongetcategory .delete-btn.disabled {
-    opacity: 0.38;
-    pointer-events: none;
-    cursor: not-allowed;
-}
-
-.eccm-master-page #exceptiongetcategory .edit-btn .material-icons,
-.eccm-master-page #exceptiongetcategory .delete-btn .material-icons {
-    display: none !important;
-}
-
-.eccm-master-page #exceptiongetcategory .edit-btn .bi,
-.eccm-master-page #exceptiongetcategory .delete-btn .bi {
-    font-size: 1.0625rem;
-    line-height: 1;
-}
-
-.eccm-master-page #exceptiongetcategory .programme-action-switch .form-check-input {
-    width: 2.25rem;
-    height: 1.125rem;
-    margin: 0;
-    cursor: pointer;
-    box-shadow: none;
-}
-
-.eccm-master-page #exceptiongetcategory .programme-action-switch .form-check-input:checked {
-    background-color: #12b76a;
-    border-color: #12b76a;
-}
-
-.eccm-master-page #exceptiongetcategory .programme-action-switch .form-check-input:focus {
-    box-shadow: 0 0 0 0.2rem rgba(18, 183, 106, 0.2);
-}
+/* The row-action rules that used to live here (icon buttons sized 1.75rem, a
+   `.material-icons { display: none !important }` that hid the only glyph the
+   server rendered, and the switch skin) are gone: the Action column is now the
+   §3b icon-over-caption stack, styled in public/css/exemption-category-admin.css.
+   They were ID-scoped to this one table, so nothing else referenced them. */
 
 .eccm-master-page #exceptiongetcategory tbody td:nth-child(4),
 .eccm-master-page #exceptiongetcategory tbody td:nth-child(5) {
@@ -1378,77 +1313,11 @@ body.custom-loaded {
     border: 1px solid #e4e7ec;
 }
 
-.ems-master-page #exemptionMedicalSpecialityTable tbody td .d-inline-flex[role="group"] {
-    gap: 0.75rem;
-    justify-content: center;
-    flex-wrap: nowrap;
-}
-
-.ems-master-page #exemptionMedicalSpecialityTable .edit-btn,
-.ems-master-page #exemptionMedicalSpecialityTable .delete-btn {
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    padding: 0 !important;
-    border: 0 !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    color: #004a93;
-    line-height: 1;
-    transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.ems-master-page #exemptionMedicalSpecialityTable .edit-btn:hover,
-.ems-master-page #exemptionMedicalSpecialityTable .delete-btn:hover:not([aria-disabled="true"]) {
-    opacity: 0.72;
-    transform: translateY(-1px);
-    color: #004a93;
-}
-
-.ems-master-page #exemptionMedicalSpecialityTable .delete-btn {
-    color: #d92d20;
-}
-
-.ems-master-page #exemptionMedicalSpecialityTable .delete-btn:hover:not([aria-disabled="true"]) {
-    color: #b42318;
-}
-
-.ems-master-page #exemptionMedicalSpecialityTable .delete-btn[aria-disabled="true"],
-.ems-master-page #exemptionMedicalSpecialityTable .delete-btn.disabled {
-    opacity: 0.38;
-    pointer-events: none;
-    cursor: not-allowed;
-}
-
-.ems-master-page #exemptionMedicalSpecialityTable .edit-btn .material-icons,
-.ems-master-page #exemptionMedicalSpecialityTable .delete-btn .material-icons {
-    display: none !important;
-}
-
-.ems-master-page #exemptionMedicalSpecialityTable .edit-btn .bi,
-.ems-master-page #exemptionMedicalSpecialityTable .delete-btn .bi {
-    font-size: 1.0625rem;
-    line-height: 1;
-}
-
-.ems-master-page #exemptionMedicalSpecialityTable .programme-action-switch .form-check-input {
-    width: 2.25rem;
-    height: 1.125rem;
-    margin: 0;
-    cursor: pointer;
-    box-shadow: none;
-}
-
-.ems-master-page #exemptionMedicalSpecialityTable .programme-action-switch .form-check-input:checked {
-    background-color: #12b76a;
-    border-color: #12b76a;
-}
-
-.ems-master-page #exemptionMedicalSpecialityTable .programme-action-switch .form-check-input:focus {
-    box-shadow: 0 0 0 0.2rem rgba(18, 183, 106, 0.2);
-}
+/* The row-action rules that used to live here (icon buttons sized 1.75rem, a
+   `.material-icons { display: none !important }` that hid the only glyph the
+   server rendered, and the switch skin) are gone: the Action column is now the
+   §3b icon-over-caption stack, styled in public/css/exemption-masters-admin.css.
+   They were ID-scoped to this one table, so nothing else referenced them. */
 
 .ems-master-page #exemptionMedicalSpecialityTable tbody td:nth-child(3),
 .ems-master-page #exemptionMedicalSpecialityTable tbody td:nth-child(4),

@@ -75,61 +75,61 @@ class ExemptionCategoryController extends Controller
             /* ===============================
            STATUS TOGGLE
         ================================ */
+            // Status: soft badge, display only (docs/new-design-index-page.md
+            // §3b). data-order lets a client-side sort order by state.
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
+                $isActive = (int) $row->active_inactive === 1;
 
-                return '
-            <div class="form-check form-switch d-inline-block">
-                <input class="form-check-input plain-status-toggle"
-                       type="checkbox"
-                       data-id="' . $row->pk . '"
-                       ' . $checked . '>
-            </div>';
+                return '<span class="status-pill badge rounded-1 '
+                    . ($isActive ? 'bg-success-subtle' : 'bg-danger-subtle') . '"'
+                    . ' data-order="' . (int) $isActive . '">'
+                    . ($isActive ? 'Active' : 'Inactive')
+                    . '</span>';
             })
+            ->addColumn('action', function ($row) {
+                $isActive = (int) $row->active_inactive === 1;
+                // The caption names the ACTION, not the state: the state is
+                // already shown by the badge one column over (§3b).
+                $toggleLabel = $isActive ? 'Deactivate' : 'Activate';
 
-            /* ===============================
-           ACTION BUTTONS
-        ================================ */
-    ->addColumn('action', function ($row) {
-        $disabled = $row->active_inactive == 1 ? 'disabled aria-disabled="true"' : '';
+                $edit = '<a href="javascript:void(0)" class="exm-act exm-act--edit edit-btn"'
+                    . ' data-id="' . (int) $row->pk . '"'
+                    . ' data-exemp_category_name="' . e($row->exemp_category_name) . '"'
+                    . ' data-exemp_cat_short_name="' . e($row->exemp_cat_short_name) . '"'
+                    . ' data-active_inactive="' . (int) $row->active_inactive . '"'
+                    . ' title="Edit" aria-label="Edit category">'
+                    . '<span class="exm-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>'
+                    . '<span class="exm-act__label">Edit</span></a>';
 
-                return '
-                    <div class="d-inline-flex align-items-center gap-2"
-                        role="group"
-                        aria-label="Row actions">
+                // No .form-check/.form-switch wrapper (§3b trap 1): custom.css
+                // pulls a .form-check-input inside one left by -2.375rem, which
+                // is right for switch-beside-label and wrong for this layout.
+                $toggle = '<label class="exm-act exm-act--toggle" title="' . $toggleLabel . '">'
+                    . '<span class="exm-act__icon">'
+                    . '<input class="form-check-input plain-status-toggle" type="checkbox" role="switch"'
+                    . ' data-id="' . (int) $row->pk . '" ' . ($isActive ? 'checked' : '')
+                    . ' aria-label="' . $toggleLabel . ' category">'
+                    . '</span>'
+                    . '<span class="exm-act__label">' . $toggleLabel . '</span></label>';
 
-                        <!-- Edit Action -->
-                        <a href="javascript:void(0)"
-                        data-id="' . $row->pk . '"
-                        data-exemp_category_name="' . $row->exemp_category_name . '"
-                        data-exemp_cat_short_name="' . $row->exemp_cat_short_name . '"
-                        data-active_inactive="' . $row->active_inactive . '"
-                        class="btn btn-sm edit-btn btn-outline-primary d-inline-flex align-items-center gap-1"
-                        aria-label="Edit course group type">
+                // Mirror the rule the page enforces: an active row cannot be
+                // deleted, so the control is muted and inert rather than
+                // red-and-always-failing.
+                $delete = $isActive
+                    ? '<span class="exm-act exm-act--del is-disabled" aria-disabled="true"'
+                        . ' title="Deactivate this category before deleting">'
+                        . '<span class="exm-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
+                        . '<span class="exm-act__label">Delete</span></span>'
+                    : '<a href="javascript:void(0)" class="exm-act exm-act--del delete-btn"'
+                        . ' data-id="' . (int) $row->pk . '" aria-disabled="false"'
+                        . ' title="Delete" aria-label="Delete category">'
+                        . '<span class="exm-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
+                        . '<span class="exm-act__label">Delete</span></a>';
 
-                            <i class="material-icons material-symbols-rounded"
-                            style="font-size:18px;">edit</i>
-
-                            <span class="d-none d-md-inline">Edit</span>
-                        </a>
-
-                        <!-- Delete Action -->
-                        <a href="javascript:void(0)"
-                        data-id="' . $row->pk . '"
-                        class="btn btn-sm btn-outline-danger delete-btn d-inline-flex align-items-center gap-1 ' . $disabled . '"
-                        aria-disabled="' . ($row->active_inactive == 1 ? 'true' : 'false') . '">
-
-                            <i class="material-icons material-symbols-rounded"
-                            style="font-size:18px;">delete</i>
-
-                            <span class="d-none d-md-inline">Delete</span>
-                        </a>
-
-                    </div>
-                ';
+                return '<div class="exm-act-group" role="group" aria-label="Row actions">'
+                    . $edit . $toggle . $delete
+                    . '</div>';
             })
-
-
             ->rawColumns(['status', 'action'])
             ->orderColumn('DT_RowIndex', 'pk $1') //Added this line for ordering
             ->make(true);
@@ -288,62 +288,61 @@ public function store(Request $request)
             /* ===============================
            STATUS TOGGLE
         ================================ */
+            // Status: soft badge, display only (docs/new-design-index-page.md
+            // §3b). data-order lets a client-side sort order by state.
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
+                $isActive = (int) $row->active_inactive === 1;
 
-                return '
-            <div class="form-check form-switch d-inline-block">
-                <input class="form-check-input plain-status-toggle"
-                       type="checkbox"
-                       data-id="' . $row->pk . '"
-                       ' . $checked . '>
-            </div>';
+                return '<span class="status-pill badge rounded-1 '
+                    . ($isActive ? 'bg-success-subtle' : 'bg-danger-subtle') . '"'
+                    . ' data-order="' . (int) $isActive . '">'
+                    . ($isActive ? 'Active' : 'Inactive')
+                    . '</span>';
             })
+            ->addColumn('action', function ($row) {
+                $isActive = (int) $row->active_inactive === 1;
+                // The caption names the ACTION, not the state: the state is
+                // already shown by the badge one column over (§3b).
+                $toggleLabel = $isActive ? 'Deactivate' : 'Activate';
 
-            /* ===============================
-           ACTION BUTTONS
-        ================================ */
+                $edit = '<a href="javascript:void(0)" class="exm-act exm-act--edit edit-btn"'
+                    . ' data-id="' . (int) $row->pk . '"'
+                    . ' data-speciality_name="' . e($row->speciality_name) . '"'
+                    . ' data-created_date="' . e($row->created_date) . '"'
+                    . ' data-active_inactive="' . (int) $row->active_inactive . '"'
+                    . ' title="Edit" aria-label="Edit speciality">'
+                    . '<span class="exm-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>'
+                    . '<span class="exm-act__label">Edit</span></a>';
 
+                // No .form-check/.form-switch wrapper (§3b trap 1): custom.css
+                // pulls a .form-check-input inside one left by -2.375rem, which
+                // is right for switch-beside-label and wrong for this layout.
+                $toggle = '<label class="exm-act exm-act--toggle" title="' . $toggleLabel . '">'
+                    . '<span class="exm-act__icon">'
+                    . '<input class="form-check-input plain-status-toggle" type="checkbox" role="switch"'
+                    . ' data-id="' . (int) $row->pk . '" ' . ($isActive ? 'checked' : '')
+                    . ' aria-label="' . $toggleLabel . ' speciality">'
+                    . '</span>'
+                    . '<span class="exm-act__label">' . $toggleLabel . '</span></label>';
 
-             ->addColumn('action', function ($row) {
-              $disabled = $row->active_inactive == 1 ? 'disabled aria-disabled="true"' : '';
+                // Mirror the rule the page enforces: an active row cannot be
+                // deleted, so the control is muted and inert rather than
+                // red-and-always-failing.
+                $delete = $isActive
+                    ? '<span class="exm-act exm-act--del is-disabled" aria-disabled="true"'
+                        . ' title="Deactivate this speciality before deleting">'
+                        . '<span class="exm-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
+                        . '<span class="exm-act__label">Delete</span></span>'
+                    : '<a href="javascript:void(0)" class="exm-act exm-act--del delete-btn"'
+                        . ' data-id="' . (int) $row->pk . '" aria-disabled="false"'
+                        . ' title="Delete" aria-label="Delete speciality">'
+                        . '<span class="exm-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
+                        . '<span class="exm-act__label">Delete</span></a>';
 
-                return '
-                    <div class="d-inline-flex align-items-center gap-2"
-                        role="group"
-                        aria-label="Row actions">
-
-                        <!-- Edit Action -->
-                        <a href="javascript:void(0)"
-                        data-id="' . $row->pk . '"
-                        data-speciality_name="' . e($row->speciality_name) . '"
-                        data-created_date="' . $row->created_date . '"
-                        data-active_inactive="' . $row->active_inactive . '"
-                        class="btn btn-sm edit-btn btn-outline-primary d-inline-flex align-items-center gap-1"
-                        aria-label="Edit course group type">
-
-                            <i class="material-icons material-symbols-rounded"
-                            style="font-size:18px;">edit</i>
-
-                            <span class="d-none d-md-inline">Edit</span>
-                        </a>
-
-                        <!-- Delete Action -->
-                        <a href="javascript:void(0)"
-                        data-id="' . $row->pk . '"
-                        class="btn btn-sm btn-outline-danger delete-btn d-inline-flex align-items-center gap-1 ' . $disabled . '"
-                        aria-disabled="' . ($row->active_inactive == 1 ? 'true' : 'false') . '">
-
-                            <i class="material-icons material-symbols-rounded"
-                            style="font-size:18px;">delete</i>
-
-                            <span class="d-none d-md-inline">Delete</span>
-                        </a>
-
-                    </div>
-                ';
+                return '<div class="exm-act-group" role="group" aria-label="Row actions">'
+                    . $edit . $toggle . $delete
+                    . '</div>';
             })
-
             ->rawColumns(['status', 'action'])
             ->make(true);
     }

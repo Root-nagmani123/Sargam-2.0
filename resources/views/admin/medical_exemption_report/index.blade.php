@@ -2,141 +2,18 @@
 
 @section('title', 'Medical Exemption Report')
 
+@push('styles')
+{{-- Module stylesheet (docs/new-design-index-page.md §7) — this page used to
+     carry ~130 lines of the same rules in an inline <style> block. --}}
+<link rel="stylesheet"
+    href="{{ asset('css/medical-exemption-report-admin.css') }}?v={{ @filemtime(public_path('css/medical-exemption-report-admin.css')) }}">
+@endpush
+
 @section('setup_content')
 <link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
 <link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}?v={{ filemtime(public_path('css/select2-theme.css')) }}">
-<style>
-/* =====================================================================
-   Medical Exemption Report — page-scoped polish.
-   Tokens/components come from sargam-app.css (--ds-*, .ds-*).
-   ===================================================================== */
 
-/* --- Segmented Active / Archived control -------------------------- */
-.mer-segment { display: inline-flex; gap: var(--ds-space-1); padding: var(--ds-space-1); background: #fff; border-radius: var(--ds-radius-2); }
-.mer-segment .mer-segment-btn {
-    border: 0; border-radius: var(--ds-radius-1); padding: 0.45rem 1.5rem; font-weight: 600; font-size: 0.9rem;
-    color: var(--ds-ink-muted); background: transparent; display: inline-flex; align-items: center; gap: var(--ds-space-1);
-    transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
-}
-.mer-segment .mer-segment-btn:hover { color: var(--ds-ink); background: rgba(var(--bs-primary-rgb, 0 74 147), 0.06); }
-.mer-segment .mer-segment-btn.active { background: var(--bs-primary); color: #fff; box-shadow: var(--ds-shadow-sm); }
-
-/* --- Top utility buttons (Print / Download) ---------------------- */
-.mer-util-btn {
-    height: 42px; display: inline-flex; align-items: center; gap: var(--ds-space-2);
-    padding: 0 1rem; font-weight: 600; font-size: 0.9rem; color: #004a93;
-    background: #fff; border: 0; border-radius: var(--ds-radius-1);
-    transition: border-color .15s ease, box-shadow .15s ease, color .15s ease;
-}
-.mer-util-btn:hover { color: var(--bs-primary); box-shadow: var(--ds-shadow-sm); }
-.mer-util-btn.dropdown-toggle::after { margin-left: 0.35rem; }
-.mer-download-menu { min-width: 11rem; border-radius: var(--ds-radius-1); }
-
-/* --- Inline filter toolbar --------------------------------------- */
-.mer-filterbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ds-space-2); }
-.mer-filters-label { font-weight: 600; font-size: 0.9rem; color: var(--ds-ink); margin-right: var(--ds-space-1); }
-.mer-filter-control {
-    height: 42px; display: inline-flex; align-items: center; gap: var(--ds-space-1);
-    padding: 0 0.85rem; font-size: 0.875rem; font-weight: 500; color: var(--ds-ink);
-    background: #fff; border: 1px solid var(--ds-line); border-radius: var(--ds-radius-1); line-height: 1;
-}
-select.mer-filter-control {
-    display: inline-block; min-width: 180px; max-width: 240px; min-height: 42px;
-    padding-right: 2.25rem; text-overflow: ellipsis;
-}
-.mer-filter-control:hover { border-color: #c4ccd6; }
-.mer-filter-control.dropdown-toggle::after { margin-left: auto; }
-#merResetFilters.mer-filter-control { color: var(--bs-danger); border-color: var(--bs-danger); font-weight: 600; }
-#merResetFilters.mer-filter-control:hover { background: var(--bs-danger); color: #fff; }
-.mer-period-menu { min-width: auto; }
-
-/* --- Dual-month range calendar ----------------------------------- */
-.mer-cal { padding: var(--ds-space-3); }
-.mer-cal-months { display: flex; gap: var(--ds-space-4); }
-@media (max-width: 575.98px) { .mer-cal-months { flex-direction: column; gap: var(--ds-space-3); } }
-.mer-cal-month { width: 232px; }
-.mer-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--ds-space-2); }
-.mer-cal-title { font-weight: 600; font-size: 0.875rem; color: var(--ds-ink); }
-.mer-cal-nav {
-    border: 0; background: transparent; width: 28px; height: 28px; border-radius: var(--ds-radius-1);
-    color: var(--ds-ink-muted); display: inline-flex; align-items: center; justify-content: center;
-}
-.mer-cal-nav:hover { background: var(--ds-surface-2); color: var(--ds-ink); }
-.mer-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-.mer-cal-dow { text-align: center; font-size: 0.7rem; font-weight: 600; color: var(--ds-ink-muted); padding: 4px 0; }
-.mer-cal-day {
-    aspect-ratio: 1 / 1; border: 0; background: transparent; border-radius: var(--ds-radius-1);
-    font-size: 0.8125rem; color: var(--ds-ink); cursor: pointer;
-    display: inline-flex; align-items: center; justify-content: center;
-}
-.mer-cal-day:hover { background: rgba(var(--bs-primary-rgb, 0 74 147), 0.1); }
-.mer-cal-day.in-range { background: rgba(var(--bs-primary-rgb, 0 74 147), 0.12); border-radius: 0; }
-.mer-cal-day.is-start, .mer-cal-day.is-end { background: var(--bs-primary); color: #fff; }
-.mer-cal-day.is-start { border-radius: var(--ds-radius-1) 0 0 var(--ds-radius-1); }
-.mer-cal-day.is-end { border-radius: 0 var(--ds-radius-1) var(--ds-radius-1) 0; }
-.mer-cal-day.is-start.is-end { border-radius: var(--ds-radius-1); }
-.mer-cal-footer {
-    display: flex; align-items: center; justify-content: space-between; gap: var(--ds-space-2);
-    margin-top: var(--ds-space-3); padding-top: var(--ds-space-3); border-top: 1px solid var(--ds-line);
-}
-.mer-cal-range { font-size: 0.8125rem; color: var(--ds-ink-muted); }
-
-/* --- Column Visibility modal ------------------------------------- */
-.mer-col-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--ds-space-3); }
-.mer-col-chip {
-    display: flex; align-items: center; gap: var(--ds-space-2); margin: 0; padding: 0.65rem 0.85rem;
-    border: 1px solid var(--ds-line); border-radius: var(--ds-radius-1); background: #fff; cursor: pointer;
-    font-size: 0.9rem; font-weight: 500; color: var(--ds-ink); user-select: none;
-    transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
-}
-.mer-col-chip:hover { border-color: #c4ccd6; background: var(--ds-surface-2); }
-.mer-col-chip.is-checked { border-color: var(--bs-primary); box-shadow: inset 0 0 0 1px var(--bs-primary); }
-.mer-col-chip .form-check-input { margin: 0; flex-shrink: 0; cursor: pointer; }
-@media (max-width: 479.98px) { .mer-col-grid { grid-template-columns: 1fr; } }
-
-/* --- Search box -------------------------------------------------- */
-.mer-search-box { position: relative; display: inline-flex; align-items: center; }
-.mer-search-ico { position: absolute; left: 12px; font-size: 18px; color: var(--ds-ink-muted); pointer-events: none; }
-.mer-search-field {
-    height: 42px; width: 240px; padding-left: 38px; border: 1px solid var(--ds-line);
-    border-radius: var(--ds-radius-1); font-size: 0.875rem;
-}
-.mer-search-field:focus { border-color: #86b7fe; box-shadow: var(--ds-focus-ring); }
-@media (max-width: 575.98px) { .mer-search-field { width: 160px; } }
-
-/* --- Table with sticky header ------------------------------------ */
-.datatables .mer-scroll { max-height: 70vh; overflow: auto; -webkit-overflow-scrolling: touch; }
-.datatables .table-responsive { overflow: visible; }
-.datatables #medicalExemptionReportTable { min-width: 100%; width: 100%; margin-bottom: 0; }
-.datatables #medicalExemptionReportTable thead th {
-    position: sticky; top: 0; z-index: 10; background: var(--ds-surface-2);
-    border-bottom: 1px solid var(--ds-line); font-size: 0.8125rem; text-transform: uppercase;
-    letter-spacing: 0.02em; white-space: nowrap; padding: 12px 14px; vertical-align: middle;
-}
-.datatables #medicalExemptionReportTable td { padding: 12px 14px; vertical-align: middle; font-size: 0.9rem; color: var(--ds-ink); }
-.mer-ot-link { color: #004a93; font-weight: 600; text-decoration: underline; }
-.mer-ot-link:hover { color: var(--bs-primary); }
-.mer-count-link { color: #0d6efd; font-weight: 600; text-decoration: underline; }
-
-/* Bottom bar */
-.datatables .mer-table-footer { margin-top: var(--ds-space-3); }
-.datatables .mer-count { gap: var(--ds-space-2); color: var(--ds-ink-muted); font-size: 0.875rem; }
-.datatables .dataTables_length, .datatables .dataTables_info { margin: 0; padding: 0; color: var(--ds-ink-muted); font-size: 0.875rem; white-space: nowrap; }
-.datatables .dataTables_length label { margin: 0; display: inline-flex; align-items: center; gap: var(--ds-space-2); }
-.datatables .dataTables_length select.form-select { width: auto; min-width: 76px; display: inline-block; border-radius: var(--ds-radius-1); }
-.datatables .dataTables_paginate { margin: 0; }
-.datatables .pagination { margin: 0; gap: var(--ds-space-1); flex-wrap: wrap; }
-.datatables .pagination .page-item .page-link {
-    margin-left: 0; min-width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center;
-    padding: 0 0.5rem; border: 1px solid var(--ds-line); border-radius: var(--ds-radius-1);
-    color: var(--ds-ink); font-size: 0.875rem; background: #fff;
-}
-.datatables .pagination .page-item .page-link:hover { background: var(--ds-surface-2); border-color: #c4ccd6; }
-.datatables .pagination .page-item.active .page-link { background: var(--bs-primary); border-color: var(--bs-primary); color: #fff; }
-.datatables .pagination .page-item.disabled .page-link { color: var(--ds-ink-muted); background: var(--ds-surface-2); opacity: 0.6; }
-</style>
-
-<div class="container-fluid">
+<div class="container-fluid mer-page">
 
     <x-breadcrum title="Medical Exemption Report" :items="[
         ['label' => 'Home', 'url' => route('admin.dashboard')],
@@ -147,31 +24,38 @@ select.mer-filter-control {
     {{-- Toolbar: status segment (left) + Print / Download (right) --}}
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
 
-        <div class="mer-segment" role="group" aria-label="Course Status Filter">
-            <button type="button" class="mer-segment-btn active" id="merFilterActive" aria-pressed="true">Active</button>
-            <button type="button" class="mer-segment-btn" id="merFilterArchive" aria-pressed="false">Archived</button>
-        </div>
+        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0" role="group"
+            aria-label="Course Status Filter">
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill active"
+                    id="merFilterActive" aria-pressed="true">Active</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill"
+                    id="merFilterArchive" aria-pressed="false">Archived</button>
+            </li>
+        </ul>
 
         <div class="d-flex flex-wrap align-items-center gap-2">
-        <button type="button" class="mer-util-btn" onclick="merPrintTable()">
-            <i class="material-icons material-symbols-rounded" style="font-size:20px;" aria-hidden="true">print</i>
-            <span class="d-none d-sm-inline">Print</span>
+        <button type="button" class="btn mer-export-btn" onclick="merPrintTable()">
+            <i class="bi bi-printer" aria-hidden="true"></i>
+            <span>Print</span>
         </button>
         <div class="dropdown">
-            <button type="button" class="mer-util-btn dropdown-toggle" id="merDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="material-icons material-symbols-rounded" style="font-size:20px;" aria-hidden="true">download</i>
-                <span class="d-none d-sm-inline">Download</span>
+            <button type="button" class="btn mer-export-btn dropdown-toggle" id="merDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-download" aria-hidden="true"></i>
+                <span>Download</span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end shadow-sm mer-download-menu py-2" aria-labelledby="merDownloadBtn">
                 <li>
                     <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="merExportPdf">
-                        <i class="material-icons material-symbols-rounded text-danger" style="font-size:18px;" aria-hidden="true">picture_as_pdf</i>
+                        <i class="bi bi-filetype-pdf text-danger" aria-hidden="true"></i>
                         <span>Download PDF</span>
                     </button>
                 </li>
                 <li>
                     <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="merExportCsv">
-                        <i class="material-icons material-symbols-rounded text-success" style="font-size:18px;" aria-hidden="true">table_chart</i>
+                        <i class="bi bi-file-earmark-excel text-success" aria-hidden="true"></i>
                         <span>Download Excel</span>
                     </button>
                 </li>
@@ -185,21 +69,23 @@ select.mer-filter-control {
             <div class="ds-card-body">
 
                 {{-- Filters --}}
-                <div class="mer-filterbar mb-3">
-                    <span class="mer-filters-label">Filters</span>
+                <div class="mer-filterbar programme-dt-toolbar d-flex flex-wrap align-items-center gap-3 mb-4">
+                    <span class="programme-dt-filters-label">Filters</span>
 
-                    <select name="course_filter" id="mer_course_filter" class="form-select mer-filter-control" aria-label="Course Name">
+                    <div class="programme-dt-filter-select">
+                    <select name="course_filter" id="mer_course_filter" class="form-select form-select-sm" aria-label="Course Name">
                         <option value="">Course Name</option>
                         @foreach($courses as $course)
                         <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
                         @endforeach
                     </select>
+                    </div>
 
                     {{-- Time Period --}}
                     <div class="dropdown">
-                        <button type="button" class="mer-filter-control dropdown-toggle" id="merTimePeriodToggle"
+                        <button type="button" class="btn mer-period-toggle dropdown-toggle" id="merTimePeriodToggle"
                                 data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-                            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">calendar_month</i>
+                            <i class="bi bi-calendar3" aria-hidden="true"></i>
                             <span id="merTimePeriodLabel">Time Period</span>
                         </button>
                         <div class="dropdown-menu p-0 mer-period-menu">
@@ -221,27 +107,34 @@ select.mer-filter-control {
                         </div>
                     </div>
 
-                    <a href="javascript:void(0)" id="merResetFilters" class="mer-filter-control">
-                        <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">restart_alt</i>
-                        Reset Filters
-                    </a>
+                    {{-- Reset is a <button>, not a link (§2) --}}
+                    <button type="button" id="merResetFilters" class="btn programme-dt-btn-reset">Reset Filters</button>
 
-                    <div class="ms-auto d-flex align-items-center gap-2">
-                        <button type="button" class="mer-filter-control" id="merColumnsToggle" data-bs-toggle="modal" data-bs-target="#merColumnsModal">
-                            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">view_column</i>
-                            <span class="d-none d-md-inline">Columns</span>
+                    {{-- The search is the shared .programme-dt-search markup — the
+                         structure datatable-global-ui.js would relocate into that
+                         slot — so the skin matches every other index page even
+                         though this table drives its own server-side search. --}}
+                    <div class="ms-auto d-flex flex-wrap align-items-center gap-2">
+                        <button type="button" class="btn programme-dt-btn-columns" id="merColumnsToggle"
+                            data-bs-toggle="modal" data-bs-target="#merColumnsModal" title="Show / hide columns">
+                            <span>Columns</span>
+                            <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                         </button>
-                        <div class="mer-search-box">
-                            <i class="material-icons material-symbols-rounded mer-search-ico" aria-hidden="true">search</i>
-                            <input type="text" id="mer_search" class="form-control mer-search-field"
-                                   placeholder="Search OT, code, course..." aria-label="Search">
+                        <div class="programme-dt-search">
+                            <div class="dataTables_filter">
+                                <label>
+                                    <input type="search" id="mer_search" class="form-control form-control-sm"
+                                        placeholder="Search OT, code, course..." autocomplete="off" aria-label="Search">
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {{-- Table --}}
+                {{-- Table (§3) --}}
+                <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <table class="table align-middle" id="medicalExemptionReportTable">
+                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" id="medicalExemptionReportTable">
                         <thead>
                             <tr>
                                 <th class="col">S. No.</th>
@@ -252,23 +145,24 @@ select.mer-filter-control {
                         </thead>
                     </table>
                 </div>
+                </div>
             </div>
         </div>
     </div>
 
     {{-- Column Visibility modal --}}
-    <div class="modal fade" id="merColumnsModal" tabindex="-1" aria-labelledby="merColumnsModalLabel" aria-hidden="true">
+    <div class="modal fade mer-modal" id="merColumnsModal" tabindex="-1" aria-labelledby="merColumnsModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-semibold" id="merColumnsModalLabel">Column Visibility</h5>
+            <div class="modal-content shadow-lg">
+                <div class="mer-modal-header">
+                    <h5 class="mer-modal-title" id="merColumnsModalLabel">Column Visibility</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="mer-modal-body">
                     <div class="mer-col-grid" id="merColumnsGrid"></div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-primary px-4" data-bs-dismiss="modal">Close</button>
+                <div class="mer-modal-footer">
+                    <button type="button" class="btn mer-btn-cancel" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -309,10 +203,15 @@ $(document).ready(function () {
         responsive: false,
         scrollX: false,
         autoWidth: false,
+        // ‹ 1 2 3 › — First/Last are not part of the shared footer (§4).
+        pagingType: 'simple_numbers',
+        // ⚠️ No Bootstrap row/col in the footer: datatable-global-ui.js rewrites
+        // the className of both slots when it fills them, which strips any col-*
+        // and leaves the two halves stacked. A plain flex container survives.
         dom: "<'mer-scroll't>" +
-             "<'mer-table-footer row align-items-center g-2 mt-3'" +
-                 "<'col-12 col-md-auto me-md-auto order-2 order-md-1'p>" +
-                 "<'col-12 col-md-auto order-1 order-md-2 d-flex justify-content-md-end align-items-center mer-count'li>" +
+             "<'programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3'" +
+                 "<'programme-dt-pagination'p>" +
+                 "<'programme-dt-count d-flex align-items-center gap-2'li>" +
              ">" +
              "<'mer-processing'r>",
         lengthMenu: [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],

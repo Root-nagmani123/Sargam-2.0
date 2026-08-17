@@ -1,0 +1,220 @@
+/*
+ * Medical Exemption Report (admin) — the listing and its detail view.
+ *
+ * A module stylesheet rather than the inline <style> block this page used to
+ * carry (docs/new-design-index-page.md "Where the CSS lives"), named
+ * <module>-<audience>.css per §7. Root: .mer-page.
+ *
+ * Only what the shared layers do not cover lives here: the two-month range
+ * picker, the column chips, the export buttons and the in-table links. The
+ * status tabs, filter controls, search box, table skin and footer now come
+ * from the shared programme-dt-* chrome in public/css/custom.css (§7), which
+ * is why the equivalent rules are gone rather than moved.
+ */
+
+/* ── Export row (§1): white pills, secondary to the page actions ─────────── */
+.mer-page .mer-export-btn {
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 1rem;
+    border: 0;
+    border-radius: 8px;
+    background: #fff;
+    color: #004384;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.mer-page .mer-export-btn:hover,
+.mer-page .mer-export-btn:focus {
+    background: #eef3f9;
+    color: #003468;
+}
+
+/* Time Period is a bespoke two-month range picker, so it is a button dressed
+   as a filter pill rather than a <select> the shared class can style. */
+.mer-page .mer-period-toggle {
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 0.875rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+    color: #344054;
+    font-size: 0.9375rem;
+    white-space: nowrap;
+}
+
+.mer-page .mer-period-toggle:hover {
+    border-color: #b6c0cc;
+}
+
+/* ── Everything below is page-specific and has no shared equivalent ──────── */
+
+.mer-download-menu { min-width: 11rem; border-radius: var(--ds-radius-1); }
+.mer-period-menu { min-width: auto; }
+/* --- Dual-month range calendar ----------------------------------- */
+.mer-cal { padding: var(--ds-space-3); }
+.mer-cal-months { display: flex; gap: var(--ds-space-4); }
+@media (max-width: 575.98px) { .mer-cal-months { flex-direction: column; gap: var(--ds-space-3); } }
+.mer-cal-month { width: 232px; }
+.mer-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--ds-space-2); }
+.mer-cal-title { font-weight: 600; font-size: 0.875rem; color: var(--ds-ink); }
+.mer-cal-nav {
+    border: 0; background: transparent; width: 28px; height: 28px; border-radius: var(--ds-radius-1);
+    color: var(--ds-ink-muted); display: inline-flex; align-items: center; justify-content: center;
+}
+.mer-cal-nav:hover { background: var(--ds-surface-2); color: var(--ds-ink); }
+.mer-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.mer-cal-dow { text-align: center; font-size: 0.7rem; font-weight: 600; color: var(--ds-ink-muted); padding: 4px 0; }
+.mer-cal-day {
+    aspect-ratio: 1 / 1; border: 0; background: transparent; border-radius: var(--ds-radius-1);
+    font-size: 0.8125rem; color: var(--ds-ink); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.mer-cal-day:hover { background: rgba(var(--bs-primary-rgb, 0 74 147), 0.1); }
+.mer-cal-day.in-range { background: rgba(var(--bs-primary-rgb, 0 74 147), 0.12); border-radius: 0; }
+.mer-cal-day.is-start, .mer-cal-day.is-end { background: var(--bs-primary); color: #fff; }
+.mer-cal-day.is-start { border-radius: var(--ds-radius-1) 0 0 var(--ds-radius-1); }
+.mer-cal-day.is-end { border-radius: 0 var(--ds-radius-1) var(--ds-radius-1) 0; }
+.mer-cal-day.is-start.is-end { border-radius: var(--ds-radius-1); }
+.mer-cal-footer {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--ds-space-2);
+    margin-top: var(--ds-space-3); padding-top: var(--ds-space-3); border-top: 1px solid var(--ds-line);
+}
+.mer-cal-range { font-size: 0.8125rem; color: var(--ds-ink-muted); }
+/* --- Column Visibility modal ------------------------------------- */
+.mer-col-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--ds-space-3); }
+.mer-col-chip {
+    display: flex; align-items: center; gap: var(--ds-space-2); margin: 0; padding: 0.65rem 0.85rem;
+    border: 1px solid var(--ds-line); border-radius: var(--ds-radius-1); background: #fff; cursor: pointer;
+    font-size: 0.9rem; font-weight: 500; color: var(--ds-ink); user-select: none;
+    transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
+}
+.mer-col-chip:hover { border-color: #c4ccd6; background: var(--ds-surface-2); }
+.mer-col-chip.is-checked { border-color: var(--bs-primary); box-shadow: inset 0 0 0 1px var(--bs-primary); }
+.mer-col-chip .form-check-input { margin: 0; flex-shrink: 0; cursor: pointer; }
+@media (max-width: 479.98px) { .mer-col-grid { grid-template-columns: 1fr; } }
+@media (max-width: 575.98px) { .mer-search-field { width: 160px; } }
+/* --- Table with sticky header ------------------------------------ */
+.datatables .mer-scroll { max-height: 70vh; overflow: auto; -webkit-overflow-scrolling: touch; }
+.mer-ot-link { color: #004a93; font-weight: 600; text-decoration: underline; }
+.mer-ot-link:hover { color: var(--bs-primary); }
+.mer-count-link { color: #0d6efd; font-weight: 600; text-decoration: underline; }
+
+/* ── Modal chrome (§3c) — the Column Visibility dialog ────────────────────── */
+
+.mer-modal .modal-content {
+    border: 0;
+    border-radius: 12px;
+}
+
+.mer-modal .mer-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #eaecf0;
+}
+
+.mer-modal .mer-modal-title {
+    margin: 0;
+    color: #1f2937;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.mer-modal .mer-modal-body {
+    padding: 1.5rem;
+}
+
+/* Equal, flush-right footer — one button here, but the same grid so it lines up
+   with the pairs on every other page (§3c). */
+.mer-modal .mer-modal-footer {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    align-items: stretch;
+    gap: 1rem;
+    width: fit-content;
+    max-width: 100%;
+    margin-inline-start: auto;
+    margin-inline-end: 0;
+    padding: 0 1.5rem 1.5rem;
+    border-top: 0;
+}
+
+.mer-modal .mer-modal-footer > .btn {
+    width: 100%;
+    white-space: nowrap;
+}
+
+.mer-modal .mer-btn-cancel {
+    min-width: 120px;
+    min-height: 2.75rem;
+    padding: 0.5rem 1.5rem;
+    border: 1px solid #f2c4c0;
+    border-radius: 8px;
+    background: #fff;
+    color: var(--bs-danger, #b12923);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.mer-modal .mer-btn-cancel:hover,
+.mer-modal .mer-btn-cancel:focus {
+    background: #fff5f4;
+    border-color: #e79c96;
+    color: #8f201b;
+}
+
+/* datatable-global-ui.js gives the count slot flex-wrap, and DataTables ships a
+   16px bottom margin on .dataTables_length plus padding-top on .dataTables_info
+   — together they break "Showing [10] of N items" over two lines. */
+.mer-page .programme-dt-count {
+    flex-wrap: nowrap !important;
+    white-space: nowrap;
+}
+
+.mer-page .programme-dt-count .dataTables_info,
+.mer-page .programme-dt-count .dataTables_length {
+    padding-top: 0 !important;
+    margin: 0 !important;
+}
+
+/* The theme paints an active page number with a blue gradient marked
+   !important, which outranks the shared footer rule. */
+.mer-page .programme-dt-footer .pagination .page-item.active .page-link {
+    background-image: none !important;
+    background-color: #fff !important;
+    border-color: #7367f0 !important;
+    color: #344054 !important;
+    font-weight: 600;
+}
+
+.mer-page .programme-dt-footer .pagination .page-item:not(.active):not(.disabled) .page-link {
+    background-image: none !important;
+    background-color: transparent !important;
+    color: #667085 !important;
+}
+
+/* ── Detail view: the five summary cards ──────────────────────────────────
+   Unique to the detail page; the rest of its old inline block duplicated the
+   index page rule-for-rule, so it is not repeated here. */
+/* Medical Exemption Report — OT detail. Tokens from sargam-app.css (--ds-*). */
+
+/* --- Stat cards -------------------------------------------------- */
+.mer-page .mer-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--ds-space-3); }
+.mer-page .mer-stat-card {
+    background: #fff; border: 1px solid var(--ds-line); border-radius: var(--ds-radius-2);
+    padding: 0.85rem 1.1rem; box-shadow: var(--ds-shadow-sm);
+}
+.mer-page .mer-stat-label { font-size: 0.8125rem; font-weight: 500; color: var(--ds-ink-muted); margin-bottom: 0.35rem; }
+.mer-page .mer-stat-value { font-size: 1.5rem; font-weight: 700; color: var(--ds-ink); line-height: 1; }

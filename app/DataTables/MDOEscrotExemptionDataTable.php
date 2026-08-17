@@ -99,33 +99,36 @@ class MDOEscrotExemptionDataTable extends DataTable
                 $csrf = csrf_token();
                 $formId = 'delete-form-' . $row->pk;
 
+                // Icon over caption, both stacks the same width
+                // (docs/new-design-index-page.md §3b). destroy() refuses
+                // nothing, so Delete needs no disabled variant — the page's own
+                // confirm modal guards it, and the inline onclick stays as the
+                // fallback that index.blade.php strips once that modal is wired.
                 return <<<HTML
-<div class="d-flex justify-content-center align-items-center gap-2"
-     role="group"
-     aria-label="Row actions">
+<div class="mee-act-group" role="group" aria-label="Row actions">
 
     <!-- Edit -->
     <a href="javascript:void(0)"
-       class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2 mee-edit-btn border-0 bg-transparent p-0"
+       class="mee-act mee-act--edit mee-edit-btn"
        data-edit-id="{$row->pk}"
+       title="Edit record"
        aria-label="Edit record">
-        <span class="material-icons material-symbols-rounded"
-              style="font-size:20px;"
-              aria-hidden="true">edit</span>
+        <span class="mee-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
+        <span class="mee-act__label">Edit</span>
     </a>
 
     <!-- Delete -->
-    <form id="{$formId}" action="{$deleteUrl}" method="POST" class="d-inline">
+    <form id="{$formId}" action="{$deleteUrl}" method="POST" class="mee-act mee-act--del">
         <input type="hidden" name="_token" value="{$csrf}">
         <input type="hidden" name="_method" value="DELETE">
 
         <button type="submit"
-                class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 px-2 border-0 bg-transparent p-0"
+                class="mee-act__btn"
+                title="Delete record"
                 aria-label="Delete record"
                 onclick="return confirm('Are you sure you want to delete this record?');">
-            <span class="material-icons material-symbols-rounded"
-                  style="font-size:20px;"
-                  aria-hidden="true">delete</span>
+            <span class="mee-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
+            <span class="mee-act__label">Delete</span>
         </button>
     </form>
 
@@ -230,12 +233,18 @@ public function html(): HtmlBuilder
             'lengthChange' => true,
             'pageLength' => 10,
             'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+            // ‹ 1 2 3 › — First/Last are not part of the shared footer (§4).
+            'pagingType' => 'simple_numbers',
             // Page-scoped search bar drives the table, so no default search box.
             // Bottom bar = pagination (left) + "Showing [n] of N items" (right).
+            // It names the shared .programme-dt-footer / .programme-dt-pagination
+            // / .programme-dt-count classes (§4) so it is painted like every
+            // other index page's footer even though this table opts out of
+            // datatable-global-ui.js and renders the bar itself.
             'dom' => "<'row'<'col-12'tr>>" .
-                     "<'row mt-3 align-items-center mee-dt-bottom'" .
-                         "<'col-12 col-md-auto me-md-auto mee-dt-paginate'p>" .
-                         "<'col-12 col-md-auto d-flex justify-content-md-end align-items-center mee-dt-count'li>" .
+                     "<'row align-items-center mee-dt-bottom programme-dt-footer'" .
+                         "<'col-12 col-md-auto me-md-auto mee-dt-paginate programme-dt-pagination'p>" .
+                         "<'col-12 col-md-auto d-flex justify-content-md-end align-items-center mee-dt-count programme-dt-count'li>" .
                      ">",
             'language' => [
                 'lengthMenu' => 'Showing _MENU_',
@@ -244,11 +253,11 @@ public function html(): HtmlBuilder
                 'infoFiltered' => '',
                 'zeroRecords' => 'No matching records found',
                 'emptyTable' => 'No records available',
+                // The same glyphs vendor/pagination/custom.blade.php uses, which
+                // is what makes the two footer variants match (§4).
                 'paginate' => [
-                    'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 24px;">chevron_left</i>',
-                    'next' => '<i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 24px;">chevron_right</i>'
+                    'previous' => '&lsaquo;',
+                    'next' => '&rsaquo;',
                 ]
             ],
         ]);

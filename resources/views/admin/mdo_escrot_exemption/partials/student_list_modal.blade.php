@@ -1,14 +1,13 @@
-<div class="modal fade mee-student-list-modal" id="meeStudentListModal" tabindex="-1"
+<div class="modal fade mee-modal mee-student-list-modal" id="meeStudentListModal" tabindex="-1"
     aria-labelledby="meeStudentListModalLabel" aria-hidden="true"
     data-bs-backdrop="static" data-bs-keyboard="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold" id="meeStudentListModalLabel">Student List</h5>
+        <div class="modal-content shadow-lg overflow-hidden">
+            <div class="mee-modal-header">
+                <h5 class="mee-modal-title" id="meeStudentListModalLabel">Student List</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body pt-2">
-                <hr class="mt-0 mb-3 opacity-50">
+            <div class="mee-modal-body">
 
                 <div class="d-flex flex-wrap align-items-center gap-2 mb-3 mee-student-selected-bar">
                     <span class="text-secondary fw-medium small text-nowrap" id="meeStudentSelectedCount">0 Selected</span>
@@ -21,7 +20,7 @@
                     <i class="bi bi-search mee-student-search-icon" aria-hidden="true"></i>
                     <input type="search"
                         id="meeStudentListSearch"
-                        class="form-control rounded-pill mee-student-search-input shadow-none"
+                        class="mee-control mee-student-search-input"
                         placeholder="Search"
                         autocomplete="off">
                 </div>
@@ -33,14 +32,16 @@
                     <ul class="list-group list-group-flush mb-0 d-none" id="meeStudentList"></ul>
                 </div>
             </div>
-            <div class="modal-footer border-0 gap-2 justify-content-end pt-0">
-                <button type="button" class="btn btn-outline-danger rounded-3 px-4 fw-semibold" id="meeStudentClearAll">
+            {{-- Three actions, so the equal/right footer grid runs three columns
+                 wide; Save keeps the submit weight. --}}
+            <div class="mee-modal-footer">
+                <button type="button" class="btn mee-btn-cancel" id="meeStudentClearAll">
                     Clear All
                 </button>
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4 fw-semibold" id="meeStudentSelectAll">
+                <button type="button" class="btn mee-btn-ghost" id="meeStudentSelectAll">
                     Select All
                 </button>
-                <button type="button" class="btn btn-primary rounded-3 px-4 fw-semibold" id="meeStudentSave">
+                <button type="button" class="btn mee-btn-submit" id="meeStudentSave">
                     Save
                 </button>
             </div>

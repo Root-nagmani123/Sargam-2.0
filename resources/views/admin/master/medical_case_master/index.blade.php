@@ -2,82 +2,15 @@
 
 @section('title', 'Medical Case Master')
 
+@push('styles')
+{{-- Shared with Exemption Categories / Exemption Medical Speciality: same
+     design, same components (docs/new-design-index-page.md §7). This page used
+     to carry the same rules in an inline <style> block. --}}
+<link rel="stylesheet"
+    href="{{ asset('css/exemption-masters-admin.css') }}?v={{ @filemtime(public_path('css/exemption-masters-admin.css')) }}">
+@endpush
+
 @section('setup_content')
-<style>
-/* ===== Medical Case Master — reference-matched polish (presentation only) ===== */
-.mcm-toolbar { gap: 0.5rem; }
-.mcm-tool-btn {
-    height: 42px; display: inline-flex; align-items: center; gap: 8px;
-    padding: 0 14px; font-size: 0.875rem; font-weight: 600; color: #1f2937;
-    background: #fff; border: 1px solid #d0d5dd; border-radius: 8px; line-height: 1;
-}
-.mcm-tool-btn:hover { border-color: #b6c0cc; }
-.mcm-search-box { position: relative; display: inline-flex; align-items: center; }
-.mcm-search-ico { position: absolute; left: 14px; color: #667085; font-size: 16px; pointer-events: none; }
-.mcm-search-input {
-    height: 42px; width: 300px; max-width: 100%; padding-left: 40px;
-    border: 1px solid #d0d5dd; border-radius: 8px; font-size: 0.9rem; background: #fff;
-}
-.mcm-search-input:focus { border-color: #86b7fe; box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.18); outline: none; }
-
-/* Table header */
-.mcm-master-page .programme-dt-table thead th {
-    background: #f8fafc; color: #667085; text-transform: uppercase;
-    font-size: 0.75rem; letter-spacing: 0.02em; font-weight: 600;
-    border-bottom: 1px solid #e5e7eb; padding: 12px 14px;
-}
-.mcm-master-page .programme-dt-table tbody td { padding: 14px; vertical-align: middle; }
-
-/* Status pills */
-.mcm-master-page .programme-status-badge,
-.mcm-master-page .mcm-status-badge {
-    display: inline-block; padding: 0.35rem 0.95rem; border-radius: 50rem;
-    font-size: 0.8125rem; font-weight: 600; line-height: 1.2;
-}
-.mcm-master-page .programme-status-badge--active { color: #0f7b3e; background: #e3f5ea; }
-.mcm-master-page .programme-status-badge--inactive { color: #c0392b; background: #fde6e4; }
-
-/* Row action icons: edit (indigo) · toggle (amber) · delete (red) */
-.mcm-master-page .edit-btn,
-.mcm-master-page .delete-btn {
-    border: 0 !important; background: transparent !important; box-shadow: none !important;
-    padding: 4px 6px !important; line-height: 1;
-}
-.mcm-master-page .edit-btn { color: #4f46e5 !important; }
-.mcm-master-page .delete-btn { color: #dc3545 !important; }
-.mcm-master-page .edit-btn .bi,
-.mcm-master-page .delete-btn .bi { font-size: 18px; }
-.mcm-master-page .programme-action-switch .form-check-input { cursor: pointer; }
-.mcm-master-page .programme-action-switch .form-check-input:checked { background-color: #f0a500; border-color: #f0a500; }
-
-/* Bottom bar: pagination (left) + "Showing [n] of N items" (right) */
-.mcm-master-page .mcm-count,
-.mcm-master-page .mcm-count .dataTables_info,
-.mcm-master-page .mcm-count .dataTables_length { color: #667085; font-size: 0.875rem; }
-.mcm-master-page .mcm-count .dataTables_length,
-.mcm-master-page .mcm-count .dataTables_info { margin: 0; padding: 0; white-space: nowrap; }
-.mcm-master-page .mcm-count .dataTables_length label { margin: 0; display: inline-flex; align-items: center; gap: 0.5rem; }
-.mcm-master-page .mcm-count .dataTables_length select { width: auto; min-width: 76px; display: inline-block; border-radius: 6px; margin: 0 0.25rem; }
-.mcm-master-page .pagination { gap: 4px; margin: 0; flex-wrap: wrap; }
-.mcm-master-page .pagination .page-link {
-    border: 1px solid #e2e8f0; border-radius: 8px; min-width: 36px; height: 36px;
-    display: inline-flex; align-items: center; justify-content: center; color: #1f2937; margin-left: 0; background: #fff;
-}
-.mcm-master-page .pagination .page-link:hover { background: #f8fafc; }
-.mcm-master-page .pagination .page-item.active .page-link { background: var(--bs-primary); border-color: var(--bs-primary); color: #fff; }
-.mcm-master-page .pagination .page-item.disabled .page-link { color: #98a2b3; background: #f8fafc; }
-
-/* Column Visibility modal grid */
-.mcm-col-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-.mcm-col-chip {
-    display: flex; align-items: center; gap: 8px; margin: 0; padding: 0.6rem 0.85rem;
-    border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; cursor: pointer;
-    font-size: 0.9rem; font-weight: 500; color: #1f2937; user-select: none;
-}
-.mcm-col-chip:hover { border-color: #b6c0cc; background: #f8fafc; }
-.mcm-col-chip.is-checked { border-color: var(--bs-primary); box-shadow: inset 0 0 0 1px var(--bs-primary); }
-@media (max-width: 479.98px) { .mcm-col-grid { grid-template-columns: 1fr; } }
-</style>
 <div class="container-fluid mcm-master-page">
     <x-breadcrum title="Medical Case Master" :showBack="false">
         <button type="button"
@@ -86,23 +19,31 @@
             data-bs-toggle="modal"
             data-bs-target="#mcmAddModal"
             aria-controls="mcmAddModal">
-            <i class="material-icons material-symbols-rounded" aria-hidden="true">add</i>
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
             <span>Add Medical Case</span>
         </button>
     </x-breadcrum>
 
     <div class="card mcm-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3 p-md-4">
-            <div class="mcm-toolbar d-flex flex-wrap align-items-center justify-content-end mb-4">
-                <button type="button" class="mcm-tool-btn" id="mcmColumnsToggle"
-                    data-bs-toggle="modal" data-bs-target="#mcmColumnsModal">
-                    <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">view_column</i>
-                    <span class="d-none d-sm-inline">Columns</span>
+            {{-- Toolbar (§2). The search is the shared .programme-dt-search
+                 markup — the structure datatable-global-ui.js would relocate into
+                 that slot — so the skin matches every other index page even though
+                 this table drives its own server-side search. --}}
+            <div class="mcm-toolbar programme-dt-toolbar d-flex flex-wrap align-items-center justify-content-end gap-2 mb-4">
+                <button type="button" class="btn programme-dt-btn-columns" id="mcmColumnsToggle"
+                    data-bs-toggle="modal" data-bs-target="#mcmColumnsModal"
+                    title="Show / hide columns">
+                    <span>Columns</span>
+                    <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                 </button>
-                <div class="mcm-search-box">
-                    <i class="material-icons material-symbols-rounded mcm-search-ico" aria-hidden="true">search</i>
-                    <input type="text" id="mcmTableSearch" class="form-control mcm-search-input"
-                        placeholder="Search" autocomplete="off" aria-label="Search medical cases">
+                <div class="programme-dt-search">
+                    <div class="dataTables_filter">
+                        <label>
+                            <input type="search" id="mcmTableSearch" class="form-control form-control-sm"
+                                placeholder="Search" autocomplete="off" aria-label="Search medical cases">
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -126,113 +67,115 @@
 </div>
 
 <!-- Add Medical Case -->
-<div class="modal fade mcm-form-modal" id="mcmAddModal" tabindex="-1" aria-labelledby="mcmAddModalLabel" aria-hidden="true"
+<div class="modal fade exm-modal mcm-form-modal" id="mcmAddModal" tabindex="-1" aria-labelledby="mcmAddModalLabel" aria-hidden="true"
     data-bs-backdrop="static" data-bs-keyboard="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content cgt-form-modal border-0 shadow-lg">
-            <div class="modal-header">
-                <h5 class="modal-title mb-0" id="mcmAddModalLabel">Add Medical Case</h5>
+        <div class="modal-content shadow-lg">
+            <div class="exm-modal-header">
+                <h5 class="exm-modal-title" id="mcmAddModalLabel">Add Medical Case</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+            <div class="exm-modal-body">
                 <form id="medicalCaseForm" novalidate>
                     <input type="hidden" name="_token" value="{{ csrf_token() }}">
 
-                    <div class="mb-3">
-                        <label for="mcm_add_case_name" class="form-label cgt-field-label mb-2">
-                            Case Name <span class="text-danger">*</span>
+                    <div class="exm-field-card"><div class="exm-field">
+                        <label for="mcm_add_case_name" class="exm-field-label">
+                            Case Name <span class="exm-req">*</span>
                         </label>
                         <input type="text"
                                name="case_name"
                                id="mcm_add_case_name"
-                               class="form-control rounded-3"
+                               class="exm-control"
                                placeholder="eg. IPD"
                                autocomplete="off">
                         <small class="text-danger d-none mt-1" id="mcm_add_case_name_error">Case Name is required</small>
                     </div>
 
-                    <div class="mb-0">
-                        <label for="mcm_add_status" class="form-label cgt-field-label mb-2">
-                            Status <span class="text-danger">*</span>
+                    <div class="exm-field">
+                        <label for="mcm_add_status" class="exm-field-label">
+                            Status <span class="exm-req">*</span>
                         </label>
-                        <select name="active_inactive" id="mcm_add_status" class="form-select rounded-3">
+                        <select name="active_inactive" id="mcm_add_status" class="exm-control">
                             <option value="">Select Status</option>
                             <option value="1">Active</option>
                             <option value="0">Inactive</option>
                         </select>
                         <small class="text-danger d-none mt-1" id="mcm_add_status_error">Status is required</small>
                     </div>
+                    </div>
                 </form>
             </div>
-            <div class="modal-footer border-0 gap-2 justify-content-end">
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary rounded-3 px-4" id="mcmAddSubmit">Add</button>
+            <div class="exm-modal-footer">
+                <button type="button" class="btn exm-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn exm-btn-submit" id="mcmAddSubmit">Add Medical Case</button>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Edit Medical Case -->
-<div class="modal fade mcm-form-modal" id="mcmEditModal" tabindex="-1" aria-labelledby="mcmEditModalLabel" aria-hidden="true"
+<div class="modal fade exm-modal mcm-form-modal" id="mcmEditModal" tabindex="-1" aria-labelledby="mcmEditModalLabel" aria-hidden="true"
     data-bs-backdrop="static" data-bs-keyboard="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content cgt-form-modal border-0 shadow-lg">
-            <div class="modal-header">
-                <h5 class="modal-title mb-0" id="mcmEditModalLabel">Edit Medical Case</h5>
+        <div class="modal-content shadow-lg">
+            <div class="exm-modal-header">
+                <h5 class="exm-modal-title" id="mcmEditModalLabel">Edit Medical Case</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+            <div class="exm-modal-body">
                 <form id="medicalCaseEditForm" novalidate>
                     <input type="hidden" name="_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="id" id="mcm_edit_id" value="">
 
-                    <div class="mb-3">
-                        <label for="mcm_edit_case_name" class="form-label cgt-field-label mb-2">
-                            Case Name <span class="text-danger">*</span>
+                    <div class="exm-field-card"><div class="exm-field">
+                        <label for="mcm_edit_case_name" class="exm-field-label">
+                            Case Name <span class="exm-req">*</span>
                         </label>
                         <input type="text"
                                name="case_name"
                                id="mcm_edit_case_name"
-                               class="form-control rounded-3"
+                               class="exm-control"
                                placeholder="eg. IPD"
                                autocomplete="off">
                         <small class="text-danger d-none mt-1" id="mcm_edit_case_name_error">Case Name is required</small>
                     </div>
 
-                    <div class="mb-0">
-                        <label for="mcm_edit_status" class="form-label cgt-field-label mb-2">
-                            Status <span class="text-danger">*</span>
+                    <div class="exm-field">
+                        <label for="mcm_edit_status" class="exm-field-label">
+                            Status <span class="exm-req">*</span>
                         </label>
-                        <select name="status" id="mcm_edit_status" class="form-select rounded-3">
+                        <select name="status" id="mcm_edit_status" class="exm-control">
                             <option value="">Select Status</option>
                             <option value="1">Active</option>
                             <option value="0">Inactive</option>
                         </select>
                         <small class="text-danger d-none mt-1" id="mcm_edit_status_error">Status is required</small>
                     </div>
+                    </div>
                 </form>
             </div>
-            <div class="modal-footer border-0 gap-2 justify-content-end">
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary rounded-3 px-4" id="mcmEditSubmit">Update</button>
+            <div class="exm-modal-footer">
+                <button type="button" class="btn exm-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn exm-btn-submit" id="mcmEditSubmit">Update Medical Case</button>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Column Visibility -->
-<div class="modal fade" id="mcmColumnsModal" tabindex="-1" aria-labelledby="mcmColumnsModalLabel" aria-hidden="true">
+<div class="modal fade exm-modal" id="mcmColumnsModal" tabindex="-1" aria-labelledby="mcmColumnsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header">
-                <h5 class="modal-title fw-semibold mb-0" id="mcmColumnsModalLabel">Column Visibility</h5>
+        <div class="modal-content shadow-lg">
+            <div class="exm-modal-header">
+                <h5 class="exm-modal-title" id="mcmColumnsModalLabel">Column Visibility</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <div class="mcm-col-grid" id="mcmColumnsGrid"></div>
+            <div class="exm-modal-body">
+                <div class="exm-col-grid" id="mcmColumnsGrid"></div>
             </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
+            <div class="exm-modal-footer">
+                <button type="button" class="btn exm-btn-cancel" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -297,60 +240,30 @@
             });
         }
 
-        function decorateMcmRows() {
-            $(tableSelector + ' tbody tr').each(function() {
-                const $row = $(this);
-                const $cells = $row.find('td');
-                if ($cells.length < 5) {
-                    return;
-                }
-
-                const $statusCell = $cells.eq(3);
-                const $actionCell = $cells.eq(4);
-                const $toggle = $statusCell.find('.plain-status-toggle').add($actionCell.find('.plain-status-toggle')).first();
-
-                if ($toggle.length) {
-                    const isActive = $toggle.is(':checked');
-                    const badgeClass = isActive ? 'programme-status-badge--active' : 'programme-status-badge--inactive';
-                    const label = isActive ? 'Active' : 'Inactive';
-
-                    const $switchWrap = $toggle.closest('.form-check');
-                    const $actionGroup = $actionCell.find('.d-inline-flex[role="group"]');
-                    const $editBtn = $actionGroup.find('.edit-btn').first();
-
-                    if ($switchWrap.length && $actionGroup.length) {
-                        $switchWrap.addClass('programme-action-switch m-0 d-inline-flex align-items-center p-0');
-                        if ($editBtn.length) {
-                            $editBtn.after($switchWrap);
-                        } else {
-                            $actionGroup.prepend($switchWrap);
-                        }
-                    }
-
-                    $statusCell.empty().append(
-                        $('<span>', {
-                            class: 'badge rounded-1 programme-status-badge mcm-status-badge ' + badgeClass,
-                            text: label
-                        })
-                    );
-                }
-
-                // Keep the server's material-icons (Bootstrap Icons font isn't
-                // loaded on this layout); just drop the text label for icon-only.
-                $actionCell.find('.edit-btn, .delete-btn').each(function() {
-                    $(this).find('span.d-none').remove();
-                });
-            });
-        }
-
+        // The status badge and the Edit · switch · Delete group are rendered
+        // server-side now (MedicalCaseMasterController::datatable, §3b). This
+        // used to move the switch out of the Status cell into the action group,
+        // rebuild the badge and strip the button captions on every draw. Kept as
+        // a no-op so the DataTables callbacks below keep their shape.
+        function decorateMcmRows() {}
+        // Only used when the user CANCELS the confirm dialog: the switch has
+        // already flipped visually, so the badge and the caption are put back in
+        // step with it. A confirmed change reloads the table, which re-renders
+        // both from the server.
         function updateMcmRowBadge($checkbox, isActive) {
             const $badge = $checkbox.closest('tr').find('.mcm-status-badge');
             if ($badge.length) {
                 $badge
-                    .removeClass('programme-status-badge--active programme-status-badge--inactive')
-                    .addClass(isActive ? 'programme-status-badge--active' : 'programme-status-badge--inactive')
+                    .removeClass('bg-success-subtle bg-danger-subtle')
+                    .addClass(isActive ? 'bg-success-subtle' : 'bg-danger-subtle')
                     .text(isActive ? 'Active' : 'Inactive');
             }
+            // The caption names the ACTION, so it is the inverse of the state.
+            $checkbox.attr('aria-label', (isActive ? 'Deactivate' : 'Activate') + ' medical case')
+                     .closest('.exm-act--toggle')
+                     .attr('title', isActive ? 'Deactivate' : 'Activate')
+                     .find('.exm-act__label')
+                     .text(isActive ? 'Deactivate' : 'Activate');
         }
 
         if ($.fn.DataTable.isDataTable(tableSelector)) {
@@ -363,10 +276,15 @@
                 pageLength: 10,
                 lengthMenu: [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
                 order: [[0, 'desc']],
+                // ‹ 1 2 3 › — First/Last are not part of the shared footer (§4).
+                pagingType: 'simple_numbers',
+                // ⚠️ No Bootstrap row/col here: datatable-global-ui.js rewrites the
+                // className of both slots when it fills them, which strips any col-*
+                // and leaves the two halves stacked. A plain flex container survives.
                 dom: "<'row'<'col-12'tr>>" +
-                     "<'row mt-3 align-items-center'" +
-                         "<'col-12 col-md-auto me-md-auto'p>" +
-                         "<'col-12 col-md-auto d-flex justify-content-md-end align-items-center mcm-count'li>" +
+                     "<'programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3'" +
+                         "<'programme-dt-pagination'p>" +
+                         "<'programme-dt-count d-flex align-items-center gap-2'li>" +
                      ">",
                 ajax: {
                     url: "{{ route('master.medical.case.master.datatable') }}",
@@ -457,7 +375,7 @@
             var title = $.trim($(this.header()).text()) || ('Column ' + (idx + 1));
             var visible = this.visible();
             $mcmColGrid.append(
-                '<label class="mcm-col-chip' + (visible ? ' is-checked' : '') + '" for="mcmColToggle' + idx + '">' +
+                '<label class="exm-col-chip' + (visible ? ' is-checked' : '') + '" for="mcmColToggle' + idx + '">' +
                     '<input class="form-check-input mcm-col-toggle" type="checkbox" ' + (visible ? 'checked ' : '') +
                            'id="mcmColToggle' + idx + '" data-column="' + idx + '">' +
                     '<span>' + title + '</span>' +
@@ -466,7 +384,7 @@
         });
         $mcmColGrid.on('change', '.mcm-col-toggle', function() {
             table.column($(this).data('column')).visible(this.checked);
-            $(this).closest('.mcm-col-chip').toggleClass('is-checked', this.checked);
+            $(this).closest('.exm-col-chip').toggleClass('is-checked', this.checked);
         });
 
         $('#mcmAddSubmit').on('click', function() {
@@ -558,7 +476,7 @@
                 status === 0 || status === '0' ? '0' : (status === 1 || status === '1' ? '1' : '')
             );
             $form.find('small.text-danger').addClass('d-none');
-            $form.find('.form-control, .form-select').removeClass('is-invalid');
+            $form.find('.exm-control').removeClass('is-invalid');
 
             showMcmModal(mcmEditModalEl);
 
@@ -684,7 +602,7 @@
 
         $(document).on('click', '.delete-btn', function(e) {
             e.preventDefault();
-            if ($(this).attr('aria-disabled') === 'true' || $(this).hasClass('disabled')) {
+            if ($(this).attr('aria-disabled') === 'true' || $(this).hasClass('is-disabled')) {
                 return;
             }
 

@@ -1,0 +1,552 @@
+/*
+ * Escort / Moderator Duty (admin) — the MDO/Escort exemption index and its
+ * four modals (Add, Edit, Bulk Upload, Student picker).
+ *
+ * A module stylesheet rather than the two inline <style> blocks this page used
+ * to carry (docs/new-design-index-page.md "Where the CSS lives"), named
+ * <module>-<audience>.css per §7.
+ *
+ * Roots — the prefix is per module, not per page (§7):
+ *   .mee-master-page   the listing page
+ *   .mee-modal         a modal, which lives OUTSIDE the page root in the DOM
+ *
+ * Anything used by both is scoped to BOTH roots, via :is() so the specificity
+ * stays at one class. §3d records the bug this avoids: a component written
+ * under one root renders unstyled in the other.
+ *
+ * NOTE the `programme-dt-*` classes this page also uses are a different layer —
+ * shared DataTables chrome in public/css/custom.css (§7). This file only adds
+ * what that layer does not cover.
+ */
+
+/* ── Toolbar bits the shared layer does not cover (§2) ─────────────────────── */
+
+/* Time Period is a flatpickr range, so it is an input dressed as a filter pill
+   rather than a <select> the shared .programme-dt-filter-select can style. */
+.mee-master-page .mee-time-period-filter {
+    display: inline-flex;
+    position: relative;
+}
+
+.mee-master-page .mee-tp-input {
+    width: 190px;
+    height: 40px;
+    padding: 0 2rem 0 2.375rem;
+    background: #fff;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    color: #344054;
+    font-size: 0.9375rem;
+    cursor: pointer;
+}
+
+.mee-master-page .mee-tp-input::placeholder {
+    color: #667085;
+    opacity: 1;
+}
+
+.mee-master-page .mee-tp-input:focus {
+    outline: 0;
+    border-color: #004384;
+    box-shadow: 0 0 0 3px rgba(0, 67, 132, 0.12);
+}
+
+.mee-master-page .mee-tp-ico,
+.mee-master-page .mee-tp-caret {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #667085;
+    pointer-events: none;
+}
+
+.mee-master-page .mee-tp-ico {
+    left: 0.875rem;
+    font-size: 1rem;
+}
+
+.mee-master-page .mee-tp-caret {
+    right: 0.875rem;
+    font-size: 0.75rem;
+}
+
+/* Filter overflow (§2): the three rarely-used filters live behind a link that
+   marks itself when any of them is set. */
+.mee-master-page .mee-more-filters {
+    color: #004384;
+    font-weight: 600;
+    text-decoration: underline;
+    white-space: nowrap;
+}
+
+.mee-master-page .mee-more-filters-active {
+    font-weight: 700;
+}
+
+.mee-extra-menu {
+    min-width: 240px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12);
+}
+
+/* Export row (§1): white pills that read as secondary next to the page's
+   primary Add button. */
+.mee-master-page .mee-export-btn {
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 1rem;
+    border: 0;
+    border-radius: 8px;
+    background: #fff;
+    color: #004384;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.mee-master-page .mee-export-btn:hover,
+.mee-master-page .mee-export-btn:focus {
+    background: #eef3f9;
+    color: #003468;
+}
+
+.mee-master-page .mee-export-btn:disabled {
+    opacity: 0.6;
+}
+
+/* ── Action column: equal-width icon-over-label stacks (§3b) ───────────────── */
+
+/* The Actions cell is the last column; trimming its own padding keeps the
+   stacks inside the panel instead of clipping the captions. */
+.mee-master-page .programme-dt-table thead th:last-child,
+.mee-master-page .programme-dt-table tbody td:last-child {
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+}
+
+.mee-master-page .mee-act-group {
+    display: inline-flex;
+    /* flex-start, not stretch: the stacks are a mix of <a>, <button> and
+       <form>, and stretching them to a common height starts their icon strips
+       at different tops (§3b wants one baseline). */
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+/* The Delete action is wrapped in a <form>; it must add no box of its own. */
+.mee-master-page .mee-act,
+.mee-master-page .mee-act__btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    /* Wide enough for the longest caption, so no stack is sized by its own text
+       — otherwise the icon row comes out unevenly spaced (§3b). */
+    min-width: 56px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.mee-master-page .mee-act--del {
+    align-items: flex-start;
+}
+
+.mee-master-page .mee-act:focus-visible,
+.mee-master-page .mee-act__btn:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.2);
+}
+
+/* One fixed-height strip for the glyphs, so they share a baseline. */
+.mee-master-page .mee-act__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+}
+
+.mee-master-page .mee-act__icon > i {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.mee-master-page .mee-act__label {
+    white-space: nowrap;
+}
+
+.mee-master-page .mee-act--edit {
+    color: #2563eb;
+}
+
+.mee-master-page .mee-act--del .mee-act__btn {
+    color: var(--bs-danger, #b12923);
+}
+
+.mee-master-page .mee-act:hover .mee-act__label,
+.mee-master-page .mee-act__btn:hover .mee-act__label {
+    text-decoration: underline;
+}
+
+/* ── Bottom bar (§4) ───────────────────────────────────────────────────────
+   This page renders its own pagination + count through the DataTables `dom`
+   string and opts out of datatable-global-ui.js, so the shared
+   .programme-dt-footer chrome is applied by naming it in that dom string; only
+   the length <select> needs sizing here. */
+.mee-master-page .mee-dt-count .dataTables_length,
+.mee-master-page .mee-dt-count .dataTables_info {
+    margin: 0;
+    padding: 0;
+    color: #667085;
+    font-size: 0.875rem;
+}
+
+.mee-master-page .mee-dt-count .dataTables_length label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+}
+
+.mee-master-page .mee-dt-count .dataTables_length select {
+    width: auto;
+    min-width: 76px;
+    display: inline-block;
+    border-radius: 6px;
+    margin: 0 0.25rem;
+}
+
+/* ── Column Visibility modal — grid of bordered checkbox chips ─────────────── */
+
+.mee-col-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.mee-col-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0.65rem 0.85rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    color: #1f2937;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+}
+
+.mee-col-chip:hover {
+    border-color: #b6c0cc;
+    background: #f8fafc;
+}
+
+.mee-col-chip.is-checked {
+    border-color: #004384;
+    box-shadow: inset 0 0 0 1px #004384;
+}
+
+@media (max-width: 767.98px) {
+    .mee-col-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 479.98px) {
+    .mee-col-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ── Modal chrome (§3c) ────────────────────────────────────────────────────
+   Add and Edit look ALIKE: same header, same tinted field card, same
+   labels/controls, same footer pair. Only the contents and the submit caption
+   differ. */
+
+.mee-modal .modal-content {
+    border: 0;
+    border-radius: 12px;
+}
+
+.mee-modal .mee-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #eaecf0;
+}
+
+.mee-modal .mee-modal-title {
+    margin: 0;
+    color: #1f2937;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.mee-modal .mee-modal-body {
+    padding: 1.5rem;
+}
+
+/* ⚠️ These modals wrap header/body/footer inside a <form>, which breaks
+   Bootstrap's .modal-dialog-scrollable — it expects them as direct children of
+   .modal-content, and it keys the scrolling on .modal-body, which these bodies
+   are not. Without both rules the body never scrolls: the content overflows,
+   `overflow: hidden` clips it and the footer buttons end up off screen. */
+.mee-modal .modal-dialog-scrollable .modal-content > form {
+    display: flex;
+    flex-direction: column;
+    max-height: 100%;
+    overflow: hidden;
+}
+
+.mee-modal .modal-dialog-scrollable .modal-content > form > .mee-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.mee-modal .modal-dialog-scrollable .modal-content > form > .mee-modal-header,
+.mee-modal .modal-dialog-scrollable .modal-content > form > .mee-modal-footer {
+    flex-shrink: 0;
+}
+
+/* One tinted card per record (§3c). */
+.mee-modal .mee-field-card {
+    background: #eef1fc;
+    border-radius: 10px;
+    padding: 1rem;
+}
+
+.mee-modal .mee-field-card + .mee-field-card {
+    margin-top: 1rem;
+}
+
+.mee-modal .mee-field-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    color: #344054;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.mee-modal .mee-req {
+    color: var(--bs-danger, #b12923);
+}
+
+.mee-modal .mee-control {
+    width: 100%;
+    min-height: 2.625rem;
+    padding: 0.5rem 0.75rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    color: #1f2937;
+    font-size: 0.875rem;
+}
+
+.mee-modal select.mee-control {
+    appearance: auto;
+}
+
+.mee-modal .mee-control:focus {
+    border-color: #004384;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.2);
+    outline: 0;
+}
+
+.mee-modal .mee-control.is-invalid {
+    border-color: var(--bs-danger, #b12923);
+}
+
+/* Faculty is a Select2, which draws its own box — match it to .mee-control. */
+.mee-modal .mee-faculty-select2 + .select2-container .select2-selection {
+    min-height: 2.625rem;
+    padding: 0.25rem 0.25rem;
+    display: flex;
+    align-items: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+
+.mee-modal .mee-faculty-select2 + .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 100%;
+}
+
+.mee-modal .mee-faculty-select2.is-invalid + .select2-container .select2-selection {
+    border-color: var(--bs-danger, #b12923);
+}
+
+/* Above the modal (1055) or the dropdown is trapped behind the backdrop. */
+.select2-container--open {
+    z-index: 1060;
+}
+
+/* Footer: an equal, flush-right pair (§3c). grid + 1fr columns makes the two
+   buttons the width of the wider one; width:fit-content keeps the grid as wide
+   as its content while staying block-level, so the auto start margin can push
+   it to the trailing edge — an inline-grid would be aligned by the parent's
+   text-align and ignore the margin. */
+.mee-modal .mee-modal-footer {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    align-items: stretch;
+    gap: 1rem;
+    width: fit-content;
+    max-width: 100%;
+    margin-inline-start: auto;
+    margin-inline-end: 0;
+    padding: 0 1.5rem 1.5rem;
+    border-top: 0;
+}
+
+/* Equal columns are narrower than the longest caption's natural width, so
+   without this the caption wraps and that one button grows while its partner
+   does not. */
+.mee-modal .mee-modal-footer > .btn {
+    width: 100%;
+    white-space: nowrap;
+}
+
+.mee-modal .mee-btn-cancel,
+.mee-modal .mee-btn-submit {
+    /* A short pair ("Close" / "Upload") would otherwise shrink to ~100px and
+       read as cramped next to the long-caption modals. */
+    min-width: 120px;
+    min-height: 2.75rem;
+    padding: 0.5rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.mee-modal .mee-btn-cancel {
+    background: #fff;
+    border: 1px solid #f2c4c0;
+    color: var(--bs-danger, #b12923);
+}
+
+.mee-modal .mee-btn-cancel:hover,
+.mee-modal .mee-btn-cancel:focus {
+    background: #fff5f4;
+    border-color: #e79c96;
+    color: #8f201b;
+}
+
+.mee-modal .mee-btn-submit {
+    background: #004384;
+    border: 1px solid #004384;
+    color: #fff;
+}
+
+.mee-modal .mee-btn-submit:hover,
+.mee-modal .mee-btn-submit:focus {
+    background: #003468;
+    border-color: #003468;
+    color: #fff;
+}
+
+/* The student picker's chips and the "Assign Students" trigger. */
+.mee-modal .mee-assign-students-trigger {
+    text-align: left;
+}
+
+.mee-student-tag,
+.mee-master-page .mee-student-tag {
+    background-color: #004384;
+    color: #fff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+}
+
+/* A third, neutral action for the student picker (Clear All / Select All /
+   Save): same size as the pair so the three columns stay even. */
+.mee-modal .mee-btn-ghost {
+    min-height: 2.75rem;
+    padding: 0.5rem 1.5rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+    color: #344054;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.mee-modal .mee-btn-ghost:hover,
+.mee-modal .mee-btn-ghost:focus {
+    background: #f9fafb;
+    border-color: #b6c0cc;
+    color: #1f2937;
+}
+
+/* The student picker's own list chrome — these classes were in the markup with
+   no rule anywhere in the codebase, so the search icon overlapped the input and
+   the list had no height limit. */
+.mee-modal .mee-student-search-input {
+    padding-left: 2.375rem;
+}
+
+.mee-modal .mee-student-search-icon {
+    position: absolute;
+    left: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #98a2b3;
+    font-size: 1rem;
+    pointer-events: none;
+}
+
+.mee-modal .mee-student-list-wrap {
+    max-height: 320px;
+    overflow-y: auto;
+    border-radius: 8px;
+}
+
+.mee-modal .mee-student-selected-divider {
+    width: 1px;
+    height: 1.25rem;
+    background: #e4e7ec;
+}
+
+/* The theme paints an active page number with
+   `linear-gradient(135deg,#0d6efd,#0a58ca) !important`, which outranks the
+   shared .programme-dt-footer rule and made this pager the only blue one in the
+   product. Restate the shared look with enough specificity to win. */
+.mee-master-page .mee-dt-bottom .pagination .page-item.active .page-link {
+    background-image: none !important;
+    background-color: #fff !important;
+    border-color: #7367f0 !important;
+    color: #344054 !important;
+    font-weight: 600;
+}
+
+.mee-master-page .mee-dt-bottom .pagination .page-item:not(.active):not(.disabled) .page-link {
+    background-image: none !important;
+    background-color: transparent !important;
+    color: #667085 !important;
+}
+
+.mee-master-page .mee-dt-bottom .pagination .page-item:not(.active):not(.disabled) .page-link:hover {
+    background-color: #f9fafb !important;
+    border-color: #e4e7ec;
+    color: #344054 !important;
+}

@@ -1,0 +1,370 @@
+/*
+ * Exemption masters (admin) — Exemption Categories, Exemption Medical
+ * Speciality and Medical Case Master, plus their Add / Edit /
+ * Column-visibility modals.
+ *
+ * Both pages are served by ExemptionCategoryController and are the same
+ * design, so they share one module stylesheet rather than two near-identical
+ * copies (docs/new-design-index-page.md "Where the CSS lives", §7). Each page
+ * used to carry these rules in its own inline <style> block.
+ *
+ * Roots — the prefix is per module, not per page (§7):
+ *   .eccm-master-page / .ems-master-page /
+ *   .mcm-master-page                      the three listing pages
+ *   .exm-modal                            a modal, which is MOVED to <body>
+ *                                         on load, so it is never inside a
+ *                                         page root
+ *
+ * The components are named .exm-* once, and only the page roots and the JS
+ * hook classes (edit-btn, delete-btn, plain-status-toggle) differ per page.
+ *
+ * NOTE the `programme-dt-*` classes these pages also use are a different
+ * layer — shared DataTables chrome in public/css/custom.css (§7). This file
+ * only adds what that layer does not cover.
+ */
+/* ── Status column: soft badge, display only (§3b) ─────────────────────────── */
+
+/* The theme ships the *-subtle backgrounds but not the matching
+   text-*-emphasis colours, so the label would render black. */
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .status-pill {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .status-pill.bg-success-subtle {
+    color: #146c43;
+}
+
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .status-pill.bg-danger-subtle {
+    color: #b02a37;
+}
+
+/* ── Action column: equal-width icon-over-label stacks (§3b) ───────────────── */
+
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .exm-act-group {
+    display: inline-flex;
+    /* flex-start, not stretch: the stacks are a mix of <a>, <label> and <span>,
+       and stretching them to a common height starts their icon strips at
+       different tops (§3b wants one baseline). */
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .exm-act {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    /* Wide enough for "Deactivate", so no stack is sized by its own caption —
+       otherwise the icon row comes out unevenly spaced (§3b). */
+    min-width: 62px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* One fixed-height strip for glyphs AND the switch, so they share a baseline. */
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .exm-act__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+}
+
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .exm-act__icon > i {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+/* No .form-check wrapper here (§3b trap 1) — the switch skin is keyed on the
+   input itself and still applies. */
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .exm-act__icon .form-check-input {
+    margin: 0;
+    float: none;
+    cursor: pointer;
+}
+
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .exm-act__label {
+    white-space: nowrap;
+}
+
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .exm-act--edit {
+    color: #2563eb;
+}
+
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .exm-act--toggle {
+    color: #475467;
+}
+
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .exm-act--del {
+    color: var(--bs-danger, #b12923);
+}
+
+/* Delete is refused while the row is active — muted, not red-and-always-failing. */
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .exm-act--del.is-disabled {
+    color: #98a2b3;
+    opacity: 0.65;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .exm-act:not(.is-disabled):hover .exm-act__label {
+    text-decoration: underline;
+}
+
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .exm-act:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.2);
+}
+
+/* The Actions cell is the widest thing on these rows; trimming its own padding
+   keeps the last stack's caption inside the panel. */
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .programme-dt-table thead th:last-child,
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .programme-dt-table tbody td:last-child {
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+}
+
+/* ── Bottom bar (§4) ───────────────────────────────────────────────────────
+   datatable-global-ui.js is active on this table: it relocates the pager and
+   the "Showing … of N items" controls into .programme-dt-pagination /
+   .programme-dt-count and replaces whatever classes the `dom` string put
+   there, so the sizing rules that used to live here (keyed on .eccm-count)
+   never matched. custom.css already styles those shared slots. */
+
+/* The theme paints an active page number with a blue gradient marked
+   !important, which outranks the shared footer rule. Restate the shared look
+   with enough specificity to win. */
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .programme-dt-footer .pagination .page-item.active .page-link {
+    background-image: none !important;
+    background-color: #fff !important;
+    border-color: #7367f0 !important;
+    color: #344054 !important;
+    font-weight: 600;
+}
+
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .programme-dt-footer .pagination .page-item:not(.active):not(.disabled) .page-link {
+    background-image: none !important;
+    background-color: transparent !important;
+    color: #667085 !important;
+}
+
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .programme-dt-footer .pagination .page-item:not(.active):not(.disabled) .page-link:hover {
+    background-color: #f9fafb !important;
+    border-color: #e4e7ec;
+    color: #344054 !important;
+}
+
+/* ── Column Visibility modal — grid of bordered checkbox chips ─────────────── */
+
+.exm-col-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.exm-col-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    color: #1f2937;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+}
+
+.exm-col-chip:hover {
+    border-color: #b6c0cc;
+    background: #f8fafc;
+}
+
+.exm-col-chip.is-checked {
+    border-color: #004384;
+    box-shadow: inset 0 0 0 1px #004384;
+}
+
+@media (max-width: 479.98px) {
+    .exm-col-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ── Modal chrome (§3c) ────────────────────────────────────────────────────
+   Add and Edit look ALIKE: same header, same tinted field card, same
+   labels/controls, same footer pair. Only the caption on the submit differs. */
+
+.exm-modal .modal-content {
+    border: 0;
+    border-radius: 12px;
+}
+
+.exm-modal .exm-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #eaecf0;
+}
+
+.exm-modal .exm-modal-title {
+    margin: 0;
+    color: #1f2937;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.exm-modal .exm-modal-body {
+    padding: 1.5rem;
+}
+
+/* One tinted card per record (§3c). */
+.exm-modal .exm-field-card {
+    background: #eef1fc;
+    border-radius: 10px;
+    padding: 1rem;
+}
+
+.exm-modal .exm-field + .exm-field {
+    margin-top: 1rem;
+}
+
+.exm-modal .exm-field-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    color: #344054;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.exm-modal .exm-req {
+    color: var(--bs-danger, #b12923);
+}
+
+.exm-modal .exm-control {
+    width: 100%;
+    min-height: 2.625rem;
+    padding: 0.5rem 0.75rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    color: #1f2937;
+    font-size: 0.875rem;
+}
+
+.exm-modal select.exm-control {
+    appearance: auto;
+}
+
+.exm-modal .exm-control:focus {
+    border-color: #004384;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.2);
+    outline: 0;
+}
+
+.exm-modal .exm-control.is-invalid {
+    border-color: var(--bs-danger, #b12923);
+}
+
+/* Footer: an equal, flush-right pair (§3c). width:fit-content keeps the grid as
+   wide as its content while staying block-level, so the auto start margin can
+   push it to the trailing edge — an inline-grid would be aligned by the
+   parent's text-align and ignore the margin. */
+.exm-modal .exm-modal-footer {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    align-items: stretch;
+    gap: 1rem;
+    width: fit-content;
+    max-width: 100%;
+    margin-inline-start: auto;
+    margin-inline-end: 0;
+    padding: 0 1.5rem 1.5rem;
+    border-top: 0;
+}
+
+.exm-modal .exm-modal-footer > .btn {
+    width: 100%;
+    white-space: nowrap;
+}
+
+.exm-modal .exm-btn-cancel,
+.exm-modal .exm-btn-submit {
+    min-width: 120px;
+    min-height: 2.75rem;
+    padding: 0.5rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.exm-modal .exm-btn-cancel {
+    background: #fff;
+    border: 1px solid #f2c4c0;
+    color: var(--bs-danger, #b12923);
+}
+
+.exm-modal .exm-btn-cancel:hover,
+.exm-modal .exm-btn-cancel:focus {
+    background: #fff5f4;
+    border-color: #e79c96;
+    color: #8f201b;
+}
+
+.exm-modal .exm-btn-submit {
+    background: #004384;
+    border: 1px solid #004384;
+    color: #fff;
+}
+
+.exm-modal .exm-btn-submit:hover,
+.exm-modal .exm-btn-submit:focus {
+    background: #003468;
+    border-color: #003468;
+    color: #fff;
+}
+
+/* The dialog defaults to Bootstrap's 500px, which leaves the equal footer
+   columns at (500 − 48 padding − 16 gap) / 2 = 218px — narrower than
+   "Update Exemption Category" needs, so that caption was clipped at the
+   button's edge. 36rem gives each column 256px. */
+.exm-modal .modal-dialog {
+    max-width: 36rem;
+}
+
+/* datatable-global-ui.js gives the count slot `flex-wrap`, which breaks
+   "Showing [10] of N items" over two lines once the length <select> is in it.
+   There is always room for one line here. */
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .programme-dt-count {
+    flex-wrap: nowrap !important;
+    white-space: nowrap;
+}
+
+/* Two DataTables defaults break this one line: `.dataTables_info` carries
+   `padding-top: 0.755em`, and `.dataTables_length` a 16px bottom margin — the
+   latter inflates the flex line to 50px so its centred neighbour renders 14px
+   lower and the pair reads as two rows. */
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .programme-dt-count .dataTables_info,
+:is(.eccm-master-page, .ems-master-page, .mcm-master-page) .programme-dt-count .dataTables_length {
+    padding-top: 0 !important;
+    margin: 0 !important;
+}
