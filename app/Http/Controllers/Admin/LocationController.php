@@ -7,11 +7,44 @@ use Illuminate\Http\Request;
 
 class LocationController extends Controller
 {
-    public function countryIndex()
-    {
-        $countries = Country::paginate(10);
+    /** Whitelist for the footers' rows-per-page select (docs/new-design-index-page.md §4B). */
+    public const PER_PAGE_OPTIONS = [10, 25, 50, 100];
 
-        return view('admin.country.index', compact('countries'));
+    /**
+     * Readable names for the foreign keys. The dialogs show these messages inline,
+     * so "The state master pk field is required." is not good enough.
+     */
+    private const FIELD_NAMES = [
+        'country_master_pk' => 'country',
+        'state_master_pk' => 'state',
+        'district_master_pk' => 'district',
+        'active_inactive' => 'status',
+    ];
+
+    /**
+     * A whitelisted page size — anything else falls back to 10, so the query
+     * string can't ask for an unbounded page.
+     */
+    private function perPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 10);
+
+        return in_array($perPage, self::PER_PAGE_OPTIONS, true) ? $perPage : 10;
+    }
+
+    public function countryIndex(Request $request)
+    {
+        $perPage = $this->perPage($request);
+
+        // withQueryString(), or the pager links drop per_page and page 2 snaps
+        // back to 10 rows.
+        $countries = Country::orderBy('country_name')->paginate($perPage)->withQueryString();
+
+        return view('admin.country.index', [
+            'countries' => $countries,
+            'perPage' => $perPage,
+            'perPageOptions' => self::PER_PAGE_OPTIONS,
+        ]);
     }
 
     public function countryCreate()
@@ -76,11 +109,24 @@ class LocationController extends Controller
     }
 
     // State
-    public function stateIndex()
+    public function stateIndex(Request $request)
     {
-        $states = State::paginate(10);
-        // print_r($states);die;
-        return view('admin.state.index', compact('states'));
+        $perPage = $this->perPage($request);
+
+        // with('country'): the listing shows which country each state belongs to,
+        // and the Edit dialog needs the country to pre-select.
+        $states = State::with('country')
+            ->orderBy('state_name')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return view('admin.state.index', [
+            'states' => $states,
+            // The dialog's country select — 2 rows, so rendering the options is fine.
+            'countries' => Country::orderBy('country_name')->get(['pk', 'country_name']),
+            'perPage' => $perPage,
+            'perPageOptions' => self::PER_PAGE_OPTIONS,
+        ]);
     }
 
     public function stateCreate()
@@ -95,7 +141,7 @@ class LocationController extends Controller
             'state_name' => 'required|string|max:255',
             'country_master_pk' => 'required|exists:country_master,pk',
             'active_inactive' => 'required',
-        ]);
+        ], [], self::FIELD_NAMES);
 
         $state = new State();
         $state->state_name = $request->state_name;
@@ -121,7 +167,7 @@ class LocationController extends Controller
             'state_name' => 'required|string|max:255',
             'country_master_pk' => 'required|exists:country_master,pk',  // Validating country
             'active_inactive' => 'required',
-        ]);
+        ], [], self::FIELD_NAMES);
 
 
         $state = State::findOrFail($pk);
@@ -146,10 +192,21 @@ class LocationController extends Controller
     }
 
     // District
-    public function districtIndex()
+    public function districtIndex(Request $request)
     {
-        $districts = District::paginate(10);
-        return view('admin.district.index', compact('districts'));
+        $perPage = $this->perPage($request);
+
+        $districts = District::with(['country', 'state'])
+            ->orderBy('district_name')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return view('admin.district.index', [
+            'districts' => $districts,
+            'countries' => Country::orderBy('country_name')->get(['pk', 'country_name']),
+            'perPage' => $perPage,
+            'perPageOptions' => self::PER_PAGE_OPTIONS,
+        ]);
     }
 
     public function districtCreate()
@@ -165,7 +222,7 @@ class LocationController extends Controller
             'state_master_pk' => 'required|numeric',
             'district_name' => 'required|string|max:100',
              'active_inactive' => 'required',
-        ]);
+        ], [], self::FIELD_NAMES);
 
 
         District::create([
@@ -194,7 +251,7 @@ class LocationController extends Controller
             'state_master_pk' => 'required|numeric',
             'district_name' => 'required|string|max:100',
              'active_inactive' => 'required',
-        ]);
+        ], [], self::FIELD_NAMES);
 
         $district = District::findOrFail($id);
         $district->update([
@@ -216,10 +273,24 @@ class LocationController extends Controller
     }
 
     // City
-    public function cityIndex()
+    public function cityIndex(Request $request)
     {
-        $cities = City::with(['state', 'district'])->paginate(10);
-        return view('admin.city.index', compact('cities'));
+        $perPage = $this->perPage($request);
+
+        $cities = City::with(['country', 'state', 'district'])
+            ->orderBy('city_name')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return view('admin.city.index', [
+            'cities' => $cities,
+            // Only the countries are rendered as options; the state and district
+            // selects are filled by the cascade lookups, so 37 states and 850
+            // districts never reach the page (§3c).
+            'countries' => Country::orderBy('country_name')->get(['pk', 'country_name']),
+            'perPage' => $perPage,
+            'perPageOptions' => self::PER_PAGE_OPTIONS,
+        ]);
     }
 
     public function cityCreate()
@@ -238,7 +309,7 @@ class LocationController extends Controller
             'district_master_pk' => 'required',
             'city_name' => 'required|string|max:100',
             'active_inactive' => 'required',
-        ]);
+        ], [], self::FIELD_NAMES);
 
         City::create([
             'country_master_pk' => $request->country_master_pk,
@@ -269,7 +340,7 @@ class LocationController extends Controller
             'district_master_pk' => 'required',
             'city_name' => 'required|string|max:100',
             'active_inactive' => 'required',
-        ]);
+        ], [], self::FIELD_NAMES);
 
         $city = City::findOrFail($id);
 

@@ -1,0 +1,392 @@
+/*
+ * Address masters (admin) — Country, State, District and City.
+ *
+ * Four listings of the same shape (a paginated table, a status switch, Edit and
+ * Delete, and an Add/Edit dialog), so they share one module stylesheet rather
+ * than four near-identical copies (docs/new-design-index-page.md "Where the CSS
+ * lives", §7).
+ *
+ * Roots — one per page, components named once:
+ *   .country-master-page    Country
+ *   .state-master-page      State
+ *   .district-master-page   District
+ *   .city-master-page       City
+ *
+ * NOTE the `programme-dt-*` classes these pages also use are a different layer —
+ * shared DataTables chrome in public/css/custom.css (§7). This file only adds
+ * what that layer does not cover.
+ */
+
+/* ── Status column: soft badge, display only (§3b) ─────────────────────────
+   The theme ships the *-subtle backgrounds but not the matching
+   text-*-emphasis colours, so the label would render black. */
+
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .status-pill {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .status-pill.bg-success-subtle {
+    color: #146c43;
+}
+
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .status-pill.bg-danger-subtle {
+    color: #b02a37;
+}
+
+/* ── Action column: equal-width icon-over-label stacks (§3b) ───────────────
+   The actions stay VISIBLE in the cell — Edit · the status switch · Delete —
+   never collapsed behind a kebab. Edit opens the modal. */
+
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .programme-dt-table thead th:last-child,
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .programme-dt-table tbody td:last-child {
+    text-align: center;
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+}
+
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .adr-act-group {
+    display: inline-flex;
+    /* flex-start, not stretch: the stacks are a mix of <button>, <label>, <span>
+       and <form>, and stretching them to a common height starts their icon
+       strips at different tops (§3b wants one baseline). */
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+/* The Delete action is wrapped in a <form>; it must add no box of its own. */
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .adr-act,
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .adr-act__btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    /* Wide enough for "Deactivate", so no stack is sized by its own caption. */
+    min-width: 62px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* One fixed-height strip for glyphs AND the switch, so they share a baseline. */
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .adr-act__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+}
+
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .adr-act__icon > i {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+/* No .form-check wrapper here (§3b trap 1) — the switch skin is keyed on the
+   input itself and still applies, without the -2.375rem pull that wrapper
+   would bring. */
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .adr-act__icon .form-check-input {
+    margin: 0;
+    float: none;
+    cursor: pointer;
+}
+
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .adr-act__label {
+    white-space: nowrap;
+}
+
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .adr-act--edit {
+    color: #2563eb;
+}
+
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .adr-act--toggle {
+    color: #475467;
+}
+
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .adr-act--del .adr-act__btn {
+    color: var(--bs-danger, #b12923);
+}
+
+/* Delete is refused while the row is active — muted, not red-and-always-failing. */
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .adr-act--del.is-disabled {
+    color: #98a2b3;
+    opacity: 0.65;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .adr-act:not(.is-disabled):hover .adr-act__label,
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .adr-act__btn:hover .adr-act__label {
+    text-decoration: underline;
+}
+
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .adr-act:focus-visible,
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .adr-act__btn:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.2);
+}
+
+/* ── Footer (§4 variant B) ─────────────────────────────────────────────────
+   These are Laravel paginators, not DataTables, so the footer is hand-written
+   and reuses the shared class names to match the grids that are. */
+
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .programme-dt-count {
+    color: #667085;
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .programme-dt-footer .pagination {
+    margin: 0;
+    gap: 0.25rem;
+}
+
+/* The rows-per-page select. Named .dataTables_length/.dataTables_info so these
+   hand-written footers read the same as the JS-filled ones. */
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .programme-dt-count .dataTables_length {
+    /* DataTables' own sheet gives this a 16px bottom margin, which would push
+       the select below the pager's baseline. */
+    margin-bottom: 0;
+}
+
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .programme-dt-count .dataTables_length label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0;
+    font-weight: 400;
+}
+
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .programme-dt-count select {
+    width: auto;
+    min-width: 4.5rem;
+    padding: 0.25rem 1.75rem 0.25rem 0.6rem;
+    border-color: #d0d5dd;
+    border-radius: 6px;
+    color: #344054;
+}
+
+:is(.country-master-page, .state-master-page, .district-master-page, .city-master-page) .programme-dt-count .dataTables_info {
+    /* …and 0.755em of top padding, same story. */
+    padding-top: 0;
+    margin-bottom: 0;
+}
+
+/* ── Add / Edit modals (§3c) ───────────────────────────────────────────────
+   Add and Edit look ALIKE: same header with a divider, same tinted field card,
+   same labels/controls, same equal flush-right footer pair. Only the title, the
+   submit caption, the form action and the pre-filled values differ.
+
+   Scoped on .adr-modal, not the page roots: these rules must beat Bootstrap's
+   .form-control/.form-select without !important, and the prefix keeps them from
+   leaking to any other dialog on the page. */
+
+/* These listings sit under a sticky page chrome, so the dialog has to clear it. */
+.adr-modal.show {
+    z-index: 1110 !important;
+}
+
+body.modal-open:has(.adr-modal.show) .modal-backdrop.show {
+    z-index: 1105 !important;
+}
+
+.adr-modal .modal-content {
+    border: 0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.adr-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #eaecf0;
+}
+
+.adr-modal-title {
+    margin: 0;
+    color: #101828;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.adr-modal-body {
+    padding: 1.25rem;
+}
+
+/* One tinted card per record (§3c). */
+.adr-field-card {
+    position: relative;
+    padding: 1rem;
+    background: #eef1fc;
+    border-radius: 10px;
+}
+
+.adr-field-card + .adr-field-card {
+    margin-top: 0.75rem;
+}
+
+.adr-field + .adr-field {
+    margin-top: 1rem;
+}
+
+.adr-field-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: #344054;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.adr-req {
+    color: #dc2626;
+}
+
+.adr-modal .adr-control {
+    display: block;
+    width: 100%;
+    min-height: 2.625rem;
+    padding: 0.5rem 0.75rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    color: #101828;
+    font-size: 0.875rem;
+    box-shadow: none;
+}
+
+.adr-modal select.adr-control {
+    /* Bootstrap's own caret, since .form-select is not in play here. */
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23667085' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 14px 11px;
+    padding-right: 2.25rem;
+}
+
+.adr-modal .adr-control:focus {
+    border-color: #004384;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
+    outline: 0;
+}
+
+.adr-modal .adr-control:disabled {
+    background-color: #f2f4f7;
+    color: #98a2b3;
+    cursor: not-allowed;
+}
+
+.adr-modal .adr-control.is-invalid {
+    border-color: #dc2626;
+}
+
+.adr-error {
+    display: block;
+    margin-top: 0.3rem;
+    color: #dc2626;
+    font-size: 0.75rem;
+}
+
+/* Repeatable cards (Country's Add): − and + as a matched 30×30 pair (§3c). */
+.adr-field-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.adr-field-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 7px;
+    color: #fff;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.adr-field-btn > i {
+    font-size: 0.9rem;
+    line-height: 1;
+}
+
+.adr-field-btn--remove {
+    background: #ef4444;
+}
+
+.adr-field-btn--add {
+    background: #2563eb;
+}
+
+.adr-field-btn:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.2);
+}
+
+/* Footer: an equal pair, flush right — the alignment asked for on the
+   group-mapping dialogs, kept the same across the admin's modals. */
+.adr-modal-footer {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    align-items: stretch;
+    gap: 0.75rem;
+    width: fit-content;
+    max-width: 100%;
+    margin-inline-start: auto;
+    padding: 1rem 1.25rem 1.25rem;
+}
+
+.adr-modal .adr-btn-cancel,
+.adr-modal .adr-btn-submit {
+    width: 100%;
+    min-width: 8.5rem;
+    min-height: 2.625rem;
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.adr-modal .adr-btn-cancel {
+    background: #fff;
+    border: 1px solid #fca5a5;
+    color: #dc2626;
+}
+
+.adr-modal .adr-btn-cancel:hover {
+    background: #fef2f2;
+    border-color: #dc2626;
+    color: #dc2626;
+}
+
+.adr-modal .adr-btn-submit {
+    background: #004384;
+    border: 1px solid #004384;
+    color: #fff;
+}
+
+.adr-modal .adr-btn-submit:hover {
+    background: #00376d;
+    border-color: #00376d;
+    color: #fff;
+}
