@@ -1,0 +1,337 @@
+/* ============================================================================
+   Issue Reports — module stylesheet
+   ----------------------------------------------------------------------------
+   Covers every screen of the "report a problem" feature:
+
+     .ir-page   → admin/issue_reports/index.blade.php      (Reported Issues)
+                  admin/issue_reports/my_issues.blade.php  (My Reported Issues)
+     .ir-modal  → the dashboard "Report a problem" modal, the Column Visibility
+                  modal and the Delete confirmation modal
+
+   Page chrome (toolbar / panel / footer) comes from the shared programme-dt
+   layer in custom.css — see docs/new-design-index-page.md. Only what that layer
+   does not provide lives here, built on the --ds-* tokens (docs/design.md).
+
+   Scoped to the two roots so it beats Bootstrap without !important and cannot
+   leak into other modules. Anything reused by BOTH a page and a modal must list
+   both selectors (docs/new-design-index-page.md §3d).
+   ========================================================================== */
+
+/* ── Status badge — display only, the control lives in the Action column ──── */
+.ir-page .ir-status {
+    display: inline-block;
+    padding: 0.3em 0.75em;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    border-radius: var(--ds-radius-1, 4px);
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.ir-page .ir-status--active {
+    color: #b42318;
+    background: #fef3f2;
+    border-color: #fecdca;
+}
+
+.ir-page .ir-status--fixed {
+    color: #067647;
+    background: #ecfdf3;
+    border-color: #abefc6;
+}
+
+/* ── Row actions — icon over caption, every stack the same width ──────────── */
+.ir-page .ir-act-group {
+    display: inline-flex;
+    align-items: stretch;
+    gap: var(--ds-space-1, 0.25rem);
+}
+
+.ir-page .ir-act {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    min-width: 62px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.ir-page .ir-act:hover {
+    opacity: 0.75;
+}
+
+.ir-page .ir-act:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.ir-page .ir-act__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+}
+
+.ir-page .ir-act__icon > i {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.ir-page .ir-act__label {
+    white-space: nowrap;
+}
+
+.ir-page .ir-act--fix {
+    color: #2563eb;
+}
+
+.ir-page .ir-act--del {
+    color: var(--bs-danger, #dc3545);
+}
+
+/* ── Attachment link ───────────────────────────────────────────────────────── */
+.ir-page .ir-attachment {
+    color: #2563eb;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.ir-page .ir-attachment:hover {
+    text-decoration: underline;
+}
+
+/* ── Description column ────────────────────────────────────────────────────
+   Only column 2 wraps in .programme-dt-table (custom.css:416); the description
+   sits further right and would render as one unbroken line. */
+.ir-page .programme-dt-table td.ir-col-wrap {
+    white-space: normal;
+    max-width: 420px;
+}
+
+/* ── Date-range filter — matches the height of .programme-dt-filter-select ── */
+.ir-page .ir-date-range {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2, 0.5rem);
+}
+
+.ir-page .ir-date-input {
+    width: 150px;
+    min-height: var(--ds-control-h, 2.5rem);
+    font-size: 0.875rem;
+    border-radius: var(--ds-radius-1, 4px);
+    border: 1px solid var(--ds-line, #e5e7eb);
+    color: var(--ds-ink, #1f2937);
+}
+
+.ir-page .ir-date-sep {
+    color: var(--ds-ink-muted, #667085);
+}
+
+/* ── Flash message row keeps its space only when it holds something ───────── */
+.ir-page .ir-flash:empty {
+    display: none;
+}
+
+/* ── Print: only the table survives ───────────────────────────────────────── */
+@media print {
+    .ir-page .no-print,
+    .ir-page .programme-dt-toolbar,
+    .ir-page .programme-dt-footer,
+    .ir-page .programme-status-tabs,
+    .ir-page .btn,
+    .ir-page nav {
+        display: none !important;
+    }
+}
+
+/* ============================================================================
+   Modals — one language for all three (docs/new-design-index-page.md §3c)
+   ========================================================================== */
+.ir-modal .modal-content {
+    border: 0;
+    border-radius: 12px;
+    box-shadow: var(--ds-shadow-lg, 0 4px 12px rgba(16, 24, 40, 0.18));
+}
+
+.ir-modal .ir-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ds-space-3, 1rem);
+    padding: var(--ds-space-3, 1rem) var(--ds-space-4, 1.5rem);
+    border-bottom: 1px solid #eaecf0;
+}
+
+.ir-modal .ir-modal-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ds-ink, #1f2937);
+}
+
+.ir-modal .ir-modal-body {
+    padding: var(--ds-space-4, 1.5rem);
+}
+
+/* One tinted card per record / per field group. */
+.ir-modal .ir-field-card {
+    background: #eef1fc;
+    border-radius: 10px;
+    padding: var(--ds-space-3, 1rem);
+}
+
+.ir-modal .ir-field-card + .ir-field-card {
+    margin-top: var(--ds-space-3, 1rem);
+}
+
+.ir-modal .ir-form-label {
+    display: block;
+    margin-bottom: var(--ds-space-1, 0.25rem);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ds-ink, #1f2937);
+}
+
+.ir-modal .ir-req {
+    color: #dc2626;
+}
+
+/* Beats .form-control / .form-select without !important (two classes + root). */
+.ir-modal .ir-control {
+    width: 100%;
+    min-height: var(--ds-control-h, 2.5rem);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--ds-ink, #1f2937);
+    background-color: var(--ds-surface, #fff);
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+
+.ir-modal .ir-control:focus {
+    border-color: var(--ds-primary, #004a93);
+    box-shadow: var(--ds-focus-ring, 0 0 0 0.2rem rgba(0, 74, 147, 0.2));
+    outline: 0;
+}
+
+.ir-modal textarea.ir-control {
+    min-height: 96px;
+    resize: vertical;
+}
+
+.ir-modal .ir-field + .ir-field {
+    margin-top: var(--ds-space-3, 1rem);
+}
+
+.ir-modal .ir-hint {
+    margin-top: var(--ds-space-2, 0.5rem);
+    font-size: 0.75rem;
+    color: var(--ds-ink-muted, #667085);
+}
+
+.ir-modal .ir-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ds-space-2, 0.5rem);
+    padding: 0 var(--ds-space-4, 1.5rem) var(--ds-space-4, 1.5rem);
+    border: 0;
+}
+
+.ir-modal .ir-btn-cancel,
+.ir-modal .ir-btn-submit {
+    min-width: 120px;
+    height: var(--ds-control-h, 2.5rem);
+    padding: 0 var(--ds-space-3, 1rem);
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 8px;
+}
+
+.ir-modal .ir-btn-cancel {
+    color: #dc2626;
+    background: var(--ds-surface, #fff);
+    border: 1px solid #fca5a5;
+}
+
+.ir-modal .ir-btn-cancel:hover {
+    background: #fef2f2;
+    border-color: #f87171;
+    color: #b91c1c;
+}
+
+.ir-modal .ir-btn-submit {
+    color: #fff;
+    background: #004384;
+    border: 1px solid #004384;
+}
+
+.ir-modal .ir-btn-submit:hover {
+    background: #003468;
+    border-color: #003468;
+    color: #fff;
+}
+
+.ir-modal .ir-btn-submit:disabled {
+    opacity: 0.65;
+}
+
+/* Delete confirmation — same shell, a warning glyph instead of a field card. */
+.ir-modal .ir-confirm {
+    text-align: center;
+    padding: var(--ds-space-4, 1.5rem);
+}
+
+.ir-modal .ir-confirm__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    margin-bottom: var(--ds-space-3, 1rem);
+    font-size: 1.5rem;
+    color: #b42318;
+    background: #fef3f2;
+    border-radius: 50%;
+}
+
+.ir-modal .ir-confirm__title {
+    margin: 0 0 var(--ds-space-1, 0.25rem);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ds-ink, #1f2937);
+}
+
+.ir-modal .ir-confirm__text {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--ds-ink-muted, #667085);
+}
+
+/* The field card is a plain block on phones — nothing to collapse, but the
+   footer buttons need room. */
+@media (max-width: 575.98px) {
+    .ir-modal .ir-modal-footer {
+        flex-direction: column-reverse;
+    }
+
+    .ir-modal .ir-btn-cancel,
+    .ir-modal .ir-btn-submit {
+        width: 100%;
+    }
+
+    .ir-page .ir-date-input {
+        width: 100%;
+    }
+}

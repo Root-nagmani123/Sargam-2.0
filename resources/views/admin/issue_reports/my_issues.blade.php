@@ -2,189 +2,143 @@
 @section('title', 'My Reported Issues')
 
 @push('styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
-<style>
-/* ── Status badges ── */
-.issue-status-badge {
-    display: inline-block;
-    padding: .3em .75em;
-    font-size: .75rem;
-    font-weight: 600;
-    line-height: 1;
-    border-radius: 4px;
-}
-.issue-status-badge--active { color: #be123c; background: #ffe4e6; }
-.issue-status-badge--fixed  { color: #15803d; background: #dcfce7; }
-
-/* ── Tab buttons ── */
-.issue-tab {
-    display: inline-flex;
-    align-items: center;
-    padding: .45rem 1.15rem;
-    font-size: .875rem;
-    font-weight: 500;
-    border-radius: 6px;
-    border: 1.5px solid #d1d5db;
-    background: #fff;
-    color: #374151;
-    cursor: pointer;
-    transition: background .15s, color .15s, border-color .15s;
-    white-space: nowrap;
-    line-height: 1.4;
-}
-.issue-tab:hover  { background: #f1f5f9; border-color: #93afc8; }
-.issue-tab.active { background: #004a93; color: #fff; border-color: #004a93; }
-
-/* ── Attachment link ── */
-.attachment-view { color: #2563eb; font-weight: 500; text-decoration: none; }
-.attachment-view:hover { text-decoration: underline; }
-
-/* ── Table header ── */
-#my-issue-reports-table thead th {
-    font-size: .76rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    color: #6b7280;
-    background: #f9fafb;
-    border-bottom: 1px solid #e5e7eb;
-    white-space: nowrap;
-}
-#my-issue-reports-table tbody td { font-size: .875rem; }
-
-/* ── Columns dropdown ── */
-#myColumnsDropdown label { cursor: pointer; user-select: none; font-size: .875rem; }
-#myColumnsDropdown input[type=checkbox] { accent-color: #004a93; }
-
-/* ── Filter bar ── */
-.issue-filter-bar { background: #f9fafb; }
-
-@media print {
-    .no-print, .issue-filter-bar, #myIssueDtFooter, .btn, nav { display: none !important; }
-}
-</style>
+<link rel="stylesheet" href="{{ asset('css/issue-reports-admin.css') }}?v={{ @filemtime(public_path('css/issue-reports-admin.css')) ?: time() }}">
 @endpush
 
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid ir-page">
     <x-breadcrum title="My Reported Issues" />
 
-    <div id="status-msg" class="mb-3"></div>
+    {{-- Status pills + exports — above the card (new-design §1) --}}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0"
+            role="group" aria-label="Filter issues by status">
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill active"
+                        data-filter="all" aria-pressed="true" aria-current="true">All Issues</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill"
+                        data-filter="active" aria-pressed="false">Active Issues</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill"
+                        data-filter="fixed" aria-pressed="false">Fixed Issues</button>
+            </li>
+        </ul>
 
-    <div class="card rounded-3 overflow-hidden shadow-sm border">
-
-        {{-- ── Tab row ── --}}
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 px-4 py-3 bg-white border-bottom">
-            <div class="d-flex flex-wrap gap-2" role="group" aria-label="Filter issues by status">
-                <button class="issue-tab active" data-filter="all">All Issues</button>
-                <button class="issue-tab"        data-filter="active">Active Issues</button>
-                <button class="issue-tab"        data-filter="fixed">Fixed Issues</button>
-            </div>
-            <div class="d-flex gap-2 no-print">
-                <div class="dropdown">
-                    <button class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 dropdown-toggle"
-                            type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-download" aria-hidden="true"></i> Export
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                        <li><a id="myDownloadCsvBtn" class="dropdown-item" href="{{ route('my.issue-reports.export') }}">
+        <div class="d-flex flex-wrap gap-2 no-print">
+            <div class="dropdown">
+                <button type="button" class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                        data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                    <i class="bi bi-download" aria-hidden="true"></i>
+                    <span>Download</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                    <li>
+                        <a id="myDownloadCsvBtn" class="dropdown-item" href="{{ route('my.issue-reports.export') }}">
                             <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i> CSV
-                        </a></li>
-                        <li><a id="myDownloadExcelBtn" class="dropdown-item" href="{{ route('my.issue-reports.export-excel') }}">
+                        </a>
+                    </li>
+                    <li>
+                        <a id="myDownloadExcelBtn" class="dropdown-item" href="{{ route('my.issue-reports.export-excel') }}">
                             <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Excel
-                        </a></li>
-                    </ul>
-                </div>
-                <button id="myPrintBtn" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1">
-                    <i class="bi bi-printer" aria-hidden="true"></i> Print
-                </button>
-            </div>
-        </div>
-
-        {{-- ── Filter bar ── --}}
-        <div class="d-flex flex-wrap align-items-center gap-2 px-4 py-3 issue-filter-bar border-bottom no-print">
-            <span class="fw-semibold text-secondary" style="font-size:.82rem;">Filter</span>
-
-            <select id="myDeptFilter" class="form-select form-select-sm"
-                    style="width:auto;min-width:145px;" aria-label="Filter by department">
-                <option value="">Department</option>
-            </select>
-
-            <select id="mySubmoduleFilter" class="form-select form-select-sm"
-                    style="width:auto;min-width:145px;" aria-label="Filter by submodule">
-                <option value="">Submodule</option>
-            </select>
-
-            <div class="d-flex align-items-center gap-1">
-                <div class="input-group input-group-sm" style="width:155px;">
-                    <span class="input-group-text bg-white px-2">
-                        <i class="bi bi-calendar3" style="font-size:.8rem;"></i>
-                    </span>
-                    <input type="date" id="myDateFrom" class="form-control form-control-sm border-start-0"
-                           aria-label="From date">
-                </div>
-                <span class="text-body-secondary px-1">—</span>
-                <div class="input-group input-group-sm" style="width:155px;">
-                    <span class="input-group-text bg-white px-2">
-                        <i class="bi bi-calendar3" style="font-size:.8rem;"></i>
-                    </span>
-                    <input type="date" id="myDateTo" class="form-control form-control-sm border-start-0"
-                           aria-label="To date">
-                </div>
+                        </a>
+                    </li>
+                </ul>
             </div>
 
-            <button class="btn btn-sm btn-outline-danger" id="myRemoveFilterBtn">Reset Filter</button>
-
-            {{-- Columns visibility --}}
-            <div class="dropdown ms-auto">
-                <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
-                        type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-layout-three-columns" aria-hidden="true"></i> Columns
-                </button>
-                <ul class="dropdown-menu shadow-sm py-2" id="myColumnsDropdown" style="min-width:190px;"></ul>
-            </div>
-
-            {{-- Search toggle --}}
-            <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center"
-                    id="mySearchToggleBtn" aria-label="Toggle search" style="width:32px;height:32px;padding:0;">
-                <i class="bi bi-search" aria-hidden="true"></i>
+            <button type="button" id="myPrintBtn" class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
+                <i class="bi bi-printer" aria-hidden="true"></i>
+                <span>Print</span>
             </button>
-            <div id="myIssueDtSearch" class="d-none"></div>
         </div>
+    </div>
 
-        {{-- ── DataTable ── --}}
-        <div class="table-responsive">
-            {!! $dataTable->table([
-                'class'             => 'table table-hover align-middle mb-0 w-100',
-                'data-sargam-dt-ui' => 'false',
-            ]) !!}
+    <div class="card">
+        <div class="card-body">
+
+            {{-- Toolbar: filters left · columns + search right (new-design §2) --}}
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4
+                        programme-dt-toolbar no-print">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="programme-dt-filters-label">Filters</span>
+
+                    <div class="programme-dt-filter-select">
+                        <select id="myDeptFilter" class="form-select" aria-label="Filter by department">
+                            <option value="">Department</option>
+                        </select>
+                    </div>
+
+                    <div class="programme-dt-filter-select">
+                        <select id="mySubmoduleFilter" class="form-select" aria-label="Filter by submodule">
+                            <option value="">Submodule</option>
+                        </select>
+                    </div>
+
+                    <div class="ir-date-range">
+                        <input type="date" id="myDateFrom" class="form-control ir-date-input" aria-label="From date">
+                        <span class="ir-date-sep" aria-hidden="true">—</span>
+                        <input type="date" id="myDateTo" class="form-control ir-date-input" aria-label="To date">
+                    </div>
+
+                    <button type="button" class="btn programme-dt-btn-reset" id="myRemoveFilterBtn">Reset Filters</button>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns"
+                            data-bs-toggle="modal" data-bs-target="#myIssueReportColumnVisibilityModal"
+                            title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+
+                    <div id="myIssueDtSearch" class="programme-dt-search" data-dt-search-for="my-issue-reports-table"></div>
+                </div>
+            </div>
+
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
+                </div>
+            </div>
+
+            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 no-print"
+                 data-dt-footer-for="my-issue-reports-table"></div>
+
         </div>
-
-        {{-- ── Footer ── --}}
-        <div id="myIssueDtFooter"
-             class="d-flex flex-wrap align-items-center justify-content-between gap-3 px-4 py-3 border-top bg-white no-print">
-        </div>
-
     </div>
 </div>
+
+{{-- ── Column visibility ── --}}
+<div class="modal fade ir-modal" id="myIssueReportColumnVisibilityModal" tabindex="-1"
+     aria-labelledby="myIssueReportColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="ir-modal-header">
+                <h5 class="ir-modal-title" id="myIssueReportColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="ir-modal-body">
+                <div class="row g-3" id="myIssueReportColumnToggleGrid"></div>
+            </div>
+            <div class="ir-modal-footer">
+                <button type="button" class="btn ir-btn-submit" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
 {!! $dataTable->scripts() !!}
 <script>
 $(document).ready(function () {
-    var table          = null;
-    var currentFilter  = 'all';
+    var table            = null;
+    var currentFilter    = 'all';
 
-    function showMsg(type, text) {
-        $('#status-msg').html(
-            '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
-            text +
-            '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>'
-        );
-        setTimeout(function () { $('#status-msg .alert').alert('close'); }, 4500);
-    }
-
+    /* ── Collect active filter state ── */
     function filterParams() {
         return {
             status_filter:    currentFilter,
@@ -201,7 +155,7 @@ $(document).ready(function () {
         var vis = [];
         table.columns().every(function (i) {
             var title = $(this.header()).text().trim();
-            if (!title) return;
+            if (!title || title === 'Action') return;
             if (this.visible()) vis.push(i);
         });
 
@@ -242,7 +196,7 @@ $(document).ready(function () {
         var logoUrl   = '{{ asset("admin_assets/images/logos/logo.png") }}';
 
         var filterParts = [];
-        var tabLabel = $('.issue-tab.active').text().trim();
+        var tabLabel = $('.programme-status-pill.active').text().trim();
         if (tabLabel && tabLabel !== 'All Issues') filterParts.push(tabLabel);
         var deptText = $('#myDeptFilter option:selected').text().trim();
         if ($('#myDeptFilter').val()) filterParts.push('Department: ' + deptText);
@@ -332,6 +286,7 @@ $(document).ready(function () {
         'Status':             'status'
     };
 
+    /* ── Keep Export links (CSV + Excel) in sync with active filters + visible columns ── */
     function updateDownloadLink() {
         var p  = filterParams();
         var qs = Object.entries(p)
@@ -339,8 +294,9 @@ $(document).ready(function () {
             .map(function (e) { return encodeURIComponent(e[0]) + '=' + encodeURIComponent(e[1]); });
 
         var visibleKeys = [];
-        $('#myColumnsDropdown input[type=checkbox]:checked').each(function () {
-            visibleKeys.push($(this).data('key'));
+        $('#myIssueReportColumnToggleGrid input[type=checkbox]:checked').each(function () {
+            var key = COLUMN_KEY_MAP[$(this).data('label')];
+            if (key) visibleKeys.push(key);
         });
         if (visibleKeys.length) {
             qs.push('columns=' + encodeURIComponent(visibleKeys.join(',')));
@@ -351,97 +307,99 @@ $(document).ready(function () {
         $('#myDownloadExcelBtn').attr('href', '{{ route('my.issue-reports.export-excel') }}' + suffix);
     }
 
-    function buildFooter() {
-        var $wrap   = $('#my-issue-reports-table_wrapper');
-        var $footer = $('#myIssueDtFooter');
-        if (!$wrap.length || $footer.data('built')) return;
+    /* ── Column visibility ─────────────────────────────────────────────────
+       Hidden columns are stored as LABELS, not indices: a column added to the
+       table later would shift every index and silently hide the wrong one
+       (docs/column-visibility.md §3). */
+    var COLVIS_KEY = 'sargam.myIssueReports.hiddenCols.{{ auth()->id() ?? 'guest' }}';
 
-        var $pag  = $wrap.find('.dataTables_paginate').first();
-        var $len  = $wrap.find('.dataTables_length').first();
-        var $info = $wrap.find('.dataTables_info').first();
-        if (!$pag.length) return;
-
-        var $left  = $('<div class="d-flex align-items-center gap-2 flex-wrap"></div>');
-        var $right = $('<div class="d-flex align-items-center gap-3 ms-auto flex-wrap"></div>');
-
-        if ($len.length) {
-            var $sel = $len.find('select').addClass('form-select form-select-sm').css('width', 'auto');
-            $len.empty()
-                .append($('<span class="text-body-secondary small">Showing </span>'))
-                .append($sel);
-            $left.append($len);
-        }
-        if ($info.length)  $right.append($info.addClass('text-body-secondary small mb-0'));
-        if ($pag.length) { $pag.find('.pagination').addClass('mb-0'); $right.append($pag); }
-
-        $footer.append($left).append($right);
-        $footer.data('built', true);
+    function readHidden() {
+        try {
+            var raw = window.localStorage.getItem(COLVIS_KEY);
+            var arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) { return []; }
     }
 
-    function buildColumnsDropdown() {
-        if (!table || $('#myColumnsDropdown').data('built')) return;
-        var $menu = $('#myColumnsDropdown').empty();
-        table.columns().every(function (idx) {
-            var title = $(this.header()).text().trim();
+    function persistHidden(labels) {
+        try { window.localStorage.setItem(COLVIS_KEY, JSON.stringify(labels)); } catch (e) {}
+    }
+
+    function buildColumnsModal(dt) {
+        var $grid = $('#myIssueReportColumnToggleGrid');
+        if (!$grid.length) return;
+
+        var hidden = readHidden();
+        $grid.empty();
+
+        dt.columns().every(function () {
+            var idx   = this.index();
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
             if (!title) return;
-            var key    = COLUMN_KEY_MAP[title] || title;
-            var $li    = $('<li>');
-            var $label = $('<label class="dropdown-item py-1 mb-0">');
-            var $cb    = $('<input type="checkbox" class="me-2">').prop('checked', this.visible()).data('col', idx).data('key', key);
-            $label.append($cb).append(title);
-            $li.append($label);
-            $menu.append($li);
+
+            var shown   = hidden.indexOf(title) === -1;
+            var inputId = 'myIrColvis_' + idx;
+
+            this.visible(shown, false);
+
+            var $cell  = $('<div class="col-12 col-sm-6 col-md-4"></div>');
+            var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                .attr('for', inputId);
+            var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .data('label', title)
+                .prop('checked', shown);
+
+            $cb.on('change', function () {
+                var h = readHidden();
+                var pos = h.indexOf(title);
+                if (this.checked) {
+                    if (pos !== -1) h.splice(pos, 1);
+                } else if (pos === -1) {
+                    h.push(title);
+                }
+                persistHidden(h);
+                dt.column(idx).visible(this.checked, false);
+                dt.columns.adjust();
+                updateDownloadLink();
+            });
+
+            $label.append($cb).append($('<span></span>').text(title));
+            $cell.append($label);
+            $grid.append($cell);
         });
-        $menu.on('change', 'input[type=checkbox]', function () {
-            table.column($(this).data('col')).visible(this.checked);
-            updateDownloadLink();
-        });
-        $menu.data('built', true);
+
+        dt.columns.adjust();
+        updateDownloadLink();
     }
 
-    function buildSearch() {
-        var $slot   = $('#myIssueDtSearch');
-        var $wrap   = $('#my-issue-reports-table_wrapper');
-        var $filter = $wrap.find('.dataTables_filter').first();
-        if (!$filter.length || $slot.find('input').length) return;
-        $filter.find('input')
-            .addClass('form-control form-control-sm')
-            .attr('placeholder', 'Search…')
-            .css('width', '200px');
-        $filter.find('label').contents()
-            .filter(function () { return this.nodeType === 3; }).remove();
-        $slot.append($filter);
-    }
+    /* ── DataTable hookup ──────────────────────────────────────────────────
+       Search box and footer are relocated by datatable-global-ui.js into the
+       .programme-dt-search / .programme-dt-footer slots above — nothing to do
+       here beyond the filters. */
+    $(document).on('init.dt', function (e, settings) {
+        if (!settings.nTable || settings.nTable.id !== 'my-issue-reports-table') return;
 
-    /* ── Wait for DataTable ── */
-    setTimeout(function () {
-        if (!$.fn.DataTable.isDataTable('#my-issue-reports-table')) return;
-        table = $('#my-issue-reports-table').DataTable();
+        table = new $.fn.dataTable.Api(settings);
 
-        $('#my-issue-reports-table').on('preXhr.dt', function (e, settings, data) {
+        /* Inject filter params into every AJAX request */
+        $('#my-issue-reports-table').on('preXhr.dt', function (ev, s, data) {
             $.extend(data, filterParams());
         });
 
-        $('#my-issue-reports-table').on('draw.dt', function () {
-            if (!$('#myIssueDtFooter').data('built')) buildFooter();
-        });
+        buildColumnsModal(table);
+    });
 
-        buildFooter();
-        buildColumnsDropdown();
-        buildSearch();
-        setTimeout(function () { buildFooter(); buildColumnsDropdown(); buildSearch(); }, 350);
-    }, 100);
-
-    /* ── Tabs ── */
-    $(document).on('click', '.issue-tab', function () {
-        $('.issue-tab').removeClass('active');
-        $(this).addClass('active');
+    /* ── Status pills ── */
+    $(document).on('click', '.programme-status-pill', function () {
+        $('.programme-status-pill').removeClass('active').attr('aria-pressed', 'false').removeAttr('aria-current');
+        $(this).addClass('active').attr({ 'aria-pressed': 'true', 'aria-current': 'true' });
         currentFilter = String($(this).data('filter'));
         updateDownloadLink();
         if (table) table.ajax.reload();
     });
 
-    /* ── Filters ── */
+    /* ── Filter controls ── */
     $('#myDeptFilter, #mySubmoduleFilter, #myDateFrom, #myDateTo').on('change', function () {
         updateDownloadLink();
         if (table) table.ajax.reload();
@@ -481,19 +439,16 @@ $(document).ready(function () {
         table.page.len(-1).draw();
     });
 
-    /* ── Search toggle ── */
-    $('#mySearchToggleBtn').on('click', function () {
-        var $slot = $('#myIssueDtSearch');
-        $slot.toggleClass('d-none');
-        if (!$slot.hasClass('d-none')) $slot.find('input').first().focus();
-    });
-
-    /* ── Populate filter dropdowns (scoped to current user's data) ── */
+    /* ── Populate filter dropdowns ── */
     $.get('{{ route('my.issue-reports.filter-options') }}', function (data) {
         var $dept = $('#myDeptFilter');
         var $sub  = $('#mySubmoduleFilter');
-        (data.departments || []).forEach(function (d) { $dept.append($('<option>').val(d).text(d)); });
-        (data.submodules  || []).forEach(function (s) { $sub.append($('<option>').val(s).text(s)); });
+        (data.departments || []).forEach(function (d) {
+            $dept.append($('<option>').val(d).text(d));
+        });
+        (data.submodules || []).forEach(function (s) {
+            $sub.append($('<option>').val(s).text(s));
+        });
     });
 
     updateDownloadLink();
