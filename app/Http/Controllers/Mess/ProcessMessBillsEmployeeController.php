@@ -3218,6 +3218,25 @@ class ProcessMessBillsEmployeeController extends Controller
             $clientTypeDisplay = $bills[0]->client_type_display ?? ($bills[0]->client_type_label ?? '—');
             $courseName = null;
 
+            // Self-service: hold back items whose invoice hasn't been sent to the user yet.
+            // Notifications store combined_id URL-encoded (see groupBillsByBuyer()); routing may
+            // hand back a decoded $id, so rebuild the encoded form from the resolved bill's
+            // buyer name/client type before matching against stored notifications.
+            $isSelfService = ! $this->currentUserCanAdminMessBills();
+            $notifiedKeySet = [];
+            $sentTotal = 0.0;
+            if ($isSelfService) {
+                $normalizedCombinedId = 'combined-' . rawurlencode($buyerName) . '-' . $clientTypeSlug;
+                $receiverUserId = (int) ($this->resolveReceiverUserIdFromAnyBill($bills) ?? 0);
+                $notifiedKeys = $this->getMessCombinedNotifiedLineItemKeys($receiverUserId, $normalizedCombinedId, $filterDateFromYmd, $filterDateToYmd, $bills);
+                if ($notifiedKeys === [] && $this->messCombinedHasInvoiceNotificationInDateRange($receiverUserId, $normalizedCombinedId, $filterDateFromYmd, $filterDateToYmd)) {
+                    // Legacy notification predating per-item tracking — treat everything as sent.
+                    $isSelfService = false;
+                } else {
+                    $notifiedKeySet = array_fill_keys($notifiedKeys, true);
+                }
+            }
+
             if ($paymentOnly) {
                 try {
                     $first = $bills[0];
@@ -3280,7 +3299,14 @@ class ProcessMessBillsEmployeeController extends Controller
                 if (!empty($b->remarks)) {
                     $remarksList[] = trim((string) $b->remarks);
                 }
+                $isDateRangeBill = $b instanceof SellingVoucherDateRangeReport;
                 foreach ($b->items ?? [] as $item) {
+                    if ($isSelfService) {
+                        $itemKey = $isDateRangeBill ? 'dr-' . (int) ($item->id ?? 0) : 'ki-' . (int) ($item->pk ?? 0);
+                        if (! isset($notifiedKeySet[$itemKey])) {
+                            continue;
+                        }
+                    }
                     $itemIssueDate = null;
                     $itemIssueYmd = null;
                     try {
@@ -3299,6 +3325,7 @@ class ProcessMessBillsEmployeeController extends Controller
                             $dateMin = $itemIssueYmd;
                         }
                     }
+                    $sentTotal += $this->lineItemNetAmount($item);
                     $items[] = (object) [
                         'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
                         'quantity' => $item->quantity,
@@ -3337,7 +3364,10 @@ class ProcessMessBillsEmployeeController extends Controller
             $referenceNumber = collect($referenceNumbers)->filter()->unique()->implode(', ');
             $orderBy = collect($orderBys)->filter()->unique()->implode(', ');
             $remarks = collect($remarksList)->filter()->unique()->implode(' | ');
-            $dueAmount = $financials['due'];
+            if ($isSelfService) {
+                $totalAmount = $this->roundMoney($sentTotal);
+            }
+            $dueAmount = $isSelfService ? $this->billDueAmount($totalAmount, $paidAmount) : $financials['due'];
             $totalDueAmount = $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, null, $filterDateToYmd)['due'];
             $paymentStatusLabel = $this->isBillFullyPaid($paidAmount, $totalAmount) ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid');
             $invoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
