@@ -9451,6 +9451,43 @@ class EstateController extends Controller
         return $map;
     }
 
+    /**
+     * Bill row par Define House (estate_house_master) ke charges laagu karo aur grand_total set karo.
+     *
+     * Licence fee / water charge ka master Define House hai: wahan update hone par har jagah (list, print,
+     * PDF, report) wahi naya amount dikhna chahiye — isliye ehm_* value mile to wahi jeetti hai, bill row par
+     * generate ke waqt save hua purana amount nahi. Electricity slab/meter se nikalta hai, isliye uska sirf
+     * fallback (bill par 0/null ho tab hi) rakha gaya hai.
+     *
+     * Query me `ehm.licence_fee as ehm_licence_fee` / `ehm.water_charge as ehm_water_charge`
+     * (aur optional `ehm.electric_charge as ehm_electric_charge`) select hone chahiye.
+     */
+    private function applyEstateHouseMasterCharges(object $bill): void
+    {
+        $master = static function ($value) {
+            return $value !== null && $value !== '' ? (float) $value : null;
+        };
+
+        $houseWater = $master($bill->ehm_water_charge ?? null);
+        if ($houseWater !== null) {
+            $bill->water_charges = $houseWater;
+        }
+
+        $houseLicence = $master($bill->ehm_licence_fee ?? null);
+        if ($houseLicence !== null) {
+            $bill->licence_fees = $houseLicence;
+        }
+
+        $houseElectric = $master($bill->ehm_electric_charge ?? null);
+        if ($houseElectric !== null && (float) ($bill->electricty_charges ?? 0) <= 0) {
+            $bill->electricty_charges = $houseElectric;
+        }
+
+        $bill->grand_total = (float) ($bill->electricty_charges ?? 0)
+            + (float) ($bill->water_charges ?? 0)
+            + (float) ($bill->licence_fees ?? 0);
+    }
+
     private function computeGenerateEstateBillBillsCollection(
         string $year,
         string $month,
@@ -9573,23 +9610,8 @@ class EstateController extends Controller
 
             $b->total_consumed_unit = (int) ($b->meter_one_consume_unit ?? 0) + (int) ($b->meter_two_consume_unit ?? 0);
 
-            // Fallback: when reading has 0/null water or licence, use estate_house_master (Define House) values
-            $billWater = (float) ($b->water_charges ?? 0);
-            $billLicence = (float) ($b->licence_fees ?? 0);
-            if ($billWater <= 0 && isset($b->ehm_water_charge) && ($b->ehm_water_charge !== null && $b->ehm_water_charge !== '')) {
-                $b->water_charges = (float) $b->ehm_water_charge;
-            }
-            if ($billLicence <= 0 && isset($b->ehm_licence_fee) && ($b->ehm_licence_fee !== null && $b->ehm_licence_fee !== '')) {
-                $b->licence_fees = (float) $b->ehm_licence_fee;
-            }
-
-            // Fallback for electricity: when still 0/null, use house master electric charge
-            $billElectric = (float) ($b->electricty_charges ?? 0);
-            if ($billElectric <= 0 && isset($b->ehm_electric_charge) && ($b->ehm_electric_charge !== null && $b->ehm_electric_charge !== '')) {
-                $b->electricty_charges = (float) $b->ehm_electric_charge;
-            }
-
-            $b->grand_total = (float) ($b->electricty_charges ?? 0) + (float) ($b->water_charges ?? 0) + (float) ($b->licence_fees ?? 0);
+            // Water / licence Define House se, electricity ka sirf fallback — grand_total bhi yahin set hota hai.
+            $this->applyEstateHouseMasterCharges($b);
         }
 
         return $bills;
@@ -9698,18 +9720,8 @@ class EstateController extends Controller
             $b->meter_two_consume_unit = ($u2 > 0 || $curr2 > 0 || $prev2 > 0) ? $u2 : null;
             $b->total_consumed_unit = (int) ($b->meter_one_consume_unit ?? 0) + (int) ($b->meter_two_consume_unit ?? 0);
 
-            // Reading row me 0/null ho to Define House (estate_house_master) values use karo.
-            if ((float) ($b->water_charges ?? 0) <= 0 && ($b->ehm_water_charge ?? null) !== null && $b->ehm_water_charge !== '') {
-                $b->water_charges = (float) $b->ehm_water_charge;
-            }
-            if ((float) ($b->licence_fees ?? 0) <= 0 && ($b->ehm_licence_fee ?? null) !== null && $b->ehm_licence_fee !== '') {
-                $b->licence_fees = (float) $b->ehm_licence_fee;
-            }
-            if ((float) ($b->electricty_charges ?? 0) <= 0 && ($b->ehm_electric_charge ?? null) !== null && $b->ehm_electric_charge !== '') {
-                $b->electricty_charges = (float) $b->ehm_electric_charge;
-            }
-
-            $b->grand_total = (float) ($b->electricty_charges ?? 0) + (float) ($b->water_charges ?? 0) + (float) ($b->licence_fees ?? 0);
+            // Water / licence Define House se, electricity ka sirf fallback — grand_total bhi yahin set hota hai.
+            $this->applyEstateHouseMasterCharges($b);
 
             // Blade: Employee Type badge aur print link (Other bills alag route/flag se print hote hain).
             $b->is_other_bill = true;
@@ -10292,6 +10304,8 @@ class EstateController extends Controller
                 ->join('estate_possession_other as epo', 'emro.estate_possession_other_pk', '=', 'epo.pk')
                 ->join('estate_other_req as eor', 'epo.estate_other_req_pk', '=', 'eor.pk')
                 ->leftJoin('estate_unit_sub_type_master as eust', 'epo.estate_unit_sub_type_master_pk', '=', 'eust.pk')
+                // Define House join: iske bina Other bill ka licence fee / water charge purana (bill par saved) hi dikhta tha.
+                ->leftJoin('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
                 ->select(
                     'emro.pk',
                     'epo.pk as estate_possession_details_pk',
@@ -10316,9 +10330,9 @@ class EstateController extends Controller
                     DB::raw('NULL as meter_two_consume_unit'),
                     ($hasUnitTypeOnSubType ? 'eust.estate_unit_type_master_pk as unit_type_pk' : 'epo.estate_unit_type_master_pk as unit_type_pk'),
                     'epo.estate_unit_sub_type_master_pk as unit_sub_type_pk',
-                    DB::raw('NULL as ehm_water_charge'),
-                    DB::raw('NULL as ehm_electric_charge'),
-                    DB::raw('NULL as ehm_licence_fee'),
+                    'ehm.water_charge as ehm_water_charge',
+                    'ehm.electric_charge as ehm_electric_charge',
+                    'ehm.licence_fee as ehm_licence_fee',
                     'eor.emp_name',
                     DB::raw('NULL as employee_id'),
                     DB::raw("COALESCE(NULLIF(TRIM(eor.designation), ''), NULLIF(TRIM(eor.section), ''), '—') as emp_designation"),
@@ -10413,21 +10427,8 @@ class EstateController extends Controller
             $bill->meter_one_consume_unit = $u1 > 0 ? $u1 : (($curr1 > 0 || $prev1 > 0) ? 0 : null);
             $bill->meter_two_consume_unit = $u2 > 0 ? $u2 : (($curr2 > 0 || $prev2 > 0) ? 0 : null);
 
-            // 2) Fallback: when emrd has 0/null, use estate_house_master (via epd.estate_house_master_pk) for electricity, water, licence
-            $billElectric = (float) ($bill->electricty_charges ?? 0);
-            $billWater = (float) ($bill->water_charges ?? 0);
-            $billLicence = (float) ($bill->licence_fees ?? 0);
-            if ($billElectric <= 0 && property_exists($bill, 'ehm_electric_charge')) {
-                $bill->electricty_charges = (float) ($bill->ehm_electric_charge ?? 0);
-            }
-            if ($billWater <= 0 && property_exists($bill, 'ehm_water_charge')) {
-                $bill->water_charges = (float) ($bill->ehm_water_charge ?? 0);
-            }
-            if ($billLicence <= 0 && property_exists($bill, 'ehm_licence_fee')) {
-                $bill->licence_fees = (float) ($bill->ehm_licence_fee ?? 0);
-            }
-
-            $bill->grand_total = (float) ($bill->electricty_charges ?? 0) + (float) ($bill->water_charges ?? 0) + (float) ($bill->licence_fees ?? 0);
+            // 2) Water / licence Define House (estate_house_master) se, electricity ka sirf fallback.
+            $this->applyEstateHouseMasterCharges($bill);
 
             // Direct bill link (from Generate Estate Bill): when bill_no is present,
             // return a streamed PDF so browser shows PDF preview.
@@ -10622,15 +10623,8 @@ class EstateController extends Controller
                 $b->meter_one_consume_unit = ($u1 > 0 || $curr1 > 0 || $prev1 > 0) ? $u1 : null;
                 $b->meter_two_consume_unit = ($u2 > 0 || $curr2 > 0 || $prev2 > 0) ? $u2 : null;
 
-                $billWater = (float) ($b->water_charges ?? 0);
-                $billLicence = (float) ($b->licence_fees ?? 0);
-                if ($billWater <= 0 && isset($b->ehm_water_charge) && $b->ehm_water_charge !== null && $b->ehm_water_charge !== '') {
-                    $b->water_charges = (float) $b->ehm_water_charge;
-                }
-                if ($billLicence <= 0 && isset($b->ehm_licence_fee) && $b->ehm_licence_fee !== null && $b->ehm_licence_fee !== '') {
-                    $b->licence_fees = (float) $b->ehm_licence_fee;
-                }
-                $b->grand_total = (float) ($b->electricty_charges ?? 0) + (float) ($b->water_charges ?? 0) + (float) ($b->licence_fees ?? 0);
+                // Water / licence Define House se — list aur print ka amount ek jaisa rahe.
+                $this->applyEstateHouseMasterCharges($b);
             }
 
             $bills = $rows;
@@ -10755,15 +10749,8 @@ class EstateController extends Controller
                     $b->meter_two_consume_unit = $u2;
                 }
 
-                $billWater = (float) ($b->water_charges ?? 0);
-                $billLicence = (float) ($b->licence_fees ?? 0);
-                if ($billWater <= 0 && isset($b->ehm_water_charge) && $b->ehm_water_charge !== null && $b->ehm_water_charge !== '') {
-                    $b->water_charges = (float) $b->ehm_water_charge;
-                }
-                if ($billLicence <= 0 && isset($b->ehm_licence_fee) && $b->ehm_licence_fee !== null && $b->ehm_licence_fee !== '') {
-                    $b->licence_fees = (float) $b->ehm_licence_fee;
-                }
-                $b->grand_total = (float) ($b->electricty_charges ?? 0) + (float) ($b->water_charges ?? 0) + (float) ($b->licence_fees ?? 0);
+                // Water / licence Define House se — list aur print ka amount ek jaisa rahe.
+                $this->applyEstateHouseMasterCharges($b);
             }
 
             // "My Estate Bill" ka Print All: LBSNAA ke saath user ke Other/contract bills bhi.
@@ -10915,15 +10902,8 @@ class EstateController extends Controller
                     $b->meter_two_consume_unit = $u2;
                 }
 
-                $billWater = (float) ($b->water_charges ?? 0);
-                $billLicence = (float) ($b->licence_fees ?? 0);
-                if ($billWater <= 0 && isset($b->ehm_water_charge) && $b->ehm_water_charge !== null && $b->ehm_water_charge !== '') {
-                    $b->water_charges = (float) $b->ehm_water_charge;
-                }
-                if ($billLicence <= 0 && isset($b->ehm_licence_fee) && $b->ehm_licence_fee !== null && $b->ehm_licence_fee !== '') {
-                    $b->licence_fees = (float) $b->ehm_licence_fee;
-                }
-                $b->grand_total = (float) ($b->electricty_charges ?? 0) + (float) ($b->water_charges ?? 0) + (float) ($b->licence_fees ?? 0);
+                // Water / licence Define House se — list aur print ka amount ek jaisa rahe.
+                $this->applyEstateHouseMasterCharges($b);
             }
 
             // "My Estate Bill" ka PDF download: LBSNAA ke saath user ke Other/contract bills bhi.
@@ -11751,9 +11731,10 @@ class EstateController extends Controller
                 'emrd.meter_one_consume_unit',
                 'emrd.meter_two_consume_unit',
                 'emrd.electricty_charges',
-                // Define House: estate_house_master.water_charge / licence_fee. Reading rows often NULL or 0 — fall back; NULLIF avoids COALESCE(0, real) swallowing the good row.
-                DB::raw('IF((emrd.water_charges IS NOT NULL AND emrd.water_charges <> 0), emrd.water_charges, COALESCE(NULLIF(ehm.water_charge, 0), NULLIF(ehm_bn.water_charge, 0), ehm.water_charge, ehm_bn.water_charge, emrd.water_charges)) as water_charges'),
-                DB::raw('IF((emrd.licence_fees IS NOT NULL AND emrd.licence_fees <> 0), emrd.licence_fees, COALESCE(NULLIF(ehm.licence_fee, 0), NULLIF(ehm_bn.licence_fee, 0), ehm.licence_fee, ehm_bn.licence_fee, emrd.licence_fees)) as licence_fees'),
+                // Define House (estate_house_master) hi water_charge / licence_fee ka master hai — wahan update hote hi
+                // report/list/print sab me naya amount aana chahiye, isliye ehm value pehle, bill ki purani value fallback.
+                DB::raw('COALESCE(ehm.water_charge, ehm_bn.water_charge, emrd.water_charges) as water_charges'),
+                DB::raw('COALESCE(ehm.licence_fee, ehm_bn.licence_fee, emrd.licence_fees) as licence_fees'),
             ]);
 
         $otherQ = DB::table('estate_month_reading_details_other as emro')
@@ -11799,8 +11780,8 @@ class EstateController extends Controller
                 DB::raw('NULL as meter_one_consume_unit'),
                 DB::raw('NULL as meter_two_consume_unit'),
                 'emro.electricty_charges',
-                DB::raw('IF((emro.water_charges IS NOT NULL AND emro.water_charges <> 0), emro.water_charges, COALESCE(NULLIF(ehm_o.water_charge, 0), NULLIF(ehm_o_bn.water_charge, 0), ehm_o.water_charge, ehm_o_bn.water_charge, emro.water_charges)) as water_charges'),
-                DB::raw('IF((emro.licence_fees IS NOT NULL AND emro.licence_fees <> 0), emro.licence_fees, COALESCE(NULLIF(ehm_o.licence_fee, 0), NULLIF(ehm_o_bn.licence_fee, 0), ehm_o.licence_fee, ehm_o_bn.licence_fee, emro.licence_fees)) as licence_fees'),
+                DB::raw('COALESCE(ehm_o.water_charge, ehm_o_bn.water_charge, emro.water_charges) as water_charges'),
+                DB::raw('COALESCE(ehm_o.licence_fee, ehm_o_bn.licence_fee, emro.licence_fees) as licence_fees'),
             ]);
 
         // Employee Type filter: 'lbsnaa' -> sirf LBSNAA rows, 'other' -> sirf Other Employee rows, warna dono.
