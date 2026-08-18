@@ -67,6 +67,9 @@ class ReportController extends Controller
         'seconds' => 'STOCK_BALANCE_TILL_DATE_CACHE_SECONDS',
     ];
 
+    /** Redis TTL (seconds) for Stock Balance Till Date report (screen + Excel/PDF export). Kept short so exports used for reconciliation don't go stale. */
+    private const STOCK_BALANCE_TILL_DATE_CACHE_TTL = 300;
+
     private const SALE_VOUCHER_BUYERS_PER_PAGE = 8;
     private const STOCK_BALANCE_TILL_DATE_PER_PAGE = 50;
 
@@ -603,6 +606,26 @@ class ReportController extends Controller
     }
 
     /**
+     * Shared base join for Selling Voucher (kitchen_issue_items -> kitchen_issue_master) aggregations.
+     * Callers add their own where/select/groupBy on top.
+     */
+    private static function kitchenIssueItemsBaseQuery(): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('kitchen_issue_items as kii')
+            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk');
+    }
+
+    /**
+     * Shared base join for Selling Voucher Date Range (sv_date_range_report_items -> sv_date_range_reports) aggregations.
+     * Callers add their own where/select/groupBy on top.
+     */
+    private static function svDateRangeItemsBaseQuery(): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('sv_date_range_report_items as svi')
+            ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id');
+    }
+
+    /**
      * @param  array{fromDate: string, toDate: string, vendorIds: array<int>, storeIds: array<int>}  $filters
      */
     private function stockPurchaseDetailLinesBaseQuery(array $filters): \Illuminate\Database\Query\Builder
@@ -1015,7 +1038,7 @@ class ReportController extends Controller
      * @param  callable(): mixed  $callback
      * @return array{0: mixed, 1: bool}
      */
-    private function rememberMessReportCache(string $cacheKey, array $envKeys, string $logLabel, callable $callback): array
+    private function rememberMessReportCache(string $cacheKey, array $envKeys, string $logLabel, callable $callback, ?int $ttlSeconds = null): array
     {
         $enabled = ! in_array(
             strtolower((string) env($envKeys['enabled'], 'true')),
@@ -1043,7 +1066,7 @@ class ReportController extends Controller
         }
 
         return [
-            DataTableRedisCache::remember($cacheKey, $envKeys, $logLabel, $callback),
+            DataTableRedisCache::remember($cacheKey, $envKeys, $logLabel, $callback, $ttlSeconds),
             false,
         ];
     }
@@ -1051,7 +1074,7 @@ class ReportController extends Controller
     /**
      * @param  array{enabled: string, seconds: string}  $envKeys
      */
-    private function putMessReportCache(string $cacheKey, mixed $payload, array $envKeys, string $logLabel): void
+    private function putMessReportCache(string $cacheKey, mixed $payload, array $envKeys, string $logLabel, ?int $ttlSeconds = null): void
     {
         $enabled = ! in_array(
             strtolower((string) env($envKeys['enabled'], 'true')),
@@ -1062,7 +1085,7 @@ class ReportController extends Controller
             return;
         }
 
-        $ttl = max(30, (int) env($envKeys['seconds'], 300));
+        $ttl = max(30, $ttlSeconds ?? (int) env($envKeys['seconds'], 300));
         try {
             RedisBackedCache::repositoryForStore(RedisBackedCache::projectDefaultStoreName())
                 ->put($cacheKey, $payload, $ttl);
@@ -1328,7 +1351,7 @@ class ReportController extends Controller
     {
         $tillDate = $request->filled('till_date') ? $request->till_date : now()->format('Y-m-d');
         $storeIds = $this->normalizedIdList($request, 'store_id');
-        $reportData = $this->buildStockBalanceTillDateData($tillDate, $storeIds);
+        [$reportData, ] = $this->loadStockBalanceTillDateReportData($request, $tillDate, $storeIds);
         $selectedStoreName = $this->resolveStoreNamesLabel($storeIds);
 
         $fileName = 'stock-balance-till-date-' . $tillDate . '-' . now()->format('Y-m-d_His') . '.xlsx';
@@ -1349,9 +1372,10 @@ class ReportController extends Controller
 
         $tillDate = $request->filled('till_date') ? $request->till_date : now()->format('Y-m-d');
         $storeIds = $this->normalizedIdList($request, 'store_id');
+        [$reportData, ] = $this->loadStockBalanceTillDateReportData($request, $tillDate, $storeIds);
 
         $data = [
-            'reportData' => $this->buildStockBalanceTillDateData($tillDate, $storeIds),
+            'reportData' => $reportData,
             'tillDate' => $tillDate,
             'selectedStoreName' => $this->resolveStoreNamesLabel($storeIds),
             'emblemSrc' => $this->messPdfIndiaEmblemForDompdf(),
@@ -2836,7 +2860,8 @@ class ReportController extends Controller
                 $cacheKey,
                 $rawReportData,
                 self::STOCK_BALANCE_TILL_DATE_CACHE_ENV_KEYS,
-                'ReportController@stockBalanceTillDate'
+                'ReportController@stockBalanceTillDate',
+                self::STOCK_BALANCE_TILL_DATE_CACHE_TTL
             );
             $cacheHit = false;
         } else {
@@ -2844,7 +2869,8 @@ class ReportController extends Controller
                 $cacheKey,
                 self::STOCK_BALANCE_TILL_DATE_CACHE_ENV_KEYS,
                 'ReportController@stockBalanceTillDate',
-                $loadReport
+                $loadReport,
+                self::STOCK_BALANCE_TILL_DATE_CACHE_TTL
             );
         }
 
@@ -2954,8 +2980,7 @@ class ReportController extends Controller
             ->get()
             ->keyBy('item_subcategory_id');
 
-        $issuedKiAgg = DB::table('kitchen_issue_items as kii')
-            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+        $issuedKiAgg = $this->kitchenIssueItemsBaseQuery()
             ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
             ->where('kim.store_type', 'store')
             ->where('kim.issue_date', '<=', $tillDate)
@@ -2969,8 +2994,7 @@ class ReportController extends Controller
             ->get()
             ->keyBy('item_subcategory_id');
 
-        $issuedSvAgg = DB::table('sv_date_range_report_items as svi')
-            ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+        $issuedSvAgg = $this->svDateRangeItemsBaseQuery()
             ->where('svr.store_type', 'store')
             ->where('svi.issue_date', '<=', $tillDate)
             ->whereNotNull('svi.item_subcategory_id')
@@ -3154,8 +3178,7 @@ class ReportController extends Controller
             ->get()
             ->keyBy('item_subcategory_id');
 
-        $issuedKiAgg = DB::table('kitchen_issue_items as kii')
-            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+        $issuedKiAgg = self::kitchenIssueItemsBaseQuery()
             ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
             ->where('kim.store_type', 'store')
             ->where('kim.issue_date', '<=', $tillDate)
@@ -3166,8 +3189,7 @@ class ReportController extends Controller
             ->get()
             ->keyBy('item_subcategory_id');
 
-        $issuedSvAgg = DB::table('sv_date_range_report_items as svi')
-            ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+        $issuedSvAgg = self::svDateRangeItemsBaseQuery()
             ->where('svr.store_type', 'store')
             ->where('svi.issue_date', '<=', $tillDate)
             ->whereIn('svi.item_subcategory_id', $itemIds)
@@ -3531,8 +3553,7 @@ class ReportController extends Controller
             ->get()
             ->keyBy('item_subcategory_id');
 
-        $saleKiAgg = DB::table('kitchen_issue_items as kii')
-            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+        $saleKiAgg = $this->kitchenIssueItemsBaseQuery()
             ->join('mess_item_subcategories as mis_ki', 'mis_ki.id', '=', 'kii.item_subcategory_id')
             ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
             ->where('kim.store_type', 'store')
@@ -3549,8 +3570,7 @@ class ReportController extends Controller
             ->get()
             ->keyBy('item_subcategory_id');
 
-        $saleSvAgg = DB::table('sv_date_range_report_items as svi')
-            ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+        $saleSvAgg = $this->svDateRangeItemsBaseQuery()
             ->join('mess_item_subcategories as mis_sv', 'mis_sv.id', '=', 'svi.item_subcategory_id')
             ->where('svr.store_type', 'store')
             ->where('svi.issue_date', '>=', $fromDate)
