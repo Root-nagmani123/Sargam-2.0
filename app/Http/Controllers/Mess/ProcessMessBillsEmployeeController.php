@@ -1283,7 +1283,8 @@ class ProcessMessBillsEmployeeController extends Controller
 
                 $sentTotal = $this->roundMoney($this->sumMessBillNotifiedItemAmount($bills, $notifiedKeySet));
 
-                if ($sentTotal <= 0.0) {
+                if ($sentTotal <= 0.0 && $cb->paid <= 0.0) {
+                    // Nothing sent, nothing paid — genuinely nothing to show for this user yet.
                     return null;
                 }
 
@@ -3372,7 +3373,11 @@ class ProcessMessBillsEmployeeController extends Controller
             $paymentStatusLabel = $this->isBillFullyPaid($paidAmount, $totalAmount) ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid');
             $invoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
             $clientNameCourse = $courseName ? trim($buyerName . ' – ' . $courseName) : $buyerName;
-            $items = collect($items)->sortBy('issue_date_sort')->values()->all();
+            $items = collect($items)->sortBy('issue_date_sort')->values()->map(function ($row) {
+                unset($row->issue_date_sort);
+
+                return $row;
+            })->all();
             $bill = (object) [
                 'items' => collect($items),
                 'client_name' => $buyerName,
