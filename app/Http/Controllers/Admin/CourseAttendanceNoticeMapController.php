@@ -324,7 +324,11 @@ class CourseAttendanceNoticeMapController extends Controller
     // Direct Notice and Discipline Memo tabs — see get_Role_by_course()).
     $data_course_id = get_Role_by_course();
     $courses = CourseMaster::where('active_inactive', 1)
+        ->where('start_year', '<=', now()->toDateString())
         ->where('end_date', '>=', now()->toDateString())
+        ->when(!empty($data_course_id), function ($q) use ($data_course_id) {
+            $q->whereIn('pk', $data_course_id);
+        })
         ->orderBy('course_name', 'asc')
         ->get();
 
@@ -784,8 +788,15 @@ public function create(Request $request)
 {
     // Only courses that have actually started (start_year <= today) and not yet
     // ended — same "future courses excluded" rule as the index()/Add Notice dropdown.
+    // Scoped to the courses mapped to the logged-in user's role — Admin/Super
+    // Admin/PA get an empty list back and so keep seeing every course.
+    $data_course_id = get_Role_by_course();
     $activeCourses = CourseMaster::where('active_inactive', '1')
+        ->where('start_year', '<=', now()->toDateString())
         ->where('end_date', '>=', now()->toDateString())
+        ->when(!empty($data_course_id), function ($q) use ($data_course_id) {
+            $q->whereIn('pk', $data_course_id);
+        })
         ->get();
 // print_r($activeCourses);die;
     return view('admin.courseAttendanceNoticeMap.create', compact('activeCourses'));
