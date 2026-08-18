@@ -75,7 +75,12 @@ class FcTravelPlanReportDataTable extends DataTable
                     .'</div>';
             })
             ->rawColumns(['login_username', 'full_name', 'slot_display', 'require_academy_vehicle', 'is_submitted', 'action'])
-            ->orderColumn('full_name', 'COALESCE(NULLIF(TRIM(s1.full_name), \'\'), NULLIF(TRIM(sm.full_name), \'\'), tp.user_id) $1')
+            // Sorts on the same expression the column displays — including the name parts,
+            // otherwise a dynamic-form trainee sorted by their numeric id while showing a name.
+            ->orderColumn('full_name', 'COALESCE('
+                .'NULLIF(TRIM(s1.full_name), \'\'), '
+                .'NULLIF(TRIM(CONCAT_WS(\' \', NULLIF(TRIM(s1.first_name), \'\'), NULLIF(TRIM(s1.middle_name), \'\'), NULLIF(TRIM(s1.last_name), \'\'))), \'\'), '
+                .'NULLIF(TRIM(sm.full_name), \'\'), tp.user_id) $1')
             ->orderColumn('roll_no', 'COALESCE(NULLIF(TRIM(s1.roll_no), \'\'), sm.roll_no, s1.roll_no) $1')
             ->orderColumn('mobile_no', 'COALESCE(s1.mobile_no, \'\') $1')
             ->orderColumn('joining_date', 'tp.joining_date $1')
@@ -124,7 +129,9 @@ class FcTravelPlanReportDataTable extends DataTable
                 'lengthChange'=> true,
                 'pageLength'  => 25,
                 'order'       => [[1, 'asc']],
-                'lengthMenu'  => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+                // No -1 / "All": server-side or not, that asks for every matching plan in one
+                // response and grows with the roster. Use Export Excel for the full set.
+                'lengthMenu'  => [[10, 25, 50, 100, 250], [10, 25, 50, 100, 250]],
                 'processing'  => true,
                 'serverSide'  => true,
                 'dom'         => '<"row mb-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',

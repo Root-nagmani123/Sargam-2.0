@@ -57,7 +57,7 @@
 
                         <div class="d-flex gap-2">
                             <a href="{{ route('fc-reg.admin.form-builder.step', $step) }}" class="btn btn-sm btn-primary">
-                                <i class="bi bi-pencil-square me-1"></i>Edit Fields
+                                <i class="bi bi-pencil me-1"></i>Edit Fields
                             </a>
                             <a href="{{ route('fc-reg.admin.form-builder.preview', $step) }}" class="btn btn-sm btn-outline-secondary">
                                 <i class="bi bi-eye me-1"></i>Preview

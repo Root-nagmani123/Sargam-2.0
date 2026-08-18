@@ -62,6 +62,14 @@
                                     </small>
                                 </div>
 
+                                <!-- OTP (required after Web Auth verify — A4 SMS) -->
+                                <div class="col-md-12 d-none" id="otpContainer">
+                                    <label class="form-label">OTP</label>
+                                    <input type="text" class="form-control" name="otp" id="forgot_otp"
+                                        placeholder="Enter OTP sent to your mobile" disabled>
+                                    <small class="text-muted">OTP is sent after Web Auth verification</small>
+                                </div>
+
                                 <!-- New Password -->
                                 <div class="col-md-12">
                                     <label class="form-label">Enter New Password</label>
@@ -153,6 +161,10 @@
                         document.getElementById('verified_username').value = data.user_name;
                         document.getElementById('usernameContainer').classList.remove('d-none');
 
+                        document.getElementById('otpContainer').classList.remove('d-none');
+                        document.getElementById('forgot_otp').disabled = false;
+                        document.getElementById('forgot_otp').required = true;
+
                         document.getElementById('new_password').disabled = false;
                         document.getElementById('confirm_password').disabled = false;
                         document.getElementById('submitBtn').disabled = false;
@@ -164,7 +176,7 @@
                         // alert("Verification successful. Please proceed to set your new login password.");
                         Swal.fire({
                             title: 'Verification Successful',
-                            text: 'Please proceed to set your new login password.',
+                            text: data.message || 'OTP sent. Enter OTP and set your new password.',
                             icon: 'success',
                             confirmButtonText: 'OK'
                         });

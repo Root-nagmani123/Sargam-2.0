@@ -87,8 +87,8 @@
                         नाम / Name: <input type="text" name="officer_name" class="blank blank--mid" required value="{{ $val('officer_name') }}"><br>
                         पदनाम / Designation: <input type="text" name="designation" class="blank blank--mid" value="{{ $val('designation') }}">
                     </div>
-                    <div>स्थान / Place: <strong>मसूरी / Mussoorie</strong></div>
-                    <div>दिनांक / Dated: <input type="date" name="declaration_date" class="blank blank--sm" value="{{ $val('declaration_date') }}"></div>
+                    <div>स्थान / Place: <strong>{{ config('fc.document_place_hi') }} / {{ config('fc.document_place') }}</strong></div>
+                    <div>दिनांक / Dated: <input type="date" name="declaration_date" class="blank blank--sm" value="{{ old('declaration_date', fc_document_date('iso')) }}" readonly></div>
                     <div style="clear:both;"></div>
                 </div>
 
@@ -96,7 +96,8 @@
             </div>
         </div>
 
-        {{-- Signature upload --}}
+        {{-- Signature upload section — commented out per request (hidden on the fill form) --}}
+        {{--
         @if(! empty($template['signatures']))
             <div class="card fc-card border-0 shadow-sm mb-3">
                 <div class="card-header bg-white py-3"><h6 class="mb-0 text-uppercase small fw-bold text-muted">Signatures / हस्ताक्षर</h6></div>
@@ -116,6 +117,7 @@
                 </div>
             </div>
         @endif
+        --}}
 
         <div class="d-flex justify-content-between mb-5">
             <a href="{{ route('fc-reg.forms.step', [$form, $step]) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Cancel</a>

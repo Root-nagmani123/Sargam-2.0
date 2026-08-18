@@ -31,9 +31,14 @@
                 <h4>{{ $form->form_name }}</h4>
                 <p>Step {{ (isset($allSteps) ? ($allSteps->search(fn ($s) => $s->id === $step->id)) : 0) + 1 }}@isset($allSteps) of {{ $allSteps->count() }}@endisset — {{ $step->step_name }}</p>
             </div>
-            <a href="{{ route('fc-reg.forms.dashboard', $form) }}" class="btn btn-light btn-sm ms-auto rounded-pill px-3">
-                <i class="bi bi-grid me-1"></i>All Steps
-            </a>
+            <div class="ms-auto d-flex flex-wrap gap-2">
+                <a href="{{ $form->landingPageUrl() }}" class="btn btn-light btn-sm rounded-pill px-3">
+                    <i class="bi bi-house-door me-1"></i>Home
+                </a>
+                <a href="{{ route('fc-reg.forms.dashboard', $form) }}" class="btn btn-light btn-sm rounded-pill px-3">
+                    <i class="bi bi-grid me-1"></i>All Steps
+                </a>
+            </div>
         </div>
     </div>
 
@@ -258,6 +263,62 @@ document.querySelectorAll('.fc-file-upload[data-max-kb]').forEach(function (inpu
         return first;
     }
 
+    // Laravel error key "group.0.field" -> input name "group[0][field]".
+    function nameFromErrorKey(key) {
+        const parts = key.split('.');
+        return parts[0] + parts.slice(1).map(function (p) { return '[' + p + ']'; }).join('');
+    }
+
+    // Remove anything surfaced by a previous save attempt so stale messages don't linger.
+    function clearServerErrors() {
+        document.querySelectorAll('.fc-group-form .is-invalid').forEach(function (el) { el.classList.remove('is-invalid'); });
+        document.querySelectorAll('.fc-server-feedback, .fc-server-summary').forEach(function (el) { el.remove(); });
+    }
+
+    // Render a 422 validation payload: highlight each offending field, show its message
+    // inline, and put a summary above the failing section. Returns the first bad input.
+    function showServerErrors(form, errors) {
+        let firstEl = null;
+        const messages = [];
+
+        Object.keys(errors).forEach(function (key) {
+            const list = errors[key];
+            const msg = Array.isArray(list) ? list[0] : list;
+            if (msg) { messages.push(msg); }
+
+            const name = nameFromErrorKey(key);
+            const input = form.querySelector('[name="' + name + '"]') || form.querySelector('[name="' + name + '[]"]');
+            if (input) {
+                input.classList.add('is-invalid');
+                if (!firstEl) { firstEl = input; }
+                const holder = input.closest('.mb-2, .mb-3, .col, .form-group, td') || input.parentElement;
+                if (holder && !holder.querySelector('.fc-server-feedback')) {
+                    const fb = document.createElement('div');
+                    fb.className = 'invalid-feedback fc-server-feedback';
+                    fb.style.display = 'block';
+                    fb.textContent = msg;
+                    holder.appendChild(fb);
+                }
+            }
+        });
+
+        if (messages.length) {
+            const box = document.createElement('div');
+            box.className = 'alert alert-danger fc-server-summary';
+            box.setAttribute('role', 'alert');
+            const head = document.createElement('div');
+            head.className = 'fw-semibold mb-1';
+            head.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Please fix the following:';
+            const ul = document.createElement('ul');
+            ul.className = 'mb-0 ps-3';
+            messages.forEach(function (m) { const li = document.createElement('li'); li.textContent = m; ul.appendChild(li); });
+            box.appendChild(head); box.appendChild(ul);
+            form.parentElement.insertBefore(box, form);
+        }
+
+        return firstEl;
+    }
+
     btn.addEventListener('click', async function () {
         const forms = Array.from(document.querySelectorAll('.fc-group-form'));
 
@@ -281,8 +342,10 @@ document.querySelectorAll('.fc-file-upload[data-max-kb]').forEach(function (inpu
         btn.disabled = true; label.textContent = 'Saving…'; spin.classList.remove('d-none');
 
         const tokenMeta = document.querySelector('meta[name="csrf-token"]');
-        const headers = Object.assign({ 'X-Requested-With': 'XMLHttpRequest' },
+        const headers = Object.assign({ 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
             tokenMeta ? { 'X-CSRF-TOKEN': tokenMeta.getAttribute('content') } : {});
+
+        clearServerErrors();
 
         try {
             for (const form of forms) {
@@ -292,6 +355,22 @@ document.querySelectorAll('.fc-file-upload[data-max-kb]').forEach(function (inpu
                     headers: headers,
                     credentials: 'same-origin',
                 });
+
+                // Validation failure (e.g. no_html rejected a tag / <script>): show the real
+                // per-field messages instead of a generic "could not save" alert.
+                if (resp.status === 422) {
+                    let payload = {};
+                    try { payload = await resp.json(); } catch (e) {}
+                    const firstErr = showServerErrors(form, payload.errors || {});
+                    btn.disabled = false; label.textContent = originalText; spin.classList.add('d-none');
+                    if (firstErr) {
+                        (firstErr.closest('.repeatable-row') || firstErr.closest('.fc-group-section') || firstErr)
+                            .scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        try { firstErr.focus({ preventScroll: true }); } catch (e) {}
+                    }
+                    return;
+                }
+
                 if (!resp.ok) { throw new Error('save failed (' + resp.status + ')'); }
             }
             window.location.href = btn.dataset.nextUrl;

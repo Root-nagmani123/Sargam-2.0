@@ -44,12 +44,12 @@
     border-radius: 0.75rem;
 }
 
-#guess_faculty {
+#guest_faculty {
     margin-bottom: 0;
     min-width: 1000px;
 }
 
-#guess_faculty thead th {
+#guest_faculty thead th {
     background-color: #f8f9fa;
     color: #495057;
     font-weight: 600;
@@ -61,13 +61,13 @@
     white-space: nowrap;
 }
 
-#guess_faculty tbody td {
+#guest_faculty tbody td {
     padding: 1rem 0.75rem;
     vertical-align: middle;
     border-bottom: 1px solid #f0f0f0;
 }
 
-#guess_faculty tbody tr:hover {
+#guest_faculty tbody tr:hover {
     background-color: rgba(13, 110, 253, 0.04);
     transition: background-color 0.2s ease;
 }
@@ -276,13 +276,13 @@
     font-size: 0.9rem;
 }
 
-#guess_faculty_wrapper .dataTables_length select.form-select,
-#guess_faculty_wrapper .dataTables_filter input.form-control {
+#guest_faculty_wrapper .dataTables_length select.form-select,
+#guest_faculty_wrapper .dataTables_filter input.form-control {
     min-height: 2rem;
 }
 
-#guess_faculty_wrapper .dataTables_filter label,
-#guess_faculty_wrapper .dataTables_length label {
+#guest_faculty_wrapper .dataTables_filter label,
+#guest_faculty_wrapper .dataTables_length label {
     margin-bottom: 0;
     font-size: 0.875rem;
     color: var(--bs-secondary-color);
@@ -306,12 +306,12 @@
         -webkit-overflow-scrolling: touch;
     }
 
-    #guess_faculty {
+    #guest_faculty {
         min-width: 1000px;
     }
 
-    #guess_faculty thead th,
-    #guess_faculty tbody td {
+    #guest_faculty thead th,
+    #guest_faculty tbody td {
         padding: 0.75rem 0.6rem;
         font-size: 0.875rem;
     }
@@ -355,16 +355,16 @@
         padding: 0 0.875rem;
     }
 
-    #guess_faculty {
+    #guest_faculty {
         min-width: 1000px;
     }
 
-    #guess_faculty thead th {
+    #guest_faculty thead th {
         padding: 0.75rem 0.5rem;
         font-size: 0.75rem;
     }
 
-    #guess_faculty tbody td {
+    #guest_faculty tbody td {
         padding: 0.75rem 0.5rem;
         font-size: 0.8rem;
     }
@@ -415,8 +415,8 @@
     }
 
     /* Stack DataTables controls on mobile */
-    #guess_faculty_wrapper .dataTables_wrapper .row:first-child,
-    #guess_faculty_wrapper .dataTables_wrapper .dt-row:first-child {
+    #guest_faculty_wrapper .dataTables_wrapper .row:first-child,
+    #guest_faculty_wrapper .dataTables_wrapper .dt-row:first-child {
         flex-direction: column !important;
         align-items: stretch !important;
         gap: 0.75rem;
@@ -425,16 +425,16 @@
         border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     }
 
-    #guess_faculty_wrapper .dataTables_length,
-    #guess_faculty_wrapper .dataTables_filter {
+    #guest_faculty_wrapper .dataTables_length,
+    #guest_faculty_wrapper .dataTables_filter {
         text-align: left !important;
         margin-bottom: 0;
         display: block;
         width: 100%;
     }
 
-    #guess_faculty_wrapper .dataTables_length label,
-    #guess_faculty_wrapper .dataTables_filter label {
+    #guest_faculty_wrapper .dataTables_length label,
+    #guest_faculty_wrapper .dataTables_filter label {
         display: flex;
         align-items: center;
         gap: 0.5rem;
@@ -443,7 +443,7 @@
         font-size: 0.875rem;
     }
 
-    #guess_faculty_wrapper .dataTables_length select {
+    #guest_faculty_wrapper .dataTables_length select {
         margin: 0;
         min-width: 80px;
         max-width: 100%;
@@ -451,7 +451,7 @@
         padding: 0.375rem 2rem 0.375rem 0.5rem;
     }
 
-    #guess_faculty_wrapper .dataTables_filter input {
+    #guest_faculty_wrapper .dataTables_filter input {
         margin-left: 0 !important;
         width: 100%;
         max-width: 100%;
@@ -461,8 +461,8 @@
     }
 
     /* Stack DataTables info and pagination on mobile */
-    #guess_faculty_wrapper .dataTables_wrapper .row:last-child,
-    #guess_faculty_wrapper .dataTables_wrapper .dt-row:last-child {
+    #guest_faculty_wrapper .dataTables_wrapper .row:last-child,
+    #guest_faculty_wrapper .dataTables_wrapper .dt-row:last-child {
         flex-direction: column !important;
         align-items: stretch !important;
         gap: 0.75rem;
@@ -471,12 +471,12 @@
         border-top: 1px solid rgba(0, 0, 0, 0.08);
     }
 
-    #guess_faculty_wrapper .dataTables_info {
+    #guest_faculty_wrapper .dataTables_info {
         text-align: center !important;
         margin-bottom: 0;
     }
 
-    #guess_faculty_wrapper .dataTables_paginate {
+    #guest_faculty_wrapper .dataTables_paginate {
         text-align: center !important;
         margin-top: 0;
     }
@@ -497,16 +497,16 @@
         padding: 0 0.75rem;
     }
 
-    #guess_faculty {
+    #guest_faculty {
         min-width: 1000px;
     }
 
-    #guess_faculty thead th {
+    #guest_faculty thead th {
         padding: 0.625rem 0.4rem;
         font-size: 0.7rem;
     }
 
-    #guess_faculty tbody td {
+    #guest_faculty tbody td {
         padding: 0.625rem 0.4rem;
         font-size: 0.75rem;
     }

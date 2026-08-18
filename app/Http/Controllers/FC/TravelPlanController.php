@@ -4,12 +4,14 @@ namespace App\Http\Controllers\FC;
 
 use App\Http\Controllers\Controller;
 use App\Models\FC\FcTravelArrivalSlot;
+use App\Models\FC\MctpTravelModeMaster;
 use App\Models\FC\StudentMaster;
 use App\Models\FC\StudentMasterFirst;
 use App\Models\FC\StudentTravelPlanMaster;
 use App\Services\FC\FcRegistrationFlowService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class TravelPlanController extends Controller
 {
@@ -68,6 +70,9 @@ class TravelPlanController extends Controller
         return view('fc.registration.travel', [
             'plan'           => $plan,
             'slots'          => $slots,
+            'travelModes'    => MctpTravelModeMaster::choicesIncluding(
+                old('mode_of_journey', $plan?->mode_of_journey)
+            ),
             'availableDates' => $availableDates,
             'step1'          => $step1,
             'master'         => $master,
@@ -104,12 +109,20 @@ class TravelPlanController extends Controller
             'joining_date'              => 'required|date',
             'joining_time'              => 'nullable|date_format:H:i',
             'fc_travel_arrival_slot_id' => 'required|exists:fc_travel_arrival_slots,id',
-            'mode_of_journey'           => 'required|string|in:By Air,By Road,By Train',
-            'journey_vehicle_no'        => 'required|string|max:200',
+            // Accepts whatever the travel-mode master currently offers, plus the value this
+            // plan already holds — so a plan saved under an older list can be resubmitted.
+            'mode_of_journey'           => ['required', 'string', Rule::in(
+                MctpTravelModeMaster::choicesIncluding($existing?->mode_of_journey)
+            )],
+            'journey_vehicle_no'        => 'required|string|max:200|no_html',
             'academy_arrival_date'      => 'nullable|date',
-            'arrival_time_dehradun'     => 'required|string|max:120',
+            'arrival_time_dehradun'     => 'required|string|max:120|no_html',
             'require_academy_vehicle'   => 'required|boolean',
-            'special_requirements'      => 'nullable|string|max:1000',
+            'special_requirements'      => 'nullable|string|max:1000|no_html',
+        ], [], [
+            'journey_vehicle_no'    => 'Flight No / Train No / Vehicle No',
+            'arrival_time_dehradun' => 'Arrival time at Dehradun',
+            'special_requirements'  => 'Remarks',
         ]);
 
         $slot = FcTravelArrivalSlot::where('id', $request->fc_travel_arrival_slot_id)
@@ -167,19 +180,27 @@ class TravelPlanController extends Controller
                 ->with('error', 'Please complete bank details first.');
         }
 
+        $existing = StudentTravelPlanMaster::forUser($userId)->first();
+
         $request->validate([
             'joining_date'              => 'required|date',
             'joining_time'              => 'nullable|date_format:H:i',
             'fc_travel_arrival_slot_id' => 'required|exists:fc_travel_arrival_slots,id',
-            'mode_of_journey'           => 'required|string|in:By Air,By Road,By Train',
-            'journey_vehicle_no'        => 'nullable|string|max:200',
+            // Master-driven, plus this plan's own saved value (see save() above).
+            'mode_of_journey'           => ['required', 'string', Rule::in(
+                MctpTravelModeMaster::choicesIncluding($existing?->mode_of_journey)
+            )],
+            'journey_vehicle_no'        => 'nullable|string|max:200|no_html',
             'academy_arrival_date'      => 'nullable|date',
-            'arrival_time_dehradun'     => 'nullable|string|max:120',
+            'arrival_time_dehradun'     => 'nullable|string|max:120|no_html',
             'require_academy_vehicle'   => 'nullable|boolean',
-            'special_requirements'      => 'nullable|string|max:1000',
+            'special_requirements'      => 'nullable|string|max:1000|no_html',
+        ], [], [
+            'journey_vehicle_no'    => 'Flight No / Train No / Vehicle No',
+            'arrival_time_dehradun' => 'Arrival time at Dehradun',
+            'special_requirements'  => 'Remarks',
         ]);
 
-        $existing = StudentTravelPlanMaster::forUser($userId)->first();
         if ($existing?->is_submitted) {
             return $this->registrationFlow->redirectAfterTravelSubmit($userId);
         }

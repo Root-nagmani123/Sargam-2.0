@@ -31,6 +31,7 @@ class StudentAttendanceListDataTable extends DataTable
             ->addColumn('update_status', fn($row) => $this->renderRadioGroup($row, 'status', [1 => 'Present', 2 => 'Late', 3 => 'Absent']))
             ->addColumn('mdo_duty', fn($row) => $this->renderMdoCell($row))
             ->addColumn('escort_duty', fn($row) => $this->renderEscortCell($row))
+            ->addColumn('other_exemption', fn($row) => $this->renderOtherExemptionCell($row))
             ->addColumn('action', fn($row) => $this->renderActionCell($row))
             ->filterColumn('student_name', fn($query, $keyword) => $query->whereHas('studentsMaster', fn($q) => $q->where('display_name', 'like', "%{$keyword}%")))
             ->filterColumn('student_code', fn($query, $keyword) => $query->whereHas('studentsMaster', fn($q) => $q->where('generated_OT_code', 'like', "%{$keyword}%")))
@@ -47,7 +48,7 @@ class StudentAttendanceListDataTable extends DataTable
                     });
                 }
             }, true)
-            ->rawColumns(['attendance_status', 'update_status', 'mdo_duty', 'escort_duty', 'action']);
+            ->rawColumns(['attendance_status', 'update_status', 'mdo_duty', 'escort_duty', 'other_exemption', 'action']);
     }
 
     public function query(): QueryBuilder
@@ -105,23 +106,77 @@ class StudentAttendanceListDataTable extends DataTable
             Column::make('update_status')->title('Update Attendance Status')->orderable(false)->searchable(true),
             Column::make('mdo_duty')->title('MDO Duty')->orderable(false)->searchable(true),
             Column::make('escort_duty')->title('Escort/ Modular Duty')->orderable(false)->searchable(true),
+            Column::make('other_exemption')->title('Other Exemption')->orderable(false)->searchable(false),
             Column::computed('action')->title('Action')->orderable(false)->searchable(true),
         ];
     }
 
-    protected function getSavedStatus(int $studentId): int
+    /** The saved attendance row for this OT/session, resolved once and cached. */
+    protected function getSavedRecord(int $studentId): ?CourseStudentAttendance
     {
         static $cache = [];
         if (!array_key_exists($studentId, $cache)) {
-            $rec = CourseStudentAttendance::where([
+            $cache[$studentId] = CourseStudentAttendance::where([
                 ['Student_master_pk', '=', $studentId],
                 ['Course_master_pk', '=', $this->course_pk],
                 ['group_type_master_course_master_map_pk', '=', $this->group_pk],
                 ['timetable_pk', '=', $this->timetable_pk],
             ])->first();
-            $cache[$studentId] = $rec ? (int) $rec->status : 0;
         }
         return $cache[$studentId];
+    }
+
+    protected function getSavedStatus(int $studentId): int
+    {
+        $rec = $this->getSavedRecord($studentId);
+        return $rec ? (int) $rec->status : 0;
+    }
+
+    /**
+     * Which status radio (Present=1 / Late=2 / Absent=3) shows as selected for
+     * this OT. Unlocked OTs with no record default to Present — unchanged from the
+     * original behaviour.
+     */
+    protected function statusRadioSelected(int $studentId): int
+    {
+        // Locked by an MDO / Escort / Medical exemption → always Present.
+        if ($this->exemptions()->reasonFor($studentId) !== null) {
+            return 1;
+        }
+
+        $rec = $this->getSavedRecord($studentId);
+        if (!$rec) {
+            return 1; // No record yet → default Present.
+        }
+
+        $status = (int) $rec->status;
+
+        // Duty/exemption statuses (4=MDO, 5=Escort, 6=Medical, 7=Other) have no
+        // radio of their own here, so show Present.
+        if (in_array($status, [4, 5, 6, 7], true)) {
+            return 1;
+        }
+
+        return $status; // 1/2/3, or 0 (nothing checked)
+    }
+
+    /**
+     * True when this OT was saved as an Other Exemption: status Absent (3) with a
+     * reason on record. The Other Exemption radio is its own control (not part of
+     * the status group), so such a row shows BOTH the Absent radio and the Other
+     * Exemption radio checked, with the reason filled in.
+     */
+    protected function isOtherExemption(int $studentId): bool
+    {
+        if ($this->exemptions()->reasonFor($studentId) !== null) {
+            return false;
+        }
+
+        $rec = $this->getSavedRecord($studentId);
+
+        return $rec
+            && (int) $rec->status === 3
+            && trim((string) ($rec->other_exemption_comments ?? '')) !== '';
     }
 
     protected function statusLabelClass(int $status): array
@@ -205,40 +260,14 @@ class StudentAttendanceListDataTable extends DataTable
         // same rule — the lock here is the visible half of it, not the rule.
         $lockReason = $this->exemptions()->reasonFor($studentId);
 
-        $courseStudent = CourseStudentAttendance::where([
-            ['Student_master_pk', '=', $studentId],
-            ['Course_master_pk', '=', $this->course_pk],
-            ['group_type_master_course_master_map_pk', '=', $this->group_pk],
-            ['timetable_pk', '=', $this->timetable_pk]
-        ])->first();
+        // Which status radio is checked. Unlocked OTs with no record default to
+        // Present (original, unchanged behaviour).
+        $selected = $this->statusRadioSelected($studentId);
 
         // Fallback for a browser that submits no radio. Present when the OT is
         // locked, so a locked row can never post back "Not Marked".
         $fallback = $lockReason !== null ? 1 : 0;
         $html = "<input type='hidden' name='student[{$studentId}]' value='{$fallback}'>";
-
-        // Determine default checked value
-        $defaultCheckedValue = null;
-
-        if ($lockReason !== null) {
-            // Present, whatever is saved: the Attendance column has no radio of its
-            // own for duty/exemption statuses, so those would leave it blank.
-            $defaultCheckedValue = 1;
-        } elseif ($courseStudent) {
-            // If there's an existing attendance record, use its status
-            $defaultCheckedValue = $courseStudent->status;
-            // Duty/Exemption statuses (4=MDO, 5=Escort, 6=Medical, 7=Other) ke liye
-            // Attendance column me alag radio nahi hota — inko "Present" (1) dikhao
-            // taaki Attendance column me by default Present radio selected rahe.
-            if (in_array($defaultCheckedValue, [4, 5, 6, 7])) {
-                $defaultCheckedValue = 1;
-            }
-        } else {
-            // Exemption/duty lagu ho tab bhi Attendance column me "Present" radio
-            // by default selected rahega (MDO/Escort ki tarah). Medical/Other
-            // exemption ka actual status hidden input (value 6/7) se save hota hai.
-            $defaultCheckedValue = 1; // Present
-        }
 
         foreach ($options as $value => $label) {
             $labelClass = match ($value) {
@@ -248,7 +277,7 @@ class StudentAttendanceListDataTable extends DataTable
                 default => 'text-dark',
             };
 
-            $checked = ($defaultCheckedValue !== null && $defaultCheckedValue == $value) ? 'checked' : '';
+            $checked = ($selected == $value) ? 'checked' : '';
 
             // Left enabled deliberately: a disabled radio fires no event, so the
             // marker would get no explanation for why the click did nothing. The
@@ -258,7 +287,7 @@ class StudentAttendanceListDataTable extends DataTable
                 : '';
 
             $html .= "<div class='form-check form-check-inline'>
-                        <input class='form-check-input' type='radio' name='student[{$studentId}]' value='{$value}' {$checked} id='student[{$studentId}][{$value}]'{$lockAttr}>
+                        <input class='form-check-input js-att-status' type='radio' name='student[{$studentId}]' value='{$value}' {$checked} id='student[{$studentId}][{$value}]'{$lockAttr}>
                         <label class='form-check-label {$labelClass}' for='student[{$studentId}][{$value}]'>{$label}</label>
                     </div>";
         }
@@ -269,6 +298,38 @@ class StudentAttendanceListDataTable extends DataTable
         }
 
         return $html;
+    }
+
+    /**
+     * "Other Exemption" column: a radio in the SAME group as Present/Late/Absent
+     * (so picking it deselects them) plus the free-text reason. On save the
+     * status is stored as Absent (3) and the reason as other_exemption_comments;
+     * the text field is editable only while this radio is the chosen one.
+     */
+    protected function renderOtherExemptionCell($row): string
+    {
+        $studentId = $row->studentsMaster->pk;
+
+        $lockReason = $this->exemptions()->reasonFor($studentId);
+        $isOther = $this->isOtherExemption($studentId);
+
+        $rec = $this->getSavedRecord($studentId);
+        $comment = $rec ? (string) ($rec->other_exemption_comments ?? '') : '';
+
+        $checked = $isOther ? 'checked' : '';
+
+        // A locked OT (MDO/Escort/Medical) is forced Present and can never be an
+        // Other Exemption, so its control is disabled.
+        $radioDisabled = $lockReason !== null ? 'disabled' : '';
+
+        // Reason is editable only while Other Exemption is on for an unlocked OT.
+        $textDisabled = ($isOther && $lockReason === null) ? '' : 'disabled';
+
+        return "<div class='form-check mb-1'>
+                    <input class='form-check-input js-att-other' type='radio' name='other_exemption[{$studentId}]' value='1' {$checked} {$radioDisabled} id='other_exemption[{$studentId}]'>
+                    <label class='form-check-label text-secondary' for='other_exemption[{$studentId}]'>Other Exemption</label>
+                </div>
+                <input type='text' class='form-control form-control-sm att-other-reason' name='other_exemption_comments[{$studentId}]' data-att-ot='{$studentId}' value='" . e($comment) . "' placeholder='Enter exemption reason' {$textDisabled}>";
     }
 
     /** Shared with AttendanceController::save, so the lock and its enforcement agree. */

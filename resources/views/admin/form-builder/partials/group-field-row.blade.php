@@ -34,16 +34,18 @@
             <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveGroupField({{ $field->id }}, {{ $group->id }}, 'down')" title="Move Down">
                 <i class="bi bi-arrow-down"></i>
             </button>
-            @if($field->is_active)
-                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" title="Cannot delete — field is in use"
-                    onclick="alert('This field is currently in use on the form and cannot be deleted. Set it to inactive first, then try again.')">
-                    <i class="bi bi-trash"></i>
-                </button>
-            @else
-                <form method="POST" action="{{ route('fc-reg.admin.form-builder.group-field.delete', $field) }}" class="fc-fb-actions__form" onsubmit="return confirm('Delete this field?')">
-                    @csrf @method('DELETE')
-                    <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
-                </form>
+            @if(config('fc.form_builder_delete_enabled'))
+                @if($field->is_active)
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" title="Cannot delete — field is in use"
+                        onclick="alert('This field is currently in use on the form and cannot be deleted. Set it to inactive first, then try again.')">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                @else
+                    <form method="POST" action="{{ route('fc-reg.admin.form-builder.group-field.delete', $field) }}" class="fc-fb-actions__form" onsubmit="return confirm('Delete this field?')">
+                        @csrf @method('DELETE')
+                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
+                    </form>
+                @endif
             @endif
         </div>
     </td>

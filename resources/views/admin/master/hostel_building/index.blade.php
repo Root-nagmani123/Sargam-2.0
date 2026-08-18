@@ -150,83 +150,11 @@
         var TABLE_ID = '#hostelbuildingmaster-table';
         var table;
 
-        /* ---- Relocate search + build footer (pagination + count) ---- */
-        function enhanceHbDtControls() {
-            var $wrapper = $(TABLE_ID + '_wrapper');
-            if (!$wrapper.length) {
-                return;
-            }
-
-            var $searchSlot = $('#hbDtSearch');
-            var $footer = $('#hbDtFooter');
-
-            // Search → toolbar right
-            if (!$searchSlot.find('.dataTables_filter').length) {
-                var $filter = $wrapper.find('.dataTables_filter').first();
-                if ($filter.length) {
-                    $filter.find('input')
-                        .addClass('form-control shadow-none')
-                        .attr('placeholder', 'Search')
-                        .attr('aria-label', 'Search buildings');
-                    $filter.find('label').contents().filter(function () {
-                        return this.nodeType === 3;
-                    }).remove();
-                    $searchSlot.append($filter);
-                }
-            }
-
-            // Footer: pagination + count (once)
-            if ($footer.data('dtReady')) {
-                updateHbDtCount();
-                return;
-            }
-
-            var $paginate = $wrapper.find('.dataTables_paginate').first();
-            var $length = $wrapper.find('.dataTables_length').first();
-            var $info = $wrapper.find('.dataTables_info').first();
-
-            if (!$footer.length || (!$paginate.length && !$length.length)) {
-                return;
-            }
-
-            var $pagCol = $('<div class="programme-dt-pagination"></div>');
-            var $countCol = $('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>');
-
-            if ($paginate.length) {
-                $paginate.find('.pagination').addClass('mb-0');
-                $pagCol.append($paginate);
-            }
-
-            if ($length.length) {
-                var $select = $length.find('select').addClass('form-select form-select-sm').detach();
-                $length.find('label')
-                    .empty()
-                    .append(document.createTextNode('Showing '))
-                    .append($select)
-                    .append(document.createTextNode(' '));
-                $countCol.append($length);
-            }
-
-            if ($info.length) {
-                $info.addClass('mb-0');
-                $countCol.append($info);
-            }
-
-            $footer.append($pagCol).append($countCol);
-            $footer.data('dtReady', true);
-            updateHbDtCount();
-        }
-
-        function updateHbDtCount() {
-            if (!table) {
-                return;
-            }
-            var info = table.page.info();
-            var $info = $('#hbDtFooter .dataTables_info');
-            if ($info.length && info && info.recordsDisplay !== undefined) {
-                $info.text('of ' + info.recordsDisplay.toLocaleString() + ' items');
-            }
-        }
+        /* Search box, pagination and the "Showing N of M items" count are relocated
+           into #hbDtSearch / #hbDtFooter by the global enhancer
+           (public/js/datatable-global-ui.js) via the data-dt-search-for /
+           data-dt-footer-for hooks on those slots. Do NOT rebuild them here — a
+           second enhancer duplicates the global one and can race it. */
 
         /* ---- Column show / hide (DataTables API) ---- */
         var hbColStorageKey = 'hbGrid:hiddenColumns:v1';
@@ -304,23 +232,7 @@
             }
             table = $(TABLE_ID).DataTable();
 
-            enhanceHbDtControls();
-            updateHbDtCount();
             setupHbColumns(table);
-
-            var $wrapper = $(TABLE_ID + '_wrapper');
-            $(TABLE_ID).on('draw.dt', function () {
-                if ($wrapper.find('.dataTables_paginate').length && !$('#hbDtFooter .dataTables_paginate').length) {
-                    $('#hbDtFooter').empty().data('dtReady', false);
-                    enhanceHbDtControls();
-                }
-                updateHbDtCount();
-            });
-
-            setTimeout(function () {
-                enhanceHbDtControls();
-                updateHbDtCount();
-            }, 300);
         }, 150);
 
         /* ---- Print ---- */

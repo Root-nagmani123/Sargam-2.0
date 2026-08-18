@@ -28,14 +28,16 @@ return [
     ],
 
     // Notice Notifications
+    // Open the dashboard feed on its Notices tab (not the notice master list),
+    // so the user lands on the same notice cards shown on the dashboard.
     'notice' => [
         'Notice' => [
-            'route' => 'admin.notice.index',
-            'params' => [],
+            'route' => 'admin.dashboard.feed',
+            'params' => ['tab' => 'notices'],
         ],
         'NoticeNotification' => [
-            'route' => 'admin.notice.index',
-            'params' => [],
+            'route' => 'admin.dashboard.feed',
+            'params' => ['tab' => 'notices'],
         ],
     ],
 
@@ -180,6 +182,15 @@ return [
         ],
         'EstateHac' => [
             'route' => 'admin.estate.put-in-hac',
+            'params' => [],
+        ],
+    ],
+
+    // Issue Report Notifications (raised issue -> notify Super Admin; resolved -> notify reporter).
+    // Non-admin recipients are auto-redirected to their own list by IssueReportController@index.
+    'issue_report' => [
+        'IssueReport' => [
+            'route'  => 'admin.issue-reports.index',
             'params' => [],
         ],
     ],

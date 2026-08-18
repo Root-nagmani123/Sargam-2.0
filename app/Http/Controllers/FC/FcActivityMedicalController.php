@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Maatwebsite\Excel\Facades\Excel;
 use Yajra\DataTables\Facades\DataTables;
+use App\Rules\SafeUploadedDocument;
 
 class FcActivityMedicalController extends Controller
 {
@@ -601,7 +602,13 @@ class FcActivityMedicalController extends Controller
         $request->validate([
             'otcode' => 'required|string',
             'course_master_pk' => 'required|integer|exists:course_master,pk',
-            'file1' => 'nullable|file|mimes:pdf|max:10240',
+            'file1' => [
+                'nullable',
+                'file',
+                'mimes:pdf',
+                'max:' . SafeUploadedDocument::maxKilobytes(10240),
+                new SafeUploadedDocument(['pdf']),
+            ],
             'textfindings' => 'nullable|string|max:5000',
         ]);
 

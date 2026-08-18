@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sargam 2.0 — FC Security Hardening (Round 2) · Review</title>
+<style>
+  :root{
+    --navy:#1a3c6e; --navy-2:#24508f; --ink:#1a2230; --muted:#5b6675;
+    --bg:#f5f7fa; --card:#fff; --line:#e2e8f0; --code:#f1f4f8;
+    --ok:#137a4b; --ok-bg:#e5f5ec; --warn:#8a5a00; --warn-bg:#fdf3e0;
+    --bad:#a1201c; --bad-bg:#fbe9e8; --info:#1a5f8a; --info-bg:#e6f1f8;
+  }
+  @media (prefers-color-scheme: dark){:root{
+    --navy:#4d7fd6; --navy-2:#3a67b5; --ink:#e6eaf0; --muted:#9aa6b6;
+    --bg:#0f141b; --card:#161d27; --line:#28313d; --code:#111722;
+    --ok:#5fd39a; --ok-bg:#123027; --warn:#e6b566; --warn-bg:#33280f;
+    --bad:#f08a84; --bad-bg:#3a1c1a; --info:#79b7dd; --info-bg:#122735;}}
+  :root[data-theme="dark"]{
+    --navy:#4d7fd6; --navy-2:#3a67b5; --ink:#e6eaf0; --muted:#9aa6b6;
+    --bg:#0f141b; --card:#161d27; --line:#28313d; --code:#111722;
+    --ok:#5fd39a; --ok-bg:#123027; --warn:#e6b566; --warn-bg:#33280f;
+    --bad:#f08a84; --bad-bg:#3a1c1a; --info:#79b7dd; --info-bg:#122735;}
+  :root[data-theme="light"]{
+    --navy:#1a3c6e; --navy-2:#24508f; --ink:#1a2230; --muted:#5b6675;
+    --bg:#f5f7fa; --card:#fff; --line:#e2e8f0; --code:#f1f4f8;
+    --ok:#137a4b; --ok-bg:#e5f5ec; --warn:#8a5a00; --warn-bg:#fdf3e0;
+    --bad:#a1201c; --bad-bg:#fbe9e8; --info:#1a5f8a; --info-bg:#e6f1f8;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}
+  .wrap{max-width:960px;margin:0 auto;padding:0 16px 64px}
+  header.top{background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#fff;margin:0 -16px 24px;padding:28px 16px 24px}
+  header.top .kicker{font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:.85}
+  header.top h1{margin:.25em 0 .1em;font-size:clamp(20px,4.5vw,30px);line-height:1.2}
+  header.top .meta{font-size:13px;opacity:.9;margin-top:8px;word-break:break-word}
+  .verdict{display:flex;gap:14px;align-items:flex-start;border-radius:12px;padding:16px 18px;margin:0 0 26px;border:1px solid var(--line);background:var(--ok-bg)}
+  .verdict .big{font-size:26px;line-height:1}
+  .verdict h2{margin:0 0 4px;font-size:18px;color:var(--ok)}
+  .verdict p{margin:0;font-size:14.5px;color:var(--ink)}
+  h2.sec{font-size:19px;margin:34px 0 12px;padding-bottom:6px;border-bottom:2px solid var(--navy);color:var(--navy)}
+  h3{font-size:16px;margin:22px 0 8px}
+  p,li{font-size:15px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:2px 16px;margin:12px 0}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px}
+  code{background:var(--code);padding:1px 5px;border-radius:4px}
+  pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-size:13px;line-height:1.5}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:12px 0;border:1px solid var(--line);border-radius:10px}
+  table{border-collapse:collapse;width:100%;min-width:520px;font-size:14px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  thead th{background:var(--navy);color:#fff;font-weight:600;font-size:13px}
+  tbody tr:last-child td{border-bottom:0}
+  .badge{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+  .b-ok{background:var(--ok-bg);color:var(--ok)}.b-warn{background:var(--warn-bg);color:var(--warn)}
+  .b-bad{background:var(--bad-bg);color:var(--bad)}.b-info{background:var(--info-bg);color:var(--info)}
+  .b-na{background:var(--code);color:var(--muted)}
+  ul.tight{margin:8px 0;padding-left:20px}ul.tight li{margin:3px 0}
+  .note{font-size:13.5px;color:var(--muted)}
+  .finding{border-left:4px solid var(--line);padding:2px 0 2px 14px;margin:14px 0}
+  .finding.high{border-color:var(--bad)}.finding.med{border-color:var(--warn)}.finding.low{border-color:var(--info)}
+  .finding h4{margin:0 0 4px;font-size:15px}
+  footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+  @media (max-width:520px){.verdict{flex-direction:column;gap:8px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="kicker">Sargam 2.0 · Government of India · LBSNAA</div>
+  <h1>FC Security Hardening (Round 2) — Code Review &amp; Verdict</h1>
+  <div class="meta">
+    Branch <code>hotfix/security_audit_29july</code> · 6 files, +354/−15 (working tree)<br>
+    Scope: <strong>Exemption upload/input hardening</strong> · <strong>Exemption chooser flow</strong> ·
+    <strong>Login CAPTCHA + layout</strong> · <strong>OTP send/verify throttling</strong><br>
+    Audited against <em>Sargam 2.0 Code Review Guidelines (G1–G8)</em> · Static review of working-tree source
+  </div>
+</header>
+
+<div class="verdict">
+  <div class="big">✅</div>
+  <div>
+    <h2>Verdict: PASS — Approve with conditions</h2>
+    <p>All changes are correct, tested, and security-positive, with <strong>no G7/breaking defects</strong> and only a
+    minor G1 note. Existing functionality is preserved (additive validation, throttling, and view routing). Approval is
+    conditional on the deploy notes and the small carry-over items at the end (weak CAPTCHA image config, the
+    <code>test</code> category visibility, cache-driver dependency for throttling).</p>
+  </div>
+</div>
+
+<h2 class="sec">1 · What changed</h2>
+<div class="scroll">
+<table>
+  <thead><tr><th>File</th><th>Change</th><th>Area</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">FrontPageController.php</td><td>Exemption: <code>no_html</code>, fixed medical-doc validation gap, added <code>SafeUploadedDocument</code>+<code>SingleFileExtension</code>; exemption chooser routing; login <code>required|captcha</code>; OTP send/verify throttle across 3 flows</td><td>Server</td></tr>
+    <tr><td class="mono">app/Rules/SingleFileExtension.php</td><td><span class="badge b-info">new</span> reusable rule — rejects stacked/double extensions (<code>name.txt.pdf.pdf</code>)</td><td>Rule</td></tr>
+    <tr><td class="mono">FcOtpService.php</td><td>Central OTP throttle (RateLimiter) — send &amp; verify, 5/number → 10-min block</td><td>Service</td></tr>
+    <tr><td class="mono">exemption_application.blade.php</td><td><code>autocomplete=off</code>; medical input tagged <code>fc-file-upload</code>; client extension guard include</td><td>View</td></tr>
+    <tr><td class="mono">exemption_registered_select.blade.php</td><td><span class="badge b-info">new</span> chooser view for "Registered but Now Seeking Exemption"</td><td>View</td></tr>
+    <tr><td class="mono">fc_login.blade.php</td><td>CAPTCHA field + <code>refreshCaptcha()</code>; two-panel welcome layout (fills empty space)</td><td>View</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 class="sec">2 · Guideline audit (G1–G8)</h2>
+<div class="scroll">
+<table>
+  <thead><tr><th>Clause</th><th>Engaged?</th><th>Result</th></tr></thead>
+  <tbody>
+    <tr><td>G1 · unrestricted <code>get()</code> / <code>SELECT *</code></td><td>Chooser reads <code>fc_exemption_master</code> via <code>-&gt;get()</code></td><td><span class="badge b-warn">MINOR</span> tiny reference table (16 rows); acceptable, could add <code>select()</code></td></tr>
+    <tr><td>G2 · pagination</td><td>No listing added</td><td><span class="badge b-na">N/A</span></td></tr>
+    <tr><td>G3 · batch chunk/cursor</td><td>—</td><td><span class="badge b-na">N/A</span></td></tr>
+    <tr><td>G4 · duplicate DB calls</td><td>None introduced</td><td><span class="badge b-ok">CLEAN</span></td></tr>
+    <tr><td>G5 · queries in loops / N+1</td><td>None</td><td><span class="badge b-ok">CLEAN</span></td></tr>
+    <tr><td>G6 · manual connections</td><td>—</td><td><span class="badge b-na">N/A</span></td></tr>
+    <tr><td>G7 · transactions</td><td>No new write transactions</td><td><span class="badge b-na">N/A</span></td></tr>
+    <tr><td>G8 · <code>DATE()/LOWER()/CAST()</code> on indexed cols</td><td>No new predicates on indexed cols</td><td><span class="badge b-ok">CLEAN</span></td></tr>
+  </tbody>
+</table>
+</div>
+<p class="note">Throttling uses the cache (RateLimiter), not the DB. The only new query is the chooser's small reference-table read.</p>
+
+<h2 class="sec">3 · Focus-order findings</h2>
+
+<h3>3.1 Breaking changes / blast radius</h3>
+<div class="finding med">
+  <h4><span class="badge b-warn">CONFIRM</span> Login now requires a CAPTCHA</h4>
+  <p><code>verifyLogin</code> adds <code>required|captcha</code>. This is intended, but it is a behaviour change: any
+  automated/integration login (if any) must now solve the CAPTCHA. Session-backed, so it works with the existing
+  UA-binding middleware. Confirm no headless client depends on this endpoint.</p>
+</div>
+<div class="finding low">
+  <h4><span class="badge b-ok">CLEAR</span> Exemption chooser routing</h4>
+  <p><code>exemptionApplication</code> returns a different view only for the "Registered but Now Seeking Exemption"
+  category; every other category and the save flow are unchanged. View-only.</p>
+</div>
+
+<h3>3.2 Logic / correctness</h3>
+<div class="finding low">
+  <h4><span class="badge b-ok">CLEAR</span> OTP throttle — verified</h4>
+  <p>Send: 5 allowed, 6th blocked ~10 min. Verify: 5 wrong counted, 6th blocked ~10 min; a correct OTP resets the
+  counter. Keyed by mobile number; send/verify counted separately; per-flow isolation
+  (<code>registration</code>/<code>password_change</code>/<code>forgot_password</code>).</p>
+</div>
+<div class="finding low">
+  <h4><span class="badge b-ok">CLEAR</span> Medical-doc validation gap fixed</h4>
+  <p>Previous <code>=== 'medical'</code> never matched "Medical Grounds", so required/type/size were skipped. Now
+  <code>stripos(...'medical')</code> + <code>SafeUploadedDocument</code> + <code>SingleFileExtension</code> run. Verified:
+  <code>Document1.txt.pdf.pdf</code>, <code>scan.jpg.pdf</code>, <code>shell.php.pdf</code> → BLOCK; genuine files pass.</p>
+</div>
+
+<h3>3.3 Security</h3>
+<div class="finding low">
+  <h4><span class="badge b-ok">POSITIVE</span> Multiple controls added</h4>
+  <p>OTP flooding/brute-force throttle; login CAPTCHA (anti-automation); exemption upload malicious-file + double-extension
+  scanning; <code>no_html</code> input validation; autocomplete off. Server remains the authority throughout.</p>
+</div>
+
+<h2 class="sec">4 · Verified clean (evidence)</h2>
+<ul class="tight">
+  <li>OTP throttle behaviour test: 5-then-block on send &amp; verify; success clears; <code>MAX=5, BLOCK=10 min</code>.</li>
+  <li><code>SingleFileExtension</code>: blocks <code>*.txt.pdf.pdf</code>/<code>*.jpg.pdf</code>; allows <code>report.pdf</code>, <code>Dr. Smith.pdf</code>, <code>invoice.2024.pdf</code>.</li>
+  <li>Login page renders CAPTCHA (<code>/captcha/default</code>) + input; two-panel layout balanced; welcome text forced white.</li>
+  <li>Exemption chooser lists the other categories and links to existing forms; save flow &amp; flag untouched (flag stays admin-managed).</li>
+  <li>All PHP lints clean; all Blade partials compile; view cache cleared.</li>
+  <li><strong>Scope respected</strong> — main login (<code>Auth\LoginController</code>) and non-exemption upload paths untouched.</li>
+</ul>
+
+<h2 class="sec">5 · Security items addressed this round</h2>
+<div class="scroll">
+<table>
+  <thead><tr><th>Concern</th><th>Control</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>OTP flooding (send)</td><td>5 sends/number → 10-min block + notification</td><td><span class="badge b-ok">Done</span></td></tr>
+    <tr><td>OTP brute-force (verify)</td><td>5 wrong/number → 10-min block; success resets</td><td><span class="badge b-ok">Done</span></td></tr>
+    <tr><td>Login automation / brute-force</td><td>CAPTCHA + existing <code>throttle:login</code></td><td><span class="badge b-ok">Done</span></td></tr>
+    <tr><td>Malicious file (exemption)</td><td><code>SafeUploadedDocument</code> content scan</td><td><span class="badge b-ok">Done</span></td></tr>
+    <tr><td>Double / stacked extension (exemption)</td><td><code>SingleFileExtension</code> (+ client guard)</td><td><span class="badge b-ok">Done</span></td></tr>
+    <tr><td>HTML/script in inputs (exemption)</td><td><code>no_html</code> on text fields</td><td><span class="badge b-ok">Done</span></td></tr>
+    <tr><td>Autocomplete on exemption form</td><td><code>autocomplete=off</code></td><td><span class="badge b-ok">Done</span></td></tr>
+    <tr><td>Medical-doc validation bypass</td><td>name-match bug fixed</td><td><span class="badge b-ok">Fixed</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 class="sec">6 · Open / conditions</h2>
+<div class="finding med">
+  <h4><span class="badge b-warn">Carry-over</span> CAPTCHA image is OCR-weak</h4>
+  <p><code>config/captcha.php</code>: <code>lines=0, quality=100</code>, single colour → trivially OCR-solvable. The CAPTCHA
+  now guards login &amp; exemption, but for real bot resistance, harden the image (lines/noise/quality/colours,
+  <code>sensitive=true</code>). One config change hardens all CAPTCHAs.</p>
+</div>
+<div class="finding low">
+  <h4><span class="badge b-info">Data</span> <code>test</code> category visible</h4>
+  <p><code>fc_exemption_master.pk 6</code> is <code>visible=1</code>, so it appears in the chooser (and category page). Set
+  <code>visible=0</code> to show exactly the 3 real categories.</p>
+</div>
+<div class="finding low">
+  <h4><span class="badge b-info">Ops</span> Throttle needs a persistent cache</h4>
+  <p>OTP throttling uses the cache store (same as the OTP itself). Production <code>CACHE_DRIVER</code> must be persistent
+  (file/redis/database) — if OTP delivery works, throttling works.</p>
+</div>
+<div class="finding low">
+  <h4><span class="badge b-info">Note</span> Double-extension strictness</h4>
+  <p>A genuine <code>resume.doc.pdf</code> is rejected and must be renamed — intended for the finding, recoverable by rename.</p>
+</div>
+<div class="finding low">
+  <h4><span class="badge b-info">Terminology</span> CAPTCHA ≠ MFA</h4>
+  <p>The login CAPTCHA is anti-automation, not a second factor. If the audit's MFA item strictly requires MFA, an actual
+  second factor (OTP/TOTP) is still needed — report the CAPTCHA as "brute-force/anti-automation," not "MFA".</p>
+</div>
+
+<h2 class="sec">7 · Required before deploy</h2>
+<pre>php artisan view:clear        # blade changes (login, exemption)
+# controller + service changes take effect on the normal PHP-FPM reload / OPcache reset
+# ensure CACHE_DRIVER is persistent (throttle + OTP)
+# optional data: set fc_exemption_master.visible = 0 for the 'test' category (pk 6)</pre>
+<p class="note">No <code>.env</code>/migration needed for this round. (The earlier FC-login-encryption round still needs
+<code>PASSWORD_ENC_KEY</code> in production <code>.env</code> + <code>config:cache</code>.)</p>
+
+<footer>
+  Static review only (no execution timings / QA-environment evidence, per guidelines §1).
+  Guideline audit: G1 minor (reference-table read), rest CLEAN/N-A. Verdict: <strong>PASS — Approve with conditions</strong>.
+  Sargam 2.0 FC security-audit remediation workstream.
+</footer>
+
+</div>
+<script>(function(){try{var t=localStorage.getItem('theme');if(t){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+</body>
+</html>

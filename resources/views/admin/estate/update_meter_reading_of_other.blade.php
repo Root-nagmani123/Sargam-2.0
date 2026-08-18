@@ -118,11 +118,11 @@
                                 <th style="width:2.5rem;"><input type="checkbox" class="form-check-input" id="select_all" title="Select all"></th>
                                 <th>House No.</th>
                                 <th>Name</th>
-                                <th>Last month date</th>
-                                <th>Meter No.</th>
-                                <th>Last Month Electric Meter Reading</th>
+                                <th>Last Month Electric Reading Date</th>
+                                <th>Old Meter No.</th>
+                                <th>Electric Meter Reading</th>
                                 <th>New Meter No.</th>
-                                <th>Current Month Electric Meter Reading <span class="text-danger">*</span></th>
+                                <th>New Meter Reading <span class="text-danger">*</span></th>
                                 <th>Unit</th>
                             </tr>
                         </thead>
@@ -184,6 +184,12 @@ $(document).ready(function() {
     const allUnitTypes = @json($unitTypes ?? []);
     const possessionPks = @json($possessionPks ?? '');
     const prefill = @json($prefill ?? null);
+    // List Meter Reading ka Edit link is page ko reading_pk ke saath kholta hai — sirf usi flow me New Meter No. editable.
+    // Scope note: input validation ki relaxation deliberately is screen par NAHI hai — wo LBSNAA-only hai (by request).
+    const isListEditMode = !!(prefill && prefill.reading_pk);
+    const newMeterNoLockAttr = isListEditMode ? '' : ' readonly';
+    const newMeterNoLockClass = isListEditMode ? '' : ' bg-light';
+    const newMeterNoPlaceholder = isListEditMode ? 'Enter new meter no.' : '';
 
     let dataTable = null;
     let lastInvalidReadingAlertAt = 0;
@@ -356,10 +362,10 @@ $(document).ready(function() {
                         '</td>' +
                         '<td class="other-dual-col other-dual-newmeter-col">' +
                             '<div class="other-dual-seg" data-slot="1">' +
-                            '<input type="text" class="form-control form-control-sm new-meter-no" name="readings['+i0+'][new_meter_no]" value="'+ escAttr(nm1) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m1.old_meter_no || '') +'">' +
+                            '<input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+i0+'][new_meter_no]" value="'+ escAttr(nm1) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m1.old_meter_no || '') +'"'+ newMeterNoLockAttr +'>' +
                             '</div>' +
                             '<div class="other-dual-seg" data-slot="2">' +
-                            '<input type="text" class="form-control form-control-sm new-meter-no" name="readings['+i1+'][new_meter_no]" value="'+ escAttr(nm2) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m2.old_meter_no || '') +'">' +
+                            '<input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+i1+'][new_meter_no]" value="'+ escAttr(nm2) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m2.old_meter_no || '') +'"'+ newMeterNoLockAttr +'>' +
                             '</div>' +
                         '</td>' +
                         '<td class="other-dual-col other-dual-reading-col">' +
@@ -374,7 +380,7 @@ $(document).ready(function() {
                             '<input type="hidden" name="readings['+i1+'][meter_slot]" value="2">' +
                             '</div>' +
                         '</td>' +
-                        '<td class="other-dual-col other-dual-units text-body-secondary small">' +
+                        '<td class="other-dual-col other-dual-units small">' +
                             '<div class="other-dual-seg" data-slot="1"><span class="unit-cell">—</span></div>' +
                             '<div class="other-dual-seg" data-slot="2"><span class="unit-cell">—</span></div>' +
                         '</td>' +
@@ -404,11 +410,11 @@ $(document).ready(function() {
                     '<td class="text-nowrap">'+ escAttr(row.last_reading_date || 'N/A') +'</td>' +
                     '<td>'+ escAttr(oldDisp) +'</td>' +
                     '<td>'+ escAttr(lastElecDisp) +'</td>' +
-                    '<td><input type="text" class="form-control form-control-sm new-meter-no" name="readings['+idx+'][new_meter_no]" value="'+ escAttr(newMeterNoPrefill) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(oldMeterNoStr) +'"></td>' +
+                    '<td><input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+idx+'][new_meter_no]" value="'+ escAttr(newMeterNoPrefill) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(oldMeterNoStr) +'"'+ newMeterNoLockAttr +'></td>' +
                     '<td><input type="number" class="form-control form-control-sm curr-reading" name="readings['+idx+'][curr_month_elec_red]" value="" min="0" step="1" placeholder="Enter" inputmode="numeric" data-last-reading="'+ (lastReading !== null ? lastReading : '') +'" data-existing-curr="'+ existingCurrStored.replace(/"/g, '&quot;') +'">' +
                     '<input type="hidden" name="readings['+idx+'][pk]" value="'+ row.pk +'">' +
                     '<input type="hidden" name="readings['+idx+'][meter_slot]" value="'+ slot +'"></td>' +
-                    '<td class="unit-cell text-body-secondary small">—</td>' +
+                    '<td class="unit-cell">—</td>' +
                     '</tr>';
                 tbody.append(tr);
             });
@@ -509,9 +515,47 @@ $(document).ready(function() {
         window.otherMeterRowData[keyFlat].new_meter_no = $nm.length ? ($nm.val() || '') : '';
     }
 
+    function refreshOtherUnitForReadingInput($inp) {
+        const $row = $inp.closest('tr');
+        const lastVal = $inp.data('last-reading');
+        const lastReading = (lastVal !== '' && lastVal !== undefined && !isNaN(parseFloat(lastVal))) ? parseFloat(lastVal) : null;
+
+        const currVal = $inp.val();
+        const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
+
+        let unit = '';
+        if (isOtherMeterNoChangedForReading($inp)) {
+            // Meter replaced: naya meter 0 se start hota hai, isliye reading hi unit hai.
+            if (currReading !== null) unit = currReading;
+        } else if (lastReading !== null && currReading !== null && currReading >= lastReading) {
+            unit = currReading - lastReading;
+        }
+        const unitText = unit === '' ? '—' : String(unit);
+        if ($row.hasClass('other-dual-stacked')) {
+            const slot = $inp.closest('.other-dual-seg').data('slot');
+            if (slot !== undefined && slot !== null) {
+                $row.find('.other-dual-units .other-dual-seg[data-slot="' + slot + '"] .unit-cell').text(unitText);
+            }
+        } else {
+            $row.children('td.unit-cell').text(unitText);
+        }
+    }
+
     $(document).on('input change', '#meterReadingSaveForm .new-meter-no', function() {
         this.value = String(this.value || '').replace(/\D/g, '').slice(0, 50);
-        syncOtherRowDataFromInputs($(this).closest('tr'));
+        const $meterInp = $(this);
+        const $row = $meterInp.closest('tr');
+        syncOtherRowDataFromInputs($row);
+
+        // Meter no badalne se unit ka basis badalta hai — Unit column refresh karo.
+        let $readingInp;
+        if ($row.hasClass('other-dual-stacked')) {
+            const slot = $meterInp.closest('.other-dual-seg').data('slot');
+            $readingInp = $row.find('.other-dual-reading-col .other-dual-seg[data-slot="' + slot + '"] .curr-reading');
+        } else {
+            $readingInp = $row.find('.curr-reading').first();
+        }
+        if ($readingInp && $readingInp.length) refreshOtherUnitForReadingInput($readingInp);
     });
 
     $(document).on('keydown', '#meterReadingSaveForm .new-meter-no', function(e) {
@@ -522,28 +566,8 @@ $(document).ready(function() {
 
     $(document).on('input', '#meterReadingSaveForm .curr-reading', function() {
         const $inp = $(this);
-        const $row = $inp.closest('tr');
-        const lastVal = $inp.data('last-reading');
-        const lastReading = (lastVal !== '' && lastVal !== undefined && !isNaN(parseFloat(lastVal))) ? parseFloat(lastVal) : null;
-
-        let currVal = $inp.val();
-        let currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
-
-        syncOtherRowDataFromInputs($row);
-
-        let unit = '';
-        if (lastReading !== null && currReading !== null && currReading >= lastReading) {
-            unit = currReading - lastReading;
-        }
-        const unitText = unit === '' ? '—' : String(unit);
-        if ($row.hasClass('other-dual-stacked')) {
-            var slot = $inp.closest('.other-dual-seg').data('slot');
-            if (slot !== undefined && slot !== null) {
-                $row.find('.other-dual-units .other-dual-seg[data-slot="' + slot + '"] .unit-cell').text(unitText);
-            }
-        } else {
-            $row.children('td.unit-cell').text(unitText);
-        }
+        syncOtherRowDataFromInputs($inp.closest('tr'));
+        refreshOtherUnitForReadingInput($inp);
     });
 
     $(document).on('blur', '#meterReadingSaveForm .curr-reading', function() {
@@ -552,7 +576,7 @@ $(document).ready(function() {
         const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
         if (isOtherCurrReadingBelowMinAllowed($inp, currReading)) {
             lastInvalidReadingAlertAt = Date.now();
-            alert('Current Month Reading cannot be less than Last Month Meter Reading.');
+            alert('Current Month Reading cannot be less than Last Month Meter Reading.\n\nIf the meter was replaced or the saved reading is wrong, open this row from List Meter Reading → Edit.');
         }
     });
 
@@ -617,7 +641,7 @@ $(document).ready(function() {
             const now = Date.now();
             if ((now - lastInvalidReadingAlertAt) > 800) {
                 lastInvalidReadingAlertAt = now;
-                alert('Current Month Reading cannot be less than Last Month Meter Reading.');
+                alert('Current Month Reading cannot be less than Last Month Meter Reading.\n\nIf the meter was replaced or the saved reading is wrong, open this row from List Meter Reading → Edit.');
             }
             return;
         }

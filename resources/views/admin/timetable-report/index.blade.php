@@ -625,13 +625,15 @@ $(document).ready(function() {
             $('#btnColumns').prop('disabled', false);
             $('#btnPrint').prop('disabled', false);
 
-            // Move toolbar buttons into DataTables search row
-            var $wrapper = $('#timetableReportTable').closest('.dataTables_wrapper');
-            var $filter  = $wrapper.find('.dataTables_filter');
-            var $toolbar = $('#timetableReportToolbar').children().detach();
-            if ($filter.length && $toolbar.length) {
-                $filter.addClass('d-flex align-items-center justify-content-end flex-wrap gap-2');
-                $filter.append($toolbar);
+            // Move the Columns/Print buttons into the DataTables search row. appendToSearchRow()
+            // finds the search row wherever the global UI script has put it. Matters here because
+            // #timetableReportToolbar is d-none: a move that fails must leave the buttons alone
+            // rather than strand them, which is what the old detach()-first version did.
+            if (window.SargamDataTableUI) {
+                window.SargamDataTableUI.appendToSearchRow(
+                    'timetableReportTable',
+                    $('#timetableReportToolbar').children()
+                );
             }
         } else {
             reportDt.ajax.reload(null, true);

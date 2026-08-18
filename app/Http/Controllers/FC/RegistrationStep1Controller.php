@@ -8,6 +8,7 @@ use App\Services\FC\RegistrationService;
 use App\Services\FC\DynamicFormService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Rules\SafeUploadedDocument;
 
 class RegistrationStep1Controller extends Controller
 {
@@ -19,7 +20,7 @@ class RegistrationStep1Controller extends Controller
     // ── Dashboard (home after login) ─────────────────────────────────
     public function dashboard()
     {
-        $dynamicForm = FcForm::activeRegistrationDynamicForm();
+        $dynamicForm = FcForm::strictActiveRegistrationForm();
         if ($dynamicForm) {
             return redirect()->route('fc-reg.forms.dashboard', $dynamicForm);
         }
@@ -93,8 +94,16 @@ class RegistrationStep1Controller extends Controller
             'mobile_no'         => 'required|digits:10',
             'email'             => 'required|email|max:150',
             'session_id'        => 'required|exists:session_masters,id',
-            'photo'             => 'nullable|image|mimes:jpeg,jpg,png|max:500',
-            'signature'         => 'nullable|image|mimes:jpeg,jpg,png|max:200',
+            'photo'             => [
+                'nullable', 'image', 'mimes:jpeg,jpg,png',
+                'max:' . SafeUploadedDocument::maxKilobytes(500),
+                new SafeUploadedDocument(['jpeg', 'jpg', 'png']),
+            ],
+            'signature'         => [
+                'nullable', 'image', 'mimes:jpeg,jpg,png',
+                'max:' . SafeUploadedDocument::maxKilobytes(200),
+                new SafeUploadedDocument(['jpeg', 'jpg', 'png']),
+            ],
         ]);
 
         $data = $validated;

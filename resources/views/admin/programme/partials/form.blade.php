@@ -7,6 +7,12 @@
     $endDateValue = old('enddate', ($course && filled($course->end_date))
         ? \Carbon\Carbon::parse($course->end_date)->format('Y-m-d')
         : '');
+    $ptStartTimeValue = old('pt_start_time', ($course && filled($course->pt_start_time))
+        ? \Carbon\Carbon::parse($course->pt_start_time)->format('H:i')
+        : '');
+    $ptEndTimeValue = old('pt_end_time', ($course && filled($course->pt_end_time))
+        ? \Carbon\Carbon::parse($course->pt_end_time)->format('H:i')
+        : '');
     $assistantCoordinators = $assistant_coordinator_name ?? [];
     $assistantRoles = $assistant_coordinator_roles ?? [];
 @endphp
@@ -86,6 +92,36 @@
                             formLabelClass="d-none"
                             formInputClass="programme-form-control programme-form-control--icon" />
                         <i class="bi bi-calendar3 programme-field-icon" aria-hidden="true"></i>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label programme-field-label" for="pt_start_time">PT Start Time</label>
+                    <div class="programme-input-icon-wrap">
+                        <x-input
+                            type="time"
+                            name="pt_start_time"
+                            label=""
+                            placeholder="Select PT start time"
+                            value="{{ $ptStartTimeValue }}"
+                            formLabelClass="d-none"
+                            formInputClass="programme-form-control programme-form-control--icon" />
+                        <i class="bi bi-clock programme-field-icon" aria-hidden="true"></i>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label programme-field-label" for="pt_end_time">PT End Time</label>
+                    <div class="programme-input-icon-wrap">
+                        <x-input
+                            type="time"
+                            name="pt_end_time"
+                            label=""
+                            placeholder="Select PT end time"
+                            value="{{ $ptEndTimeValue }}"
+                            formLabelClass="d-none"
+                            formInputClass="programme-form-control programme-form-control--icon" />
+                        <i class="bi bi-clock programme-field-icon" aria-hidden="true"></i>
                     </div>
                 </div>
 

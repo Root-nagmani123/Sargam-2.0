@@ -7,8 +7,10 @@ use App\Services\FC\FcPostArrivalAccessService;
 use App\Services\NotificationService;
 use App\Services\SidebarMenu\BreadcrumbResolver;
 use App\Services\SidebarMenu\MenuService;
+use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -36,6 +38,15 @@ class AppServiceProvider extends ServiceProvider
     public function boot(MenuService $menuService)
     {
         Paginator::useBootstrap();
+
+        // Schema introspection (Schema::hasTable/hasColumn) is cached across requests
+        // by fc_schema_columns() because information_schema reads contend badly under
+        // load. Migrations are the only thing that can invalidate it, so flush there.
+        Event::listen(MigrationsEnded::class, static function () {
+            if (function_exists('fc_schema_cache_forget')) {
+                fc_schema_cache_forget();
+            }
+        });
 
         // Reject HTML / angle brackets in free-text inputs to block stored XSS at the
         // source (CWE-20 / CWE-79). Non-string values pass through untouched; only

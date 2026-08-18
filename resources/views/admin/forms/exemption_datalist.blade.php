@@ -103,8 +103,20 @@
                                             </td>
                                             <td>
                                                 @if ($data->application_type == 2)
-                                                    @if ($data->medical_exemption_doc)
-                                                        <a href="{{ asset('storage/' . $data->medical_exemption_doc) }}"
+                                                    {{-- Medical exemptions attach a medical document; "Previously Completed
+                                                         Foundation Course" attaches its completion certificate. Pick the one
+                                                         belonging to THIS application's category — a row can carry both when
+                                                         an earlier application was replaced, and showing the wrong one would
+                                                         misrepresent the application. --}}
+                                                    @php
+                                                        $category = (string) ($data->Exemption_name ?? '');
+                                                        $prevFcDoc = $data->fc_Prev_comp_doc ?? null;
+                                                        $supportingDoc = stripos($category, 'completed foundation course') !== false
+                                                            ? ($prevFcDoc ?: $data->medical_exemption_doc)
+                                                            : ($data->medical_exemption_doc ?: $prevFcDoc);
+                                                    @endphp
+                                                    @if ($supportingDoc)
+                                                        <a href="{{ asset('storage/' . $supportingDoc) }}"
                                                             target="_blank" class="btn btn-sm btn-info">View</a>
                                                     @else
                                                         <span class="text-muted">No Document</span>

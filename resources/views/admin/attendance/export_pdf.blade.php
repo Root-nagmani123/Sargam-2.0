@@ -17,6 +17,7 @@
         'Attendance Status' => 'col-status',
         'MDO Duty'          => 'col-duty',
         'Escort Duty'       => 'col-duty',
+        'Other Exemption'   => 'col-reason',
     ];
     $centerHeadings = ['S.No', 'OT Code', 'Attendance Status', 'MDO Duty', 'Escort Duty'];
 
@@ -64,11 +65,12 @@
         }
         table.data-table tbody tr:nth-child(even) { background: #eef2f8; }
 
-        .col-sno { width: 7%; }
-        .col-ot { width: 31%; }
-        .col-code { width: 13%; }
-        .col-status { width: 17%; }
-        .col-duty { width: 16%; }
+        .col-sno { width: 6%; }
+        .col-ot { width: 22%; }
+        .col-code { width: 11%; }
+        .col-status { width: 13%; }
+        .col-duty { width: 12%; }
+        .col-reason { width: 24%; }
         .cell-center { text-align: center; }
         .status-pill { font-weight: bold; }
 

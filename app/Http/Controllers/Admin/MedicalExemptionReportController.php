@@ -59,12 +59,12 @@ class MedicalExemptionReportController extends Controller
         // Active tab = running courses; Archive tab = ended courses (mirrors Course
         // Master). The course-filter dropdown swaps between these as the tab changes.
         $courses = CourseMaster::where('active_inactive', '1')
-            ->where('end_date', '>', now())
+            ->where('end_date', '>=', now()->toDateString())
             ->orderBy('course_name')
             ->get(['pk', 'course_name']);
 
         $archivedCourses = CourseMaster::where('active_inactive', '1')
-            ->where('end_date', '<', now())
+            ->where('end_date', '<', now()->toDateString())
             ->orderBy('course_name')
             ->get(['pk', 'course_name']);
 

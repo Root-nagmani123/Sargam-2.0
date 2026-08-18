@@ -18,15 +18,15 @@
             @foreach ($faqs as $key => $faq)
                 <div class="accordion-item">
                     <h2 class="accordion-header" id="headingAll{{ $key }}">
-                        <button class="accordion-button {{ $key !== 0 ? 'collapsed' : '' }}" type="button"
+                        <button class="accordion-button collapsed" type="button"
                             data-bs-toggle="collapse" data-bs-target="#collapseAll{{ $key }}"
-                            aria-expanded="{{ $key === 0 ? 'true' : 'false' }}"
+                            aria-expanded="false"
                             aria-controls="collapseAll{{ $key }}">
-                            {{ $faq->header }}
+                            {!! $faq->header !!}
                         </button>
                     </h2>
                     <div id="collapseAll{{ $key }}"
-                        class="accordion-collapse collapse {{ $key === 0 ? 'show' : '' }}"
+                        class="accordion-collapse collapse"
                         aria-labelledby="headingAll{{ $key }}" data-bs-parent="#faqAccordionAll">
                         <div class="accordion-body">
                             {!! $faq->content !!}

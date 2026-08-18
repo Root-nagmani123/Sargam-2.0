@@ -592,6 +592,7 @@ class DocumentFormTemplates
                     'heading' => 'Government Servant Details / सरकारी कर्मचारी का विवरण',
                     'fields'  => [
                         ['name' => 'officer_name', 'label' => 'Name of the Officer (in full) and Service to which he/she belongs / अधिकारी का नाम (पूर्ण रूप में) तथा वह सेवा जिससे वह संबंधित है', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
+                        ['name' => 'as_on_date', 'label' => 'Statement as on Date / जिस तिथि तक विवरण है', 'type' => 'date', 'width' => 'col-md-4'],
                         ['name' => 'present_post', 'label' => 'Present Post held / वर्तमान में धारित पद', 'type' => 'text', 'width' => 'col-md-3'],
                         ['name' => 'cadre', 'label' => 'Cadre of the State on which borne / जिस राज्य के संवर्ग में सम्मिलित है', 'type' => 'text', 'width' => 'col-md-3'],
                         ['name' => 'present_pay', 'label' => 'Present Pay (₹) / वर्तमान वेतन (₹)', 'type' => 'text', 'width' => 'col-md-3'],
@@ -796,6 +797,10 @@ class DocumentFormTemplates
                             'I am about to marry a person who has a spouse living (exemption applied for)',
                         ]],
                         ['name' => 'exemption_reasons', 'label' => 'Reasons for seeking exemption (if applicable) / छूट माँगने के कारण (यदि लागू हो)', 'type' => 'textarea', 'width' => 'col-md-12'],
+                        // Editable addressee of the exemption application (defaults filled on the form).
+                        ['name' => 'exemption_to_line1', 'label' => 'Addressee — Line 1', 'type' => 'text', 'width' => 'col-md-12'],
+                        ['name' => 'exemption_to_line2', 'label' => 'Addressee — Line 2', 'type' => 'text', 'width' => 'col-md-12'],
+                        ['name' => 'exemption_to_line3', 'label' => 'Addressee — Line 3', 'type' => 'text', 'width' => 'col-md-12'],
                     ],
                 ],
             ],
@@ -854,9 +859,19 @@ class DocumentFormTemplates
                     'heading' => 'Surety / प्रतिभू',
                     'fields'  => [
                         ['name' => 'surety_name', 'label' => 'Full Name of Surety / प्रतिभू का पूरा नाम', 'type' => 'text', 'width' => 'col-md-6'],
+                        ['name' => 'surety_decl_name', 'label' => 'Name of Surety (in declaration) / प्रतिभू का नाम (घोषणा में)', 'type' => 'text', 'width' => 'col-md-6'],
                         ['name' => 'surety_address', 'label' => 'Address of Surety / प्रतिभू का पता', 'type' => 'textarea', 'width' => 'col-md-6'],
                         ['name' => 'surety_occupation', 'label' => 'Occupation of Surety / प्रतिभू का व्यवसाय', 'type' => 'text', 'width' => 'col-md-6'],
                         ['name' => 'surety_eligibility', 'label' => 'Surety is / प्रतिभू है', 'type' => 'select', 'options' => ['In the permanent service of Government', 'Ordinarily resident in India'], 'width' => 'col-md-6'],
+                        ['name' => 'surety_govt_name', 'label' => 'Government of (if in permanent service) / (यदि स्थायी सेवा में) सरकार का नाम', 'type' => 'text', 'width' => 'col-md-6'],
+                    ],
+                ],
+                [
+                    'heading' => 'Bond Execution / बंधपत्र निष्पादन',
+                    'fields'  => [
+                        ['name' => 'bond_dated_at', 'label' => 'Dated (at/year) / दिनांक', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'bond_dated_day', 'label' => 'This … day / इस … दिन', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'bond_dated_month', 'label' => 'Day of (month/year) / माह', 'type' => 'text', 'width' => 'col-md-4'],
                     ],
                 ],
                 [
@@ -873,6 +888,14 @@ class DocumentFormTemplates
                         ['name' => 'surety_witness_name', 'label' => 'Name of Witness / साक्षी का नाम', 'type' => 'text', 'width' => 'col-md-4'],
                         ['name' => 'surety_witness_address', 'label' => 'Address / पता', 'type' => 'text', 'width' => 'col-md-4'],
                         ['name' => 'surety_witness_occupation', 'label' => 'Occupation / व्यवसाय', 'type' => 'text', 'width' => 'col-md-4'],
+                    ],
+                ],
+                [
+                    'heading' => 'Witness to Surety (Declaration) / प्रतिभू के साक्षी (घोषणा)',
+                    'fields'  => [
+                        ['name' => 'surety_witness_name2', 'label' => 'Name of Witness / साक्षी का नाम', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'surety_witness_address2', 'label' => 'Address / पता', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'surety_witness_occupation2', 'label' => 'Occupation / व्यवसाय', 'type' => 'text', 'width' => 'col-md-4'],
                     ],
                 ],
             ],

@@ -22,6 +22,10 @@
                 $durationLabel = $weeks . ' ' . \Illuminate\Support\Str::plural('Week', $weeks);
             }
         }
+        $ptTimeLabel = null;
+        if (filled($course->pt_start_time) && filled($course->pt_end_time)) {
+            $ptTimeLabel = \Carbon\Carbon::parse($course->pt_start_time)->format('h:i A') . ' - ' . \Carbon\Carbon::parse($course->pt_end_time)->format('h:i A');
+        }
         $updatedAt = \Carbon\Carbon::parse($course->Modified_date ?? $course->updated_at ?? now())->format('d M Y, h:i A');
         $isActive = filled($course->end_date) && \Carbon\Carbon::parse($course->end_date)->startOfDay()->gte(now()->startOfDay());
         $statusLabel = $isActive ? 'Active' : 'Archived';
@@ -270,6 +274,10 @@
                         <div class="programme-show-field mb-3">
                             <div class="programme-show-field__label">End Date</div>
                             <div class="programme-show-field__value">{{ $endDate ?: 'NA' }}</div>
+                        </div>
+                        <div class="programme-show-field mb-3">
+                            <div class="programme-show-field__label">PT Time</div>
+                            <div class="programme-show-field__value">{{ $ptTimeLabel ?: 'NA' }}</div>
                         </div>
                         <div class="programme-show-field mb-0">
                             <div class="programme-show-field__label">Last Updated</div>

@@ -3,14 +3,18 @@
 namespace App\Http\Controllers\Admin\Estate;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Admin\Estate\Concerns\AuthorizesEstateMaster;
 use App\Models\EstateCampus;
 use Illuminate\Http\Request;
 
 class EstateCampusController extends Controller
 {
+    use AuthorizesEstateMaster;
+
     public function index()
     {
-        $items = EstateCampus::orderBy('campus_name')->get();
+        // Naya record hamesha sabse upar — isliye pk desc, naam se nahi.
+        $items = EstateCampus::orderBy('pk', 'desc')->get();
         return view('admin.estate.define_campus.index', compact('items'));
     }
 
@@ -49,7 +53,20 @@ class EstateCampusController extends Controller
 
     public function destroy(Request $request, string $id)
     {
-        EstateCampus::findOrFail($id)->delete();
+        $item = EstateCampus::findOrFail($id);
+
+        try {
+            $item->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Campus abhi bhi blocks / houses / possessions se referenced hai (FK constraint).
+            // 500 dikhane ke bajaye saaf message do.
+            $message = 'This Estate/Campus is used by other estate records and cannot be deleted.';
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'message' => $message], 409);
+            }
+            return redirect()->route('admin.estate.define-campus.index')->with('error', $message);
+        }
+
         if ($request->ajax()) {
             return response()->json(['success' => true, 'message' => 'Campus deleted successfully.']);
         }

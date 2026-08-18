@@ -19,9 +19,11 @@
     box-shadow:0 10px 30px rgba(0,40,90,.18); position:relative; overflow:hidden;
     margin-bottom:1.25rem;
 }
+/* Decorative glow only — it sits over the top-right corner where the header
+   buttons live, so it must not swallow their clicks. */
 .fc-band::after{ content:""; position:absolute; right:-40px; top:-40px; width:180px; height:180px;
-    background:radial-gradient(circle,rgba(255,255,255,.14),transparent 70%); }
-.fc-band__row{ display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+    background:radial-gradient(circle,rgba(255,255,255,.14),transparent 70%); pointer-events:none; }
+.fc-band__row{ display:flex; align-items:center; gap:1rem; flex-wrap:wrap; position:relative; z-index:1; }
 .fc-band__ico{ flex:0 0 auto; width:54px; height:54px; border-radius:14px;
     background:rgba(255,255,255,.16); display:flex; align-items:center; justify-content:center;
     font-size:1.5rem; backdrop-filter:blur(2px); }

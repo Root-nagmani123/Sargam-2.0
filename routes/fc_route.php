@@ -148,6 +148,9 @@ Route::get('/registration/foundation-course', [FrontPageController::class, 'foun
 // Auth verify user 
 Route::get('/registration/fc-auth', [FrontPageController::class, 'authindex'])->name('verify.authindex');
 Route::post('/registration/verify', [FrontPageController::class, 'verify'])->name('registration.verify');
+Route::post('/registration/send-otp', [FrontPageController::class, 'sendRegistrationOtp'])
+    ->middleware('throttle:6,1')
+    ->name('registration.send_otp');
 
 // Show the create credentials form
 Route::get('/fc/create-credentials', [FrontPageController::class, 'credential_index'])->name('credential.registration.create');
@@ -196,10 +199,13 @@ Route::get('/fc/thank-you', function () {
     return view('fc.thank_you');
 })->name('fc.thank_you');
 
-//forget password page
-Route::get('/fc/forget-password', function () {
-    return view('fc.forget');
-})->name('fc.forget');
+// The `fc.forget` route was removed: GET /fc/forget-password (public, no auth)
+// rendered view('fc.forget'), which has never existed, so it returned a hard 500
+// to anonymous visitors. It was a typo'd duplicate — one letter — of
+// /fc/forgot-password below, which is the real page: it goes through
+// FrontPageController@showForgotPasswordForm and renders fc.forgot_password with
+// the OTP send/verify flow. Nothing referenced the broken name anywhere in the
+// app, and the working route is untouched.
 
 //status page (fc_registration_master dashboard)
 Route::get('/fc/status', [FrontPageController::class, 'student_status'])->name('fc.status');
@@ -210,11 +216,23 @@ Route::get('/fc/status/data', [FrontPageController::class, 'student_statusFragme
 Route::get('/fc/forgot-password', [FrontPageController::class, 'showForgotPasswordForm'])->name('fc.password.forgot');
 
 
-//reset password 
-Route::post('/fc/password-reset', [FrontPageController::class, 'resetPassword'])->name('fc.password.reset');
+//reset password
+Route::post('/fc/password-reset', [FrontPageController::class, 'resetPassword'])
+    ->middleware('throttle:6,1')
+    ->name('fc.password.reset');
 
 //reset web-auth form verify
-Route::post('/fc/verify-web-auth', [FrontPageController::class, 'verifyWebAuth'])->name('fc.verify_web_auth');
+Route::post('/fc/verify-web-auth', [FrontPageController::class, 'verifyWebAuth'])
+    ->middleware('throttle:6,1')
+    ->name('fc.verify_web_auth');
+
+// A5 — logged-in / staged FC password change with OTP
+Route::post('/fc/password-change/send-otp', [FrontPageController::class, 'sendPasswordChangeOtp'])
+    ->middleware('throttle:6,1')
+    ->name('fc.password.change.send_otp');
+Route::post('/fc/password-change', [FrontPageController::class, 'changePasswordWithOtp'])
+    ->middleware('throttle:6,1')
+    ->name('fc.password.change');
 
 //joining document route
 Route::get('/admin/fc/joining-documents/{formId}', [FcJoiningDocumentController::class, 'create'])->name('fc.joining.index');
@@ -246,6 +264,13 @@ Route::post('/admin/migrate-fc-registration', [StudentImportController::class, '
 Route::get('/enrollment/create', [EnrollementController::class, 'create'])->name('enrollment.create');
 Route::post('/enrollment/store', [EnrollementController::class, 'store'])->name('enrollment.store');
 Route::post('/enrollment/filter-students', [EnrollementController::class, 'filterStudents'])->name('enrollment.filterStudents');
+// Server-side DataTables feed + full pk list for the enrolment student picker.
+// Behind auth — they return the full student roster / all matching pks, so they must
+// never be reachable without a session (callers are the admin enrolment page only).
+Route::middleware('auth')->group(function () {
+    Route::get('/enrollment/students-data', [EnrollementController::class, 'studentsData'])->name('enrollment.studentsData');
+    Route::get('/enrollment/students-all-pks', [EnrollementController::class, 'studentsAllPks'])->name('enrollment.studentsAllPks');
+});
 
 // student master course map route
 Route::get('/student-courses', [EnrollementController::class, 'studentCourses'])->name('student.courses');

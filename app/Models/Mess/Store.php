@@ -55,14 +55,4 @@ class Store extends Model
     {
         return $this->hasMany(PurchaseOrder::class, 'store_id');
     }
-    
-    public function materialRequests()
-    {
-        return $this->hasMany(MaterialRequest::class, 'store_id');
-    }
-    
-    public function inboundTransactions()
-    {
-        return $this->hasMany(InboundTransaction::class, 'store_id');
-    }
 }

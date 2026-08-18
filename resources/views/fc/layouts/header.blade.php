@@ -43,7 +43,7 @@
        <div class="container">
            <div class="row align-items-center">
                <div class="col-md-3 d-flex align-items-center">
-                   <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/800px-Flag_of_India.svg.png"
+                   <img src="{{ asset('images/flag-of-india.svg') }}"
                        alt="GoI Logo" height="30">
                    <span class="ms-2" style="font-size: 14px;">Government of India</span>
                </div>

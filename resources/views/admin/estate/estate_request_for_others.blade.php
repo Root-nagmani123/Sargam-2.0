@@ -74,6 +74,11 @@
                             <input type="date" class="form-control" id="modal_doj_academy" name="doj_academy" required min="1950-01-01" max="{{ date('Y-m-d') }}">
                             <small class="text-muted d-block mt-1">Date must be between 01-01-1950 and today.</small>
                         </div>
+                        <div class="col-md-6">
+                            <label for="modal_employee_master_emp_id" class="form-label">Employee Emp ID</label>
+                            <input type="text" class="form-control" id="modal_employee_master_emp_id" name="employee_master_emp_id"
+                                maxlength="255" placeholder="e.g. SOC00237">
+                        </div>
                     </div>
                     <div class="d-flex gap-2 mt-4">
                         <button type="submit" class="btn btn-success" id="btnSubmitOtherRequest">
@@ -137,7 +142,7 @@
         $('#btn-open-add-other-request').on('click', function() {
             $('#addEditOtherRequestModalLabel').text('Add Other Estate Request');
             $('#other_request_id').val('');
-            $('#modal_employee_name, #modal_father_name, #modal_section, #modal_doj_academy').val('');
+            $('#modal_employee_name, #modal_father_name, #modal_section, #modal_doj_academy, #modal_employee_master_emp_id').val('');
             $('#addEditOtherRequestFormErrors').addClass('d-none').find('ul').empty();
             setDojAcademyMaxToday();
             if (addEditModal) addEditModal.show();
@@ -152,6 +157,7 @@
             $('#modal_father_name').val($btn.data('father_name') || '');
             $('#modal_section').val($btn.data('section') || '');
             $('#modal_doj_academy').val($btn.data('doj_academy') || '');
+            $('#modal_employee_master_emp_id').val($btn.data('employee_master_emp_id') || '');
             $('#addEditOtherRequestFormErrors').addClass('d-none').find('ul').empty();
             setDojAcademyMaxToday();
             if (addEditModal) addEditModal.show();

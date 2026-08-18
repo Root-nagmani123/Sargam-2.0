@@ -1,10 +1,10 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Course Repositories | Lal Bahadur')
+@section('title', 'Course Repositories')
 
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-<link rel="stylesheet" href="{{ asset('css/course-repository-admin.css') }}">
+<link rel="stylesheet" href="{{ asset('css/course-repository-admin.css') }}?v={{ @filemtime(public_path('css/course-repository-admin.css')) ?: time() }}">
 @endpush
 
 @section('setup_content')
@@ -387,7 +387,10 @@ $(function() {
     }
 
     var crTable = $table.DataTable({
-        responsive: true,
+        // NOTE: DataTables' `responsive` extension is intentionally NOT used here.
+        // It attaches its own row-level click handling and reflows columns, which
+        // caused table links to need a double-click (first click was absorbed).
+        // The `.table-responsive` wrapper already handles horizontal overflow.
         autoWidth: false,
         pageLength: 10,
         lengthMenu: [

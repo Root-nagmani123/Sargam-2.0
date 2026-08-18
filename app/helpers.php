@@ -46,15 +46,284 @@ function fc_user_col(string $table): string
 {
     static $cache = [];
     if (! array_key_exists($table, $cache)) {
-        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'user_id')) {
+        if (fc_schema_has_column($table, 'user_id')) {
             $cache[$table] = 'user_id';
-        } elseif (\Illuminate\Support\Facades\Schema::hasColumn($table, 'userid')) {
+        } elseif (fc_schema_has_column($table, 'userid')) {
             $cache[$table] = 'userid';
         } else {
             $cache[$table] = 'username';
         }
     }
     return $cache[$table];
+}
+
+if (! function_exists('fc_user_name_for_id')) {
+    /**
+     * user_credentials.user_name for an auth id, memoised for the request.
+     *
+     * Three separate call sites (fc_user_val(), FcImportedProfileLockService::rosterRow()
+     * and DynamicFormService's course fallback) each resolved this independently, so a
+     * single page render issued the same query three times. They now share one memo.
+     */
+    function fc_user_name_for_id(int $userId): ?string
+    {
+        static $memo = [];
+
+        if (array_key_exists($userId, $memo)) {
+            return $memo[$userId];
+        }
+
+        $name = DB::table('user_credentials')->where('pk', $userId)->value('user_name');
+
+        return $memo[$userId] = ($name === null ? null : (string) $name);
+    }
+}
+
+if (! function_exists('fc_schema_cache_version')) {
+    /**
+     * Version marker every schema cache key hangs off. Bumping it invalidates all
+     * cached listings at once without needing cache tags (which not every store
+     * supports). Memoised per request, so this costs one cache read per request.
+     */
+    function fc_schema_cache_version(bool $bump = false): int
+    {
+        static $version = null;
+
+        $key = 'fc_schema_version:'.DB::getDatabaseName();
+
+        if ($bump) {
+            try {
+                $incremented = Cache::increment($key);
+                if ($incremented === false || (int) $incremented <= 0) {
+                    // Key absent or the store returned false (e.g. the database cache store):
+                    // seed to current+1 rather than resetting to 1, which would collide with
+                    // entries already cached under an earlier v1 and serve them stale.
+                    $version = ((int) Cache::get($key, 1)) + 1;
+                    Cache::forever($key, $version);
+                } else {
+                    $version = (int) $incremented;
+                }
+            } catch (\Throwable $e) {
+                $version = 1;
+            }
+
+            return $version;
+        }
+
+        if ($version !== null) {
+            return $version;
+        }
+
+        try {
+            $version = (int) Cache::get($key, 1);
+        } catch (\Throwable $e) {
+            $version = 1;
+        }
+
+        return $version = $version > 0 ? $version : 1;
+    }
+}
+
+if (! function_exists('fc_schema_cache_key')) {
+    /**
+     * Cache key namespace for schema introspection, scoped to the connection's
+     * database so multiple environments sharing a cache store never collide.
+     */
+    function fc_schema_cache_key(string $table): string
+    {
+        return 'fc_schema_cols:'.DB::getDatabaseName().':v'.fc_schema_cache_version().':'.$table;
+    }
+}
+
+if (! function_exists('fc_schema_columns')) {
+    /**
+     * Column listing for a table, memoised per request AND cached across requests.
+     *
+     * Schema::hasTable()/hasColumn() each hit information_schema, which is far slower
+     * than a normal indexed read and contends badly under concurrency — a load test
+     * showed 24-49 metadata queries per page render, thousands/sec at 200 concurrent
+     * users. One cached column listing answers both questions for a table.
+     *
+     * The cache is invalidated automatically when migrations run (see AppServiceProvider)
+     * and by `php artisan cache:clear`.
+     *
+     * @return list<string>
+     */
+    function fc_schema_columns(string $table, bool $forget = false): array
+    {
+        static $memo = [];
+
+        // Runtime DDL (form builder / column manager) must be able to drop the
+        // in-request memo too, not just the persistent cache — otherwise code
+        // running after the ALTER in the SAME request still sees the old columns.
+        if ($forget) {
+            if ($table === '') {
+                $memo = [];
+            } else {
+                unset($memo[$table]);
+            }
+
+            return [];
+        }
+
+        if (array_key_exists($table, $memo)) {
+            return $memo[$table];
+        }
+
+        $ttl = (int) config('fc.schema_cache_ttl', 86400);
+
+        try {
+            // The closure must NOT swallow a Schema:: failure into [] — Cache::remember would
+            // then persist that empty array for the full TTL (24h), which fc_schema_has_table()
+            // reads as "table does not exist", silently breaking fc_user_col()/report fallbacks
+            // for a day. Letting the exception propagate means nothing is cached and the catch
+            // below performs a live lookup instead.
+            $columns = Cache::remember(
+                fc_schema_cache_key($table),
+                $ttl > 0 ? $ttl : 86400,
+                static fn () => Schema::getColumnListing($table)
+            );
+        } catch (\Throwable $e) {
+            // Cache store unavailable, or the introspection query failed: fall back to a live
+            // lookup and never poison the cache with an empty result.
+            try {
+                $columns = Schema::getColumnListing($table);
+            } catch (\Throwable $e2) {
+                $columns = [];
+            }
+        }
+
+        return $memo[$table] = is_array($columns) ? $columns : [];
+    }
+}
+
+if (! function_exists('fc_schema_has_table')) {
+    /**
+     * Cached Schema::hasTable(). A table always has at least one column, so an
+     * empty column listing means the table does not exist.
+     */
+    function fc_schema_has_table(string $table): bool
+    {
+        return fc_schema_columns($table) !== [];
+    }
+}
+
+if (! function_exists('fc_schema_has_column')) {
+    /**
+     * Cached Schema::hasColumn().
+     *
+     * Matches case-insensitively, exactly as Laravel's Schema::hasColumn() does —
+     * MySQL column names are case-insensitive and this codebase has real columns
+     * that differ in case from the name used in queries (e.g. degree_master.Pk
+     * queried as `pk`). A case-sensitive compare would wrongly report them missing.
+     */
+    function fc_schema_has_column(string $table, string $column, bool $forget = false): bool
+    {
+        static $lowerMemo = [];
+
+        if ($forget) {
+            if ($table === '') {
+                $lowerMemo = [];
+            } else {
+                unset($lowerMemo[$table]);
+            }
+
+            return false;
+        }
+
+        if (! array_key_exists($table, $lowerMemo)) {
+            $lowerMemo[$table] = array_flip(array_map('strtolower', fc_schema_columns($table)));
+        }
+
+        return isset($lowerMemo[$table][strtolower($column)]);
+    }
+}
+
+if (! function_exists('fc_lookup_cache_version')) {
+    /**
+     * Version marker for cached reference/master-data lookups. Bumping it makes every
+     * cached dropdown unreachable at once, so master-data edits publish immediately
+     * instead of waiting out the TTL. Memoised per request.
+     */
+    function fc_lookup_cache_version(bool $bump = false): int
+    {
+        static $version = null;
+
+        $key = 'fc_lookup_version:'.DB::getDatabaseName();
+
+        if ($bump) {
+            try {
+                $incremented = Cache::increment($key);
+                if ($incremented === false || (int) $incremented <= 0) {
+                    // Key absent or the store returned false (e.g. the database cache store):
+                    // seed to current+1 rather than resetting to 1, which would collide with
+                    // entries already cached under an earlier v1 and serve them stale.
+                    $version = ((int) Cache::get($key, 1)) + 1;
+                    Cache::forever($key, $version);
+                } else {
+                    $version = (int) $incremented;
+                }
+            } catch (\Throwable $e) {
+                $version = 1;
+            }
+
+            return $version;
+        }
+
+        if ($version !== null) {
+            return $version;
+        }
+
+        try {
+            $version = (int) Cache::get($key, 1);
+        } catch (\Throwable $e) {
+            $version = 1;
+        }
+
+        return $version = $version > 0 ? $version : 1;
+    }
+}
+
+if (! function_exists('fc_flush_lookup_cache')) {
+    /**
+     * Publish master-data changes to form dropdowns immediately.
+     * Call after saving states / districts / languages / qualifications etc.
+     */
+    function fc_flush_lookup_cache(): void
+    {
+        try {
+            fc_lookup_cache_version(true);
+        } catch (\Throwable $e) {
+            // Never let cache invalidation break a save.
+        }
+    }
+}
+
+if (! function_exists('fc_schema_cache_forget')) {
+    /**
+     * Drop cached schema introspection. Called automatically after migrations;
+     * pass a table to target one, or nothing to clear everything FC has cached.
+     */
+    function fc_schema_cache_forget(?string $table = null): void
+    {
+        // Drop the in-request memo as well, so code running after a runtime
+        // ALTER TABLE in the same request sees the new columns immediately.
+        fc_schema_columns($table ?? '', true);
+        fc_schema_has_column($table ?? '', '', true);
+
+        try {
+            if ($table !== null) {
+                Cache::forget(fc_schema_cache_key($table));
+
+                return;
+            }
+
+            // Bump the version marker so every cached listing becomes unreachable.
+            fc_schema_cache_version(true);
+        } catch (\Throwable $e) {
+            // Never let cache invalidation break a migration/deploy.
+        }
+    }
 }
 
 /**
@@ -109,11 +378,37 @@ function fc_user_val(string $table, int $userId): string|int
     }
 
     // Pre-migration: resolve the username string from user_credentials.
-    if (! array_key_exists($userId, $usernameCache)) {
-        $usernameCache[$userId] = \Illuminate\Support\Facades\DB::table('user_credentials')
-            ->where('pk', $userId)
-            ->value('user_name') ?? '';
+    $name = trim((string) (fc_user_name_for_id($userId) ?? ''));
+    if ($name !== '') {
+        return $name;
     }
+
+    // Not in user_credentials — the id is a staged roster pk (fc_registration_master.pk),
+    // which is what the admin screens pass for a trainee who registered through /fc/login
+    // and has not been migrated yet. Their rows in the few still-username-keyed tables
+    // (e.g. student_cloth_size_master_details) were written under the roster login name,
+    // exactly as the $userId < 0 branch above resolves it. Without this the lookup returned
+    // '' and matched nothing, so those sections silently vanished from the profile report.
+    //
+    // The fallback is deliberately narrow. user_credentials.pk and fc_registration_master.pk
+    // are SEPARATE id spaces, so an integer can be a dead credentials pk and, by coincidence,
+    // a live roster pk belonging to somebody else. It is therefore only accepted for a roster
+    // entry that has NOT been migrated into user_credentials — a migrated trainee is always
+    // addressed by their credentials pk, so a roster-pk hit on one is an ambiguous id, and
+    // returning '' (the previous behaviour: matches nothing) is the safe answer.
+    if (! array_key_exists($userId, $usernameCache)) {
+        $rosterName = trim((string) (\Illuminate\Support\Facades\DB::table('fc_registration_master')
+            ->where('pk', $userId)
+            ->value('user_id') ?? ''));
+
+        $migrated = $rosterName !== ''
+            && \Illuminate\Support\Facades\DB::table('user_credentials')
+                ->where('user_name', $rosterName)
+                ->exists();
+
+        $usernameCache[$userId] = $migrated ? '' : $rosterName;
+    }
+
     return $usernameCache[$userId];
 }
 
@@ -560,7 +855,11 @@ function userHasAssignedRoles(): bool
         return false;
     }
 
-    return $user->roles()->exists();
+    // hasRole() has almost always loaded this relation already on the same request;
+    // reusing it avoids a second identical roles query per page.
+    return $user->relationLoaded('roles')
+        ? $user->roles->isNotEmpty()
+        : $user->roles()->exists();
 }
 
 /**
@@ -579,6 +878,26 @@ function isSidebarPrivilegedUser(): bool
 function isEstateAuthority(): bool
 {
     return hasRole('Estate Admin') || hasRole('Super Admin');
+}
+
+/**
+ * Estate Master screens (Define Campus / Unit Type / Unit Sub Type / Block-Building /
+ * Pay Scale / Electric Slab / Eligibility Criteria).
+ *
+ * Deliberately the UNION of the two estate role vocabularies this codebase uses:
+ *   - hasRole('Estate')     — what the Estate Master sidebar block gates on
+ *                             (components/menu/setup_estate_management.blade.php)
+ *   - isEstateAuthority()   — 'Estate Admin' || 'Super Admin', what EstateController gates on
+ *
+ * hasRole() checks session roles before Spatie roles, so the same operator can satisfy one
+ * vocabulary or the other depending on how they logged in. Taking the union means nobody who
+ * can reach these screens today loses access, while every other role (Student-OT, Faculty,
+ * Training, HAC Person, ...) is refused — the Admin/Estate/* controllers previously had no
+ * server-side check at all and relied on the sidebar hiding the link.
+ */
+function isEstateMasterAuthority(): bool
+{
+    return hasRole('Estate') || isEstateAuthority();
 }
 
 /**
@@ -1145,6 +1464,16 @@ function employee_designation_search()
     });
     return $designation;
 }
+if (!function_exists('build_student_photo_url')) {
+    function build_student_photo_url(?string $photoPath): string
+    {
+        if ($photoPath == null) {
+            return 'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+        }
+
+        return asset('storage/form-uploads/photo/' . $photoPath);
+    }
+}
 function get_profile_pic()
 {
     $user = Auth::user();
@@ -1163,11 +1492,7 @@ function get_profile_pic()
                 ->where('pk', $user->user_id)
                 ->value('photo_path');
 
-            if ($data == null) {
-                return 'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
-            } else {
-                return asset('storage/form-uploads/photo/' . $data);
-            }
+            return build_student_photo_url($data);
         });
 
         return $profile_pic;
@@ -1186,14 +1511,56 @@ function get_profile_pic()
         return $profile_pic;
     }
 }
-if (!function_exists('get_notice_notification_by_role')) {
-    function get_notice_notification_by_role()
+if (!function_exists('notice_feed_base_query')) {
+    /**
+     * Base notice query with the author name and department resolved.
+     * Columns are table-qualified because user_credentials / department_master
+     * carry their own active_inactive + pk columns.
+     */
+    function notice_feed_base_query()
+    {
+        return DB::table('notices_notification')
+            ->leftJoin('user_credentials as notice_author', 'notice_author.pk', '=', 'notices_notification.created_by')
+            ->leftJoin('employee_master as notice_author_emp', 'notice_author_emp.pk', '=', 'notice_author.user_id')
+            ->leftJoin('department_master as notice_author_dept', 'notice_author_dept.pk', '=', 'notice_author_emp.department_master_pk')
+            ->select(
+                'notices_notification.pk',
+                'notices_notification.notice_title',
+                'notices_notification.notice_type',
+                'notices_notification.description',
+                'notices_notification.target_audience',
+                'notices_notification.course_master_pk',
+                'notices_notification.document',
+                'notices_notification.display_date',
+                'notices_notification.expiry_date',
+                'notices_notification.created_at',
+                'notices_notification.created_by',
+                DB::raw("NULLIF(TRIM(CONCAT_WS(' ', notice_author.first_name, notice_author.last_name)), '') as author_name"),
+                'notice_author_dept.department_name as author_department'
+            )
+            ->where('notices_notification.active_inactive', 1)
+            ->where('notices_notification.expiry_date', '>=', date('Y-m-d'))
+            ->orderBy('notices_notification.display_date', 'desc');
+    }
+}
+if (!function_exists('notice_feed_query_by_role')) {
+    /**
+     * Role-scoped notice feed as an UNEXECUTED query builder.
+     *
+     * Returning the builder (rather than a Collection) is what lets callers add
+     * filters and ->paginate() in SQL instead of pulling every live notice into
+     * memory and filtering in PHP.
+     *
+     * Each role resolves to ONE statement — the previous version ran a second
+     * query per role and merged the two collections, which cannot be paginated.
+     *
+     * @return \Illuminate\Database\Query\Builder|null  null when unauthenticated
+     */
+    function notice_feed_query_by_role()
     {
         $user = Auth::user();
-
-        // Return empty collection if user is not authenticated
         if (!$user) {
-            return collect([]);
+            return null;
         }
 
         $sessionRoles = Session::get('user_roles', []);
@@ -1204,45 +1571,56 @@ if (!function_exists('get_notice_notification_by_role')) {
         $isStaffFaculty = !empty(array_intersect($roleStaffFaculty, $sessionRoles));
         $isStudent      = !empty(array_intersect($roleStudent, $sessionRoles));
 
+        $query = notice_feed_base_query();
 
-        $commonNotices = DB::table('notices_notification')
-            ->where('target_audience', 'All')
-            ->where('active_inactive', 1)
-            ->where('expiry_date', '>=', date('Y-m-d'))
-            ->orderBy('display_date', 'desc')
-            ->get();
-
-        // 🔥 Staff/Faculty Notices
+        // Staff/Faculty: everyone's "All" notices plus their own audience.
         if ($isStaffFaculty) {
-
-            $data = DB::table('notices_notification')
-                ->where('target_audience', 'like', '%Staff/Faculty%')
-                ->where('active_inactive', 1)
-                ->where('expiry_date', '>=', date('Y-m-d'))
-                ->orderBy('display_date', 'desc')
-                ->get();
-
-
-            return $commonNotices->merge($data);
+            return $query->where(function ($w) {
+                $w->where('notices_notification.target_audience', 'All')
+                    ->orWhere('notices_notification.target_audience', 'like', '%Staff/Faculty%');
+            });
         }
 
-        // 🔥 Student OT Notices
+        // Student-OT: "All" notices plus Office-trainee notices for the courses
+        // they are enrolled in. The course ids are resolved in their own small
+        // query rather than joined in: the old inner join on
+        // student_master_course__map emitted the same notice once per mapping
+        // row (duplicate cards), and a joined query cannot be counted for
+        // pagination without a distinct().
         if ($isStudent) {
-            $roleNotices =  DB::table('notices_notification')
-                ->join('student_master_course__map as smcm', 'notices_notification.course_master_pk', '=', 'smcm.course_master_pk')
-                ->where('target_audience', 'like', '%Office trainee%')
-                ->where('notices_notification.active_inactive', 1)
-                ->where('smcm.student_master_pk', $user->user_id)
-                ->where('expiry_date', '>=', date('Y-m-d'))
-                ->orderBy('display_date', 'desc')
-                ->get();
+            $courseIds = DB::table('student_master_course__map')
+                ->where('student_master_pk', $user->user_id)
+                ->distinct()
+                ->pluck('course_master_pk');
 
+            return $query->where(function ($w) use ($courseIds) {
+                $w->where('notices_notification.target_audience', 'All');
 
-            return $commonNotices->merge($roleNotices);
+                if ($courseIds->isNotEmpty()) {
+                    $w->orWhere(function ($o) use ($courseIds) {
+                        $o->where('notices_notification.target_audience', 'like', '%Office trainee%')
+                            ->whereIn('notices_notification.course_master_pk', $courseIds);
+                    });
+                }
+            });
         }
 
-        // Roles not matching → return only "All"
-        return $commonNotices;
+        // Roles not matching → only "All"
+        return $query->where('notices_notification.target_audience', 'All');
+    }
+}
+if (!function_exists('get_notice_notification_by_role')) {
+    /**
+     * Every live notice for the current user, as a Collection.
+     *
+     * Unbounded by design — only use it where the caller needs the whole set.
+     * For listing screens prefer notice_feed_query_by_role() with ->paginate().
+     */
+    function get_notice_notification_by_role()
+    {
+        $query = notice_feed_query_by_role();
+
+        return $query ? $query->get() : collect([]);
     }
 }
 
@@ -1550,7 +1928,7 @@ if (! function_exists('fc_report_apply_tracker_user_resolution')) {
 
         $query->leftJoin('user_credentials as uc', "{$t}.user_id", '=', 'uc.pk');
 
-        if (Schema::hasTable('fc_registration_master')) {
+        if (fc_schema_has_table('fc_registration_master')) {
             $query->leftJoin('fc_registration_master as frm', 'frm.pk', '=', "{$t}.user_id")
                 ->leftJoin('user_credentials as uc_frm', 'uc_frm.user_name', '=', 'frm.user_id');
         }
@@ -1565,7 +1943,7 @@ if (! function_exists('fc_report_login_username_sql')) {
         $t = $alias ?? $trackerTable;
         $parts = ["NULLIF(TRIM(uc.user_name), '')"];
 
-        if (Schema::hasTable('fc_registration_master')) {
+        if (fc_schema_has_table('fc_registration_master')) {
             $parts[] = "NULLIF(TRIM(frm.user_id), '')";
             $parts[] = "NULLIF(TRIM(uc_frm.user_name), '')";
         }
@@ -1581,7 +1959,7 @@ if (! function_exists('fc_report_route_user_id_sql')) {
     {
         $t = $alias ?? $trackerTable;
 
-        if (Schema::hasTable('fc_registration_master')) {
+        if (fc_schema_has_table('fc_registration_master')) {
             return "COALESCE(uc.pk, uc_frm.pk, `{$t}`.`user_id`)";
         }
 
@@ -1609,15 +1987,15 @@ if (! function_exists('fc_report_join_student_master_firsts')) {
             $join->on(function ($join) use ($t, $s1Col) {
                 $join->on("s1.{$s1Col}", '=', "{$t}.user_id");
 
-                if (Schema::hasColumn('student_master_firsts', 'user_id')) {
+                if (fc_schema_has_column('student_master_firsts', 'user_id')) {
                     $join->orOn('s1.user_id', '=', 'uc.pk');
-                    if (Schema::hasTable('fc_registration_master')) {
+                    if (fc_schema_has_table('fc_registration_master')) {
                         $join->orOn('s1.user_id', '=', 'uc_frm.pk');
                     }
                 }
 
-                if (Schema::hasTable('fc_registration_master')
-                    && Schema::hasColumn('student_master_firsts', 'username')) {
+                if (fc_schema_has_table('fc_registration_master')
+                    && fc_schema_has_column('student_master_firsts', 'username')) {
                     $join->orOn('s1.username', '=', 'frm.user_id');
                 }
             });
@@ -1744,5 +2122,79 @@ if (! function_exists('resolve_default_discipline_memo_template_pk')) {
             ->orderByRaw('discipline_master_pk IS NULL')
             ->orderBy('title')
             ->value('pk');
+    }
+}
+
+if (! function_exists('fc_document_date')) {
+    /**
+     * Batch-frozen ceremony date for FC joining documents (single source:
+     * config('fc.document_declaration_date')).
+     *
+     * @param  string  $format  'iso' → Y-m-d (for <input type="date">);
+     *                          'display' → d-m-Y (the form the PDFs print).
+     */
+    function fc_document_date(string $format = 'display'): string
+    {
+        $iso = (string) config('fc.document_declaration_date');
+
+        if ($format === 'iso') {
+            return $iso;
+        }
+
+        try {
+            return \Carbon\Carbon::parse($iso)->format('d-m-Y');
+        } catch (\Throwable $e) {
+            return $iso;
+        }
+    }
+}
+
+if (! function_exists('sanitize_export_cell')) {
+    /**
+     * Neutralise CSV/XLSX formula injection: a cell whose first character is one
+     * Excel/LibreOffice/Sheets treats as a formula prefix (= + - @) or a leading
+     * tab/CR gets a leading single quote, forcing spreadsheet apps to treat it as
+     * text instead of evaluating it. Use for any exported column sourced from
+     * free text an unprivileged user typed (description, remarks, comments, ...).
+     *
+     * @param  mixed  $value
+     */
+    function sanitize_export_cell($value): string
+    {
+        $value = (string) $value;
+
+        if ($value !== '' && preg_match('/^[=+\-@\t\r]/', $value)) {
+            return "'" . $value;
+        }
+
+        return $value;
+    }
+}
+
+if (! function_exists('fc_kra_sn_img')) {
+    /**
+     * Return an inline <img> for the Devanagari "क्र.सं." label, as a base64 data URI.
+     *
+     * mPDF's Indic shaper renders the "क्र" rakaar conjunct as a faint/near-invisible
+     * stroke at small header sizes, so the document-form PDFs embed this pre-rendered
+     * (Chrome/HarfBuzz-shaped) image instead — only this one label is an image, the rest
+     * of every form stays plain mPDF text. Cached per request.
+     *
+     * @param  string  $height  CSS height for the label (match the surrounding font).
+     */
+    function fc_kra_sn_img(string $height = '9pt'): string
+    {
+        static $data = null;
+        if ($data === null) {
+            $path = resource_path('images/fc/kra_sn.png');
+            $data = (is_file($path) && is_readable($path))
+                ? 'data:image/png;base64,'.base64_encode((string) file_get_contents($path))
+                : '';
+        }
+        if ($data === '') {
+            return 'क्र.सं.'; // asset missing → fall back to text
+        }
+
+        return '<img src="'.$data.'" alt="क्र.सं." style="height:'.$height.'; vertical-align:middle;">';
     }
 }

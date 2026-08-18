@@ -3,7 +3,6 @@
 @section('content')
 @php
     $storeTypes = \App\Models\Mess\Store::storeTypes();
-    $canDeleteStore = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid">
     <x-breadcrum title="Store Master"></x-breadcrum>
@@ -40,43 +39,7 @@
                             <th>Action</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @foreach($stores as $store)
-                            <tr>
-                                <td>{{ $store->id }}</td>
-                                <td>
-                                    <div class="fw-semibold">{{ $store->store_name }}</div>
-                                    <div class="text-muted small">Code: {{ $store->store_code }}</div>
-                                </td>
-                                <td class="text-capitalize">{{ $storeTypes[$store->store_type ?? 'mess'] ?? ($store->store_type ?? '-') }}</td>
-                                <td>{{ $store->location ?? '-' }}</td>
-                                <td>
-                                    <span class="badge bg-{{ $store->status_badge_class }}">
-                                        {{ $store->status_label }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="d-flex gap-2 flex-wrap">
-                                        <button type="button" class="btn btn-sm btn-warning btn-edit-store bg-transparent border-0 p-0 text-primary"
-                                                data-id="{{ $store->id }}"
-                                                data-store-name="{{ e($store->store_name) }}"
-                                                data-store-type="{{ e(trim((string)($store->store_type ?? '')) ?: 'mess') }}"
-                                                data-location="{{ e($store->location ?? '') }}"
-                                                data-status="{{ e($store->status ?? 'active') }}"
-                                                title="Edit"><i class="material-symbols-rounded">edit</i></button>
-                                        @if($canDeleteStore)
-                                            <form method="POST" action="{{ route('admin.mess.stores.destroy', $store->id) }}" class="d-inline"
-                                                  onsubmit="return confirm('Are you sure you want to delete this store?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-danger bg-transparent border-0 p-0 text-primary" title="Delete"><i class="material-symbols-rounded">delete</i></button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
@@ -196,7 +159,16 @@
     </div>
 </div>
 
-@include('components.mess-master-datatables', ['tableId' => 'storesTable', 'searchPlaceholder' => 'Search stores...', 'orderColumn' => 1, 'actionColumnIndex' => 5, 'infoLabel' => 'stores'])
+@include('components.mess-master-datatables', [
+    'tableId' => 'storesTable',
+    'searchPlaceholder' => 'Search stores...',
+    'orderColumn' => 0,
+    'orderDir' => 'desc',
+    'actionColumnIndex' => 5,
+    'infoLabel' => 'stores',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.stores.index'),
+])
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {

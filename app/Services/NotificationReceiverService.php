@@ -475,6 +475,41 @@ class NotificationReceiverService
     }
 
     /**
+     * User IDs who should be notified when a new issue is reported via the
+     * dashboard "Report Issue" launcher: Super Admin only.
+     *
+     * @return int[]
+     */
+    public function getIssueReportAdminReceivers(): array
+    {
+        $roleNames = ['Super Admin'];
+        $userIds = [];
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('model_has_roles')) {
+            $spatieIds = DB::table('model_has_roles as mhr')
+                ->join('roles as r', 'r.id', '=', 'mhr.role_id')
+                ->join('user_credentials as uc', 'uc.pk', '=', 'mhr.model_id')
+                ->where('mhr.model_type', User::class)
+                ->whereIn('r.name', $roleNames)
+                ->pluck('uc.user_id')
+                ->all();
+            $userIds = array_merge($userIds, $spatieIds);
+        }
+
+        $rolePks = UserRoleMaster::whereIn('user_role_name', $roleNames)->pluck('pk');
+        if ($rolePks->isNotEmpty()) {
+            $legacyIds = EmployeeRoleMapping::query()
+                ->whereIn('user_role_master_pk', $rolePks)
+                ->join('user_credentials as uc', 'uc.pk', '=', 'employee_role_mapping.user_credentials_pk')
+                ->pluck('uc.user_id')
+                ->all();
+            $userIds = array_merge($userIds, $legacyIds);
+        }
+
+        return array_values(array_unique(array_filter(array_map('intval', $userIds))));
+    }
+
+    /**
      * User IDs for HAC workflow (Put in HAC / HAC approved).
      *
      * @return int[]

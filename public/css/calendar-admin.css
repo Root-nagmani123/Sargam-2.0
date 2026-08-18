@@ -1492,9 +1492,15 @@ border-left-color: #f6c23e;
 }
 
 .calendar-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-x: contain;
+    /*
+     * Must NOT be a scroll container: FullCalendar appends the "+ more" popover
+     * inside .fc-view-harness (a descendant), and any overflow clipping here cuts
+     * off the lower event cards for bottom-row days. Note `overflow-x: auto` alone
+     * forces `overflow-y` to compute to `auto` too (CSS spec), which is what
+     * clipped the popover. FullCalendar's own inner .fc-scroller (which does not
+     * contain the popover) still handles horizontal/vertical scrolling of the grid.
+     */
+    overflow: visible;
 }
 
 #calendar .fc-view-harness {
@@ -1918,10 +1924,11 @@ border-left-color: #f6c23e;
     overscroll-behavior-x: contain;
 }
 
-.calendar-container {
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-x: contain;
-}
+/* NOTE: `.calendar-container` is deliberately NOT a scroll container (see the
+   block near the top of this file) so the FullCalendar "+ more" popover isn't
+   clipped. The scroll-tuning declarations that used to live here
+   (-webkit-overflow-scrolling / overscroll-behavior-x) only apply to scroll
+   containers, so they were inert and have been removed. */
 
 .list-event-card {
     padding: 0.75rem;
@@ -2097,7 +2104,12 @@ box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.25);
 border: 1px solid #e4e7ec;
 border-radius: 0.75rem;
 box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
-overflow: hidden;
+/*
+ * Keep visible so the FullCalendar "+ more" popover (appended inside the card)
+ * is not clipped for bottom-row days. The card-body fills the rounded corners
+ * with its own white background, so nothing bleeds past the radius.
+ */
+overflow: visible;
 }
 
 .calendar-admin-page .cal-portal-card > .card-body {

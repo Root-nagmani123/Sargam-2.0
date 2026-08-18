@@ -230,6 +230,11 @@ select.sme-filter-control {
 #smeFormBody .is-invalid { border-color: var(--bs-danger); }
 #smeFormBody .form-control,
 #smeFormBody .form-select { min-height: 44px; border-radius: var(--ds-radius-2); }
+/* Medical Case frozen when Exemption Category = Cat-A (From PT). */
+#smeFormBody .select2-container--default.sme-frozen-select2 .select2-selection--single {
+    background: var(--bs-secondary-bg, #eef1f4);
+    cursor: not-allowed;
+}
 /* Let Select2 panels escape the modal body instead of being clipped or offset. */
 #smeFormModal .modal-content,
 #smeFormModal .modal-body { overflow: visible; }
@@ -1316,6 +1321,39 @@ $(document).ready(function() {
                 rebuildModalStudents(res.students, 'Search Student');
             });
         });
+
+        // Medical Case = PT Exemption -> fill Start/End Time from the selected course's PT window.
+        function applyPtTimesIfExempted(){
+            if ($form.find('#smeMedicalCase').val() !== 'PT Exemption') return;
+            var selected = $form.find('#courseDropdown option:selected');
+            var ptStart = selected.data('ptStartTime') || '';
+            var ptEnd = selected.data('ptEndTime') || '';
+            if (ptStart) { $form.find('#arrivalTime').val(ptStart); }
+            if (ptEnd) { $form.find('#departureTime').val(ptEnd); }
+        }
+        $form.on('change', '#smeMedicalCase, #courseDropdown', applyPtTimesIfExempted);
+
+        // Exemption Category = Cat-A (From PT) -> force Medical Case to "PT Exemption" and freeze it.
+        // Kept enabled (not `disabled`) so the value still posts to the server; the dropdown
+        // is just blocked from opening while frozen.
+        function applyMedicalCaseLockForCategory(){
+            var $category = $form.find('#smeExemptionCategory');
+            var $medicalCase = $form.find('#smeMedicalCase');
+            if (!$category.length || !$medicalCase.length) return;
+            var isCatAFromPt = $category.find('option:selected').text().trim() === 'Cat-A (From PT)';
+            $medicalCase.data('smeFrozen', isCatAFromPt);
+            $medicalCase.next('.select2-container').toggleClass('sme-frozen-select2', isCatAFromPt);
+            if (isCatAFromPt) {
+                $medicalCase.val('PT Exemption');
+                if ($medicalCase.hasClass('select2-hidden-accessible')) { $medicalCase.trigger('change.select2'); }
+                applyPtTimesIfExempted();
+            }
+        }
+        $form.on('change', '#smeExemptionCategory', applyMedicalCaseLockForCategory);
+        $form.on('select2:opening', '#smeMedicalCase', function(e){
+            if ($(this).data('smeFrozen')) { e.preventDefault(); }
+        });
+        applyMedicalCaseLockForCategory();
     }
 
     function submitModalForm(){

@@ -19,20 +19,25 @@
                 @csrf
 
                 @php
-                    $today = date('Y-m-d');
+                    // No "today" floor on any date: an admin must be able to record a course
+                    // or registration window that has already started. The relationships
+                    // between the dates are unchanged — each end date still cannot precede
+                    // its own start date, and the server keeps enforcing the full set.
+                    $courseStart       = old('course_start_date', $pathPage?->course_start_date?->format('Y-m-d') ?? '');
+                    $registrationStart = old('registration_start_date', $pathPage?->registration_start_date?->format('Y-m-d') ?? '');
+                    $exemptionStart    = old('exemption_start_date', $pathPage?->exemption_start_date?->format('Y-m-d') ?? '');
                 @endphp
 
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <label for="course_start_date" class="form-label fw-semibold">Course Start Date</label>
                         <input type="date" name="course_start_date" id="course_start_date" class="form-control"
-                            min="{{ $today }}"
-                            value="{{ old('course_start_date', $pathPage?->course_start_date?->format('Y-m-d') ?? '') }}">
+                            value="{{ $courseStart }}">
                     </div>
                     <div class="col-md-6">
                         <label for="course_end_date" class="form-label fw-semibold">Course End Date</label>
                         <input type="date" name="course_end_date" id="course_end_date" class="form-control"
-                            min="{{ old('course_start_date', $pathPage?->course_start_date?->format('Y-m-d') ?? $today) }}"
+                            @if($courseStart) min="{{ $courseStart }}" @endif
                             value="{{ old('course_end_date', $pathPage?->course_end_date?->format('Y-m-d') ?? '') }}">
                     </div>
                 </div>
@@ -41,14 +46,14 @@
                     <div class="col-md-6">
                         <label for="registration_start_date" class="form-label fw-semibold">Registration Start Date</label>
                         <input type="date" name="registration_start_date" id="registration_start_date"
-                            class="form-control" min="{{ $today }}"
-                            value="{{ old('registration_start_date', $pathPage?->registration_start_date?->format('Y-m-d') ?? '') }}">
+                            class="form-control"
+                            value="{{ $registrationStart }}">
                     </div>
                     <div class="col-md-6">
                         <label for="registration_end_date" class="form-label fw-semibold">Registration End Date</label>
                         <input type="date" name="registration_end_date" id="registration_end_date"
                             class="form-control"
-                            min="{{ old('registration_start_date', $pathPage?->registration_start_date?->format('Y-m-d') ?? $today) }}"
+                            @if($registrationStart) min="{{ $registrationStart }}" @endif
                             value="{{ old('registration_end_date', $pathPage?->registration_end_date?->format('Y-m-d') ?? '') }}">
                     </div>
                 </div>
@@ -57,13 +62,12 @@
                     <div class="col-md-6">
                         <label for="exemption_start_date" class="form-label fw-semibold">Exemption Start Date</label>
                         <input type="date" name="exemption_start_date" id="exemption_start_date" class="form-control"
-                            min="{{ $today }}"
-                            value="{{ old('exemption_start_date', $pathPage?->exemption_start_date?->format('Y-m-d') ?? '') }}">
+                            value="{{ $exemptionStart }}">
                     </div>
                     <div class="col-md-6">
                         <label for="exemption_end_date" class="form-label fw-semibold">Exemption End Date</label>
                         <input type="date" name="exemption_end_date" id="exemption_end_date" class="form-control"
-                            min="{{ old('exemption_start_date', $pathPage?->exemption_start_date?->format('Y-m-d') ?? $today) }}"
+                            @if($exemptionStart) min="{{ $exemptionStart }}" @endif
                             value="{{ old('exemption_end_date', $pathPage?->exemption_end_date?->format('Y-m-d') ?? '') }}">
                     </div>
                 </div>

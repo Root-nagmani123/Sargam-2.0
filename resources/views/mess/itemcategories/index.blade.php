@@ -4,8 +4,6 @@
 @php
     $categoryTypes = \App\Models\Mess\ItemCategory::categoryTypes();
     $selectedCategoryType = $categoryTypeFilter ?? request('category_type', '');
-   $canDeleteItemCategory = hasRole('Super Admin') || hasRole('Mess-Admin');
-   // $canDeleteItemCategory = hasRole('Super Admin') || (hasRole('Mess-Admin') && auth()->check() && strcasecmp((string) auth()->user()->name, 'Rohit Aggarwal') === 0);
 @endphp
 <div class="container-fluid">
     <x-breadcrum title="Category Item Master"></x-breadcrum>
@@ -55,43 +53,7 @@
                             <th>Action</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @foreach($itemcategories as $itemcategory)
-                            <tr>
-                                <td><div class="fw-semibold">{{ $itemcategory->category_name }}</div></td>
-                                <td>
-                                    {{ $categoryTypes[$itemcategory->category_type ?? 'raw_material'] ?? ucfirst(str_replace('_', ' ', $itemcategory->category_type ?? '')) }}
-                                </td>
-                                <td>{{ $itemcategory->description ?? '-' }}</td>
-                                <td>
-                                    <span class="badge bg-{{ $itemcategory->status_badge_class }}">
-                                        {{ $itemcategory->status_label }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="d-flex gap-2 flex-wrap">
-                                        <button type="button" class="text-primary btn-edit-itemcategory bg-transparent border-0"
-                                                data-id="{{ $itemcategory->id }}"
-                                                data-category-name="{{ e($itemcategory->category_name) }}"
-                                                data-category-type="{{ e($itemcategory->category_type ?? 'raw_material') }}"
-                                                data-description="{{ e($itemcategory->description ?? '') }}"
-                                                data-status="{{ e($itemcategory->status ?? 'active') }}"
-                                                title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
-                                        @if($canDeleteItemCategory)
-                                            <form method="POST" action="{{ route('admin.mess.itemcategories.destroy', $itemcategory->id) }}" class="d-inline"
-                                                  onsubmit="return confirm('Are you sure you want to delete this category item?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-primary btn-delete-itemcategory bg-transparent border-0 p-0" title="Delete">
-                                                    <i class="material-icons material-symbol-rounded">delete</i>
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
@@ -199,7 +161,15 @@
     </div>
 </div>
 
-@include('components.mess-master-datatables', ['tableId' => 'itemCategoriesTable', 'searchPlaceholder' => 'Search category items...', 'orderColumn' => 0, 'actionColumnIndex' => 4, 'infoLabel' => 'category items'])
+@include('components.mess-master-datatables', [
+    'tableId' => 'itemCategoriesTable',
+    'searchPlaceholder' => 'Search category items...',
+    'orderColumn' => 0,
+    'actionColumnIndex' => 4,
+    'infoLabel' => 'category items',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.itemcategories.index'),
+])
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {

@@ -333,12 +333,12 @@ class StudentMedicalExemptionController extends Controller
         // (mirrors Course Master's active/archived split). The course filter
         // dropdown swaps between these two lists as the tab changes.
         $courses = CourseMaster::where('active_inactive', '1')
-            ->where('end_date', '>', now())
+            ->where('end_date', '>=', now()->toDateString())
             ->orderBy('course_name', 'asc')
             ->get();
 
         $archivedCourses = CourseMaster::where('active_inactive', '1')
-            ->where('end_date', '<', now())
+            ->where('end_date', '<', now()->toDateString())
             ->orderBy('course_name', 'asc')
             ->get();
 
@@ -363,7 +363,7 @@ class StudentMedicalExemptionController extends Controller
     // Every active (non-expired) course — the medical-exemption form is not
     // role-scoped by course (a doctor can raise an exemption for any current course).
     $courses = CourseMaster::where('active_inactive', '1')
-        ->where('end_date', '>', now())
+        ->where('end_date', '>=', now()->toDateString())
         ->orderBy('course_name')
         ->get();
 
@@ -461,7 +461,7 @@ class StudentMedicalExemptionController extends Controller
         if (!empty($data_course_id)) {
             $courses = $courses->whereIn('pk', $data_course_id);
         }
-        $courses = $courses->where('end_date', '>', now())
+        $courses = $courses->where('end_date', '>=', now()->toDateString())
             ->get();
 
         $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
@@ -472,12 +472,16 @@ class StudentMedicalExemptionController extends Controller
 }
 
     /**
-     * Check if a date-time range overlaps with existing exemptions for the same student
+     * Check if a date-time range overlaps with an existing exemption of the SAME
+     * exemption type (opd_category) for the same student. Different exemption types
+     * (e.g. PT Exemption vs OPD vs Referral) are allowed to overlap - a student can be
+     * referred to a hospital and separately marked PT Exempt for the same dates.
      * Two ranges overlap if: new_start < existing_end AND new_end > existing_start
      */
-    private function checkOverlap($studentId, $fromDate, $toDate, $excludeId = null)
+    private function checkOverlap($studentId, $fromDate, $toDate, $exemptionType, $excludeId = null)
     {
-        $query = StudentMedicalExemption::where('student_master_pk', $studentId);
+        $query = StudentMedicalExemption::where('student_master_pk', $studentId)
+            ->where('opd_category', $exemptionType);
 
         // Exclude current record when updating
         if ($excludeId !== null) {
@@ -501,7 +505,7 @@ class StudentMedicalExemptionController extends Controller
             if ($overlaps) {
                 $existingFromFormatted = $existingFrom->format('d M Y H:i');
                 $existingToFormatted = $exemption->to_date ? \Carbon\Carbon::parse($exemption->to_date)->format('d M Y H:i') : 'Ongoing';
-                return "This time range overlaps with an existing exemption for this student (from {$existingFromFormatted} to {$existingToFormatted}).";
+                return "This time range overlaps with an existing '{$exemptionType}' exemption for this student (from {$existingFromFormatted} to {$existingToFormatted}).";
             }
         }
 
@@ -575,11 +579,12 @@ class StudentMedicalExemptionController extends Controller
         // Strip the split-input helpers (not table columns).
         unset($validated['arrival_date'], $validated['arrival_time'], $validated['departure_date'], $validated['departure_time']);
 
-        // Check for overlapping time ranges for the same student
+        // Check for overlapping time ranges for the same student and same exemption type
         $overlapError = $this->checkOverlap(
             $validated['student_master_pk'],
             $validated['from_date'],
-            $validated['to_date']
+            $validated['to_date'],
+            $validated['opd_category']
         );
 
         if ($overlapError) {
@@ -707,7 +712,7 @@ class StudentMedicalExemptionController extends Controller
     {
         $record = StudentMedicalExemption::findOrFail(decrypt($id));
         $courses = CourseMaster::where('active_inactive', '1')
-            ->where('end_date', '>', now())
+            ->where('end_date', '>=', now()->toDateString())
             ->orderBy('course_name')
             ->get();
 
@@ -798,11 +803,12 @@ class StudentMedicalExemptionController extends Controller
 
         $record = StudentMedicalExemption::findOrFail(decrypt($id));
 
-        // Check for overlapping time ranges for the same student (excluding current record)
+        // Check for overlapping time ranges for the same student and same exemption type (excluding current record)
         $overlapError = $this->checkOverlap(
             $validated['student_master_pk'],
             $validated['from_date'],
             $validated['to_date'],
+            $validated['opd_category'],
             $record->pk
         );
 

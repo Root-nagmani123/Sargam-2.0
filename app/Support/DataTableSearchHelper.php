@@ -69,6 +69,37 @@ class DataTableSearchHelper
         return true;
     }
 
+    /**
+     * Status codes whose rendered "Active"/"Inactive" pill text contains $term,
+     * mirroring what a client-side DataTables search does to that column.
+     *
+     * For grids that search in the browser but export from the server, the two
+     * have to agree — otherwise a searched export comes back empty while the
+     * screen shows rows. Note "Inactive" contains "active", so a search for
+     * "active" matches BOTH codes; that is precisely the client-side behaviour.
+     * Returns [] when the term cannot be part of either word, so callers can
+     * leave the clause off entirely.
+     *
+     * @return int[]
+     */
+    public static function statusPillMatches(string $term, string $activeText = 'Active', string $inactiveText = 'Inactive'): array
+    {
+        $needle = mb_strtolower(self::normalizeRaw($term));
+        if ($needle === '') {
+            return [];
+        }
+
+        $matches = [];
+        if (str_contains(mb_strtolower($activeText), $needle)) {
+            $matches[] = 1;
+        }
+        if (str_contains(mb_strtolower($inactiveText), $needle)) {
+            $matches[] = 0;
+        }
+
+        return $matches;
+    }
+
     private static function normalizeHaystack(string $haystack): string
     {
         $haystack = str_replace("\xC2\xA0", ' ', $haystack);

@@ -6,12 +6,14 @@ use App\DataTables\FC\FcTravelPlanReportDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\FC\FcForm;
 use App\Models\FC\FcTravelArrivalSlot;
+use App\Models\FC\MctpTravelModeMaster;
 use App\Models\FC\StudentMaster;
 use App\Models\FC\StudentMasterFirst;
 use App\Models\FC\StudentTravelPlanMaster;
 use App\Exports\FcTravelJoiningReportExport;
 use App\Services\FC\FcTravelPlanReportService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
 
 class TravelPlanReportController extends Controller
@@ -24,7 +26,21 @@ class TravelPlanReportController extends Controller
             ->orderBy('form_name')
             ->get(['id', 'form_name', 'form_slug', 'course_master_pk']);
         $slots = FcTravelArrivalSlot::orderBy('sort_order')->orderBy('id')->get();
-        $modes = ['By Air', 'By Road', 'By Train'];
+        // Master list + any value already stored on a plan, so the filter can still find
+        // records saved under an earlier list (e.g. the legacy "By Air"/"By Road"/"By Train").
+        $modes = collect(MctpTravelModeMaster::activeNames())
+            ->merge(
+                StudentTravelPlanMaster::query()
+                    ->whereNotNull('mode_of_journey')
+                    ->where('mode_of_journey', '!=', '')
+                    ->distinct()
+                    ->pluck('mode_of_journey')
+            )
+            ->map(fn ($m) => trim((string) $m))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
 
         $summaryBase = FcTravelPlanReportService::baseQuery();
         FcTravelPlanReportService::applyFilters($summaryBase, $request);
@@ -98,7 +114,11 @@ class TravelPlanReportController extends Controller
             'slots',
             'availableDates',
             'displayName'
-        ));
+        ) + [
+            'travelModes' => MctpTravelModeMaster::choicesIncluding(
+                old('mode_of_journey', $plan->mode_of_journey)
+            ),
+        ]);
     }
 
     public function update(Request $request, int $userId)
@@ -108,7 +128,10 @@ class TravelPlanReportController extends Controller
         $validated = $request->validate([
             'joining_date'              => 'required|date',
             'fc_travel_arrival_slot_id' => 'required|exists:fc_travel_arrival_slots,id',
-            'mode_of_journey'           => 'required|string|in:By Air,By Road,By Train',
+            // Master-driven, plus whatever this plan already holds (older lists included).
+            'mode_of_journey'           => ['required', 'string', Rule::in(
+                MctpTravelModeMaster::choicesIncluding($plan->mode_of_journey)
+            )],
             'journey_vehicle_no'        => 'required|string|max:200',
             'arrival_time_dehradun'     => 'required|string|max:120',
             'require_academy_vehicle'   => 'required|boolean',

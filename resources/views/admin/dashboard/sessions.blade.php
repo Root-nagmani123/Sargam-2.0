@@ -1,10 +1,10 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Sessions - Sargam | Lal Bahadur')
+@section('title', 'Sessions')
 
 @section('content')
 <div class="container-fluid">
-    <x-breadcrum title="Sessions"></x-breadcrum>
+    <x-breadcrum title="Sessions" :showBack="true"></x-breadcrum>
     
     <div class="card" >
         <div class="card-body">

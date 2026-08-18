@@ -3352,21 +3352,26 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             return '<option value="' + s.id + '" ' + attrs + (item && String(item.item_subcategory_id) === String(s.id) ? ' selected' : '') + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>';
         }).join('');
-        const qty = item ? item.quantity : '';
+        const returnQty = item ? (parseFloat(item.return_quantity) || 0) : 0;
+        const qty = item ? (parseFloat(item.quantity) || 0) : '';
         const avail = item ? item.available_quantity : 0;
         const rate = item ? item.rate : '';
-        const total = item ? item.amount : '';
+        const total = item
+            ? (item.amount != null ? item.amount : ((parseFloat(qty) || 0) * (parseFloat(rate) || 0)))
+            : '';
         const unit = item ? (item.unit || '') : '';
-        const left = item && (avail - qty) >= 0 ? (avail - qty) : 0;
-        const originalQtyAttr = item ? (' data-original-qty="' + (parseFloat(item.quantity) || 0) + '"') : '';
+        const left = item && qty !== '' && (avail - qty) >= 0 ? (avail - qty) : 0;
+        // original-qty = net issued (stock currently held by this voucher line)
+        const originalQtyAttr = item ? (' data-original-qty="' + (parseFloat(qty) || 0) + '" data-return-qty="' + returnQty + '"') : '';
         return '<tr class="sv-item-row edit-sv-item-row"' + originalQtyAttr + '>' +
-            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
+            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select sv-item-select" required><option value="">Select Item</option>' + options + '</select>' +
+            '<input type="hidden" name="items[' + index + '][return_quantity]" class="sv-return-qty-hidden" value="' + returnQty + '"></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control  sv-unit" readonly placeholder="—" value="' + (unit || '') + '"></td>' +
             '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  sv-avail bg-light" step="0.01" min="0" value="' + avail + '" placeholder="0" readonly></td>' +
             '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  sv-qty" step="0.01" min="0.01" placeholder="0" value="' + qty + '" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
             '<td><input type="text" class="form-control  sv-left bg-light" readonly placeholder="0" value="' + left + '"></td>' +
             '<td><input type="number" name="items[' + index + '][rate]" class="form-control  sv-rate" step="0.01" min="0" placeholder="0" value="' + rate + '" required></td>' +
-            '<td><input type="text" class="form-control  sv-total bg-light" readonly placeholder="0.00" value="' + (total ? Number(total).toFixed(2) : '') + '"></td>' +
+            '<td><input type="text" class="form-control  sv-total bg-light" readonly placeholder="0.00" value="' + (total !== '' ? Number(total).toFixed(2) : '') + '"></td>' +
             '<td><button type="button" class="btn btn-sm btn-outline-danger sv-remove-row edit-sv-remove-row" title="Remove">×</button></td>' +
             '</tr>';
     }
@@ -3948,7 +3953,13 @@ document.addEventListener('DOMContentLoaded', function() {
         editModalItemsBody.addEventListener('change', function(e) {
             if (e.target.classList.contains('sv-item-select')) {
                 const row = e.target.closest('.sv-item-row');
-                if (row) { updateUnit(row); calcRow(row); updateEditGrandTotal(); }
+                if (row) {
+                    // Changing item clears previous line's return history for this row.
+                    const retHidden = row.querySelector('.sv-return-qty-hidden');
+                    if (retHidden) retHidden.value = '0';
+                    row.setAttribute('data-return-qty', '0');
+                    updateUnit(row); calcRow(row); updateEditGrandTotal();
+                }
             }
         });
         

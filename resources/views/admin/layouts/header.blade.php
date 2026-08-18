@@ -48,7 +48,7 @@
     <!-- Left: Government Identity -->
     <div class="d-flex align-items-center gap-2 text-nowrap header-govt-wrap">
         <span class="header-flag-wrap d-inline-flex align-items-center justify-content-center rounded-2 bg-white border border-light-subtle">
-            <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
+            <img src="{{ asset('images/flag-of-india.svg') }}"
                 alt="Flag of India" class="header-flag-icon">
         </span>
         <span class="small text-white header-govt-text">
@@ -94,7 +94,7 @@
                 </a>
                 <div class="header-brand d-flex align-items-center gap-2 py-2 px-2">
                      
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="" class="header-logo-emblem" width="44" height="44">
+                    <img src="{{ asset('images/ashoka.png') }}" alt="" class="header-logo-emblem" width="44" height="44">
                     <span class="header-brand-divider" aria-hidden="true"></span>
                     <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="Sargam 2.0" class="header-logo">
 

@@ -14,7 +14,7 @@
         $out = '<table style="border-collapse:collapse;"><tr>';
         for ($i = 0; $i < $len; $i++) {
             $ch = mb_substr($value, $i, 1);
-            $out .= '<td style="border:0.5px solid #666; width:12px; height:14px; text-align:center; font-size:8.5px; font-weight:bold; color:#0b3d91;">'.($ch !== '' ? e($ch) : '&nbsp;').'</td>';
+            $out .= '<td style="border:0.5px solid #666; width:12pt; height:14pt; text-align:center; font-size:8.5pt; font-weight:bold; color:#0b3d91;">'.($ch !== '' ? e($ch) : '&nbsp;').'</td>';
         }
         $out .= '</tr></table>';
         return $out;
@@ -24,7 +24,7 @@
         $out = '';
         foreach ($options as $o) {
             $mark = ((string) $o === (string) $sel) ? '&#9745;' : '&#9744;';
-            $out .= '<span style="margin-right:12px; font-size:8.6px; white-space:nowrap;">'.$mark.' '.e($o).'</span>';
+            $out .= '<span style="margin-right:12pt; font-size:8.6pt; white-space:nowrap;">'.$mark.' '.e($o).'</span>';
         }
         return $out;
     };
@@ -36,23 +36,24 @@
 <head>
 <meta charset="utf-8">
 <style>
-    body { font-family: 'DejaVu Sans', sans-serif; font-size: 10px; color: #000; }
-    .formtag { text-align: right; font-weight: bold; font-size: 9px; }
-    .head { text-align: center; margin-bottom: 6px; }
-    .head .t { font-size: 14px; font-weight: bold; text-decoration: underline; }
-    .head .s { font-size: 9px; color: #333; margin-top: 2px; }
-    .head .h { font-size: 12px; font-weight: bold; margin-top: 3px; }
-    table.ddo { width: 100%; border-collapse: collapse; margin: 6px 0 8px; }
-    table.ddo td { border-bottom: 1px solid #000; font-size: 9px; font-weight: bold; padding: 3px 4px; }
+    @page { margin: 11mm 12mm 11mm 12mm; }
+    body { font-family: 'DejaVu Sans', sans-serif; font-size: 11pt; color: #000; }
+    .formtag { text-align: right; font-weight: bold; font-size: 9pt; }
+    .head { text-align: center; margin-bottom: 6pt; }
+    .head .t { font-size: 14pt; font-weight: bold; text-decoration: underline; }
+    .head .s { font-size: 9pt; color: #333; margin-top: 2pt; }
+    .head .h { font-size: 12pt; font-weight: bold; margin-top: 3pt; }
+    table.ddo { width: 100%; border-collapse: collapse; margin: 6pt 0 8pt; }
+    table.ddo td { border-bottom: 1px solid #000; font-size: 9pt; font-weight: bold; padding: 3pt 4pt; }
     table.eis { width: 100%; border-collapse: collapse; }
-    table.eis th, table.eis td { border: 0.6px solid #555; padding: 3px 5px; font-size: 9.5px; vertical-align: middle; }
+    table.eis th, table.eis td { border: 0.6px solid #555; padding: 3pt 5pt; font-size: 9.5pt; vertical-align: middle; }
     table.eis thead th { background-color: #e8eef8; text-align: center; font-weight: bold; }
-    .sec { background-color: #f2f6fc; text-align: center; font-weight: bold; font-size: 8.5px; color: #14315e; width: 20px; }
-    .sno { text-align: center; width: 30px; }
+    .sec { background-color: #f2f6fc; text-align: center; font-weight: bold; font-size: 9pt; color: #14315e; width: 20pt; }
+    .sno { text-align: center; width: 30pt; }
     .part { width: 44%; }
-    .sign-wrap { margin-top: 26px; text-align: right; }
-    .sign-line { display: inline-block; border-top: 1px solid #000; padding-top: 3px; font-size: 9.5px; min-width: 220px; text-align: center; }
-    .sig-img { max-height: 38px; max-width: 200px; }
+    .sign-wrap { margin-top: 26pt; text-align: right; }
+    .sign-line { display: inline-block; border-top: 1px solid #000; padding-top: 3pt; font-size: 9.5pt; min-width: 220pt; text-align: center; }
+    .sig-img { max-height: 38pt; max-width: 200pt; }
 </style>
 </head>
 <body>
@@ -72,7 +73,7 @@
     <table class="eis">
         <thead>
             <tr>
-                <th style="width:20px;">A</th>
+                <th style="width:20pt;">A</th>
                 <th class="sno">SNo</th>
                 <th class="part">Particulars / विवरण</th>
                 <th>Details / ब्योरा</th>

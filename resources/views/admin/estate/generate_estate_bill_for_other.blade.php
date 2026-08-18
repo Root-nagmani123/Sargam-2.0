@@ -243,22 +243,16 @@ $(document).ready(function() {
 
                 // Do not initialise DataTables when there is only the colspan row, it causes incorrect column count warnings.
                 if (data.length > 0) {
+                    // Custom dom/language nahi de rahe — global DataTables UI (datatable-global-ui.js)
+                    // apne aap "Showing [10 ▼] of _TOTAL_ items" wala single toolbar/footer laga dega.
+                    // (Custom dom dene par woh UI dobara inject hota tha → double pagination + galat count.)
                     dataTableInstance = $('#billForOtherTable').DataTable({
                         order: [[1, 'asc']],
                         pageLength: 10,
                         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                        language: {
-                            search: "Search:",
-                            lengthMenu: "Show _MENU_ entries",
-                            info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                            infoEmpty: "Showing 0 to 0 of 0 entries",
-                            infoFiltered: "(filtered from _MAX_ total entries)",
-                            paginate: { first: "First", last: "Last", next: "Next", previous: "Previous" }
-                        },
                         responsive: false,
                         autoWidth: false,
-                        scrollX: true,
-                        dom: '<"row flex-nowrap align-items-center py-2"<"col-12 col-sm-6 col-md-6 mb-2 mb-md-0"l><"col-12 col-sm-6 col-md-6"f>>rt<"row align-items-center py-2"<"col-12 col-sm-5 col-md-5"i><"col-12 col-sm-7 col-md-7"p>>'
+                        scrollX: true
                     });
                     buildColumnToggle();
                 }

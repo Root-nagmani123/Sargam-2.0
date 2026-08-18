@@ -142,6 +142,7 @@
                         <label class="form-label small">Replace Sample File (optional)</label>
                         <input type="file" name="sample_file" class="form-control form-control-sm"
                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                        <small class="text-muted d-block">PDF / JPG / PNG / DOC, max {{ \App\Rules\SafeUploadedDocument::maxLabel(10240) }}.</small>
                         @if($sample->sample_file_path)
                             <small class="text-muted">Current: {{ $sample->sample_original_name ?: basename($sample->sample_file_path) }}</small>
                         @endif
@@ -187,7 +188,9 @@
                     <label class="form-label small">Sample File <span class="text-danger">*</span></label>
                     <input type="file" name="sample_file" class="form-control form-control-sm"
                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" required>
-                    <small class="text-muted">PDF / JPG / PNG / DOC, max 10MB.</small>
+                    {{-- Limit comes from php.ini (upload_max_filesize/post_max_size), so the
+                         label can never promise more than the server will accept. --}}
+                    <small class="text-muted">PDF / JPG / PNG / DOC, max {{ \App\Rules\SafeUploadedDocument::maxLabel(10240) }}.</small>
                 </div>
             </div>
             <div class="modal-footer">

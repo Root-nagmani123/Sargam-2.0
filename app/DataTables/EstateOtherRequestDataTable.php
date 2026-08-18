@@ -20,6 +20,7 @@ class EstateOtherRequestDataTable extends DataTable
                 return '<span title="' . e($val) . '">' . e($val) . '</span>';
             })
             ->editColumn('emp_name', fn($row) => $row->emp_name ?? 'N/A')
+            ->editColumn('employee_master_emp_id', fn($row) => $row->employee_master_emp_id ?: '-')
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
 
@@ -28,7 +29,8 @@ class EstateOtherRequestDataTable extends DataTable
                         $subQuery->where('emp_name', 'like', "%{$searchValue}%")
                             ->orWhere('f_name', 'like', "%{$searchValue}%")
                             ->orWhere('section', 'like', "%{$searchValue}%")
-                            ->orWhere('request_no_oth', 'like', "%{$searchValue}%");
+                            ->orWhere('request_no_oth', 'like', "%{$searchValue}%")
+                            ->orWhere('employee_master_emp_id', 'like', "%{$searchValue}%");
                     });
                 }
             }, true)
@@ -44,7 +46,8 @@ class EstateOtherRequestDataTable extends DataTable
                         data-employee_name="' . e($row->emp_name ?? '') . '"
                         data-father_name="' . e($row->f_name ?? '') . '"
                         data-section="' . e($row->section ?? '') . '"
-                        data-doj_academy="' . e($doj) . '">
+                        data-doj_academy="' . e($doj) . '"
+                        data-employee_master_emp_id="' . e($row->employee_master_emp_id ?? '') . '">
                         <i class="material-symbols-rounded" style="font-size:18px;">edit</i>
                     </a>
                     <a href="javascript:void(0);" class="text-primary btn-delete-other-request" data-url="' . e($deleteUrl) . '" data-id="' . $row->pk . '" title="Delete">
@@ -100,6 +103,7 @@ class EstateOtherRequestDataTable extends DataTable
             Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(true)->searchable(false)->width('80px'),
             Column::make('request_no_oth')->title('Request ID')->orderable(false)->searchable(true)->width('180px'),
             Column::make('emp_name')->title('Employee Name')->orderable(false)->searchable(true)->width('220px'),
+            Column::make('employee_master_emp_id')->title('Emp ID')->orderable(false)->searchable(true)->width('160px'),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false)->width('120px'),
         ];
     }

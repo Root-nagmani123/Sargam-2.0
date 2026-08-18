@@ -7,8 +7,14 @@
 <div class="fc-shell">
     @php
         $gatedStepMeta = $gatedStepMeta ?? [];
-        $totalSteps = $steps->count();
-        $doneSteps  = $steps->filter(fn ($s) => ($stepStatus[$s->id] ?? false))->count();
+        // A step that does not apply to this trainee can never be completed, so it is
+        // excluded from the denominator — otherwise a finished trainee reads "6 of 7".
+        // $progressDone / $progressTotal come from FcStepApplicabilityService; the
+        // filters below are the same rule, kept as a fallback for any other caller.
+        $doneSteps  = $progressDone ?? $steps->filter(fn ($s) => ($stepStatus[$s->id] ?? false))->count();
+        $totalSteps = $progressTotal ?? $steps->filter(
+            fn ($s) => ($stepStatus[$s->id] ?? false) || !isset($gatedStepMeta[$s->id])
+        )->count();
         $pct        = $totalSteps > 0 ? (int) round($doneSteps / $totalSteps * 100) : 0;
     @endphp
     <div class="fc-band">
@@ -22,8 +28,73 @@
                 <small>{{ $doneSteps }} of {{ $totalSteps }} steps completed</small>
                 <div class="fc-prog"><span style="width: {{ $pct }}%"></span></div>
             </div>
+            @if($formComplete ?? false)
+                {{-- Offered only once every applicable step is done; the controller enforces
+                     the same check, so the link cannot be used to skip ahead.
+
+                     The PDF itself only contains the first two steps. Requiring all of them
+                     anyway is deliberate academy policy — registration must be finished before
+                     a trainee can self-print from it. See ReportController@myDescriptiveRollPdf. --}}
+                <a href="{{ route('fc-reg.forms.descriptive-roll.pdf', $form) }}"
+                   class="btn btn-light btn-sm fw-semibold"
+                   style="white-space:nowrap;">
+                    <i class="bi bi-file-earmark-arrow-down me-1"></i>Download Descriptive Roll (PDF)
+                </a>
+            @endif
         </div>
     </div>
+
+    {{-- ── Fixed information card ─────────────────────────────────────────────
+         Always first — before Step 1 — on every form. It is not a step: it carries no status,
+         cannot be completed, and is never counted in the progress bar.
+
+         The document comes from config('fc.joining_letter') — one default for every dynamic
+         form, because form slugs differ between environments (the 101st course is 'fc-101' on
+         dev, 'fc-102' on production) and keying on the slug made the card disappear on prod.
+         config('fc.joining_letters')[slug] overrides it per intake, and '' there suppresses
+         the card for one form. --}}
+    @php
+        $fcLetterOverrides = (array) config('fc.joining_letters', []);
+        $fcLetterPath = array_key_exists($form->form_slug ?? '', $fcLetterOverrides)
+            ? $fcLetterOverrides[$form->form_slug]
+            : config('fc.joining_letter');
+        $fcLetterPath = is_string($fcLetterPath) ? trim($fcLetterPath) : '';
+        $fcLetterExists = $fcLetterPath !== '' && is_file(public_path($fcLetterPath));
+    @endphp
+    @if($fcLetterPath)
+    <div class="card border-0 shadow-sm mb-4" style="border-radius:10px; border-left:4px solid #004a93 !important;">
+        <div class="card-body p-4">
+            <div class="d-flex flex-wrap align-items-start gap-3">
+                <div class="flex-shrink-0 d-flex align-items-center justify-content-center"
+                     style="width:52px; height:52px; border-radius:10px; background:#e7edf6; color:#004a93;">
+                    <i class="bi bi-envelope-paper fs-3" aria-hidden="true"></i>
+                </div>
+                <div class="flex-grow-1" style="min-width:16rem;">
+                    <h5 class="fw-bold mb-1" style="color:#004a93;">Read this first</h5>
+                    <p class="small fw-bold mb-3">Please read this joining document before you begin.</p>
+
+                    @if($fcLetterExists)
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="{{ asset($fcLetterPath) }}" target="_blank" rel="noopener"
+                               class="btn btn-sm btn-primary" style="background-color:#004a93; border-color:#004a93;">
+                                <i class="bi bi-file-earmark-pdf me-1"></i>Read the Joining Document (PDF)
+                            </a>
+                            <a href="{{ asset($fcLetterPath) }}" download
+                               class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-download me-1"></i>Download
+                            </a>
+                        </div>
+                    @else
+                        <div class="alert alert-warning small mb-0 py-2">
+                            <i class="bi bi-exclamation-triangle me-1"></i>The joining document is not available at the moment.
+                            Please contact the Academy office.
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 
     @if($steps->isEmpty())
         <div class="alert alert-warning">
@@ -58,7 +129,11 @@
                         $blockedMsg = $isAccessible ? null : 'Complete the previous step first';
                     }
 
-                    // Special Assistant with no ph_value on the roster: disabled + not applicable.
+                    // Step whose applicability rule does not hold for this trainee (e.g. Special
+                    // Assistant with no ph_value on the roster): disabled, and rendered in its own
+                    // "not applicable" state rather than as a pending step, so it does not read as
+                    // outstanding work. Already-filled steps keep their normal Completed state.
+                    $isNotApplicable = isset($gatedStepMeta[$step->id]) && !$rawDone;
                     if (isset($gatedStepMeta[$step->id])) {
                         $isAccessible = false;
                         $isDone = false;
@@ -70,24 +145,28 @@
                         <div class="card-body">
                             <div class="d-flex align-items-center mb-3">
                                 <div class="rounded-circle d-flex align-items-center justify-content-center me-3"
-                                     style="width:40px;height:40px;background:{{ $isDone ? '#198754' : '#1a3c6e' }};color:#fff;font-size:1rem;">
+                                     style="width:40px;height:40px;background:{{ $isDone ? '#198754' : ($isNotApplicable ? '#adb5bd' : '#1a3c6e') }};color:#fff;font-size:1rem;">
                                     @if($isDone)
                                         <i class="bi bi-check-lg"></i>
+                                    @elseif($isNotApplicable)
+                                        <i class="bi bi-dash-lg"></i>
                                     @else
                                         <span class="fw-bold">{{ $si + 1 }}</span>
                                     @endif
                                 </div>
                                 <div>
-                                    <h6 class="mb-0">{{ $step->step_name }}</h6>
+                                    <h6 class="mb-0 fw-bold">{{ $step->step_name }}</h6>
                                     <small class="text-muted">Step {{ $si + 1 }}</small>
                                 </div>
                                 @if($isDone)
                                     <span class="badge bg-success ms-auto">Completed</span>
+                                @elseif($isNotApplicable)
+                                    <span class="badge bg-secondary ms-auto">Not applicable</span>
                                 @endif
                             </div>
 
                             @if($step->description)
-                                <p class="text-muted small mb-3">{{ Str::limit($step->description, 100) }}</p>
+                                <p class="small fw-bold mb-3">{{ Str::limit($step->description, 100) }}</p>
                             @endif
 
                             @if($isAccessible)

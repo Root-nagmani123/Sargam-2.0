@@ -148,7 +148,7 @@
                                         </div>
                                         <div class="card-body">
                                             <div class="table-responsive enrollment-dt-wrap">
-                                                <table class="table table-striped table-hover table-sm align-middle w-100" id="studentTable">
+                                                <table class="table table-striped table-hover table-sm align-middle w-100 dt-legacy-layout" id="studentTable" data-sargam-dt-ui="false">
                                                     <thead>
                                                         <tr>
                                                             <th width="50px" class="align-middle">
@@ -326,53 +326,91 @@
             $(el).trigger('change');
         }
 
+        // ── Student picker: server-side DataTable + selection that survives paging ──
+        //
+        // The list used to load every matching student at once and page them in the
+        // browser, so "checked" could simply be read back off the DOM. With
+        // server-side paging only one page of rows exists at a time, so the chosen
+        // students are tracked in a Set of pks instead and re-applied on every draw.
+        var studentTable = null;
+        var selectedStudentPks = new Set();
+        var lastFilters = { previous_courses: [], services: [] };
+
         function destroyStudentDataTableIfAny() {
             if ($.fn.dataTable.isDataTable('#studentTable')) {
                 $('#studentTable').DataTable().destroy();
+                $('#studentTable tbody').empty();
             }
+            studentTable = null;
         }
 
-        function studentTableHasOnlyPlaceholderRow() {
-            var $rows = $('#studentTable tbody tr');
-            if ($rows.length !== 1) return false;
-            return $rows.find('td[colspan]').length > 0;
+        function updateSelectedStudents() {
+            var pks = Array.from(selectedStudentPks);
+            $('#selectedStudents').val(pks.join(','));
+            $('#studentCount').text(pks.length);
+
+            // Header checkbox reflects "is every row on this page selected?"
+            var $boxes = $('#studentTable tbody .student-checkbox');
+            var allOnPage = $boxes.length > 0 && $boxes.filter(':checked').length === $boxes.length;
+            $('.js-select-all-students').prop('checked', allOnPage);
+        }
+
+        // Re-tick the boxes for rows that are in the selected set.
+        function applySelectionToPage() {
+            $('#studentTable tbody .student-checkbox').each(function () {
+                $(this).prop('checked', selectedStudentPks.has(parseInt(this.value, 10)));
+            });
+            updateSelectedStudents();
         }
 
         function initStudentDataTable() {
             destroyStudentDataTableIfAny();
-            if (studentTableHasOnlyPlaceholderRow()) return;
-            if (!$('#studentTable tbody tr').length) return;
 
-            $('#studentTable').DataTable({
-                responsive: true,
+            studentTable = $('#studentTable').DataTable({
+                processing: true,
+                serverSide: true,
+                responsive: false,
                 autoWidth: false,
-                paging: false,
                 searching: true,
                 ordering: true,
                 info: true,
+                paging: true,
+                pageLength: 25,
+                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
                 order: [[2, 'asc']],
-                columnDefs: [{
-                    orderable: false,
-                    searchable: false,
-                    targets: 0
-                }],
-                dom: "<'row mb-2 g-2'<'col-sm-12'f>>" +
+                ajax: {
+                    url: '{{ route('enrollment.studentsData') }}',
+                    type: 'GET',
+                    data: function (d) {
+                        d.previous_courses = lastFilters.previous_courses;
+                        d.services = lastFilters.services;
+                    }
+                },
+                columns: [
+                    { data: 'select',       name: 'select',       orderable: false, searchable: false, className: 'text-center' },
+                    { data: 'course_name',  name: 'course_name' },
+                    { data: 'student_name', name: 'student_name' },
+                    { data: 'ot_code',      name: 'ot_code' },
+                    { data: 'service',      name: 'service' }
+                ],
+                // Layout: per-page selector on top (left) with the search box beside it;
+                // record info bottom-left and pagination bottom-RIGHT.
+                dom: "<'row mb-2 g-2 align-items-center'<'col-sm-12 col-md-6 d-flex align-items-center gap-2'l><'col-sm-12 col-md-6'f>>" +
                     "<'row'<'col-sm-12'tr>>" +
-                    "<'row mt-2'<'col-sm-12'i>>",
+                    "<'row mt-2 align-items-center'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7 d-flex justify-content-end'p>>",
                 language: {
+                    processing: 'Loading…',
                     search: 'Search:',
                     searchPlaceholder: 'Filter students…',
+                    lengthMenu: 'Show _MENU_',
                     emptyTable: 'No students loaded',
                     zeroRecords: 'No matching students',
-                    info: 'Showing _TOTAL_ student(s)',
+                    info: 'Showing _START_ to _END_ of _TOTAL_ student(s)',
                     infoEmpty: 'No students',
                     infoFiltered: '(filtered from _MAX_ total)'
                 },
-                drawCallback: function() {
-                    var total = $('.student-checkbox').length;
-                    var checked = $('.student-checkbox:checked').length;
-                    $('.js-select-all-students').prop('checked', total > 0 && checked === total);
-                    updateSelectedStudents();
+                drawCallback: function () {
+                    applySelectionToPage();
                 }
             });
         }
@@ -646,28 +684,45 @@
         $('#course_master_pk').on('change', filterPreviousCourses);
 
         // Student list: select tracking
-        function updateSelectedStudents() {
-            var selectedStudents = [];
-            $('.student-checkbox:checked').each(function() {
-                selectedStudents.push($(this).val());
-            });
-            $('#selectedStudents').val(selectedStudents.join(','));
-            // show count of selected (not total checkboxes)
-            $('#studentCount').text(selectedStudents.length);
-        }
+        // Select-all applies to EVERY matching student, not just the visible page:
+        // with server-side paging the browser only holds one page, so the full pk
+        // list is fetched from the server (mirrors the old "all checked" default).
+        $('#studentTable').on('change', '.js-select-all-students', function () {
+            var checked = $(this).prop('checked');
 
-        // select all checkbox (delegated — survives DataTables redraws)
-        $('#studentTable').on('change', '.js-select-all-students', function() {
-            const checked = $(this).prop('checked');
-            $('.student-checkbox').prop('checked', checked);
-            updateSelectedStudents();
+            if (!checked) {
+                selectedStudentPks.clear();
+                applySelectionToPage();
+                return;
+            }
+
+            if (!lastFilters.previous_courses.length) { return; }
+
+            $.ajax({
+                url: '{{ route('enrollment.studentsAllPks') }}',
+                method: 'GET',
+                data: {
+                    previous_courses: lastFilters.previous_courses,
+                    services: lastFilters.services
+                },
+                success: function (res) {
+                    if (res && res.success) {
+                        (res.pks || []).forEach(function (pk) { selectedStudentPks.add(parseInt(pk, 10)); });
+                    }
+                    applySelectionToPage();
+                },
+                error: function () { applySelectionToPage(); }
+            });
         });
 
-        // when individual checkbox toggles
-        $(document).on('change', '.student-checkbox', function() {
-            const total = $('.student-checkbox').length;
-            const checked = $('.student-checkbox:checked').length;
-            $('.js-select-all-students').prop('checked', total > 0 && checked === total);
+        // Individual row toggle updates the tracked set (survives paging/search).
+        $(document).on('change', '#studentTable tbody .student-checkbox', function () {
+            var pk = parseInt(this.value, 10);
+            if ($(this).prop('checked')) {
+                selectedStudentPks.add(pk);
+            } else {
+                selectedStudentPks.delete(pk);
+            }
             updateSelectedStudents();
         });
 
@@ -681,102 +736,35 @@
             var previousCourses = $('#previous_courses').val() || [];
             var services = $('#services').val() || [];
 
-            console.log('Previous Courses:', previousCourses); // Debug
-            console.log('Services:', services); // Debug
-
             if (!previousCourses.length) {
                 alert('Please select at least one previous course');
                 return;
             }
 
-            destroyStudentDataTableIfAny();
-            $('#studentTable tbody').html('<tr><td colspan="5" class="text-center">Loading students...</td></tr>');
+            // Filters changed → previous selection no longer applies (same as the
+            // old behaviour, which rebuilt the table and re-checked everything).
+            lastFilters = { previous_courses: previousCourses, services: services };
+            selectedStudentPks.clear();
 
-            $.ajax({
-                url: '{{ route('enrollment.filterStudents') }}',
-                method: 'POST',
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    previous_courses: previousCourses,
-                    services: services
-                },
-                success: function(response) {
-                    console.log('AJAX Response:', response); // Debug
-                    
-                    if (response.success) {
-                        console.log('Students data:', response.students); // Debug
-                        console.log('Total students:', response.total_count); // Debug
-                        populateStudentTable(response.students || []);
-                    } else {
-                        destroyStudentDataTableIfAny();
-                        $('#studentTable tbody').html(
-                            '<tr id="noDataRow"><td colspan="5" class="text-center text-danger">' + 
-                            (response.message || 'No students found') + 
-                            '</td></tr>'
-                        );
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX Error Status:', status); // Debug
-                    console.error('AJAX Error:', error); // Debug
-                    console.error('XHR Response:', xhr.responseText); // Debug
-
-                    destroyStudentDataTableIfAny();
-                    $('#studentTable tbody').html(
-                        '<tr><td colspan="5" class="text-center text-danger">' +
-                        'Error loading students. Status: ' + status + 
-                        '</td></tr>'
-                    );
-                }
-            });
-        }
-
-        function populateStudentTable(students) {
-            var tableBody = $('#studentTable tbody');
-            destroyStudentDataTableIfAny();
-            tableBody.empty();
-
-            console.log('Students data received for table:', students); // Debug
-            console.log('Number of students:', students ? students.length : 0); // Debug
-
-            if (!students || students.length === 0) {
-                tableBody.html(
-                    '<tr id="noDataRow">' +
-                    '<td colspan="5" class="text-center">No students found for the selected filters</td>' +
-                    '</tr>'
-                );
-                $('#studentCount').text(0);
-                $('.js-select-all-students').prop('checked', false);
-                return;
+            if (!studentTable) {
+                initStudentDataTable();
+            } else {
+                studentTable.ajax.reload(null, true);
             }
 
-            students.forEach(function(student, index) {
-                console.log('Student ' + index + ':', student); // Debug
-                
-                // Check if student_pk exists
-                if (!student.student_pk) {
-                    console.warn('Student missing student_pk:', student);
-                    return;
-                }
-                
-                var row = '<tr>' +
-                    '<td><input type="checkbox" name="students[]" value="' + student.student_pk + '" class="student-checkbox" checked></td>' +
-                    '<td>' + formatNameWithShort(student.course_name, student.course_short_name) + '</td>' +
-                    '<td>' + (student.student_name || 'N/A') + '</td>' +
-                    '<td>' + (student.ot_code || 'N/A') + '</td>' +
-                    '<td>' + formatNameWithShort(student.service_name, student.service_short_name) + '</td>' +
-                    '</tr>';
-
-                tableBody.append(row);
+            // Preserve the old default of "everything matching is selected".
+            $.ajax({
+                url: '{{ route('enrollment.studentsAllPks') }}',
+                method: 'GET',
+                data: { previous_courses: previousCourses, services: services },
+                success: function (res) {
+                    if (res && res.success) {
+                        (res.pks || []).forEach(function (pk) { selectedStudentPks.add(parseInt(pk, 10)); });
+                    }
+                    applySelectionToPage();
+                },
+                error: function () { applySelectionToPage(); }
             });
-
-            // Update count and checkboxes
-            $('.js-select-all-students').prop('checked', true);
-            updateSelectedStudents();
-
-            initStudentDataTable();
-
-            console.log('Table populated with ' + students.length + ' students'); // Debug
         }
 
         // Optional: Auto-load students when both previous courses and services are selected

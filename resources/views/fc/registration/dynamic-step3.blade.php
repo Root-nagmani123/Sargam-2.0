@@ -198,6 +198,7 @@
 @endpush
 
 @push('scripts')
+@include('fc.registration.partials.fc-upload-extension-guard')
 @include('fc.registration.partials.fc-form-validation')
 @empty($form)
 <script src="{{ asset('admin_assets/libs/select2/dist/js/select2.full.min.js') }}"></script>

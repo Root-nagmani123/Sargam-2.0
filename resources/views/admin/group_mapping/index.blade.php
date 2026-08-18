@@ -8,7 +8,7 @@
 
 @section('setup_content')
 <div class="container-fluid gm-master-page">
-    <x-breadcrum title="Course Group Mapping">
+    <x-breadcrum title="Course Group Mapping" :showBack="false">
         <div class="d-flex flex-wrap justify-content-end align-items-center gap-2">
             <div class="dropdown gm-add-student-hover">
                 <button type="button"
@@ -77,7 +77,7 @@
         </ul>
 
         <div class="dropdown">
-            <button type="button" class="btn programme-dt-btn-columns gm-download-btn dropdown-toggle"
+            <button type="button" class="btn programme-dt-btn-columns gm-download-btn dropdown-toggle border-0 text-primary"
                 id="gmDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-download" aria-hidden="true"></i>
                 <span>Download</span>

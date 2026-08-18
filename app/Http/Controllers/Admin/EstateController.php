@@ -41,6 +41,15 @@ use Illuminate\Support\Facades\View;
 class EstateController extends Controller
 {
     /**
+     * Per-request memo for {@see estateSelfOtherLinks()}, keyed by user id.
+     * The links are an input to the bill cache's key, so they cannot live inside that cache;
+     * memoising here keeps repeat call sites in one request from re-running the query.
+     *
+     * @var array<int, array<int, array{emp_id: string, name: string}>>
+     */
+    private array $estateSelfOtherLinksMemo = [];
+
+    /**
      * Column on employee_master that payroll_salary_master.employee_master_pk joins to (often pk_old when that column exists).
      * estate_possession_details.emploee_master_pk is canonical employee_master.pk — use resolveEmployeeMasterCanonicalPk() when saving.
      */
@@ -55,6 +64,23 @@ class EstateController extends Controller
     private function authorizeEstateMasterMeterAndReports(): void
     {
         abort_unless(isEstateAuthority(), 403, 'You do not have permission to access this estate section.');
+    }
+
+    /**
+     * Bill print screens: Estate role sabhi bills print kar sakta hai; baaki koi bhi logged-in user
+     * tabhi jab query self-filter se uske apne bills tak simit ho (My Estate Bill ka Print button).
+     */
+    private function authorizeEstateBillPrint(\Illuminate\Http\Request $request): void
+    {
+        if (isEstateAuthority()) {
+            return;
+        }
+
+        abort_unless(
+            Auth::check() && $this->shouldApplyGenerateEstateBillSelfFilter($request),
+            403,
+            'You do not have permission to access this estate section.'
+        );
     }
 
     /**
@@ -3049,6 +3075,7 @@ class EstateController extends Controller
             'father_name' => $request->query('father_name'),
             'section' => $request->query('section'),
             'doj_academy' => $request->query('doj_academy'),
+            'employee_master_emp_id' => $request->query('employee_master_emp_id'),
         ];
 
         if ($request->filled('id')) {
@@ -3059,11 +3086,133 @@ class EstateController extends Controller
                     'father_name' => $record->f_name,
                     'section' => $record->section,
                     'doj_academy' => $record->doj_acad?->format('Y-m-d'),
+                    'employee_master_emp_id' => $record->employee_master_emp_id ?? null,
                 ];
             }
         }
 
         return view('admin.estate.add_other_estate_request', compact('prefill', 'record'));
+    }
+
+    /**
+     * Naam ko link-comparison ke liye normalize: sirf letters/digits, uppercase.
+     * "BAL KISHAN" -> "BALKISHAN", "Balkishan  Arya" -> "BALKISHANARYA".
+     */
+    private function normalizeEstateLinkName(string $name): string
+    {
+        return strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', $name));
+    }
+
+    /**
+     * SQL expression jo estate_other_req.emp_name ko normalizeEstateLinkName() jaisa hi banata hai.
+     */
+    private function estateOtherRequestNameExpr(string $alias = 'eor'): string
+    {
+        $expr = "COALESCE($alias.emp_name, '')";
+        foreach ([' ', '.', '-', "'", ',', '/'] as $ch) {
+            $expr = "REPLACE($expr, '" . str_replace("'", "''", $ch) . "', '')";
+        }
+
+        return "UPPER($expr)";
+    }
+
+    /**
+     * Logged-in user ki Other/contract link identity — DBA ka diya hua rule:
+     *   employee_master.status = 1 AND employee_master.payroll = 1
+     *   AND employee_master.emp_id = estate_other_req.employee_master_emp_id
+     *   AND estate_other_req.emp_name us employee ke naam se match kare
+     *
+     * Yahan pehle do steps se employee row nikalti hai; naam ka match query me lagta hai
+     * ({@see applyEstateOtherRequestSelfFilter()}).
+     *
+     * Result is memoised for the request. It cannot go into the Redis bill cache — it is an INPUT
+     * to that cache's key — so the query has to run before the cache is consulted. Memoising keeps
+     * that at one query per request no matter how many call sites ask for the links.
+     *
+     * @return array<int, array{emp_id: string, name: string}>
+     */
+    private function estateSelfOtherLinks(): array
+    {
+        $user = Auth::user();
+        if (! $user
+            || ! Schema::hasColumn('employee_master', 'emp_id')
+            || ! Schema::hasColumn('employee_master', 'payroll')) {
+            return [];
+        }
+
+        $userId = (int) ($user->user_id ?? $user->pk ?? 0);
+        if ($userId <= 0) {
+            return [];
+        }
+
+        // Keyed by user id: a single request is always one user, but keying it means a queue
+        // worker or a test that switches users in-process can never read a stale answer.
+        if (array_key_exists($userId, $this->estateSelfOtherLinksMemo)) {
+            return $this->estateSelfOtherLinksMemo[$userId];
+        }
+
+        $rows = DB::table('employee_master')
+            ->where(function ($q) use ($userId) {
+                $q->where('pk', $userId);
+                if (Schema::hasColumn('employee_master', 'pk_old')) {
+                    $q->orWhere('pk_old', $userId);
+                }
+            })
+            ->where('status', 1)
+            ->where('payroll', 1)
+            ->whereRaw("TRIM(COALESCE(emp_id, '')) <> ''")
+            ->get(['emp_id', 'first_name', 'middle_name', 'last_name']);
+
+        $links = [];
+        foreach ($rows as $row) {
+            $empId = strtoupper(trim((string) $row->emp_id));
+            $name = $this->normalizeEstateLinkName(
+                ($row->first_name ?? '') . ' ' . ($row->middle_name ?? '') . ' ' . ($row->last_name ?? '')
+            );
+            if ($empId === '' || $name === '') {
+                continue;
+            }
+            $links[$empId . '|' . $name] = ['emp_id' => $empId, 'name' => $name];
+        }
+
+        ksort($links); // cache key stable rahe
+
+        return $this->estateSelfOtherLinksMemo[$userId] = array_values($links);
+    }
+
+    /**
+     * estate_other_req (alias $alias) ko logged-in user ke link par simit karo.
+     *
+     * emp_id exact match hota hai; naam ka match dono taraf se "contains" hai, kyunki Other
+     * request me naam chhota/adhoora hota hai ("BAL KISHAN" vs employee_master "Balkishan Arya",
+     * "DAULAT SINGH" vs "DAULAT SINGH RAWAT"). Isse wo galat link bhi ruk jaata hai jahan ek hi
+     * emp_id do alag logon par laga ho (jaise SOC00020 par "MANOJ KUMAR" vs "MANOJ SEMWAL").
+     *
+     * @param  \Illuminate\Database\Query\Builder  $query
+     * @param  array<int, array{emp_id: string, name: string}>  $selfLinks
+     */
+    private function applyEstateOtherRequestSelfFilter($query, array $selfLinks, string $alias = 'eor'): void
+    {
+        if (empty($selfLinks) || ! Schema::hasColumn('estate_other_req', 'employee_master_emp_id')) {
+            $query->whereRaw('1 = 0'); // no link: show no Other rows for this user
+
+            return;
+        }
+
+        $nameExpr = $this->estateOtherRequestNameExpr($alias);
+
+        $query->where(function ($outer) use ($selfLinks, $alias, $nameExpr) {
+            foreach ($selfLinks as $link) {
+                $outer->orWhere(function ($q) use ($link, $alias, $nameExpr) {
+                    $q->whereRaw("UPPER(TRIM($alias.employee_master_emp_id)) = ?", [$link['emp_id']])
+                        ->whereRaw("$nameExpr <> ''")
+                        ->whereRaw(
+                            "($nameExpr LIKE ? OR ? LIKE CONCAT('%', $nameExpr, '%'))",
+                            ['%' . $link['name'] . '%', $link['name']]
+                        );
+                });
+            }
+        });
     }
 
     /**
@@ -3078,6 +3227,8 @@ class EstateController extends Controller
             'section' => ['required', 'string', 'max:500', $noSpecialChars],
             'doj_academy' => ['required', 'date', 'after_or_equal:1950-01-01', 'before_or_equal:today'],
             'designation' => ['nullable', 'string', 'max:500', $noSpecialChars],
+            // Free text — jaisa type hua waisa hi estate_other_req me save hota hai.
+            'employee_master_emp_id' => ['nullable', 'string', 'max:255'],
         ], [
             'father_name.regex' => 'Father name may only contain letters, numbers, spaces, hyphen, apostrophe and dot.',
             'section.regex' => 'Section may only contain letters, numbers, spaces, hyphen, apostrophe and dot.',
@@ -3093,6 +3244,13 @@ class EstateController extends Controller
             'doj_acad' => $validated['doj_academy'],
             'designation' => $validated['designation'] ?? null,
         ];
+
+        // Jaisa type hua waisa hi save (sirf trim) — DBA ki lowercase entries jaise "pramod.kashyap"
+        // edit karne par badalni nahi chahiye. Bill ka match waise bhi case-insensitive hai.
+        if (Schema::hasColumn('estate_other_req', 'employee_master_emp_id')) {
+            $linkEmpId = trim((string) ($validated['employee_master_emp_id'] ?? ''));
+            $data['employee_master_emp_id'] = $linkEmpId !== '' ? $linkEmpId : null;
+        }
 
         if ($request->filled('id')) {
             $record = EstateOtherRequest::findOrFail($request->id);
@@ -6597,6 +6755,26 @@ class EstateController extends Controller
             abort(403, 'You do not have permission to update reading and meter no.');
         }
 
+        // Set only when this page was opened via Edit from List Meter Reading. It relaxes the input validation for
+        // that one row (a lower reading may be entered); it does NOT change how units are measured — those stay
+        // New Meter Reading − Electric Meter Reading, exactly as the screen shows.
+        $editReadingPkRaw = $request->input('edit_reading_pk');
+        $editReadingPk = (is_numeric($editReadingPkRaw) && (int) $editReadingPkRaw > 0) ? (int) $editReadingPkRaw : null;
+        // The edit deep-link scopes the grid to that one reading (getMeterReadingList: reading_pk), so a genuine
+        // correction always submits exactly that row. Anything else — a bulk save carrying the field, or a replayed
+        // POST — must not get the relaxed baseline, so drop the flag instead of trusting it.
+        if ($editReadingPk !== null) {
+            $submittedPks = [];
+            foreach ((array) $request->input('readings', []) as $item) {
+                if (is_array($item) && isset($item['selected']) && (string) $item['selected'] === '1' && ! empty($item['pk'])) {
+                    $submittedPks[(int) $item['pk']] = true;
+                }
+            }
+            if (array_keys($submittedPks) !== [$editReadingPk]) {
+                $editReadingPk = null;
+            }
+        }
+
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'readings' => 'required|array',
             'readings.*.pk' => 'required|exists:estate_month_reading_details,pk',
@@ -6610,9 +6788,12 @@ class EstateController extends Controller
             'reading_block_id' => 'nullable|integer|exists:estate_block_master,pk',
             'reading_unit_type_id' => 'nullable|integer|exists:estate_unit_type_master,pk',
             'reading_unit_sub_type_id' => 'nullable|integer|exists:estate_unit_sub_type_master,pk',
+            'edit_reading_pk' => 'nullable|integer|exists:estate_month_reading_details,pk',
         ]);
 
-        $validator->after(function ($v) use ($request) {
+        // $editReadingPk yahan already validated hai (upar wala guard): sirf tabhi non-null jab submit me
+        // theek wahi ek row ho. Andar dobara request se mat nikalo — warna guard bypass ho jayega.
+        $validator->after(function ($v) use ($request, $editReadingPk) {
             $readings = (array) $request->input('readings', []);
             $selectedPks = [];
             foreach ($readings as $item) {
@@ -6683,6 +6864,10 @@ class EstateController extends Controller
                 }
 
                 $pk = isset($item['pk']) ? (int) $item['pk'] : 0;
+                // Edit flow from List Meter Reading: correcting a saved reading, so no baseline restriction on that row.
+                if ($editReadingPk !== null && $pk === $editReadingPk) {
+                    continue;
+                }
                 $row = $rows->get($pk);
                 if (! $row) {
                     continue;
@@ -6723,7 +6908,7 @@ class EstateController extends Controller
                     if (! $meterChanged) {
                         $v->errors()->add(
                             $field,
-                            'New meter reading cannot be less than the saved current reading, or than the opening reading when no current reading exists yet.'
+                            'New meter reading cannot be less than the saved current reading, or than the opening reading when no current reading exists yet. If the meter was replaced or the saved reading is wrong, open this row from List Meter Reading → Edit.'
                         );
                     }
                 }
@@ -6835,6 +7020,11 @@ class EstateController extends Controller
                 'emrd.electricty_charges',
                 'emrd.meter_one as emrd_meter_one_before',
                 'emrd.meter_two as emrd_meter_two_before',
+                // Old meter no. — units ke liye meter-replacement detect karne me chahiye.
+                'emrd.meter_one as emrd_meter_one',
+                'emrd.meter_two as emrd_meter_two',
+                'ehm.meter_one as ehm_meter_one',
+                'ehm.meter_two as ehm_meter_two',
                 'emrd.estate_possession_details_pk',
                 'ehm.pk as audit_estate_house_pk',
                 'ehm.estate_campus_master_pk as audit_campus_pk',
@@ -6880,6 +7070,24 @@ class EstateController extends Controller
             }
 
             if ($row) {
+                // New Meter No. is frozen everywhere except the edit flow. Enforce that server-side too: a submitted
+                // number that differs from the stored one is dropped rather than written, so a replayed POST or a
+                // stale cached payload cannot silently change the meter. Equal values still write as before.
+                if (! ($editReadingPk !== null && $formRowPk === $editReadingPk)) {
+                    foreach ([1 => 'meter_one', 2 => 'meter_two'] as $guardSlot => $guardCol) {
+                        $submittedMeterNo = preg_replace('/\D/', '', (string) ($data[$guardCol] ?? ''));
+                        $storedMeterNo = preg_replace('/\D/', '', $this->effectiveOldMeterNoForRegularReadingRow($row, $guardSlot));
+                        if ($submittedMeterNo !== '' && $storedMeterNo !== '' && $submittedMeterNo !== $storedMeterNo) {
+                            // Coerce, don't just drop: the replacement check below reads $data, so leaving the
+                            // submitted value there would bill the row as a meter replacement that was never stored.
+                            $data[$guardCol] = $storedMeterNo;
+                            if (array_key_exists($guardCol, $update)) {
+                                $update[$guardCol] = $storedMeterNo;
+                            }
+                        }
+                    }
+                }
+
                 // Opening reading for units: saved curr when set, else last_month / possession (matches list baseline_min_reading).
                 $epdPrimary = (isset($row->epd_electric_meter_reading) && $row->epd_electric_meter_reading !== null && (int) $row->epd_electric_meter_reading > 0) ? (int) $row->epd_electric_meter_reading : null;
                 $epdSecondary = (isset($row->epd_electric_meter_reading_2) && $row->epd_electric_meter_reading_2 !== null && (int) $row->epd_electric_meter_reading_2 > 0) ? (int) $row->epd_electric_meter_reading_2 : null;
@@ -6906,11 +7114,26 @@ class EstateController extends Controller
                 $curr1New = $curr1Form !== null ? $curr1Form : $curr1Existing;
                 $curr2New = $curr2Form !== null ? $curr2Form : $curr2Existing;
 
-                $baseline1 = $curr1Existing !== null ? $curr1Existing : $prev1;
-                $baseline2 = $curr2Existing !== null ? $curr2Existing : $prev2;
+                // Units = New Meter Reading − Electric Meter Reading (the saved reading shown on screen);
+                // pehli entry par saved reading nahi hoti, tab last month / possession opening se naapte hain.
+                $baseline1 = \App\Support\EstateMeterReadingUnits::baseline($curr1Existing, (int) $prev1);
+                $baseline2 = \App\Support\EstateMeterReadingUnits::baseline($curr2Existing, (int) $prev2);
 
-                $u1 = ($curr1New !== null && $curr1New >= $baseline1) ? (int) ($curr1New - $baseline1) : 0;
-                $u2 = ($curr2New !== null && $curr2New >= $baseline2) ? (int) ($curr2New - $baseline2) : 0;
+                // Meter replace hua ho toh naya meter 0 se start hota hai — reading hi consumed unit hai,
+                // warna purane baseline se difference lo.
+                $meter1Changed = $this->isRegularMeterReplaced($row, 1, $data['meter_one']);
+                $meter2Changed = $this->isRegularMeterReplaced($row, 2, $data['meter_two']);
+
+                $u1 = \App\Support\EstateMeterReadingUnits::consumed(
+                    $curr1New !== null ? (int) $curr1New : null,
+                    $baseline1,
+                    $meter1Changed
+                );
+                $u2 = \App\Support\EstateMeterReadingUnits::consumed(
+                    $curr2New !== null ? (int) $curr2New : null,
+                    $baseline2,
+                    $meter2Changed
+                );
 
                 $unitTypePk = isset($row->unit_type_pk) ? (int) $row->unit_type_pk : null;
                 $m1Charge = $u1 > 0 ? $this->calculateElectricChargeForUnits($unitTypePk, $u1) : 0.0;
@@ -7926,6 +8149,21 @@ class EstateController extends Controller
     /**
      * Effective old meter number for regular possession reading validation (matches list: emrd ?? ehm).
      */
+    /**
+     * Slot ka meter replace hua ya nahi — submitted new meter no. vs effective old meter no.
+     * True hone par us slot ke units = current reading (naya meter 0 se start hota hai).
+     */
+    private function isRegularMeterReplaced($row, int $meterSlot, ?string $submittedMeterNo): bool
+    {
+        $newDigits = preg_replace('/\D/', '', trim((string) $submittedMeterNo));
+        if ($newDigits === '') {
+            return false;
+        }
+        $oldDigits = preg_replace('/\D/', '', $this->effectiveOldMeterNoForRegularReadingRow($row, $meterSlot));
+
+        return $oldDigits !== '' && $newDigits !== $oldDigits;
+    }
+
     private function effectiveOldMeterNoForRegularReadingRow($row, int $meterSlot): string
     {
         if ($meterSlot === 2) {
@@ -8495,7 +8733,7 @@ class EstateController extends Controller
                         $house = $row->house_no ? (" (House: {$row->house_no})") : '';
                         $v->errors()->add(
                             "readings.$idx.curr_month_elec_red",
-                            "Current month reading must be greater than or equal to last month meter reading{$house}."
+                            "Current month reading must be greater than or equal to last month meter reading{$house}. If the meter was replaced or the saved reading is wrong, open this row from List Meter Reading → Edit."
                         );
                     }
                 }
@@ -8573,6 +8811,9 @@ class EstateController extends Controller
                             'epo.pk as possession_pk',
                             'ehm.pk as house_pk',
                             'ehm.house_no as ehm_house_no',
+                            // Old meter no. fallback — units ke liye meter-replacement detect karne me chahiye.
+                            'ehm.meter_one as ehm_meter_one',
+                            'ehm.meter_two as ehm_meter_two',
                             DB::raw('COALESCE(epo.estate_unit_type_master_pk, ' . $houseDerivedExpr . ') as electric_unit_type_pk_resolved'),
                         ])
                         ->first();
@@ -8602,6 +8843,23 @@ class EstateController extends Controller
                 $newMeterNoDigits = preg_replace('/\D/', '', $newMeterNoRaw ?? '');
                 $update = [];
 
+                // Meter replace hua ho toh naya meter 0 se start hota hai — reading hi consumed unit hai.
+                $ehmForOldMeter = [];
+                if ($otherPossessionCtx && ! empty($row->estate_possession_other_pk)) {
+                    $ehmForOldMeter[(int) $row->estate_possession_other_pk] = (object) [
+                        'meter_one' => $otherPossessionCtx->ehm_meter_one ?? null,
+                        'meter_two' => $otherPossessionCtx->ehm_meter_two ?? null,
+                    ];
+                }
+                $oldMeterDigitsForUnits = preg_replace('/\D/', '', $this->effectiveOldMeterNoForOtherReadingRow(
+                    $row,
+                    $meterSlot,
+                    $ehmForOldMeter
+                ));
+                $meterReplacedForUnits = $newMeterNoDigits !== ''
+                    && $oldMeterDigitsForUnits !== ''
+                    && $newMeterNoDigits !== $oldMeterDigitsForUnits;
+
                 if ($meterSlot === 2) {
                     $oldCurr2 = $row->curr_month_elec_red2;
                     if ($oldCurr2 !== null && $oldCurr2 !== '') {
@@ -8610,7 +8868,9 @@ class EstateController extends Controller
                     $baseline2 = ($oldCurr2 !== null && $oldCurr2 !== '')
                         ? (int) $oldCurr2
                         : (int) ($row->last_month_elec_red2 ?? 0);
-                    $units = $curr >= $baseline2 ? $curr - $baseline2 : 0;
+                    $units = $meterReplacedForUnits
+                        ? $curr
+                        : ($curr >= $baseline2 ? $curr - $baseline2 : 0);
                     $charge = $units > 0 ? $this->calculateElectricChargeForUnits($electricUnitTypePkOther, $units) : 0.0;
 
                     $update['curr_month_elec_red2'] = $curr;
@@ -8625,7 +8885,9 @@ class EstateController extends Controller
                     $baseline = ($oldCurr !== null && $oldCurr !== '')
                         ? (int) $oldCurr
                         : (int) ($row->last_month_elec_red ?? 0);
-                    $units = $curr >= $baseline ? $curr - $baseline : 0;
+                    $units = $meterReplacedForUnits
+                        ? $curr
+                        : ($curr >= $baseline ? $curr - $baseline : 0);
                     $charge = $units > 0 ? $this->calculateElectricChargeForUnits($electricUnitTypePkOther, $units) : 0.0;
 
                     $update['curr_month_elec_red'] = $curr;
@@ -8965,22 +9227,25 @@ class EstateController extends Controller
      * Filter estate_month_reading_details (alias emrd) for Generate Bill / print: match selected Y-m by
      * to_date's calendar month when set (actual reading month), else bill_month + bill_year.
      *
+     * $alias se hi estate_month_reading_details_other (alias emro) par bhi reuse hota hai — dono
+     * tables me to_date / bill_month / bill_year same shape ke hain.
+     *
      * @param  \Illuminate\Database\Query\Builder  $query
      */
-    private function applyEstateGenerateBillMonthFilter($query, string $year, string $month): void
+    private function applyEstateGenerateBillMonthFilter($query, string $year, string $month, string $alias = 'emrd'): void
     {
         $monthName = date('F', mktime(0, 0, 0, (int) $month, 1));
         $y = (int) $year;
         $m = (int) $month;
-        $query->where(function ($q) use ($y, $m, $year, $monthName) {
-            $q->where(function ($q2) use ($y, $m) {
-                $q2->whereNotNull('emrd.to_date')
-                    ->whereYear('emrd.to_date', $y)
-                    ->whereMonth('emrd.to_date', $m);
-            })->orWhere(function ($q2) use ($year, $monthName) {
-                $q2->whereNull('emrd.to_date')
-                    ->where('emrd.bill_year', $year)
-                    ->where('emrd.bill_month', $monthName);
+        $query->where(function ($q) use ($y, $m, $year, $monthName, $alias) {
+            $q->where(function ($q2) use ($y, $m, $alias) {
+                $q2->whereNotNull("$alias.to_date")
+                    ->whereYear("$alias.to_date", $y)
+                    ->whereMonth("$alias.to_date", $m);
+            })->orWhere(function ($q2) use ($year, $monthName, $alias) {
+                $q2->whereNull("$alias.to_date")
+                    ->where("$alias.bill_year", $year)
+                    ->where("$alias.bill_month", $monthName);
             });
         });
     }
@@ -9129,6 +9394,63 @@ class EstateController extends Controller
      * @param  array<int, int>|null  $restrictEmployeePksSorted  null when full-access query; otherwise employee_pk allow-list (sorted)
      * @return \Illuminate\Support\Collection<int, object>
      */
+    /**
+     * Estate bill rows ke liye "kaunse possession + bill-month me naya meter no. bana" ka map banata hai.
+     * Key = "<possessionPk>|<Month YYYY>" (e.g. "123|June 2026"), value = ['m1' => bool, 'm2' => bool].
+     * Source: estate_update_reading audit (meter_change_month = bill_month . ' ' . bill_year).
+     * Ek hi query me saare possessions ke change records nikaalte hain (N+1 se bachne ke liye).
+     *
+     * @param  \Illuminate\Support\Collection  $bills
+     * @param  string  $type  'l' = regular possession, 'o' = other.
+     */
+    private function buildEstateMeterChangeMonthMap($bills, string $type = 'l'): array
+    {
+        $map = [];
+        if (! Schema::hasTable('estate_update_reading') || $bills === null || $bills->isEmpty()) {
+            return $map;
+        }
+
+        $possessionPks = $bills->pluck('estate_possession_details_pk')
+            ->filter(fn ($v) => $v !== null && (int) $v > 0)
+            ->map(fn ($v) => (int) $v)
+            ->unique()
+            ->values()
+            ->all();
+        if (empty($possessionPks)) {
+            return $map;
+        }
+
+        $eurRows = DB::table('estate_update_reading')
+            ->where('type', $type)
+            ->whereIn('estate_possession_details_pk', $possessionPks)
+            ->get([
+                'estate_possession_details_pk',
+                'meter_change_month',
+                'old_meter_no_one',
+                'new_meter_no_one',
+                'old_meter_no_two',
+                'new_meter_no_two',
+            ]);
+
+        foreach ($eurRows as $eur) {
+            $key = (int) $eur->estate_possession_details_pk . '|' . trim((string) ($eur->meter_change_month ?? ''));
+            if (! isset($map[$key])) {
+                $map[$key] = ['m1' => false, 'm2' => false];
+            }
+            // Naya meter tab maano jab new_meter_no set ho aur old se alag ho (old null/blank bhi replacement hai).
+            if ($eur->new_meter_no_one !== null && (string) $eur->new_meter_no_one !== ''
+                && (string) $eur->new_meter_no_one !== (string) $eur->old_meter_no_one) {
+                $map[$key]['m1'] = true;
+            }
+            if ($eur->new_meter_no_two !== null && (string) $eur->new_meter_no_two !== ''
+                && (string) $eur->new_meter_no_two !== (string) $eur->old_meter_no_two) {
+                $map[$key]['m2'] = true;
+            }
+        }
+
+        return $map;
+    }
+
     private function computeGenerateEstateBillBillsCollection(
         string $year,
         string $month,
@@ -9141,6 +9463,7 @@ class EstateController extends Controller
     ): \Illuminate\Support\Collection {
         $selectCols = [
             'emrd.pk',
+            'emrd.estate_possession_details_pk',
             'emrd.bill_no',
             'emrd.bill_month',
             'emrd.bill_year',
@@ -9208,7 +9531,17 @@ class EstateController extends Controller
 
         $bills = $this->orderEstateGenerateBillQueryLatestFirst($query)->get();
 
+        // Meter number change map: possession + bill-month ("June 2026") jiske liye naya meter bana hai.
+        // Naya meter 0 se start hota hai (consumed unit = current reading), isliye us pehle bill me
+        // Previous Reading blank dikhani hai — purane meter ka reading nahi.
+        $meterChangeMap = $this->buildEstateMeterChangeMonthMap($bills, 'l');
+
         foreach ($bills as $b) {
+            $mcKey = (isset($b->estate_possession_details_pk) ? (int) $b->estate_possession_details_pk : 0)
+                . '|' . trim((string) ($b->bill_month ?? '') . ' ' . (string) ($b->bill_year ?? ''));
+            $b->meter_one_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m1'];
+            $b->meter_two_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m2'];
+
             $b->bill_no = $this->resolveBillNumber($b->bill_no ?? null, $b->pk ?? null);
             $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d-m-Y') : '—';
             $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d-m-Y') : '—';
@@ -9263,6 +9596,130 @@ class EstateController extends Controller
     }
 
     /**
+     * "My Estate Bill" (?scope=self) ke liye Other / contract employee bills.
+     *
+     * Kuch employees ka allotment LBSNAA request (estate_home_request_details) se nahi, balki
+     * "Estate Request for Others" (estate_other_req → estate_possession_other →
+     * estate_month_reading_details_other) se hota hai. Self view sirf LBSNAA tables padhta tha,
+     * isliye aise employee ko apna bill kabhi nahi dikhta tha — Estate Admin ko wahi bill
+     * "View Estate Bill for Other" page par dikh jata tha.
+     *
+     * Link `estate_other_req.employee_master_emp_id` (= employee_master.emp_id) + emp_name se hota
+     * hai — poora rule {@see applyEstateOtherRequestSelfFilter()} me. Jab tak link set nahi hai,
+     * kuch nahi aayega; sirf naam se guess karna galat employee ka bill dikha sakta hai.
+     *
+     * @param  array<int, array{emp_id: string, name: string}>  $selfLinks  {@see estateSelfOtherLinks()}
+     */
+    private function computeGenerateEstateBillOtherBillsForSelf(
+        string $year,
+        string $month,
+        array $selfLinks,
+        bool $hasUnitTypeOnSubType
+    ): \Illuminate\Support\Collection {
+        if (empty($selfLinks)
+            || ! Schema::hasTable('estate_month_reading_details_other')
+            || ! Schema::hasColumn('estate_other_req', 'employee_master_emp_id')) {
+            return collect();
+        }
+
+        $query = DB::table('estate_month_reading_details_other as emro')
+            ->join('estate_possession_other as epo', 'emro.estate_possession_other_pk', '=', 'epo.pk')
+            ->join('estate_other_req as eor', 'epo.estate_other_req_pk', '=', 'eor.pk')
+            ->leftJoin('estate_unit_sub_type_master as eust', 'epo.estate_unit_sub_type_master_pk', '=', 'eust.pk')
+            ->leftJoin('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
+            ->select(
+                'emro.pk',
+                'epo.pk as estate_possession_details_pk',
+                'emro.bill_no',
+                'emro.bill_month',
+                'emro.bill_year',
+                'emro.from_date',
+                'emro.to_date',
+                'emro.last_month_elec_red',
+                'emro.curr_month_elec_red',
+                'emro.last_month_elec_red2',
+                'emro.curr_month_elec_red2',
+                'emro.electricty_charges',
+                'emro.water_charges',
+                'emro.licence_fees',
+                'emro.house_no',
+                'emro.meter_one',
+                'emro.meter_one_elec_charge',
+                'emro.meter_two',
+                'emro.meter_two_elec_charge',
+                ($hasUnitTypeOnSubType ? 'eust.estate_unit_type_master_pk as unit_type_pk' : 'epo.estate_unit_type_master_pk as unit_type_pk'),
+                'epo.estate_unit_sub_type_master_pk as unit_sub_type_pk',
+                'eor.emp_name',
+                DB::raw('NULL as employee_id'),
+                DB::raw("COALESCE(NULLIF(TRIM(eor.designation), ''), NULLIF(TRIM(eor.section), ''), '—') as emp_designation"),
+                'eust.unit_sub_type',
+                'ehm.water_charge as ehm_water_charge',
+                'ehm.licence_fee as ehm_licence_fee',
+                'ehm.electric_charge as ehm_electric_charge'
+            );
+
+        if (Schema::hasColumn('estate_possession_other', 'return_home_status')) {
+            $query->where(function ($q) {
+                $q->whereNull('epo.return_home_status')
+                    ->orWhere('epo.return_home_status', 0);
+            });
+        }
+
+        $this->applyEstateOtherRequestSelfFilter($query, $selfLinks);
+        $this->applyEstateGenerateBillMonthFilter($query, $year, $month, 'emro');
+
+        $bills = $query->orderByRaw('(emro.to_date IS NOT NULL) DESC')
+            ->orderByDesc('emro.to_date')
+            ->orderByDesc('emro.pk')
+            ->get();
+
+        // Naya meter is bill month me bana ho to Previous Reading blank — Other/contract bills type 'o'.
+        $meterChangeMap = $this->buildEstateMeterChangeMonthMap($bills, 'o');
+
+        foreach ($bills as $b) {
+            $mcKey = (isset($b->estate_possession_details_pk) ? (int) $b->estate_possession_details_pk : 0)
+                . '|' . trim((string) ($b->bill_month ?? '') . ' ' . (string) ($b->bill_year ?? ''));
+            $b->meter_one_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m1'];
+            $b->meter_two_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m2'];
+
+            $b->bill_no = $this->resolveBillNumber($b->bill_no ?? null, $b->pk ?? null);
+            $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d-m-Y') : '—';
+            $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d-m-Y') : '—';
+            $b->house_display = $b->unit_sub_type && $b->house_no ? $b->unit_sub_type . '-(' . $b->house_no . ')' : ($b->house_no ?? '—');
+
+            // Other bills me consumed unit save nahi hota — readings se nikaalo (LBSNAA jaisa fallback).
+            $prev1 = (int) ($b->last_month_elec_red ?? 0);
+            $curr1 = (int) ($b->curr_month_elec_red ?? 0);
+            $prev2 = (int) ($b->last_month_elec_red2 ?? 0);
+            $curr2 = (int) ($b->curr_month_elec_red2 ?? 0);
+            $u1 = ($curr1 >= $prev1) ? $curr1 - $prev1 : 0;
+            $u2 = ($curr2 >= $prev2) ? $curr2 - $prev2 : 0;
+            $b->meter_one_consume_unit = ($u1 > 0 || $curr1 > 0 || $prev1 > 0) ? $u1 : null;
+            $b->meter_two_consume_unit = ($u2 > 0 || $curr2 > 0 || $prev2 > 0) ? $u2 : null;
+            $b->total_consumed_unit = (int) ($b->meter_one_consume_unit ?? 0) + (int) ($b->meter_two_consume_unit ?? 0);
+
+            // Reading row me 0/null ho to Define House (estate_house_master) values use karo.
+            if ((float) ($b->water_charges ?? 0) <= 0 && ($b->ehm_water_charge ?? null) !== null && $b->ehm_water_charge !== '') {
+                $b->water_charges = (float) $b->ehm_water_charge;
+            }
+            if ((float) ($b->licence_fees ?? 0) <= 0 && ($b->ehm_licence_fee ?? null) !== null && $b->ehm_licence_fee !== '') {
+                $b->licence_fees = (float) $b->ehm_licence_fee;
+            }
+            if ((float) ($b->electricty_charges ?? 0) <= 0 && ($b->ehm_electric_charge ?? null) !== null && $b->ehm_electric_charge !== '') {
+                $b->electricty_charges = (float) $b->ehm_electric_charge;
+            }
+
+            $b->grand_total = (float) ($b->electricty_charges ?? 0) + (float) ($b->water_charges ?? 0) + (float) ($b->licence_fees ?? 0);
+
+            // Blade: Employee Type badge aur print link (Other bills alag route/flag se print hote hain).
+            $b->is_other_bill = true;
+            $b->employee_type_label = 'OTHER';
+        }
+
+        return $bills;
+    }
+
+    /**
      * Generate Estate Bill / Estate Bill Summary - filters and list of bill cards.
      *
      * Redis/file cache: ESTATE_UPDATE_METER_READING_CACHE_* for bill list when a bill month is selected (keys: estate_geb_lbs:v2:…).
@@ -9310,6 +9767,10 @@ class EstateController extends Controller
                 }
             }
 
+            // Self view me Other/contract allotment ka bill bhi dikhana hai
+            // (link = estate_other_req.employee_master_emp_id + emp_name; {@see estateSelfOtherLinks()}).
+            $selfOtherLinks = $applySelfFilter ? $this->estateSelfOtherLinks() : [];
+
             $ustKey = ($unitSubTypePk !== null && $unitSubTypePk !== '') ? (string) $unitSubTypePk : '';
 
             $searchShapeSig = [
@@ -9323,7 +9784,7 @@ class EstateController extends Controller
                 'ln' => Schema::hasColumn('employee_master', 'last_name') ? 1 : 0,
             ];
 
-            $cacheKey = 'estate_geb_lbs:v2:' . md5(json_encode([
+            $cacheKey = 'estate_geb_lbs:v4:' . md5(json_encode([
                 'bm' => $billMonth,
                 'ust' => $ustKey,
                 'q' => $search,
@@ -9334,6 +9795,7 @@ class EstateController extends Controller
                 'emp' => $restrictEmployeePksSorted === null
                     ? ['t' => 'all']
                     : ['t' => 'emp', 'ids' => $restrictEmployeePksSorted],
+                'oth' => $selfOtherLinks,
             ]));
 
             $bills = $this->rememberUpdateMeterReadingCache($cacheKey, function () use (
@@ -9344,9 +9806,10 @@ class EstateController extends Controller
                 $hasUnitTypeOnSubType,
                 $hasEpdReading2,
                 $applySelfFilter,
-                $restrictEmployeePksSorted
+                $restrictEmployeePksSorted,
+                $selfOtherLinks
             ) {
-                return $this->computeGenerateEstateBillBillsCollection(
+                $lbsnaBills = $this->computeGenerateEstateBillBillsCollection(
                     $year,
                     $month,
                     $ustKey !== '' ? $ustKey : null,
@@ -9356,6 +9819,20 @@ class EstateController extends Controller
                     $applySelfFilter,
                     $restrictEmployeePksSorted
                 );
+
+                if (empty($selfOtherLinks)) {
+                    return $lbsnaBills;
+                }
+
+                // Unit Sub Type filter self view me dikhta hi nahi, isliye Other bills par lagana zaroori nahi.
+                $otherBills = $this->computeGenerateEstateBillOtherBillsForSelf(
+                    $year,
+                    $month,
+                    $selfOtherLinks,
+                    $hasUnitTypeOnSubType
+                );
+
+                return $otherBills->isEmpty() ? $lbsnaBills : $lbsnaBills->concat($otherBills)->values();
             });
         }
 
@@ -9677,6 +10154,7 @@ class EstateController extends Controller
         $employeePk = $request->get('employee_pk');
         $employeeCategory = trim((string) $request->get('employee_category', 'LBSNAA'));
         $bill = null;
+        $billIsOther = false; // resolved bill regular (l) hai ya Other/contract (o) — meter-change lookup type ke liye.
 
         $resolveMonthVariants = function ($m): array {
             $m = trim((string) $m);
@@ -9760,6 +10238,7 @@ class EstateController extends Controller
         $baseQuery = function () use ($hasUnitTypeOnSubType, $hasEpdReading2Print) {
             $cols = [
                 'emrd.pk',
+                'emrd.estate_possession_details_pk',
                 'emrd.bill_no',
                 'emrd.bill_month',
                 'emrd.bill_year',
@@ -9815,6 +10294,7 @@ class EstateController extends Controller
                 ->leftJoin('estate_unit_sub_type_master as eust', 'epo.estate_unit_sub_type_master_pk', '=', 'eust.pk')
                 ->select(
                     'emro.pk',
+                    'epo.pk as estate_possession_details_pk',
                     'emro.bill_no',
                     'emro.bill_month',
                     'emro.bill_year',
@@ -9867,8 +10347,12 @@ class EstateController extends Controller
                             ->orWhere('emro.pk', $billNo);
                     })
                     ->first();
+                if ($bill) {
+                    $billIsOther = true;
+                }
             }
         } elseif ($month && $year && $employeePk) {
+            $billIsOther = $isOtherEmployee;
             $monthVariants = $resolveMonthVariants($month);
             // Allow print preview for any bill (draft or notified) when filtering by employee
             if ($isOtherEmployee) {
@@ -9898,6 +10382,13 @@ class EstateController extends Controller
         }
 
         if ($bill) {
+            // Naya meter (is bill month me bana) → Previous Reading blank, kyunki naya meter 0 se start hota hai.
+            $meterChangeMap = $this->buildEstateMeterChangeMonthMap(collect([$bill]), $billIsOther ? 'o' : 'l');
+            $mcKey = (isset($bill->estate_possession_details_pk) ? (int) $bill->estate_possession_details_pk : 0)
+                . '|' . trim((string) ($bill->bill_month ?? '') . ' ' . (string) ($bill->bill_year ?? ''));
+            $bill->meter_one_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m1'];
+            $bill->meter_two_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m2'];
+
             $bill->bill_no = $this->resolveBillNumber($bill->bill_no ?? null, $bill->pk ?? null);
             $bill->from_date_formatted = $bill->from_date ? \Carbon\Carbon::parse($bill->from_date)->format('d.m.Y') : '—';
             $bill->to_date_formatted = $bill->to_date ? \Carbon\Carbon::parse($bill->to_date)->format('d.m.Y') : '—';
@@ -10024,7 +10515,8 @@ class EstateController extends Controller
      */
     public function estateBillReportPrintAll(Request $request)
     {
-        $this->authorizeEstateMasterMeterAndReports();
+        // "My Estate Bill" ka Print bhi yahin aata hai — employee ke liye query neeche self-filter se simit hai.
+        $this->authorizeEstateBillPrint($request);
 
         $billMonth = $request->get('bill_month');
         $unitSubTypePk = $request->get('unit_sub_type_pk');
@@ -10052,7 +10544,13 @@ class EstateController extends Controller
         if (!empty($selectedPks) && $request->boolean('is_other')) {
             $isSelectedPrint = true;
             $isOtherSelected = true;
-            $backUrl = route('admin.estate.generate-estate-bill-for-other', ['bill_month' => $billMonth]);
+            $selfOnly = $this->shouldApplyGenerateEstateBillSelfFilter($request);
+            $backUrl = $selfOnly
+                ? route('admin.estate.generate-estate-bill', array_filter([
+                    'bill_month' => $billMonth,
+                    'scope' => 'self',
+                ], static fn ($v) => $v !== null && $v !== ''))
+                : route('admin.estate.generate-estate-bill-for-other', ['bill_month' => $billMonth]);
 
             $hasUnitTypeOnSubType = \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
             $rows = DB::table('estate_month_reading_details_other as emro')
@@ -10061,8 +10559,13 @@ class EstateController extends Controller
                 ->leftJoin('estate_unit_sub_type_master as eust', 'epo.estate_unit_sub_type_master_pk', '=', 'eust.pk')
                 ->leftJoin('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
                 ->whereIn('emro.pk', $selectedPks)
+                // Self view: sirf apne linked Other bills — pk guess karke kisi aur ka bill na khule.
+                ->when($selfOnly, function ($q) {
+                    $this->applyEstateOtherRequestSelfFilter($q, $this->estateSelfOtherLinks());
+                })
                 ->select(
                     'emro.pk',
+                    'epo.pk as estate_possession_details_pk',
                     'emro.bill_no',
                     'emro.bill_month',
                     'emro.bill_year',
@@ -10095,7 +10598,15 @@ class EstateController extends Controller
                 ->orderBy('emro.bill_no')
                 ->get();
 
+            // Naya meter (is bill month me bana) → Previous Reading blank. Other/contract bills => type 'o'.
+            $meterChangeMap = $this->buildEstateMeterChangeMonthMap($rows, 'o');
+
             foreach ($rows as $b) {
+                $mcKey = (isset($b->estate_possession_details_pk) ? (int) $b->estate_possession_details_pk : 0)
+                    . '|' . trim((string) ($b->bill_month ?? '') . ' ' . (string) ($b->bill_year ?? ''));
+                $b->meter_one_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m1'];
+                $b->meter_two_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m2'];
+
                 $b->bill_no = $this->resolveBillNumber($b->bill_no ?? null, $b->pk ?? null);
                 $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d.m.Y') : '—';
                 $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d.m.Y') : '—';
@@ -10133,6 +10644,7 @@ class EstateController extends Controller
 
             $selectCols = [
                 'emrd.pk',
+                'emrd.estate_possession_details_pk',
                 'emrd.bill_no',
                 'emrd.bill_month',
                 'emrd.bill_year',
@@ -10203,7 +10715,15 @@ class EstateController extends Controller
 
             $bills = $this->orderEstateGenerateBillQueryLatestFirst($query)->get();
 
+            // Naya meter (is bill month me bana) → Previous Reading blank, kyunki naya meter 0 se start hota hai.
+            $meterChangeMap = $this->buildEstateMeterChangeMonthMap($bills, 'l');
+
             foreach ($bills as $b) {
+                $mcKey = (isset($b->estate_possession_details_pk) ? (int) $b->estate_possession_details_pk : 0)
+                    . '|' . trim((string) ($b->bill_month ?? '') . ' ' . (string) ($b->bill_year ?? ''));
+                $b->meter_one_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m1'];
+                $b->meter_two_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m2'];
+
                 $b->bill_no = $this->resolveBillNumber($b->bill_no ?? null, $b->pk ?? null);
                 $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d.m.Y') : '—';
                 $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d.m.Y') : '—';
@@ -10245,9 +10765,34 @@ class EstateController extends Controller
                 }
                 $b->grand_total = (float) ($b->electricty_charges ?? 0) + (float) ($b->water_charges ?? 0) + (float) ($b->licence_fees ?? 0);
             }
+
+            // "My Estate Bill" ka Print All: LBSNAA ke saath user ke Other/contract bills bhi.
+            $bills = $bills->concat($this->selfOtherBillsForPrint($request, $year, $month, $hasUnitTypeOnSubType))->values();
         }
 
         return view('admin.estate.estate_bill_report_print_all', compact('bills', 'billMonth', 'unitSubTypePk', 'isSelectedPrint', 'isOtherSelected', 'backUrl'));
+    }
+
+    /**
+     * Print screens ke liye logged-in user ke Other/contract bills (self scope me hi).
+     * Print blade d.m.Y format use karta hai, list page d-m-Y — isliye yahan dobara format karte hain.
+     *
+     * @return \Illuminate\Support\Collection<int, \stdClass>
+     */
+    private function selfOtherBillsForPrint(Request $request, string $year, string $month, bool $hasUnitTypeOnSubType): \Illuminate\Support\Collection
+    {
+        if (! $this->shouldApplyGenerateEstateBillSelfFilter($request) || ! Auth::check()) {
+            return collect();
+        }
+
+        $rows = $this->computeGenerateEstateBillOtherBillsForSelf($year, $month, $this->estateSelfOtherLinks(), $hasUnitTypeOnSubType);
+
+        foreach ($rows as $b) {
+            $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d.m.Y') : '—';
+            $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d.m.Y') : '—';
+        }
+
+        return $rows;
     }
 
     /**
@@ -10255,7 +10800,7 @@ class EstateController extends Controller
      */
     public function estateBillReportPrintAllPdf(Request $request)
     {
-        $this->authorizeEstateMasterMeterAndReports();
+        $this->authorizeEstateBillPrint($request);
 
         $billMonth = $request->get('bill_month');
         $unitSubTypePk = $request->get('unit_sub_type_pk');
@@ -10269,6 +10814,7 @@ class EstateController extends Controller
 
             $selectCols = [
                 'emrd.pk',
+                'emrd.estate_possession_details_pk',
                 'emrd.bill_no',
                 'emrd.bill_month',
                 'emrd.bill_year',
@@ -10329,7 +10875,15 @@ class EstateController extends Controller
 
             $bills = $this->orderEstateGenerateBillQueryLatestFirst($query)->get();
 
+            // Naya meter (is bill month me bana) → Previous Reading blank, kyunki naya meter 0 se start hota hai.
+            $meterChangeMap = $this->buildEstateMeterChangeMonthMap($bills, 'l');
+
             foreach ($bills as $b) {
+                $mcKey = (isset($b->estate_possession_details_pk) ? (int) $b->estate_possession_details_pk : 0)
+                    . '|' . trim((string) ($b->bill_month ?? '') . ' ' . (string) ($b->bill_year ?? ''));
+                $b->meter_one_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m1'];
+                $b->meter_two_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m2'];
+
                 $b->bill_no = $this->resolveBillNumber($b->bill_no ?? null, $b->pk ?? null);
                 $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d.m.Y') : '—';
                 $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d.m.Y') : '—';
@@ -10371,6 +10925,9 @@ class EstateController extends Controller
                 }
                 $b->grand_total = (float) ($b->electricty_charges ?? 0) + (float) ($b->water_charges ?? 0) + (float) ($b->licence_fees ?? 0);
             }
+
+            // "My Estate Bill" ka PDF download: LBSNAA ke saath user ke Other/contract bills bhi.
+            $bills = $bills->concat($this->selfOtherBillsForPrint($request, $year, $month, $hasUnitTypeOnSubType))->values();
         }
 
         if ($bills->isEmpty()) {
@@ -11076,7 +11633,7 @@ class EstateController extends Controller
         bool $filterByUser,
         array $employeeIdsSorted,
         mixed $currentUserId,
-        ?string $currentUserEmailNorm,
+        array $currentUserLinks,
         int $reqStart,
         mixed $reqLengthRaw,
         string $searchValue,
@@ -11088,14 +11645,17 @@ class EstateController extends Controller
             'fbu' => $filterByUser,
             'eids' => $employeeIdsSorted,
             'uid' => $currentUserId,
-            'em' => $currentUserEmailNorm,
+            // 'oth' (not the old 'em'): this carries the Other/contract links, not an email.
+            // Renaming the field changes every key, so the version below is bumped v2 -> v3 to
+            // retire the old entries cleanly instead of leaving them to expire.
+            'oth' => $currentUserLinks,
             'et' => $employeeTypeFilter,
         ];
         if (! $isDataTables) {
-            return 'estate_br_grid:v2:lg:' . md5(json_encode([$normalizedBillMonth, $scope]));
+            return 'estate_br_grid:v3:lg:' . md5(json_encode([$normalizedBillMonth, $scope]));
         }
 
-        return 'estate_br_grid:v2:dt:' . md5(json_encode([
+        return 'estate_br_grid:v3:dt:' . md5(json_encode([
             'm' => $normalizedBillMonth,
             's' => $scope,
             'st' => $reqStart,
@@ -11111,6 +11671,7 @@ class EstateController extends Controller
      *
      * @param  array<int, string>  $billMonthVariants
      * @param  array<int, int>  $employeeIds
+     * @param  array<int, array{emp_id: string, name: string}>  $currentUserLinks  {@see estateSelfOtherLinks()}
      * @return array{kind: 'legacy', data: array<int, array<string, mixed>>}|array{kind: 'datatables', recordsTotal: int, recordsFiltered: int, data: array<int, array<string, mixed>>}
      */
     private function computeBillReportGridCachedPayload(
@@ -11119,7 +11680,7 @@ class EstateController extends Controller
         bool $filterByUser,
         array $employeeIds,
         mixed $currentUserId,
-        ?string $currentUserEmail,
+        array $currentUserLinks,
         bool $isDataTables,
         int $start,
         int $length,
@@ -11218,13 +11779,8 @@ class EstateController extends Controller
             ->whereRaw('TRIM(CAST(emro.bill_year AS CHAR)) = ?', [$billYearStr])
             ->where('epo.return_home_status', 0);
         if ($filterByUser) {
-            if (Schema::hasColumn('estate_other_req', 'user_id') && $currentUserId !== null) {
-                $otherQ->where('eor.user_id', $currentUserId);
-            } elseif ($currentUserEmail !== null && Schema::hasColumn('estate_other_req', 'email')) {
-                $otherQ->where('eor.email', $currentUserEmail);
-            } else {
-                $otherQ->whereRaw('1 = 0'); // no user link: show no Other rows for this user
-            }
+            // Other/contract bills ka link employee_master_emp_id + emp_name hai (wahi jo My Estate Bill use karta hai).
+            $this->applyEstateOtherRequestSelfFilter($otherQ, $currentUserLinks);
         }
         $otherQ = $otherQ->select([
                 DB::raw("TRIM(CONCAT('Other Employee', IF(CHAR_LENGTH(TRIM(COALESCE(eor.designation, ''))) > 0, CONCAT(' — ', TRIM(eor.designation)), ''))) as employee_type"),
@@ -11455,15 +12011,14 @@ class EstateController extends Controller
         $filterByUser = ! (isEstateAuthority());
         $employeeIds = [];
         $currentUserId = null;
-        $currentUserEmail = null;
+        $currentUserLinks = [];
         if ($filterByUser && Auth::check()) {
             $user = Auth::user();
             $currentUserId = $user->user_id ?? $user->pk ?? null;
             $employeeIds = getEmployeeIdsForUser($currentUserId);
             $employeeIds = array_filter(array_map('intval', $employeeIds));
-            if (isset($user->email)) {
-                $currentUserEmail = trim((string) $user->email);
-            }
+            // Other/contract bills employee_master_emp_id + emp_name se link hote hain — My Estate Bill wala hi resolver.
+            $currentUserLinks = $this->estateSelfOtherLinks();
         }
 
         $orderCol = $isDataTables ? (int) data_get($request->all(), 'order.0.column', 0) : 0;
@@ -11472,7 +12027,6 @@ class EstateController extends Controller
         $normalizedBillMonth = $billYearStr . '-' . $billMonthNumPadded;
         $employeeIdsSorted = array_values($employeeIds);
         sort($employeeIdsSorted, SORT_NUMERIC);
-        $currentUserEmailNorm = ($currentUserEmail !== null && $currentUserEmail !== '') ? strtolower($currentUserEmail) : null;
 
         $cacheKey = $this->estateBillReportGridCacheKey(
             $isDataTables,
@@ -11480,7 +12034,7 @@ class EstateController extends Controller
             $filterByUser,
             $employeeIdsSorted,
             $currentUserId,
-            $currentUserEmailNorm,
+            $currentUserLinks,
             max(0, (int) $request->get('start', 0)),
             $request->get('length', 10),
             $searchValue,
@@ -11500,7 +12054,7 @@ class EstateController extends Controller
             $filterByUser,
             $employeeIds,
             $currentUserId,
-            $currentUserEmail,
+            $currentUserLinks,
             $isDataTables,
             $start,
             $length,
@@ -11517,7 +12071,7 @@ class EstateController extends Controller
                 $filterByUser,
                 $employeeIds,
                 $currentUserId,
-                $currentUserEmail,
+                $currentUserLinks,
                 $isDataTables,
                 $start,
                 $length,
@@ -11591,6 +12145,7 @@ class EstateController extends Controller
         $other = $other
             ->select([
                 'emro.pk',
+                'epo.pk as estate_possession_details_pk',
                 'emro.bill_no',
                 'emro.bill_month',
                 'emro.bill_year',
@@ -11615,13 +12170,29 @@ class EstateController extends Controller
             ->orderByDesc('emro.pk')
             ->get();
 
+        // Naya meter (is bill month me bana) → uski Previous Reading blank, kyunki naya meter 0 se start hota hai.
+        // Other/contract bills => estate_update_reading type 'o'.
+        $meterChangeMap = $this->buildEstateMeterChangeMonthMap($other, 'o');
+
         $rows = [];
         foreach ($other as $r) {
+            $mcKey = (isset($r->estate_possession_details_pk) ? (int) $r->estate_possession_details_pk : 0)
+                . '|' . trim((string) ($r->bill_month ?? '') . ' ' . (string) ($r->bill_year ?? ''));
+            $meterOneIsNew = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m1'];
+            $meterTwoIsNew = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m2'];
+
             $prev = (int) ($r->last_month_elec_red ?? 0);
             $curr = (int) ($r->curr_month_elec_red ?? 0);
             $prev2 = (int) ($r->last_month_elec_red2 ?? 0);
             $curr2 = (int) ($r->curr_month_elec_red2 ?? 0);
-            $units = (($curr >= $prev) ? $curr - $prev : 0) + (($curr2 >= $prev2) ? $curr2 - $prev2 : 0);
+            // Naya meter → current reading hi consumed unit (0 se start). Warna purana concept: curr - prev.
+            $unitOne = $meterOneIsNew ? $curr : (($curr >= $prev) ? $curr - $prev : 0);
+            $unitTwo = $meterTwoIsNew ? $curr2 : (($curr2 >= $prev2) ? $curr2 - $prev2 : 0);
+            $units = $unitOne + $unitTwo;
+
+            // Second meter tabhi dikhao jab meter_two ek real number ho (0/null nahi) ya uska koi reading ho.
+            // Isse meter_no column me extra "0" line nahi aayegi (meter_two = 0 wale single-meter homes).
+            $showMeterTwo = (int) ($r->meter_two ?? 0) !== 0 || $prev2 > 0 || $curr2 > 0;
             // Use electricity amount saved on the bill (set when meter reading was saved), not current slab rates.
             $totalCharge = (float) ($r->electricty_charges ?? 0);
             // Prefer Define House (estate_house_master) licence_fee so changes in Define House reflect here
@@ -11645,9 +12216,9 @@ class EstateController extends Controller
                 'house_no' => $r->house_no ?? '—',
                 'from_date' => $r->from_date ? \Carbon\Carbon::parse($r->from_date)->format('d-m-Y') : '—',
                 'to_date' => $r->to_date ? \Carbon\Carbon::parse($r->to_date)->format('d-m-Y') : '—',
-                'meter_no' => trim(($r->meter_one ?? '') . (isset($r->meter_two) && (string) $r->meter_two !== '' ? "\n" . $r->meter_two : '')),
-                'prev_reading' => (string) $prev . (($prev2 > 0 || $curr2 > 0) ? "\n" . $prev2 : ''),
-                'curr_reading' => (string) $curr . (($prev2 > 0 || $curr2 > 0) ? "\n" . $curr2 : ''),
+                'meter_no' => trim(($r->meter_one ?? '') . ($showMeterTwo ? "\n" . (int) ($r->meter_two ?? 0) : '')),
+                'prev_reading' => ($meterOneIsNew ? '—' : (string) $prev) . ($showMeterTwo ? "\n" . ($meterTwoIsNew ? '—' : (string) $prev2) : ''),
+                'curr_reading' => (string) $curr . ($showMeterTwo ? "\n" . (string) $curr2 : ''),
                 'unit_consumed' => (string) $units,
                 'total_charge' => $totalCharge,
                 'licence_fee' => $licence,
@@ -11691,7 +12262,7 @@ class EstateController extends Controller
         $billMonthStr = date('F', mktime(0, 0, 0, $monthNum, 1));
 
         $hasReturnHomeStatusCol = Schema::hasColumn('estate_possession_other', 'return_home_status');
-        $cacheKey = 'estate_gebo:v1:' . md5(json_encode([
+        $cacheKey = 'estate_gebo:v2:' . md5(json_encode([
             'bm' => $billMonthStr,
             'by' => $billYearStr,
             'rh' => $hasReturnHomeStatusCol ? 1 : 0,

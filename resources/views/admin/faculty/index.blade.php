@@ -36,7 +36,7 @@
         <!-- start Zero Configuration -->
         <div class="card" style="border-left:4px solid #004a93;">
             <div class="card-body">
-                <div class="table-responsive">
+                <div>
                     <div class="row">
                         <div class="col-6">
                             <h4 class="fw-semibold text-primary mb-0" style="color:#004a93 !important;">
@@ -72,7 +72,46 @@
                     </div>
 
                     <hr>
-                    {!! $dataTable->table(['class' => 'table', 'data-sargam-dt-ui' => 'false']) !!}
+
+                    <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4">
+                        <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                            <button type="button" class="btn programme-dt-btn-columns" id="facultyBtnColumns"
+                                data-bs-toggle="modal" data-bs-target="#facultyColumnVisibilityModal"
+                                title="Show / hide columns">
+                                <span>Columns</span>
+                                <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                            </button>
+                            <div id="facultyDtSearch" class="programme-dt-search" data-dt-search-for="faculty-table"></div>
+                        </div>
+                    </div>
+
+                    <div class="programme-dt-panel">
+                        <div class="table-responsive">
+                            {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
+                        </div>
+                        <div id="facultyDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                            data-dt-footer-for="faculty-table"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Column Visibility Modal -->
+    <div class="modal fade" id="facultyColumnVisibilityModal" tabindex="-1"
+        aria-labelledby="facultyColumnVisibilityLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-0 pb-2">
+                    <h5 class="modal-title fw-bold" id="facultyColumnVisibilityLabel">Column Visibility</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-0">
+                    <hr class="mt-0">
+                    <div class="row g-3" id="facultyColumnToggleGrid"></div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -82,101 +121,95 @@
 @push('scripts')
     {!! $dataTable->scripts() !!}
 
+{{-- Search box, pagination and the "Showing N of M items" count are relocated into
+     #facultyDtSearch / #facultyDtFooter by the global enhancer
+     (public/js/datatable-global-ui.js) via the data-dt-search-for /
+     data-dt-footer-for hooks above. Do NOT add a page-local copy of that logic. --}}
+
 <script>
-// Move the Yajra DataTable's search / pagination / length / count into the
-// programme-dt-* slots so they render (the table's DOM routes them into hidden
-// rows by default). Mirrors the programme / course-group-type index pattern.
+/* ---- Column show / hide (DataTables API), matching the other listing pages ---- */
 $(function () {
-    function enhanceFacultyDtControls() {
-        var $wrapper = $('#faculty-table_wrapper');
-        if (!$wrapper.length) { return; }
+    var TABLE_ID = '#faculty-table';
+    var facultyColStorageKey = 'facultyGrid:hiddenColumns:v1';
 
-        var $searchSlot = $('#facultyDtSearch');
-        var $footer = $('#facultyDtFooter');
-
-        if ($searchSlot.length && !$searchSlot.find('.dataTables_filter').length) {
-            var $filter = $wrapper.find('.dataTables_filter').first();
-            if ($filter.length) {
-                $filter.find('input')
-                    .addClass('form-control shadow-none')
-                    .attr('placeholder', 'Search')
-                    .attr('aria-label', 'Search faculty');
-                $filter.find('label').contents().filter(function () {
-                    return this.nodeType === 3;
-                }).remove();
-                $searchSlot.append($filter);
-            }
+    function facultyGetHiddenCols() {
+        try {
+            var raw = localStorage.getItem(facultyColStorageKey);
+            var arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) {
+            return [];
         }
+    }
 
-        if ($footer.data('dtReady')) { updateFacultyDtCount(); return; }
-        if (!$footer.length) { return; }
-        // If the global DataTable UI already populated this footer, don't duplicate it.
-        if ($footer.find('.dataTables_info, .dataTables_paginate, .dataTables_length').length) {
-            $footer.data('dtReady', true);
-            updateFacultyDtCount();
+    function facultyPersistHiddenCols(arr) {
+        try { localStorage.setItem(facultyColStorageKey, JSON.stringify(arr)); } catch (e) {}
+    }
+
+    function setupFacultyColumns(dt) {
+        if (!dt) {
             return;
         }
+        var hidden = facultyGetHiddenCols();
 
-        var $paginate = $wrapper.find('.dataTables_paginate').first();
-        var $length = $wrapper.find('.dataTables_length').first();
-        var $info = $wrapper.find('.dataTables_info').first();
-
-        var $pagCol = $('<div class="programme-dt-pagination"></div>');
-        var $countCol = $('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>');
-
-        if ($paginate.length) {
-            $paginate.find('.pagination').addClass('mb-0');
-            $pagCol.append($paginate);
-        }
-
-        if ($length.length) {
-            // Detach (not empty) the select so DataTables' change.DT handler survives.
-            var $select = $length.find('select').addClass('form-select form-select-sm').detach();
-            $length.find('label')
-                .empty()
-                .append(document.createTextNode('Showing '))
-                .append($select)
-                .append(document.createTextNode(' '));
-            $countCol.append($length);
-        }
-
-        if ($info.length) {
-            $info.addClass('mb-0');
-            $countCol.append($info);
-        }
-
-        $footer.append($pagCol).append($countCol);
-        $footer.data('dtReady', true);
-    }
-
-    function updateFacultyDtCount() {
-        if (!$.fn.DataTable.isDataTable('#faculty-table')) { return; }
-        var info = $('#faculty-table').DataTable().page.info();
-        var $info = $('#facultyDtFooter .dataTables_info');
-        if ($info.length && info && info.recordsDisplay !== undefined) {
-            $info.text('of ' + info.recordsDisplay.toLocaleString() + ' items');
-        }
-    }
-
-    // Yajra initialises the table itself; wait for it, then wire up the slots.
-    var facultyInitTimer = setInterval(function () {
-        if (!$.fn.DataTable.isDataTable('#faculty-table')) { return; }
-        clearInterval(facultyInitTimer);
-
-        var $wrapper = $('#faculty-table_wrapper');
-        enhanceFacultyDtControls();
-        updateFacultyDtCount();
-
-        $('#faculty-table').on('draw.dt', function () {
-            if ($wrapper.find('.dataTables_paginate').length && !$('#facultyDtFooter .dataTables_paginate').length) {
-                $('#facultyDtFooter').empty().data('dtReady', false);
-                enhanceFacultyDtControls();
-            }
-            updateFacultyDtCount();
+        // Apply saved visibility — DataTables keeps this across redraws / ajax reloads.
+        dt.columns().every(function () {
+            var idx = this.index();
+            this.visible(hidden.indexOf(idx) === -1, false);
         });
+        dt.columns.adjust();
 
-        setTimeout(function () { enhanceFacultyDtControls(); updateFacultyDtCount(); }, 300);
-    }, 50);
+        var $grid = $('#facultyColumnToggleGrid');
+        if (!$grid.length) {
+            return;
+        }
+        $grid.empty();
+
+        dt.columns().every(function () {
+            var idx = this.index();
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (!title) {
+                return;
+            }
+
+            var inputId = 'facultycolvis_' + idx;
+            var $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
+            var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-1 px-3 py-2 mb-0 w-100"></label>')
+                .attr('for', inputId);
+            var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .prop('checked', hidden.indexOf(idx) === -1);
+
+            $cb.on('change', function () {
+                var h = facultyGetHiddenCols();
+                var pos = h.indexOf(idx);
+                if (this.checked) {
+                    if (pos !== -1) h.splice(pos, 1);
+                } else {
+                    if (pos === -1) h.push(idx);
+                }
+                facultyPersistHiddenCols(h);
+                dt.column(idx).visible(this.checked, false);
+                dt.columns.adjust();
+            });
+
+            $label.append($cb).append($('<span></span>').text(title));
+            $cell.append($label);
+            $grid.append($cell);
+        });
+    }
+
+    // Yajra initialises the table itself. Handle both orders: if it is already up
+    // we build now, otherwise init.dt fires for us. Both paths are idempotent.
+    $(document).on('init.dt', function (e, settings) {
+        if (settings.nTable && settings.nTable.id === 'faculty-table') {
+            setupFacultyColumns(new $.fn.dataTable.Api(settings));
+        }
+    });
+
+    if ($.fn.DataTable.isDataTable(TABLE_ID)) {
+        setupFacultyColumns($(TABLE_ID).DataTable());
+    }
 });
 </script>
 

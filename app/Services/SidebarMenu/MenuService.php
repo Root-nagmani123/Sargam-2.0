@@ -48,6 +48,7 @@ class MenuService
         $data['order'] = $data['order'] ?? Menu::max('order') + 1;
         $menu = Menu::create($data);
         SidebarNavResolver::clearCache();
+        self::clearStructureCache();
         Permission::firstOrCreate([
             'name' => $permission,
             'guard_name' => 'web'
@@ -65,6 +66,7 @@ class MenuService
         $menu = $this->find($id);
         $menu->update(['is_active' => $status]);
         SidebarNavResolver::clearCache();
+        self::clearStructureCache();
         return $menu;
     }
 
@@ -93,6 +95,7 @@ class MenuService
             }
         }
         SidebarNavResolver::clearCache();
+        self::clearStructureCache();
         return $menu;
     }
 
@@ -101,6 +104,7 @@ class MenuService
         $menu = $this->find($id);
         $deleted = $menu->delete();
         SidebarNavResolver::clearCache();
+        self::clearStructureCache();
         return $deleted;
     }
 
@@ -296,16 +300,25 @@ class MenuService
         return $this->menusCache[$key] = $this->buildMenus();
     }
 
-    private function buildMenus()
+    /** Cache key for the sidebar category → group → menu → children structure. */
+    public const STRUCTURE_CACHE_KEY = 'fc_sidebar_structure';
+
+    /**
+     * The sidebar structure (categories → groups → menus → children).
+     *
+     * This is global data — identical for every user — but it cost 5 queries on
+     * EVERY page in the application, including login. Per-user permission
+     * filtering still happens live in buildMenus(), so no permission data is
+     * cached here and a revoked permission takes effect immediately.
+     *
+     * The payload is stored serialized and unserialized on every read, so each
+     * caller gets its own object graph. buildMenus() mutates what it receives
+     * (it reassigns ->groups and unsets ->menus); handing out a shared instance
+     * — as the array cache driver would — would corrupt the next caller's menu.
+     */
+    private function categoryStructure()
     {
-        $user = auth()->user();
-        $isAdmin = isSidebarPrivilegedUser();
-
-        # if Admin then load all menus else load only user permissions
-        $permissions = $isAdmin ? [] : $user->getAllPermissions()->pluck('name')->toArray();
-
-
-        $categories = SidebarCategory::select('id', 'icon', 'name', 'slug')
+        $build = static fn () => SidebarCategory::select('id', 'icon', 'name', 'slug')
             ->with(['groups' => function ($q) {
                 $q->select('id', 'category_id', 'icon', 'name')
                     ->orderBy('order', 'asc')
@@ -321,6 +334,46 @@ class MenuService
             ->orderBy('order', 'asc')
             ->where('is_active', 1)
             ->get();
+
+        $ttl = (int) config('fc.menu_cache_ttl', 600);
+        if ($ttl <= 0) {
+            return $build();
+        }
+
+        try {
+            $payload = Cache::remember(self::STRUCTURE_CACHE_KEY, $ttl, static fn () => serialize($build()));
+            $restored = is_string($payload) ? @unserialize($payload) : null;
+
+            if ($restored instanceof \Illuminate\Support\Collection) {
+                return $restored;
+            }
+        } catch (\Throwable $e) {
+            // Fall through to a live query — never break the sidebar over a cache issue.
+        }
+
+        return $build();
+    }
+
+    /** Drop the cached sidebar structure (called whenever a menu row changes). */
+    public static function clearStructureCache(): void
+    {
+        try {
+            Cache::forget(self::STRUCTURE_CACHE_KEY);
+        } catch (\Throwable $e) {
+            // ignore
+        }
+    }
+
+    private function buildMenus()
+    {
+        $user = auth()->user();
+        $isAdmin = isSidebarPrivilegedUser();
+
+        # if Admin then load all menus else load only user permissions
+        $permissions = $isAdmin ? [] : $user->getAllPermissions()->pluck('name')->toArray();
+
+
+        $categories = $this->categoryStructure();
 
         // No role assigned → only Home (no Setup / Academic / Time Table tabs).
         if (! $isAdmin && ! userHasAssignedRoles()) {

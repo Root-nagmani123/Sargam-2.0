@@ -10,7 +10,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Routes trainees between legacy FC registration (/fc-reg/registration/*)
@@ -24,7 +23,7 @@ class FcRegistrationFlowService
 
         if ($formId < 1) {
             $userId = Auth::id();
-            if ($userId && Schema::hasTable('student_masters') && Schema::hasColumn('student_masters', 'form_id')) {
+            if ($userId && fc_schema_has_table('student_masters') && fc_schema_has_column('student_masters', 'form_id')) {
                 $formId = (int) (StudentMaster::where(fc_user_col('student_masters'), fc_user_val('student_masters', $userId))->value('form_id') ?? 0);
             }
         }
@@ -65,9 +64,9 @@ class FcRegistrationFlowService
         if ($form) {
             $trackerTable = $form->trackerStorageTable();
             $userKey = fc_user_col($trackerTable);
-            if (Schema::hasTable($trackerTable) && Schema::hasColumn($trackerTable, 'travel_done')) {
+            if (fc_schema_has_table($trackerTable) && fc_schema_has_column($trackerTable, 'travel_done')) {
                 $query = DB::table($trackerTable)->where($userKey, fc_user_val($trackerTable, $userId));
-                if (Schema::hasColumn($trackerTable, 'form_id')) {
+                if (fc_schema_has_column($trackerTable, 'form_id')) {
                     $query->where('form_id', $form->id);
                 }
                 if ((bool) $query->value('travel_done')) {
@@ -90,12 +89,12 @@ class FcRegistrationFlowService
     {
         $trackerTable = $form->trackerStorageTable();
         $masterRow = null;
-        $trackerIsFormScoped = Schema::hasTable($trackerTable)
-            && Schema::hasColumn($trackerTable, 'form_id');
+        $trackerIsFormScoped = fc_schema_has_table($trackerTable)
+            && fc_schema_has_column($trackerTable, 'form_id');
 
         if ($steps->contains(fn ($s) => filled($s->tracker_column))
-            && Schema::hasTable($trackerTable)
-            && Schema::hasColumn($trackerTable, fc_user_col($trackerTable))) {
+            && fc_schema_has_table($trackerTable)
+            && fc_schema_has_column($trackerTable, fc_user_col($trackerTable))) {
             $userKey = fc_user_col($trackerTable);
             $trackerQuery = DB::table($trackerTable)->where($userKey, fc_user_val($trackerTable, $userId));
             if ($trackerIsFormScoped) {
@@ -130,6 +129,18 @@ class FcRegistrationFlowService
      *
      * @return array{form: FcForm, items: list<array{label: string, url: ?string, done: bool, current: bool}>}|null
      */
+    /**
+     * Whether a step simply does not apply to this trainee.
+     *
+     * The rule itself lives in FcStepApplicabilityService — this used to be a private
+     * second copy of the Special Assistant step-name match, which drifted from the one
+     * in GenericFormController and was absent from reporting altogether.
+     */
+    public function stepNotApplicable(FcFormStep $step, int $userId): bool
+    {
+        return app(FcStepApplicabilityService::class)->notApplicable($step, $userId);
+    }
+
     public function buildTravelStepNav(FcForm $form, int $userId): array
     {
         $steps = $form->activeSteps()->get();
@@ -137,13 +148,24 @@ class FcRegistrationFlowService
         $travelDone = $this->isTravelComplete($userId, $form);
 
         $items = [];
-        $travelInserted = false;
+
+        // A step that does not apply to this trainee (Special Assistant without a
+        // ph_value) is skipped by the flow and can never be "done". Treated as a
+        // plain incomplete step it showed grey AND, via the prev-all-done gate
+        // below, greyed out every step after it — so a finished Vision Statement
+        // looked unfinished on the Travel Plan tracker. Same rule the sequential
+        // access guard already applies: a gated-off step never blocks.
+        $effectiveDone = [];
+        foreach ($steps as $step) {
+            $effectiveDone[$step->id] = ($stepStatus[$step->id] ?? false)
+                || $this->stepNotApplicable($step, $userId);
+        }
 
         foreach ($steps as $si => $step) {
-            $rawDone = $stepStatus[$step->id] ?? false;
+            $rawDone = $effectiveDone[$step->id] ?? false;
             $prevAllDone = true;
             for ($pi = 0; $pi < $si; $pi++) {
-                if (! ($stepStatus[$steps[$pi]->id] ?? false)) {
+                if (! ($effectiveDone[$steps[$pi]->id] ?? false)) {
                     $prevAllDone = false;
                     break;
                 }
@@ -157,25 +179,17 @@ class FcRegistrationFlowService
                 'current' => false,
             ];
 
-            if (($step->tracker_column ?? '') === 'bank_done' && ! $travelInserted) {
-                $items[] = [
-                    'label' => 'Travel Plan',
-                    'url' => route('fc-reg.registration.travel'),
-                    'done' => $travelDone,
-                    'current' => true,
-                ];
-                $travelInserted = true;
-            }
         }
 
-        if (! $travelInserted) {
-            $items[] = [
-                'label' => 'Travel Plan',
-                'url' => route('fc-reg.registration.travel'),
-                'done' => $travelDone,
-                'current' => true,
-            ];
-        }
+        // Travel Plan is always the LAST item. It used to be spliced in straight
+        // after Bank Details, which showed it as step 5 of 8 even though the flow
+        // reaches it only after the final form step.
+        $items[] = [
+            'label' => 'Travel Plan',
+            'url' => route('fc-reg.registration.travel'),
+            'done' => $travelDone,
+            'current' => true,
+        ];
 
         return ['form' => $form, 'items' => $items];
     }
@@ -209,9 +223,9 @@ class FcRegistrationFlowService
         $trackerTable = $form->trackerStorageTable();
         $userKey = fc_user_col($trackerTable);
 
-        if (Schema::hasTable($trackerTable) && Schema::hasColumn($trackerTable, 'docs_done')) {
+        if (fc_schema_has_table($trackerTable) && fc_schema_has_column($trackerTable, 'docs_done')) {
             $query = DB::table($trackerTable)->where($userKey, fc_user_val($trackerTable, $userId));
-            if (Schema::hasColumn($trackerTable, 'form_id')) {
+            if (fc_schema_has_column($trackerTable, 'form_id')) {
                 $query->where('form_id', $form->id);
             }
             if ((bool) $query->value('docs_done')) {

@@ -54,7 +54,7 @@
 
                 <div class="d-flex flex-wrap gap-2">
                     <a href="{{ route('fc-reg.admin.forms.edit', $form) }}" class="btn btn-sm btn-primary">
-                        <i class="bi bi-pencil-square me-1"></i>Edit / Steps
+                        <i class="bi bi-pencil me-1"></i>Edit / Steps
                     </a>
                     <a href="{{ route('fc-reg.forms.dashboard', $form) }}" class="btn btn-sm btn-outline-secondary" target="_blank">
                         <i class="bi bi-eye me-1"></i>User View
@@ -62,10 +62,12 @@
                     <a href="{{ route('admin.reports.form', $form) }}" class="btn btn-sm btn-outline-info" title="View Submissions Report">
                         <i class="bi bi-bar-chart-line me-1"></i>Report
                     </a>
-                    <form method="POST" action="{{ route('fc-reg.admin.forms.destroy', $form) }}" class="d-inline" onsubmit="return confirm('Delete this form and ALL its steps/fields? This cannot be undone.')">
-                        @csrf @method('DELETE')
-                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                    </form>
+                    @if(config('fc.form_builder_delete_enabled'))
+                        <form method="POST" action="{{ route('fc-reg.admin.forms.destroy', $form) }}" class="d-inline" onsubmit="return confirm('Delete this form and ALL its steps/fields? This cannot be undone.')">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    @endif
                 </div>
             </div>
         </div>

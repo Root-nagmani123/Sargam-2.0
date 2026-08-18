@@ -8,6 +8,10 @@ use App\DataTables\GroupMappingDataTable;
 use App\DataTables\Master\EmployeeTypeMasterDataTable;
 use App\DataTables\MemberDataTable;
 use App\DataTables\RoleDataTable;
+use App\Http\Controllers\Admin\IssueManagement\IssueCategoryController;
+use App\Http\Controllers\Admin\IssueManagement\IssueEscalationMatrixController;
+use App\Http\Controllers\Admin\IssueManagement\IssuePriorityController;
+use App\Http\Controllers\Admin\IssueManagement\IssueSubCategoryController;
 use App\Http\Controllers\Admin\Master\FacultyExpertiseMasterController;
 use App\Http\Controllers\Admin\Master\FacultyTypeMasterController;
 use App\DataTables\UserCredentialsDataTable;
@@ -67,6 +71,9 @@ use Carbon\Carbon;
 
 class UserController extends Controller
 {
+    /** Notices per page on the dashboard feed. */
+    private const NOTICE_FEED_PER_PAGE = 10;
+
     private const ADMIN_USERS_INDEX_LIST_EPOCH_KEY = 'admin_users_index_list_epoch';
 
     /**
@@ -213,8 +220,8 @@ class UserController extends Controller
           $upcomingBirthdays = $upcomingBirthdays->merge($upcoming);
       }
 
-      $totalActiveCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '<', now())->where('end_date', '>=', now())->count();
-      $upcomingCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '>', now())->count();
+      $totalActiveCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '<=', now()->toDateString())->where('end_date', '>=', now()->toDateString())->count();
+      $upcomingCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '>', now()->toDateString())->count();
       $upcomingEventsCount = Holiday::active()->where('holiday_date', '>', now())->count();
 
 
@@ -387,6 +394,8 @@ class UserController extends Controller
 
         $enabledWidgetKeys = $baseCards->filter(fn($c) => str_starts_with($c->key, 'widget_'))->pluck('key')->toArray();
 
+        $issueReportModules = \App\Http\Controllers\Admin\IssueReportController::moduleOptions();
+
         $cardsToRender = $baseCards->filter(fn($c) => !str_starts_with($c->key, 'widget_'))->map(function ($card) use ($cardDefinitions, $cardCounts) {
             $def = $cardDefinitions[$card->key] ?? null;
             return [
@@ -436,7 +445,8 @@ class UserController extends Controller
             'fullDuplicateContractualIdCardRequests',
             'idCardApprovalRoute',
             'cardsToRender',
-            'enabledWidgetKeys'
+            'enabledWidgetKeys',
+            'issueReportModules'
         ));
     }
 
@@ -451,16 +461,105 @@ class UserController extends Controller
             $activeTab = 'notifications';
         }
 
-        $data = $this->buildDashboardFeedData();
+        $data = $this->buildDashboardFeedData($request);
         $data['activeTab'] = $activeTab;
 
         return view('admin.dashboard.feed', $data);
     }
 
     /**
-     * Shared data for dashboard feed page.
+     * Notices tab: role-scoped, filtered and paginated in SQL.
+     *
+     * Returns [paginator, filterOptions, appliedFilters].
      */
-    protected function buildDashboardFeedData(): array
+    protected function buildNoticeFeed(?Request $request): array
+    {
+        // No year filter: this feed shows live notices only (the base query drops
+        // anything past its expiry_date), so a Year control could never offer more
+        // than the current year or two and would read as a broken archive. If an
+        // archive is wanted later, the expiry predicate has to relax first — the
+        // control on its own would not deliver one.
+        $filters = [
+            'type'     => trim((string) ($request?->query('notice_type') ?? '')),
+            'dept'     => trim((string) ($request?->query('notice_dept') ?? '')),
+            'audience' => trim((string) ($request?->query('notice_audience') ?? '')),
+            'q'        => trim((string) ($request?->query('q') ?? '')),
+        ];
+
+        $base = notice_feed_query_by_role();
+
+        if (!$base) {
+            $empty = new \Illuminate\Pagination\LengthAwarePaginator([], 0, self::NOTICE_FEED_PER_PAGE, 1, [
+                'path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(),
+            ]);
+
+            return [$empty, ['types' => collect(), 'depts' => collect(), 'audiences' => collect()], $filters];
+        }
+
+        // Dropdown options come from the UNFILTERED role-scoped set, so choosing a
+        // Type never empties the Department list (and a filtered-away option can
+        // still be un-chosen).
+        //
+        // One DISTINCT per column, never one DISTINCT across several together: a
+        // combined DISTINCT that includes a near-unique column (display_date) has a
+        // row count that tracks the notice count, so it degenerates into reading the
+        // whole live set. Per column the result is bounded by that column's real
+        // cardinality — a handful of types, audiences and departments.
+        //
+        // select(), not selectRaw(): selectRaw APPENDS to the base query's column
+        // list, which would mix the 13 plain columns with the projection here.
+        $distinctOf = fn (string $column) => (clone $base)
+            ->reorder()
+            ->select($column)
+            ->distinct()
+            ->pluck($column)
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
+        $filterOptions = [
+            'types'     => $distinctOf('notices_notification.notice_type'),
+            'depts'     => $distinctOf('notice_author_dept.department_name'),
+            'audiences' => $distinctOf('notices_notification.target_audience'),
+        ];
+
+        if ($filters['type'] !== '') {
+            $base->where('notices_notification.notice_type', $filters['type']);
+        }
+
+        if ($filters['audience'] !== '') {
+            $base->where('notices_notification.target_audience', $filters['audience']);
+        }
+
+        if ($filters['dept'] !== '') {
+            $base->where('notice_author_dept.department_name', $filters['dept']);
+        }
+
+        if ($filters['q'] !== '') {
+            // Escape LIKE metacharacters: a typed "%" should match a literal percent
+            // sign, not every notice.
+            $like = '%' . addcslashes($filters['q'], '%_\\') . '%';
+            $base->where(function ($w) use ($like) {
+                $w->where('notices_notification.notice_title', 'like', $like)
+                    ->orWhere('notices_notification.notice_type', 'like', $like)
+                    ->orWhere('notice_author_dept.department_name', 'like', $like)
+                    ->orWhereRaw("CONCAT_WS(' ', notice_author.first_name, notice_author.last_name) like ?", [$like]);
+            });
+        }
+
+        $notices = $base->paginate(self::NOTICE_FEED_PER_PAGE)->withQueryString();
+
+        return [$notices, $filterOptions, $filters];
+    }
+
+    /**
+     * Shared data for dashboard feed page.
+     *
+     * $request is optional so the dashboard widget can call this without one;
+     * the notices tab reads its filters from it when present.
+     */
+    protected function buildDashboardFeedData(?Request $request = null): array
     {
         $user = Auth::user();
         $isAdminSummary = hasRole('Admin');
@@ -521,26 +620,9 @@ class UserController extends Controller
             $upcomingBirthdays = $upcomingBirthdays->merge($upcoming);
         }
 
-        $notices = get_notice_notification_by_role();
-
-        $noticeTabKeys = ['office-orders', 'work-allocation', 'notice-circular'];
-        $noticeTabLabels = [
-            'office-orders' => 'Office Orders',
-            'work-allocation' => 'Work Allocation',
-            'notice-circular' => 'Notice/ Circular/ Order',
-        ];
-        $noticeTabCounts = ['office-orders' => 0, 'work-allocation' => 0, 'notice-circular' => 0];
-        foreach ($notices as $noticeForTab) {
-            $tabKey = $this->resolveDashboardNoticeTabKey($noticeForTab->notice_type ?? '');
-            $noticeTabCounts[$tabKey]++;
-        }
-        $defaultNoticeTab = 'office-orders';
-        foreach ($noticeTabKeys as $tabKeyCandidate) {
-            if ($noticeTabCounts[$tabKeyCandidate] > 0) {
-                $defaultNoticeTab = $tabKeyCandidate;
-                break;
-            }
-        }
+        // Notices are filtered and paginated in SQL (see buildNoticeFeed) rather
+        // than fetched whole and filtered in the browser.
+        [$notices, $noticeFilterOptions, $noticeFilters] = $this->buildNoticeFeed($request);
 
         $feedExpandedNotifications = collect();
         $feedExpandedWishes = collect();
@@ -573,27 +655,12 @@ class UserController extends Controller
             'upcomingBirthdays',
             'birthdayWishCounts',
             'notices',
-            'noticeTabKeys',
-            'noticeTabLabels',
-            'noticeTabCounts',
-            'defaultNoticeTab',
+            'noticeFilterOptions',
+            'noticeFilters',
             'feedExpandedNotifications',
             'feedExpandedWishes',
             'notificationBadgeCount'
         );
-    }
-
-    public function resolveDashboardNoticeTabKey(?string $type): string
-    {
-        $t = strtolower((string) ($type ?? ''));
-        if (str_contains($t, 'office order')) {
-            return 'office-orders';
-        }
-        if (str_contains($t, 'course notice')) {
-            return 'work-allocation';
-        }
-
-        return 'notice-circular';
     }
 
     /**
@@ -1032,6 +1099,13 @@ class UserController extends Controller
             $request->merge(['from_date' => $today, 'to_date' => $today]);
         }
 
+        // Active / Archived course status. "archive" shows students of courses that
+        // have already ended so their old attendance stays viewable; "active" (default)
+        // shows currently-running courses. The payload scopes students accordingly;
+        // the course-option queries below switch their end_date comparison to match.
+        $archive = $request->input('status') === 'archive';
+        $courseDateOp = $archive ? '<' : '>=';
+
         $payload = $this->resolveDashboardStudentListPayload($request);
         $students = $payload['students'];
         $availableCourses = $payload['availableCourses'];
@@ -1104,7 +1178,7 @@ class UserController extends Controller
             ->where('gmap.active_inactive', 1)
             ->where('cgroup.active_inactive', 1)
             ->where('cm.active_inactive', 1)
-            ->where('cm.end_date', '>=', now())
+            ->where('cm.end_date', $courseDateOp, now())
             ->where('fm.active_inactive', 1);
 
         // Filter by logged-in faculty if available
@@ -1152,7 +1226,7 @@ class UserController extends Controller
             ->join('faculty_master as fm', 'gmap.facility_id', '=', 'fm.pk')
             ->where('gmap.active_inactive', 1)
             ->where('cm.active_inactive', 1)
-            ->where('cm.end_date', '>=', now())
+            ->where('cm.end_date', $courseDateOp, now())
             ->where('fm.active_inactive', 1);
 
         // Filter by logged-in faculty if available
@@ -1180,6 +1254,37 @@ class UserController extends Controller
             ->sortBy('course_name')
             ->values();
 
+        // Course filter dropdown. A faculty can belong to several courses at once,
+        // so the list has to be selectable rather than implied by the row set: we
+        // offer every currently-running course, unioned with the courses this
+        // faculty actually has rows for (which may include one whose end_date has
+        // just passed — it would otherwise vanish from the dropdown while its
+        // students are still listed). $availableCourses entries arrive as a mix of
+        // objects (student sources) and arrays ($groupMapCourses), hence the
+        // normalisation below.
+        $courseOptions = CourseMaster::where('active_inactive', '1')
+            ->where('end_date', $courseDateOp, now())
+            ->orderBy('course_name')
+            ->get(['pk', 'course_name', 'couse_short_name', 'start_year', 'end_date'])
+            // toBase(): Eloquent\Collection::merge() keys items by getKey(), which
+            // blows up on the plain objects below. Drop to a base collection first.
+            ->toBase()
+            ->merge(
+                collect($availableCourses)->map(function ($c) {
+                    return (object) [
+                        'pk' => is_array($c) ? ($c['pk'] ?? null) : ($c->pk ?? null),
+                        'course_name' => is_array($c) ? ($c['course_name'] ?? '') : ($c->course_name ?? ''),
+                        'couse_short_name' => is_array($c) ? ($c['couse_short_name'] ?? '') : ($c->couse_short_name ?? ''),
+                        'start_year' => is_array($c) ? ($c['start_year'] ?? null) : ($c->start_year ?? null),
+                        'end_date' => is_array($c) ? ($c['end_date'] ?? null) : ($c->end_date ?? null),
+                    ];
+                })
+            )
+            ->filter(fn ($c) => ! empty($c->pk))
+            ->unique('pk')
+            ->sortBy('course_name')
+            ->values();
+
         // Get group names from group_type_master_course_master_map with their type_name (counsellor type)
         // Only include groups for active courses (active_inactive = 1 and end_date >= now())
         // Filter by logged-in faculty if available
@@ -1188,7 +1293,7 @@ class UserController extends Controller
             ->join('faculty_master as fm', 'gmap.facility_id', '=', 'fm.pk')
             ->where('gmap.active_inactive', 1)
             ->where('cm.active_inactive', 1)
-            ->where('cm.end_date', '>=', now())
+            ->where('cm.end_date', $courseDateOp, now())
             ->where('fm.active_inactive', 1)
             ->whereNotNull('gmap.group_name')
             ->where('gmap.group_name', '!=', '');
@@ -1227,21 +1332,9 @@ class UserController extends Controller
             (string) $request->input('session', '')
         );
 
-        // OT / Participant options (each distinct student) for that filter dropdown.
-        $participantOptions = $students
-            ->map(function ($m) {
-                $s = $m->studentMaster;
-                if (! $s) {
-                    return null;
-                }
-                $name = $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''));
-                $code = $s->generated_OT_code ?? '';
-                return (object) [
-                    'pk' => (string) $s->pk,
-                    'label' => trim(($code !== '' ? $code . ' — ' : '') . $name),
-                ];
-            })
-            ->filter()->unique('pk')->sortBy('label')->values();
+        // OT / Participant options (each distinct student), mapped to the selected
+        // Course so the OT list only shows participants of the chosen course.
+        $participantOptions = $this->dashboardStudentListParticipantOptions($students, $request);
 
         // Server-side filters (Course / ACC / Group / Cadre / House / Session / Participant).
         $students = $this->applyDashboardStudentListFilters($students, $request);
@@ -1298,9 +1391,10 @@ class UserController extends Controller
             'session' => (string) $request->input('session', ''),
             'topic' => (string) $request->input('topic', ''),
             'participant' => (string) $request->input('participant', ''),
+            'status' => $archive ? 'archive' : 'active',
         ];
 
-        return view('admin.dashboard.student_list', compact('students', 'presentStudents', 'absentStudents', 'availableCourses', 'counsellorTypes', 'counsellorFaculties', 'groupNames', 'dutyTypes', 'filters', 'cadreOptions', 'houseOptions', 'sessionOptions', 'topicOptions', 'participantOptions', 'tabCounts', 'cardCounts', 'snapshotDate', 'listTitle'));
+        return view('admin.dashboard.student_list', compact('students', 'presentStudents', 'absentStudents', 'availableCourses', 'courseOptions', 'counsellorTypes', 'counsellorFaculties', 'groupNames', 'dutyTypes', 'filters', 'cadreOptions', 'houseOptions', 'sessionOptions', 'topicOptions', 'participantOptions', 'tabCounts', 'cardCounts', 'snapshotDate', 'listTitle'));
     }
 
     /**
@@ -1747,6 +1841,9 @@ class UserController extends Controller
         // export 403s for users who see the on-screen table fine.
         $exportFacultyPk = get_auth_faculty_master_pk();
         if (! hasRole('Super Admin')
+            && ! hasRole('Training Induction Admin')
+            && ! hasRole('Training MCTP Admin')
+            && ! hasRole('Training IST')
             && ! is_faculty_portal_user()
             && ! ($exportFacultyPk && ! hasRole('Student-OT'))) {
             abort(403, 'You are not authorized to export the student list.');
@@ -1887,6 +1984,15 @@ class UserController extends Controller
         $facultyPk = get_auth_faculty_master_pk();
         $isSuperAdmin = hasRole('Super Admin');
 
+        // Training authorities (Induction / MCTP / IST admins) are administrative
+        // roles that oversee every course, not a single faculty's classes — the
+        // student-detail page already grants them Super-Admin-level access. Treat them
+        // the same here so their student list isn't empty (they have no faculty pk).
+        $seesAllCourses = $isSuperAdmin
+            || hasRole('Training Induction Admin')
+            || hasRole('Training MCTP Admin')
+            || hasRole('Training IST');
+
         // Active vs Archive scope. Only the OT-participants page sends status=archive;
         // everything else (student list, export) omits it and stays on "active".
         // Archive = course has ended (end_date < today); Active = still running.
@@ -1897,13 +2003,13 @@ class UserController extends Controller
         // scoped to their courses below. A coordinator/ACC is reached via their
         // faculty pk even if their login role isn't a standard faculty-portal role.
         // (Exclude Student-OT: their user_id can collide with a faculty pk.)
-        if ($isSuperAdmin || is_faculty_portal_user() || ($facultyPk && ! hasRole('Student-OT'))) {
+        if ($seesAllCourses || is_faculty_portal_user() || ($facultyPk && ! hasRole('Student-OT'))) {
 
-            if ($isSuperAdmin || $facultyPk) {
+            if ($seesAllCourses || $facultyPk) {
                 $source1Students = collect([]);
 
                 // Course set feeding the primary (enrollment) student source.
-                if ($isSuperAdmin) {
+                if ($seesAllCourses) {
                     $activeCoordinatorCourses = CourseMaster::where('active_inactive', 1)
                         ->where('end_date', $dateOp, now())
                         ->pluck('pk');
@@ -2002,7 +2108,7 @@ class UserController extends Controller
                 // in here (the session-level scope in expandStudentRowsBySession then
                 // keeps only this faculty's own sessions for such non-coordinated courses).
                 $source3Students = collect([]);
-                if ($facultyPk && ! $isSuperAdmin) {
+                if ($facultyPk && ! $seesAllCourses) {
                     $taughtRows = DB::table('course_student_attendance as a')
                         ->join('timetable as t', 'a.timetable_pk', '=', 't.pk')
                         ->where(function ($q) use ($facultyPk) {
@@ -2077,7 +2183,7 @@ class UserController extends Controller
                 // the current viewer is allowed to see. This is a student-list concern
                 // (and an N+1); skip it for callers that only want the course roster.
                 if ($withTotals) {
-                    $this->appendStudentsWithMemos($uniqueStudents, $seenStudentCourseKeys, $isSuperAdmin, $facultyPk);
+                    $this->appendStudentsWithMemos($uniqueStudents, $seenStudentCourseKeys, $seesAllCourses, $facultyPk);
                 }
 
                 // Batch-load House Name (hostel room, keyed by student_master.user_id == hostel user_name)
@@ -2161,8 +2267,9 @@ class UserController extends Controller
 
                 // Faculty session scope: a plain session-teacher sees only the
                 // sessions THEY conducted; a CC/ACC sees all sessions of the courses
-                // they coordinate. Super Admin (even with a faculty pk) is unscoped.
-                $sessionFacultyScope = $isSuperAdmin ? null : $facultyPk;
+                // they coordinate. Super Admin / Training authority (even with a
+                // faculty pk) is unscoped.
+                $sessionFacultyScope = $seesAllCourses ? null : $facultyPk;
                 $coordinatorCourseIds = $sessionFacultyScope
                     ? $this->getCoordinatorCourseIds($sessionFacultyScope)->map(fn ($id) => (string) $id)->values()->all()
                     : [];
@@ -2438,6 +2545,43 @@ class UserController extends Controller
     }
 
     /**
+     * OT / Participant dropdown options, mapped to the selected Course so the OT
+     * list only shows participants belonging to the chosen course. With no course
+     * selected every in-scope participant is offered. Each option is a {pk, label}
+     * pair — pk is the student, label is "OT code — Name".
+     *
+     * @param  \Illuminate\Support\Collection  $students
+     * @return \Illuminate\Support\Collection
+     */
+    private function dashboardStudentListParticipantOptions($students, Request $request)
+    {
+        $courseId = (string) $request->input('course_id', '');
+
+        return $students
+            ->filter(function ($m) use ($courseId) {
+                if (! $m->studentMaster) {
+                    return false;
+                }
+                if ($courseId !== '' && (string) ($m->course->pk ?? '') !== $courseId) {
+                    return false;
+                }
+
+                return true;
+            })
+            ->map(function ($m) {
+                $s = $m->studentMaster;
+                $name = $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''));
+                $code = $s->generated_OT_code ?? '';
+
+                return (object) [
+                    'pk' => (string) $s->pk,
+                    'label' => trim(($code !== '' ? $code . ' — ' : '') . $name),
+                ];
+            })
+            ->unique('pk')->sortBy('label')->values();
+    }
+
+    /**
      * Distinct class-session time slots for the given students within the selected
      * Time Period (Session filter dropdown). Scoped to [$fromDate, $toDate].
      *
@@ -2526,6 +2670,7 @@ class UserController extends Controller
                 'a.Student_master_pk as spk',
                 'a.pk as attendance_pk',
                 'a.status',
+                'a.other_exemption_comments',
                 'a.timetable_pk',
                 'a.course_master_pk',
                 't.START_DATE as session_date',
@@ -2542,6 +2687,7 @@ class UserController extends Controller
                     'course_master_pk' => $r->course_master_pk,
                     'status' => $r->status,
                     'present' => (int) $r->status !== 3,
+                    'other_exemption_comments' => $r->other_exemption_comments ?? null,
                     'session_date' => $r->session_date ?? null,
                     'session_time' => $r->session_time ?? null,
                     'session_topic' => $r->session_topic ?? null,
@@ -2625,6 +2771,7 @@ class UserController extends Controller
             if (empty($sessions)) {
                 $studentMap->attendance_present = true;
                 $studentMap->attendance_status = null;
+                $studentMap->other_exemption_comments = null;
                 $studentMap->session_date = null;
                 $studentMap->session_time = null;
                 $studentMap->session_topic = null;
@@ -2639,6 +2786,7 @@ class UserController extends Controller
                 $row = clone $studentMap;
                 $row->attendance_present = $session['present'];
                 $row->attendance_status = $session['status'];
+                $row->other_exemption_comments = $session['other_exemption_comments'] ?? null;
                 $row->session_date = $session['session_date'];
                 $row->session_time = $session['session_time'];
                 $row->session_topic = $session['session_topic'];
@@ -2768,15 +2916,24 @@ class UserController extends Controller
             if ($search !== '') {
                 $name = strtolower(trim((string) (($student->display_name ?? '') ?: trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')))));
                 $otCode = strtolower((string) ($student->generated_OT_code ?? ''));
+                $username = strtolower((string) ($student->user_id ?? ''));
                 $email = strtolower((string) ($student->email ?? ''));
                 $groupName = $studentMap->groupMapping->groupTypeMasterCourseMasterMap->group_name ?? null;
                 $cadre = strtolower((string) ($groupName ?: ($student->cadre->cadre_name ?? '')));
+                $topic = strtolower((string) ($studentMap->session_topic ?? ''));
+                $faculty = strtolower((string) $this->dashboardResolveSessionFaculty(
+                    $studentMap->session_faculty_master ?? null,
+                    $studentMap->session_internal_faculty ?? null
+                ));
 
                 if (
                     ! str_contains($name, $search)
                     && ! str_contains($otCode, $search)
+                    && ! str_contains($username, $search)
                     && ! str_contains($email, $search)
                     && ! str_contains($cadre, $search)
+                    && ! str_contains($topic, $search)
+                    && ! str_contains($faculty, $search)
                 ) {
                     return false;
                 }
@@ -2921,6 +3078,10 @@ class UserController extends Controller
             (string) $request->input('session', '')
         );
 
+        // OT / Participant options mapped to the selected Course, so the dropdown
+        // refreshes to that course's participants whenever the Course filter changes.
+        $participantOptions = $this->dashboardStudentListParticipantOptions($students, $request);
+
         [$filteredAll, $presentAll, $absentAll] = $this->dashboardStudentListTabSets($request, $students);
 
         $counts = [
@@ -2941,19 +3102,19 @@ class UserController extends Controller
         // Column layout (DataTable column index → sort key).
         $columnMap = [
             0 => 'serial_no',
-            1 => 'ot_code',
-            2 => 'name',
+            // The OT code no longer has its own column — it renders under the name.
+            1 => 'name',
+            2 => 'course',
             3 => 'username',
             4 => 'cadre',
             5 => 'date',
             6 => 'session',
             7 => 'topic',
             8 => 'faculty',
-            // 9 => absent_reason (not sortable)
-            10 => 'status',
-            11 => 'mdo',
-            12 => 'escort',
-            13 => 'other_exempt',
+            9 => 'status',
+            10 => 'mdo',
+            11 => 'escort',
+            12 => 'other_exempt',
         ];
 
         $orderCol = (int) $request->input('order.0.column', 0);
@@ -3018,9 +3179,20 @@ class UserController extends Controller
 
             $data[] = [
                 's_no' => $start + $idx + 1,
-                'ot_code' => $student->generated_OT_code ?? 'N/A',
-                'name' => '<a href="' . e($detailUrl) . '" class="sl-count">' . e($displayName) . '</a>',
-                'username' => e($student->email ?? 'N/A'),
+                // OT code has no column of its own; it sits under the name so the
+                // listing stays narrower without losing the identifier.
+                'name' => (function () use ($detailUrl, $displayName, $student) {
+                    $html = '<a href="' . e($detailUrl) . '" class="sl-count">' . e($displayName) . '</a>';
+                    $otCode = trim((string) ($student->generated_OT_code ?? ''));
+                    if ($otCode !== '') {
+                        $html .= '<div class="sl-ot-code">' . e($otCode) . '</div>';
+                    }
+                    return $html;
+                })(),
+                // A faculty can be mapped to several courses, so each row names the
+                // course it belongs to — otherwise a multi-course list is ambiguous.
+                'course' => e($studentMap->course->course_name ?? 'N/A'),
+                'username' => e($student->user_id ?? 'N/A'),
                 'cadre' => e($student->cadre->cadre_name ?? 'N/A'),
                 'date' => e($studentMap->session_date ? \Illuminate\Support\Carbon::parse($studentMap->session_date)->format('d M Y') : 'N/A'),
                 'session' => e($studentMap->session_time ?: 'N/A'),
@@ -3060,11 +3232,21 @@ class UserController extends Controller
                 'escort' => $showEscort
                     ? '<a href="' . e($detailUrl . '?section=dutiesSection' . $linkDateQs) . '" class="sl-count">Escort</a>'
                     : '-',
-                'other_exempt' => $showMedical
-                    ? '<a href="' . e($detailUrl . '?section=medicalExceptionsSection' . $linkDateQs) . '" class="sl-count">Medical</a>'
-                    : ($showOther
-                        ? '<a href="' . e($detailUrl . ($linkDateQs !== '' ? '?' . ltrim($linkDateQs, '&') : '')) . '" class="sl-count">Other</a>'
-                        : '-'),
+                'other_exempt' => (function () use ($showMedical, $showOther, $studentMap, $detailUrl, $linkDateQs) {
+                    if ($showMedical) {
+                        return '<a href="' . e($detailUrl . '?section=medicalExceptionsSection' . $linkDateQs) . '" class="sl-count">Medical</a>';
+                    }
+                    if ($showOther) {
+                        return '<a href="' . e($detailUrl . ($linkDateQs !== '' ? '?' . ltrim($linkDateQs, '&') : '')) . '" class="sl-count">Other</a>';
+                    }
+                    // Inline Other Exemption from the mark-attendance screen (Absent +
+                    // a typed reason) — show the reason text in this column.
+                    $otherComment = trim((string) ($studentMap->other_exemption_comments ?? ''));
+                    if ($otherComment !== '') {
+                        return '<span class="text-muted small" title="Other Exemption">' . e($otherComment) . '</span>';
+                    }
+                    return '-';
+                })(),
             ];
         }
 
@@ -3077,6 +3259,7 @@ class UserController extends Controller
             'filterOptions' => [
                 'session' => $sessionOptions->values()->all(),
                 'topic' => $topicOptions->values()->all(),
+                'participant' => $participantOptions->values()->all(),
             ],
             'data' => $data,
         ]);
@@ -3379,8 +3562,10 @@ class UserController extends Controller
         return match ($sortKey) {
             'ot_code' => strtolower((string) ($student->generated_OT_code ?? '')),
             'name' => strtolower(trim((string) (($student->display_name ?? '') ?: trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''))))),
-            'username', 'email' => strtolower((string) ($student->email ?? '')),
+            'username' => strtolower((string) ($student->user_id ?? '')),
+            'email' => strtolower((string) ($student->email ?? '')),
             'cadre' => strtolower((string) ($student->cadre->cadre_name ?? '')),
+            'course' => strtolower((string) ($studentMap->course->course_name ?? '')),
             'status' => (int) ($studentMap->attendance_present ?? true),
             'date' => (string) ($studentMap->session_date ?? ''),
             'session' => (string) ($studentMap->session_time ?? ''),
@@ -3419,6 +3604,7 @@ class UserController extends Controller
             'S. No.',
             'OT Code',
             'Name',
+            'Course',
             'User Name',
             'Cadre',
             'Date',
@@ -3462,11 +3648,19 @@ class UserController extends Controller
             $showMedical = $statusCode === 6 || $flags['medical'];
             $showOther = $statusCode === 7 || $flags['other'];
 
+            // Inline Other Exemption (Absent + typed reason) shows its reason text in
+            // the Other Exemptions column, mirroring the on-screen table.
+            $otherComment = trim((string) ($studentMap->other_exemption_comments ?? ''));
+            $otherExemptionColumn = $showMedical
+                ? 'Medical'
+                : ($showOther ? 'Other' : ($otherComment !== '' ? $otherComment : '-'));
+
             $rows[] = [
                 $index + 1,
                 $student->generated_OT_code ?? 'N/A',
                 $displayName,
-                $student->email ?? 'N/A',
+                $studentMap->course->course_name ?? 'N/A',
+                $student->user_id ?? 'N/A',
                 $student->cadre->cadre_name ?? 'N/A',
                 $studentMap->session_date ? Carbon::parse($studentMap->session_date)->format('d M Y') : 'N/A',
                 $studentMap->session_time ?: 'N/A',
@@ -3478,7 +3672,7 @@ class UserController extends Controller
                 $statusText,
                 $showMdo ? 'MDO' : '-',
                 $showEscort ? 'Escort' : '-',
-                $showMedical ? 'Medical' : ($showOther ? 'Other' : '-'),
+                $otherExemptionColumn,
             ];
         }
 
@@ -4406,6 +4600,21 @@ public function toggleStatus(Request $request)
         if ($table === 'faculty_type_master') {
             FacultyTypeMasterController::bumpListCacheEpoch();
         }
+        /* CENTCOM grids are server-side: their cached page snapshots are keyed by
+           search + sort, and both can depend on status (sorting by the Status
+           column, or a search term that matches the status pill). Without these
+           bumps a toggled row keeps its old position until the TTL expires. */
+        if ($table === 'issue_category_master') {
+            IssueCategoryController::bumpIndexListCacheEpoch();
+            // The matrix lists ACTIVE categories only, so it changes shape too.
+            IssueEscalationMatrixController::bumpEscalationMatrixListCacheEpoch();
+        }
+        if ($table === 'issue_sub_category_master') {
+            IssueSubCategoryController::bumpIndexListCacheEpoch();
+        }
+        if ($table === 'issue_priority_master') {
+            IssuePriorityController::bumpIndexListCacheEpoch();
+        }
 
         $newState = ((int) $status === 1) ? 'Active' : 'Inactive';
         session()->flash('success', "Status updated to {$newState}.");
@@ -4873,7 +5082,7 @@ public function uploadPdf(Request $request)
 
         return CourseMaster::whereIn('pk', $coordinatorCourses)
             ->where('active_inactive', 1)
-            ->where('end_date', '>=', now())
+            ->where('end_date', '>=', now()->toDateString())
             ->pluck('pk');
     }
 
@@ -4905,7 +5114,7 @@ public function uploadPdf(Request $request)
 
         $activeCourseIds = CourseMaster::whereIn('pk', $groupMappings->pluck('course_name')->unique())
             ->where('active_inactive', 1)
-            ->where('end_date', '>=', now())
+            ->where('end_date', '>=', now()->toDateString())
             ->pluck('pk');
 
         if ($activeCourseIds->isEmpty()) {

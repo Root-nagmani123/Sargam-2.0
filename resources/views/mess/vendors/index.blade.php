@@ -1,9 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Mess Vendors')
 @section('content')
-@php
-    $canDeleteVendor = hasRole('Super Admin') || hasRole('Mess-Admin');
-@endphp
 <div class="container-fluid">
     <x-breadcrum title="Mess Stores"></x-breadcrum>
     <div class="datatables">
@@ -36,59 +33,7 @@
                                 <th>Action</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @foreach($vendors as $vendor)
-                            <tr>
-                                <td>
-                                    <div class="fw-semibold">{{ $vendor->name }}</div>
-                                </td>
-                                <td>{{ $vendor->email ?? '-' }}</td>
-                                <td>{{ $vendor->contact_person ?? '-' }}</td>
-                                <td>{{ $vendor->phone ?? '-' }}</td>
-                                <td>{{ $vendor->address ?? '-' }}</td>
-                                <td>
-                                    <div class="d-flex gap-2 flex-wrap">
-                                        <button type="button"
-                                            class="text-primary btn-view-vendor bg-transparent border-0"
-                                            data-id="{{ $vendor->id }}" data-name="{{ e($vendor->name) }}"
-                                            data-email="{{ e($vendor->email ?? '') }}"
-                                            data-contact-person="{{ e($vendor->contact_person ?? '') }}"
-                                            data-phone="{{ e($vendor->phone ?? '') }}"
-                                            data-address="{{ e($vendor->address ?? '') }}"
-                                            data-gst-number="{{ e($vendor->gst_number ?? '') }}"
-                                            data-bank-name="{{ e($vendor->bank_name ?? '') }}"
-                                            data-ifsc-code="{{ e($vendor->ifsc_code ?? '') }}"
-                                            data-account-number="{{ e($vendor->account_number ?? '') }}" title="View"><i
-                                                class="material-icons material-symbol-rounded">visibility</i></button>
-                                        <button type="button"
-                                            class="text-primary btn-edit-vendor bg-transparent border-0"
-                                            data-id="{{ $vendor->id }}" data-name="{{ e($vendor->name) }}"
-                                            data-email="{{ e($vendor->email ?? '') }}"
-                                            data-contact-person="{{ e($vendor->contact_person ?? '') }}"
-                                            data-phone="{{ e($vendor->phone ?? '') }}"
-                                            data-address="{{ e($vendor->address ?? '') }}"
-                                            data-gst-number="{{ e($vendor->gst_number ?? '') }}"
-                                            data-bank-name="{{ e($vendor->bank_name ?? '') }}"
-                                            data-ifsc-code="{{ e($vendor->ifsc_code ?? '') }}"
-                                            data-account-number="{{ e($vendor->account_number ?? '') }}" title="Edit"><i
-                                                class="material-icons material-symbol-rounded">edit</i></button>
-                                        @if($canDeleteVendor)
-                                            <form method="POST"
-                                                action="{{ route('admin.mess.vendors.destroy', $vendor->id) }}"
-                                                class="d-inline"
-                                                onsubmit="return confirm('Are you sure you want to delete this vendor?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">
-                                                    <i class="material-icons material-symbol-rounded">delete</i>
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
             </div>
@@ -391,8 +336,15 @@
         </div>
     </div>
 </div>
-@include('components.mess-master-datatables', ['tableId' => 'vendorsTable', 'searchPlaceholder' => 'Search vendors...',
-'orderColumn' => 0, 'actionColumnIndex' => 5, 'infoLabel' => 'vendors'])
+@include('components.mess-master-datatables', [
+    'tableId' => 'vendorsTable',
+    'searchPlaceholder' => 'Search vendors...',
+    'orderColumn' => 0,
+    'actionColumnIndex' => 5,
+    'infoLabel' => 'vendors',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.vendors.index'),
+])
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {

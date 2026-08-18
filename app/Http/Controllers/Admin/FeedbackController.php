@@ -5179,7 +5179,7 @@ class FeedbackController extends Controller
         $preferred = DB::table('course_master')
             ->whereIn('pk', $keys)
             ->where('active_inactive', 1)
-            ->where('start_year', '<', now())
+            ->where('start_year', '<=', now()->toDateString())
             ->whereDate('end_date', '>=', Carbon::today())
             ->orderBy('course_name')
             ->value('pk');
