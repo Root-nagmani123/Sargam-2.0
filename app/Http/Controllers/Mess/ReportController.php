@@ -67,8 +67,8 @@ class ReportController extends Controller
         'seconds' => 'STOCK_BALANCE_TILL_DATE_CACHE_SECONDS',
     ];
 
-    /** Fallback Redis TTL (seconds) for Stock Balance Till Date report when STOCK_BALANCE_TILL_DATE_CACHE_SECONDS is unset. */
-    private const STOCK_BALANCE_TILL_DATE_CACHE_TTL = 3600;
+    /** Redis TTL (seconds) for Stock Balance Till Date report (screen + Excel/PDF export). Kept short so exports used for reconciliation don't go stale. */
+    private const STOCK_BALANCE_TILL_DATE_CACHE_TTL = 300;
 
     private const SALE_VOUCHER_BUYERS_PER_PAGE = 8;
     private const STOCK_BALANCE_TILL_DATE_PER_PAGE = 50;
