@@ -4952,7 +4952,9 @@ class ProcessMessBillsEmployeeController extends Controller
             return $this->roundMoney((float) ($bill->paid_amount ?? 0));
         }
         if ($bill instanceof KitchenIssueMaster) {
-            $bill->load('paymentDetails');
+            if (! $bill->relationLoaded('paymentDetails')) {
+                $bill->load('paymentDetails');
+            }
 
             return $this->roundMoney((float) $bill->paymentDetails->sum('paid_amount'));
         }
