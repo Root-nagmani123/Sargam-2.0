@@ -81,7 +81,10 @@ class GroupMappingDataTable extends DataTable
 
                 $viewHtml = '<a href="javascript:void(0)" class="programme-action-btn gm-action-btn view-student" data-id="' . e($id) . '" aria-label="View students"><i class="bi bi-eye" aria-hidden="true"></i></a>';
 
-                $downloadHtml = '<a href="' . e(route('group.mapping.export.student.list', $id)) . '" class="programme-action-btn gm-action-btn" aria-label="Download student list"><i class="bi bi-download" aria-hidden="true"></i></a>';
+                // Student-list report, in both formats — the Excel sheet and the PDF
+                // render the same LBSNAA-branded layout (see GroupMappingStudentListExport).
+                $downloadHtml = '<a href="' . e(route('group.mapping.export.student.list', $id)) . '" class="programme-action-btn gm-action-btn" title="Download student list (Excel)" aria-label="Download student list as Excel"><i class="bi bi-file-earmark-excel" aria-hidden="true"></i></a>'
+                    . '<a href="' . e(route('group.mapping.export.student.list.pdf', $id)) . '" class="programme-action-btn gm-action-btn" title="Download student list (PDF)" aria-label="Download student list as PDF"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i></a>';
 
                 $deleteHtml = $isActive
                     ? '<button type="button" class="programme-action-btn gm-action-btn programme-action-btn--danger" disabled aria-disabled="true" title="Cannot delete active group mapping"><i class="bi bi-trash" aria-hidden="true"></i></button>'

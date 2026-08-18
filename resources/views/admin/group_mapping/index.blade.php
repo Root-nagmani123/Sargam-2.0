@@ -85,8 +85,8 @@
             <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-1 py-2" aria-labelledby="gmDownloadBtn">
                 <li>
                     <button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="gmDownloadCsv">
-                        <i class="bi bi-filetype-csv text-success" aria-hidden="true"></i>
-                        <span>Download CSV</span>
+                        <i class="bi bi-filetype-xlsx text-success" aria-hidden="true"></i>
+                        <span>Download Excel</span>
                     </button>
                 </li>
                 <li>
@@ -139,7 +139,7 @@
                         <span>Columns</span>
                         <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
-                    <div id="gmDtSearch" class="programme-dt-search">
+                    <div id="gmDtSearch" class="programme-dt-search" data-dt-search-for="group-mapping-table">
                         <div class="dataTables_filter">
                             <label class="mb-0 w-100">
                                 <input type="search" id="gmCustomSearch" class="form-control shadow-none"
@@ -154,7 +154,8 @@
                 <div class="table-responsive">
                     {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
                 </div>
-                <div id="gmDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"></div>
+                <div id="gmDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                    data-dt-footer-for="group-mapping-table"></div>
             </div>
         </div>
     </div>
@@ -446,6 +447,14 @@
             <div class="modal-footer border-top justify-content-between align-items-center px-4 py-3">
                 <div class="text-muted small" id="selectedOtCount">0 OT(s) selected</div>
                 <div class="d-flex gap-2 flex-wrap">
+                    {{-- Same student-list report as the row Download icons: an LBSNAA-branded
+                         sheet/PDF headed by Course Name, Course Duration and Group Type. --}}
+                    <button type="button" class="btn btn-outline-success rounded-1" id="gmStudentListExcel">
+                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Download Excel
+                    </button>
+                    <button type="button" class="btn btn-outline-danger rounded-1" id="gmStudentListPdf">
+                        <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> Download PDF
+                    </button>
                     <button type="button" class="btn btn-outline-primary rounded-1" id="toggleBulkMessage">
                         <i class="bi bi-send-check me-1" aria-hidden="true"></i> Send SMS / Send Email
                     </button>
@@ -597,77 +606,12 @@ $(document).ready(function() {
             .attr('aria-current', 'true');
     }
 
-    function enhanceGmDtControls() {
-        var $wrapper = $('#group-mapping-table_wrapper');
-        if (!$wrapper.length) {
-            return;
-        }
-
-        var $footer = $('#gmDtFooter');
-
-        if ($footer.data('dtReady')) {
-            updateGmDtCount();
-            return;
-        }
-
-        var $paginate = $wrapper.find('.dataTables_paginate').first();
-        var $length = $wrapper.find('.dataTables_length').first();
-
-        // Don't build (and don't lock in dtReady) until DataTables has actually
-        // rendered its controls — otherwise we'd cache an empty footer forever.
-        if (!$footer.length || (!$paginate.length && !$length.length)) {
-            return;
-        }
-
-        var $pagCol = $('<div class="programme-dt-pagination"></div>');
-        var $countCol = $('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>');
-
-        if ($paginate.length) {
-            $paginate.find('.pagination').addClass('mb-0');
-            $pagCol.append($paginate);
-        }
-
-        if ($length.length) {
-            var $select = $length.find('select').addClass('form-select form-select-sm').detach();
-            $length.find('label')
-                .empty()
-                .append(document.createTextNode('Showing '))
-                .append($select)
-                .append(document.createTextNode(' '));
-            $countCol.append($length);
-
-            // The length control is relocated out of the DataTables wrapper, which
-            // detaches DataTables' delegated change listener. Drive the page length
-            // explicitly via the API so changing "Showing N" actually re-pages.
-            $select.off('change.gmLen').on('change.gmLen', function() {
-                if ($.fn.DataTable.isDataTable('#group-mapping-table')) {
-                    var len = parseInt(this.value, 10);
-                    if (!isNaN(len)) {
-                        $('#group-mapping-table').DataTable().page.len(len).draw();
-                    }
-                }
-            });
-        }
-
-        // Self-managed count text — does NOT rely on relocating DataTables' own
-        // .dataTables_info node (which was the fragile part that kept failing).
-        $countCol.append('<span class="gm-count-text text-muted mb-0"></span>');
-
-        $footer.append($pagCol).append($countCol);
-        $footer.data('dtReady', true);
-        updateGmDtCount();
-    }
-
-    function updateGmDtCount() {
-        if (!$.fn.DataTable.isDataTable('#group-mapping-table')) {
-            return;
-        }
-        var info = $('#group-mapping-table').DataTable().page.info();
-        var $countText = $('#gmDtFooter .gm-count-text');
-        if ($countText.length && info && info.recordsDisplay !== undefined) {
-            $countText.text('of ' + info.recordsDisplay.toLocaleString() + ' items');
-        }
-    }
+    /* Pagination and the "Showing N of M items" count are relocated into
+       #gmDtFooter by the global enhancer (public/js/datatable-global-ui.js) via
+       the data-dt-footer-for hook. Do NOT rebuild them here — a second enhancer
+       races the global one and leaves the footer empty. The search box stays put:
+       #gmDtSearch already ships its own .dataTables_filter driven by
+       #gmCustomSearch, which the global enhancer leaves alone. */
 
     /* ---------- Column show / hide (DataTables API) ---------- */
     var gmColStorageKey = 'gmGrid:hiddenColumns:v1';
@@ -750,23 +694,8 @@ $(document).ready(function() {
         });
     }
 
-    function bindGmTableUi(table) {
-        enhanceGmDtControls();
-        updateGmDtCount();
-        setupGmColumns(table);
-
-        table.on('draw.dt', function() {
-            var $wrapper = $('#group-mapping-table_wrapper');
-            if ($wrapper.find('.dataTables_paginate').length && !$('#gmDtFooter .dataTables_paginate').length) {
-                $('#gmDtFooter').empty().data('dtReady', false);
-            }
-            enhanceGmDtControls();
-            updateGmDtCount();
-        });
-    }
-
     $('#group-mapping-table').on('init.dt', function() {
-        bindGmTableUi($(this).DataTable());
+        setupGmColumns($(this).DataTable());
     });
 
     setTimeout(function() {
@@ -775,7 +704,7 @@ $(document).ready(function() {
         }
 
         var table = $('#group-mapping-table').DataTable();
-        bindGmTableUi(table);
+        setupGmColumns(table);
 
         setActiveFilterButton($('#filterGroupActive'));
 
@@ -892,6 +821,25 @@ $(document).ready(function() {
         params.columns = gmVisibleExportCols().join(',');
         var url = '{{ route('group.mapping.download.csv') }}?' + $.param(params);
         window.open(url, '_blank');
+    });
+
+    /* ---------- Student-list report for the group open in the View modal ----------
+       window.currentGroupMappingId is the encrypted mapping id set by the .view-student
+       handler (custom.js). Encoded the same way route() encodes it in the row links. */
+    function gmDownloadStudentList(urlTemplate) {
+        var id = window.currentGroupMappingId;
+        if (!id) {
+            return;
+        }
+        window.open(urlTemplate.replace('__GM_ID__', encodeURIComponent(id)), '_blank');
+    }
+
+    $('#gmStudentListExcel').on('click', function() {
+        gmDownloadStudentList('{{ route('group.mapping.export.student.list', '__GM_ID__') }}');
+    });
+
+    $('#gmStudentListPdf').on('click', function() {
+        gmDownloadStudentList('{{ route('group.mapping.export.student.list.pdf', '__GM_ID__') }}');
     });
 
     $('#studentGroupType').on('change', function() {
