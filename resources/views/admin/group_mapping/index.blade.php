@@ -85,8 +85,8 @@
             <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-1 py-2" aria-labelledby="gmDownloadBtn">
                 <li>
                     <button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="gmDownloadCsv">
-                        <i class="bi bi-filetype-csv text-success" aria-hidden="true"></i>
-                        <span>Download CSV</span>
+                        <i class="bi bi-filetype-xlsx text-success" aria-hidden="true"></i>
+                        <span>Download Excel</span>
                     </button>
                 </li>
                 <li>
@@ -446,6 +446,14 @@
             <div class="modal-footer border-top justify-content-between align-items-center px-4 py-3">
                 <div class="text-muted small" id="selectedOtCount">0 OT(s) selected</div>
                 <div class="d-flex gap-2 flex-wrap">
+                    {{-- Same student-list report as the row Download icons: an LBSNAA-branded
+                         sheet/PDF headed by Course Name, Course Duration and Group Type. --}}
+                    <button type="button" class="btn btn-outline-success rounded-1" id="gmStudentListExcel">
+                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Download Excel
+                    </button>
+                    <button type="button" class="btn btn-outline-danger rounded-1" id="gmStudentListPdf">
+                        <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> Download PDF
+                    </button>
                     <button type="button" class="btn btn-outline-primary rounded-1" id="toggleBulkMessage">
                         <i class="bi bi-send-check me-1" aria-hidden="true"></i> Send SMS / Send Email
                     </button>
@@ -812,6 +820,25 @@ $(document).ready(function() {
         params.columns = gmVisibleExportCols().join(',');
         var url = '{{ route('group.mapping.download.csv') }}?' + $.param(params);
         window.open(url, '_blank');
+    });
+
+    /* ---------- Student-list report for the group open in the View modal ----------
+       window.currentGroupMappingId is the encrypted mapping id set by the .view-student
+       handler (custom.js). Encoded the same way route() encodes it in the row links. */
+    function gmDownloadStudentList(urlTemplate) {
+        var id = window.currentGroupMappingId;
+        if (!id) {
+            return;
+        }
+        window.open(urlTemplate.replace('__GM_ID__', encodeURIComponent(id)), '_blank');
+    }
+
+    $('#gmStudentListExcel').on('click', function() {
+        gmDownloadStudentList('{{ route('group.mapping.export.student.list', '__GM_ID__') }}');
+    });
+
+    $('#gmStudentListPdf').on('click', function() {
+        gmDownloadStudentList('{{ route('group.mapping.export.student.list.pdf', '__GM_ID__') }}');
     });
 
     $('#studentGroupType').on('change', function() {
