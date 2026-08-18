@@ -436,9 +436,53 @@ class CourseRepositoryController extends Controller
      * - Inserts metadata into course_repository_details
      * - Uploads files and inserts into course_repository_documents
      */
+    /**
+     * Per-file upload ceiling in kilobytes, as Laravel's `max:` rule measures it.
+     * Applied on both submit (uploadDocument) and update (updateDocument).
+     *
+     * Note this is the application's limit only. PHP's own upload_max_filesize still
+     * applies first and discards a larger file before the request reaches Laravel, so
+     * raising this above that ini value has no effect until php.ini is raised too.
+     */
+    private function uploadMaxKb(): int
+    {
+        return (int) config('course_repository.max_file_kb', 25600);
+    }
+
+    /** Extensions for the `mimes:` rule, e.g. "jpg,jpeg,png,pdf,doc,docx". */
+    private function uploadAllowedMimes(): string
+    {
+        return implode(',', (array) config('course_repository.allowed_extensions', []));
+    }
+
+    /** Human form of the same list for error messages, e.g. "JPG, JPEG, PNG, PDF, DOC or DOCX". */
+    private function uploadAllowedTypesLabel(): string
+    {
+        $types = array_map('strtoupper', (array) config('course_repository.allowed_extensions', []));
+        if (count($types) < 2) {
+            return implode('', $types);
+        }
+        $last = array_pop($types);
+
+        return implode(', ', $types) . ' or ' . $last;
+    }
+
+    /** Human form of the size cap for error messages, e.g. "25 MB". */
+    private function uploadMaxSizeLabel(): string
+    {
+        $mb = $this->uploadMaxKb() / 1024;
+
+        return rtrim(rtrim(number_format($mb, 1), '0'), '.') . ' MB';
+    }
+
     public function uploadDocument($pk, Request $request)
     {
         try {
+            $maxKb = $this->uploadMaxKb();
+            $mimes = $this->uploadAllowedMimes();
+            $sizeLabel = $this->uploadMaxSizeLabel();
+            $typesLabel = $this->uploadAllowedTypesLabel();
+
             $validated = $request->validate([
                 'category' => 'required|string|in:Course,Other,Institutional',
                 'course_name' => 'nullable|string',
@@ -449,13 +493,26 @@ class CourseRepositoryController extends Controller
                 'sector_master' => 'nullable|numeric',
                 'ministry_master' => 'nullable|numeric',
                 'attachments' => 'nullable|array',
-                'attachments.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:10120', // Max 10MB per file
+                'attachments.*' => 'nullable|file|mimes:' . $mimes . '|max:' . $maxKb,
                 'attachment_titles' => 'nullable|array',
                 'attachment_titles.*' => 'nullable|string|max:5000',
                 'keywords' => 'nullable|string|max:4000',
                 'video_link' => 'nullable|string|max:2000',
+            ], [
+                // Default messages name the raw input ("attachments.0"), which tells the
+                // uploader nothing. :position is 1-based and matches the row they filled in.
+                'category.required' => 'Please select a category (Course, Other or Institutional).',
+                'category.in' => 'Please select a valid category (Course, Other or Institutional).',
+                'attachments.*.file' => 'Attachment :position could not be read. Please select the file again.',
+                'attachments.*.mimes' => 'Attachment :position must be a ' . $typesLabel . ' file.',
+                'attachments.*.max' => 'Attachment :position is larger than ' . $sizeLabel . '. Please upload a smaller file.',
+                'attachment_titles.*.max' => 'The title for attachment :position must be 5000 characters or less.',
+                'keywords.max' => 'Keywords must be 4000 characters or less.',
+                'video_link.max' => 'Video link must be 2000 characters or less.',
+                'sector_master.numeric' => 'Please select a valid Sector.',
+                'ministry_master.numeric' => 'Please select a valid Ministry.',
             ]);
-            
+
             // Get the category
             $category = $validated['category'];
             
@@ -672,10 +729,15 @@ class CourseRepositoryController extends Controller
     public function updateDocument($pk, Request $request)
     {
         try {
+            $maxKb = $this->uploadMaxKb();
+            $mimes = $this->uploadAllowedMimes();
+            $sizeLabel = $this->uploadMaxSizeLabel();
+            $typesLabel = $this->uploadAllowedTypesLabel();
+
             $validated = $request->validate([
                 'category' => 'nullable|string|in:Course,Other,Institutional',
                 'file_title' => 'nullable|string|max:5000',
-                'document_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:10120', // Max 10MB
+                'document_file' => 'nullable|file|mimes:' . $mimes . '|max:' . $maxKb,
                 'course_name' => 'nullable|string',
                 'subject_name' => 'nullable|string',
                 'timetable_name' => 'nullable|string',
@@ -685,6 +747,16 @@ class CourseRepositoryController extends Controller
                 'ministry_master' => 'nullable|numeric',
                 'keywords' => 'nullable|string|max:4000',
                 'video_link' => 'nullable|string|max:2000',
+            ], [
+                'category.in' => 'Please select a valid category (Course, Other or Institutional).',
+                'document_file.file' => 'The document could not be read. Please select the file again.',
+                'document_file.mimes' => 'The document must be a ' . $typesLabel . ' file.',
+                'document_file.max' => 'The document is larger than ' . $sizeLabel . '. Please upload a smaller file.',
+                'file_title.max' => 'The document title must be 5000 characters or less.',
+                'keywords.max' => 'Keywords must be 4000 characters or less.',
+                'video_link.max' => 'Video link must be 2000 characters or less.',
+                'sector_master.numeric' => 'Please select a valid Sector.',
+                'ministry_master.numeric' => 'Please select a valid Ministry.',
             ]);
 
             $document = CourseRepositoryDocument::findOrFail($pk);
