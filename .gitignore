@@ -29,3 +29,7 @@ docker-compose.yml
 /SECURITY_MODULE_IMPLEMENTATION.md
 /ISSUE_REPORT_NOTIFICATIONS.md
 .htaccess
+
+# Local review framework — not part of the application repository
+/docs/code-review-guidline/
+/docs/code-review-guidline-old/

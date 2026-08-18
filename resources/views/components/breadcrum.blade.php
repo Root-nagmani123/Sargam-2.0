@@ -68,6 +68,7 @@
                 'memo.discipline.*',
                 'admin.memo-notice.*',
                 'timetable-report.*',
+                'timetable-repository.*',
                 'feedback.get.*',
                 'subject.*',
                 'subject-module.*',

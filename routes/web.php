@@ -44,6 +44,7 @@ use App\Http\Controllers\Admin\{
     EstateController,
     QuickLinkController,
     TimetableReportController,
+    TimetableRepositoryController,
     ExemptionMasterController,
     StationedLeaveMasterController,
     LeaveApplicationController,
@@ -561,6 +562,18 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/data', [TimetableReportController::class, 'data'])->name('data');
         Route::get('/export-pdf', [TimetableReportController::class, 'exportPdf'])->name('pdf');
         Route::get('/export-excel', [TimetableReportController::class, 'exportExcel'])->name('excel');
+    });
+
+    // Timetable Repository — course + week wise PDF library
+    Route::prefix('timetable-repository')->name('timetable-repository.')->group(function () {
+        Route::get('/', [TimetableRepositoryController::class, 'index'])->name('index');
+        Route::get('/weeks', [TimetableRepositoryController::class, 'weeks'])->name('weeks');
+        Route::get('/create', [TimetableRepositoryController::class, 'create'])->name('create');
+        Route::post('/', [TimetableRepositoryController::class, 'store'])->name('store');
+        Route::get('/{pk}/download', [TimetableRepositoryController::class, 'download'])->name('download');
+        Route::get('/{pk}/edit', [TimetableRepositoryController::class, 'edit'])->name('edit');
+        Route::put('/{pk}', [TimetableRepositoryController::class, 'update'])->name('update');
+        Route::delete('/{pk}', [TimetableRepositoryController::class, 'destroy'])->name('destroy');
     });
 
     // Area of Expertise
