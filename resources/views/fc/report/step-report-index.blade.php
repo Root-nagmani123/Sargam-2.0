@@ -60,11 +60,14 @@
 
     <x-session_message />
     <div id="vsTableError" class="alert alert-warning d-none py-2 px-3 mb-3" role="alert"></div>
-    @if (! $mapsStep)
-        <div class="alert alert-info py-2 px-3 mb-3" role="alert">
-            This course's form does not collect {{ $report->title() }} data, so those columns will be empty.
-        </div>
-    @endif
+    {{-- Always rendered, toggled by syncMapsStepBanner() from each draw's mapsStep flag. It
+         cannot be a server-side @if: the course picker switches course without reloading the
+         page, so a banner decided at render time would never change. --}}
+    <div id="vsMapsStepNotice"
+         class="alert alert-info py-2 px-3 mb-3 {{ $mapsStep ? 'd-none' : '' }}"
+         role="alert">
+        This course's form does not collect {{ $report->title() }} data, so those columns will be empty.
+    </div>
 
     <div class="card border-0 shadow-sm mb-3" style="border-radius:8px;">
         <div class="card-body py-3 px-3">
@@ -268,6 +271,7 @@ $(function () {
         });
 
         table.on('draw', syncExportButtons);
+        table.on('draw', syncMapsStepBanner);
         table.on('error.dt', function (e, settings) {
             var xhr = settings && settings.jqXHR;
             $('#vsTableError').removeClass('d-none').text(describeAjaxError(xhr));
@@ -330,6 +334,14 @@ $(function () {
         if (docsBase) {
             $z.removeClass('d-none').attr('href', docsBase + '?' + $.param(base));
         }
+    }
+
+    // The server sends mapsStep with every draw. Left alone when the key is absent — an error
+    // response or an older cached script must not flip the banner on a course that is fine.
+    function syncMapsStepBanner() {
+        var payload = table ? table.ajax.json() : null;
+        if (!payload || typeof payload.mapsStep === 'undefined') { return; }
+        $('#vsMapsStepNotice').toggleClass('d-none', payload.mapsStep !== false);
     }
 
     function rebuild() {

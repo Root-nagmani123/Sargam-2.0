@@ -15,6 +15,7 @@ use App\Support\FC\FcUploadFile;
 use App\Support\FC\FcUploadUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 
 /**
@@ -103,6 +104,42 @@ class StepReportController extends Controller
         return $out;
     }
 
+    /**
+     * Audit record for one export attempt.
+     *
+     * These endpoints are the data-egress paths of the module: a spreadsheet of a cohort's bank
+     * account numbers, a PDF of their medical declarations, a ZIP of their Aadhaar and PAN
+     * cards. Without a record there is no way to answer "who took this, when, and how much"
+     * after the fact. Refusals are logged too — an admin repeatedly bouncing off the row cap is
+     * itself worth seeing.
+     *
+     * Deliberately records no trainee data and no file paths: the search term can be a person's
+     * name, so only whether one was used is kept. The point is to identify the actor and the
+     * scope, not to duplicate the payload into the log file.
+     */
+    private function logExport(
+        Request $request,
+        FcStepReport $service,
+        ?FcForm $form,
+        string $format,
+        string $outcome,
+        array $extra = []
+    ): void {
+        Log::info('FC step report export', array_merge([
+            'actor_id' => auth()->id(),
+            'actor' => auth()->user()->user_name ?? null,
+            'ip' => $request->ip(),
+            'report' => $service->key(),
+            'format' => $format,
+            'outcome' => $outcome,
+            'form_id' => $form?->id,
+            'course' => $form?->form_name,
+            'status_filter' => (string) $request->input('f_status', '') ?: 'all',
+            'searched' => trim((string) ($request->input('search_term') ?: $request->input('search.value') ?: '')) !== '',
+            'columns' => count($service->visibleColumns($request)),
+        ], $extra));
+    }
+
     public function exportExcel(Request $request, string $report)
     {
         $service = $this->report($report);
@@ -115,6 +152,8 @@ class StepReportController extends Controller
         // while this gives them a working alternative.
         $rowCount = $this->countRows($service, $form, $request);
         if ($rowCount > self::XLSX_MAX_ROWS) {
+            $this->logExport($request, $service, $form, 'xlsx', 'refused_row_cap', ['rows' => $rowCount]);
+
             return back()->with('error', sprintf(
                 'This selection has %s records, over the %s-row Excel limit. Narrow the filters and try again.',
                 number_format($rowCount),
@@ -123,6 +162,8 @@ class StepReportController extends Controller
         }
 
         $filename = $this->slug($service->title()).'_'.$this->slug($form->form_name).'_'.now()->format('Ymd_His').'.xlsx';
+
+        $this->logExport($request, $service, $form, 'xlsx', 'ok', ['rows' => $rowCount]);
 
         return Excel::download(
             new FcStepReportExport($service, $form, $service->visibleColumns($request), $request),
@@ -148,7 +189,11 @@ class StepReportController extends Controller
         // result set, which matters when each row carries long free text.
         $rows = [];
         $truncated = false;
-        foreach ($query->orderBy('s1.first_name')->cursor() as $row) {
+        // Tiebreaker on the UNIQUE s1 key: with a hard row cap, ties in first_name would make
+        // WHICH trainee falls outside the cap vary between runs of the same export.
+        $ordered = $query->orderBy('s1.first_name')->orderBy('s1.'.fc_user_col('student_master_firsts'));
+
+        foreach ($ordered->cursor() as $row) {
             if (count($rows) >= self::PDF_MAX_ROWS) {
                 $truncated = true;
                 break;
@@ -157,6 +202,8 @@ class StepReportController extends Controller
         }
 
         if ($rows === []) {
+            $this->logExport($request, $service, $form, 'pdf', 'empty', ['rows' => 0]);
+
             return back()->with('error', 'No trainees match the current filters. Nothing to export.');
         }
 
@@ -193,6 +240,11 @@ class StepReportController extends Controller
 
         $filename = $this->slug($service->title()).'_'.$this->slug($form->form_name).'_'.now()->format('Ymd_His').'.pdf';
 
+        $this->logExport($request, $service, $form, 'pdf', 'ok', [
+            'rows' => count($rows),
+            'truncated' => $truncated,
+        ]);
+
         return response((string) $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
@@ -215,7 +267,10 @@ class StepReportController extends Controller
      */
     public function file(Request $request)
     {
-        $path = FcUploadUrl::decode($request->query(FcUploadUrl::TOKEN_PARAM));
+        // Audience-scoped: a token minted for the open descriptive-data route is refused here,
+        // and one minted here is refused there. Without it the `auth` above is only as strong
+        // as the path segment in the URL, which a recipient can edit.
+        $path = FcUploadUrl::decode($request->query(FcUploadUrl::TOKEN_PARAM), self::FILE_PATH);
         abort_if($path === null, 404);
 
         // Resolves across every directory an FC upload can live in, catches the traversal
@@ -346,6 +401,11 @@ class StepReportController extends Controller
         if ($added === 0) {
             @unlink($tmpPath);
 
+            $this->logExport($request, $service, $form, 'zip', 'empty', [
+                'files' => 0,
+                'missing_on_disk' => $missing,
+            ]);
+
             return back()->with(
                 'error',
                 $missing > 0
@@ -374,6 +434,13 @@ class StepReportController extends Controller
             session()->flash('error', sprintf('Document archive: %s file(s) included — %s.',
                 number_format($added), implode('; ', $notices)));
         }
+
+        $this->logExport($request, $service, $form, 'zip', 'ok', [
+            'files' => $added,
+            'bytes' => $bytes,
+            'missing_on_disk' => $missing,
+            'truncated' => $truncated,
+        ]);
 
         $response->headers->set('X-Document-Count', (string) $added);
         if ($missing > 0) {

@@ -80,7 +80,15 @@ class FcStepReportExport implements FromQuery, WithChunkReading, WithEvents, Wit
         $query = $this->report->build($this->form, $this->columns);
         $this->report->applyFilters($query, $this->request);
 
-        return $query->orderBy('s1.first_name');
+        // first_name is not unique, and Laravel Excel runs each chunk as its own
+        // LIMIT/OFFSET query (AppendQueryToSheet::handle -> forPage). With ties in the sort key
+        // MySQL is free to order the two executions differently, so a row on a chunk boundary
+        // can be written twice or skipped — an .xlsx quietly missing a trainee while its S.No.
+        // column still reads 1..N. s1.user_id carries a UNIQUE index, so adding it makes the
+        // ordering total and every chunk boundary deterministic. Same reason documentArchive
+        // chunks with chunkById on this column rather than chunk() on a name.
+        return $query->orderBy('s1.first_name')
+            ->orderBy('s1.'.fc_user_col('student_master_firsts'));
     }
 
     public function chunkSize(): int

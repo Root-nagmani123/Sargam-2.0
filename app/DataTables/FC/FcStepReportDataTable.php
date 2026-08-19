@@ -99,6 +99,15 @@ class FcStepReportDataTable extends DataTable
 
         $dt->rawColumns($raw);
 
+        // Sent alongside the rows so the "this course does not collect this data" banner can
+        // follow the course picker. The banner is rendered server-side at page load, but the
+        // picker switches course entirely client-side (rebuild(), no reload) — so without this
+        // it stayed fixed on whatever the URL carried, which is normally nothing, and the
+        // banner never appeared in the ordinary flow at all.
+        $dt->with([
+            'mapsStep' => $this->form ? $this->report->formMapsStep($this->form) : true,
+        ]);
+
         return $dt;
     }
 

@@ -156,8 +156,11 @@ $(function () {
     // silently staying out of a saved list that predates it.
     // Every localStorage call is wrapped: it throws in private-browsing modes and when the
     // quota is full, and losing the saved selection must never take the report down.
-    function colStoreKey() {
-        var id = currentFormId();
+    // formId is optional: with no argument this is the currently-selected course, which is
+    // what every read and write wants. Reset passes an explicit id because it clears the key
+    // for a course it is about to navigate away from.
+    function colStoreKey(formId) {
+        var id = (formId === undefined || formId === null || formId === '') ? currentFormId() : formId;
         return id ? 'fcDescData.hiddenCols.' + id : '';
     }
 
@@ -525,6 +528,16 @@ $(function () {
     // populateCourses() + loadCourse() destroy and re-create the whole set, which is the
     // same path a course switch already takes, so there is no stale widget left to disagree.
     $('#btnResetFilters').on('click', function () {
+        // Clear the saved hidden-column list BEFORE rebuilding. columnDefs() re-applies that
+        // list on every re-init, so without this the rebuild handed the user back the same
+        // narrow table and Reset appeared to do nothing — contradicting the promise above.
+        // Both the course being left and the one being restored are cleared, because the
+        // key is per-course and Reset resets the picker too.
+        [colStoreKey(), colStoreKey(preselectId)].forEach(function (key) {
+            if (!key) { return; }
+            try { window.localStorage.removeItem(key); } catch (e) {}
+        });
+
         populateCourses(preselectId);
         loadCourse(preselectId);
     });

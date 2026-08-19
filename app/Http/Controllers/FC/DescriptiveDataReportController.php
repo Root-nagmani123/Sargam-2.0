@@ -143,7 +143,13 @@ class DescriptiveDataReportController extends Controller
      */
     public function file(Request $request)
     {
-        $path = FcUploadUrl::decode($request->query(FcUploadUrl::TOKEN_PARAM));
+        // Audience-scoped: this route is deliberately unauthenticated for PHOTOGRAPHS AND
+        // SIGNATURES only. Naming its audience stops it serving a token minted for the
+        // step reports, whose uploads are Aadhaar cards, PAN cards and medical documents.
+        $path = FcUploadUrl::decode(
+            $request->query(FcUploadUrl::TOKEN_PARAM),
+            FcUploadUrl::DEFAULT_PATH
+        );
         abort_if($path === null, 404);
 
         // Resolve through the codebase's own resolver, which knows every place an upload can

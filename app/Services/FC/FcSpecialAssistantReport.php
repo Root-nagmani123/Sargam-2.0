@@ -53,20 +53,33 @@ class FcSpecialAssistantReport extends FcStepReport
         // NULL rather than a column reference when a deployment lacks the table, so the report
         // degrades to empty cells instead of failing with an unknown-column error.
         if (! $this->tableAvailable()) {
-            return [
-                'physical_impairment_info' => 'NULL',
-                'adjustment_required' => 'NULL',
-                'adjustment_type' => 'NULL',
-                'doc_path' => 'NULL',
-            ];
+            return array_map(fn () => 'NULL', $this->reportColumns());
         }
 
-        return [
-            'physical_impairment_info' => '`sa`.`physical_impairment_info`',
-            'adjustment_required' => '`sa`.`adjustment_required`',
-            'adjustment_type' => "NULLIF(TRIM(`sa`.`adjustment_type`), '')",
-            'doc_path' => "NULLIF(TRIM(`sa`.`doc_path`), '')",
-        ];
+        // Guarded PER COLUMN, like both sibling reports. tableAvailable() only proves
+        // physical_impairment_info is there; referencing the other three on its word means a
+        // deployment missing any one of them fails with an unknown-column error instead of
+        // degrading to empty cells, which is the whole point of the guard.
+        //
+        // The two long prose fields are passed through raw: longCell() does its own
+        // truncation, and NULLIF(TRIM()) is reserved for the short fields where an
+        // all-whitespace value is nothing rather than an answer.
+        $trimmed = ['adjustment_type', 'doc_path'];
+
+        $out = [];
+        foreach (array_keys($this->reportColumns()) as $key) {
+            if (! fc_schema_has_column(self::TABLE, $key)) {
+                $out[$key] = 'NULL';
+
+                continue;
+            }
+
+            $out[$key] = in_array($key, $trimmed, true)
+                ? "NULLIF(TRIM(`sa`.`{$key}`), '')"
+                : "`sa`.`{$key}`";
+        }
+
+        return $out;
     }
 
     protected function applyJoins(Builder $query, FcForm $form): void

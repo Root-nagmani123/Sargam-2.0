@@ -96,7 +96,11 @@ class FcDescriptiveDataExport implements FromQuery, WithChunkReading, WithCustom
         $query = $service->build($this->form, $this->fields);
         $service->applyFilters($query, $this->fields, $this->request);
 
-        return $query->orderBy('s1.first_name');
+        // Same non-unique-ORDER-BY-under-LIMIT/OFFSET defect as the step-report export: chunked
+        // exports re-run the query per chunk, so ties in first_name let a row shift across a
+        // boundary and be duplicated or dropped. s1.user_id is UNIQUE, making the order total.
+        return $query->orderBy('s1.first_name')
+            ->orderBy('s1.'.fc_user_col('student_master_firsts'));
     }
 
     public function chunkSize(): int

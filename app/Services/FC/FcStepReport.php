@@ -23,6 +23,9 @@ use Illuminate\Support\Facades\DB;
  */
 abstract class FcStepReport
 {
+    /** @var array<string,list<string>> form|table => target_columns that form maps. */
+    private array $mappedColumns = [];
+
     /** Long text is cut to this in the on-screen table only; exports always carry it whole. */
     public const TABLE_PREVIEW_CHARS = 220;
 
@@ -127,6 +130,73 @@ abstract class FcStepReport
             ->where('g.target_table', $probe['table'])
             ->where('gf.target_column', $probe['column'])
             ->exists();
+    }
+
+    /**
+     * Which of these column spellings does this form actually map for $table?
+     *
+     * The same logical field is mapped to different columns on different forms — the Aadhaar
+     * upload on new_registration_bank_details_masters goes to doc_aadhar_path on forms 17 and
+     * 18 but to doc_aadhar on form 21. A report that hardcodes one spelling reads the wrong
+     * column on the other forms: an empty cell where the trainee has uploaded nothing to that
+     * column, or worse, a STALE file when both columns hold a path and the newer upload landed
+     * in the one the report is not reading.
+     *
+     * Candidates are tried in order, so the caller decides precedence when a form maps more
+     * than one. Returns null when the form maps none of them — the caller then decides how to
+     * degrade.
+     *
+     * @param  list<string>  $candidates  column spellings, most preferred first
+     */
+    protected function formMappedColumn(FcForm $form, string $table, array $candidates): ?string
+    {
+        foreach ($candidates as $candidate) {
+            if (in_array($candidate, $this->formMappedColumns($form, $table), true)
+                && fc_schema_has_column($table, $candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Every target_column this form maps for $table, from both definition tables for the same
+     * reason formMapsStep() checks both.
+     *
+     * Memoised per form and table: reportExpressions() is re-evaluated for each column through
+     * columnSql(), so without this the two lookups below would run once per column per request.
+     *
+     * @return list<string>
+     */
+    private function formMappedColumns(FcForm $form, string $table): array
+    {
+        $memoKey = $form->id.'|'.$table;
+
+        if (array_key_exists($memoKey, $this->mappedColumns)) {
+            return $this->mappedColumns[$memoKey];
+        }
+
+        $direct = DB::table('fc_form_fields as f')
+            ->join('fc_form_steps as s', 'f.step_id', '=', 's.id')
+            ->where('s.form_id', $form->id)
+            ->where('f.is_active', 1)
+            ->where('s.is_active', 1)
+            ->where('f.target_table', $table)
+            ->pluck('f.target_column');
+
+        $grouped = DB::table('fc_form_group_fields as gf')
+            ->join('fc_form_field_groups as g', 'gf.group_id', '=', 'g.id')
+            ->join('fc_form_steps as s', 'g.step_id', '=', 's.id')
+            ->where('s.form_id', $form->id)
+            ->where('gf.is_active', 1)
+            ->where('g.is_active', 1)
+            ->where('s.is_active', 1)
+            ->where('g.target_table', $table)
+            ->pluck('gf.target_column');
+
+        return $this->mappedColumns[$memoKey] = $direct->concat($grouped)
+            ->filter()->unique()->values()->all();
     }
 
     /** @return array{table: string, column: string} one field that proves the step is mapped */

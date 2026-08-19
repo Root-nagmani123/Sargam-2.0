@@ -340,40 +340,59 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     //
     // match(get|post) for the same reason as descriptive-data: the page renders on GET and the
     // DataTable POSTs its draw request.
+    // key => [screen label, Spatie permission the whole report requires].
+    //
+    // The permission is the one the report's own `menus` row already declares, so the sidebar
+    // link and the route now agree — previously the menu decided whether the link was DRAWN
+    // while the route let anyone in who knew the URL.
+    //
+    //   menu 241 special-assistant    -> special_assistant_report
+    //   menu 242 vision-statement     -> vision_statement_report
+    //   menu 243 pre-medical-history  -> pre_medical_report
+    //   menu 244 bank-report          -> fc_bank_details
+    //
+    // Every one of the four is therefore revocable on its own, and each appears as a checkbox
+    // under Setup > FC Forms > Fc-reg Admin on /roles/{id} — that screen builds its list from
+    // the menu rows, so a route gated on a permission with no menu row could not be granted
+    // through the UI at all.
     foreach ([
-        'vision-statement' => 'Vision Statement',
-        'special-assistant' => 'Special Assistant',
+        'vision-statement' => ['Vision Statement', 'vision_statement_report'],
+        'special-assistant' => ['Special Assistant', 'special_assistant_report'],
         // 'bank-report', not 'bank-details': /admin/reports/bank-details already belongs to the
         // older ReportController::bankDetails() screen, which overview.blade.php and
         // form-overview.blade.php both link to. Registering the same URI here would shadow it.
-        'bank-report' => 'Bank Details',
-        'pre-medical-history' => 'Pre-Medical History',
-    ] as $stepReportKey => $stepReportLabel) {
-        // NOTE — the group's `auth` only, by decision. A role gate was applied here and then
-        // deliberately removed: no role or user currently holds the `bulk_smsemail` permission
-        // that fc.reg.admin accepts, so gating these would have left them Super-Admin-only and
-        // locked out the people who use them.
+        'bank-report' => ['Bank Details', 'fc_bank_details'],
+        'pre-medical-history' => ['Pre-Medical History', 'pre_medical_report'],
+    ] as $stepReportKey => [$stepReportLabel, $stepReportPermission]) {
+        // The group's `auth` is NOT an admin gate in this application: Authenticate.php STEP 2
+        // hydrates an FC trainee's roster session into Auth, so Auth::check() passes for a
+        // trainee. Every route below therefore carries its own `can:` check — without it a
+        // logged-in trainee could read and export every other trainee's medical history and
+        // bank details, which was verified reproducible before this gate was added.
         //
-        // The exposure this leaves open is real and recorded: `auth` is not an admin gate in
-        // this application — Authenticate.php:96 hydrates an FC trainee's roster session into
-        // Auth — so a logged-in trainee can reach these screens and their sheet exports. Same
-        // gate the sibling descriptive-data report already carries. Revisit when a reporting
-        // permission exists to gate on.
+        // `can:` is used rather than the fc.reg.admin middleware because that middleware admits
+        // the `bulk_smsemail` permission, which does not exist in the permissions table — it
+        // silently degrades to Super-Admin-only and locks out the admins who use these screens.
         Route::match(['get', 'post'], '/'.$stepReportKey, [StepReportController::class, 'index'])
-            ->defaults('report', $stepReportKey)->name($stepReportKey);
+            ->defaults('report', $stepReportKey)
+            ->middleware('can:'.$stepReportPermission)
+            ->name($stepReportKey);
         Route::get('/'.$stepReportKey.'/export-excel', [StepReportController::class, 'exportExcel'])
-            ->defaults('report', $stepReportKey)->name($stepReportKey.'.export.excel');
+            ->defaults('report', $stepReportKey)
+            ->middleware('can:'.$stepReportPermission)
+            ->name($stepReportKey.'.export.excel');
         Route::get('/'.$stepReportKey.'/export-pdf', [StepReportController::class, 'exportPdf'])
-            ->defaults('report', $stepReportKey)->name($stepReportKey.'.export.pdf');
+            ->defaults('report', $stepReportKey)
+            ->middleware('can:'.$stepReportPermission)
+            ->name($stepReportKey.'.export.pdf');
 
-        // fc.reg.admin, unlike its siblings: this endpoint returns EVERY uploaded document on a
-        // course in a single file. The rest of the report is a screen an admin reads; this is a
-        // bulk extract of trainee-supplied documents, so it gets the same gate as the photo
-        // archive on descriptive-data rather than the group's auth-only one. 404s on a report
-        // that has no upload columns.
+        // Same permission as the rest of the report. This previously used the fc.reg.admin
+        // middleware, which resolves to Super Admin alone because the `bulk_smsemail` permission
+        // it accepts was never created — so the bulk document archive returned 403 to every
+        // other administrator. 404s on a report that has no upload columns.
         Route::get('/'.$stepReportKey.'/export-documents', [StepReportController::class, 'exportDocuments'])
             ->defaults('report', $stepReportKey)
-            ->middleware('fc.reg.admin')
+            ->middleware('can:'.$stepReportPermission)
             ->name($stepReportKey.'.export.documents');
     }
 

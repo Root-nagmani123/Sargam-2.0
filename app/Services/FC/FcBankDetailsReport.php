@@ -58,6 +58,25 @@ class FcBankDetailsReport extends FcStepReport
         ];
     }
 
+    /**
+     * Column spellings each document may live under, most preferred first.
+     *
+     * The table carries two parallel sets and forms disagree on which they write: forms 17 and
+     * 18 map doc_aadhar_path, form 21 ("Foundation Course 101") maps doc_aadhar. Reading one
+     * spelling for every course showed form-21 trainees a SUPERSEDED Aadhaar card — the newer
+     * upload had gone to the column the report was not reading — and would show an empty cell
+     * for anyone whose first upload landed there.
+     *
+     * Keys are the reportColumns() keys and must stay as they are: they name the DataTable
+     * columns, the `cols` narrowing parameter, the Excel headers and the ZIP's file columns.
+     * Only the SQL behind them is resolved per form.
+     */
+    private const DOC_CANDIDATES = [
+        'doc_aadhar_path' => ['doc_aadhar_path', 'doc_aadhar'],
+        'doc_pan_path' => ['doc_pan_path', 'doc_pan'],
+        'doc_cancel_cheque_path' => ['doc_cancel_cheque_path', 'doc_cancel_cheque'],
+    ];
+
     protected function reportExpressions(FcForm $form): array
     {
         // NULL rather than a column reference when a deployment lacks the table, so the report
@@ -68,12 +87,52 @@ class FcBankDetailsReport extends FcStepReport
 
         $out = [];
         foreach (array_keys($this->reportColumns()) as $key) {
+            if (isset(self::DOC_CANDIDATES[$key])) {
+                $out[$key] = $this->documentSql($form, $key);
+
+                continue;
+            }
+
             $out[$key] = fc_schema_has_column(self::TABLE, $key)
                 ? "NULLIF(TRIM(`bd`.`{$key}`), '')"
                 : 'NULL';
         }
 
         return $out;
+    }
+
+    /**
+     * The upload for this document, preferring the column THIS form writes and falling back to
+     * the other spellings.
+     *
+     * Preference, not exclusivity, and the distinction matters: form 21 maps doc_aadhar today,
+     * but its older rows were written to doc_aadhar_path before it was remapped. Reading only
+     * the mapped column drops those trainees' Aadhaar cards from the screen, both exports and
+     * the ZIP; reading only the historical column shows a superseded file for anyone who has
+     * uploaded since. COALESCE in form-mapped-first order is the one ordering that is correct
+     * for both, and it needs no backfill.
+     */
+    private function documentSql(FcForm $form, string $key): string
+    {
+        $candidates = self::DOC_CANDIDATES[$key];
+
+        $mapped = $this->formMappedColumn($form, self::TABLE, $candidates);
+        if ($mapped !== null) {
+            array_unshift($candidates, $mapped);
+        }
+
+        $parts = [];
+        foreach (array_unique($candidates) as $candidate) {
+            if (fc_schema_has_column(self::TABLE, $candidate)) {
+                $parts[] = "NULLIF(TRIM(`bd`.`{$candidate}`), '')";
+            }
+        }
+
+        if ($parts === []) {
+            return 'NULL';
+        }
+
+        return count($parts) === 1 ? $parts[0] : 'COALESCE('.implode(', ', $parts).')';
     }
 
     protected function applyJoins(Builder $query, FcForm $form): void
