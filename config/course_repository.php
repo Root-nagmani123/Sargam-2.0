@@ -22,6 +22,6 @@ return [
     */
     'max_file_kb' => (int) env('COURSE_REPOSITORY_MAX_FILE_KB', 25600), // 25 MB
 
-    'allowed_extensions' => ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'],
+    'allowed_extensions' => ['pdf'],
 
 ];

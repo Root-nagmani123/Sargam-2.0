@@ -449,13 +449,13 @@ class CourseRepositoryController extends Controller
         return (int) config('course_repository.max_file_kb', 25600);
     }
 
-    /** Extensions for the `mimes:` rule, e.g. "jpg,jpeg,png,pdf,doc,docx". */
+    /** Extensions for the `mimes:` rule, e.g. "pdf". */
     private function uploadAllowedMimes(): string
     {
         return implode(',', (array) config('course_repository.allowed_extensions', []));
     }
 
-    /** Human form of the same list for error messages, e.g. "JPG, JPEG, PNG, PDF, DOC or DOCX". */
+    /** Human form of the same list for error messages, e.g. "PDF". */
     private function uploadAllowedTypesLabel(): string
     {
         $types = array_map('strtoupper', (array) config('course_repository.allowed_extensions', []));

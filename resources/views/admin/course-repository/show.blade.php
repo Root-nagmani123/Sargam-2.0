@@ -29,8 +29,8 @@
     // client-side check and the server rule always state one number.
     $perFileMaxBytes = (int) config('course_repository.max_file_kb', 25600) * 1024;
 
-    $allowedUploadExtensions = (array) config('course_repository.allowed_extensions', ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx']);
-    // Feeds the file picker's own type filter, e.g. ".jpg,.jpeg,.png,.pdf,.doc,.docx"
+    $allowedUploadExtensions = (array) config('course_repository.allowed_extensions', ['pdf']);
+    // Feeds the file picker's own type filter, e.g. ".pdf"
     $uploadAcceptAttr = '.' . implode(',.', $allowedUploadExtensions);
     $uploadTypesLabel = strtoupper(implode(', ', $allowedUploadExtensions));
     $uploadMaxSizeLabel = rtrim(rtrim(number_format($perFileMaxBytes / (1024 * 1024), 1), '0'), '.') . ' MB';
@@ -1467,7 +1467,7 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             totalUploadBytes += (file.size || 0);
             if (ALLOWED_EXTENSIONS.indexOf(ext) === -1) {
                 uploadErrors.push(label + ' "' + name +
-                    '" is not an allowed file type. Allowed types: JPG, JPEG, PNG, PDF, DOC, DOCX.');
+                    '" is not an allowed file type. Allowed types: {{ $uploadTypesLabel }}.');
             }
             if (file.size === 0) {
                 uploadErrors.push(label + ' "' + name + '" is empty (0 KB). Please select a valid file.');
@@ -2148,7 +2148,7 @@ window.crDocEdit = (function() {
             var fileErrors = [];
             if (allowed.indexOf(rExt) === -1) {
                 fileErrors.push('"' + rName +
-                    '" is not an allowed file type. Allowed types: JPG, JPEG, PNG, PDF, DOC, DOCX.');
+                    '" is not an allowed file type. Allowed types: {{ $uploadTypesLabel }}.');
             }
             if (replacement.size === 0) {
                 fileErrors.push('"' + rName + '" is empty (0 KB). Please select a valid file.');
