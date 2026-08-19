@@ -342,27 +342,37 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     // DataTable POSTs its draw request.
     // key => [screen label, Spatie permission the whole report requires].
     //
-    // The permission is the one the report's own `menus` row already declares, so the sidebar
-    // link and the route now agree — previously the menu decided whether the link was DRAWN
-    // while the route let anyone in who knew the URL.
+    // The permission strings below are the ones PRODUCTION already carries in
+    // menus.permission_name, and they are not guessable from the screen names — the sidebar
+    // label and the permission were created independently and do not match:
     //
-    //   menu 241 special-assistant    -> special_assistant_report
-    //   menu 242 vision-statement     -> vision_statement_report
-    //   menu 243 pre-medical-history  -> pre_medical_report
-    //   menu 244 bank-report          -> fc_bank_details
+    //   Special Assistant Report  ->  special_assistant_report
+    //   Vision Statement Report   ->  vision_statement        (not vision_statement_report)
+    //   Pre Medical report        ->  pre_medical_history     (not pre_medical_report)
+    //   Fc Bank Details           ->  bank_detail_report      (not fc_bank_details)
     //
-    // Every one of the four is therefore revocable on its own, and each appears as a checkbox
-    // under Setup > FC Forms > Fc-reg Admin on /roles/{id} — that screen builds its list from
-    // the menu rows, so a route gated on a permission with no menu row could not be granted
+    // An earlier version of this file gated on the right-hand names in brackets. None of them
+    // exists in production, and Spatie denies an unknown permission outright — there is no
+    // Gate::before super-admin bypass anywhere in app/Providers — so twelve of these sixteen
+    // routes returned 403 to every account, Super Admin included. Verified by reproducing the
+    // production rows locally: only special_assistant_report resolved, the other three 403'd.
+    //
+    // Do NOT "tidy" these into a consistent naming scheme without renaming the permissions and
+    // menus rows in every environment first. The string here has to equal permissions.name
+    // exactly; menus.name is only the sidebar label and is not read by the gate.
+    //
+    // Each report is separately revocable, and each appears as a checkbox under
+    // Setup > FC Forms > Fc-reg Admin on /roles/{id} — that screen builds its list from the
+    // menu rows, so a route gated on a permission with no menu row could not be granted
     // through the UI at all.
     foreach ([
-        'vision-statement' => ['Vision Statement', 'vision_statement_report'],
+        'vision-statement' => ['Vision Statement', 'vision_statement'],
         'special-assistant' => ['Special Assistant', 'special_assistant_report'],
         // 'bank-report', not 'bank-details': /admin/reports/bank-details already belongs to the
         // older ReportController::bankDetails() screen, which overview.blade.php and
         // form-overview.blade.php both link to. Registering the same URI here would shadow it.
-        'bank-report' => ['Bank Details', 'fc_bank_details'],
-        'pre-medical-history' => ['Pre-Medical History', 'pre_medical_report'],
+        'bank-report' => ['Bank Details', 'bank_detail_report'],
+        'pre-medical-history' => ['Pre-Medical History', 'pre_medical_history'],
     ] as $stepReportKey => [$stepReportLabel, $stepReportPermission]) {
         // The group's `auth` is NOT an admin gate in this application: Authenticate.php STEP 2
         // hydrates an FC trainee's roster session into Auth, so Auth::check() passes for a
@@ -370,9 +380,13 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
         // logged-in trainee could read and export every other trainee's medical history and
         // bank details, which was verified reproducible before this gate was added.
         //
-        // `can:` is used rather than the fc.reg.admin middleware because that middleware admits
-        // the `bulk_smsemail` permission, which does not exist in the permissions table — it
-        // silently degrades to Super-Admin-only and locks out the admins who use these screens.
+        // `can:` rather than the fc.reg.admin middleware, which admits only Super Admin plus
+        // holders of `bulk_smsemail` — a permission that exists in some environments and not
+        // others, so the same middleware admits a different set of people depending on where
+        // it runs. A per-report permission is grantable and revocable on its own and behaves
+        // the same everywhere. (Do not restate here WHICH environments have that permission:
+        // an earlier version of this comment did, from one developer database, and was wrong
+        // in production.)
         Route::match(['get', 'post'], '/'.$stepReportKey, [StepReportController::class, 'index'])
             ->defaults('report', $stepReportKey)
             ->middleware('can:'.$stepReportPermission)
@@ -402,8 +416,19 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     // for a recipient who is not a Sargam user — a trade accepted for photographs and
     // signatures. These reports' uploads are Aadhaar cards, PAN cards, cancelled cheques and
     // medical documents, which should not be readable by an anonymous URL holder, so they get
-    // their own endpoint inside the auth group. No role gate, matching the screens above.
-    // Consequence, deliberate: document links inside a forwarded export require a login.
+    // their own endpoint inside the auth group.
+    //
+    // `auth` only, and NO `can:` — which makes this the least-gated route in the family, while
+    // it carries the most sensitive files. That is a deliberate trade, not an oversight: the
+    // screens are gated per report so an admin cannot browse a report they have no permission
+    // for, but a document link inside an exported workbook has to keep working for the
+    // colleague it was sent to, who may hold no report permission at all. Reaching a file
+    // still requires both a login and possession of an unguessable token minted from that
+    // workbook.
+    //
+    // Revisit if forwarded exports stop being a requirement: adding
+    // ->middleware('can:'.$permission) here would close the gap, at the cost of breaking every
+    // document link in every workbook already sent.
     Route::get('/step-file', [StepReportController::class, 'file'])
         ->name('step-file');
 

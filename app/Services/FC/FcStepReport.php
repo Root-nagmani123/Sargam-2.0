@@ -136,11 +136,12 @@ abstract class FcStepReport
      * Which of these column spellings does this form actually map for $table?
      *
      * The same logical field is mapped to different columns on different forms — the Aadhaar
-     * upload on new_registration_bank_details_masters goes to doc_aadhar_path on forms 17 and
-     * 18 but to doc_aadhar on form 21. A report that hardcodes one spelling reads the wrong
-     * column on the other forms: an empty cell where the trainee has uploaded nothing to that
-     * column, or worse, a STALE file when both columns hold a path and the newer upload landed
-     * in the one the report is not reading.
+     * upload on new_registration_bank_details_masters lands in doc_aadhar_path under some
+     * forms and doc_aadhar under others, and which is which is data that differs between
+     * environments. A report that hardcodes one spelling reads the wrong column on the rest:
+     * an empty cell where the trainee has uploaded nothing to that column, or worse, a STALE
+     * file when both columns hold a path and the newer upload landed in the one the report is
+     * not reading.
      *
      * Candidates are tried in order, so the caller decides precedence when a form maps more
      * than one. Returns null when the form maps none of them — the caller then decides how to

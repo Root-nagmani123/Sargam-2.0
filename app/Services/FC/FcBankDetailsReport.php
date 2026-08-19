@@ -61,11 +61,14 @@ class FcBankDetailsReport extends FcStepReport
     /**
      * Column spellings each document may live under, most preferred first.
      *
-     * The table carries two parallel sets and forms disagree on which they write: forms 17 and
-     * 18 map doc_aadhar_path, form 21 ("Foundation Course 101") maps doc_aadhar. Reading one
-     * spelling for every course showed form-21 trainees a SUPERSEDED Aadhaar card — the newer
-     * upload had gone to the column the report was not reading — and would show an empty cell
-     * for anyone whose first upload landed there.
+     * The table carries two parallel sets — doc_aadhar and doc_aadhar_path, and the PAN and
+     * cheque equivalents — and different forms map the same upload to different ones of them.
+     * Reading a single hardcoded spelling for every course showed a SUPERSEDED Aadhaar card
+     * wherever the newer upload had gone to the column the report was not reading, and an
+     * empty cell wherever a trainee's only upload landed there.
+     *
+     * Which form maps which spelling is DATA and differs between environments, so it is not
+     * recorded here. formMappedColumn() resolves it per form at runtime.
      *
      * Keys are the reportColumns() keys and must stay as they are: they name the DataTable
      * columns, the `cols` narrowing parameter, the Excel headers and the ZIP's file columns.
@@ -105,11 +108,11 @@ class FcBankDetailsReport extends FcStepReport
      * The upload for this document, preferring the column THIS form writes and falling back to
      * the other spellings.
      *
-     * Preference, not exclusivity, and the distinction matters: form 21 maps doc_aadhar today,
-     * but its older rows were written to doc_aadhar_path before it was remapped. Reading only
-     * the mapped column drops those trainees' Aadhaar cards from the screen, both exports and
-     * the ZIP; reading only the historical column shows a superseded file for anyone who has
-     * uploaded since. COALESCE in form-mapped-first order is the one ordering that is correct
+     * Preference, not exclusivity, and the distinction matters: a form's mapping can change,
+     * leaving older rows under the previous spelling. Reading only the currently-mapped column
+     * drops those trainees' Aadhaar cards from the screen, both exports and the ZIP; reading
+     * only the historical column shows a superseded file to anyone who has uploaded since.
+     * COALESCE in form-mapped-first order is the one ordering that is correct
      * for both, and it needs no backfill.
      */
     private function documentSql(FcForm $form, string $key): string

@@ -454,7 +454,9 @@ class FcDescriptiveDataExport implements FromQuery, WithChunkReading, WithCustom
         $query = (string) parse_url($url, PHP_URL_QUERY);
         parse_str($query, $params);
 
-        $path = FcUploadUrl::decode($params[FcUploadUrl::TOKEN_PARAM] ?? null);
+        // pathForDisplay(), not decode(): this names a spreadsheet cell after the file and
+        // never serves it, so there is no endpoint whose audience it could assert.
+        $path = FcUploadUrl::pathForDisplay($params[FcUploadUrl::TOKEN_PARAM] ?? null);
 
         return $path !== null ? basename($path) : $url;
     }

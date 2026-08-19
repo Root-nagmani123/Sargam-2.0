@@ -60,32 +60,63 @@ final class FcUploadUrl
      * Encrypted, URL-safe. base64url so the token survives a query string untouched.
      *
      * The payload carries the audience — the one endpoint allowed to redeem this token —
-     * alongside the path. Without it the two file routes are interchangeable: they decode
-     * with the same key and serve on the same terms, so a token minted for the authenticated
+     * ahead of the path. Without it the two file routes are interchangeable: they decode with
+     * the same key and serve on the same terms, so a token minted for the authenticated
      * step-report endpoint could be redeemed at the unauthenticated descriptive-data one just
      * by editing the path segment in the URL, which handed out Aadhaar cards with no login.
      * The audience travels INSIDE the ciphertext, so it cannot be edited the way the URL can.
+     *
+     * A newline separator rather than JSON, deliberately. json_encode() returns false on a
+     * path that is not valid UTF-8, which encrypted to an empty string and made that file
+     * permanently unreachable — a silent 404 with nothing logged. This form is byte
+     * transparent, and an audience is a route path, so it can never contain a newline itself.
      */
     public static function encode(string $path, string $audience = self::DEFAULT_PATH): string
     {
-        $payload = json_encode(
-            ['aud' => $audience, 'p' => $path],
-            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
-        );
-
-        return rtrim(strtr(base64_encode(Crypt::encryptString($payload)), '+/', '-_'), '=');
+        return rtrim(strtr(base64_encode(Crypt::encryptString($audience."\n".$path)), '+/', '-_'), '=');
     }
 
     /**
-     * Reverse of encode(). Returns null when the token is missing, malformed, has been
-     * tampered with, or was minted for a different endpoint — all of which are treated the
-     * same way by the caller: a 404.
+     * The stored path behind a token, but ONLY for a caller that will serve the file.
      *
-     * @param  string|null  $audience  reject the token unless it was minted for this endpoint.
-     *                                 Pass null ONLY where the path is used for display; every
-     *                                 route that actually serves a file must name its own.
+     * $audience is mandatory on purpose. It was optional once, defaulting to "accept anything",
+     * and that default is the whole protection quietly switched off: the next file endpoint
+     * added to this module would call decode($token), inherit the permissive default, and
+     * reopen the cross-endpoint bypass with no visible symptom. A caller that genuinely does
+     * not serve a file wants pathForDisplay() instead.
+     *
+     * Returns null when the token is missing, malformed, tampered with, or was minted for a
+     * different endpoint — all of which the callers treat the same way: a 404.
      */
-    public static function decode(?string $token, ?string $audience = null): ?string
+    public static function decode(?string $token, string $audience): ?string
+    {
+        $claims = self::claims($token);
+
+        if ($claims === null || ! hash_equals($audience, $claims['aud'])) {
+            return null;
+        }
+
+        return $claims['path'];
+    }
+
+    /**
+     * The stored path behind a token, with no audience check.
+     *
+     * For callers that read the path but never serve the bytes — the Excel export naming a
+     * cell after the file, for instance. Named so that skipping the audience is a deliberate
+     * choice a reviewer can see, rather than an omitted argument.
+     */
+    public static function pathForDisplay(?string $token): ?string
+    {
+        return self::claims($token)['path'] ?? null;
+    }
+
+    /**
+     * Decrypt a token into its audience and path, or null if it cannot be trusted.
+     *
+     * @return array{aud: string, path: string}|null
+     */
+    private static function claims(?string $token): ?array
     {
         $token = trim((string) $token);
         if ($token === '') {
@@ -103,28 +134,15 @@ final class FcUploadUrl
             return null;
         }
 
-        $claims = json_decode($plain, true);
+        // Two parts means an audienced token. One means a legacy token: a bare path, minted
+        // before audiences existed. Only the descriptive-data report ever issued one — the
+        // step-report endpoint does not exist on main — so that is the audience it is given,
+        // which keeps already-emailed workbooks resolving exactly as before.
+        $parts = explode("\n", $plain, 2);
 
-        if (is_array($claims) && isset($claims['p'], $claims['aud'])) {
-            $path = trim((string) $claims['p']);
-            $aud = (string) $claims['aud'];
-        } else {
-            // Legacy token: a bare path, minted before audiences existed. Only the
-            // descriptive-data report ever issued one — the step-report endpoint does not
-            // exist on main — so that is its audience. Keeps workbooks already emailed
-            // under the accepted-risk decision resolving exactly as before.
-            $path = trim($plain);
-            $aud = self::DEFAULT_PATH;
-        }
+        $aud = count($parts) === 2 ? $parts[0] : self::DEFAULT_PATH;
+        $path = trim(count($parts) === 2 ? $parts[1] : $parts[0]);
 
-        if ($path === '') {
-            return null;
-        }
-
-        if ($audience !== null && ! hash_equals($audience, $aud)) {
-            return null;
-        }
-
-        return $path;
+        return $path === '' ? null : ['aud' => $aud, 'path' => $path];
     }
 }
