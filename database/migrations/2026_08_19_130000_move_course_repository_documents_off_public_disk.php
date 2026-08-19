@@ -25,8 +25,22 @@ use Illuminate\Support\Facades\Storage;
  */
 return new class extends Migration
 {
-    /** Legacy roots that hold documents, as they appear on the public disk. */
-    private const DOCUMENT_ROOTS = ['course-repository/attachments', 'course_repository', 'Course Repository'];
+    /**
+     * Legacy roots that hold documents, as they appear on the public disk.
+     *
+     * Documents do NOT all live under an "attachments" folder — the bulk sit directly
+     * under the repository name, e.g.
+     * "course-repository/Central Course Repository of LBSNAA/MCTP/…/file.pdf". Denying
+     * only course-repository/attachments would therefore have missed almost all of them.
+     */
+    private const DOCUMENT_ROOTS = ['course-repository', 'course_repository', 'Course Repository'];
+
+    /**
+     * Re-permitted inside the denied roots: category thumbnails are decorative images
+     * rendered with asset() on the listing pages and are meant to stay public. Denying
+     * their parent without this would blank every repository card.
+     */
+    private const PUBLIC_EXCEPTIONS = ['course-repository/categories'];
 
     public function up(): void
     {
@@ -72,6 +86,10 @@ return new class extends Migration
               . "<IfModule mod_authz_core.c>\n    Require all denied\n</IfModule>\n"
               . "<IfModule !mod_authz_core.c>\n    Order allow,deny\n    Deny from all\n</IfModule>\n";
 
+        $allow = "# Category thumbnails are public by design — see the migration that wrote this.\n"
+               . "<IfModule mod_authz_core.c>\n    Require all granted\n</IfModule>\n"
+               . "<IfModule !mod_authz_core.c>\n    Order allow,deny\n    Allow from all\n</IfModule>\n";
+
         foreach (self::DOCUMENT_ROOTS as $root) {
             try {
                 if (Storage::disk($disk)->exists($root)) {
@@ -79,6 +97,20 @@ return new class extends Migration
                 }
             } catch (\Throwable $e) {
                 Log::warning('Could not write deny rule for legacy document root.', [
+                    'root' => $root,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        // Written after the denies, so a nested allow always wins for the thumbnails.
+        foreach (self::PUBLIC_EXCEPTIONS as $root) {
+            try {
+                if (Storage::disk($disk)->exists($root)) {
+                    Storage::disk($disk)->put($root . '/.htaccess', $allow);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Could not re-permit public exception folder.', [
                     'root' => $root,
                     'error' => $e->getMessage(),
                 ]);

@@ -1001,14 +1001,73 @@ class CourseRepositoryController extends Controller
      */
     private function resolveDocumentLocation(CourseRepositoryDocument $document): ?array
     {
-        foreach ([self::documentDisk(), self::legacyDocumentDisk()] as $disk) {
-            $path = $this->resolveDocumentRelativePath($document, $disk);
-            if ($path !== null) {
-                return ['disk' => $disk, 'path' => $path];
-            }
+        $private = self::documentDisk();
+        $legacy = self::legacyDocumentDisk();
+
+        $path = $this->resolveDocumentRelativePath($document, $private);
+        if ($path !== null) {
+            return ['disk' => $private, 'path' => $path];
         }
 
-        return null;
+        $path = $this->resolveDocumentRelativePath($document, $legacy);
+        if ($path === null) {
+            return null;
+        }
+
+        // Found on the public disk. Move it before serving.
+        //
+        // The bulk move runs as a migration, but that only helps where `migrate` is
+        // actually run on deploy, and the console command only helps if someone
+        // remembers it. Neither is a property of the code. Relocating on read means any
+        // document reachable through the application secures itself the first time it is
+        // opened, with no operational step at all.
+        //
+        // Best-effort: if the move fails the file is still served from where it is, so a
+        // read never breaks because of a housekeeping failure.
+        if ($this->relocateLegacyDocument($legacy, $private, $path)) {
+            return ['disk' => $private, 'path' => $path];
+        }
+
+        return ['disk' => $legacy, 'path' => $path];
+    }
+
+    /**
+     * Copy a legacy file onto the private disk and drop the public copy.
+     *
+     * Size is verified before the delete: a truncated or empty write must not be allowed
+     * to destroy the only remaining copy.
+     */
+    private function relocateLegacyDocument(string $from, string $to, string $path): bool
+    {
+        try {
+            $stream = Storage::disk($from)->readStream($path);
+            if (! is_resource($stream)) {
+                return false;
+            }
+
+            Storage::disk($to)->writeStream($path, $stream);
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+
+            if (! Storage::disk($to)->exists($path)
+                || Storage::disk($to)->size($path) !== Storage::disk($from)->size($path)) {
+                return false;
+            }
+
+            Storage::disk($from)->delete($path);
+
+            Log::info('course_repository.document.relocated', ['path' => $path]);
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::warning('course_repository.document.relocate_failed', [
+                'path' => $path,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     private function resolveDocumentRelativePath(CourseRepositoryDocument $document, ?string $disk = null): ?string

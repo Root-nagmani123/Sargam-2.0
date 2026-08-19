@@ -971,16 +971,28 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
             Route::get('/get-template-by-course', 'getTemplateByCourse')->name('getTemplateByCourse'); // <-- Template AJAX route
             Route::get('/templates-by-type', 'getTemplatesByType')->name('getTemplatesByType'); // list templates for a course+type picker
             Route::post('/get-student-attendance-by-topic', 'getStudentAttendanceBytopic')->name('getStudentAttendanceBytopic'); // <-- New AJAX route
-            Route::post('/store_memo_notice', 'store_memo_notice')->name('store_memo_notice');
-            Route::post('/store_memo_status', 'store_memo_status')->name('store_memo_status');
-            Route::post('/memo/update/{id}', 'updateMemoStatus')->name('update_memo_status');
-            Route::get('/notice/edit/{id}', 'editNotice')->name('editNotice');
-            Route::post('/notice/update-template/{id}', 'updateNoticeTemplate')->name('update_notice_template');
-            Route::post('/end-chat', 'endChat')->name('endChat');
+
+            // Write actions on disciplinary records. Gated as a block rather than method
+            // by method — the per-method checks were applied to only some of these, so
+            // creating a memo, closing a case with a marks deduction, and deleting
+            // conversation messages all ran for any authenticated user. A route added
+            // inside this group now inherits the check instead of having to remember it.
+            // Participant-facing routes are deliberately outside it.
+            Route::middleware('memo.notice.manager')->group(function () {
+                Route::post('/store_memo_notice', 'store_memo_notice')->name('store_memo_notice');
+                Route::post('/store_memo_status', 'store_memo_status')->name('store_memo_status');
+                Route::post('/memo/update/{id}', 'updateMemoStatus')->name('update_memo_status');
+                Route::get('/notice/edit/{id}', 'editNotice')->name('editNotice');
+                Route::post('/notice/update-template/{id}', 'updateNoticeTemplate')->name('update_notice_template');
+                Route::post('/end-chat', 'endChat')->name('endChat');
+            });
             Route::post('/memo_notice_conversation', 'memo_notice_conversation')->name('memo_notice_conversation');
             Route::post('/memo_notice_conversation_student', 'memo_notice_conversation_student')->name('memo_notice_conversation_student');
             Route::post('/memo_notice_conversation_model', 'memo_notice_conversation_model')->name('memo_notice_conversation_model');
+            // Reached only from the admin conversation view (conversation.blade.php);
+            // the participant's own view is chat.blade.php and does not link here.
             Route::delete('/notice-delete-Message/{id}/{type}', [CourseAttendanceNoticeMapController::class, 'noticedeleteMessage'])
+                ->middleware('memo.notice.manager')
                 ->name('noticedeleteMessage');
             Route::delete('/record-delete/{id}/{type}', 'destroyRecord')->name('destroy');
             //  Route::get('/user_chat', function () {
@@ -1001,7 +1013,11 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     Route::get('/send_notice/students', [CourseAttendanceNoticeMapController::class, 'getStudentsForNotice'])->name('send.notice.students');
     Route::get('/send_notice/list/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'noticeListModal'])->name('send.notice.list.modal');
     Route::get('/send_notice/list-page/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'noticeListPage'])->name('send.notice.list.page');
-    Route::post('/send_notice_direct_save', [CourseAttendanceNoticeMapController::class, 'send_direct_notice_save'])->name('send.notice.direct.save');
+    // Issues a notice against a named participant — same class of write as the actions
+    // inside the memo-notice group, so it carries the same gate.
+    Route::post('/send_notice_direct_save', [CourseAttendanceNoticeMapController::class, 'send_direct_notice_save'])
+        ->middleware('memo.notice.manager')
+        ->name('send.notice.direct.save');
     Route::get('/attendance_send_notice/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'view_all_notice_list'])->name('attendance.send_notice');
     Route::post('/notice_direct_save', [CourseAttendanceNoticeMapController::class, 'notice_direct_save'])->name('notice.direct.save');
 
