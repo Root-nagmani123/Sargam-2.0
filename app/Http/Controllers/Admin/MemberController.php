@@ -66,6 +66,7 @@ class MemberController extends Controller
 
     private function mapStep4Data(Request $request): array
     {
+
         $address = [
             'current_address' => $request->address,
             'country_master_pk' => $request->country,

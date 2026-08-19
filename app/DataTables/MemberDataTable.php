@@ -67,6 +67,8 @@ class MemberDataTable extends DataTable
                 return '<label class="text-dark">' . $appellationPrefix . $row->first_name . ' ' . $row->middle_name . ' ' . $row->last_name . '</label>';
             })
             ->addColumn('employee_id', fn($row) => '<label class="text-dark">' . $row->emp_id . '</label>')
+            ->addColumn('department', fn($row) => '<label class="text-dark">' . optional($row->department)->department_name . '</label>')
+            ->addColumn('designation', fn($row) => '<label class="text-dark">' . optional($row->designation)->designation_name . '</label>')
             ->addColumn('mobile_no', fn($row) => '<label class="text-dark">' . $row->mobile . '</label>')
             ->addColumn('email', fn($row) => '<label class="text-dark">' . $row->email . '</label>')
             ->addColumn('actions', function($row) {
@@ -88,6 +90,16 @@ class MemberDataTable extends DataTable
                 $query->where('first_name', 'like', "%{$keyword}%")
                       ->orWhere('middle_name', 'like', "%{$keyword}%")
                       ->orWhere('last_name', 'like', "%{$keyword}%");
+            })
+            ->filterColumn('department', function ($query, $keyword) {
+                $query->whereHas('department', function ($q) use ($keyword) {
+                    $q->where('department_name', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('designation', function ($query, $keyword) {
+                $query->whereHas('designation', function ($q) use ($keyword) {
+                    $q->where('designation_name', 'like', "%{$keyword}%");
+                });
             })
             ->filterColumn('mobile_no', function ($query, $keyword) {
                 $query->where('mobile', 'like', "%{$keyword}%");
@@ -113,17 +125,25 @@ class MemberDataTable extends DataTable
                             ->orWhere('middle_name', 'like', "%{$searchValue}%")
                             ->orWhere('last_name', 'like', "%{$searchValue}%")
                             ->orWhere('mobile', 'like', "%{$searchValue}%")
-                            ->orWhere('email', 'like', "%{$searchValue}%");
+                            ->orWhere('email', 'like', "%{$searchValue}%")
+                            ->orWhereHas('department', function ($q) use ($searchValue) {
+                                $q->where('department_name', 'like', "%{$searchValue}%");
+                            })
+                            ->orWhereHas('designation', function ($q) use ($searchValue) {
+                                $q->where('designation_name', 'like', "%{$searchValue}%");
+                            });
                     });
                 }
             }, true)
-            ->rawColumns(['employee_name', 'employee_id', 'actions', 'mobile_no', 'email','status']);
+            ->rawColumns(['employee_name', 'employee_id', 'department', 'designation', 'actions', 'mobile_no', 'email', 'status']);
     }
 
 
     public function query(EmployeeMaster $model): QueryBuilder
     {
-        return $model->newQuery()->with('appellationMaster')->orderBy('pk', 'desc');
+        return $model->newQuery()
+            ->with(['appellationMaster', 'department', 'designation'])
+            ->orderBy('first_name', 'asc');
     }
 
     public function html(): HtmlBuilder
@@ -163,6 +183,8 @@ class MemberDataTable extends DataTable
             Column::computed('DT_RowIndex')->title('#')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('employee_name')->title('Employee Name')->addClass('text-center')->orderable(false)->searchable(true),
             Column::make('employee_id')->title('Employee ID')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('department')->title('Department')->addClass('text-center')->orderable(false)->searchable(true),
+            Column::make('designation')->title('Designation')->addClass('text-center')->orderable(false)->searchable(true),
             Column::make('mobile_no')->title('Mobile No')->addClass('text-center')->orderable(false)->searchable(true),
             Column::make('email')->title('Email')->addClass('text-center')->orderable(false)->searchable(true),
             Column::computed('status')->title('Status')->addClass('text-center')->orderable(false)->searchable(false),
