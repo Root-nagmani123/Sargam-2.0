@@ -80,6 +80,55 @@ class FcStepReportGuardsTest extends TestCase
         $this->assertSame($path, FcUploadUrl::decode($token, StepReportController::FILE_PATH));
     }
 
+    /**
+     * F-016: the audience cannot be omitted when minting.
+     *
+     * decode() has required an explicit audience since the cross-endpoint bypass was closed,
+     * but for() and encode() defaulted to DEFAULT_PATH — the UNAUTHENTICATED route. A caller
+     * who forgot the argument published the document anonymously with no error, no log line
+     * and no failing test. Asserted structurally because a missing required argument is an
+     * ArgumentCountError, which is the point: it cannot reach production.
+     */
+    public function test_the_audience_cannot_be_omitted_when_minting(): void
+    {
+        foreach (['for' => 1, 'encode' => 1] as $method => $index) {
+            $parameter = (new \ReflectionMethod(FcUploadUrl::class, $method))->getParameters()[$index];
+
+            $this->assertFalse(
+                $parameter->isOptional(),
+                "FcUploadUrl::{$method}() must require its audience — an optional one defaults to "
+                .'the unauthenticated route and fails open'
+            );
+        }
+    }
+
+    /** Every mint site in the application names its audience rather than relying on a default. */
+    public function test_no_call_site_mints_without_naming_an_audience(): void
+    {
+        $roots = [app_path(), resource_path('views'), base_path('routes')];
+        $offenders = [];
+
+        foreach ($roots as $root) {
+            $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS));
+            foreach ($it as $file) {
+                if (! $file->isFile() || ! preg_match('/\.php$/', $file->getFilename())) {
+                    continue;
+                }
+                foreach (file($file->getPathname()) as $n => $line) {
+                    if (! str_contains($line, 'FcUploadUrl::for(')) {
+                        continue;
+                    }
+                    if (! str_contains($line, 'FILE_PATH') && ! str_contains($line, 'DEFAULT_PATH')) {
+                        $offenders[] = $file->getPathname().':'.($n + 1);
+                    }
+                }
+            }
+        }
+
+        $this->assertSame([], $offenders,
+            'these call sites mint an upload URL without naming the endpoint that may serve it');
+    }
+
     // ── F-003 / F-011: every report endpoint carries a permission gate that resolves ────
 
     public function test_every_step_report_endpoint_is_gated_on_a_permission(): void

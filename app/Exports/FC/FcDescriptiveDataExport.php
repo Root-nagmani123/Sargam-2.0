@@ -169,7 +169,10 @@ class FcDescriptiveDataExport implements FromQuery, WithChunkReading, WithCustom
                 // Plain text here; registerEvents() attaches the real hyperlink afterwards.
                 // A spreadsheet hyperlink is cell metadata, not content — writing the URL as
                 // a string alone leaves it inert.
-                $out[] = FcUploadUrl::for($value);
+                // DEFAULT_PATH named explicitly: these are photographs and specimen
+                // signatures, the uploads the unauthenticated route's accepted-risk
+                // decision was actually taken for.
+                $out[] = FcUploadUrl::for($value, FcUploadUrl::DEFAULT_PATH);
                 continue;
             }
 

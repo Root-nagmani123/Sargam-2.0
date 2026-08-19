@@ -240,7 +240,9 @@ class FcDescriptiveDataReportDataTable extends DataTable
             return '<span class="text-muted">—</span>';
         }
 
-        return '<a href="'.e(FcUploadUrl::for($path)).'" target="_blank" rel="noopener" '
+        // DEFAULT_PATH named explicitly — photographs and signatures, served by the
+        // deliberately unauthenticated route so a forwarded export keeps resolving.
+        return '<a href="'.e(FcUploadUrl::for($path, FcUploadUrl::DEFAULT_PATH)).'" target="_blank" rel="noopener" '
             .'class="btn btn-outline-primary py-0 px-2" style="font-size:11px;" '
             .'title="'.e($label).'"><i class="bi bi-box-arrow-up-right me-1"></i>View</a>';
     }

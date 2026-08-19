@@ -318,7 +318,8 @@ class DescriptiveDataReportController extends Controller
                         $value = $row->{$key} ?? null;
 
                         if ($field['type'] === 'file') {
-                            $line[] = FcUploadUrl::for($value);
+                            // DEFAULT_PATH named explicitly: photographs and signatures.
+                            $line[] = FcUploadUrl::for($value, FcUploadUrl::DEFAULT_PATH);
                         } elseif ($field['type'] === 'date') {
                             $line[] = $this->formatDateValue($value);
                         } else {

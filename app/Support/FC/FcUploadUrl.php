@@ -34,24 +34,28 @@ final class FcUploadUrl
     public const DEFAULT_PATH = '/admin/reports/descriptive-data/file';
 
     /**
-     * @param  string|null  $basePath  the endpoint that will serve the token.
+     * @param  string  $basePath  the endpoint that will serve the token. REQUIRED, deliberately.
      *
-     * Defaults to the long-standing, deliberately UNAUTHENTICATED photo/signature route, so
-     * existing callers are unchanged. Reports whose uploads are identity or medical documents
-     * pass their own authenticated endpoint instead — the open route's accepted-risk decision
-     * was taken for photographs and does not extend to an Aadhaar card.
+     * Pass self::DEFAULT_PATH for photographs and specimen signatures — the long-standing,
+     * deliberately UNAUTHENTICATED route whose accepted-risk decision was taken for images.
+     * Pass the report's own authenticated endpoint for anything else; that decision does not
+     * extend to an Aadhaar card.
      *
-     * The endpoint is also written into the token as its audience, so that separation is
-     * enforced rather than merely intended. See encode().
+     * There is no default because a default here fails OPEN. This parameter used to be
+     * optional and fell back to the unauthenticated route, so a caller who simply forgot it
+     * published the documents anonymously: the link rendered, nothing errored, no log line was
+     * written and no test failed. Omitting it is now an ArgumentCountError at the call site —
+     * loud, immediate, and impossible to ship.
+     *
+     * The endpoint is also written into the token as its audience, so the separation is
+     * enforced at redemption rather than merely intended. See encode() and decode().
      */
-    public static function for(?string $path, ?string $basePath = null): string
+    public static function for(?string $path, string $basePath): string
     {
         $path = trim((string) $path);
         if ($path === '') {
             return '';
         }
-
-        $basePath = $basePath ?: self::DEFAULT_PATH;
 
         return url($basePath).'?'.self::TOKEN_PARAM.'='.self::encode($path, $basePath);
     }
@@ -70,8 +74,13 @@ final class FcUploadUrl
      * path that is not valid UTF-8, which encrypted to an empty string and made that file
      * permanently unreachable — a silent 404 with nothing logged. This form is byte
      * transparent, and an audience is a route path, so it can never contain a newline itself.
+     *
+     * $audience is required for the same reason it is required on for(): a default here is a
+     * default to whichever endpoint is named in DEFAULT_PATH, and that endpoint is the
+     * unauthenticated one. decode() has demanded an explicit audience since the cross-endpoint
+     * bypass was closed; leaving the minting side permissive kept exactly half of that gap open.
      */
-    public static function encode(string $path, string $audience = self::DEFAULT_PATH): string
+    public static function encode(string $path, string $audience): string
     {
         return rtrim(strtr(base64_encode(Crypt::encryptString($audience."\n".$path)), '+/', '-_'), '=');
     }
