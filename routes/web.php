@@ -593,12 +593,18 @@ Route::middleware(['auth'])->group(function () {
         Route::post('store', 'store')->name('store');
         Route::post('import-group-mapping', 'importGroupMapping')->name('import');
         Route::post('get-group-names-by-type', 'getGroupNamesByType')->name('get.group.names.by.type');
+        // Throttled: the Add Student modal fires this on a 400ms keystroke debounce,
+        // so a few dozen calls a minute is normal use and anything far above that is
+        // someone walking the OT-code space.
+        Route::post('get-student-by-otcode', 'getStudentByOtCode')->name('get.student.by.otcode')
+            ->middleware('throttle:60,1');
         Route::post('add-single-student', 'addSingleStudent')->name('add.single.student');
         Route::post('student-list', 'studentList')->name('student.list');
         Route::post('student-update', 'updateStudent')->name('student.update');
         Route::delete('student-delete', 'deleteStudent')->name('student.delete');
         Route::post('send-message', 'sendMessage')->name('send.message');
         Route::get('export-student-list/{id?}', 'exportStudentList')->name('export.student.list');
+        Route::get('export-student-list-pdf/{id?}', 'exportStudentListPdf')->name('export.student.list.pdf');
         Route::get('filter-faculties', 'filterFaculties')->name('filter.faculties');
         Route::get('filter-courses', 'filterCourses')->name('filter.courses');
         Route::get('download-pdf', 'downloadPdf')->name('download.pdf');
@@ -769,18 +775,6 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         Route::post('/reject/{id}', 'reject')->name('reject');
         Route::post('/approve-group/{id}', 'approveGroup')->name('approve_group');
         Route::post('/reject-group/{id}', 'rejectGroup')->name('reject_group');
-    });
-
-    // Visitor/Gate Pass Routes
-    Route::prefix('security/visitor-pass')->name('admin.security.visitor_pass.')->controller(\App\Http\Controllers\Admin\Security\VisitorPassController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::post('/store', 'store')->name('store');
-        Route::get('/show/{id}', 'show')->name('show');
-        Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::post('/update/{id}', 'update')->name('update');
-        Route::delete('/delete/{id}', 'delete')->name('delete');
-        Route::post('/checkout/{id}', 'checkOut')->name('checkout');
     });
 
     // ============================================
@@ -1096,9 +1090,12 @@ Route::get('/fc-front', function () {
     return view('fc.front_page');
 })->name('fc.front');
 
-Route::get('/admin/memo-conversation', function () {
-    return view('admin.courseAttendanceNoticeMap.memo_conversation'); // or any other view you want to show
-})->name('admin.courseAttendanceNoticeMap.memo_conversation');
+// The `admin.courseAttendanceNoticeMap.memo_conversation` route and its view were
+// removed: the closure passed no data and the Blade was a static mockup end to end —
+// a fixed course ("88th Foundation Course"), a fixed date (22/11/2013), Lorem ipsum
+// topics, a named real participant, a named signatory, and an invented exemption
+// table. Nothing linked to it (no Blade, no controller, no `menus` row), so it served
+// only to render a fabricated disciplinary document at a live URL.
 
 //route for admin notice/ memo conversation
 // Route::get('/admin/memo-notice', function () {

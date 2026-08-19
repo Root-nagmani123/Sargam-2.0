@@ -1,9 +1,9 @@
 @php
     $columns     = $columns ?? [];
     $rows        = $rows ?? collect();
-    $filterLine  = $filterLine ?? '';
+    $group       = $group ?? [];
     $printedOn   = $printedOn ?? now()->format('d-m-Y H:i');
-    $reportTitle = $reportTitle ?? 'Send Memo / Notice Report';
+    $reportTitle = $reportTitle ?? 'Course Group Mapping - Student List';
     $logo        = $logo ?? null;
 @endphp
 <!doctype html>
@@ -12,7 +12,9 @@
     <meta charset="utf-8">
     <title>{{ $reportTitle }} — LBSNAA</title>
     <style>
-        @page { size: A4 landscape; margin: 10mm 8mm; }
+        {{-- Portrait, unlike the 14-column Discipline Memo report this styling is
+             taken from: a 5-column student list wastes most of a landscape page. --}}
+        @page { size: A4 portrait; margin: 10mm 8mm; }
         * { font-family: 'DejaVu Sans', sans-serif; }
         *, *::before, *::after { box-sizing: border-box; }
         body { margin: 0; padding: 0; color: #1f2937; font-size: 8px; }
@@ -31,6 +33,24 @@
             color: #004a93;
             margin: 4px 0 4px;
         }
+
+        /* The highlighted Course Name / Course Duration / Group Type strip this
+           report is built around — amber so it stands apart from the navy branding
+           above and the navy table heading below. */
+        table.course-strip {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff3cd;
+            border: 0.8px solid #e0a800;
+            margin: 0 0 4px;
+        }
+        table.course-strip td {
+            padding: 4px 6px;
+            font-size: 9px;
+            color: #663c00;
+            vertical-align: top;
+        }
+        table.course-strip .lbl { font-weight: bold; }
 
         .meta {
             font-size: 8px;
@@ -71,23 +91,16 @@
         }
         table.data-table tbody tr:nth-child(even) { background: #f4f7fb; }
 
-        .col-sno { width: 3%; text-align: center; }
-        .col-program { width: 12%; }
-        .col-name { width: 11%; }
-        .col-code { width: 8%; }
-        .col-type { width: 6%; text-align: center; }
-        .col-date { width: 7%; text-align: center; }
-        .col-topic { width: 12%; }
-        .col-status { width: 6%; text-align: center; }
-        .col-conclusion { width: 9%; }
-        .col-discussion { width: 10%; }
-        .col-remarks { width: 16%; }
+        .col-sno { width: 6%; text-align: center; }
+        .col-name { width: 30%; }
+        .col-code { width: 16%; }
+        /* Emails are long and unbreakable; without word-break they force the whole
+           landscape table wider than the page and every other column collapses. */
+        .col-email { width: 30%; word-break: break-all; }
+        .col-mobile { width: 18%; }
 
-        .badge { display: inline-block; padding: 1px 5px; border-radius: 3px; font-weight: bold; }
-        .badge-notice { background: #cfe2ff; color: #084298; }
-        .badge-memo { background: #e2e3e5; color: #41464b; }
-        .badge-open { background: #d1e7dd; color: #0f5132; }
-        .badge-close { background: #f8d7da; color: #842029; }
+        thead { display: table-header-group; }
+        tr { page-break-inside: avoid; }
 
         .footer { margin-top: 8px; text-align: center; font-size: 7px; color: #666; }
     </style>
@@ -118,16 +131,24 @@
 
         <div class="report-title">{{ strtoupper($reportTitle) }}</div>
 
+        <table class="course-strip">
+            <tr>
+                <td style="width: 42%;"><span class="lbl">Course Name:</span> {{ $group['course_name'] ?? 'N/A' }}</td>
+                <td style="width: 33%;"><span class="lbl">Course Duration:</span> {{ $group['course_duration'] ?? 'N/A' }}</td>
+                <td style="width: 25%;"><span class="lbl">Group Type:</span> {{ $group['group_type'] ?? 'N/A' }}</td>
+            </tr>
+        </table>
+
         <div class="meta">
-            @if($filterLine)<div>{{ $filterLine }}  |  Generated: {{ $printedOn }}</div>@endif
+            <div>Group Name: {{ $group['group_name'] ?? 'N/A' }}  |  Faculty: {{ $group['faculty'] ?? 'N/A' }}  |  Generated: {{ $printedOn }}</div>
         </div>
 
-        <div class="totals">Total Records: {{ $rows->count() }}</div>
+        <div class="totals">Total Students: {{ $rows->count() }}</div>
     </div>
 
     <table class="data-table">
-        {{-- Columns are driven by $columns (MemoNoticeExport::columnDefs()) rather
-             than hard-coded, so this can't drift from the Excel sheet. Cells are
+        {{-- Columns are driven by $columns (GroupMappingStudentListExport::columnDefs())
+             rather than hard-coded, so this can't drift from the Excel sheet. Cells are
              keyed by column key — never by position. --}}
         @php $colCount = count($columns) + 1; @endphp
         <thead>
@@ -143,19 +164,12 @@
                 <tr>
                     <td class="col-sno">{{ $index + 1 }}</td>
                     @foreach($columns as $col)
-                        @php $value = $row[$col['key']] ?? ''; @endphp
-                        @if($col['key'] === 'type')
-                            <td class="{{ $col['class'] }}"><span class="badge {{ $value === 'Memo' ? 'badge-memo' : 'badge-notice' }}">{{ $value }}</span></td>
-                        @elseif($col['key'] === 'status')
-                            <td class="{{ $col['class'] }}"><span class="badge {{ $value === 'Open' ? 'badge-open' : 'badge-close' }}">{{ $value }}</span></td>
-                        @else
-                            <td class="{{ $col['class'] }}">{{ $value }}</td>
-                        @endif
+                        <td class="{{ $col['class'] }}">{{ $row[$col['key']] ?? '' }}</td>
                     @endforeach
                 </tr>
             @empty
                 <tr>
-                    <td colspan="{{ $colCount }}" style="text-align:center;">No records found.</td>
+                    <td colspan="{{ $colCount }}" style="text-align:center;">No students found.</td>
                 </tr>
             @endforelse
         </tbody>

@@ -89,10 +89,15 @@ class OTNoticeMemoService
             ->leftJoin('student_notice_status as sns', 'student_memo_status.student_notice_status_pk', '=', 'sns.pk')
             ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
             ->leftJoin('memo_conclusion_master as mcm', 'student_memo_status.memo_conclusion_master_pk', '=', 'mcm.pk')
+            // The memo's OWN meeting venue, set when the memo was generated —
+            // distinct from the original notice's session venue.
+            ->leftJoin('venue_master as vm', 'student_memo_status.venue_master_pk', '=', 'vm.venue_id')
             ->select(
                 'student_memo_status.pk as id',
                 'student_memo_status.course_master_pk',
                 'student_memo_status.date as session_date',
+                'student_memo_status.start_time as memo_time',
+                'vm.venue_name as memo_venue',
                 'student_memo_status.status',
                 'student_memo_status.conclusion_remark',
                 'student_memo_status.message as response',
