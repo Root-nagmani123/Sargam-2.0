@@ -1416,13 +1416,15 @@ $(document).ready(function() {
         });
         applyMedicalCaseLockForCategory();
 
-        // Advisory warning: does this student already have ANY exemption overlapping
-        // this date-time range? Purely informational — never blocks typing or submit.
+        // Does this student already have ANY exemption overlapping this date-time
+        // range? Checked as soon as the student/date/time fields are filled in
+        // (same trigger the old inline banner used) and shown as a popup with
+        // Cancel / "Yes, Add New Entry" instead of a banner.
         var smeConflictTimer = null;
         function checkTimeConflict(){
             var studentId = $form.find('#studentDropdown').val();
             var arrivalDate = $form.find('#arrivalDate').val();
-            if (!studentId || !arrivalDate) { $('#smeConflictWarning').remove(); return; }
+            if (!studentId || !arrivalDate) return;
 
             var actionUrl = $form.attr('action') || '';
             var excludeMatch = actionUrl.match(/\/update\/([^/?]+)/);
@@ -1435,12 +1437,20 @@ $(document).ready(function() {
                 departure_time: $form.find('#departureTime').val(),
                 exclude_id: excludeMatch ? excludeMatch[1] : ''
             }).done(function(res){
-                $('#smeConflictWarning').remove();
-                if (res && res.conflict) {
-                    var $alert = $('<div id="smeConflictWarning" class="alert alert-warning py-2 px-3 mb-3 sme-conflict-pulse fw-bold">'
-                        + '<i class="bi bi-exclamation-triangle-fill me-1"></i> ' + res.message + '</div>');
-                    $form.prepend($alert);
-                    $alert[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (res && res.conflict && typeof Swal !== 'undefined') {
+                    var msgEn = res.message + ' Do you want to add a new exemption entry anyway?';
+                    var msgHi = (res.message_hi || '') + ' क्या आप फिर भी नई छूट प्रविष्टि जोड़ना चाहते हैं?';
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Overlapping exemption found',
+                        html: '<div>' + $('<div>').text(msgEn).html() + '</div>'
+                            + '<hr class="my-2">'
+                            + '<div>' + $('<div>').text(msgHi).html() + '</div>',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, Add New Entry',
+                        cancelButtonText: 'Cancel',
+                        reverseButtons: true
+                    });
                 }
             });
         }
@@ -1455,6 +1465,13 @@ $(document).ready(function() {
         if (!form) return;
         // Block if client-side file error is still visible
         if ($('#smeAjaxForm .sme-file-err').length) return;
+
+        doSubmitModalForm();
+    }
+
+    function doSubmitModalForm(){
+        var form = document.getElementById('smeAjaxForm');
+        if (!form) return;
         var $btn = $('#smeFormSubmit').prop('disabled', true);
         $('#smeAjaxForm .sme-err').remove();
         $('#smeAjaxForm .is-invalid').removeClass('is-invalid');
@@ -1541,6 +1558,8 @@ $(document).ready(function() {
         });
         $('#smeFormBody').empty();
         $('#smeFormSubmit').prop('disabled', true);
+        window.smeConflictMessage = null;
+        window.smeConflictConfirmed = false;
     });
 
     $('#addExemptionBtn').on('click', function(e){

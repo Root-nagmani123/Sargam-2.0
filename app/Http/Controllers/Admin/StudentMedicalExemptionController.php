@@ -557,11 +557,15 @@ class StudentMedicalExemptionController extends Controller
             $overlaps = $newFrom < $existingTo && $newTo > $existingFrom;
 
             if ($overlaps) {
+                $rangeText = $existingFrom->format('d M Y H:i') . ' to '
+                    . ($exemption->to_date ? $existingTo->format('d M Y H:i') : 'Ongoing');
+                $rangeTextHi = $existingFrom->format('d M Y H:i') . ' से '
+                    . ($exemption->to_date ? $existingTo->format('d M Y H:i') : 'अभी तक जारी');
+
                 return response()->json([
                     'conflict' => true,
-                    'message' => "This student already has a '{$exemption->opd_category}' exemption in this time range (from "
-                        . $existingFrom->format('d M Y H:i') . ' to '
-                        . ($exemption->to_date ? $existingTo->format('d M Y H:i') : 'Ongoing') . ').',
+                    'message' => "This student already has a '{$exemption->opd_category}' exemption in this time range (from {$rangeText}).",
+                    'message_hi' => "इस छात्र के पास पहले से ही '{$exemption->opd_category}' की छूट इस समय-सीमा में मौजूद है ({$rangeTextHi})।",
                 ]);
             }
         }
