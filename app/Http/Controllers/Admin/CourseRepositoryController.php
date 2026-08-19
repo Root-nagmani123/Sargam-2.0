@@ -862,11 +862,13 @@ class CourseRepositoryController extends Controller
     public function downloadDocument($pk)
     {
         try {
-            $document = CourseRepositoryDocument::findOrFail($pk);
-            
+            $document = $this->findReadableDocument($pk);
+
             if (!$document->full_path && !$document->normalized_full_path) {
                 return redirect()->back()->with('error', 'File not found');
             }
+
+            $this->logDocumentRead($document, 'download');
 
             $location = $this->resolveDocumentLocation($document);
             if (!$location) {
@@ -920,12 +922,14 @@ class CourseRepositoryController extends Controller
     public function streamDocument($pk)
     {
         try {
-            $document = CourseRepositoryDocument::findOrFail($pk);
+            $document = $this->findReadableDocument($pk);
 
             $location = $this->resolveDocumentLocation($document);
             if (!$location) {
                 abort(404);
             }
+
+            $this->logDocumentRead($document, 'stream');
 
             $name = preg_replace('/^\d+_[a-f0-9]+_/', '', (string) $document->upload_document);
 
@@ -941,6 +945,39 @@ class CourseRepositoryController extends Controller
             Log::error('Error streaming document: ' . $e->getMessage());
             abort(404);
         }
+    }
+
+    /**
+     * Resolve a document for a read action, or 404.
+     *
+     * Enforces `del_type = 1`. Every other read path in this controller filters on it
+     * (the listings at :138, :1053, :1506, :1814 and the counters at :1921, :1931), but
+     * the two file-serving actions used a bare findOrFail() — so a document an admin had
+     * deleted stayed downloadable indefinitely. deleteDocument() is a soft delete; the
+     * file is never removed from disk, which is what made that gap silent.
+     */
+    private function findReadableDocument($pk): CourseRepositoryDocument
+    {
+        return CourseRepositoryDocument::where('pk', $pk)
+            ->where('del_type', 1)
+            ->firstOrFail();
+    }
+
+    /**
+     * Record who read which document.
+     *
+     * These routes serve institutional material to every authenticated user, so without
+     * a log there is no way to tell ordinary use from someone walking the id range. This
+     * does not restrict anything — it makes the reading visible.
+     */
+    private function logDocumentRead(CourseRepositoryDocument $document, string $via): void
+    {
+        Log::info('course_repository.document.read', [
+            'document_pk' => $document->pk,
+            'via' => $via,
+            'user_id' => auth()->id(),
+            'ip' => request()->ip(),
+        ]);
     }
 
     /** Disk new uploads are written to. Private — see config/course_repository.php. */

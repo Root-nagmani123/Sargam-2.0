@@ -1321,10 +1321,18 @@ Route::middleware(['auth'])->group(function () {
     Route::get('course-repository/document/{pk}/edit-data', [CourseRepositoryController::class, 'getDocument'])->name('course-repository.document.edit-data');
     Route::post('course-repository/document/{pk}/update', [CourseRepositoryController::class, 'updateDocument'])->name('course-repository.document.update');
     Route::delete('course-repository/document/{pk}', [CourseRepositoryController::class, 'deleteDocument'])->name('course-repository.document.delete');
-    Route::get('course-repository/document/{pk}/download', [CourseRepositoryController::class, 'downloadDocument'])->name('course-repository.document.download');
+    // Both document read actions are throttled. They take a sequential primary key, so
+    // without a rate limit the whole corpus is walkable by incrementing it; 120/min is
+    // far above any human browsing pattern and far below a useful scrape. This bounds
+    // bulk retrieval — it is not an access-control decision, which is still open.
+    Route::get('course-repository/document/{pk}/download', [CourseRepositoryController::class, 'downloadDocument'])
+        ->middleware('throttle:120,1')
+        ->name('course-repository.document.download');
     // Inline viewer source. Exists so the in-page PDF iframe never needs a
     // public /storage URL, which the web server would serve without a session.
-    Route::get('course-repository/document/{pk}/stream', [CourseRepositoryController::class, 'streamDocument'])->name('course-repository.document.stream');
+    Route::get('course-repository/document/{pk}/stream', [CourseRepositoryController::class, 'streamDocument'])
+        ->middleware('throttle:120,1')
+        ->name('course-repository.document.stream');
 
     // Search route
     Route::get('course-repository-search', [CourseRepositoryController::class, 'search'])->name('course-repository.search');
