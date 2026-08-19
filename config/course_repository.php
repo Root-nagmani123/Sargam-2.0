@@ -32,4 +32,30 @@ return [
 
     'allowed_extensions' => ['pdf'],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Where uploaded documents live
+    |--------------------------------------------------------------------------
+    |
+    | These files are access-controlled, so they must NOT sit on the `public`
+    | disk. That disk is exposed through the public/storage symlink, which the
+    | web server resolves before Laravel ever loads — so anything on it is
+    | readable by anyone who can reach the host, and no controller check can
+    | prevent it. Stored names are predictable too ("{title}_{unix ts}.pdf"),
+    | so "nobody knows the URL" was never the protection it looked like.
+    |
+    | `disk` is where new uploads go: `local` is storage/app, which no vhost
+    | serves. Reads go through CourseRepositoryController's authenticated
+    | stream/download actions instead of a direct URL.
+    |
+    | `legacy_disk` is the old location. Documents uploaded before this change
+    | are still there, so reads fall back to it and REMAIN directly reachable
+    | until they are moved. Run `php artisan course-repository:secure-documents`
+    | to migrate them, then the fallback stops matching anything.
+    |
+    */
+    'disk' => env('COURSE_REPOSITORY_DISK', 'local'),
+
+    'legacy_disk' => env('COURSE_REPOSITORY_LEGACY_DISK', 'public'),
+
 ];

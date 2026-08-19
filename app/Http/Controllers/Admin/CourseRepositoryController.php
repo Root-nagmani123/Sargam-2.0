@@ -561,9 +561,12 @@ class CourseRepositoryController extends Controller
                         // Generate unique filename
                         $fileName = $this->buildDocumentFileName($file);
                         
-                        // Store file in hierarchical folder structure under admin root
+                        // Store file in hierarchical folder structure under admin root.
+                        // Private disk: these documents are access-controlled and must not
+                        // be reachable through public/storage. Reads go through
+                        // streamDocument()/downloadDocument().
                         $storageFolder = trim($folderPath, '/');
-                        $filePath = $file->storeAs($storageFolder, $fileName, 'public');
+                        $filePath = $file->storeAs($storageFolder, $fileName, self::documentDisk());
                         
                         // Insert into course_repository_documents
                         CourseRepositoryDocument::create([
@@ -784,12 +787,15 @@ class CourseRepositoryController extends Controller
                         : 'course_repository';
 
                     $fileName = $this->buildDocumentFileName($file);
-                    $filePath = $file->storeAs($storageFolder, $fileName, 'public');
+                    $filePath = $file->storeAs($storageFolder, $fileName, self::documentDisk());
 
-                    // Remove the old physical file if we can resolve it
-                    $oldRelative = $this->resolveDocumentRelativePath($document);
-                    if ($oldRelative && Storage::disk('public')->exists($oldRelative)) {
-                        Storage::disk('public')->delete($oldRelative);
+                    // Remove the old physical file if we can resolve it. Resolved by
+                    // location, not by a fixed disk name — a replaced document may still
+                    // have its previous copy on the legacy public disk, and leaving that
+                    // behind would keep the old version publicly readable forever.
+                    $old = $this->resolveDocumentLocation($document);
+                    if ($old) {
+                        Storage::disk($old['disk'])->delete($old['path']);
                     }
 
                     $document->upload_document = $fileName;
@@ -862,8 +868,8 @@ class CourseRepositoryController extends Controller
                 return redirect()->back()->with('error', 'File not found');
             }
 
-            $relativePath = $this->resolveDocumentRelativePath($document);
-            if (!$relativePath) {
+            $location = $this->resolveDocumentLocation($document);
+            if (!$location) {
                 Log::error('Course repository file not found', [
                     'document_pk' => $document->pk,
                     'full_path' => $document->full_path,
@@ -871,11 +877,11 @@ class CourseRepositoryController extends Controller
                 ]);
                 return redirect()->back()->with('error', 'File not found in storage');
             }
-            
+
             // Get original filename without timestamp prefix
             $originalName = preg_replace('/^\d+_[a-f0-9]+_/', '', $document->upload_document);
-            
-            return Storage::disk('public')->download($relativePath, $originalName);
+
+            return Storage::disk($location['disk'])->download($location['path'], $originalName);
         } catch (Exception $e) {
             Log::error('Error downloading document: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Download failed: ' . $e->getMessage());
@@ -899,8 +905,78 @@ class CourseRepositoryController extends Controller
     /**
      * Resolve file path variations and return a valid relative path for public disk.
      */
-    private function resolveDocumentRelativePath(CourseRepositoryDocument $document): ?string
+    /**
+     * Stream a document inline for the in-page PDF viewer.
+     *
+     * This exists so the viewer never needs a /storage URL. The old iframe pointed at
+     * asset('storage/…'), which the web server serves before Laravel loads — meaning the
+     * document was readable by anyone with the link, logged in or not. Routed through the
+     * controller, the request at least passes the `auth` middleware first.
+     *
+     * NOTE: authentication only. Whether a given user may read a given document is a
+     * separate object-level question this controller has never answered — see the
+     * follow-up raised with the Course Repository module owner.
+     */
+    public function streamDocument($pk)
     {
+        try {
+            $document = CourseRepositoryDocument::findOrFail($pk);
+
+            $location = $this->resolveDocumentLocation($document);
+            if (!$location) {
+                abort(404);
+            }
+
+            $name = preg_replace('/^\d+_[a-f0-9]+_/', '', (string) $document->upload_document);
+
+            // Inline, so the browser's PDF viewer renders it in place rather than
+            // downloading. Content-Type is forced: guessing from a stored filename is
+            // how an uploaded file ends up executing as something else.
+            return Storage::disk($location['disk'])->response($location['path'], $name, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . addslashes($name) . '"',
+                'X-Content-Type-Options' => 'nosniff',
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error streaming document: ' . $e->getMessage());
+            abort(404);
+        }
+    }
+
+    /** Disk new uploads are written to. Private — see config/course_repository.php. */
+    public static function documentDisk(): string
+    {
+        return (string) config('course_repository.disk', 'local');
+    }
+
+    /** Disk documents uploaded before the private-disk change still live on. */
+    public static function legacyDocumentDisk(): string
+    {
+        return (string) config('course_repository.legacy_disk', 'public');
+    }
+
+    /**
+     * Where a document's file actually is, as ['disk' => …, 'path' => …], or null.
+     *
+     * The private disk is checked first so a migrated file is never served from the
+     * public one; the legacy disk is the fallback for documents uploaded before the
+     * move. Callers must stream through this rather than building a /storage URL.
+     */
+    private function resolveDocumentLocation(CourseRepositoryDocument $document): ?array
+    {
+        foreach ([self::documentDisk(), self::legacyDocumentDisk()] as $disk) {
+            $path = $this->resolveDocumentRelativePath($document, $disk);
+            if ($path !== null) {
+                return ['disk' => $disk, 'path' => $path];
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveDocumentRelativePath(CourseRepositoryDocument $document, ?string $disk = null): ?string
+    {
+        $disk = $disk ?: self::legacyDocumentDisk();
         $candidates = [];
 
         if ($document->normalized_full_path) {
@@ -945,7 +1021,7 @@ class CourseRepositoryController extends Controller
             if (!is_string($candidate) || trim($candidate) === '') {
                 continue;
             }
-            if (Storage::disk('public')->exists($candidate)) {
+            if (Storage::disk($disk)->exists($candidate)) {
                 return $candidate;
             }
         }
@@ -1656,18 +1732,13 @@ class CourseRepositoryController extends Controller
                 return redirect()->back()->with('error', 'Document not found');
             }
 
-            $pdfRelativePath = $this->resolveDocumentRelativePath($pdfDocument);
-            // asset(), not Storage::disk('public')->url(): the disk's url is built from
-            // APP_URL, so it always pointed at http://localhost/storage/... no matter
-            // which host/port/subfolder the app was actually served from — the iframe
-            // then loaded nothing. asset() follows the current request's base, and is
-            // what CourseRepositoryDocument::public_file_url already uses.
-            // When the path resolves to nothing the file is not on the public disk at
-            // all, so public_file_url would only give the iframe a URL that 404s —
-            // i.e. a blank viewer with no explanation. Pass null instead and let the
-            // view show its "PDF document not available" state.
-            $pdfViewUrl = $pdfRelativePath
-                ? asset('storage/' . $pdfRelativePath)
+            // Route through the authenticated stream action rather than a /storage URL.
+            // The previous asset('storage/…') link was served by the web server before
+            // Laravel loaded, so the PDF was readable by anyone holding the link.
+            // Still null when the file cannot be found, so the view keeps showing its
+            // "PDF document not available" state instead of an iframe that 404s.
+            $pdfViewUrl = $this->resolveDocumentLocation($pdfDocument)
+                ? route('course-repository.document.stream', ['pk' => $pdfDocument->pk])
                 : null;
 
             return view('admin.course-repository.user.document-view', [
@@ -1766,9 +1837,8 @@ class CourseRepositoryController extends Controller
             // mismatches between DB and disk) so view/download links work, matching
             // the resolution already used by the admin panel's downloadDocument().
             $documents->each(function (CourseRepositoryDocument $doc) {
-                $relativePath = $this->resolveDocumentRelativePath($doc);
-                $doc->resolved_file_url = $relativePath
-                    ? Storage::disk('public')->url($relativePath)
+                $doc->resolved_file_url = $this->resolveDocumentLocation($doc)
+                    ? route('course-repository.document.stream', ['pk' => $doc->pk])
                     : null;
 
                 // Legacy imported rows store subject/topic/author foreign keys from the

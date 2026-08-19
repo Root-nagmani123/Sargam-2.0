@@ -1322,6 +1322,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('course-repository/document/{pk}/update', [CourseRepositoryController::class, 'updateDocument'])->name('course-repository.document.update');
     Route::delete('course-repository/document/{pk}', [CourseRepositoryController::class, 'deleteDocument'])->name('course-repository.document.delete');
     Route::get('course-repository/document/{pk}/download', [CourseRepositoryController::class, 'downloadDocument'])->name('course-repository.document.download');
+    // Inline viewer source. Exists so the in-page PDF iframe never needs a
+    // public /storage URL, which the web server would serve without a session.
+    Route::get('course-repository/document/{pk}/stream', [CourseRepositoryController::class, 'streamDocument'])->name('course-repository.document.stream');
 
     // Search route
     Route::get('course-repository-search', [CourseRepositoryController::class, 'search'])->name('course-repository.search');
