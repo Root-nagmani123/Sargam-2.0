@@ -2049,7 +2049,17 @@ public function noticedeleteMessage($id,$type)
     //   - anyone else sees nothing. Fail closed, the same way get_Role_by_course()
     //     returns [-1] rather than [] for a user it cannot place.
     if (isOfficerTraineeUser()) {
-        $notices->where('student_notice_status.student_pk', auth()->user()->user_id);
+        // Resolved first and checked explicitly: student_pk is nullable, and
+        // Laravel compiles where($col, null) to `IS NULL` — which MATCHES rows
+        // instead of excluding them. A trainee whose session carries no user_id
+        // would otherwise be handed every notice with a null student_pk.
+        $ownStudentPk = auth()->user()->user_id ?? null;
+
+        if ($ownStudentPk === null) {
+            $notices->whereRaw('1 = 0');
+        } else {
+            $notices->where('student_notice_status.student_pk', $ownStudentPk);
+        }
     } elseif (! (hasRole('Admin') || hasRole('Super Admin') || hasRole('PA'))) {
         $notices->whereRaw('1 = 0');
     }
