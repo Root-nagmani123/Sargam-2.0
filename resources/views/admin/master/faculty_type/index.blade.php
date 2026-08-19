@@ -19,6 +19,47 @@
 
     <x-session_message />
 
+    {{-- Secondary actions (Download / Print) — above the card, per §1 of
+         docs/new-design-index-page.md. ?q= and ?cols= are stamped on by
+         ftmUpdateExportLinks(), so every format carries the same search term and
+         columns the grid is currently showing. Print is a server-rendered
+         branded view, NOT window.print(). --}}
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 mst-secondary-actions">
+        <div class="dropdown">
+            <button type="button" id="ftmDownloadToggle"
+                    class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                    data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="ftmDownloadToggle">
+                <li>
+                    <a class="dropdown-item" id="ftmCsvLink"
+                       href="{{ route('master.faculty.type.master.export', ['format' => 'csv']) }}">
+                        <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i> CSV
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" id="ftmExcelLink"
+                       href="{{ route('master.faculty.type.master.export', ['format' => 'excel']) }}">
+                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Excel (.xlsx)
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" id="ftmPdfLink"
+                       href="{{ route('master.faculty.type.master.export', ['format' => 'pdf']) }}">
+                        <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <a href="{{ route('master.faculty.type.master.export', ['format' => 'print']) }}"
+           id="ftmPrintLink" target="_blank" rel="noopener"
+           class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
+            <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
+        </a>
+    </div>
+
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
 
@@ -169,7 +210,7 @@
                     </p>
                 </div>
 
-                <div class="modal-footer border-0 gap-2 justify-content-center">
+                <div class="modal-footer border-0 gap-2 justify-content-end">
                     <button type="button" class="btn mst-btn-cancel px-4" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn mst-btn-submit px-4" id="ftmSubmitBtn">Add Faculty Type</button>
                 </div>
@@ -228,6 +269,50 @@
         dt.on('draw', ftmRenumber);
         ftmRenumber();
 
+        /* ---------- Export links follow the grid ----------
+         * Positional map: header index -> the export key the server understands
+         * (FacultyTypeMasterController::exportColumnDefs()). '' marks a column
+         * that is not in the export at all — here, Action.
+         * ⚠️ Adding a column to the table means adding an entry here too. */
+        var FTM_EXPORT_COLUMN_KEYS = ['sno', 'faculty_type', 'short_name', 'status', ''];
+        var FTM_EXPORT_COL_COUNT = FTM_EXPORT_COLUMN_KEYS.filter(Boolean).length;
+        var FTM_EXPORT_LINK_IDS = ['ftmCsvLink', 'ftmExcelLink', 'ftmPdfLink', 'ftmPrintLink'];
+
+        function ftmUpdateExportLinks() {
+            var keys = [];
+            dt.columns().every(function () {
+                var key = FTM_EXPORT_COLUMN_KEYS[this.index()];
+                if (key && this.visible()) { keys.push(key); }
+            });
+
+            // This grid searches client-side; the export reads ?q=. Without
+            // carrying the term the download returns every row and its header
+            // can't name the filter that was applied.
+            var term = dt.search() || '';
+
+            FTM_EXPORT_LINK_IDS.forEach(function (id) {
+                var link = document.getElementById(id);
+                if (!link) { return; }
+
+                var base = link.href.split('?')[0];
+                var params = new URLSearchParams(link.href.split('?')[1] || '');
+
+                params.delete('q');
+                if (term !== '') { params.set('q', term); }
+
+                params.delete('cols');
+                // Omit ?cols= entirely while nothing is hidden — the server reads
+                // "no cols" as "every column".
+                if (keys.length !== FTM_EXPORT_COL_COUNT) { params.set('cols', keys.join(',')); }
+
+                var qs = params.toString();
+                link.href = base + (qs ? '?' + qs : '');
+            });
+        }
+
+        // Search-as-you-type has to re-stamp the links, not just redraw the grid.
+        dt.on('search.dt', ftmUpdateExportLinks);
+
         /* ---------- Column visibility (stores LABELS, not indices — see docs) ---------- */
         var FTM_COLVIS_KEY = 'sargam.facultyType.hiddenCols.{{ auth()->id() ?? 'guest' }}';
 
@@ -279,6 +364,7 @@
                     ftmSaveHiddenCols(current);
                     dt.column(idx).visible(this.checked, false);
                     dt.columns.adjust();
+                    ftmUpdateExportLinks();
                 });
 
                 $grid.append(
@@ -293,6 +379,8 @@
 
             dt.columns.adjust();
         })();
+
+        ftmUpdateExportLinks();
 
         /* ---------- Add / Edit modal ---------- */
         var $form = $('#ftmForm');

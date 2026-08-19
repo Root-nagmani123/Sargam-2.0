@@ -19,6 +19,47 @@
 
     <x-session_message />
 
+    {{-- Secondary actions (Download / Print) — above the card, per §1 of
+         docs/new-design-index-page.md. ?q=, ?cols= and ?status_filter= are
+         stamped on by applUpdateExportLinks(), so every format carries the same
+         search term, columns and status the grid is currently showing.
+         Print is a server-rendered branded view, NOT window.print(). --}}
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 mst-secondary-actions">
+        <div class="dropdown">
+            <button type="button" id="applDownloadToggle"
+                    class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                    data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="applDownloadToggle">
+                <li>
+                    <a class="dropdown-item" id="applCsvLink"
+                       href="{{ route('master.appellation.export', ['format' => 'csv']) }}">
+                        <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i> CSV
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" id="applExcelLink"
+                       href="{{ route('master.appellation.export', ['format' => 'excel']) }}">
+                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Excel (.xlsx)
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" id="applPdfLink"
+                       href="{{ route('master.appellation.export', ['format' => 'pdf']) }}">
+                        <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <a href="{{ route('master.appellation.export', ['format' => 'print']) }}"
+           id="applPrintLink" target="_blank" rel="noopener"
+           class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
+            <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
+        </a>
+    </div>
+
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
 
@@ -95,7 +136,7 @@
                     </div>
                 </div>
 
-                <div class="modal-footer border-0 gap-2 justify-content-center">
+                <div class="modal-footer border-0 gap-2 justify-content-end">
                     <button type="button" class="btn mst-btn-cancel px-4" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn mst-btn-submit px-4" id="applSubmitBtn">Add Appellation</button>
                 </div>
@@ -144,6 +185,54 @@
             })();
         }
 
+        /* ---------- Export links follow the grid ----------
+         * Positional map: header index -> the export key the server understands
+         * (AppellationMasterController::exportColumnDefs()). '' marks a column
+         * that is not in the export at all — here, Action.
+         * ⚠️ Adding a column to the table means adding an entry here too. */
+        var APPL_EXPORT_COLUMN_KEYS = ['sno', 'appellation', 'status', ''];
+        var APPL_EXPORT_COL_COUNT = APPL_EXPORT_COLUMN_KEYS.filter(Boolean).length;
+        var APPL_EXPORT_LINK_IDS = ['applCsvLink', 'applExcelLink', 'applPdfLink', 'applPrintLink'];
+
+        function applUpdateExportLinks() {
+            var dt = $.fn.DataTable.isDataTable(TABLE_ID) ? $(TABLE_ID).DataTable() : null;
+            var keys = [];
+            var term = '';
+
+            if (dt) {
+                dt.columns().every(function () {
+                    var key = APPL_EXPORT_COLUMN_KEYS[this.index()];
+                    if (key && this.visible()) { keys.push(key); }
+                });
+                // The term lives in DataTables, which sends it to the grid feed
+                // as search[value]; the export reads ?q=. Without carrying it the
+                // download returns every row and its header can't name the filter.
+                term = dt.search() || '';
+            }
+
+            APPL_EXPORT_LINK_IDS.forEach(function (id) {
+                var link = document.getElementById(id);
+                if (!link) { return; }
+
+                var base = link.href.split('?')[0];
+                var params = new URLSearchParams(link.href.split('?')[1] || '');
+
+                params.delete('q');
+                if (term !== '') { params.set('q', term); }
+
+                params.delete('status_filter');
+                if (window.applStatusFilter) { params.set('status_filter', window.applStatusFilter); }
+
+                params.delete('cols');
+                // Omit ?cols= entirely while nothing is hidden — the server reads
+                // "no cols" as "every column".
+                if (dt && keys.length !== APPL_EXPORT_COL_COUNT) { params.set('cols', keys.join(',')); }
+
+                var qs = params.toString();
+                link.href = base + (qs ? '?' + qs : '');
+            });
+        }
+
         /* ---------- Status pills → server-side filter ---------- */
         window.applStatusFilter = '';
 
@@ -163,6 +252,8 @@
             if ($.fn.DataTable.isDataTable(TABLE_ID)) {
                 $(TABLE_ID).DataTable().ajax.reload();
             }
+
+            applUpdateExportLinks();
         });
 
         /* ---------- Column visibility (stores LABELS, not indices — see docs) ---------- */
@@ -216,6 +307,7 @@
                     applSaveHiddenCols(current);
                     dt.column(idx).visible(this.checked, false);
                     dt.columns.adjust();
+                    applUpdateExportLinks();
                 });
 
                 $grid.append(
@@ -231,7 +323,12 @@
             dt.columns.adjust();
         }
 
-        applWhenTableReady(applBuildColumnGrid);
+        applWhenTableReady(function (dt) {
+            applBuildColumnGrid(dt);
+            // Search-as-you-type has to re-stamp the links, not just redraw.
+            dt.on('search.dt', applUpdateExportLinks);
+            applUpdateExportLinks();
+        });
 
         /* ---------- Add / Edit modal ---------- */
         var $form = $('#applForm');

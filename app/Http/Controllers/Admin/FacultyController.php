@@ -18,6 +18,8 @@ use App\Models\AppellationMaster;
 
 class FacultyController extends Controller
 {
+    use \App\Http\Controllers\Concerns\ExportsMasterGrid;
+
     public function index(FacultyDataTable $dataTable)
     {
         return $dataTable->render('admin.faculty.index');
@@ -877,9 +879,129 @@ class FacultyController extends Controller
         return view('admin.faculty.show', compact('faculty'));
     }
 
+    /**
+     * Full-detail workbook: 34 columns (personal, qualification, experience,
+     * bank, expertise). Kept alongside export() below — it is the only way to
+     * get the child-table data out, so the grid exports do not replace it.
+     */
     function excelExportFaculty()
     {
-        return Excel::download(new \App\Exports\FacultyExport(), 'faculty_list_'.time().'.xlsx');
+        return Excel::download(new \App\Exports\FacultyExport(), 'Faculty_FullDetails_' . date('YmdHis') . '.xlsx');
+    }
+
+    /* ====================================================================
+     * Grid export - CSV | Excel | PDF | Print  (rendering: ExportsMasterGrid)
+     *
+     * These carry the columns the LISTING shows, so a download reconciles with
+     * the screen. The deep dump above is a separate, clearly-labelled item in
+     * the same Download menu.
+     * ================================================================= */
+
+    /**
+     * Canonical export columns, in display order.
+     *
+     * Keys must match FACULTY_EXPORT_COLUMN_KEYS in faculty/index.blade.php.
+     * Action is not exportable; 'sno' only drives the running serial.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function exportColumnDefs(): array
+    {
+        return [
+            'sno' => [
+                'heading' => 'S. No.',
+                'width'   => '6%',
+                'align'   => 'center',
+                'value'   => fn ($row, int $index) => $index + 1,
+            ],
+            'faculty_code' => [
+                'heading' => 'Faculty Code',
+                'width'   => '12%',
+                'align'   => 'left',
+                'value'   => fn ($row) => $row->faculty_code ?: '-',
+            ],
+            'faculty_name' => [
+                'heading' => 'Faculty Name',
+                'width'   => '20%',
+                'align'   => 'left',
+                'value'   => fn ($row) => $row->full_name ?: '-',
+            ],
+            'faculty_email' => [
+                'heading' => 'Faculty Email',
+                'width'   => '22%',
+                'align'   => 'left',
+                'value'   => fn ($row) => $row->email_id ?: '-',
+            ],
+            'mobile_number' => [
+                'heading' => 'Mobile Number',
+                'width'   => '12%',
+                'align'   => 'left',
+                'value'   => fn ($row) => $row->mobile_no ?: '-',
+            ],
+            'modified_date' => [
+                'heading' => 'Modified Date',
+                'width'   => '12%',
+                'align'   => 'center',
+                'value'   => fn ($row) => $row->last_update
+                    ? \Carbon\Carbon::parse($row->last_update)->format('d-m-Y H:i')
+                    : 'N/A',
+            ],
+            'modified_by' => [
+                'heading' => 'Modified By',
+                'width'   => '10%',
+                'align'   => 'left',
+                'value'   => fn ($row) => $row->createdByUser?->name ?: 'N/A',
+            ],
+            'status' => [
+                'heading' => 'Status',
+                'width'   => '6%',
+                'align'   => 'center',
+                'value'   => fn ($row) => ((int) $row->active_inactive === 1) ? 'Active' : 'Inactive',
+            ],
+        ];
+    }
+
+    /**
+     * The grid's own query, minus paging.
+     *
+     * Mirrors FacultyDataTable: same `pk desc` ordering and the same four
+     * searched columns as its ->filter() closure, so the export is the screen
+     * the user is looking at rather than the whole table.
+     */
+    private function exportQuery(string $search)
+    {
+        $query = FacultyMaster::with('createdByUser')->orderBy('pk', 'desc');
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('full_name', 'like', '%' . $search . '%')
+                  ->orWhere('mobile_no', 'like', '%' . $search . '%')
+                  ->orWhere('faculty_code', 'like', '%' . $search . '%')
+                  ->orWhere('email_id', 'like', '%' . $search . '%');
+            });
+        }
+
+        return $query;
+    }
+
+    public function export(Request $request, string $format = 'csv')
+    {
+        $format = strtolower($format);
+        abort_unless(in_array($format, self::$exportFormats, true), 404);
+
+        $search = trim((string) $request->query('q', ''));
+
+        return $this->renderMasterExport(
+            $format,
+            $this->exportQuery($search)->get(),
+            $this->resolveExportColumns($request, $this->exportColumnDefs()),
+            'Faculty',
+            'Faculty',
+            $search !== '' ? 'Search: ' . $search : null,
+            'No faculty to export',
+            // Eight columns do not fit A4 portrait without crushing the email.
+            'landscape'
+        );
     }
 
     public function generateFacultyCodeAjax(Request $request)

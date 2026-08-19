@@ -3,12 +3,16 @@
 namespace App\Http\Controllers\Admin\Master;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\ExportsMasterGrid;
 use App\Models\FacultyTypeMaster;
 use App\Support\DataTableRedisCache;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
 class FacultyTypeMasterController extends Controller
 {
+    use ExportsMasterGrid;
+
     private const LIST_CACHE_EPOCH_KEY = 'master_faculty_type_list_epoch';
 
     public static function bumpListCacheEpoch(): void
@@ -36,6 +40,103 @@ class FacultyTypeMasterController extends Controller
         );
 
         return view('admin.master.faculty_type.index', compact('facultyTypes'));
+    }
+
+    /* ====================================================================
+     * Export - CSV | Excel | PDF | Print   (rendering lives in ExportsMasterGrid)
+     * ================================================================= */
+
+    /**
+     * Canonical export columns, in display order.
+     *
+     * Keys must match FTM_EXPORT_COLUMN_KEYS in faculty_type/index.blade.php.
+     * 'sno' is not a data column; it only drives the running serial.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function exportColumnDefs(): array
+    {
+        return [
+            'sno' => [
+                'heading' => 'S. No.',
+                'width'   => '10%',
+                'align'   => 'center',
+                'value'   => fn ($row, int $index) => $index + 1,
+            ],
+            'faculty_type' => [
+                'heading' => 'Faculty Type',
+                'width'   => '48%',
+                'align'   => 'left',
+                'value'   => fn ($row) => $row->faculty_type_name ?: 'N/A',
+            ],
+            'short_name' => [
+                'heading' => 'Short Name',
+                'width'   => '22%',
+                'align'   => 'left',
+                // Column is `shot_faculty_type_name` in the schema - the typo is
+                // the live column name, not one to "fix" here.
+                'value'   => fn ($row) => $row->shot_faculty_type_name ?: 'N/A',
+            ],
+            'status' => [
+                'heading' => 'Status',
+                'width'   => '20%',
+                'align'   => 'center',
+                'value'   => fn ($row) => ((int) $row->active_inactive === 1) ? 'Active' : 'Inactive',
+            ],
+        ];
+    }
+
+    /**
+     * The grid's rows, filtered the way the grid filters them.
+     *
+     * Ordering mirrors index()'s orderByDesc('pk'). The grid is a CLIENT-side
+     * DataTable and its search runs over every searchable column - the name, the
+     * short name AND the rendered "Active"/"Inactive" label - so all three are
+     * matched here. Substring semantics are kept identical: searching "active"
+     * matches "Inactive" too, exactly as it does in the browser.
+     */
+    private function exportQuery(string $search): Builder
+    {
+        $query = FacultyTypeMaster::query();
+
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+
+            $query->where(function ($q) use ($search, $needle) {
+                $q->where('faculty_type_name', 'like', '%' . $search . '%')
+                  ->orWhere('shot_faculty_type_name', 'like', '%' . $search . '%');
+
+                if (str_contains('active', $needle)) {
+                    $q->orWhere('active_inactive', 1);
+                }
+
+                if (str_contains('inactive', $needle)) {
+                    $q->orWhere(function ($inactive) {
+                        $inactive->where('active_inactive', '!=', 1)->orWhereNull('active_inactive');
+                    });
+                }
+            });
+        }
+
+        return $query->orderByDesc('pk');
+    }
+
+    public function export(Request $request, string $format = 'csv')
+    {
+        $format = strtolower($format);
+        abort_unless(in_array($format, self::$exportFormats, true), 404);
+
+        $search = trim((string) $request->query('q', ''));
+
+        return $this->renderMasterExport(
+            $format,
+            $this->exportQuery($search)->get(),
+            $this->resolveExportColumns($request, $this->exportColumnDefs()),
+            'Faculty Type',
+            'FacultyType',
+            $search !== '' ? 'Search: ' . $search : null,
+            'No faculty types to export'
+        );
     }
 
     public function create()

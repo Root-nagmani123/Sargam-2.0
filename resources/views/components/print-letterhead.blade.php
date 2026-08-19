@@ -39,6 +39,25 @@
     ]);
 @endphp
 
+{{-- ⚠️ Load-bearing, and it has to live here rather than in master-admin.css.
+
+     Browsers draw their OWN header (the document <title>) and footer (the URL,
+     the download timestamp and "1/3") inside the @page margin box. On a printed
+     LBSNAA form that reads as "Faculty Details – Blank Form - Sargam 2.0 …" and
+     a date stamped over the letterhead. Zeroing the page margin removes the box
+     the browser draws them in — the only way CSS can suppress them — and the
+     sheet supplies its own padding instead (master-admin.css, .print-area).
+
+     `@page` cannot be scoped to a selector, so it must NOT go in the shared
+     stylesheet: every master listing that loads it would lose its print margins
+     too. This component is included by exactly the sheets that want the
+     behaviour, so the rule ships with it. --}}
+<style>
+    @media print {
+        @page { size: A4 portrait; margin: 0; }
+    }
+</style>
+
 <div class="mst-print-header" aria-hidden="true">
     <div class="mst-print-header__row">
         @if($emblemSrc)

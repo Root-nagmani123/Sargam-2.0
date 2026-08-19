@@ -12,12 +12,27 @@
  * docs/new-design-index-page.md.
  * ========================================================================= */
 
+/* ── Brand tint ──────────────────────────────────────────────────────────────
+ * The theme recoloured --bs-primary to the canonical brand navy (#004384) but
+ * left --bs-primary-rgb at the legacy 0,74,147. Everything that tints from the
+ * TRIPLET rather than the hex — .text-primary on the Download / Print buttons,
+ * Bootstrap's focus rings — therefore renders a slightly different blue from
+ * the buttons next to it. Restate it for this subtree only; the app-wide
+ * triplet is a separate change. */
+.mst-page {
+    --bs-primary-rgb: 0, 67, 132;
+}
+
+/* ── Export row (Download / Print), above the card ───────────────────────────
+ * Chrome comes from .programme-dt-btn-columns so these match the toolbar below.
+ * Nothing here but the print rule — see the @media print block at the end. */
+
 /* ── Status badge ────────────────────────────────────────────────────────────
  * The theme ships the *-subtle backgrounds but not the matching
  * text-*-emphasis colours, so the label would render black. Tint it here. */
 .mst-page .status-pill {
-    padding: 0.35rem 0.75rem;
-    font-size: 0.8125rem;
+    padding: 0.4em 0.85em;
+    font-size: 0.75rem;
     font-weight: 600;
 }
 
@@ -98,13 +113,25 @@
 }
 
 .mst-page .mst-act--del {
-    color: var(--bs-danger);
+    color: var(--bs-danger, #dc3545);
 }
 
 .mst-page .mst-act--del.is-disabled {
     color: #98a2b3;
     opacity: 0.65;
     cursor: not-allowed;
+}
+
+/* Action is always the last column on a master grid, and it reads as an
+ * appendix to the row rather than data: keep it hard against the right edge
+ * instead of floating in the slack the short data columns leave behind. */
+/* `:not(.print-area)` — the faculty detail sheet and the blank form reuse
+ * .programme-dt-table for real data tables whose last column is a value, not
+ * an action stack; right-aligning it there just looks broken on paper. */
+.mst-page:not(.print-area) .programme-dt-table th:last-child,
+.mst-page:not(.print-area) .programme-dt-table td:last-child {
+    text-align: right;
+    white-space: nowrap;
 }
 
 /* A wrapping <form> around Delete must add no box of its own. */
@@ -167,22 +194,39 @@
  * Create and Edit share one modal and look alike: same header, same tinted
  * field card, same footer pair. Only the contents and submit caption differ. */
 .mst-modal .modal-content {
-    border-radius: var(--ds-radius-card);
+    border-radius: 12px;
 }
 
-.mst-modal .mst-field-card,
-.mst-page  .mst-field-card {
-    background: #eef1fc;
-    border-radius: var(--ds-radius-card);
-    padding: var(--ds-space-3);
+.mst-modal .modal-header {
+    border-bottom: 1px solid #eaecf0;
+    padding: 1rem 1.25rem;
+}
+
+.mst-modal .modal-header .modal-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #101828;
+    margin: 0;
+}
+
+.mst-modal .modal-body {
+    padding: 1.25rem;
+}
+
+/* Cancel · Submit sit bottom-RIGHT, matching the reference modals. */
+.mst-modal .modal-footer {
+    border-top: 0;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 0.25rem 1.25rem 1.25rem;
 }
 
 .mst-modal .mst-form-label,
 .mst-page  .mst-form-label {
     font-size: 0.8125rem;
     font-weight: 600;
-    color: var(--ds-ink);
-    margin-bottom: var(--ds-space-1);
+    color: #1f2937;
+    margin-bottom: 0.375rem;
 }
 
 .mst-modal .mst-req,
@@ -192,10 +236,28 @@
 
 .mst-modal .mst-control,
 .mst-page  .mst-control {
-    background: var(--ds-surface);
-    border: 1px solid var(--ds-line);
-    border-radius: var(--ds-radius-card);
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
     min-height: var(--ds-control-h);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: #101828;
+    box-shadow: none;
+}
+
+.mst-modal .mst-control::placeholder,
+.mst-page  .mst-control::placeholder {
+    color: #9ca3af;
+}
+
+/* The theme's --bs-primary-rgb is still the legacy 0,74,147, so the inherited
+ * focus ring would tint off-brand. State the navy literally, as the reference
+ * modals do. */
+.mst-modal .mst-control:focus,
+.mst-page  .mst-control:focus {
+    border-color: #004384;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
 }
 
 /* The scoped border above out-specifies Bootstrap's .is-invalid, so restate it. */
@@ -206,33 +268,36 @@
 
 .mst-modal .mst-btn-cancel,
 .mst-page  .mst-btn-cancel {
+    min-width: 108px;
     color: #dc2626;
     border: 1px solid #fca5a5;
-    background: var(--ds-surface);
-    border-radius: var(--ds-radius);
-    font-weight: 600;
+    background: #fff;
+    border-radius: 8px;
+    font-weight: 500;
 }
 
 .mst-modal .mst-btn-cancel:hover,
 .mst-page  .mst-btn-cancel:hover {
-    background: #fff5f5;
-    color: #b91c1c;
+    background: #fef2f2;
+    border-color: #f87171;
+    color: #dc2626;
 }
 
 .mst-modal .mst-btn-submit,
 .mst-page  .mst-btn-submit {
+    min-width: 140px;
     color: #fff;
     background: #004384;
     border: 1px solid #004384;
-    border-radius: var(--ds-radius);
+    border-radius: 8px;
     font-weight: 600;
 }
 
 .mst-modal .mst-btn-submit:hover,
 .mst-page  .mst-btn-submit:hover {
     color: #fff;
-    background: #003468;
-    border-color: #003468;
+    background: #00356a;
+    border-color: #00356a;
 }
 
 /* ── Full-page form: cards, section titles, footer ──────────────────────────
@@ -665,7 +730,8 @@
         left: 0;
         top: 0;
         width: 100%;
-        padding: 0;
+        /* Padding is set in the "Print sheet: paper design" block below —
+         * and needs !important to land. See the note there. */
     }
 
     /* The header and the mini side panel ship their own
@@ -740,5 +806,159 @@
         font-size: 0.9375rem;
         font-weight: 700;
         color: var(--ds-ink);
+    }
+}
+
+/* ── Print sheet: paper design ───────────────────────────────────────────────
+ * Screen chrome does not survive contact with paper. Scoped to `.print-area`
+ * (the faculty detail sheet and the blank form) so the listing pages are
+ * untouched.
+ *
+ * The load-bearing rule is the FIRST one: `.table-responsive` scrolls on
+ * screen, but a scrollbar on paper is just a missing column — the blank form
+ * was printing Experience Details with "Duration" cut mid-word and "Nature of
+ * Work" absent entirely, and the detail sheet lost "Percentage / CGPA" the same
+ * way. The rest flattens the tints, shadows and radii that only make sense lit.
+ *
+ * Page margin is zeroed by <x-print-letterhead> (to kill the browser's own
+ * header/footer), so the sheet supplies its own padding here. */
+@media print {
+    /* !important is load-bearing. `spacing-system.css` sets
+     * `.page-wrapper .body-wrapper .container-fluid { padding: 1.5rem }`, and
+     * Chromium scores a `:has()` selector lower than the spec implies — so the
+     * (0,3,1) selector here loses to that plain (0,3,0) one and the sheet keeps
+     * a 24px screen gutter on paper. It is also why the `padding: 0` in the
+     * isolation block above never did anything. */
+    body:has(.mst-page.print-area) .print-area {
+        padding: 12mm 10mm !important;
+        font-size: 10pt;
+    }
+
+    /* Never clip a table on paper. */
+    .mst-page.print-area .table-responsive {
+        overflow: visible !important;
+    }
+
+    .mst-page.print-area table {
+        table-layout: fixed;
+        width: 100%;
+        font-size: 8.5pt;
+    }
+
+    /* `white-space: nowrap` on the screen header is what makes a fixed-layout
+     * table overflow instead of wrap — the column titles then print on top of
+     * each other ("UNIVERSITY / INSTITUTIONYEAR OF PASSING"). Let them wrap. */
+    /* `white-space: normal` needs !important: several of these headers carry
+     * Bootstrap's `.text-nowrap` utility, which is itself !important. Left
+     * nowrap in a fixed-layout table the titles overflow their cells and the
+     * last columns ("Percentage / CGPA", "Nature of Work") are pushed off the
+     * sheet entirely - which is what "print is cut off" was. */
+    .mst-page.print-area table th,
+    .mst-page.print-area table td {
+        white-space: normal !important;
+        font-size: 8.5pt !important;
+        padding: 1.5mm 2mm !important;
+        vertical-align: top;
+    }
+
+    /* Headings break at word boundaries (`anywhere` gives "SPECIALISATI/ON");
+     * data cells may break mid-token, because a long email or URL has none. */
+    .mst-page.print-area table th {
+        overflow-wrap: break-word;
+    }
+
+    .mst-page.print-area table td {
+        overflow-wrap: anywhere;
+    }
+
+    /* Repeat the head when a table crosses a page break. */
+    .mst-page.print-area thead {
+        display: table-header-group;
+    }
+
+    .mst-page.print-area tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    /* Flat: paper has no elevation, and a filled tint only burns toner. */
+    .mst-page.print-area .mst-card,
+    .mst-page.print-area .mst-hero {
+        background: #fff;
+        border: 1px solid #98a2b3;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 4mm 5mm;
+        margin-bottom: 4mm;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .mst-page.print-area .mst-card__title {
+        font-size: 10.5pt;
+        margin: 0 0 3mm;
+        padding-bottom: 1.5mm;
+    }
+
+    .mst-page.print-area .mst-facts {
+        gap: 3mm 6mm;
+    }
+
+    .mst-page.print-area .mst-fact__label {
+        font-size: 7.5pt;
+        margin-bottom: 0.5mm;
+    }
+
+    .mst-page.print-area .mst-fact__value {
+        font-size: 9.5pt;
+    }
+
+    .mst-page.print-area .mst-hero__title {
+        font-size: 13pt;
+    }
+
+    /* A rule to write on wants to sit under its label, not float below it. */
+    .mst-page.print-area .mst-blank-line {
+        min-height: 6mm;
+        border-bottom-color: #667085;
+        margin-top: 0;
+    }
+
+    .mst-page.print-area .mst-blank-table tbody td {
+        height: 8mm;
+    }
+
+    .mst-page.print-area .mst-blank-photo {
+        width: 28mm;
+        height: 35mm;
+        font-size: 7.5pt;
+    }
+
+    /* The letterhead is the sheet's masthead — never orphan it above a break. */
+    .mst-page.print-area .mst-print-header {
+        margin-bottom: 5mm;
+        break-after: avoid;
+        page-break-after: avoid;
+    }
+}
+
+/* ── Print: the page's own chrome is not part of a printed GRID ──────────────
+ * The branded printout is served by the module's export_print view; when the
+ * browser prints the SCREEN instead, at least drop the controls that can't be
+ * acted on from paper — the toolbar, the pager, and the Action column.
+ *
+ * ⚠️ `:not(.print-area)` is load-bearing. The faculty detail sheet and the blank
+ * form are `.mst-page.print-area` and their data tables carry the same
+ * `.programme-dt-table` class, so an unqualified `th:last-child` rule deletes a
+ * real column from the printout — it was eating "Percentage / CGPA" off
+ * Qualification Details and "Nature of Work" off Experience Details. A printed
+ * SHEET has no Action column to hide; only a printed GRID does. */
+@media print {
+    .mst-page:not(.print-area) .mst-secondary-actions,
+    .mst-page:not(.print-area) .programme-dt-toolbar,
+    .mst-page:not(.print-area) .programme-dt-footer,
+    .mst-page:not(.print-area) .programme-dt-table th:last-child,
+    .mst-page:not(.print-area) .programme-dt-table td:last-child {
+        display: none !important;
     }
 }

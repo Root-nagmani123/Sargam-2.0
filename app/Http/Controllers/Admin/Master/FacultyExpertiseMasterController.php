@@ -3,12 +3,16 @@
 namespace App\Http\Controllers\Admin\Master;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\ExportsMasterGrid;
 use App\Models\FacultyExpertiseMaster;
 use App\Support\DataTableRedisCache;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
 class FacultyExpertiseMasterController extends Controller
 {
+    use ExportsMasterGrid;
+
     private const LIST_CACHE_EPOCH_KEY = 'master_faculty_expertise_list_epoch';
 
     /**
@@ -39,6 +43,95 @@ class FacultyExpertiseMasterController extends Controller
         );
 
         return view('admin.master.faculty_expertise_master.index', compact('faculties'));
+    }
+
+    /* ====================================================================
+     * Export - CSV | Excel | PDF | Print   (rendering lives in ExportsMasterGrid)
+     * ================================================================= */
+
+    /**
+     * Canonical export columns, in display order.
+     *
+     * Keys must match FEX_EXPORT_COLUMN_KEYS in
+     * faculty_expertise_master/index.blade.php. 'sno' is not a data column; it
+     * only drives the running serial.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function exportColumnDefs(): array
+    {
+        return [
+            'sno' => [
+                'heading' => 'S. No.',
+                'width'   => '12%',
+                'align'   => 'center',
+                'value'   => fn ($row, int $index) => $index + 1,
+            ],
+            'expertise' => [
+                'heading' => 'Faculty Expertise',
+                'width'   => '68%',
+                'align'   => 'left',
+                'value'   => fn ($row) => $row->expertise_name ?: 'N/A',
+            ],
+            'status' => [
+                'heading' => 'Status',
+                'width'   => '20%',
+                'align'   => 'center',
+                'value'   => fn ($row) => ((int) $row->active_inactive === 1) ? 'Active' : 'Inactive',
+            ],
+        ];
+    }
+
+    /**
+     * The grid's rows, filtered the way the grid filters them.
+     *
+     * Ordering mirrors index()'s latest('pk'). The grid is a CLIENT-side
+     * DataTable whose search runs over both searchable columns - the expertise
+     * name AND the rendered "Active"/"Inactive" label - so the status labels are
+     * matched here too. Substring semantics are kept identical: searching
+     * "active" matches "Inactive" as well, exactly as it does in the browser.
+     */
+    private function exportQuery(string $search): Builder
+    {
+        $query = FacultyExpertiseMaster::query();
+
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+
+            $query->where(function ($q) use ($search, $needle) {
+                $q->where('expertise_name', 'like', '%' . $search . '%');
+
+                if (str_contains('active', $needle)) {
+                    $q->orWhere('active_inactive', 1);
+                }
+
+                if (str_contains('inactive', $needle)) {
+                    $q->orWhere(function ($inactive) {
+                        $inactive->where('active_inactive', '!=', 1)->orWhereNull('active_inactive');
+                    });
+                }
+            });
+        }
+
+        return $query->orderByDesc('pk');
+    }
+
+    public function export(Request $request, string $format = 'csv')
+    {
+        $format = strtolower($format);
+        abort_unless(in_array($format, self::$exportFormats, true), 404);
+
+        $search = trim((string) $request->query('q', ''));
+
+        return $this->renderMasterExport(
+            $format,
+            $this->exportQuery($search)->get(),
+            $this->resolveExportColumns($request, $this->exportColumnDefs()),
+            'Faculty Expertise',
+            'FacultyExpertise',
+            $search !== '' ? 'Search: ' . $search : null,
+            'No faculty expertise to export'
+        );
     }
 
     public function create() {

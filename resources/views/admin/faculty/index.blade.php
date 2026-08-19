@@ -20,18 +20,62 @@
     {{-- The status toggle (public/admin_assets/js/custom.js) writes its result here. --}}
     <div id="status-msg"></div>
 
-    {{-- Secondary actions sit above the card, right-aligned, in the same chrome
-         as the toolbar's Columns button. --}}
-    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
-        <a href="{{ route('faculty.excel.export') }}" class="btn programme-dt-btn-columns border-0 text-primary"
-           title="Export Faculty Excel" aria-label="Export Faculty Excel">
-            <i class="bi bi-download" aria-hidden="true"></i>
-            <span>Export Excel</span>
+    {{-- Secondary actions (Download / Print / Blank Form) — above the card,
+         right-aligned, in the same slot, chrome and wording as every other
+         master listing (§1 of docs/new-design-index-page.md).
+
+         ?q= and ?cols= are stamped on by facultyUpdateExportLinks(), so each
+         format carries the same search term and columns the grid is showing.
+         Print is the branded server-rendered list; Blank Form is the separate
+         fill-in sheet and keeps its own button rather than being buried in the
+         Download menu. --}}
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 mst-secondary-actions">
+        <div class="dropdown">
+            <button type="button" id="facultyDownloadToggle"
+                    class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                    data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="facultyDownloadToggle">
+                <li>
+                    <a class="dropdown-item" id="facultyCsvLink"
+                       href="{{ route('faculty.export', ['format' => 'csv']) }}">
+                        <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i> CSV
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" id="facultyExcelLink"
+                       href="{{ route('faculty.export', ['format' => 'excel']) }}">
+                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Excel (.xlsx)
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" id="facultyPdfLink"
+                       href="{{ route('faculty.export', ['format' => 'pdf']) }}">
+                        <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    {{-- The 34-column dump (qualifications, experience, bank).
+                         Not a grid export, so it carries no ?q= / ?cols=. --}}
+                    <a class="dropdown-item" href="{{ route('faculty.excel.export') }}">
+                        <i class="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true"></i> Full Details (.xlsx)
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <a href="{{ route('faculty.export', ['format' => 'print']) }}"
+           id="facultyPrintLink" target="_blank" rel="noopener"
+           class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
+            <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
         </a>
-        <a href="{{ route('faculty.printBlank') }}" class="btn programme-dt-btn-columns border-0 text-primary"
-           title="Print Blank Form" aria-label="Print Blank Form">
-            <i class="bi bi-printer" aria-hidden="true"></i>
-            <span>Print Blank Form</span>
+
+        <a href="{{ route('faculty.printBlank') }}"
+           class="btn programme-dt-btn-columns border-0 text-primary"
+           title="Blank Form" aria-label="Blank Form">
+            <i class="bi bi-file-earmark-text" aria-hidden="true"></i><span>Blank Form</span>
         </a>
     </div>
 
@@ -102,6 +146,54 @@ $(function () {
     var TABLE_ID = '#faculty-table';
     var FACULTY_COLVIS_KEY = 'sargam.faculty.hiddenCols.{{ auth()->id() ?? 'guest' }}';
 
+    /* ---------- Export links follow the grid ----------
+     * Positional map: header index -> the export key the server understands
+     * (FacultyController::exportColumnDefs()). '' marks a column that is not in
+     * the export at all — here, Action.
+     * ⚠️ Adding a column to the table means adding an entry here too. */
+    var FACULTY_EXPORT_COLUMN_KEYS = [
+        'sno', 'faculty_code', 'faculty_name', 'faculty_email',
+        'mobile_number', 'modified_date', 'modified_by', 'status', ''
+    ];
+    var FACULTY_EXPORT_COL_COUNT = FACULTY_EXPORT_COLUMN_KEYS.filter(Boolean).length;
+    var FACULTY_EXPORT_LINK_IDS = ['facultyCsvLink', 'facultyExcelLink', 'facultyPdfLink', 'facultyPrintLink'];
+
+    function facultyUpdateExportLinks() {
+        var dt = $.fn.DataTable.isDataTable(TABLE_ID) ? $(TABLE_ID).DataTable() : null;
+        var keys = [];
+        var term = '';
+
+        if (dt) {
+            dt.columns().every(function () {
+                var key = FACULTY_EXPORT_COLUMN_KEYS[this.index()];
+                if (key && this.visible()) { keys.push(key); }
+            });
+            // The term lives in DataTables, which sends it to the grid feed as
+            // search[value]; the export reads ?q=. Without carrying it the
+            // download returns every row and its header can't name the filter.
+            term = dt.search() || '';
+        }
+
+        FACULTY_EXPORT_LINK_IDS.forEach(function (id) {
+            var link = document.getElementById(id);
+            if (!link) { return; }
+
+            var base = link.href.split('?')[0];
+            var params = new URLSearchParams(link.href.split('?')[1] || '');
+
+            params.delete('q');
+            if (term !== '') { params.set('q', term); }
+
+            params.delete('cols');
+            // Omit ?cols= entirely while nothing is hidden — the server reads
+            // "no cols" as "every column".
+            if (dt && keys.length !== FACULTY_EXPORT_COL_COUNT) { params.set('cols', keys.join(',')); }
+
+            var qs = params.toString();
+            link.href = base + (qs ? '?' + qs : '');
+        });
+    }
+
     function facultyGetHiddenCols() {
         try {
             var raw = window.localStorage.getItem(FACULTY_COLVIS_KEY);
@@ -161,6 +253,7 @@ $(function () {
                 facultyPersistHiddenCols(current);
                 dt.column(idx).visible(this.checked, false);
                 dt.columns.adjust();
+                facultyUpdateExportLinks();
             });
 
             $grid.append(
@@ -174,6 +267,13 @@ $(function () {
         });
 
         dt.columns.adjust();
+
+        // Stamp the restored column state onto the export links on first paint —
+        // a preference read back from localStorage would otherwise not reach the
+        // server until the user opened the modal and toggled something. Search-
+        // as-you-type has to re-stamp them too, not just redraw the grid.
+        dt.off('search.dt.facultyExport').on('search.dt.facultyExport', facultyUpdateExportLinks);
+        facultyUpdateExportLinks();
     }
 
     // Yajra initialises the table itself. Handle both orders: if it is already up

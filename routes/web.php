@@ -415,7 +415,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('update',  'update')->name('update');
         Route::get('show/{id}',  'show')->name('show');
         Route::delete('delete/{id}',  'destroy')->name('destroy');
+        // Full-detail workbook (34 columns) - kept, see the controller.
         Route::get('excel-export',  'excelExportFaculty')->name('excel.export');
+        // Grid-shaped export: one action, four formats (csv | excel | pdf | print).
+        Route::get('export/{format?}', 'export')->name('export');
         Route::post('check-unique', 'checkUnique')->name('checkUnique');
         Route::get('search-first-name', 'searchFirstName')->name('searchFirstName');
         Route::get('check-firstname', 'checkFirstName')->name('checkFirstName');
@@ -1016,6 +1019,8 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
 
 Route::prefix('admin/appellation')->name('master.appellation.')->middleware('auth')->group(function () {
     Route::get('/', [AppellationMasterController::class, 'index'])->name('index');
+    // One action, four formats (csv | excel | pdf | print) - see the controller.
+    Route::get('export/{format?}', [AppellationMasterController::class, 'export'])->name('export');
     Route::get('create', [AppellationMasterController::class, 'create'])->name('create');
     Route::get('edit/{id}', [AppellationMasterController::class, 'edit'])->name('edit');
     Route::post('store', [AppellationMasterController::class, 'store'])->name('store');

@@ -102,13 +102,20 @@ class AppellationMasterDataTable extends DataTable
         return $query->orderBy('pk', 'desc');
     }
 
+    /**
+     * Fixed widths on everything except the name.
+     *
+     * Without them DataTables hands the leftover width to the last column, so
+     * the action stack floats in the middle of a very wide cell instead of
+     * sitting against the grid's right edge (master-admin.css right-aligns it).
+     */
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S. No.')->addClass('text-nowrap'),
+            Column::computed('DT_RowIndex')->title('S. No.')->addClass('text-nowrap')->width('5.5rem'),
             Column::make('appettation_name')->title('Appellation Name'),
-            Column::computed('status')->title('Status')->addClass('text-nowrap'),
-            Column::computed('actions')->title('Action')->addClass('text-nowrap'),
+            Column::computed('status')->title('Status')->addClass('text-nowrap')->width('8rem'),
+            Column::computed('actions')->title('Action')->addClass('text-nowrap')->width('13rem'),
         ];
     }
 
