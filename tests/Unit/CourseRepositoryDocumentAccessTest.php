@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Http\Controllers\Admin\CourseRepositoryController;
 use App\Models\CourseRepositoryDocument;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use ReflectionMethod;
 use Tests\TestCase;
 
@@ -120,6 +121,53 @@ class CourseRepositoryDocumentAccessTest extends TestCase
             "'del_type', 1",
             $body,
             'findReadableDocument() must exclude soft-deleted documents.'
+        );
+    }
+
+    /**
+     * The relocation must report failure, not throw, when the source has vanished.
+     *
+     * This is the half of the concurrency case that IS reachable from a unit test. When
+     * two readers hit the same not-yet-relocated document, the winner deletes the public
+     * copy while the loser is still mid-move; the loser's verification then runs against
+     * a file that is gone. Flysystem's size() throws rather than returning null, so
+     * without the exists() guards this surfaced as an exception on a read path.
+     *
+     * The other half — that the caller then prefers the private copy rather than falling
+     * back to a legacy path that no longer exists — is NOT asserted here. Reaching that
+     * branch needs the two disks to change state between the resolver's first check and
+     * its relocation attempt, which a single-threaded test cannot stage without mocking
+     * the Storage facade. It is covered by the exists() checks in resolveDocumentLocation()
+     * and by reading, not by execution. Recorded rather than papered over.
+     */
+    public function test_relocation_reports_failure_instead_of_throwing_when_the_source_is_gone(): void
+    {
+        $method = new ReflectionMethod(CourseRepositoryController::class, 'relocateLegacyDocument');
+        $method->setAccessible(true);
+
+        $result = $method->invoke(
+            app(CourseRepositoryController::class),
+            CourseRepositoryController::legacyDocumentDisk(),
+            CourseRepositoryController::documentDisk(),
+            'course-repository/attachments/definitely_not_present_'.__LINE__.'.pdf'
+        );
+
+        $this->assertFalse($result, 'Relocation of a missing source must return false rather than throw.');
+    }
+
+    /** A document whose file is on neither disk resolves to nothing, not to a dead path. */
+    public function test_resolver_returns_null_when_the_file_is_on_neither_disk(): void
+    {
+        $document = new CourseRepositoryDocument();
+        $document->pk = 9912;
+        $document->full_path = 'course-repository/attachments/definitely_not_present_9912.pdf';
+
+        $method = new ReflectionMethod(CourseRepositoryController::class, 'resolveDocumentLocation');
+        $method->setAccessible(true);
+
+        $this->assertNull(
+            $method->invoke(app(CourseRepositoryController::class), $document),
+            'Resolver handed back a location for a file that exists nowhere.'
         );
     }
 }

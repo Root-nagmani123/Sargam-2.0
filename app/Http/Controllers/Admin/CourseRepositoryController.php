@@ -1028,7 +1028,22 @@ class CourseRepositoryController extends Controller
             return ['disk' => $private, 'path' => $path];
         }
 
-        return ['disk' => $legacy, 'path' => $path];
+        // A failed move has two very different causes and they need different answers.
+        //
+        // The copy genuinely failed        -> the file is still on the legacy disk, serve it.
+        // A CONCURRENT request already     -> the legacy copy is gone. Falling back to it
+        // finished its own move               would hand the caller a path to a file that
+        //                                     no longer exists, i.e. a 500 on a read.
+        //
+        // Re-checking the private disk distinguishes them. Ordered private-first so the
+        // secured copy always wins.
+        if (Storage::disk($private)->exists($path)) {
+            return ['disk' => $private, 'path' => $path];
+        }
+
+        return Storage::disk($legacy)->exists($path)
+            ? ['disk' => $legacy, 'path' => $path]
+            : null;
     }
 
     /**
@@ -1050,8 +1065,14 @@ class CourseRepositoryController extends Controller
                 fclose($stream);
             }
 
-            if (! Storage::disk($to)->exists($path)
-                || Storage::disk($to)->size($path) !== Storage::disk($from)->size($path)) {
+            // Both sizes are read defensively: a concurrent mover may have deleted the
+            // source between the copy and this check, and size() on a missing file
+            // throws rather than returning null.
+            if (! Storage::disk($to)->exists($path) || ! Storage::disk($from)->exists($path)) {
+                return false;
+            }
+
+            if (Storage::disk($to)->size($path) !== Storage::disk($from)->size($path)) {
                 return false;
             }
 
