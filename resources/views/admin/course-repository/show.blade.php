@@ -27,7 +27,16 @@
     $postMaxBytes = $iniToBytes(ini_get('post_max_size'));
     // Same limit the controller validates with on submit and update, so the hint, the
     // client-side check and the server rule always state one number.
+    //
+    // Clamped to upload_max_filesize the same way CourseRepositoryController::uploadMaxKb()
+    // does. Stating the configured 25 MB while PHP only accepts 20 MB would promise a size
+    // the server then discards silently — the hint has to name the limit that is actually
+    // enforced, not the one we asked for.
+    $uploadMaxIniBytes = $iniToBytes(ini_get('upload_max_filesize'));
     $perFileMaxBytes = (int) config('course_repository.max_file_kb', 25600) * 1024;
+    if ($uploadMaxIniBytes > 0 && $uploadMaxIniBytes < $perFileMaxBytes) {
+        $perFileMaxBytes = $uploadMaxIniBytes;
+    }
 
     $allowedUploadExtensions = (array) config('course_repository.allowed_extensions', ['pdf']);
     // Feeds the file picker's own type filter, e.g. ".pdf"

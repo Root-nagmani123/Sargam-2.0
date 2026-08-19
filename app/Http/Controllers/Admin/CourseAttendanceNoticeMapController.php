@@ -2035,8 +2035,23 @@ public function noticedeleteMessage($id,$type)
 {
      
     $notices = DB::table('student_notice_status');
-      if(hasRole('Student-OT')){
+
+    // This is the participant-facing list (uers_notice_list). The student filter used
+    // to sit inside `if (hasRole('Student-OT'))` with no else, so every OTHER
+    // authenticated role — faculty, mess staff, any account created for an unrelated
+    // module — fell through with no WHERE clause at all and read every student's
+    // disciplinary row, now including conclusion remarks and marks deducted.
+    //
+    // Three cases, and every one of them is now explicit:
+    //   - an Officer Trainee sees their own records,
+    //   - Admin / Super Admin / PA keep the unrestricted view they already have via
+    //     index(), so nothing that worked before stops working,
+    //   - anyone else sees nothing. Fail closed, the same way get_Role_by_course()
+    //     returns [-1] rather than [] for a user it cannot place.
+    if (isOfficerTraineeUser()) {
         $notices->where('student_notice_status.student_pk', auth()->user()->user_id);
+    } elseif (! (hasRole('Admin') || hasRole('Super Admin') || hasRole('PA'))) {
+        $notices->whereRaw('1 = 0');
     }
     $notices->leftJoin('course_student_attendance as csa', 'student_notice_status.course_student_attendance_pk', '=', 'csa.pk');
     // For direct notices course_student_attendance_pk=0, so csa is NULL; fall back to student_notice_status.student_pk

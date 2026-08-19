@@ -593,7 +593,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('store', 'store')->name('store');
         Route::post('import-group-mapping', 'importGroupMapping')->name('import');
         Route::post('get-group-names-by-type', 'getGroupNamesByType')->name('get.group.names.by.type');
-        Route::post('get-student-by-otcode', 'getStudentByOtCode')->name('get.student.by.otcode');
+        // Throttled: the Add Student modal fires this on a 400ms keystroke debounce,
+        // so a few dozen calls a minute is normal use and anything far above that is
+        // someone walking the OT-code space.
+        Route::post('get-student-by-otcode', 'getStudentByOtCode')->name('get.student.by.otcode')
+            ->middleware('throttle:60,1');
         Route::post('add-single-student', 'addSingleStudent')->name('add.single.student');
         Route::post('student-list', 'studentList')->name('student.list');
         Route::post('student-update', 'updateStudent')->name('student.update');
@@ -1086,9 +1090,12 @@ Route::get('/fc-front', function () {
     return view('fc.front_page');
 })->name('fc.front');
 
-Route::get('/admin/memo-conversation', function () {
-    return view('admin.courseAttendanceNoticeMap.memo_conversation'); // or any other view you want to show
-})->name('admin.courseAttendanceNoticeMap.memo_conversation');
+// The `admin.courseAttendanceNoticeMap.memo_conversation` route and its view were
+// removed: the closure passed no data and the Blade was a static mockup end to end —
+// a fixed course ("88th Foundation Course"), a fixed date (22/11/2013), Lorem ipsum
+// topics, a named real participant, a named signatory, and an invented exemption
+// table. Nothing linked to it (no Blade, no controller, no `menus` row), so it served
+// only to render a fabricated disciplinary document at a live URL.
 
 //route for admin notice/ memo conversation
 // Route::get('/admin/memo-notice', function () {

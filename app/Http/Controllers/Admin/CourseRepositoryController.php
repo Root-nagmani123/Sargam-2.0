@@ -446,7 +446,35 @@ class CourseRepositoryController extends Controller
      */
     private function uploadMaxKb(): int
     {
-        return (int) config('course_repository.max_file_kb', 25600);
+        $configured = (int) config('course_repository.max_file_kb', 25600);
+        $iniKb = self::iniUploadMaxKb();
+
+        // PHP discards an over-size file before Laravel runs, and because
+        // `attachments.*` is nullable the request that arrives then passes
+        // validation with no file at all. Configuring a ceiling above
+        // upload_max_filesize therefore does not raise the real limit — it just
+        // opens a band where the upload silently does nothing. Clamp to whichever
+        // is actually enforceable, which is what config/course_repository.php
+        // already tells the reader happens.
+        return ($iniKb > 0 && $iniKb < $configured) ? $iniKb : $configured;
+    }
+
+    /** PHP's own per-file ceiling in KB, or 0 when it cannot be read. */
+    public static function iniUploadMaxKb(): int
+    {
+        $raw = trim((string) ini_get('upload_max_filesize'));
+        if ($raw === '') {
+            return 0;
+        }
+
+        $bytes = (int) $raw;
+        switch (strtolower(substr($raw, -1))) {
+            case 'g': $bytes *= 1024 * 1024 * 1024; break;
+            case 'm': $bytes *= 1024 * 1024; break;
+            case 'k': $bytes *= 1024; break;
+        }
+
+        return intdiv($bytes, 1024);
     }
 
     /** Extensions for the `mimes:` rule, e.g. "pdf". */

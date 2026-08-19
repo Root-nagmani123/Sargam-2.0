@@ -674,6 +674,15 @@ class GroupMappingController extends Controller
             // Trim all inputs
             $data = array_map('trim', $validated);
 
+            // Same gap as the AJAX lookup, on a write path: 'exists:course_master,pk'
+            // confirms the course exists, not that this user may add students to it.
+            if (! $this->courseWithinRoleScope($data['course_master_pk'])) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'You do not have access to the selected course.',
+                ], 403);
+            }
+
             // Lookup: StudentMaster by OT code, scoped to the selected course
             // (see resolveEnrolledStudent() for why the course scope matters).
             [$studentMaster, $lookupError] = $this->resolveEnrolledStudent($data['otcode'], $data['course_master_pk']);
@@ -765,6 +774,36 @@ class GroupMappingController extends Controller
      *
      * @return array{0: ?StudentMaster, 1: ?string} [student, errorMessage]
      */
+    /**
+     * The course ids this user may act on, or null when unrestricted.
+     *
+     * get_Role_by_course() returns [] for Admin / Super Admin / PA (no restriction),
+     * [-1] for a non-admin with no mapped courses (see nothing), and a real id list
+     * otherwise. Collapsing the first case to null keeps the two meanings of "empty"
+     * from being confused at the call sites.
+     */
+    private function roleScopedCourseIds(): ?array
+    {
+        $ids = get_Role_by_course();
+
+        return empty($ids) ? null : array_map('intval', $ids);
+    }
+
+    /**
+     * Whether $coursePk is inside this user's course scope. Fails closed on a null
+     * or unresolvable course — a mapping we cannot place in a course is not one we
+     * can prove the user is allowed to read.
+     */
+    private function courseWithinRoleScope($coursePk): bool
+    {
+        $scope = $this->roleScopedCourseIds();
+        if ($scope === null) {
+            return true;
+        }
+
+        return $coursePk !== null && in_array((int) $coursePk, $scope, true);
+    }
+
     private function resolveEnrolledStudent(string $otcode, $coursePk): array
     {
         $studentMaster = StudentMaster::query()
@@ -799,15 +838,29 @@ class GroupMappingController extends Controller
                 'course_master_pk' => 'required|integer|exists:course_master,pk',
             ]);
 
-            [$studentMaster, $lookupError] = $this->resolveEnrolledStudent(
+            // exists: proves the course is real, not that this caller may see it.
+            // Without the scope check any authenticated user could resolve OT codes
+            // against courses outside their role.
+            if (! $this->courseWithinRoleScope($validated['course_master_pk'])) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Student not found for this course.',
+                ], 404);
+            }
+
+            [$studentMaster] = $this->resolveEnrolledStudent(
                 trim($validated['otcode']),
                 $validated['course_master_pk']
             );
 
             if (!$studentMaster) {
+                // Deliberately NOT resolveEnrolledStudent()'s two-branch message here.
+                // "not on this course" vs "no such OT code" is useful to an admin adding
+                // a student, but on a keystroke-driven lookup it answers a second
+                // question — whether an OT code exists at all — for anyone who asks.
                 return response()->json([
                     'status' => 'error',
-                    'message' => $lookupError,
+                    'message' => 'Student not found for this course.',
                 ], 404);
             }
 
@@ -843,6 +896,17 @@ class GroupMappingController extends Controller
     {
         $groupMapping = GroupTypeMasterCourseMasterMap::with(['courseGroup', 'courseGroupType', 'Faculty'])
             ->findOrFail(decrypt($id));
+
+        // The listing these downloads hang off IS course-scoped — GroupMappingDataTable
+        // and buildExportQuery both filter on get_Role_by_course() — so the export has to
+        // be too. Without this the encrypted id acts as a permanent bearer token: anyone
+        // holding one (a shared link, a browser history entry, an id from before their
+        // role scope was narrowed) gets every student's name, OT code, email and phone.
+        abort_unless(
+            $this->courseWithinRoleScope($groupMapping->courseGroup->pk ?? null),
+            403,
+            'You do not have access to this group mapping.'
+        );
 
         $students = StudentCourseGroupMap::with('studentsMaster:pk,display_name,generated_OT_code,email,contact_no')
             ->where('group_type_master_course_master_map_pk', $groupMapping->pk)
@@ -909,6 +973,11 @@ class GroupMappingController extends Controller
 
         try {
             ['group' => $group, 'students' => $students] = $this->studentListReportData($id);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            // A 403 from the course-scope check must surface as a 403. The generic
+            // handler below would otherwise rewrite it into "Invalid Group Mapping ID",
+            // which reads as a bad-input problem rather than a refused one.
+            throw $e;
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Invalid Group Mapping ID.');
         }
@@ -939,6 +1008,11 @@ class GroupMappingController extends Controller
 
         try {
             ['group' => $group, 'students' => $students] = $this->studentListReportData($id);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            // A 403 from the course-scope check must surface as a 403. The generic
+            // handler below would otherwise rewrite it into "Invalid Group Mapping ID",
+            // which reads as a bad-input problem rather than a refused one.
+            throw $e;
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Invalid Group Mapping ID.');
         }

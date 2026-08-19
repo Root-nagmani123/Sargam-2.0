@@ -124,7 +124,6 @@ class CourseGroupTypeController extends Controller
                     'type_name'       => $request->type_name,
                     'active_inactive' => $request->has('active_inactive') ? 1 : 0,
                 ]);
-            GroupMappingDataTable::bumpListingCacheEpoch();
 
             GroupMappingDataTable::bumpListingCacheEpoch();
 
@@ -161,7 +160,6 @@ class CourseGroupTypeController extends Controller
                 $course->update([
                     'type_name' => $request->type_name
                 ]);
-                GroupMappingDataTable::bumpListingCacheEpoch();
 
                 // Invalidate the cached Group Type dropdowns on the Group Mapping page.
                 GroupMappingDataTable::bumpListingCacheEpoch();
@@ -176,7 +174,6 @@ class CourseGroupTypeController extends Controller
             CourseGroupTypeMaster::create([
                 'type_name' => $request->type_name
             ]);
-            GroupMappingDataTable::bumpListingCacheEpoch();
 
             // Invalidate the cached Group Type dropdowns so the new type appears on
             // the Group Mapping page immediately (esp. on live, where Redis caching
@@ -231,7 +228,6 @@ class CourseGroupTypeController extends Controller
             }
 
             $courseGroupTypeMaster->delete();
-            GroupMappingDataTable::bumpListingCacheEpoch();
 
             GroupMappingDataTable::bumpListingCacheEpoch();
 
