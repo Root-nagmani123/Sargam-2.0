@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Concerns;
 
 use App\Exports\MasterGridExport;
+use App\Support\ExportCellValue;
 use App\Support\ExportCsvHeader;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -104,6 +105,16 @@ trait ExportsMasterGrid
         }
 
         if ($format === 'pdf') {
+            // DomPDF lays the whole document out in memory before it writes a byte:
+            // the Faculty grid alone measured ~9 s and ~260 MB at 668 rows. Without
+            // this the export fatals on a 128M default or trips a short
+            // max_execution_time, which reads to the user as a broken download.
+            // Same guard the other heavy DomPDF exports use (CalendarController,
+            // AttendanceController); both calls are silenced because a hardened
+            // php.ini may disable them and that must not break the export.
+            @ini_set('memory_limit', '512M');
+            @set_time_limit(300);
+
             return Pdf::loadView('admin.master.partials.export_pdf', $payload)
                 ->setPaper('a4', $orientation)
                 ->setOptions([
@@ -129,8 +140,10 @@ trait ExportsMasterGrid
             fputcsv($handle, $header);
 
             foreach ($rows as $index => $row) {
+                // ExportCellValue::safe() so a stored value beginning with = + - @
+                // arrives in Excel as text rather than as a live formula.
                 fputcsv($handle, array_values(array_map(
-                    fn ($col) => $col['value']($row, $index),
+                    fn ($col) => ExportCellValue::safe($col['value']($row, $index)),
                     $columns
                 )));
             }

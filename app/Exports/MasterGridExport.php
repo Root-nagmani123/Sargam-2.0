@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Support\ExportCellValue;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -71,8 +72,10 @@ class MasterGridExport implements
         $out = [];
 
         foreach ($this->rows as $index => $row) {
+            // PhpSpreadsheet's default binder stores a leading `=` string as a real
+            // formula cell, so neutralise before it ever reaches the sheet.
             $out[] = array_values(array_map(
-                fn ($col) => $col['value']($row, $index),
+                fn ($col) => ExportCellValue::safe($col['value']($row, $index)),
                 $this->columns
             ));
         }

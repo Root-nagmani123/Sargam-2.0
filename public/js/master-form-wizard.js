@@ -125,8 +125,15 @@
                 if (nextBtn) {
                     nextBtn.classList.toggle('d-none', step >= last);
                 }
+                // The submit stays reachable on EVERY step. Hiding it until the
+                // last step made the form unsubmittable for any record that
+                // cannot clear an earlier step's `required` fields — and those
+                // attributes do not all match what the server enforces, so a
+                // legacy row could be left with no way out. The page's own
+                // save handler still validates the whole form, and the click
+                // handler below brings the offending step forward.
                 if (finalBtn) {
-                    finalBtn.classList.toggle('d-none', step < last);
+                    finalBtn.classList.remove('d-none');
                 }
             }
 

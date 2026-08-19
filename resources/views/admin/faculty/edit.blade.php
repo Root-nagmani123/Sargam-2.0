@@ -122,7 +122,11 @@
                                     data-mst-next>
                                 <span>Save &amp; Next</span>
                             </button>
-                            <button class="btn mst-btn-submit d-inline-flex align-items-center gap-2 px-4 d-none"
+                            {{-- No `d-none`: the submit stays reachable on every step. See
+                                 master-form-wizard.js — hiding it until the last step left a
+                                 record that cannot clear an earlier step's `required` fields
+                                 with no way to save at all. --}}
+                            <button class="btn mst-btn-submit d-inline-flex align-items-center gap-2 px-4"
                                     type="button" id="saveFacultyForm" data-mst-final>
                                 <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">save</i>
                                 <span>Update Faculty</span>

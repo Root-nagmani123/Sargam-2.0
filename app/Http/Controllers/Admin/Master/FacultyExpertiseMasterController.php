@@ -169,7 +169,22 @@ class FacultyExpertiseMasterController extends Controller
         $expertise->expertise_name = $request->expertise_name;
         // User's primary key is `pk`, not `id` — ->id resolves to null here.
         $expertise->created_by = auth()->user()?->getKey();
-        $expertise->save();
+
+        try {
+            $expertise->save();
+        } catch (\Illuminate\Database\QueryException $e) {
+            // The unique rule above is a read-then-write: two submissions in the
+            // same instant both pass it. The database index is what actually
+            // prevents the duplicate, so turn its error into the same field
+            // message the validator would have produced rather than a 500.
+            if (($e->errorInfo[1] ?? null) === 1062) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['expertise_name' => 'This expertise name already exists.']);
+            }
+
+            throw $e;
+        }
 
         self::bumpListCacheEpoch();
 
