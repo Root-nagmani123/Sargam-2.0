@@ -48,6 +48,11 @@
                         <section id="step-5" class="step-section">
                             <!-- Content will be loaded via AJAX -->
                         </section>
+
+                        <h3>Employee Grade Pay</h3>
+                        <section id="step-6" class="step-section">
+                            <!-- Content will be loaded via AJAX -->
+                        </section>
                     </div>
                 </form>
 

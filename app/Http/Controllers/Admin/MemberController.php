@@ -11,8 +11,9 @@ use App\Http\Requests\Admin\Member\{
     StoreMemberStep3Request,
     StoreMemberStep4Request,
     StoreMemberStep5Request,
+    StoreMemberStep6Request,
 };
-use App\Models\{EmployeeMaster, EmployeeRoleMapping, UserCredential, City};
+use App\Models\{EmployeeMaster, EmployeeRoleMapping, UserCredential, City, PayrollSalaryMaster};
 use App\Exports\MemberExport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\AppellationMaster;
@@ -138,6 +139,51 @@ class MemberController extends Controller
     }
 
     /**
+     * Step 6 ("Employee Grade Pay") does NOT belong on employee_master — it's saved separately
+     * to payroll_salary_master by saveStep6PayrollData(). Every field here is optional, so only
+     * the ones the admin actually filled in are returned (an empty step submits an empty array).
+     */
+    private function mapStep6Data(Request $request): array
+    {
+        return array_filter([
+            'salary_grade_pk' => $request->gradepay,
+            'employee_category_master_pk' => $request->employeecategory,
+            'basic_pay' => $request->basicpay,
+            'bank_name' => $request->bankname,
+            'account_no' => $request->accountno,
+        ], fn ($value) => $value !== null && $value !== '');
+    }
+
+    /**
+     * Upserts payroll_salary_master for the given employee, keyed on employee_master_pk.
+     * Never touches fields the admin left blank — this table is also read by the Estate
+     * module (house eligibility joins on salary_grade_pk), so an existing row's other columns
+     * (net_salary, tds, etc., not exposed on this wizard) must survive untouched.
+     * payroll_salary_master.pk has no AUTO_INCREMENT, so new rows get a manually assigned pk
+     * (max(pk) + 1), matching the convention already used elsewhere in this app for such tables.
+     */
+    private function saveStep6PayrollData(int $employeeMasterPk, Request $request): void
+    {
+        $data = $this->mapStep6Data($request);
+
+        if (empty($data)) {
+            return;
+        }
+
+        $payroll = PayrollSalaryMaster::where('employee_master_pk', $employeeMasterPk)->first();
+
+        if ($payroll) {
+            $payroll->update($data);
+            return;
+        }
+
+        PayrollSalaryMaster::create(array_merge($data, [
+            'pk' => (int) (PayrollSalaryMaster::max('pk') ?? 0) + 1,
+            'employee_master_pk' => $employeeMasterPk,
+        ]));
+    }
+
+    /**
      * Validate a single step's fields against its StoreMemberStep{n}Request rules,
      * without persisting anything. Used while the wizard is in progress — the actual
      * DB write happens once, on the final store()/update() submit.
@@ -202,6 +248,7 @@ class MemberController extends Controller
             StoreMemberStep3Request::class,
             StoreMemberStep4Request::class,
             StoreMemberStep5Request::class,
+            StoreMemberStep6Request::class,
         ];
 
         $rules = [];
@@ -240,6 +287,8 @@ class MemberController extends Controller
             $this->mapStep4Data($request),
             $this->mapStep5Data($request, $profile_picture, $additional_doc_upload)
         ));
+
+        $this->saveStep6PayrollData($employee->pk, $request);
 
         $userCredential = UserCredential::create([
             'first_name' => $request->first_name,
@@ -294,6 +343,8 @@ class MemberController extends Controller
             $this->mapStep5Data($request, $profile_picture, $additional_doc_upload)
         ));
 
+        $this->saveStep6PayrollData((int) $request->emp_id, $request);
+
         UserCredential::updateOrCreate(
             ['user_id' => $request->emp_id], // Search condition
             [
@@ -330,7 +381,20 @@ class MemberController extends Controller
         $appellationMasterList = AppellationMaster::where('active_inactive', 1)
             ->pluck('appettation_name', 'pk')
             ->toArray();
-        return view("admin.member.steps.step{$step}", compact('appellationMasterList'));
+        [$gradePayOptions, $employeeCategoryOptions] = $this->step6DropdownOptions();
+        return view("admin.member.steps.step{$step}", compact('appellationMasterList', 'gradePayOptions', 'employeeCategoryOptions'));
+    }
+
+    /**
+     * Dropdown sources for Step 6 ("Employee Grade Pay"): salary_grade_master and
+     * employee_category_master. Neither table has an active/inactive flag, so all rows are listed.
+     */
+    private function step6DropdownOptions(): array
+    {
+        $gradePayOptions = \App\Models\SalaryGrade::all()->pluck('display_label_text', 'pk')->toArray();
+        $employeeCategoryOptions = \App\Models\EmployeeCategoryMaster::pluck('category', 'pk')->toArray();
+
+        return [$gradePayOptions, $employeeCategoryOptions];
     }
 
     public function show($id)
@@ -361,7 +425,9 @@ class MemberController extends Controller
         $appellationMasterList = AppellationMaster::where('active_inactive', 1)
             ->pluck('appettation_name', 'pk')
             ->toArray();
-        return view("admin.member.edit_steps.step{$step}", compact('member', 'appellationMasterList'));
+        [$gradePayOptions, $employeeCategoryOptions] = $this->step6DropdownOptions();
+        $payrollSalary = PayrollSalaryMaster::where('employee_master_pk', $id)->first();
+        return view("admin.member.edit_steps.step{$step}", compact('member', 'appellationMasterList', 'gradePayOptions', 'employeeCategoryOptions', 'payrollSalary'));
     }
 
     public function updateValidateStep(Request $request, $step, $id)
