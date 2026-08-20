@@ -9,14 +9,8 @@
 @php
     $isActive = (int) $faculty->active_inactive === 1;
 
-    $sectorName = \Illuminate\Support\Facades\DB::table('faculty_sector_master')
-        ->where('pk', $faculty->faculty_sector)
-        ->value('name');
-
-    $serviceName = \Illuminate\Support\Facades\DB::table('service_master')
-        ->where('pk', $faculty->service_master_pk)
-        ->value('service_name');
-
+    // $sectorName and $serviceName are resolved in FacultyController::show();
+    // this view issues no SQL of its own.
     $location = collect([
         $faculty->cityMaster->city_name ?? null,
         $faculty->districtMaster->district_name ?? null,

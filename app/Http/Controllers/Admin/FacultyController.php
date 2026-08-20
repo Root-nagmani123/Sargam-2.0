@@ -876,7 +876,19 @@ class FacultyController extends Controller
         if (!$faculty) {
             return redirect()->route('faculty.index')->with('error', 'Faculty not found');
         }
-        return view('admin.faculty.show', compact('faculty'));
+
+        // Neither of these is a relation on the model, so they were being queried
+        // from a @php block in the view. Resolved here instead — the view should
+        // not be issuing SQL.
+        $sectorName = $faculty->faculty_sector
+            ? DB::table('faculty_sector_master')->where('pk', $faculty->faculty_sector)->value('name')
+            : null;
+
+        $serviceName = $faculty->service_master_pk
+            ? DB::table('service_master')->where('pk', $faculty->service_master_pk)->value('service_name')
+            : null;
+
+        return view('admin.faculty.show', compact('faculty', 'sectorName', 'serviceName'));
     }
 
     /**

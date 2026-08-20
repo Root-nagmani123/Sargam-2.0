@@ -1,11 +1,8 @@
 @extends('admin.layouts.master')
-
 @section('title', 'Faculty')
-
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
 @endpush
-
 @section('setup_content')
 <div class="container-fluid mst-page">
     <x-breadcrum title="Faculty" :showBack="false">
@@ -99,9 +96,14 @@
                  enhancer (public/js/datatable-global-ui.js). Don't rebuild them. --}}
             <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    {{-- mst-table-pin-action: nine columns don't fit, so the panel
-                         scrolls — the Action column stays pinned to the right. --}}
-                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table mst-table-pin-action']) !!}
+                    {{-- Deliberately NOT `mst-table-pin-action`. A sticky cell reserves
+                         no space, and this one is 292px wide with an opaque background:
+                         measured in the browser it covered Modified Date, Modified By
+                         and Status at rest, and Status stayed covered even scrolled
+                         fully right — i.e. that column could never be read. Nine
+                         columns genuinely do not fit, so the panel scrolls and the
+                         Columns modal trims what a user does not need. --}}
+                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
                 </div>
                 <div id="facultyDtFooter"
                      class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
@@ -132,7 +134,6 @@
     </div>
 </div>
 @endsection
-
 @push('scripts')
     {!! $dataTable->scripts() !!}
 

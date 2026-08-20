@@ -1,11 +1,8 @@
 @extends('admin.layouts.master')
-
 @section('title', 'Faculty Type')
-
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
 @endpush
-
 @section('setup_content')
 <div class="container-fluid mst-page">
     <x-breadcrum title="Faculty Type" :showBack="false">
@@ -239,7 +236,6 @@
     </div>
 </div>
 @endsection
-
 @push('scripts')
 <script>
     $(function () {

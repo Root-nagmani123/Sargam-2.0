@@ -171,9 +171,18 @@ class FacultyDataTable extends DataTable
      */
     public function query(FacultyMaster $model): QueryBuilder
     {
-        // return $model->newQuery();
-        return $model->orderBy('pk', 'desc')->newQuery();
-
+        // `createdByUser` is eager-loaded because the Modified By column calls
+        // $row->createdByUser?->name for every row — without this that is one
+        // query per row on every page of the grid.
+        //
+        // The chain used to read `$model->orderBy(...)->newQuery()`, which only
+        // worked by accident: Eloquent\Builder::__call forwards newQuery() to the
+        // base query builder and then returns $this anyway, so the ordering
+        // survived and a whole base builder was created and thrown away. Written
+        // the way it was meant to be read.
+        return $model->newQuery()
+            ->with('createdByUser')
+            ->orderBy('pk', 'desc');
     }
 
     /**

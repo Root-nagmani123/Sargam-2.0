@@ -145,7 +145,15 @@
  * For grids wide enough to scroll inside `.table-responsive`, the row controls
  * must not scroll out of reach. Add `mst-table-pin-action` to the <table> and
  * the last column stays fixed to the right edge. Backgrounds are explicit
- * because a sticky cell would otherwise let the scrolled content show through. */
+ * because a sticky cell would otherwise let the scrolled content show through.
+ *
+ * ⚠️ Only opt in when the Action column is NARROW relative to the spare width.
+ * A sticky cell reserves no space — it floats over whatever is beneath it. The
+ * Faculty grid used this and the 292px action stack covered Modified Date,
+ * Modified By and Status at rest, with Status still covered at maximum scroll,
+ * so that column could never be read. Measure the table width against the
+ * wrapper before applying this; if the table is wider than the wrapper by more
+ * than the action column, plain scrolling is the correct answer. */
 /* Chrome ignores position:sticky on cells of a border-collapse:collapse table
  * (Bootstrap's default), so the pinned grid opts into separate borders. Cells
  * only carry a bottom border, so nothing doubles up visually. */
@@ -176,6 +184,33 @@
 .mst-page .mst-table-pin-action thead th:last-child {
     background: #f2f4f7;
     z-index: 3;
+}
+
+/* A grid that scrolls sideways has to LOOK like it scrolls. Windows/Chrome draws
+ * an overlay scrollbar that occupies 0px and fades out, so on the Faculty grid
+ * three columns sat off-screen with nothing on the page suggesting they existed.
+ * A thin, always-drawn track is the affordance. */
+.mst-page .table-responsive {
+    scrollbar-width: thin;                       /* Firefox */
+    scrollbar-color: #c3cbd6 transparent;
+}
+
+.mst-page .table-responsive::-webkit-scrollbar {
+    height: 10px;                                /* WebKit/Blink: force a real track */
+}
+
+.mst-page .table-responsive::-webkit-scrollbar-track {
+    background: #f2f4f7;
+    border-radius: 6px;
+}
+
+.mst-page .table-responsive::-webkit-scrollbar-thumb {
+    background: #c3cbd6;
+    border-radius: 6px;
+}
+
+.mst-page .table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #9aa6b5;
 }
 
 /* Hairline so the pinned cell reads as pinned while the rest scrolls under it. */
