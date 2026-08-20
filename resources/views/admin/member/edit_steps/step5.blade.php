@@ -42,7 +42,7 @@
         <div class="mb-3">
             <label class="form-label" for="miscellaneous">Additional Message</label>
             <textarea name="miscellaneous" id="miscellaneous" rows="4" class="form-control"
-                placeholder="eg. Lorem ipsum dolor">{{ $member->other_miscellaneous_fields ?? old('miscellaneous') }}</textarea>
+                placeholder="Any other information about this employee">{{ $member->other_miscellaneous_fields ?? old('miscellaneous') }}</textarea>
         </div>
     </div>
 </div>

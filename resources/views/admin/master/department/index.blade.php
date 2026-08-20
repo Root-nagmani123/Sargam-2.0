@@ -119,14 +119,12 @@
                     <div class="mst-modal-body">
                         <div id="dpmFormAlert" class="alert d-none mb-3" role="alert"></div>
 
-                        <div class="mst-field-card">
-                            <label for="dpmName" class="mst-form-label">
-                                Department Name <span class="mst-req">*</span>
-                            </label>
-                            <input type="text" class="mst-control" id="dpmName" name="department_name"
-                                placeholder="eg. Administration" maxlength="100" required>
-                            <div class="invalid-feedback" data-field="department_name"></div>
-                        </div>
+                        <label for="dpmName" class="mst-form-label">
+                            Department Name <span class="mst-req">*</span>
+                        </label>
+                        <input type="text" class="mst-control" id="dpmName" name="department_name"
+                            placeholder="eg. Administration" maxlength="100" required>
+                        <div class="invalid-feedback" data-field="department_name"></div>
                     </div>
 
                     <div class="mst-modal-footer">

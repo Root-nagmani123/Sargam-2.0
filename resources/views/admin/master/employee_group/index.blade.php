@@ -119,14 +119,12 @@
                     <div class="mst-modal-body">
                         <div id="egmFormAlert" class="alert d-none mb-3" role="alert"></div>
 
-                        <div class="mst-field-card">
-                            <label for="egmName" class="mst-form-label">
-                                Employee Group Name <span class="mst-req">*</span>
-                            </label>
-                            <input type="text" class="mst-control" id="egmName" name="emp_group_name"
-                                placeholder="eg. Group A" maxlength="30" required>
-                            <div class="invalid-feedback" data-field="emp_group_name"></div>
-                        </div>
+                        <label for="egmName" class="mst-form-label">
+                            Employee Group Name <span class="mst-req">*</span>
+                        </label>
+                        <input type="text" class="mst-control" id="egmName" name="emp_group_name"
+                            placeholder="eg. Group A" maxlength="30" required>
+                        <div class="invalid-feedback" data-field="emp_group_name"></div>
                     </div>
 
                     <div class="mst-modal-footer">

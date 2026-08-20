@@ -3,6 +3,17 @@
 @section('title', 'Member')
 
 @push('styles')
+{{-- Select2's own stylesheet. The local copy, not the CDN — the library is
+     already vendored (its JS ships from admin/layouts/footer.blade.php), so a
+     CDN link would only add a round trip and an offline failure mode.
+     The chip and panel styling lives with the rest of the programme-dt filter
+     chrome in custom.css, under .programme-dt-filter-select /
+     .programme-dt-filter-dropdown. --}}
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+{{-- MUST come after select2.min.css — it overrides it. Supplies the chevron
+     caret, the panel, the search box and the z-index that clears modals;
+     custom.css then trims it to the 40px programme-dt chip. --}}
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}?v={{ @filemtime(public_path('css/select2-theme.css')) ?: time() }}">
 <style>
     /* Page-scoped only — tokens come from public/css/sargam-app.css (docs/design.md).
        Everything else on this screen is the shared programme-dt chrome in custom.css. */
@@ -95,6 +106,10 @@
 
     .member-index-page .mbr-act--view {
         color: var(--ds-primary, #004384);
+    }
+
+    .member-index-page .mbr-act--print {
+        color: #475467;
     }
 
     .member-index-page .mbr-act--del {
@@ -197,7 +212,50 @@
 
     <div class="card border-0 shadow-sm rounded-1 overflow-hidden">
         <div class="card-body p-3 p-md-4">
-            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4 programme-dt-toolbar">
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                {{-- Type / Group / Department. Server-side filters, not DataTables
+                     column search: they change the query the grid, the exports and
+                     the print sheet all run, so the three can never disagree.
+                     Classes are the shared programme-dt chrome (custom.css), same
+                     as the Attendance toolbar. --}}
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="programme-dt-filters-label">Filters</span>
+
+                    <div class="programme-dt-filter-select">
+                        <select id="memberFilterType" class="form-select member-filter" data-filter-key="type_filter"
+                            aria-label="Filter by employee type">
+                            <option value="">All Types</option>
+                            @foreach ($employeeTypes as $pk => $name)
+                                <option value="{{ $pk }}">{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="programme-dt-filter-select">
+                        <select id="memberFilterGroup" class="form-select member-filter" data-filter-key="group_filter"
+                            aria-label="Filter by employee group">
+                            <option value="">All Groups</option>
+                            @foreach ($employeeGroups as $pk => $name)
+                                <option value="{{ $pk }}">{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="programme-dt-filter-select">
+                        <select id="memberFilterDepartment" class="form-select member-filter"
+                            data-filter-key="department_filter" aria-label="Filter by department">
+                            <option value="">All Departments</option>
+                            @foreach ($departments as $pk => $name)
+                                <option value="{{ $pk }}">{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <button type="button" class="btn programme-dt-btn-reset d-none" id="memberResetFilters">
+                        Reset Filters
+                    </button>
+                </div>
+
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
                     <button type="button" class="btn programme-dt-btn-columns" id="memberBtnColumns"
                         data-bs-toggle="modal" data-bs-target="#memberColumnVisibilityModal"
@@ -290,6 +348,96 @@ $(function () {
     };
     var MEMBER_EXPORT_KEY_COUNT = Object.keys(MEMBER_EXPORT_KEYS).length;
 
+    /* ---- Type / Group / Department filters --------------------------------- */
+    // One source of truth for what is applied: the selects themselves. The grid
+    // ajax, the export links and the Reset button all read this, so none of them
+    // can drift from the others.
+    function memberActiveFilters() {
+        var out = {};
+        $('.member-filter').each(function () {
+            var value = $.trim($(this).val() || '');
+            if (value) {
+                out[$(this).data('filter-key')] = value;
+            }
+        });
+        return out;
+    }
+
+    // Reset only means something once something is applied.
+    function memberSyncResetBtn() {
+        $('#memberResetFilters').toggleClass('d-none', Object.keys(memberActiveFilters()).length === 0);
+    }
+
+    // Yajra owns the ajax URL, so the filters ride along on each request rather
+    // than being baked into it. MemberDataTable::resolveFilters() reads them, and
+    // they are part of the Redis cache fingerprint — without that every filter
+    // combination would be served the first one's cached rows.
+    $(document).on('preXhr.dt', function (e, settings, data) {
+        if (!settings.nTable || settings.nTable.id !== 'member-table') {
+            return;
+        }
+        var filters = memberActiveFilters();
+        ['type_filter', 'group_filter', 'department_filter'].forEach(function (key) {
+            data[key] = filters[key] || '';
+        });
+    });
+
+    // Everything that has to happen once, after any filter changes.
+    function memberApplyFilters() {
+        memberSyncResetBtn();
+        window.memberSyncExportLinks();
+        if ($.fn.DataTable.isDataTable(MEMBER_TABLE)) {
+            // resetPaging=true: page 7 of the unfiltered list is usually past the
+            // end of the filtered one, which would come back empty and read as
+            // "this filter matches nothing".
+            $(MEMBER_TABLE).DataTable().ajax.reload(null, true);
+        }
+    }
+
+    // Select2 re-fires the native `change` on the original <select>, so this one
+    // handler serves both the plain control and the widget.
+    $(document).on('change', '.member-filter', memberApplyFilters);
+
+    $('#memberResetFilters').on('click', function () {
+        // 'change.select2' is the namespaced event the widget listens on to
+        // redraw. A plain .val('') would clear the underlying <select> while the
+        // widget kept showing the old label; a plain .trigger('change') would
+        // redraw but also run memberApplyFilters once PER select — three
+        // reloads for one click. This redraws all three, then applies once.
+        $('.member-filter').val('').trigger('change.select2');
+        memberApplyFilters();
+    });
+
+    /* ---- Searchable filter dropdowns (Select2) ----------------------------- */
+    // 71 departments is past the point where a native <select> is usable, so each
+    // filter becomes type-to-search, through the shared public/js/dropdown-search.js
+    // helper rather than a second Select2 setup of our own.
+    //
+    // Per-select, not initAll(): one shared options object would give all three
+    // the same placeholder. Each takes its own from the "All …" option the markup
+    // already carries, and that same option is allowClear's empty value — so
+    // there is exactly one definition of "no filter".
+    (function initMemberFilterSelect2() {
+        if (typeof DropdownSearch === 'undefined' || !$.fn.select2) {
+            return; // native <select> still works; it is just not searchable
+        }
+        $('.member-filter').each(function () {
+            var $sel = $(this);
+            DropdownSearch.init($sel, {
+                placeholder: $.trim($sel.find('option[value=""]').first().text()) || 'Select',
+                allowClear: true,
+                width: '100%',
+                // MUST be set. The helper defaults to the nearest .card-body, and
+                // this toolbar sits inside a `.card.overflow-hidden` — the panel
+                // would be clipped at the card edge. On <body> it never is.
+                dropdownParent: $('body'),
+                // The panel is no longer a descendant of .programme-dt-filter-select,
+                // so its styling in custom.css hangs off this class instead.
+                dropdownCssClass: 'programme-dt-filter-dropdown'
+            });
+        });
+    })();
+
     window.memberSyncExportLinks = function () {
         var hidden = memberGetHiddenCols();
         var keys = [];
@@ -300,6 +448,7 @@ $(function () {
         });
 
         var search = $.trim($('#memberDtSearch input[type="search"]').val() || '');
+        var filters = memberActiveFilters();
 
         $('.member-export-link').each(function () {
             var url = new URL(this.href, window.location.origin);
@@ -307,6 +456,11 @@ $(function () {
             if (search) {
                 url.searchParams.set('q', search);
             }
+            // Same keys the grid's ajax sends, so a download reproduces exactly
+            // the rows on screen rather than the whole table.
+            Object.keys(filters).forEach(function (key) {
+                url.searchParams.set(key, filters[key]);
+            });
             // Omit ?cols= entirely while nothing is hidden — the server reads
             // "no cols" as "every column".
             if (keys.length && keys.length !== MEMBER_EXPORT_KEY_COUNT) {
@@ -376,6 +530,7 @@ $(function () {
         });
 
         // Stamp ?cols= now that the saved visibility has been applied.
+        memberSyncResetBtn();
         window.memberSyncExportLinks();
     }
 

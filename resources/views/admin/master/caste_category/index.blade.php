@@ -119,21 +119,19 @@
                     <div class="mst-modal-body">
                         <div id="cstFormAlert" class="alert d-none mb-3" role="alert"></div>
 
-                        <div class="mst-field-card">
-                            <label for="cstName" class="mst-form-label">
-                                Category/Caste Name <span class="mst-req">*</span>
-                            </label>
-                            <input type="text" class="mst-control" id="cstName" name="Seat_name"
-                                placeholder="eg. General" maxlength="30" required>
-                            <div class="invalid-feedback" data-field="Seat_name"></div>
+                        <label for="cstName" class="mst-form-label">
+                            Category/Caste Name <span class="mst-req">*</span>
+                        </label>
+                        <input type="text" class="mst-control" id="cstName" name="Seat_name"
+                            placeholder="eg. General" maxlength="30" required>
+                        <div class="invalid-feedback" data-field="Seat_name"></div>
 
-                            <label for="cstNameHindi" class="mst-form-label mt-3">
-                                Category/Caste Name (Hindi) <span class="mst-req">*</span>
-                            </label>
-                            <input type="text" class="mst-control" id="cstNameHindi" name="Seat_name_hindi"
-                                placeholder="eg. सामान्य" maxlength="30" required>
-                            <div class="invalid-feedback" data-field="Seat_name_hindi"></div>
-                        </div>
+                        <label for="cstNameHindi" class="mst-form-label mt-3">
+                            Category/Caste Name (Hindi) <span class="mst-req">*</span>
+                        </label>
+                        <input type="text" class="mst-control" id="cstNameHindi" name="Seat_name_hindi"
+                            placeholder="eg. सामान्य" maxlength="30" required>
+                        <div class="invalid-feedback" data-field="Seat_name_hindi"></div>
                     </div>
 
                     <div class="mst-modal-footer">

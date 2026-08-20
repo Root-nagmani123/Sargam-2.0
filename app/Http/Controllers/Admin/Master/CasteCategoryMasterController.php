@@ -130,6 +130,11 @@ class CasteCategoryMasterController extends Controller
             [
                 'emptyText' => 'No caste categories to export',
                 'centeredKeys' => ['sno', 'status'],
+                // The Hindi column is Devanagari, which DomPDF draws unshaped —
+                // matras land on the wrong side of their consonant and viramas
+                // drop, so "अन्य पिछड़ा वर्ग" prints as "अनय पछिडा वरग". mPDF
+                // shapes it correctly (see ExportsBrandedGrid::brandedGridMpdf).
+                'pdfEngine' => 'mpdf',
                 'columnStyles' => '
         .col-sno     { width: 10%; text-align: center; }
         .col-name    { width: 37%; }

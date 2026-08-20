@@ -38,15 +38,44 @@ class MemberDataTable extends DataTable
     }
 
     /**
-     * The grid's own scoping — status pill plus free-text search.
+     * The toolbar's Type / Group / Department dropdowns.
+     *
+     * Each is a foreign key, so an id is all that can ever be legal — anything
+     * else is dropped rather than passed to the query. Returned as one array so
+     * the grid, the export and the cache key cannot disagree about what is
+     * applied.
+     *
+     * @return array{status:string, type:int|null, group:int|null, department:int|null}
+     */
+    public static function resolveFilters(): array
+    {
+        $id = function (string $key): ?int {
+            $raw = trim((string) request($key, ''));
+
+            return ($raw !== '' && ctype_digit($raw) && (int) $raw > 0) ? (int) $raw : null;
+        };
+
+        return [
+            'status' => self::resolveStatusFilter(),
+            'type' => $id('type_filter'),
+            'group' => $id('group_filter'),
+            'department' => $id('department_filter'),
+        ];
+    }
+
+    /**
+     * The grid's own scoping — the toolbar filters plus free-text search.
      *
      * Shared with MemberController::export() so a download can never show a
      * different set of rows than the screen it was started from.
      *
      * @param  QueryBuilder  $query
+     * @param  array{status?:string, type?:int|null, group?:int|null, department?:int|null}  $filters
      */
-    public static function applyListingFilters($query, string $statusFilter, string $search = '')
+    public static function applyListingFilters($query, array $filters, string $search = '')
     {
+        $statusFilter = $filters['status'] ?? '';
+
         if ($statusFilter === 'active') {
             $query->where('status', 1);
         } elseif ($statusFilter === 'inactive') {
@@ -54,6 +83,13 @@ class MemberDataTable extends DataTable
             $query->where(function ($sub) {
                 $sub->where('status', '!=', 1)->orWhereNull('status');
             });
+        }
+
+        // employee_type_master.pk, employee_group_master.pk, department_master.pk.
+        foreach (['type' => 'emp_type', 'group' => 'emp_group_pk', 'department' => 'department_master_pk'] as $key => $column) {
+            if (! empty($filters[$key])) {
+                $query->where($column, $filters[$key]);
+            }
         }
 
         $search = trim($search);
@@ -88,9 +124,10 @@ class MemberDataTable extends DataTable
             'MemberDataTable',
             fn () => parent::ajax(),
             [
-                // Not part of the standard DataTables fingerprint — without this the
-                // Active/Inactive pills would all share one cached payload.
-                'status_filter' => self::resolveStatusFilter(),
+                // Not part of the standard DataTables fingerprint — without these
+                // every filter combination would share one cached payload, and the
+                // grid would answer a Department pick with the previous rows.
+                'listing_filters' => self::resolveFilters(),
             ]
         );
     }
@@ -125,6 +162,7 @@ class MemberDataTable extends DataTable
                 $isActive = (int) $row->status === 1;
                 $editUrl = route('member.edit', $row->pk);
                 $viewUrl = route('member.show', encrypt($row->pk));
+                $printUrl = route('member.print', encrypt($row->pk));
                 $deleteUrl = route('member.destroy', encrypt($row->pk));
                 $checked = $isActive ? 'checked' : '';
                 $toggleLabel = $isActive ? 'Deactivate' : 'Activate';
@@ -151,6 +189,11 @@ class MemberDataTable extends DataTable
                     <a href="' . e($viewUrl) . '" class="mbr-act mbr-act--view" title="View member">
                         <span class="mbr-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span>
                         <span class="mbr-act__label">View</span>
+                    </a>
+                    <a href="' . e($printUrl) . '" class="mbr-act mbr-act--print" target="_blank" rel="noopener"
+                        title="Print this member\'s details">
+                        <span class="mbr-act__icon"><i class="bi bi-printer" aria-hidden="true"></i></span>
+                        <span class="mbr-act__label">Print</span>
                     </a>
                     <label class="mbr-act mbr-act--toggle" title="' . $toggleLabel . ' member">
                         <span class="mbr-act__icon">
@@ -203,8 +246,8 @@ class MemberDataTable extends DataTable
         $query = $model->newQuery()->with('appellationMaster');
 
         // Search is left to Yajra here (it owns the DataTables request); only the
-        // status pill is applied, through the same helper the exports use.
-        self::applyListingFilters($query, self::resolveStatusFilter());
+        // toolbar filters are applied, through the same helper the exports use.
+        self::applyListingFilters($query, self::resolveFilters());
 
         return $query->orderBy('pk', 'desc');
     }

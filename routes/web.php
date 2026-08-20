@@ -394,6 +394,9 @@ Route::middleware(['auth'])->group(function () {
         })->name('profile.edit.self');
         Route::get('profile/edit/{id}', 'editProfile')->name('profile.edit');
         Route::get('show/{id}', 'show')->name('show');
+        // Row-level Print: one member's profile, as opposed to export/print which
+        // prints the whole filtered listing.
+        Route::get('print/{id}', 'printMember')->name('print');
         Route::get('/step/{step}', 'loadStep')->name('load-step');
         Route::get('/edit-step/{step}/{id}', 'editStep')->name('edit-step');
         Route::post('/validate-step/{step}', 'validateStep');

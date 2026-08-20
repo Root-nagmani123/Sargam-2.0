@@ -26,7 +26,13 @@
     <meta charset="utf-8">
     <title>{{ $title }} — LBSNAA</title>
     <style>
-        @page { size: A4 portrait; margin: 12mm 10mm; }
+        /* margin:0, NOT 12mm 10mm. A non-zero @page margin is where Chrome and
+           Edge draw their own header and footer — the print date/time, the page
+           title, the source URL and "1/1". There is no CSS switch for those; the
+           only way to drop them is to leave the browser no margin to draw in, so
+           the sheet's real margin moves to the body padding below. The branded
+           "Generated:" line stays — it is ours, and the PDF/CSV/Excel carry it too. */
+        @page { size: A4 portrait; margin: 0; }
 
         body {
             font-family: Arial, Helvetica, sans-serif;
@@ -138,7 +144,9 @@
         .bx-foot { margin-top: 10px; text-align: center; font-size: 8px; color: #6b7280; }
 
         @media print {
-            body { padding: 0; }
+            /* Carries the page margin that @page gave up, so the content still
+               sits inside the printable area instead of running to the paper edge. */
+            body { padding: 12mm 10mm; }
         }
 
         {!! $columnStyles !!}

@@ -119,14 +119,12 @@
                     <div class="mst-modal-body">
                         <div id="dsgFormAlert" class="alert d-none mb-3" role="alert"></div>
 
-                        <div class="mst-field-card">
-                            <label for="dsgName" class="mst-form-label">
-                                Designation Name <span class="mst-req">*</span>
-                            </label>
-                            <input type="text" class="mst-control" id="dsgName" name="designation_name"
-                                placeholder="eg. Deputy Director" maxlength="100" required>
-                            <div class="invalid-feedback" data-field="designation_name"></div>
-                        </div>
+                        <label for="dsgName" class="mst-form-label">
+                            Designation Name <span class="mst-req">*</span>
+                        </label>
+                        <input type="text" class="mst-control" id="dsgName" name="designation_name"
+                            placeholder="eg. Deputy Director" maxlength="100" required>
+                        <div class="invalid-feedback" data-field="designation_name"></div>
                     </div>
 
                     <div class="mst-modal-footer">

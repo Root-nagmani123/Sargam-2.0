@@ -27,6 +27,10 @@
     $emptyText    = $emptyText ?? 'Nothing to export';
     $note         = $note ?? null;
     $total        = $total ?? $rows->count();
+    // 'dompdf' (default) or 'mpdf'. Same markup either way — only the
+    // page-number mechanism differs, since mPDF cannot run DomPDF's script block
+    // and sets its footer from the trait instead.
+    $engine       = $engine ?? 'dompdf';
 @endphp
 <!doctype html>
 <html lang="en">
@@ -34,7 +38,13 @@
     <meta charset="utf-8">
     <title>{{ $title }} — LBSNAA</title>
     <style>
+@if ($engine !== 'mpdf')
+        {{-- DomPDF only. mPDF misparses this rule badly enough to collapse the
+             text column to one character per line (a 5-row report came out as
+             242 pages); it takes its page size and margins from the constructor
+             in ExportsBrandedGrid::brandedGridMpdf() instead, set to match. --}}
         @page { size: A4 portrait; margin: 12mm 10mm; }
+@endif
         * { font-family: 'DejaVu Sans', sans-serif; }
         body { margin: 0; padding: 0; color: #1f2937; font-size: 9px; }
 
@@ -83,9 +93,14 @@
 
     <table class="pdf-hdr">
         <tr>
+            {{-- Height is inline, not in the stylesheet: mPDF sizes an <img> from
+                 its attributes/inline style and ignores a descendant CSS rule, so
+                 lbsnaa_logo.jpg laid out at its natural 1583px and squeezed the
+                 title cell to one character per line. DomPDF computes the same
+                 44px either way. --}}
             <td class="logo">
-                @if($emblem)<img src="{{ $emblem }}" alt="">@endif
-                @if($logo)<img src="{{ $logo }}" alt="">@endif
+                @if($emblem)<img src="{{ $emblem }}" alt="" height="44" style="height:44px;">@endif
+                @if($logo)<img src="{{ $logo }}" alt="" height="44" style="height:44px;">@endif
             </td>
             <td class="centre">
                 <div class="inst">LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION</div>
@@ -131,9 +146,12 @@
     </table>
 
     <div class="foot">Sargam 2.0 · Lal Bahadur Shastri National Academy of Administration</div>
+    @if ($engine !== 'mpdf')
     {{-- Page numbers on every page. Must be the LAST thing in <body>: DomPDF
          only resolves the page count once the whole document is laid out, so a
-         script placed earlier renders every page as "Page N of 1". --}}
+         script placed earlier renders every page as "Page N of 1".
+         mPDF cannot execute this — it gets the same footer from
+         ExportsBrandedGrid::brandedGridMpdf() via SetHTMLFooter(). --}}
     <script type="text/php">
         if (isset($pdf)) {
             $text = "Page {PAGE_NUM} of {PAGE_COUNT}";
@@ -143,5 +161,6 @@
             $pdf->page_text($pdf->get_width() - $w - 28, $pdf->get_height() - 24, $text, $font, $size, [0.42, 0.45, 0.5]);
         }
     </script>
+    @endif
 </body>
 </html>

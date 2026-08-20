@@ -119,14 +119,12 @@
                     <div class="mst-modal-body">
                         <div id="etmFormAlert" class="alert d-none mb-3" role="alert"></div>
 
-                        <div class="mst-field-card">
-                            <label for="etmName" class="mst-form-label">
-                                Category Type Name <span class="mst-req">*</span>
-                            </label>
-                            <input type="text" class="mst-control" id="etmName" name="employee_type_name"
-                                placeholder="eg. Contractual" maxlength="255" required>
-                            <div class="invalid-feedback" data-field="employee_type_name"></div>
-                        </div>
+                        <label for="etmName" class="mst-form-label">
+                            Category Type Name <span class="mst-req">*</span>
+                        </label>
+                        <input type="text" class="mst-control" id="etmName" name="employee_type_name"
+                            placeholder="eg. Contractual" maxlength="255" required>
+                        <div class="invalid-feedback" data-field="employee_type_name"></div>
                     </div>
 
                     <div class="mst-modal-footer">
