@@ -342,6 +342,9 @@ $(function () {
         'S.No.': 'sno',
         'Employee Name': 'employee_name',
         'Employee ID': 'employee_id',
+        'Employee Type': 'employee_type',
+        'Employee Group': 'employee_group',
+        'Department': 'department',
         'Mobile No': 'mobile_no',
         'Email': 'email',
         'Status': 'status'

@@ -156,6 +156,13 @@ class MemberDataTable extends DataTable
                 return implode(' ', $parts);
             })
             ->addColumn('employee_id', fn ($row) => (string) $row->emp_id)
+            // Type / Group / Department: the three the toolbar already filters on,
+            // now on the row as well, so a filtered grid shows what it filtered by.
+            // Their tables are eager-loaded in query() - resolving them per row
+            // would be three extra queries x page length.
+            ->addColumn('employee_type', fn ($row) => (string) optional($row->employeeType)->category_type_name)
+            ->addColumn('employee_group', fn ($row) => (string) optional($row->employeeGroup)->emp_group_name)
+            ->addColumn('department', fn ($row) => (string) optional($row->department)->department_name)
             ->addColumn('mobile_no', fn ($row) => (string) $row->mobile)
             ->addColumn('email', fn ($row) => (string) $row->email)
             ->addColumn('actions', function ($row) {
@@ -243,7 +250,14 @@ class MemberDataTable extends DataTable
 
     public function query(EmployeeMaster $model): QueryBuilder
     {
-        $query = $model->newQuery()->with('appellationMaster');
+        // employeeType / employeeGroup / department feed the columns of the same
+        // name; without them the grid costs three queries per row.
+        $query = $model->newQuery()->with([
+            'appellationMaster',
+            'employeeType',
+            'employeeGroup',
+            'department',
+        ]);
 
         // Search is left to Yajra here (it owns the DataTables request); only the
         // toolbar filters are applied, through the same helper the exports use.
@@ -314,6 +328,11 @@ class MemberDataTable extends DataTable
             Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('employee_name')->title('Employee Name')->addClass('text-start')->orderable(false)->searchable(true),
             Column::make('employee_id')->title('Employee ID')->addClass('text-start')->orderable(false)->searchable(false),
+            // Computed, not make(): these read off relations, so there is no
+            // employee_master column for DataTables to sort or search on.
+            Column::computed('employee_type')->title('Employee Type')->addClass('text-start'),
+            Column::computed('employee_group')->title('Employee Group')->addClass('text-start'),
+            Column::computed('department')->title('Department')->addClass('text-start'),
             Column::make('mobile_no')->title('Mobile No')->addClass('text-start')->orderable(false)->searchable(true),
             Column::make('email')->title('Email')->addClass('text-start')->orderable(false)->searchable(true),
             Column::computed('status')->title('Status')->addClass('text-center')->orderable(false)->searchable(false)

@@ -7,7 +7,7 @@
      column list handed to the shared one.
 
      Props:
-       $member        the EmployeeMaster row
+       $member        the EmployeeMaster row (profile_picture supplies the photo)
        $sections      MemberController::memberProfileSections() — the same array
                       the View screen renders, so print cannot drift from screen
        $assignedRoles Collection of ['role_name' => …]
@@ -22,6 +22,18 @@
     $isActive = (int) $member->status === 1;
     $designation = optional($member->designation)->designation_name;
     $department = optional($member->department)->department_name;
+
+    // The same photograph the View screen shows, off the same 'public' disk.
+    // Checked with Storage::exists() rather than printed blind: a missing file
+    // would put a broken-image glyph on a sheet that gets handed to someone.
+    $photoPath = trim((string) $member->profile_picture);
+    $photoUrl = ($photoPath !== '' && \Illuminate\Support\Facades\Storage::disk('public')->exists($photoPath))
+        ? asset('storage/' . $photoPath)
+        : null;
+    $initials = collect([$member->first_name, $member->last_name])
+        ->map(fn ($part) => mb_substr(trim((string) $part), 0, 1))
+        ->filter()
+        ->implode('');
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -70,11 +82,41 @@
         }
         .bx-meta { text-align: center; font-size: 9px; color: #6b7280; margin-bottom: 8px; }
 
-        /* ── Identity band: name, id/designation/department, status ── */
-        .mp-ident {
+        /* ── Identity band: photo, name, id/designation/department, status ── */
+        /* A table, not flexbox, like every other layout on this sheet: the band
+           has to hold its two columns in whatever engine renders it. */
+        table.mp-ident {
+            width: 100%;
+            border-collapse: collapse;
             background: #eef2f8;
-            padding: 8px 10px;
             margin-bottom: 10px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        table.mp-ident td { padding: 8px 10px; vertical-align: middle; }
+
+        /* Fixed-width cell so the name block starts at the same x whether or not
+           this member has a photograph on file. */
+        td.mp-ident__photo { width: 76px; padding-right: 0; }
+        .mp-ident__photo img {
+            width: 66px;
+            height: 80px;
+            object-fit: cover;
+            border: 1px solid #c7d2e3;
+            background: #ffffff;
+        }
+        /* Initials stand in for a missing photograph, as on the View screen —
+           an empty frame reads as a printing fault, not as "none on file". */
+        .mp-ident__initials {
+            width: 66px;
+            height: 80px;
+            border: 1px solid #c7d2e3;
+            background: #ffffff;
+            color: #003366;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            line-height: 80px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -139,15 +181,26 @@
     <div class="bx-title">Employee Details</div>
     <div class="bx-meta">Generated: {{ $exportDate }}</div>
 
-    <div class="mp-ident">
-        <div class="mp-ident__name">{{ $fullName !== '' ? $fullName : 'Member' }}</div>
-        <div class="mp-ident__meta">
-            <span>{{ filled($member->emp_id) ? 'ID ' . $member->emp_id : 'No employee ID' }}</span>
-            @if (filled($designation))<span>{{ $designation }}</span>@endif
-            @if (filled($department))<span>{{ $department }}</span>@endif
-            <span class="mp-status {{ $isActive ? 'mp-status--on' : 'mp-status--off' }}">{{ $isActive ? 'Active' : 'Inactive' }}</span>
-        </div>
-    </div>
+    <table class="mp-ident">
+        <tr>
+            <td class="mp-ident__photo">
+                @if ($photoUrl)
+                    <img src="{{ $photoUrl }}" alt="Photograph of {{ $fullName !== '' ? $fullName : 'member' }}">
+                @else
+                    <div class="mp-ident__initials">{!! $initials !== '' ? e(strtoupper($initials)) : '&mdash;' !!}</div>
+                @endif
+            </td>
+            <td>
+                <div class="mp-ident__name">{{ $fullName !== '' ? $fullName : 'Member' }}</div>
+                <div class="mp-ident__meta">
+                    <span>{{ filled($member->emp_id) ? 'ID ' . $member->emp_id : 'No employee ID' }}</span>
+                    @if (filled($designation))<span>{{ $designation }}</span>@endif
+                    @if (filled($department))<span>{{ $department }}</span>@endif
+                    <span class="mp-status {{ $isActive ? 'mp-status--on' : 'mp-status--off' }}">{{ $isActive ? 'Active' : 'Inactive' }}</span>
+                </div>
+            </td>
+        </tr>
+    </table>
 
     {{-- Two label/value pairs per row, except after the '__wide' marker, where a
          single value spans the rest of the row — long addresses are unreadable in

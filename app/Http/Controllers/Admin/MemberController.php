@@ -530,7 +530,7 @@ class MemberController extends Controller
         ], 200);
     }
     /**
-     * The listing's export columns - deliberately the same six the grid shows,
+     * The listing's export columns - deliberately the same nine the grid shows,
      * in the same order, so a downloaded report can be reconciled against the
      * screen it came from (docs/new-design-index-page.md section 1).
      *
@@ -569,6 +569,21 @@ class MemberController extends Controller
                 'class' => 'col-empid',
                 'value' => fn ($row) => (string) $row->emp_id,
             ],
+            'employee_type' => [
+                'heading' => 'Employee Type',
+                'class' => 'col-type',
+                'value' => fn ($row) => (string) optional($row->employeeType)->category_type_name,
+            ],
+            'employee_group' => [
+                'heading' => 'Employee Group',
+                'class' => 'col-group',
+                'value' => fn ($row) => (string) optional($row->employeeGroup)->emp_group_name,
+            ],
+            'department' => [
+                'heading' => 'Department',
+                'class' => 'col-dept',
+                'value' => fn ($row) => (string) optional($row->department)->department_name,
+            ],
             'mobile_no' => [
                 'heading' => 'Mobile No',
                 'class' => 'col-mobile',
@@ -604,7 +619,15 @@ class MemberController extends Controller
         $filters = MemberDataTable::resolveFilters();
         $search = trim((string) $request->query('q', ''));
 
-        $query = EmployeeMaster::query()->with('appellationMaster');
+        // Same relations MemberDataTable::query() loads - the Type / Group /
+        // Department columns read them, and this query is not paginated, so
+        // lazy-loading them would be three round trips per exported row.
+        $query = EmployeeMaster::query()->with([
+            'appellationMaster',
+            'employeeType',
+            'employeeGroup',
+            'department',
+        ]);
         MemberDataTable::applyListingFilters($query, $filters, $search);
         $rows = $query->orderBy('pk', 'desc')->get();
 
@@ -635,13 +658,19 @@ class MemberController extends Controller
                 // wherever memory_limit is 256M. mPDF does the same page in
                 // ~144 MB and half the time. See ExportsBrandedGrid::$pdfRowCap.
                 'pdfEngine' => 'mpdf',
+                // Nine columns on A4 portrait: Name and Email give up the room
+                // Type / Group / Department need. Percentages, so the sheet still
+                // fills the page when the Columns modal drops some of them.
                 'columnStyles' => '
-        .col-sno    { width: 7%;  text-align: center; }
-        .col-name   { width: 27%; }
-        .col-empid  { width: 15%; }
-        .col-mobile { width: 14%; }
-        .col-email  { width: 26%; }
-        .col-status { width: 11%; text-align: center; }',
+        .col-sno    { width: 5%;  text-align: center; }
+        .col-name   { width: 17%; }
+        .col-empid  { width: 10%; }
+        .col-type   { width: 11%; }
+        .col-group  { width: 10%; }
+        .col-dept   { width: 13%; }
+        .col-mobile { width: 10%; }
+        .col-email  { width: 16%; }
+        .col-status { width: 8%;  text-align: center; }',
             ]
         );
     }
@@ -649,7 +678,7 @@ class MemberController extends Controller
     /**
      * The legacy full-profile dump (every employee_master column). Kept alongside
      * the grid exports above because it is a different report, not a format of
-     * the same one — dropping it would lose data the six-column exports don't carry.
+     * the same one — dropping it would lose data the grid exports don't carry.
      */
     public function excelExport(Request $request)
     {
