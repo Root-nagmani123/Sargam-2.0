@@ -36,6 +36,58 @@ trait ExportsMasterGrid
     /** The formats /export/{format} accepts. */
     protected static array $exportFormats = ['csv', 'excel', 'pdf', 'print'];
 
+    /** The effective memory_limit in bytes; -1 when unlimited. */
+    private static function memoryLimitInBytes(): int
+    {
+        $raw = trim((string) ini_get('memory_limit'));
+
+        if ($raw === '' || $raw === '-1') {
+            return -1;
+        }
+
+        $unit  = strtolower(substr($raw, -1));
+        $value = (int) $raw;
+
+        return match ($unit) {
+            'g' => $value * 1024 * 1024 * 1024,
+            'm' => $value * 1024 * 1024,
+            'k' => $value * 1024,
+            default => $value,
+        };
+    }
+
+    /**
+     * A readable dead end instead of a fatal, when the PDF cannot fit in memory.
+     *
+     * Deliberately a self-contained response rather than a redirect: the admin
+     * layout renders no flash-message region, so `back()->with('error', ...)`
+     * would drop the user back on the grid with nothing shown at all.
+     */
+    private function exportTooLargeResponse(int $rowCount, int $needed, int $limit): Response
+    {
+        $mb = fn (int $bytes) => number_format($bytes / 1048576) . ' MB';
+
+        $html = '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+            . '<title>Export too large — LBSNAA</title><style>'
+            . 'body{font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;'
+            . 'color:#1f2937;background:#f5f7fa;margin:0;padding:48px 20px}'
+            . '.card{max-width:640px;margin:0 auto;background:#fff;border:1px solid #e2e7ee;'
+            . 'border-radius:10px;padding:28px 30px}'
+            . 'h1{margin:0 0 12px;font-size:1.15rem;color:#004384}'
+            . 'code{background:#f2f5f9;padding:.1em .4em;border-radius:4px;font-size:.9em}'
+            . 'a{color:#004384}</style></head><body><div class="card">'
+            . '<h1>This report is too large to render as a PDF here</h1>'
+            . '<p>The PDF needs roughly <strong>' . $mb($needed) . '</strong> for '
+            . number_format($rowCount) . ' rows, and this server allows <strong>' . $mb($limit) . '</strong>.</p>'
+            . '<p>Nothing was lost. Use <strong>Excel</strong> or <strong>CSV</strong> from the same Download menu — '
+            . 'they carry identical columns at a fraction of the cost — or narrow the grid with a search or the '
+            . 'Columns modal and export the PDF again.</p>'
+            . '<p><a href="javascript:history.back()">&larr; Back to the report</a></p>'
+            . '</div></body></html>';
+
+        return response($html, 507);
+    }
+
     /**
      * Which columns this export should carry.
      *
@@ -114,6 +166,18 @@ trait ExportsMasterGrid
             // php.ini may disable them and that must not break the export.
             @ini_set('memory_limit', '512M');
             @set_time_limit(300);
+
+            // ini_set can be refused by a hardened php.ini, and then the export
+            // dies mid-stream with a blank page and a fatal in the log. Measured
+            // on the Faculty grid: ~64 MB fixed plus ~0.35 MB per row. If the
+            // limit we actually ended up with cannot hold the job, say so — the
+            // CSV and Excel forms of the same report cost a fraction of this.
+            $needed = 64 * 1024 * 1024 + (int) ($rows->count() * 0.35 * 1024 * 1024);
+            $limit  = self::memoryLimitInBytes();
+
+            if ($limit > 0 && $limit < $needed) {
+                return $this->exportTooLargeResponse($rows->count(), $needed, $limit);
+            }
 
             return Pdf::loadView('admin.master.partials.export_pdf', $payload)
                 ->setPaper('a4', $orientation)
