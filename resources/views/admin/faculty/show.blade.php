@@ -37,6 +37,16 @@
 
     $initials = mb_strtoupper($initials) ?: '?';
     $photoUrl = $faculty->photo_uplode_path ? asset('storage/'.$faculty->photo_uplode_path) : null;
+
+    // The free-text fields are posted by JS, and a field that is absent from the
+    // DOM arrives as the STRING "undefined" rather than as nothing — one faculty
+    // record stores exactly that in both address columns, and `?: '-'` does not
+    // catch it because the string is truthy. Treat the JS junk values as empty.
+    $fact = function ($value) {
+        $value = trim((string) $value);
+
+        return in_array(strtolower($value), ['', 'undefined', 'null', 'nan'], true) ? '-' : $value;
+    };
 @endphp
 
 <div class="container-fluid mst-page print-area">
@@ -117,15 +127,15 @@
             </div>
             <div>
                 <span class="mst-fact__label">Alternate Email</span>
-                <span class="mst-fact__value">{{ $faculty->alternate_email_id ?: '-' }}</span>
+                <span class="mst-fact__value">{{ $fact($faculty->alternate_email_id) }}</span>
             </div>
             <div>
                 <span class="mst-fact__label">Current Designation</span>
-                <span class="mst-fact__value">{{ $faculty->current_designation ?: '-' }}</span>
+                <span class="mst-fact__value">{{ $fact($faculty->current_designation) }}</span>
             </div>
             <div>
                 <span class="mst-fact__label">Current Department</span>
-                <span class="mst-fact__value">{{ $faculty->current_department ?: '-' }}</span>
+                <span class="mst-fact__value">{{ $fact($faculty->current_department) }}</span>
             </div>
             <div>
                 <span class="mst-fact__label">Location</span>
@@ -133,11 +143,11 @@
             </div>
             <div>
                 <span class="mst-fact__label">Residence Address</span>
-                <span class="mst-fact__value">{{ $faculty->Residence_address ?: '-' }}</span>
+                <span class="mst-fact__value">{{ $fact($faculty->Residence_address) }}</span>
             </div>
             <div>
                 <span class="mst-fact__label">Permanent Address</span>
-                <span class="mst-fact__value">{{ $faculty->Permanent_Address ?: '-' }}</span>
+                <span class="mst-fact__value">{{ $fact($faculty->Permanent_Address) }}</span>
             </div>
         </div>
     </section>
