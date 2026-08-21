@@ -51,6 +51,22 @@
 
 .sbm-modal .sbm-attachment-current { margin-top: 0.5rem; }
 
+/* Container mode: the destination fields are locked, so dim what is left. */
+.sbm-modal .sbm-attachment-current.sbm-dim {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+.sbm-modal .sbm-container-check .form-check-input {
+    margin-top: 0.2rem;
+}
+
+.sbm-modal .sbm-container-check .form-check-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
 .sbm-page .sbm-slug {
     display: inline-block;
     padding: 0.15rem 0.5rem;

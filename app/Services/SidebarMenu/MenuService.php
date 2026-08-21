@@ -428,6 +428,7 @@ class MenuService
             'name' => $data->name,
             'route' => $data->route,
             'attachment' => $data->attachment,
+            'is_container' => $data->is_container,
             'permission_name' => $data->permission_name,
             'icon' => $data->icon,
             'order' => $data->order,
@@ -623,11 +624,16 @@ class MenuService
             ->with(['groups' => function ($q) {
                 $q->select('id', 'category_id', 'icon', 'name')
                     ->orderBy('order', 'asc')
+                    // `attachment` and `target` are BOTH read by the sidebar
+                    // renderer (SidebarController::renderGroupMenus) — an explicit
+                    // select that omits them leaves the model attribute null, so an
+                    // attachment-only menu had no destination and every menu opened
+                    // in the same tab regardless of its "Opens in" setting.
                     ->with(['menus' => function ($mq) {
-                        $mq->select('id', 'group_id', 'parent_id', 'icon', 'name', 'route', 'permission_name', 'order')
+                        $mq->select('id', 'group_id', 'parent_id', 'icon', 'name', 'route', 'attachment', 'target', 'permission_name', 'order')
                             ->orderBy('order', 'asc')
                             ->with(['children' => function ($cq) {
-                                $cq->select('id', 'parent_id', 'icon', 'name', 'route', 'permission_name', 'order')
+                                $cq->select('id', 'parent_id', 'icon', 'name', 'route', 'attachment', 'target', 'permission_name', 'order')
                                     ->orderBy('order', 'asc');
                             }]);
                     }]);
@@ -695,7 +701,14 @@ class MenuService
                     })->values();
                     $hasMenuPermission = $this->menuVisibleToUser($menu->permission_name, $permissions);
                     if ($menu->children->count() > 0 || $hasMenuPermission) {
-                        $menu->url = $menu->route ? url($menu->route) : url($menu->slug ?? '#');
+                        // An attachment-only menu points at its file, not at a
+                        // non-existent slug (menus has no `slug` column, so the
+                        // fallback resolved to url('#')).
+                        $menu->url = $menu->route
+                            ? url($menu->route)
+                            : (filled($menu->attachment)
+                                ? asset('storage/'.ltrim((string) $menu->attachment, '/'))
+                                : url($menu->slug ?? '#'));
                         return $menu;
                     }
                     return null;

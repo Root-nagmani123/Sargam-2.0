@@ -72,23 +72,25 @@ class MenuRequest extends FormRequest
             // the Edit modal's "delete the current file" checkbox.
             'attachment' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx,ppt,pptx', 'max:10240'],
             'remove_attachment' => ['nullable', 'boolean'],
+            'is_container' => ['nullable', 'boolean'],
         ];
     }
 
     /**
-     * A menu points at ONE destination: a URL or an attachment, never both.
+     * A menu points at exactly ONE destination — a Url or an Attachment — unless
+     * it is explicitly a container that only holds sub-menus.
      *
-     * Giving both leaves it ambiguous which one a click should follow, and no
-     * existing menu does it (0 of 243), so rejecting it costs nothing.
+     * Both: ambiguous, nothing would know which one a click follows.
+     * Neither: a dead menu, EXCEPT when is_container says that is deliberate.
      *
-     * Deliberately NOT requiring one of the two: 7 live menus have neither, 4 of
-     * them because they are containers that only hold sub-menus — exactly what
-     * the Url field's own help text tells you to do. Requiring a destination
-     * would make those un-editable and block creating a new parent menu.
+     * The flag exists because the alternative — inferring "container" from
+     * "has children" — cannot work at create time, when a menu has no children
+     * yet, and would make every new parent menu impossible to save.
      */
     public function withValidator($validator)
     {
         $validator->after(function ($validator) {
+            $isContainer = $this->boolean('is_container');
             $hasRoute = filled($this->input('route'));
 
             // On edit, a file already on the record counts — unless this submit is
@@ -104,10 +106,30 @@ class MenuRequest extends FormRequest
 
             $hasAttachment = $this->hasFile('attachment') || $keepsExisting;
 
+            if ($isContainer) {
+                if ($hasRoute || $hasAttachment) {
+                    $validator->errors()->add(
+                        'is_container',
+                        'A menu that only holds sub-menus cannot also have a Url or an Attachment.'
+                    );
+                }
+
+                return;
+            }
+
             if ($hasRoute && $hasAttachment) {
                 $validator->errors()->add(
                     'attachment',
                     'Give a Url or an Attachment, not both — a menu can only point at one destination.'
+                );
+
+                return;
+            }
+
+            if (! $hasRoute && ! $hasAttachment) {
+                $validator->errors()->add(
+                    'route',
+                    'Give a Url or an Attachment — or tick "This menu only holds sub-menus".'
                 );
             }
         });

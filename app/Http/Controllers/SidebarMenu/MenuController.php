@@ -220,6 +220,22 @@ class MenuController extends Controller
         // Never a column of its own — it only drives the branches below.
         unset($data['remove_attachment']);
 
+        // An unticked checkbox posts NOTHING, so validated() has no key and an
+        // update would leave a former container flagged forever. Set it either way.
+        $data['is_container'] = $request->boolean('is_container');
+
+        if ($data['is_container']) {
+            // A container has no destination of its own; drop anything it carried
+            // before, file included, rather than leaving an orphan on disk.
+            if ($current && Storage::disk('public')->exists($current)) {
+                Storage::disk('public')->delete($current);
+            }
+            $data['route'] = null;
+            $data['attachment'] = null;
+
+            return $data;
+        }
+
         if ($request->hasFile('attachment')) {
             // Replacing: drop the old file rather than orphaning it on disk.
             if ($current && Storage::disk('public')->exists($current)) {

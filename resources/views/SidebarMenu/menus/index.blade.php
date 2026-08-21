@@ -251,6 +251,24 @@
                                    autocomplete="off" maxlength="100">
                         </div>
 
+                        {{-- Destination: a menu needs a Url OR an Attachment, unless
+                             it is a container. The checkbox is what makes "neither"
+                             deliberate rather than an oversight — a menu has no
+                             children yet at create time, so it cannot be inferred. --}}
+                        <div class="form-group sbm-form-grid--full">
+                            <div class="form-check sbm-container-check">
+                                <input class="form-check-input" type="checkbox"
+                                       name="is_container" id="is_container" value="1">
+                                <label class="form-check-label" for="is_container">
+                                    This menu only holds sub-menus
+                                </label>
+                            </div>
+                            <p class="sbm-form-help">
+                                Tick for a parent menu that is not clickable itself. Its Url
+                                and Attachment stay empty.
+                            </p>
+                        </div>
+
                         <div class="form-group">
                             <label class="sbm-form-label" for="route">Url</label>
                             <input type="text" class="form-control sbm-control font-monospace" name="route" id="route"
@@ -927,6 +945,8 @@ $(function () {
         resetParentMenuSelect();
         syncIconPreview();
         sbmShowCurrentAttachment(null);
+        $('#is_container').prop('checked', false);
+        sbmSyncContainerFields();
         showMenuModal();
     }
 
@@ -956,6 +976,8 @@ $(function () {
         $('#category_id').val(data.category_id || '').trigger('change.select2');
         syncIconPreview();
         sbmShowCurrentAttachment(data.attachment || null);
+        $('#is_container').prop('checked', String(data.is_container) === '1');
+        sbmSyncContainerFields();
 
         // Chain the two AJAX loads, then open — Group must exist before Parent
         // can be filtered by it.
@@ -988,6 +1010,26 @@ $(function () {
         $('#attachmentCurrentName').text(String(path).split('/').pop());
         $wrap.removeClass('d-none');
     }
+
+    /* A container has no destination, so Url and Attachment are cleared and
+       locked while the box is ticked — the server enforces the same rule, this
+       just stops the user filling in a field that is about to be rejected. */
+    function sbmSyncContainerFields() {
+        var isContainer = $('#is_container').is(':checked');
+
+        $('#route').prop('disabled', isContainer);
+        $('#attachment').prop('disabled', isContainer);
+
+        if (isContainer) {
+            $('#route').val('');
+            $('#attachment').val('');
+            $('#removeAttachment').prop('checked', true);
+        }
+
+        $('#attachmentCurrentWrap').toggleClass('sbm-dim', isContainer);
+    }
+
+    $('#is_container').on('change', sbmSyncContainerFields);
 
     $('#sbmAddBtn').on('click', openAddModal);
 
