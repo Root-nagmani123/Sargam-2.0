@@ -171,6 +171,9 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::delete('/delete/{id}', 'delete')->name('delete');
+        // Grid exports: one query, one column list, four formats.
+        Route::get('/export/{format}', 'export')->name('export')
+            ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
     });
 
     // Designation Master
@@ -180,6 +183,9 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::delete('/delete/{id}', 'delete')->name('delete');
+        // Grid exports: one query, one column list, four formats.
+        Route::get('/export/{format}', 'export')->name('export')
+            ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
     });
 
     // Caste Category
@@ -189,6 +195,9 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::delete('/delete/{id}', 'delete')->name('delete');
+        // Grid exports: one query, one column list, four formats.
+        Route::get('/export/{format}', 'export')->name('export')
+            ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
     });
 
     // Employee Type Master
@@ -197,6 +206,9 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
+        // Grid exports: one query, one column list, four formats.
+        Route::get('/export/{format}', 'export')->name('export')
+            ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
     });
 
     // Employee Group Master
@@ -205,6 +217,9 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
+        // Grid exports: one query, one column list, four formats.
+        Route::get('/export/{format}', 'export')->name('export')
+            ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
     });
 
     Route::prefix('exemption-medical-speciality-master')->name('exemption.medical.speciality.')->controller(ExemptionCategoryController::class)->group(function () {
