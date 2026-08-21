@@ -303,17 +303,6 @@
 
 .sbm-modal .sbm-modal-body { padding: 1.25rem; }
 
-/* The tinted card the labelled controls sit in (docs/new-design-index-page.md
-   §3c). Without it the modal body renders flat white — #eef1fc is pale enough
-   that a screenshot will not tell you it is gone, so check the computed
-   background, not your eyes. */
-.sbm-modal .sbm-field-card {
-    position: relative;
-    background: #eef1fc;
-    border-radius: 10px;
-    padding: 1.25rem;
-}
-
 /* Two columns so the form reads as a form and not as a tall single stack.
    The grid gap owns the spacing — the cells carry no margin of their own, so a
    field can be moved between rows without leaving a gap behind. */
