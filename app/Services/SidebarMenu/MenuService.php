@@ -26,11 +26,86 @@ class MenuService
      */
     public function pageData(): array
     {
+        $groups = MenuGroup::where('is_active', 1)
+            ->with('category')
+            ->orderBy('order', 'asc')
+            ->get();
+
         return [
             'categories' => SidebarCategory::where('is_active', 1)->orderBy('order', 'asc')->get(),
-            'groups' => MenuGroup::where('is_active', 1)->orderBy('order', 'asc')->get(),
-            'parents' => $this->parentMenuOptions(),
+            // Qualified by category / group so repeated names are tellable apart.
+            'groups' => self::disambiguateLabels($groups, fn ($g) => optional($g->category)->name),
+            'parents' => self::disambiguateLabels(
+                $this->parentMenuOptions(),
+                fn ($m) => optional($m->group)->name
+            ),
         ];
+    }
+
+    /**
+     * The next free Display order WITHIN a group (and parent), not across the table.
+     *
+     * `order` is the sidebar's sequence inside one group, so a global
+     * `max(order) + 1` handed a new menu ~147 while its siblings sat at 1-20 — it
+     * sorted to the very end of the grid (page 25 of 25) and read as "my menu was
+     * not saved". It also matches MenuRequest's uniqueness rule, which scopes
+     * `order` to group_id + parent_id.
+     */
+    public static function nextOrderIn($groupId, $parentId): int
+    {
+        $query = Menu::query()->where('group_id', $groupId);
+
+        $parentId
+            ? $query->where('parent_id', $parentId)
+            : $query->whereNull('parent_id');
+
+        return (int) $query->max('order') + 1;
+    }
+
+    /**
+     * Make repeated option labels tellable apart.
+     *
+     * Five group names are used by more than one group ("General" sits in both
+     * Home and Communications, "Course Repository" three times) and "Exemption"
+     * names two different parent menus. In a flat dropdown those render as
+     * identical rows and picking one is a coin toss.
+     *
+     * Only names that ARE duplicated get decorated, so the common case reads
+     * exactly as before. The id is appended as a last resort for rows that
+     * collide even within the same context (Course Repository exists twice under
+     * Setup), because a label a user cannot distinguish is worse than an ugly one.
+     *
+     * @param  \Illuminate\Support\Collection  $rows
+     * @param  callable  $context  row -> the qualifier to append, e.g. its category name
+     */
+    public static function disambiguateLabels($rows, callable $context)
+    {
+        // Trimmed: one group is stored as "Course Repository " with a trailing
+        // space, which HTML collapses — untrimmed it looks unique to countBy and
+        // then renders identically to its twin.
+        $counts = $rows->countBy(fn ($row) => trim((string) $row->name));
+
+        $decorated = $rows->map(function ($row) use ($counts, $context) {
+            $row->label = trim((string) $row->name);
+
+            if (($counts[trim((string) $row->name)] ?? 0) > 1) {
+                $qualifier = trim((string) $context($row));
+                $row->label .= $qualifier !== '' ? ' ('.$qualifier.')' : '';
+            }
+
+            return $row;
+        });
+
+        // Second pass: anything still identical gets its id.
+        $labelCounts = $decorated->countBy(fn ($row) => $row->label);
+
+        return $decorated->map(function ($row) use ($labelCounts) {
+            if (($labelCounts[$row->label] ?? 0) > 1) {
+                $row->label .= ' #'.$row->id;
+            }
+
+            return $row;
+        });
     }
 
     /**
@@ -51,6 +126,7 @@ class MenuService
 
         return Menu::query()
             ->whereIn('id', $parentIds)
+            ->with('group')
             ->orderBy('name', 'asc')
             ->get(['id', 'name', 'group_id', 'category_id']);
     }
@@ -70,7 +146,7 @@ class MenuService
     {
         $permission = Str::slug($data['name'], '_');
         $data['permission_name'] = $permission;
-        $data['order'] = $data['order'] ?? Menu::max('order') + 1;
+        $data['order'] = $data['order'] ?? self::nextOrderIn($data['group_id'] ?? null, $data['parent_id'] ?? null);
         $menu = Menu::create($data);
         SidebarNavResolver::clearCache();
         self::clearStructureCache();
@@ -99,7 +175,10 @@ class MenuService
     {
         $menu = $this->find($id);
         $oldPermission = $menu->permission_name;
-        $data['order'] = $data['order'] ?? Menu::max('order') + 1;
+        $data['order'] = $data['order'] ?? self::nextOrderIn(
+            $data['group_id'] ?? $menu->group_id,
+            $data['parent_id'] ?? $menu->parent_id
+        );
         $menu->update($data);
 
         // The permission to keep in step is the one the row now carries — the form

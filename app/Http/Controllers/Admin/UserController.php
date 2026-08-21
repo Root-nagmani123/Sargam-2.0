@@ -27,6 +27,7 @@ use App\Models\FacultyMaster;
 use App\Models\Holiday;
 use App\Services\NotificationService;
 use App\Exports\UsersExport;
+use App\Exports\BrandedGridExport;
 use App\Exports\StudentListReportExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Excel as ExcelWriter;
@@ -4351,9 +4352,15 @@ class UserController extends Controller
         );
         $headings = array_map(fn (array $c) => $c['label'], $columns);
 
+        // cursor(), not get(): the export stays deliberately unpaginated (scraping the
+        // rendered table truncated every download to the 10 rows on screen), but there
+        // is no reason to hold the full hydrated model collection AND the flat $rows
+        // array at the same time. cursor() hydrates one model at a time, so peak memory
+        // is the row array alone rather than both. Keys stay 0-based and sequential, so
+        // the S. No. column below is unaffected.
         $records = $this->adminUsersBaseQuery($search, $user_type)
             ->orderBy('uc.pk')
-            ->get();
+            ->cursor();
 
         $rows = [];
         foreach ($records as $i => $record) {
@@ -4407,8 +4414,39 @@ class UserController extends Controller
                 ->download("{$fileBase}.pdf");
         }
 
-        // The band the print/PDF headers carry, so the spreadsheet names the same
-        // report and the same applied filters instead of arriving as bare columns.
+        if ($format === 'xlsx') {
+            // BrandedGridExport is what every other module's spreadsheet uses: it
+            // draws the LBSNAA logo over a navy institution band, then a navy
+            // header row over zebra rows with a frozen pane. UsersExport (below)
+            // only writes plain text, which is why this one export arrived with
+            // no logo while Roles / Menus / Topbar Category all had one.
+            //
+            // It resolves each cell through a column's `value` callable, but the
+            // rows here are already flat arrays — so each column just reads its
+            // own slot. `key` doubles as the centred-column marker.
+            $branded = [];
+            $centreKeys = [];
+            foreach ($columns as $index => $col) {
+                $key = 'col'.$index;
+                if (! empty($col['centre'])) {
+                    $centreKeys[] = $key;
+                }
+                $branded[] = [
+                    'key' => $key,
+                    'heading' => $col['label'],
+                    'class' => '',
+                    'value' => static fn ($row) => $row[$index] ?? '',
+                ];
+            }
+
+            return Excel::download(
+                new BrandedGridExport($rows, $branded, 'Users', $generatedAt, $filterLine, $centreKeys),
+                "{$fileBase}.xlsx"
+            );
+        }
+
+        // CSV keeps the plain writer: it is text, so the .xlsx branding would be
+        // dropped anyway. These rows give it the same header band in words.
         $metaRows = [
             ['LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION'],
             ['USERS'],
@@ -4417,12 +4455,10 @@ class UserController extends Controller
             [],
         ];
 
-        $writerType = $format === 'csv' ? ExcelWriter::CSV : ExcelWriter::XLSX;
-
         return Excel::download(
             new UsersExport($headings, $rows, $metaRows),
-            "{$fileBase}.{$format}",
-            $writerType
+            "{$fileBase}.csv",
+            ExcelWriter::CSV
         );
     }
 
@@ -4905,8 +4941,20 @@ public function uploadPdf(Request $request)
 
             $file = $request->file('file');
 
-            // Allow only PDF
-            if ($file->getClientOriginalExtension() != 'pdf') {
+            // Allow only PDF — checked against the file's CONTENT, not its name.
+            //
+            // The previous check read getClientOriginalExtension(), which the uploader
+            // controls, while store() below names the saved file from guessExtension(),
+            // which it does not. The two disagreeing meant an HTML document uploaded as
+            // "notes.pdf" passed this gate and was then written as <hash>.html onto the
+            // PUBLIC disk, where the browser renders it as markup on our own origin.
+            // Validating the content closes both halves at once.
+            $validator = \Illuminate\Support\Facades\Validator::make(
+                ['file' => $file],
+                ['file' => ['required', 'file', 'mimes:pdf', 'max:20480']]
+            );
+
+            if ($validator->fails()) {
                 return response()->json(['error' => 'Only PDF files allowed'], 422);
             }
 

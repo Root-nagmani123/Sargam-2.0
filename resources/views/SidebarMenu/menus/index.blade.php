@@ -99,9 +99,12 @@
                         <select id="sbmGroupFilter" class="form-select select2"
                                 data-placeholder="Group" aria-label="Filter by group">
                             <option value="">Group</option>
+                            {{-- ->label, not ->name: five group names are used by more
+                                 than one group, so the raw name rendered identical rows
+                                 (MenuService::disambiguateLabels()). --}}
                             @foreach ($groups as $group)
                                 <option value="{{ $group->id }}" data-category="{{ $group->category_id }}">
-                                    {{ $group->name }}
+                                    {{ $group->label }}
                                 </option>
                             @endforeach
                         </select>
@@ -121,7 +124,7 @@
                                 <option value="{{ $parent->id }}"
                                         data-category="{{ $parent->category_id }}"
                                         data-group="{{ $parent->group_id }}">
-                                    {{ $parent->name }}
+                                    {{ $parent->label }}
                                 </option>
                             @endforeach
                         </select>
@@ -405,7 +408,10 @@ $(function () {
         sargamServerOrder: true,
         searching: true,
         searchDelay: 400,          // search as you type, one query per pause
-        order: [[8, 'asc']],       // Display order — the sidebar's own sequence
+        /* Display order — the sidebar's own sequence. ⚠️ This index MUST track the
+           columns array below: inserting Attachment at 6 pushed Display order from
+           8 to 9, and until this was updated the grid was silently sorting by Icon. */
+        order: [[9, 'asc']],
         /* ⚠️ MUST be false. footer.blade.php:80 turns the Responsive extension on
            globally (`$.fn.dataTable.defaults.responsive = true`), and Responsive
            deals with a table wider than its box by hiding the overflow columns
@@ -660,6 +666,24 @@ $(function () {
     // otherwise a preference restored from localStorage wouldn't reach the server
     // until the user opened the modal and toggled something.
     sbmUpdateExportLinks();
+
+    /* Just created a menu? Open the grid on it. With 240+ menus over 25 pages a
+       create that drops the user on page 1 looks exactly like one that silently
+       failed. DataTables' own search box is relocated into #sbmDtSearch by
+       datatable-global-ui.js, so drive the search through the API and mirror it
+       into the visible input.
+
+       ⚠️ Must sit AFTER sbmUpdateExportLinks() is defined AND first called:
+       SBM_EXPORT_COLUMN_KEYS is a `var` declared above it, so calling it any
+       earlier reads an undefined array. */
+    @if (session('created_menu'))
+        (function () {
+            var justCreated = @json(session('created_menu'));
+            $('#sbmDtSearch input').val(justCreated);
+            dt.search(justCreated).draw();
+            sbmUpdateExportLinks();
+        })();
+    @endif
 
     /* ── Status switch ───────────────────────────────────────────────────────
        This grid has its own endpoint rather than the generic table/column one

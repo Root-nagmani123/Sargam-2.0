@@ -64,7 +64,7 @@ class MemoTypeMasterController extends Controller
                 }
 
                 $file = $request->file('memo_doc_upload');
-                $extension = $file->getClientOriginalExtension();
+                $extension = safe_upload_extension($file);
 
                 $filename = 'memo_' . time() . '.' . $extension;
 

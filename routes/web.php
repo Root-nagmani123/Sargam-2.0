@@ -141,16 +141,16 @@ Route::post('/login', [LoginController::class, 'authenticate'])->middleware('thr
 
 Route::middleware(['auth'])->group(function () {
     Route::post('roles/permissions/{id}', [RoleController::class, 'assignPermission'])->name('assign.roles.permissions');
-    Route::get('roles/{id}/permissions/export', [RoleController::class, 'exportPermissions'])->name('roles.permissions.export');
+    Route::get('roles/{id}/permissions/export', [RoleController::class, 'exportPermissions'])->middleware('menu.permission:roles')->name('roles.permissions.export');
     Route::get('roles/{id}/dashboard', [RoleController::class, 'showDashboard'])->name('roles.dashboard');
-    Route::get('roles/{id}/dashboard/export', [RoleController::class, 'exportDashboardCards'])->name('roles.dashboard.export');
+    Route::get('roles/{id}/dashboard/export', [RoleController::class, 'exportDashboardCards'])->middleware('menu.permission:roles')->name('roles.dashboard.export');
     Route::post('roles/{id}/dashboard', [RoleController::class, 'assignDashboardCard'])->name('assign.roles.dashboard');
     Route::post('dashboard-cards', [RoleController::class, 'storeDashboardCard'])->name('dashboard.cards.store');
     Route::put('dashboard-cards/{id}', [RoleController::class, 'updateDashboardCard'])->name('dashboard.cards.update');
     Route::delete('dashboard-cards/{id}', [RoleController::class, 'destroyDashboardCard'])->name('dashboard.cards.destroy');
     // Must stay ABOVE the resource: `roles/{role}` would otherwise swallow
     // /roles/export and hand "export" to show().
-    Route::get('roles/export', [RoleController::class, 'export'])->name('roles.export');
+    Route::get('roles/export', [RoleController::class, 'export'])->middleware('menu.permission:roles')->name('roles.export');
     Route::resource('roles', RoleController::class);
 });
 
@@ -1835,17 +1835,17 @@ Route::middleware(['auth'])->prefix('sidebar')->name('sidebar.')->group(function
     Route::get('categories/status/{id}', [SidebarCategoryController::class, 'status'])->name('categories.status');
     // Must stay ABOVE the resource: `categories/{category}` would otherwise
     // swallow /categories/export and hand "export" to show().
-    Route::get('categories/export', [SidebarCategoryController::class, 'export'])->name('categories.export');
+    Route::get('categories/export', [SidebarCategoryController::class, 'export'])->middleware('menu.permission:topbar_category')->name('categories.export');
     Route::resource('categories', SidebarCategoryController::class);
     Route::get('menu-groups/status/{id}', [MenuGroupController::class, 'status'])->name('menu-groups.status');
     // Must stay ABOVE the resource: `menu-groups/{menu_group}` would otherwise
     // swallow /menu-groups/export and hand "export" to show().
-    Route::get('menu-groups/export', [MenuGroupController::class, 'export'])->name('menu-groups.export');
+    Route::get('menu-groups/export', [MenuGroupController::class, 'export'])->middleware('menu.permission:sidemenu_groups')->name('menu-groups.export');
     Route::resource('menu-groups', MenuGroupController::class);
     Route::get('menus/status/{id}', [MenuController::class, 'status'])->name('menus.status');
     // Must stay ABOVE the resource: `menus/{menu}` would otherwise swallow
     // /menus/export and hand "export" to show().
-    Route::get('menus/export', [MenuController::class, 'export'])->name('menus.export');
+    Route::get('menus/export', [MenuController::class, 'export'])->middleware('menu.permission:menus')->name('menus.export');
     Route::resource('menus', MenuController::class);
     Route::get('groups', [SidebarController::class, 'getGroups'])->name('groups');
     Route::get('menu', [SidebarController::class, 'sidebarMenus'])->name('menu');

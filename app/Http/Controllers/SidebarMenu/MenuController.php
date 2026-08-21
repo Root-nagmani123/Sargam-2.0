@@ -192,8 +192,14 @@ class MenuController extends Controller
     public function store(MenuRequest $request)
     {
         $data = $this->resolveAttachment($request, $request->validated(), null);
-        $this->menuService->store($data);
-        return redirect()->back()->with('success', 'Menu Created Successfully');
+        $menu = $this->menuService->store($data);
+
+        // Hand the name back so the grid can open filtered to the new row. With
+        // 240+ menus over 25 pages, a create that lands the user on page 1 looks
+        // exactly like a create that silently failed.
+        return redirect()->back()
+            ->with('success', 'Menu Created Successfully')
+            ->with('created_menu', $menu->name);
     }
 
     /**

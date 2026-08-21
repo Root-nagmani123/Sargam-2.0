@@ -74,4 +74,42 @@ class MenuRequest extends FormRequest
             'remove_attachment' => ['nullable', 'boolean'],
         ];
     }
+
+    /**
+     * A menu points at ONE destination: a URL or an attachment, never both.
+     *
+     * Giving both leaves it ambiguous which one a click should follow, and no
+     * existing menu does it (0 of 243), so rejecting it costs nothing.
+     *
+     * Deliberately NOT requiring one of the two: 7 live menus have neither, 4 of
+     * them because they are containers that only hold sub-menus — exactly what
+     * the Url field's own help text tells you to do. Requiring a destination
+     * would make those un-editable and block creating a new parent menu.
+     */
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            $hasRoute = filled($this->input('route'));
+
+            // On edit, a file already on the record counts — unless this submit is
+            // removing it.
+            $keepsExisting = false;
+            $menu = $this->route('menu');
+            $id = is_object($menu) ? $menu->id : $menu;
+            if ($id && ! $this->boolean('remove_attachment')) {
+                $keepsExisting = filled(
+                    optional(\App\Models\SidebarMenu\Menu::find($id))->attachment
+                );
+            }
+
+            $hasAttachment = $this->hasFile('attachment') || $keepsExisting;
+
+            if ($hasRoute && $hasAttachment) {
+                $validator->errors()->add(
+                    'attachment',
+                    'Give a Url or an Attachment, not both — a menu can only point at one destination.'
+                );
+            }
+        });
+    }
 }

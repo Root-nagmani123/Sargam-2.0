@@ -2192,3 +2192,34 @@ if (! function_exists('fc_kra_sn_img')) {
         return '<img src="'.$data.'" alt="क्र.सं." style="height:'.$height.'; vertical-align:middle;">';
     }
 }
+
+if (! function_exists('safe_upload_extension')) {
+    /**
+     * The extension an uploaded file should be STORED under.
+     *
+     * Always derived from the file's content, never from the name the client sent.
+     * getClientOriginalExtension() is attacker-controlled: Laravel's mimes:/image
+     * rules validate guessExtension() (content), so the two are independent, and
+     * naming a stored file from the client value lets a genuine PNG called
+     * "payload.html" land as .html on a public disk, where the browser reads it back
+     * as markup rather than as an image. Laravel's own upload guard blocks only
+     * php/php3/php4/php5/php7/php8/phtml/phar, so .html, .htm, .svg and .xhtml are
+     * not covered by it.
+     *
+     * Safe wherever the field carries a mimes:, mimetypes: or image rule, because
+     * validateMimes() then guarantees guessExtension() is a member of the allow-list.
+     * On an UNVALIDATED field guessExtension() is unconstrained and may return null,
+     * which is what $fallback is for - but an unvalidated upload field is itself the
+     * thing to fix.
+     *
+     * @param  \Illuminate\Http\UploadedFile|null  $file
+     */
+    function safe_upload_extension($file, string $fallback = 'dat'): string
+    {
+        if (! $file || ! is_object($file) || ! method_exists($file, 'guessExtension')) {
+            return $fallback;
+        }
+
+        return strtolower((string) $file->guessExtension() ?: $fallback);
+    }
+}
