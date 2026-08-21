@@ -2,9 +2,13 @@
 
 @section('title', 'Edit Faculty')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
+@endpush
+
 @section('setup_content')
 
-<div class="container-fluid">
+<div class="container-fluid mst-page">
     <x-breadcrum title="Faculty" />
 
     <!-- start Vertical Steps Example -->
@@ -12,44 +16,59 @@
         data-index-url="{{ route('faculty.index') }} --}}
 
         <form class="facultyForm">
-            <div class="card">
+            <div class="mst-wizard">
+                <aside class="mst-wizard__rail">
+                    <ol class="mst-steps" role="tablist" aria-label="Faculty form steps">
+                        @foreach ([
+                            1 => 'Personal Information',
+                            2 => 'Qualifications Details',
+                            3 => 'Experience Details',
+                            4 => 'Bank Details',
+                            5 => 'Other information',
+                        ] as $stepNo => $stepLabel)
+                            <li class="mst-step" data-step="{{ $stepNo }}" role="tab"
+                                tabindex="{{ $stepNo === 1 ? 0 : -1 }}" aria-selected="{{ $stepNo === 1 ? 'true' : 'false' }}">
+                                <span class="mst-step__index"><span class="mst-step__num">{{ $stepNo }}</span></span>
+                                <span class="mst-step__label">{{ $stepLabel }}</span>
+                            </li>
+                        @endforeach
+                    </ol>
+                </aside>
+
+                <div class="mst-wizard__body">
+            <div class="card mst-form-card" data-mst-step="1">
                 <div class="card-body">
-                    <h4 class="card-title">Personal Information</h4>
-                    <hr>
+                    <h3 class="mst-form-section-title">Personal Information</h3>
                     <input type="hidden" name="faculty_id" value="{{ $faculty->pk }}">
                     @include('admin.faculty.components.basicInfo')
                 </div>
             </div>
-            <div class="card">
+            <div class="card mst-form-card" data-mst-step="2">
                 <div class="card-body">
-                    <h4 class="card-title">Qualification Details</h4>
-                    <hr>
+                    <h3 class="mst-form-section-title">Qualification Details</h3>
                     @include('admin.faculty.components.degree')
                 </div>
             </div>
-            <div class="card">
+            <div class="card mst-form-card" data-mst-step="3">
                 <div class="card-body">
-                    <h4 class="card-title">Experience Details</h4>
-                    <hr>
+                    <h3 class="mst-form-section-title">Experience Details</h3>
                     @include('admin.faculty.components.experienceDetails')
                 </div>
             </div>
-            <div class="card">
+            <div class="card mst-form-card" data-mst-step="4">
                 <div class="card-body">
-                    <h4 class="card-title">Bank Details</h4>
-                    <hr>
+                    <h3 class="mst-form-section-title">Bank Details</h3>
                     @include('admin.faculty.components.bankDetails')
                 </div>
             </div>
-            <div class="card">
+            <div class="card mst-form-card" data-mst-step="5">
                 <div class="card-body">
-                    <h4 class="card-title">Other information</h4>
-                    <hr>
+                    <h3 class="mst-form-section-title">Other information</h3>
                     @include('admin.faculty.components.researchPublication')
                 </div>
             </div>
 
-            <div class="card">
+            <div class="card mst-form-card" data-mst-step="5">
                 <div class="card-body">
                     <div class="row">
                             <div class="col-12 col-md-6">
@@ -95,16 +114,26 @@
                             </div>
                         </div>
                         <hr>
-                        <div class="mb-3">
-                            <button class="btn btn-primary hstack gap-6 float-end" type="button" id="saveFacultyForm">
-                                <i class="material-icons menu-icon">save</i>
-                                Update
-                            </button>
-                            <a href="{{ route('faculty.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
-                                <i class="material-icons menu-icon">arrow_back</i>
-                                Back
+                        <div class="mst-form-footer mb-3">
+                            <a href="{{ route('faculty.index') }}" class="btn mst-btn-cancel d-inline-flex align-items-center gap-2 px-4">
+                                <span>Cancel</span>
                             </a>
+                            <button type="button" class="btn mst-btn-submit d-inline-flex align-items-center gap-2 px-4"
+                                    data-mst-next>
+                                <span>Save &amp; Next</span>
+                            </button>
+                            {{-- No `d-none`: the submit stays reachable on every step. See
+                                 master-form-wizard.js — hiding it until the last step left a
+                                 record that cannot clear an earlier step's `required` fields
+                                 with no way to save at all. --}}
+                            <button class="btn mst-btn-submit d-inline-flex align-items-center gap-2 px-4"
+                                    type="button" id="saveFacultyForm" data-mst-final>
+                                <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">save</i>
+                                <span>Update Faculty</span>
+                            </button>
                         </div>
+                </div>
+            </div>
                 </div>
             </div>
         </form>
@@ -115,6 +144,7 @@
 @endsection
 
 @section('scripts')
+<script src="{{ asset('js/master-form-wizard.js') }}?v={{ @filemtime(public_path('js/master-form-wizard.js')) ?: time() }}"></script>
 <script>
 // Show/Hide Faculty (PA) field based on Faculty Type
 $(document).ready(function() {
