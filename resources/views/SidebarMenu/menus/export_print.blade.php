@@ -26,8 +26,9 @@
         .sbm-print-group      { width: 11%; }
         .sbm-print-parent     { width: 11%; }
         .sbm-print-name       { width: 12%; }
-        .sbm-print-route      { width: 15%; }
-        .sbm-print-permission { width: 14%; }
+        .sbm-print-route      { width: 12%; }
+        .sbm-print-attachment { width: 10%; }
+        .sbm-print-permission { width: 11%; }
         .sbm-print-icon       { width: 8%; }
         .sbm-print-order      { width: 4%;  text-align: center; }
         .sbm-print-target     { width: 5%;  text-align: center; }

@@ -1,8 +1,12 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Sidebar Menus')
+{{-- Named exactly as the menus row this page hangs off, because the
+     breadcrumb component appends the page title as its own crumb whenever
+     the two disagree — which read "… / Menus / Sidebar Menus". --}}
+@section('title', 'Menus')
 
 @push('styles')
+@include('admin.layouts.partials.select2-assets')
 {{-- Shared Sidebar Menu Builder chrome — the same module stylesheet the Sidebar
      Categories and Menu Groups grids use, so the three screens cannot drift
      apart. See docs/new-design-index-page.md §3b/§3c. --}}
@@ -12,7 +16,7 @@
 
 @section('setup_content')
 <div class="container-fluid sbm-page">
-    <x-breadcrum title="Sidebar Menus" :showBack="false">
+    <x-breadcrum title="Menus" :showBack="false">
         <button type="button"
                 class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
                 id="sbmAddBtn">
@@ -30,11 +34,38 @@
             {{-- ?category_id / ?group_id / ?q / ?cols are stamped on by
                  sbmUpdateExportLinks(), so a download carries the same filters,
                  search and columns as the grid. --}}
-            <a href="{{ route('sidebar.menus.export', ['format' => 'csv']) }}"
-               id="sbmDownloadLink"
-               class="btn programme-dt-btn-columns border-0 text-primary" title="Download as CSV">
-                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-            </a>
+            <div class="dropdown">
+                <button type="button"
+                        class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                        id="sbmDownloadMenuBtn" data-bs-toggle="dropdown" aria-expanded="false"
+                        title="Download this list">
+                    <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end programme-dt-download-menu"
+                    aria-labelledby="sbmDownloadMenuBtn">
+                    <li>
+                        <a class="dropdown-item" id="sbmCsvLink"
+                           href="{{ route('sidebar.menus.export', ['format' => 'csv']) }}">
+                            <i class="bi bi-filetype-csv" aria-hidden="true"></i><span>CSV</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" id="sbmExcelLink"
+                           href="{{ route('sidebar.menus.export', ['format' => 'excel']) }}">
+                            <i class="bi bi-file-earmark-excel" aria-hidden="true"></i><span>Excel</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" id="sbmPdfLink"
+                           href="{{ route('sidebar.menus.export', ['format' => 'pdf']) }}">
+                            <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i><span>PDF</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            {{-- Print stays OUTSIDE the dropdown: it opens a sheet rather than
+                 saving a file, so it is not one of the download formats. --}}
             <a href="{{ route('sidebar.menus.export', ['format' => 'print']) }}"
                id="sbmPrintLink" target="_blank" rel="noopener"
                class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
@@ -53,7 +84,8 @@
                     <span class="programme-dt-filters-label">Filters</span>
 
                     <div class="programme-dt-filter-select">
-                        <select id="sbmCategoryFilter" class="form-select" aria-label="Filter by category">
+                        <select id="sbmCategoryFilter" class="form-select select2"
+                                data-placeholder="Category" aria-label="Filter by category">
                             <option value="">Category</option>
                             @foreach ($categories as $category)
                                 <option value="{{ $category->id }}">{{ $category->name }}</option>
@@ -64,11 +96,32 @@
                     {{-- Narrowed by the category above; data-category on each option
                          is what sbmSyncGroupFilter() filters on. --}}
                     <div class="programme-dt-filter-select">
-                        <select id="sbmGroupFilter" class="form-select" aria-label="Filter by group">
+                        <select id="sbmGroupFilter" class="form-select select2"
+                                data-placeholder="Group" aria-label="Filter by group">
                             <option value="">Group</option>
                             @foreach ($groups as $group)
                                 <option value="{{ $group->id }}" data-category="{{ $group->category_id }}">
                                     {{ $group->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Narrowed by the two above; data-category / data-group on each
+                         option is what sbmSyncParentFilter() filters on. Only menus
+                         that actually have children are offered, plus the top-level
+                         sentinel — an option that could return no rows is not a
+                         filter, it is a dead end. --}}
+                    <div class="programme-dt-filter-select">
+                        <select id="sbmParentFilter" class="form-select select2"
+                                data-placeholder="Parent Menu" aria-label="Filter by parent menu">
+                            <option value="">Parent Menu</option>
+                            <option value="0">— Top level only —</option>
+                            @foreach ($parents as $parent)
+                                <option value="{{ $parent->id }}"
+                                        data-category="{{ $parent->category_id }}"
+                                        data-group="{{ $parent->group_id }}">
+                                    {{ $parent->name }}
                                 </option>
                             @endforeach
                         </select>
@@ -107,6 +160,7 @@
                                 <th scope="col">Parent Menu</th>
                                 <th scope="col">Name</th>
                                 <th scope="col">Url</th>
+                                <th scope="col">Attachment</th>
                                 <th scope="col">Permission</th>
                                 <th scope="col">Icon</th>
                                 <th scope="col">Order</th>
@@ -136,7 +190,10 @@
      data-bs-backdrop="static" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content sbm-modal border-0 shadow">
-            <form id="menuForm" action="{{ route('sidebar.menus.store') }}" method="POST" novalidate>
+            {{-- enctype: the Attachment field below posts a file, and without this
+                 the browser sends only its name and the upload silently vanishes. --}}
+            <form id="menuForm" action="{{ route('sidebar.menus.store') }}" method="POST"
+                  enctype="multipart/form-data" novalidate>
                 @csrf
                 <input type="hidden" name="id" id="menuId">
 
@@ -154,7 +211,8 @@
                     <div class="sbm-field-card sbm-form-grid">
                         <div class="form-group">
                             <label class="sbm-form-label" for="category_id">Category<span class="sbm-req">*</span></label>
-                            <select class="form-select sbm-control" name="category_id" id="category_id">
+                            <select class="form-select sbm-control select2" name="category_id" id="category_id"
+                                    data-placeholder="Select Category">
                                 <option value="">Select Category</option>
                                 @forelse ($categories as $category)
                                     <option value="{{ $category->id }}">{{ $category->name }}</option>
@@ -166,14 +224,16 @@
 
                         <div class="form-group">
                             <label class="sbm-form-label" for="group_id">Group<span class="sbm-req">*</span></label>
-                            <select class="form-select sbm-control sidebar-group-select" name="group_id" id="group_id">
+                            <select class="form-select sbm-control sidebar-group-select select2"
+                                    name="group_id" id="group_id" data-placeholder="Select Group">
                                 <option value="">Select Group</option>
                             </select>
                         </div>
 
                         <div class="form-group sbm-form-grid--full">
                             <label class="sbm-form-label" for="parent_id">Parent Menu</label>
-                            <select class="form-select sbm-control sidebar-menu-select" name="parent_id" id="parent_id">
+                            <select class="form-select sbm-control sidebar-menu-select select2"
+                                    name="parent_id" id="parent_id" data-placeholder="Select Parent Menu">
                                 <option value="">Select Parent Menu</option>
                             </select>
                             <p class="sbm-form-help">
@@ -194,6 +254,36 @@
                                    placeholder="e.g. admin/course-master" value="{{ old('route') }}"
                                    autocomplete="off" maxlength="255">
                             <p class="sbm-form-help">Leave empty if this menu only holds sub-menus.</p>
+                        </div>
+
+                        {{-- Attachment: same types and 10 MB ceiling as Useful Links,
+                             so the two upload fields behave identically.
+                             ⚠️ Stored only — the sidebar's links are hand-written in
+                             resources/views/components/menu/*.blade.php and do not
+                             read this column, so an attachment is reachable from the
+                             grid (and the exports), not yet from the menu itself. --}}
+                        <div class="form-group sbm-form-grid--full">
+                            <label class="sbm-form-label" for="attachment">Attachment</label>
+                            <input type="file" class="form-control sbm-control" name="attachment" id="attachment"
+                                   accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
+                            <p class="sbm-form-help">PDF, image, DOC, XLS or PPT — up to 10 MB. Optional.</p>
+
+                            {{-- Shown only in Edit mode, and only when a file exists;
+                                 openEditModal() / openAddModal() drive both. --}}
+                            <div id="attachmentCurrentWrap" class="sbm-attachment-current d-none">
+                                <a href="#" id="attachmentCurrentLink" class="sbm-attachment"
+                                   target="_blank" rel="noopener">
+                                    <i class="bi bi-paperclip" aria-hidden="true"></i>
+                                    <span id="attachmentCurrentName"></span>
+                                </a>
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox"
+                                           name="remove_attachment" id="removeAttachment" value="1">
+                                    <label class="form-check-label" for="removeAttachment">
+                                        Remove the current file
+                                    </label>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="form-group sbm-form-grid--full">
@@ -237,7 +327,8 @@
 
                         <div class="form-group">
                             <label class="sbm-form-label" for="is_active">Status<span class="sbm-req">*</span></label>
-                            <select class="form-select sbm-control" name="is_active" id="is_active">
+                            <select class="form-select sbm-control select2" name="is_active" id="is_active"
+                                    data-placeholder="Status">
                                 <option value="1">Active</option>
                                 <option value="0">Inactive</option>
                             </select>
@@ -245,7 +336,8 @@
 
                         <div class="form-group">
                             <label class="sbm-form-label" for="target">Opens in</label>
-                            <select class="form-select sbm-control" name="target" id="target">
+                            <select class="form-select sbm-control select2" name="target" id="target"
+                                    data-placeholder="Opens in">
                                 <option value="0" selected>Same tab</option>
                                 <option value="1">New tab</option>
                             </select>
@@ -327,6 +419,7 @@ $(function () {
             data: function (d) {
                 d.category_id = $('#sbmCategoryFilter').val() || '';
                 d.group_id = $('#sbmGroupFilter').val() || '';
+                d.parent_id = $('#sbmParentFilter').val() || '';
             }
         },
         columns: [
@@ -336,6 +429,7 @@ $(function () {
             { data: 'parent_menu', name: 'parent_menu', orderable: false, searchable: false },
             { data: 'name', name: 'name' },
             { data: 'route', name: 'route' },
+            { data: 'attachment', name: 'attachment' },
             { data: 'permission_name', name: 'permission_name' },
             { data: 'icon', name: 'icon', className: 'text-center' },
             { data: 'order', name: 'order', className: 'text-center' },
@@ -377,23 +471,66 @@ $(function () {
         });
 
         // Keep the group only if it still belongs to the chosen category.
-        $groupFilter.val($groupFilter.find('option[value="' + current + '"]').length ? current : '');
+        $groupFilter.val($groupFilter.find('option[value="' + current + '"]').length ? current : '')
+            .trigger('change.select2');
+    }
+
+    /* Parent Menu is narrowed by BOTH selects above it. Same detach-don't-hide
+       rule as the group list. The "0" (top level only) option is never filtered
+       out — it is meaningful under any category/group. */
+    var $parentFilter = $('#sbmParentFilter');
+    var parentFilterOptions = $parentFilter.find('option[data-group]').clone();
+
+    function sbmSyncParentFilter() {
+        var categoryId = $('#sbmCategoryFilter').val() || '';
+        var groupId = $groupFilter.val() || '';
+        var current = $parentFilter.val();
+
+        $parentFilter.find('option[data-group]').remove();
+        parentFilterOptions.each(function () {
+            var $opt = $(this);
+            if (groupId && String($opt.data('group')) !== String(groupId)) { return; }
+            // A menu inherits its category from its group when it has none of its
+            // own, so an empty data-category must not exclude it here.
+            var optCategory = $opt.attr('data-category');
+            if (categoryId && optCategory && String(optCategory) !== String(categoryId)) { return; }
+            $parentFilter.append($opt.clone());
+        });
+
+        // Keep the parent only if it survived the narrowing.
+        $parentFilter.val($parentFilter.find('option[value="' + current + '"]').length ? current : '')
+            .trigger('change.select2');
     }
 
     $('#sbmCategoryFilter').on('change', function () {
         sbmSyncGroupFilter();
+        sbmSyncParentFilter();
         dt.ajax.reload();
         sbmUpdateExportLinks();
     });
 
     $groupFilter.on('change', function () {
+        sbmSyncParentFilter();
+        dt.ajax.reload();
+        sbmUpdateExportLinks();
+    });
+
+    $parentFilter.on('change', function () {
         dt.ajax.reload();
         sbmUpdateExportLinks();
     });
 
     $('#sbmResetFilters').on('click', function () {
-        $('#sbmCategoryFilter').val('');
+        // Clear the GROUP explicitly. sbmSyncGroupFilter() only re-derives the
+        // option list; with no category chosen every group is back in it, so the
+        // current selection survives and Reset silently left the grid filtered.
+        // .val('') alone leaves Select2 still SHOWING the cleared value —
+        // the widget only repaints on its own namespaced event.
+        $('#sbmCategoryFilter').val('').trigger('change.select2');
+        $groupFilter.val('').trigger('change.select2');
+        $parentFilter.val('').trigger('change.select2');
         sbmSyncGroupFilter();
+        sbmSyncParentFilter();
         dt.search('').ajax.reload();      // clears the search box too
         sbmUpdateExportLinks();
     });
@@ -410,8 +547,8 @@ $(function () {
        not in the export at all — here, Action.
        ⚠️ Adding a column to the table means adding an entry here too. */
     var SBM_EXPORT_COLUMN_KEYS = [
-        'sno', 'category', 'group', 'parent', 'name', 'route', 'permission_name',
-        'icon', 'order', 'target', 'created_at', 'status', ''
+        'sno', 'category', 'group', 'parent', 'name', 'route', 'attachment',
+        'permission_name', 'icon', 'order', 'target', 'created_at', 'status', ''
     ];
     var SBM_EXPORT_COL_COUNT = SBM_EXPORT_COLUMN_KEYS.filter(Boolean).length;
 
@@ -427,8 +564,9 @@ $(function () {
         var term = dt.search() || '';
         var category = $('#sbmCategoryFilter').val() || '';
         var group = $groupFilter.val() || '';
+        var parent = $parentFilter.val() || '';
 
-        ['sbmDownloadLink', 'sbmPrintLink'].forEach(function (id) {
+        ['sbmCsvLink', 'sbmExcelLink', 'sbmPdfLink', 'sbmPrintLink'].forEach(function (id) {
             var link = document.getElementById(id);
             if (!link) { return; }
             var base = link.href.split('?')[0];
@@ -442,6 +580,10 @@ $(function () {
 
             params.delete('group_id');
             if (group !== '') { params.set('group_id', group); }
+
+            // '0' is the top-level-only sentinel, so compare against '' not falsy.
+            params.delete('parent_id');
+            if (parent !== '') { params.set('parent_id', parent); }
 
             params.delete('cols');
             // Omit ?cols= entirely while nothing is hidden — the server reads
@@ -610,11 +752,13 @@ $(function () {
     /* ══ Dependent dropdowns: Category → Group → Parent Menu ═══════════════ */
 
     function resetParentMenuSelect() {
-        $('#parent_id').empty().append('<option value="">Select Parent Menu</option>');
+        $('#parent_id').empty().append('<option value="">Select Parent Menu</option>')
+            .trigger('change.select2');
     }
 
     function resetGroupSelect() {
-        $('#group_id').empty().append('<option value="">Select Group</option>');
+        $('#group_id').empty().append('<option value="">Select Group</option>')
+            .trigger('change.select2');
     }
 
     /**
@@ -645,6 +789,9 @@ $(function () {
                 // Assign AFTER the options exist — setting it first is silently
                 // dropped (docs/new-design-index-page.md §3c).
                 $('#group_id').val(selectedGroupId || '');
+                // Select2 reads the <option>s live but only repaints the closed
+                // box on its own namespaced event (§3c).
+                $('#group_id').trigger('change.select2');
                 if (typeof done === 'function') { done(); }
             },
             error: function () {
@@ -684,6 +831,7 @@ $(function () {
                     });
                 }
                 $('#parent_id').val(selectedParentId || '');
+                $('#parent_id').trigger('change.select2');
                 if (typeof done === 'function') { done(); }
             },
             error: function () {
@@ -734,6 +882,10 @@ $(function () {
         $form.find('.invalid-feedback').remove();
         $('#SubmitMenuForm').prop('disabled', false).removeAttr('aria-busy');
         $form[0].reset();
+        // .reset() restores the native <select>s but Select2 keeps painting the
+        // last values; repaint every one of them or Add opens pre-filled with
+        // whatever the previous Edit left behind.
+        $form.find('select.select2').trigger('change.select2');
         return $form;
     }
 
@@ -750,6 +902,7 @@ $(function () {
         resetGroupSelect();
         resetParentMenuSelect();
         syncIconPreview();
+        sbmShowCurrentAttachment(null);
         showMenuModal();
     }
 
@@ -768,13 +921,17 @@ $(function () {
         $('#permission_name').val(data.permission_name || '');
         $('#icon').val(data.icon || '');
         $('#order').val(data.order === null || data.order === undefined ? '' : data.order);
-        $('#is_active').val(String(data.is_active) === '1' ? '1' : '0');
-        $('#target').val(String(data.target) === '1' ? '1' : '0');
+        // Select2 keeps the native <select> in sync but only repaints its own
+        // box on change.select2 — without this Edit opens showing the
+        // placeholder instead of the saved value (§3c).
+        $('#is_active').val(String(data.is_active) === '1' ? '1' : '0').trigger('change.select2');
+        $('#target').val(String(data.target) === '1' ? '1' : '0').trigger('change.select2');
         $form.attr('action', UPDATE_BASE + '/' + data.id)
              .append('<input type="hidden" name="_method" value="PUT">');
 
-        $('#category_id').val(data.category_id || '');
+        $('#category_id').val(data.category_id || '').trigger('change.select2');
         syncIconPreview();
+        sbmShowCurrentAttachment(data.attachment || null);
 
         // Chain the two AJAX loads, then open — Group must exist before Parent
         // can be filtered by it.
@@ -786,6 +943,26 @@ $(function () {
                 showMenuModal
             );
         });
+    }
+
+    /* Current attachment: shown in Edit when the row has one, hidden otherwise.
+       The Remove checkbox is always cleared here — resetMenuForm() runs before
+       this, but a checkbox left ticked from a previous edit would silently
+       delete the next menu's file. */
+    var ATTACHMENT_BASE = "{{ asset('storage') }}/";
+
+    function sbmShowCurrentAttachment(path) {
+        var $wrap = $('#attachmentCurrentWrap');
+        $('#removeAttachment').prop('checked', false);
+
+        if (!path) {
+            $wrap.addClass('d-none');
+            return;
+        }
+
+        $('#attachmentCurrentLink').attr('href', ATTACHMENT_BASE + path);
+        $('#attachmentCurrentName').text(String(path).split('/').pop());
+        $wrap.removeClass('d-none');
     }
 
     $('#sbmAddBtn').on('click', openAddModal);

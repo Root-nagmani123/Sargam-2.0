@@ -3,6 +3,7 @@
 @section('title', 'Assign Permission')
 
 @push('styles')
+@include('admin.layouts.partials.select2-assets')
 {{-- Shared Roles & Permissions chrome — the same module stylesheet the Roles
      grid uses, so the two screens cannot drift apart.
      See docs/new-design-index-page.md §3b. --}}
@@ -14,9 +15,26 @@
 @php
     $totalCount = count($rows);
     $disabledCount = $totalCount - $enabledCount;
+
+    // Just the four tier columns of the matrix, for the cascading filter selects.
+    // Derived from $rows (not re-queried) so the dropdowns, the grid and the
+    // exports are all reading the one permissionMatrix() result.
+    $rpFilterTree = array_map(
+        fn (array $row) => [
+            'category' => $row['category'],
+            'group' => $row['group'],
+            'menu' => $row['menu'],
+            'submenu' => $row['submenu'],
+        ],
+        $rows
+    );
 @endphp
 <div class="container-fluid rp-page">
-    <x-breadcrum title="Assign Permission - {{ ucfirst($role->name) }}" :items="['Setup', 'Hr Management', 'Assign Permission']">
+    {{-- No :items — the hardcoded trail dropped Home and mistyped the group as
+         "Hr Management". SidebarNavResolver resolves roles.show onto the Roles menu,
+         so the component builds Home / Setup / HR Management / Role & Permission /
+         Roles / <this page> from the menu tree itself. --}}
+    <x-breadcrum title="Assign Permission - {{ ucfirst($role->name) }}">
     </x-breadcrum>
 
     <x-session_message />
@@ -50,11 +68,38 @@
         <div class="d-flex flex-wrap align-items-center gap-2 rp-secondary-actions">
             {{-- ?q / ?category / ?status / ?cols are stamped on by
                  rpUpdateExportLinks(), so a download is the matrix as filtered. --}}
-            <a href="{{ route('roles.permissions.export', ['id' => $role->id, 'format' => 'csv']) }}"
-               id="rpDownloadLink"
-               class="btn programme-dt-btn-columns border-0 text-primary" title="Download as CSV">
-                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-            </a>
+            <div class="dropdown">
+                <button type="button"
+                        class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                        id="rpDownloadMenuBtn" data-bs-toggle="dropdown" aria-expanded="false"
+                        title="Download this list">
+                    <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end programme-dt-download-menu"
+                    aria-labelledby="rpDownloadMenuBtn">
+                    <li>
+                        <a class="dropdown-item" id="rpCsvLink"
+                           href="{{ route('roles.permissions.export', ['id' => $role->id, 'format' => 'csv']) }}">
+                            <i class="bi bi-filetype-csv" aria-hidden="true"></i><span>CSV</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" id="rpExcelLink"
+                           href="{{ route('roles.permissions.export', ['id' => $role->id, 'format' => 'excel']) }}">
+                            <i class="bi bi-file-earmark-excel" aria-hidden="true"></i><span>Excel</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" id="rpPdfLink"
+                           href="{{ route('roles.permissions.export', ['id' => $role->id, 'format' => 'pdf']) }}">
+                            <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i><span>PDF</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            {{-- Print stays OUTSIDE the dropdown: it opens a sheet rather than
+                 saving a file, so it is not one of the download formats. --}}
             <a href="{{ route('roles.permissions.export', ['id' => $role->id, 'format' => 'print']) }}"
                id="rpPrintLink" target="_blank" rel="noopener"
                class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
@@ -69,11 +114,16 @@
             {{-- Toolbar: filters + reset left, columns + search right (§2). --}}
             <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4
                         programme-dt-toolbar">
-                <div class="d-flex flex-wrap align-items-center gap-3">
+                <div class="d-flex flex-wrap align-items-center gap-2 gap-xl-3">
                     <span class="programme-dt-filters-label">Filters</span>
 
-                    <div class="programme-dt-filter-select">
-                        <select id="rpCategoryFilter" class="form-select" aria-label="Filter by category">
+                    {{-- Four tiers of the menu tree, each narrowing the next. Only
+                         Category is server-rendered; Group / Menu / Sub Menu are
+                         filled by rpSyncFilterOptions() from the rows actually on
+                         screen, so a choice can never produce an empty grid. --}}
+                    <div class="programme-dt-filter-select rp-filter-select">
+                        <select id="rpCategoryFilter" class="form-select select2" aria-label="Filter by category"
+                                data-placeholder="Category">
                             <option value="">Category</option>
                             @foreach ($categories as $category)
                                 <option value="{{ $category->name }}">{{ $category->name }}</option>
@@ -81,10 +131,34 @@
                         </select>
                     </div>
 
+                    <div class="programme-dt-filter-select rp-filter-select">
+                        <select id="rpGroupFilter" class="form-select select2" aria-label="Filter by group"
+                                data-placeholder="Group">
+                            <option value="">Group</option>
+                        </select>
+                    </div>
+
+                    <div class="programme-dt-filter-select rp-filter-select">
+                        <select id="rpMenuFilter" class="form-select select2" aria-label="Filter by menu"
+                                data-placeholder="Menu">
+                            <option value="">Menu</option>
+                        </select>
+                    </div>
+
+                    <div class="programme-dt-filter-select rp-filter-select">
+                        <select id="rpSubMenuFilter" class="form-select select2" aria-label="Filter by sub menu"
+                                data-placeholder="Sub Menu">
+                            <option value="">Sub Menu</option>
+                        </select>
+                    </div>
+
                     <button type="button" class="btn programme-dt-btn-reset" id="rpResetFilters">Reset Filters</button>
                 </div>
 
-                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                {{-- flex-lg-nowrap: with four filters on the left this group was
+                     dropping Search onto its own line under Columns. Keep the pair
+                     together from lg up; below that the toolbar is a column anyway. --}}
+                <div class="d-flex flex-wrap flex-lg-nowrap align-items-center gap-2 ms-lg-auto rp-toolbar-right">
                     <button type="button" class="btn programme-dt-btn-columns" id="rpBtnColumns"
                             data-bs-toggle="modal" data-bs-target="#rpPermColumnVisibilityModal"
                             title="Show / hide columns"
@@ -111,7 +185,10 @@
                                 <th scope="col">Menu</th>
                                 <th scope="col">Sub Menu</th>
                                 <th scope="col">Permission</th>
-                                <th scope="col">Status</th>
+                                {{-- text-center on the HEADER too: the cell below is
+                                     .text-center, and a left-aligned title over a
+                                     centred pill reads as a misalignment. --}}
+                                <th scope="col" class="text-center">Status</th>
                                 <th scope="col">Action</th>
                             </tr>
                         </thead>
@@ -243,16 +320,89 @@ $(function () {
     });
 
     /* ── Filters ─────────────────────────────────────────────────────────── */
+    /* Four tiers down the menu tree (Category → Group → Menu → Sub Menu), each
+       exact-matching its own column and narrowing the options offered below it.
+       The option lists come from RP_TREE ─ the same permissionMatrix() rows the
+       grid and the exports use ─ so a select can never offer a value that would
+       leave the table empty.
+
+       Column indexes are the DataTables ones (0..3), which stay put when a column
+       is hidden from the Columns modal, so a hidden Group column still filters. */
+    var RP_TREE = @json($rpFilterTree);
+
+    var RP_LEVELS = [
+        { column: 0, field: 'category', param: 'category', placeholder: 'Category', $el: $('#rpCategoryFilter') },
+        { column: 1, field: 'group',    param: 'group',    placeholder: 'Group',    $el: $('#rpGroupFilter') },
+        { column: 2, field: 'menu',     param: 'menu',     placeholder: 'Menu',     $el: $('#rpMenuFilter') },
+        { column: 3, field: 'submenu',  param: 'submenu',  placeholder: 'Sub Menu', $el: $('#rpSubMenuFilter') }
+    ];
+
+    /* Rebuild every select from `fromLevel` down, against the choices still made
+       above it. A selection that survives the narrowing is kept; one that no longer
+       exists is dropped rather than left pointing at a value with no rows. */
+    function rpSyncFilterOptions(fromLevel) {
+        for (var l = fromLevel; l < RP_LEVELS.length; l++) {
+            var level = RP_LEVELS[l];
+            var previous = level.$el.val() || '';
+            var seen = {};
+            var values = [];
+
+            RP_TREE.forEach(function (row) {
+                for (var up = 0; up < l; up++) {
+                    var chosen = RP_LEVELS[up].$el.val() || '';
+                    if (chosen !== '' && row[RP_LEVELS[up].field] !== chosen) { return; }
+                }
+                var value = row[level.field];
+                if (value === '' || seen[value]) { return; }
+                seen[value] = true;
+                values.push(value);
+            });
+
+            values.sort(function (a, b) { return a.localeCompare(b); });
+
+            level.$el.empty().append(
+                $('<option></option>').attr('value', '').text(level.placeholder)
+            );
+            values.forEach(function (value) {
+                level.$el.append(
+                    // permissionMatrix() writes '-' for "this menu has no sub menu";
+                    // a bare dash in a dropdown reads as a separator, not a choice.
+                    $('<option></option>').attr('value', value)
+                        .text(value === '-' ? '(No sub menu)' : value)
+                );
+            });
+
+            level.$el.val(values.indexOf(previous) !== -1 ? previous : '');
+
+            // Select2 reads the <option>s live, but the RENDERED selection only
+            // refreshes on its own namespaced event — without this the box keeps
+            // showing a value the narrowing just removed.
+            level.$el.trigger('change.select2');
+        }
+    }
+
     function applyFilters() {
-        var category = $('#rpCategoryFilter').val() || '';
-        // Category is an exact match on column 0; the search box covers the rest.
-        dt.column(0)
-          .search(category ? '^' + $.fn.dataTable.util.escapeRegex(category) + '$' : '', true, false)
-          .draw();
+        RP_LEVELS.forEach(function (level) {
+            var value = level.$el.val() || '';
+            dt.column(level.column).search(
+                value ? '^' + $.fn.dataTable.util.escapeRegex(value) + '$' : '',
+                true,
+                false
+            );
+        });
+        dt.draw();
         rpUpdateExportLinks();
     }
 
-    $('#rpCategoryFilter').on('change', applyFilters);
+    RP_LEVELS.forEach(function (level, index) {
+        level.$el.on('change', function () {
+            rpSyncFilterOptions(index + 1);
+            applyFilters();
+        });
+    });
+
+    // Fill Group / Menu / Sub Menu for the unfiltered view on first paint.
+    rpSyncFilterOptions(1);
 
     $('.rp-status-pill').on('click', function () {
         var $pill = $(this);
@@ -267,7 +417,12 @@ $(function () {
     });
 
     $('#rpResetFilters').on('click', function () {
-        $('#rpCategoryFilter').val('');
+        // .val('') alone leaves Select2 still SHOWING the cleared value —
+        // the widget only repaints on its own namespaced event.
+        RP_LEVELS.forEach(function (level) { level.$el.val('').trigger('change.select2'); });
+        // Re-open every narrowed list, or the selects would keep whatever subset
+        // the cleared filters had left them showing.
+        rpSyncFilterOptions(1);
         rpStatus = '';
         $('.rp-status-pill').removeClass('active').attr('aria-pressed', 'false').removeAttr('aria-current');
         $('.rp-status-pill[data-rp-status=""]').addClass('active')
@@ -301,9 +456,8 @@ $(function () {
         });
 
         var term = dt.search() || '';
-        var category = $('#rpCategoryFilter').val() || '';
 
-        ['rpDownloadLink', 'rpPrintLink'].forEach(function (id) {
+        ['rpCsvLink', 'rpExcelLink', 'rpPdfLink', 'rpPrintLink'].forEach(function (id) {
             var link = document.getElementById(id);
             if (!link) { return; }
             var base = link.href.split('?')[0];
@@ -312,8 +466,13 @@ $(function () {
             params.delete('q');
             if (term !== '') { params.set('q', term); }
 
-            params.delete('category');
-            if (category !== '') { params.set('category', category); }
+            // Every tier, by the same name RoleService::PERMISSION_TIERS uses, so a
+            // download is the matrix exactly as filtered on screen.
+            RP_LEVELS.forEach(function (level) {
+                var value = level.$el.val() || '';
+                params.delete(level.param);
+                if (value !== '') { params.set(level.param, value); }
+            });
 
             params.delete('status');
             if (rpStatus !== '') { params.set('status', rpStatus); }

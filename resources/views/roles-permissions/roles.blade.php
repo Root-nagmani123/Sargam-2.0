@@ -29,11 +29,38 @@
         <div class="d-flex flex-wrap align-items-end gap-2 rp-secondary-actions">
             {{-- ?q / ?cols are stamped on by rpUpdateExportLinks(), so a download
                  carries the same search and columns as the grid. --}}
-            <a href="{{ route('roles.export', ['format' => 'csv']) }}"
-               id="rpDownloadLink"
-               class="btn programme-dt-btn-columns border-0 text-primary" title="Download as CSV">
-                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-            </a>
+            <div class="dropdown">
+                <button type="button"
+                        class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                        id="rpDownloadMenuBtn" data-bs-toggle="dropdown" aria-expanded="false"
+                        title="Download this list">
+                    <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end programme-dt-download-menu"
+                    aria-labelledby="rpDownloadMenuBtn">
+                    <li>
+                        <a class="dropdown-item" id="rpCsvLink"
+                           href="{{ route('roles.export', ['format' => 'csv']) }}">
+                            <i class="bi bi-filetype-csv" aria-hidden="true"></i><span>CSV</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" id="rpExcelLink"
+                           href="{{ route('roles.export', ['format' => 'excel']) }}">
+                            <i class="bi bi-file-earmark-excel" aria-hidden="true"></i><span>Excel</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" id="rpPdfLink"
+                           href="{{ route('roles.export', ['format' => 'pdf']) }}">
+                            <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i><span>PDF</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            {{-- Print stays OUTSIDE the dropdown: it opens a sheet rather than
+                 saving a file, so it is not one of the download formats. --}}
             <a href="{{ route('roles.export', ['format' => 'print']) }}"
                id="rpPrintLink" target="_blank" rel="noopener"
                class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
@@ -70,9 +97,11 @@
                     <table id="rolesTable" class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                         <thead>
                             <tr>
-                                <th scope="col">Sr No.</th>
+                                {{-- text-center on the headers whose columns are
+                                     given className 'text-center' below. --}}
+                                <th scope="col" class="text-center">Sr No.</th>
                                 <th scope="col">Role</th>
-                                <th scope="col">Permissions</th>
+                                <th scope="col" class="text-center">Permissions</th>
                                 <th scope="col">Created</th>
                                 <th scope="col">Action</th>
                             </tr>
@@ -234,7 +263,7 @@ $(function () {
 
         var term = dt.search() || '';
 
-        ['rpDownloadLink', 'rpPrintLink'].forEach(function (id) {
+        ['rpCsvLink', 'rpExcelLink', 'rpPdfLink', 'rpPrintLink'].forEach(function (id) {
             var link = document.getElementById(id);
             if (!link) { return; }
             var base = link.href.split('?')[0];

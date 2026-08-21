@@ -173,11 +173,46 @@
     float: none;
 }
 
-/* Keep the Action header over its content. */
+/* Action is the last column and belongs hard against the right edge of the
+   window, not floating mid-table. `width: 1%` + nowrap makes the column
+   shrink-wrap its buttons, so auto table layout hands every spare pixel to the
+   data columns instead and the action stack lands on the right; text-align
+   keeps the header sitting over its content. */
 .rp-page .programme-dt-table th:last-child,
 .rp-page .programme-dt-table td:last-child {
-    text-align: left;
+    width: 1%;
+    text-align: right;
     white-space: nowrap;
+}
+
+/* The group is an inline-flex box, so the cell's text-align already places it.
+   This only bites when the cell is forced wider than its content. */
+.rp-page .programme-dt-table td:last-child .rp-act-group {
+    justify-content: flex-end;
+}
+
+/* Assign Permission runs FOUR tier selects (Category / Group / Menu / Sub Menu)
+   in a toolbar sized for one. At programme-dt-filter-select's 180px they push
+   Reset Filters onto its own line below 1440px, so trim them here — the
+   767px rule in custom.css still takes over and stacks them on mobile. */
+.rp-page .rp-filter-select {
+    width: 160px;
+}
+
+@media (min-width: 768px) and (max-width: 1399.98px) {
+    .rp-page .rp-filter-select {
+        width: 138px;
+    }
+}
+
+/* The blade's flex-lg-nowrap keeps Columns and Search on one line; this lets
+   the search box give way when the four filters squeeze it, since custom.css
+   pins it at a non-shrinking 300px. */
+@media (min-width: 992px) {
+    .rp-page .programme-dt-toolbar .rp-toolbar-right .programme-dt-search {
+        flex: 0 1 300px;
+        min-width: 190px;
+    }
 }
 
 /* .programme-dt-table wraps its 2nd column at 420px — right for a long-text
@@ -206,16 +241,33 @@
 
 .rp-modal { border-radius: 12px; }
 
+/* Brand band, per Figma: the header is solid navy with its title, subtitle and
+   close button reversed out of it. The top corners have to be restated here —
+   .modal-content is not overflow-hidden (that would clip the icon-picker
+   dropdown in the Assign Dashboard modal), so a square band would otherwise
+   poke out past the dialog's 12px radius. */
 .rp-modal .rp-modal-header {
-    border-bottom: 1px solid #eaecf0;
+    background: #004384;
+    border-bottom: 0;
+    border-radius: 12px 12px 0 0;
     padding: 1rem 1.25rem;
     align-items: flex-start;
 }
 .rp-modal .rp-modal-header .modal-title {
     font-size: 1.05rem;
     font-weight: 700;
-    color: var(--ds-ink, #101828);
+    color: #ffffff;
     margin: 0;
+}
+/* Bootstrap's .btn-close is a black SVG data-URI, invisible on navy. Invert it
+   here rather than adding .btn-close-white to the markup, so every modal in
+   the module gets it from the one stylesheet. */
+.rp-modal .rp-modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+    opacity: 0.8;
+}
+.rp-modal .rp-modal-header .btn-close:hover {
+    opacity: 1;
 }
 /* One line under the title saying which mode you are in — the two modes are
    otherwise distinguishable only by the submit caption. */
@@ -223,11 +275,14 @@
     margin: 2px 0 0;
     font-size: 0.8125rem;
     font-weight: 400;
-    color: var(--ds-ink-muted, #667085);
+    color: rgba(255, 255, 255, 0.78);
 }
 
 .rp-modal .rp-modal-body { padding: 1.25rem; }
 
+/* The tinted card the labelled controls sit in (docs/new-design-index-page.md
+   §3c). Restored after an edit to the modal header above accidentally took it
+   with it — without this the modal body renders flat white. */
 .rp-modal .rp-field-card {
     position: relative;
     background: #eef1fc;

@@ -1,8 +1,13 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Sidebar Categories')
+{{-- "Topbar Category", not "Sidebar Categories": that is the name on the menus
+     row this page hangs off (menu 202), and the breadcrumb component appends the
+     page title as its own crumb whenever the two disagree — which read
+     "… / Sidebar / Topbar Category / Sidebar Categories". --}}
+@section('title', 'Topbar Category')
 
 @push('styles')
+@include('admin.layouts.partials.select2-assets')
 {{-- Shared Sidebar Menu Builder chrome — the module stylesheet the Menu Groups
      and Menus grids will use too, so the screens cannot drift apart.
      See docs/new-design-index-page.md §3b/§3c. --}}
@@ -12,7 +17,7 @@
 
 @section('setup_content')
 <div class="container-fluid sbm-page">
-    <x-breadcrum title="Sidebar Categories" :showBack="false">
+    <x-breadcrum title="Topbar Category" :showBack="false">
         <button type="button"
                 class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
                 id="sbmAddBtn">
@@ -30,11 +35,38 @@
         <div class="d-flex flex-wrap align-items-end gap-2 sbm-secondary-actions">
             {{-- ?q / ?cols are stamped on by sbmUpdateExportLinks(), so a download
                  carries the same search and columns as the grid. --}}
-            <a href="{{ route('sidebar.categories.export', ['format' => 'csv']) }}"
-               id="sbmDownloadLink"
-               class="btn programme-dt-btn-columns border-0 text-primary" title="Download as CSV">
-                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-            </a>
+            <div class="dropdown">
+                <button type="button"
+                        class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                        id="sbmDownloadMenuBtn" data-bs-toggle="dropdown" aria-expanded="false"
+                        title="Download this list">
+                    <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end programme-dt-download-menu"
+                    aria-labelledby="sbmDownloadMenuBtn">
+                    <li>
+                        <a class="dropdown-item" id="sbmCsvLink"
+                           href="{{ route('sidebar.categories.export', ['format' => 'csv']) }}">
+                            <i class="bi bi-filetype-csv" aria-hidden="true"></i><span>CSV</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" id="sbmExcelLink"
+                           href="{{ route('sidebar.categories.export', ['format' => 'excel']) }}">
+                            <i class="bi bi-file-earmark-excel" aria-hidden="true"></i><span>Excel</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" id="sbmPdfLink"
+                           href="{{ route('sidebar.categories.export', ['format' => 'pdf']) }}">
+                            <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i><span>PDF</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            {{-- Print stays OUTSIDE the dropdown: it opens a sheet rather than
+                 saving a file, so it is not one of the download formats. --}}
             <a href="{{ route('sidebar.categories.export', ['format' => 'print']) }}"
                id="sbmPrintLink" target="_blank" rel="noopener"
                class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
@@ -148,8 +180,8 @@
                              category created Inactive would otherwise need a second trip. --}}
                         <div class="form-group">
                             <label class="sbm-form-label" for="is_active">Status<span class="sbm-req">*</span></label>
-                            <select class="form-select sbm-control" name="is_active" id="is_active"
-                                    required aria-required="true">
+                            <select class="form-select sbm-control select2" name="is_active" id="is_active"
+                                    data-placeholder="Status" required aria-required="true">
                                 <option value="1">Active</option>
                                 <option value="0">Inactive</option>
                             </select>
@@ -267,7 +299,7 @@ $(function () {
 
         var term = dt.search() || '';
 
-        ['sbmDownloadLink', 'sbmPrintLink'].forEach(function (id) {
+        ['sbmCsvLink', 'sbmExcelLink', 'sbmPdfLink', 'sbmPrintLink'].forEach(function (id) {
             var link = document.getElementById(id);
             if (!link) { return; }
             var base = link.href.split('?')[0];
@@ -462,7 +494,8 @@ $(function () {
             $('#slug').val(data.slug);
             $('#icon').val(data.icon);
             $('#order').val(data.order);
-            $('#is_active').val(String(data.status) === '1' ? '1' : '0');
+            // change.select2 or Edit opens showing the placeholder (§3c).
+            $('#is_active').val(String(data.status) === '1' ? '1' : '0').trigger('change.select2');
             $form.attr('action', UPDATE_BASE + '/' + data.id)
                  .append('<input type="hidden" name="_method" value="PUT">');
         } else {
@@ -470,6 +503,8 @@ $(function () {
             $('#CategoryModalSub').text('Create a new top-bar category.');
             $('#SubmitCategoryForm').text('Add Category');
             $form[0].reset();
+            // Repaint Select2 or Add opens showing the last Edit's status.
+            $form.find('select.select2').trigger('change.select2');
             $('#categoryId').val('');
             $form.attr('action', STORE_URL);
         }

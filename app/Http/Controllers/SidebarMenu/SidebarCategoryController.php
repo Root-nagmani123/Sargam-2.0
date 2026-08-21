@@ -13,6 +13,10 @@ namespace App\Http\Controllers\SidebarMenu;
 use App\Http\Controllers\Controller;
 use App\Services\SidebarMenu\SidebarCategoryService;
 use App\Http\Requests\SidebarMenu\CategoryRequest;
+use App\Exports\BrandedGridExport;
+use App\Support\ExportCsvHeader;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 
 
@@ -39,14 +43,17 @@ class SidebarCategoryController extends Controller
     }
 
     /**
-     * Download / Print — one action, two formats, off the same query and the
-     * same column definitions, so the CSV and the printout can't drift apart
-     * (docs/new-design-index-page.md §1). ?q and ?cols are stamped on by the
-     * grid so the export carries what the user is looking at.
+     * Download / Print — one action, four formats (csv, excel, pdf, print), off
+     * the same query and the same column definitions, so a spreadsheet, a PDF and
+     * a printout can't drift apart (docs/new-design-index-page.md §1). ?q and
+     * ?cols are stamped on by the grid so every format carries what the user is
+     * looking at.
      */
     public function export(Request $request)
     {
-        $format = $request->input('format') === 'print' ? 'print' : 'csv';
+        $format = strtolower((string) $request->input('format', 'csv'));
+        abort_unless(in_array($format, ['csv', 'excel', 'pdf', 'print'], true), 404);
+
         $columns = $this->service->exportColumns($request->input('cols'));
         $rows = $this->service->exportRows($request);
         $search = trim((string) $request->input('q', ''));
@@ -60,24 +67,72 @@ class SidebarCategoryController extends Controller
             ]);
         }
 
-        $filename = 'sidebar-categories-'.now()->format('Y-m-d-His').'.csv';
+        $exportDate = now()->format('d-m-Y h:i A');
+        $filename = 'TopbarCategory_'.now()->format('YmdHis');
+        $filterLine = $search !== '' ? 'Search: '.$search : null;
+        $reportTitle = 'Topbar Category';
 
-        return response()->streamDownload(function () use ($rows, $columns) {
+        if ($format === 'excel') {
+            return Excel::download(
+                new BrandedGridExport($rows, $columns, $reportTitle, $exportDate, $filterLine),
+                $filename.'.xlsx'
+            );
+        }
+
+        if ($format === 'pdf') {
+            return Pdf::loadView('exports.branded_grid_pdf', [
+                'reportTitle' => $reportTitle,
+                'columns' => $columns,
+                'rows' => $rows,
+                'filterLine' => $filterLine,
+                'exportDate' => $exportDate,
+                // Mirrors export_print.blade.php's column widths, so the PDF and
+                // the printout lay out the same.
+                'widths' => [
+                    'sno' => '7%', 'name' => '24%', 'slug' => '22%', 'icon' => '17%',
+                    'order' => '9%', 'created_at' => '12%', 'status' => '9%',
+                ],
+            ])
+                ->setPaper('a4', 'portrait')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    // The page-number script in the view needs this.
+                    'isPhpEnabled' => true,
+                ])
+                ->download($filename.'.pdf');
+        }
+
+        // The same band the .xlsx and the print/PDF headers carry, so the CSV names
+        // the report and its applied filters too instead of arriving as bare columns.
+        $band = ExportCsvHeader::rows(
+            $reportTitle,
+            $filterLine,
+            $exportDate,
+            is_countable($rows) ? count($rows) : null
+        );
+
+        return response()->streamDownload(function () use ($rows, $columns, $band) {
             $handle = fopen('php://output', 'w');
             // BOM: without it Excel reads the file as ANSI and mangles any
             // non-ASCII category name.
             fwrite($handle, "\xEF\xBB\xBF");
+            foreach ($band as $bandRow) {
+                fputcsv($handle, $bandRow);
+            }
             fputcsv($handle, array_column($columns, 'heading'));
 
-            foreach ($rows as $index => $row) {
+            $index = 0;
+            foreach ($rows as $row) {
                 fputcsv($handle, array_map(
                     fn (array $col) => (string) $col['value']($row, $index),
                     $columns
                 ));
+                $index++;
             }
 
             fclose($handle);
-        }, $filename, [
+        }, $filename.'.csv', [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }

@@ -1,8 +1,12 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Sidebar Menu Groups')
+{{-- Named exactly as the menus row this page hangs off, because the
+     breadcrumb component appends the page title as its own crumb whenever
+     the two disagree — which read "… / SideMenu Groups / Sidebar Menu Groups". --}}
+@section('title', 'SideMenu Groups')
 
 @push('styles')
+@include('admin.layouts.partials.select2-assets')
 {{-- Shared Sidebar Menu Builder chrome — the same module stylesheet the Sidebar
      Categories grid uses, so the two screens cannot drift apart.
      See docs/new-design-index-page.md §3b/§3c. --}}
@@ -18,7 +22,7 @@
 
 @section('setup_content')
 <div class="container-fluid sbm-page">
-    <x-breadcrum title="Sidebar Menu Groups" :showBack="false">
+    <x-breadcrum title="SideMenu Groups" :showBack="false">
         <button type="button"
                 class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
                 id="sbmAddBtn">
@@ -36,11 +40,38 @@
             {{-- ?category_id / ?q / ?cols are stamped on by sbmUpdateExportLinks(),
                  so a download carries the same filter, search and columns as the
                  grid. --}}
-            <a href="{{ route('sidebar.menu-groups.export', ['format' => 'csv']) }}"
-               id="sbmDownloadLink"
-               class="btn programme-dt-btn-columns border-0 text-primary" title="Download as CSV">
-                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-            </a>
+            <div class="dropdown">
+                <button type="button"
+                        class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                        id="sbmDownloadMenuBtn" data-bs-toggle="dropdown" aria-expanded="false"
+                        title="Download this list">
+                    <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end programme-dt-download-menu"
+                    aria-labelledby="sbmDownloadMenuBtn">
+                    <li>
+                        <a class="dropdown-item" id="sbmCsvLink"
+                           href="{{ route('sidebar.menu-groups.export', ['format' => 'csv']) }}">
+                            <i class="bi bi-filetype-csv" aria-hidden="true"></i><span>CSV</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" id="sbmExcelLink"
+                           href="{{ route('sidebar.menu-groups.export', ['format' => 'excel']) }}">
+                            <i class="bi bi-file-earmark-excel" aria-hidden="true"></i><span>Excel</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" id="sbmPdfLink"
+                           href="{{ route('sidebar.menu-groups.export', ['format' => 'pdf']) }}">
+                            <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i><span>PDF</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            {{-- Print stays OUTSIDE the dropdown: it opens a sheet rather than
+                 saving a file, so it is not one of the download formats. --}}
             <a href="{{ route('sidebar.menu-groups.export', ['format' => 'print']) }}"
                id="sbmPrintLink" target="_blank" rel="noopener"
                class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
@@ -59,7 +90,8 @@
                     <span class="programme-dt-filters-label">Filters</span>
 
                     <div class="programme-dt-filter-select">
-                        <select id="sbmCategoryFilter" class="form-select" aria-label="Filter by category">
+                        <select id="sbmCategoryFilter" class="form-select select2"
+                                data-placeholder="Category" aria-label="Filter by category">
                             <option value="">Category</option>
                             @foreach ($categories as $category)
                                 <option value="{{ $category->id }}">{{ $category->name }}</option>
@@ -187,7 +219,8 @@
 
                         <div class="form-group">
                             <label class="sbm-form-label" for="is_active">Status<span class="sbm-req">*</span></label>
-                            <select class="form-select sbm-control" name="is_active" id="is_active">
+                            <select class="form-select sbm-control select2" name="is_active" id="is_active"
+                                    data-placeholder="Status">
                                 <option value="1">Active</option>
                                 <option value="0">Inactive</option>
                             </select>
@@ -299,7 +332,9 @@ $(function () {
     });
 
     $('#sbmResetFilters').on('click', function () {
-        $('#sbmCategoryFilter').val('');
+        // .val('') alone leaves Select2 still SHOWING the cleared value —
+        // the widget only repaints on its own namespaced event.
+        $('#sbmCategoryFilter').val('').trigger('change.select2');
         dt.search('').ajax.reload();      // clears the search box too
         sbmUpdateExportLinks();
     });
@@ -330,7 +365,7 @@ $(function () {
         var term = dt.search() || '';
         var category = $('#sbmCategoryFilter').val() || '';
 
-        ['sbmDownloadLink', 'sbmPrintLink'].forEach(function (id) {
+        ['sbmCsvLink', 'sbmExcelLink', 'sbmPdfLink', 'sbmPrintLink'].forEach(function (id) {
             var link = document.getElementById(id);
             if (!link) { return; }
             var base = link.href.split('?')[0];
@@ -717,6 +752,8 @@ $(function () {
         $('#SubmitMenuGroupForm').prop('disabled', false).removeAttr('aria-busy');
 
         $form[0].reset();
+        // Repaint Select2 or Add opens showing the last Edit's status.
+        $form.find('select.select2').trigger('change.select2');
         pendingData = data;
 
         if (data) {
@@ -725,7 +762,8 @@ $(function () {
             $('#SubmitMenuGroupForm').text('Update Menu Group');
             $('#name').val(data.name);
             $('#order').val(data.order);
-            $('#is_active').val(String(data.status) === '1' ? '1' : '0');
+            // change.select2 or Edit opens showing the placeholder (§3c).
+            $('#is_active').val(String(data.status) === '1' ? '1' : '0').trigger('change.select2');
             $form.attr('action', UPDATE_BASE + '/' + data.id)
                  .append('<input type="hidden" name="_method" value="PATCH">');
         } else {

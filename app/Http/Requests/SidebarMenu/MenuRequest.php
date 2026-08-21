@@ -66,6 +66,12 @@ class MenuRequest extends FormRequest
             'icon' => 'nullable|string|max:100',
             'is_active' => 'required|in:0,1',
             'target' => 'nullable|in:0,1',
+
+            // Attachment: the same types and 10 MB ceiling Useful Links accepts,
+            // so the two upload fields behave identically. `remove_attachment` is
+            // the Edit modal's "delete the current file" checkbox.
+            'attachment' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx,ppt,pptx', 'max:10240'],
+            'remove_attachment' => ['nullable', 'boolean'],
         ];
     }
 }

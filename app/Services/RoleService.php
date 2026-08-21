@@ -202,18 +202,43 @@ class RoleService
     }
 
     /**
-     * Filter the matrix the way the grid does, for the exports. Same three
-     * controls: free text, category, enabled/disabled.
+     * The grid's tier filters, in the order they narrow each other.
+     *
+     * Keyed row-field => query-string name, so the controller, the export and the
+     * cascade in assign-permission.blade.php all agree on the names.
      */
-    public function filterPermissionMatrix(array $rows, ?string $search, ?string $category, ?string $status): array
+    public const PERMISSION_TIERS = [
+        'category' => 'category',
+        'group' => 'group',
+        'menu' => 'menu',
+        'submenu' => 'submenu',
+    ];
+
+    /**
+     * Filter the matrix the way the grid does, for the exports: free text, the
+     * four tier selects (category / group / menu / sub menu) and enabled/disabled.
+     *
+     * $tiers is a row-field => value map; a blank value means "no filter on this
+     * tier", and an unknown key is ignored rather than trusted, so a hand-edited
+     * query string can't filter on a field the grid does not offer.
+     *
+     * @param  array<string, string|null>  $tiers
+     */
+    public function filterPermissionMatrix(array $rows, ?string $search, array $tiers, ?string $status): array
     {
         $search = trim((string) $search);
-        $category = trim((string) $category);
         $status = in_array($status, ['enabled', 'disabled'], true) ? $status : '';
 
-        return array_values(array_filter($rows, function (array $row) use ($search, $category, $status) {
-            if ($category !== '' && $row['category'] !== $category) {
-                return false;
+        $tiers = array_filter(
+            array_map(fn ($value) => trim((string) $value), array_intersect_key($tiers, self::PERMISSION_TIERS)),
+            fn (string $value) => $value !== ''
+        );
+
+        return array_values(array_filter($rows, function (array $row) use ($search, $tiers, $status) {
+            foreach ($tiers as $field => $value) {
+                if (($row[$field] ?? null) !== $value) {
+                    return false;
+                }
             }
 
             if ($status === 'enabled' && ! $row['enabled']) {

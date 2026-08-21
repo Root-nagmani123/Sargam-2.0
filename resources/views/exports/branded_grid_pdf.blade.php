@@ -1,15 +1,19 @@
-{{-- Users → PDF (DomPDF).
+{{-- Any new-design index grid → PDF (DomPDF).
 
-     Landscape: seven columns including an email address do not fit A4 portrait.
+     ONE blade for every grid that exports this way: the report title, the
+     applied-filter line and the column set are all passed in, and the columns are
+     the same resolved array the CSV, the .xlsx and the print view are handed — so
+     a column hidden in the grid's Columns modal drops out of all four
+     (docs/new-design-index-page.md §1). Pairs with App\Exports\BrandedGridExport,
+     which renders the identical report as a spreadsheet.
 
-     Deliberately NOT sharing export_print.blade.php's CSS: DomPDF has no
+     Deliberately NOT sharing the print blades' CSS: DomPDF has no
      print-color-adjust, no @media print and only partial CSS support, and it
      needs base64 image data rather than asset() URLs. The visual language is
      kept identical by hand — same navy, same header order, same zebra.
 
-     Expects: $columns (label / width / centre), $rows, $filterLine (plain text
-     or null), $exportDate, and optionally $note / $totalRows when the controller
-     truncated the row set to keep DomPDF inside its memory limit. --}}
+     Expects: $reportTitle, $columns, $rows, $exportDate, $filterLine (plain
+     text or null), $widths (column key => CSS width, optional). --}}
 @php
     $logoFor = function (string $relative): ?string {
         $path = public_path($relative);
@@ -23,14 +27,19 @@
 
     $emblem = $logoFor('images/ashoka.png');
     $logo   = $logoFor('images/lbsnaa_logo.jpg');
+
+    $widths = $widths ?? [];
+    // Keys the grid centres; the same list the .xlsx export centres.
+    $centreKeys = ['sno', 'permissions_count', 'created_at', 'status', 'sort_order', 'order'];
+    $total = is_countable($rows) ? count($rows) : iterator_count($rows);
 @endphp
 <!doctype html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Users — LBSNAA</title>
+    <title>{{ $reportTitle }} — LBSNAA</title>
     <style>
-        @page { size: A4 landscape; margin: 10mm 10mm; }
+        @page { size: A4 portrait; margin: 12mm 10mm; }
         * { font-family: 'DejaVu Sans', sans-serif; }
         body { margin: 0; padding: 0; color: #1f2937; font-size: 9px; }
 
@@ -48,10 +57,6 @@
         .meta  { text-align: center; font-size: 8px; color: #6b7280; margin-bottom: 6px; }
         .total { text-align: center; font-size: 9px; font-weight: bold; color: #003366;
                  background: #eef2f8; padding: 3px 0; margin-bottom: 6px; }
-        /* A truncated sheet has to SAY it is truncated, or it reads as the whole
-           list and quietly under-reports. */
-        .note  { text-align: center; font-size: 8px; color: #92400e; background: #fef3c7;
-                 border: 0.8px solid #fcd34d; padding: 4px 6px; margin-bottom: 6px; }
 
         table.data-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         table.data-table th, table.data-table td {
@@ -99,44 +104,45 @@
 
     <div class="rule"></div>
 
-    <div class="report-title">USERS</div>
+    <div class="report-title">{{ mb_strtoupper($reportTitle) }}</div>
     <div class="meta">
         @if(filled($filterLine)){{ $filterLine }} &nbsp;|&nbsp; @endif Generated: {{ $exportDate }}
     </div>
-    <div class="total">Total Records: {{ number_format($totalRows ?? count($rows)) }}</div>
-
-    @if (!empty($note))
-        <div class="note">{{ $note }}</div>
-    @endif
+    <div class="total">Total Records: {{ number_format($total) }}</div>
 
     {{-- DomPDF ignores <colgroup> widths, so a width has to sit on the cell
-         itself. $columns is already filtered to whatever is still ticked in the
-         grid's Columns modal, and the rows were built from the same list, so the
-         two can't fall out of step. --}}
+         itself; $widths is keyed by column key and simply omitted when the
+         report is happy with an even split. Cells are keyed by column, never by
+         position, so a hidden column drops cleanly. --}}
     <table class="data-table">
         <thead>
             <tr>
                 @foreach ($columns as $col)
-                    <th class="{{ $col['centre'] ? 'centre-col' : '' }}" style="width: {{ $col['width'] }};">
-                        {{ $col['label'] }}
+                    @php $key = $col['key'] ?? ''; @endphp
+                    <th class="{{ in_array($key, $centreKeys, true) ? 'centre-col' : '' }}"
+                        @if(isset($widths[$key])) style="width: {{ $widths[$key] }};" @endif>
+                        {{ $col['heading'] }}
                     </th>
                 @endforeach
             </tr>
         </thead>
         <tbody>
-            @forelse ($rows as $row)
+            @forelse ($rows as $index => $row)
                 <tr>
-                    @foreach ($columns as $i => $col)
-                        <td class="{{ $col['centre'] ? 'centre-col' : '' }}">{{ $row[$i] ?? '' }}</td>
+                    @foreach ($columns as $col)
+                        @php $key = $col['key'] ?? ''; @endphp
+                        <td class="{{ in_array($key, $centreKeys, true) ? 'centre-col' : '' }}">
+                            {{ $col['value']($row, $index) }}
+                        </td>
                     @endforeach
                 </tr>
             @empty
-                <tr><td colspan="{{ max(count($columns), 1) }}" class="empty">No users to export</td></tr>
+                <tr><td colspan="{{ max(count($columns), 1) }}" class="empty">Nothing to export</td></tr>
             @endforelse
         </tbody>
     </table>
 
-    <div class="foot">Sargam 2.0 · Users · Lal Bahadur Shastri National Academy of Administration</div>
+    <div class="foot">Sargam 2.0 · {{ $reportTitle }} · Lal Bahadur Shastri National Academy of Administration</div>
     {{-- Page numbers on every page. Must be the LAST thing in <body>: DomPDF
          only resolves the page count once the whole document is laid out, so a
          script placed earlier renders every page as "Page N of 1". --}}
@@ -146,7 +152,7 @@
             $font = $fontMetrics->getFont("DejaVu Sans", "normal");
             $size = 7;
             $w = $fontMetrics->getTextWidth($text, $font, $size);
-            $pdf->page_text($pdf->get_width() - $w - 28, $pdf->get_height() - 20, $text, $font, $size, [0.42, 0.45, 0.5]);
+            $pdf->page_text($pdf->get_width() - $w - 28, $pdf->get_height() - 24, $text, $font, $size, [0.42, 0.45, 0.5]);
         }
     </script>
 </body>

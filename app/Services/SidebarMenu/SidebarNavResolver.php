@@ -190,9 +190,18 @@ class SidebarNavResolver
         // falsely match the shorter menu via the suffix check in entryMatches,
         // opening under the wrong tab. For these routes, resolve nav as if visiting
         // the parent list page so the correct sidebar item stays highlighted.
+        //
+        // The Roles screen is reachable under TWO route names — `roles.*` (the
+        // Route::resource at /roles) and `admin.roles.*` (/admin/roles) — but only
+        // /admin/roles is stored on a menu row. Left alone, arriving at /roles
+        // matches no menu at all and the trail collapses to "Home / Setup", while
+        // the sidebar link gives the full trail: the same page, two different
+        // breadcrumbs. Map the whole /roles family onto the menu that exists.
         $parentRouteMap = [
-            'roles.dashboard'       => ['path' => 'roles',       'route' => 'roles.index'],
-            'assign.roles.dashboard'=> ['path' => 'roles',       'route' => 'roles.index'],
+            'roles.index'           => ['path' => 'admin/roles', 'route' => 'admin.roles.index'],
+            'roles.show'            => ['path' => 'admin/roles', 'route' => 'admin.roles.index'],
+            'roles.dashboard'       => ['path' => 'admin/roles', 'route' => 'admin.roles.index'],
+            'assign.roles.dashboard'=> ['path' => 'admin/roles', 'route' => 'admin.roles.index'],
         ];
         if (isset($parentRouteMap[$routeName])) {
             $p = $parentRouteMap[$routeName];
@@ -714,7 +723,38 @@ class SidebarNavResolver
             return $this->safeRoute($route);
         }
 
-        return url($route);
+        // A container menu ("Role & Permission", "Estate Master", ~36 rows) stores a
+        // slug in `route` purely as an id for its children — there is no page behind
+        // it. Linking one produced a breadcrumb crumb that 404s, so only link a path
+        // that actually resolves to a GET route; the rest render as plain text.
+        return $this->routeExistsFor($route) ? url($route) : null;
+    }
+
+    /**
+     * Does this relative path match a registered GET route?
+     *
+     * Memoised per request because the breadcrumb resolves the same ancestor chain
+     * more than once per page (layout + component), and a RouteCollection match is
+     * a regex sweep over every route.
+     */
+    protected function routeExistsFor(string $path): bool
+    {
+        static $memo = [];
+
+        $key = trim($path, '/');
+        if (isset($memo[$key])) {
+            return $memo[$key];
+        }
+
+        try {
+            app('router')->getRoutes()->match(
+                \Illuminate\Http\Request::create('/'.$key, 'GET')
+            );
+
+            return $memo[$key] = true;
+        } catch (\Throwable $e) {
+            return $memo[$key] = false;
+        }
     }
 
     /**

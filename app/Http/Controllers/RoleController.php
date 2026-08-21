@@ -7,6 +7,10 @@ use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Models\SidebarMenu\SidebarCategory;
 use App\Models\DashboardCard;
+use App\Exports\BrandedGridExport;
+use App\Support\ExportCsvHeader;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 
 class RoleController extends Controller
 {
@@ -41,14 +45,17 @@ class RoleController extends Controller
     }
 
     /**
-     * Download / Print — one action, two formats, off the same query and the
-     * same column definitions, so the CSV and the printout can't drift apart
-     * (docs/new-design-index-page.md §1). ?q and ?cols are stamped on by the
-     * grid so the export carries what the user is looking at.
+     * Download / Print — one action, four formats (csv, excel, pdf, print), off
+     * the same query and the same column definitions, so a spreadsheet, a PDF and
+     * a printout can't drift apart (docs/new-design-index-page.md §1). ?q and
+     * ?cols are stamped on by the grid so every format carries what the user is
+     * looking at.
      */
     public function export(Request $request)
     {
-        $format = $request->input('format') === 'print' ? 'print' : 'csv';
+        $format = strtolower((string) $request->input('format', 'csv'));
+        abort_unless(in_array($format, ['csv', 'excel', 'pdf', 'print'], true), 404);
+
         $columns = $this->service->exportColumns($request->input('cols'));
         $rows = $this->service->exportRows($request);
         $search = trim((string) $request->input('q', ''));
@@ -62,24 +69,99 @@ class RoleController extends Controller
             ]);
         }
 
-        $filename = 'roles-'.now()->format('Y-m-d-His').'.csv';
+        return $this->gridExport(
+            $format,
+            $rows,
+            $columns,
+            'Roles & Permissions',
+            'Roles',
+            $search !== '' ? 'Search: '.$search : null,
+            // Mirrors export_print.blade.php's column widths, so the PDF and the
+            // printout lay out the same.
+            ['sno' => '10%', 'name' => '48%', 'permissions_count' => '20%', 'created_at' => '22%']
+        );
+    }
 
-        return response()->streamDownload(function () use ($rows, $columns) {
+    /**
+     * CSV / .xlsx / PDF off one resolved row set and one resolved column list.
+     *
+     * `print` is deliberately NOT routed through here — each report keeps its own
+     * print blade, because a browser printout is styled with @media print rules
+     * and print-color-adjust that DomPDF does not understand.
+     *
+     * @param  iterable  $rows
+     * @param  array<int, array{key?:string, heading:string, class:string, value:callable}>  $columns
+     * @param  string|null  $filterLine  PLAIN text ("Search: foo  |  Status: Enabled"), null when unfiltered
+     * @param  array<string, string>  $widths  column key => CSS width, for the fixed-layout PDF table
+     */
+    private function gridExport(
+        string $format,
+        iterable $rows,
+        array $columns,
+        string $reportTitle,
+        string $baseFilename,
+        ?string $filterLine = null,
+        array $widths = []
+    ) {
+        $exportDate = now()->format('d-m-Y h:i A');
+        $filename = $baseFilename.'_'.now()->format('YmdHis');
+
+        if ($format === 'excel') {
+            return Excel::download(
+                new BrandedGridExport($rows, $columns, $reportTitle, $exportDate, $filterLine),
+                $filename.'.xlsx'
+            );
+        }
+
+        if ($format === 'pdf') {
+            return Pdf::loadView('exports.branded_grid_pdf', [
+                'reportTitle' => $reportTitle,
+                'columns' => $columns,
+                'rows' => $rows,
+                'filterLine' => $filterLine,
+                'exportDate' => $exportDate,
+                'widths' => $widths,
+            ])
+                ->setPaper('a4', 'portrait')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    // The page-number script in the view needs this.
+                    'isPhpEnabled' => true,
+                ])
+                ->download($filename.'.pdf');
+        }
+
+        // The same band the .xlsx and the print/PDF headers carry, so the CSV names
+        // the report and its applied filters too instead of arriving as bare columns.
+        $band = ExportCsvHeader::rows(
+            $reportTitle,
+            $filterLine,
+            $exportDate,
+            is_countable($rows) ? count($rows) : null
+        );
+
+        return response()->streamDownload(function () use ($rows, $columns, $band) {
             $handle = fopen('php://output', 'w');
             // BOM: without it Excel reads the file as ANSI and mangles any
-            // non-ASCII role name.
+            // non-ASCII value.
             fwrite($handle, "\xEF\xBB\xBF");
+            foreach ($band as $bandRow) {
+                fputcsv($handle, $bandRow);
+            }
             fputcsv($handle, array_column($columns, 'heading'));
 
-            foreach ($rows as $index => $row) {
+            $index = 0;
+            foreach ($rows as $row) {
                 fputcsv($handle, array_map(
                     fn (array $col) => (string) $col['value']($row, $index),
                     $columns
                 ));
+                $index++;
             }
 
             fclose($handle);
-        }, $filename, [
+        }, $filename.'.csv', [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
@@ -131,37 +213,70 @@ class RoleController extends Controller
     }
 
     /**
-     * Download / Print the role's permission matrix — one action, two formats,
+     * Download / Print the role's permission matrix — one action, four formats,
      * off the same rows and the same column definitions as the screen
-     * (docs/new-design-index-page.md §1). ?q, ?category, ?status and ?cols are
-     * stamped on by the grid so the export carries what the user is looking at.
+     * (docs/new-design-index-page.md §1). ?q, the four tier selects
+     * (?category / ?group / ?menu / ?submenu), ?status and ?cols are stamped on by
+     * the grid so the export carries what the user is looking at.
      */
     public function exportPermissions(Request $request, $id)
     {
+        $format = strtolower((string) $request->input('format', 'csv'));
+        abort_unless(in_array($format, ['csv', 'excel', 'pdf', 'print'], true), 404);
+
         $role = Role::findOrFail($id);
         $rolePermissions = $role->permissions->pluck('name')->toArray();
         $categories = SidebarCategory::with(['groups.menus'])->get();
 
+        // Row-field => value, straight off the query string. filterPermissionMatrix()
+        // intersects this against its own PERMISSION_TIERS list, so an extra key here
+        // is ignored rather than trusted.
+        $tiers = [];
+        foreach (RoleService::PERMISSION_TIERS as $field => $param) {
+            $tiers[$field] = (string) $request->input($param, '');
+        }
+
         $rows = $this->service->filterPermissionMatrix(
             $this->service->permissionMatrix($categories, $rolePermissions),
             $request->input('q'),
-            $request->input('category'),
+            $tiers,
             $request->input('status')
         );
         $columns = $this->service->permissionExportColumns($request->input('cols'));
 
-        if ($request->input('format') === 'print') {
-            $bits = [];
-            if (filled($request->input('category'))) {
-                $bits[] = '<strong>Category:</strong> '.e($request->input('category'));
-            }
-            if (in_array($request->input('status'), ['enabled', 'disabled'], true)) {
-                $bits[] = '<strong>Status:</strong> '.ucfirst($request->input('status'));
-            }
-            if (filled(trim((string) $request->input('q')))) {
-                $bits[] = '<strong>Search:</strong> '.e(trim((string) $request->input('q')));
-            }
+        // Two renderings of the same filters: the print sheet gets the bold HTML
+        // one, the CSV / .xlsx / PDF band gets plain text. Driven by the same
+        // PERMISSION_TIERS list as the filtering, so a tier can never be applied
+        // and then go unmentioned on the sheet.
+        $tierLabels = [
+            'category' => 'Category',
+            'group' => 'Group',
+            'menu' => 'Menu',
+            'submenu' => 'Sub Menu',
+        ];
 
+        $bits = [];
+        $plain = [];
+        foreach ($tiers as $field => $value) {
+            if ($value === '') {
+                continue;
+            }
+            // The matrix writes '-' for "this menu has no sub menu"; spell that out
+            // rather than printing a bare dash next to the label.
+            $shown = ($field === 'submenu' && $value === '-') ? 'None' : $value;
+            $bits[] = '<strong>'.$tierLabels[$field].':</strong> '.e($shown);
+            $plain[] = $tierLabels[$field].': '.$shown;
+        }
+        if (in_array($request->input('status'), ['enabled', 'disabled'], true)) {
+            $bits[] = '<strong>Status:</strong> '.ucfirst($request->input('status'));
+            $plain[] = 'Status: '.ucfirst($request->input('status'));
+        }
+        if (filled(trim((string) $request->input('q')))) {
+            $bits[] = '<strong>Search:</strong> '.e(trim((string) $request->input('q')));
+            $plain[] = 'Search: '.trim((string) $request->input('q'));
+        }
+
+        if ($format === 'print') {
             return view('roles-permissions.assign_permission_print', [
                 'role' => $role,
                 'rows' => $rows,
@@ -172,26 +287,22 @@ class RoleController extends Controller
         }
 
         $slug = \Illuminate\Support\Str::slug($role->name) ?: 'role';
-        $filename = 'permissions-'.$slug.'-'.now()->format('Y-m-d-His').'.csv';
 
-        return response()->streamDownload(function () use ($rows, $columns) {
-            $handle = fopen('php://output', 'w');
-            // BOM: without it Excel reads the file as ANSI and mangles any
-            // non-ASCII menu name.
-            fwrite($handle, "\xEF\xBB\xBF");
-            fputcsv($handle, array_column($columns, 'heading'));
-
-            foreach ($rows as $index => $row) {
-                fputcsv($handle, array_map(
-                    fn (array $col) => (string) $col['value']($row, $index),
-                    $columns
-                ));
-            }
-
-            fclose($handle);
-        }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        return $this->gridExport(
+            $format,
+            $rows,
+            $columns,
+            'Permissions — '.$role->name,
+            'Permissions_'.$slug,
+            empty($plain) ? null : implode('  |  ', $plain),
+            // Mirrors assign_permission_print.blade.php's column widths, but with a
+            // point taken off Permission for Sr No. — the print sheet's 5% wraps the
+            // heading onto two lines in the PDF's narrower font.
+            [
+                'sno' => '6%', 'category' => '12%', 'group' => '16%', 'menu' => '17%',
+                'submenu' => '17%', 'permission' => '22%', 'status' => '10%',
+            ]
+        );
     }
 
     /**
@@ -315,6 +426,9 @@ class RoleController extends Controller
      */
     public function exportDashboardCards(Request $request, $id)
     {
+        $format = strtolower((string) $request->input('format', 'csv'));
+        abort_unless(in_array($format, ['csv', 'excel', 'pdf', 'print'], true), 404);
+
         $role = Role::findOrFail($id);
         $assignedCardIds = $role->belongsToMany(DashboardCard::class, 'role_dashboard_cards', 'role_id', 'dashboard_card_id')
             ->pluck('dashboard_cards.id')
@@ -327,15 +441,20 @@ class RoleController extends Controller
         );
         $columns = $this->service->dashboardExportColumns($request->input('cols'));
 
-        if ($request->input('format') === 'print') {
-            $bits = [];
-            if (in_array($request->input('status'), ['enabled', 'disabled'], true)) {
-                $bits[] = '<strong>Status:</strong> '.ucfirst($request->input('status'));
-            }
-            if (filled(trim((string) $request->input('q')))) {
-                $bits[] = '<strong>Search:</strong> '.e(trim((string) $request->input('q')));
-            }
+        // Two renderings of the same filters: the print sheet gets the bold HTML
+        // one, the CSV / .xlsx / PDF band gets plain text.
+        $bits = [];
+        $plain = [];
+        if (in_array($request->input('status'), ['enabled', 'disabled'], true)) {
+            $bits[] = '<strong>Status:</strong> '.ucfirst($request->input('status'));
+            $plain[] = 'Status: '.ucfirst($request->input('status'));
+        }
+        if (filled(trim((string) $request->input('q')))) {
+            $bits[] = '<strong>Search:</strong> '.e(trim((string) $request->input('q')));
+            $plain[] = 'Search: '.trim((string) $request->input('q'));
+        }
 
+        if ($format === 'print') {
             return view('roles-permissions.assign_dashboard_print', [
                 'role' => $role,
                 'rows' => $rows,
@@ -346,26 +465,20 @@ class RoleController extends Controller
         }
 
         $slug = \Illuminate\Support\Str::slug($role->name) ?: 'role';
-        $filename = 'dashboard-cards-'.$slug.'-'.now()->format('Y-m-d-His').'.csv';
 
-        return response()->streamDownload(function () use ($rows, $columns) {
-            $handle = fopen('php://output', 'w');
-            // BOM: without it Excel reads the file as ANSI and mangles any
-            // non-ASCII card label.
-            fwrite($handle, "\xEF\xBB\xBF");
-            fputcsv($handle, array_column($columns, 'heading'));
-
-            foreach ($rows as $index => $row) {
-                fputcsv($handle, array_map(
-                    fn (array $col) => (string) $col['value']($row, $index),
-                    $columns
-                ));
-            }
-
-            fclose($handle);
-        }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        return $this->gridExport(
+            $format,
+            $rows,
+            $columns,
+            'Dashboard Cards — '.$role->name,
+            'DashboardCards_'.$slug,
+            empty($plain) ? null : implode('  |  ', $plain),
+            // Mirrors assign_dashboard_print.blade.php's column widths.
+            [
+                'sno' => '7%', 'label' => '30%', 'icon' => '20%', 'color' => '12%',
+                'sort_order' => '8%', 'created_at' => '12%', 'status' => '11%',
+            ]
+        );
     }
 
     private function materialIconNames(): array

@@ -211,6 +211,44 @@ body.custom-loaded {
     line-height: 1;
 }
 
+/* Download dropdown — one toggle over CSV / Excel / PDF instead of a row of
+   separate buttons. The toggle wears the same .programme-dt-btn-columns chrome
+   as Print beside it; only the menu is defined here. Shared, because four
+   index pages use it and a per-page copy would drift. */
+.programme-dt-btn-columns.show {
+    /* Hold the hover treatment while the menu is open, so the toggle does not
+       snap back to white the moment the pointer leaves it. */
+    background: #747475;
+    color: #fff;
+}
+
+.programme-dt-download-menu {
+    min-width: 168px;
+    padding: 6px;
+    border-radius: 10px;
+}
+
+.programme-dt-download-menu .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 0.875rem;
+    color: #344054;
+}
+
+.programme-dt-download-menu .dropdown-item i {
+    font-size: 1rem;
+    width: 1rem;
+    text-align: center;
+}
+
+.programme-dt-download-menu .dropdown-item:hover {
+    background: #f2f4f7;
+    color: #004384;
+}
+
 .gm-search-toggle {
     width: 40px;
     height: 40px;

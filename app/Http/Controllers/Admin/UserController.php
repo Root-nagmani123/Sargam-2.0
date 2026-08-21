@@ -77,6 +77,17 @@ class UserController extends Controller
     private const ADMIN_USERS_INDEX_LIST_EPOCH_KEY = 'admin_users_index_list_epoch';
 
     /**
+     * Rows the PDF export will lay out before it truncates.
+     *
+     * DomPDF builds the whole frame tree in memory: measured on this listing it
+     * peaks at 178 MB for 500 rows and 364 MB for 1,000, and fatals outright at
+     * 1,500 under the 512 MB limit. user_credentials has ~15k rows, so an
+     * uncapped PDF is a guaranteed 500. CSV and XLSX have no such ceiling and
+     * stay complete; the sheet says so when it truncates.
+     */
+    private const ADMIN_USERS_PDF_ROW_CAP = 750;
+
+    /**
      * Human-readable labels for the user_category code stored on user_credentials.
      * Extend this map as new user types are introduced.
      */
@@ -4249,26 +4260,68 @@ class UserController extends Controller
 
     /**
      * Column definitions available for export, keyed by the toggle key used in
-     * the listing. Each entry maps to a heading and a value resolver.
+     * the listing. Each entry maps to a heading, a value resolver and the print /
+     * PDF column width, so all four formats lay the report out the same way.
      *
-     * @return array<string, array{label: string, value: callable}>
+     * Labels and order mirror _table.blade.php's headers: "User Role" is the
+     * Spatie role, "User Type" is the user_category code — two different things
+     * that the grid used to run under one heading.
+     *
+     * @return array<string, array{label: string, value: callable, width: string, centre: bool}>
      */
     private function adminUsersExportColumns(): array
     {
         return [
-            'username'    => ['label' => 'Username',  'value' => fn ($u) => $u->user_name ?? ''],
-            'name'        => ['label' => 'Name',      'value' => fn ($u) => trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? ''))],
-            'email'       => ['label' => 'Email',     'value' => fn ($u) => $u->email_id ?? ''],
-            'mobile'      => ['label' => 'Mobile',    'value' => fn ($u) => $u->mobile_no ?: '—'],
-            'usertype'    => ['label' => 'User Type', 'value' => fn ($u) => self::userTypeLabel($u->User_type ?? '')],
-            'roles'       => ['label' => 'Roles',     'value' => fn ($u) => $u->roles ?: 'No Role'],
+            'username' => ['label' => 'User Name', 'width' => '13%', 'centre' => false,
+                'value' => fn ($u) => $u->user_name ?? ''],
+            'name' => ['label' => 'Name', 'width' => '19%', 'centre' => false,
+                'value' => fn ($u) => trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? ''))],
+            'email' => ['label' => 'Email', 'width' => '22%', 'centre' => false,
+                'value' => fn ($u) => $u->email_id ?? ''],
+            'mobile' => ['label' => 'Contact Number', 'width' => '12%', 'centre' => true,
+                'value' => fn ($u) => $u->mobile_no ?: '—'],
+            'usertype' => ['label' => 'User Type', 'width' => '11%', 'centre' => true,
+                'value' => fn ($u) => self::userTypeLabel($u->User_type ?? '')],
+            'roles' => ['label' => 'User Role', 'width' => '17%', 'centre' => false,
+                'value' => fn ($u) => $u->roles ?: 'No Role'],
         ];
     }
 
     /**
-     * Export the users listing (csv / xlsx / pdf) honouring the active search,
-     * user-type filter and — where provided — the columns the user has left
-     * visible in the grid.
+     * The applied search / user-type filters, as a line for the report header.
+     *
+     * @return array{0: string|null, 1: string|null}  [plain text, HTML]
+     */
+    private function adminUsersFilterLine(string $search, string $userType): array
+    {
+        $plain = [];
+        $html = [];
+
+        if ($userType !== '') {
+            $label = self::userTypeLabel($userType);
+            $plain[] = 'User Type: ' . $label;
+            $html[] = '<strong>User Type:</strong> ' . e($label);
+        }
+        if ($search !== '') {
+            $plain[] = 'Search: ' . $search;
+            $html[] = '<strong>Search:</strong> ' . e($search);
+        }
+
+        return [
+            empty($plain) ? null : implode('  |  ', $plain),
+            empty($html) ? null : implode(' &nbsp;|&nbsp; ', $html),
+        ];
+    }
+
+    /**
+     * Export the users listing — csv / xlsx / pdf / print, all four off ONE query
+     * and ONE column list so they cannot drift apart
+     * (docs/new-design-index-page.md §1).
+     *
+     * Honours the active search and user-type filter and, where provided, the
+     * columns still visible in the grid. Deliberately unpaginated: the grid's
+     * Print and Download used to scrape the rendered <table>, which is one page
+     * of 10 rows, so every export silently truncated to whatever was on screen.
      */
     public function export(Request $request, string $format)
     {
@@ -4284,7 +4337,19 @@ class UserController extends Controller
             $requested = array_keys($allColumns);
         }
 
-        $headings = array_merge(['S. No.'], array_map(fn ($k) => $allColumns[$k]['label'], $requested));
+        // S. No. is generated by the export itself, so it leads every format.
+        $columns = array_merge(
+            [['label' => 'S. No.', 'width' => '6%', 'centre' => true]],
+            array_map(
+                fn ($key) => [
+                    'label' => $allColumns[$key]['label'],
+                    'width' => $allColumns[$key]['width'],
+                    'centre' => $allColumns[$key]['centre'],
+                ],
+                $requested
+            )
+        );
+        $headings = array_map(fn (array $c) => $c['label'], $columns);
 
         $records = $this->adminUsersBaseQuery($search, $user_type)
             ->orderBy('uc.pk')
@@ -4294,28 +4359,68 @@ class UserController extends Controller
         foreach ($records as $i => $record) {
             $row = [$i + 1];
             foreach ($requested as $key) {
-                $row[] = $allColumns[$key]['value']($record);
+                $row[] = (string) $allColumns[$key]['value']($record);
             }
             $rows[] = $row;
         }
 
-        $timestamp = now()->format('Ymd_His');
-        $fileBase = "users_{$timestamp}";
+        [$filterLine, $filterHtml] = $this->adminUsersFilterLine($search, $user_type);
+        $generatedAt = now()->format('d-m-Y h:i A');
+        $fileBase = 'Users_' . now()->format('YmdHis');
+
+        // Print and PDF render the same branded sheet from the same data; only the
+        // renderer differs (a browser that can do @media print vs DomPDF, which
+        // cannot — see the note at the top of each blade).
+        $reportData = [
+            'columns' => $columns,
+            'headings' => $headings,
+            'rows' => $rows,
+            'filterLine' => $filterLine,
+            'filterHtml' => $filterHtml,
+            'exportDate' => $generatedAt,
+        ];
+
+        if ($format === 'print') {
+            // No cap: the browser lays this out itself, so a full 15k-row sheet is
+            // just a large HTML document rather than a PHP memory problem.
+            return view('admin.user_management.users.partials.export_print', $reportData);
+        }
 
         if ($format === 'pdf') {
-            $pdf = Pdf::loadView('admin.user_management.users.partials.export_pdf', [
-                'headings' => $headings,
-                'rows' => $rows,
-                'generatedAt' => now()->format('d-m-Y H:i'),
-            ])->setPaper('a4', 'landscape');
+            if (count($rows) > self::ADMIN_USERS_PDF_ROW_CAP) {
+                $reportData['note'] = 'Showing the first '
+                    . number_format(self::ADMIN_USERS_PDF_ROW_CAP) . ' of '
+                    . number_format(count($rows))
+                    . ' matching users. Narrow the filters, or use the Excel / CSV download for the complete list.';
+                $reportData['rows'] = array_slice($rows, 0, self::ADMIN_USERS_PDF_ROW_CAP);
+                $reportData['totalRows'] = count($rows);
+            }
 
-            return $pdf->download("{$fileBase}.pdf");
+            return Pdf::loadView('admin.user_management.users.partials.export_pdf', $reportData)
+                ->setPaper('a4', 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    // The page-number script in the view needs this.
+                    'isPhpEnabled' => true,
+                ])
+                ->download("{$fileBase}.pdf");
         }
+
+        // The band the print/PDF headers carry, so the spreadsheet names the same
+        // report and the same applied filters instead of arriving as bare columns.
+        $metaRows = [
+            ['LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION'],
+            ['USERS'],
+            [implode('  |  ', array_filter([$filterLine, 'Generated: ' . $generatedAt]))],
+            ['Total Records: ' . number_format(count($rows))],
+            [],
+        ];
 
         $writerType = $format === 'csv' ? ExcelWriter::CSV : ExcelWriter::XLSX;
 
         return Excel::download(
-            new UsersExport($headings, $rows),
+            new UsersExport($headings, $rows, $metaRows),
             "{$fileBase}.{$format}",
             $writerType
         );

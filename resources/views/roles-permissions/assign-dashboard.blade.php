@@ -3,6 +3,7 @@
 @section('title', 'Assign Dashboard')
 
 @push('styles')
+@include('admin.layouts.partials.select2-assets')
 {{-- Shared Roles & Permissions chrome — the same module stylesheet the Roles
      grid and Assign Permission use, so the three screens cannot drift apart.
      See docs/new-design-index-page.md §3b/§3c. --}}
@@ -23,7 +24,9 @@
     $disabledCount = $totalCount - $enabledCount;
 @endphp
 <div class="container-fluid rp-page">
-    <x-breadcrum title="Assign Dashboard - {{ ucfirst($role->name) }}" :items="['Setup', 'Hr Management', 'Assign Dashboard']" :showBack="true" :backUrl="route('roles.index')">
+    {{-- No :items — see the note on assign-permission.blade.php; the trail comes
+         from the menu tree via SidebarNavResolver. --}}
+    <x-breadcrum title="Assign Dashboard - {{ ucfirst($role->name) }}" :showBack="true">
         <div class="d-flex flex-wrap align-items-center gap-2">
             <button type="button"
                     class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
@@ -65,11 +68,38 @@
         <div class="d-flex flex-wrap align-items-center gap-2 rp-secondary-actions">
             {{-- ?q / ?status / ?cols are stamped on by rpUpdateExportLinks(), so a
                  download is the card list as filtered. --}}
-            <a href="{{ route('roles.dashboard.export', ['id' => $role->id, 'format' => 'csv']) }}"
-               id="rpDownloadLink"
-               class="btn programme-dt-btn-columns border-0 text-primary" title="Download as CSV">
-                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-            </a>
+            <div class="dropdown">
+                <button type="button"
+                        class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                        id="rpDownloadMenuBtn" data-bs-toggle="dropdown" aria-expanded="false"
+                        title="Download this list">
+                    <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end programme-dt-download-menu"
+                    aria-labelledby="rpDownloadMenuBtn">
+                    <li>
+                        <a class="dropdown-item" id="rpCsvLink"
+                           href="{{ route('roles.dashboard.export', ['id' => $role->id, 'format' => 'csv']) }}">
+                            <i class="bi bi-filetype-csv" aria-hidden="true"></i><span>CSV</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" id="rpExcelLink"
+                           href="{{ route('roles.dashboard.export', ['id' => $role->id, 'format' => 'excel']) }}">
+                            <i class="bi bi-file-earmark-excel" aria-hidden="true"></i><span>Excel</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" id="rpPdfLink"
+                           href="{{ route('roles.dashboard.export', ['id' => $role->id, 'format' => 'pdf']) }}">
+                            <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i><span>PDF</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            {{-- Print stays OUTSIDE the dropdown: it opens a sheet rather than
+                 saving a file, so it is not one of the download formats. --}}
             <a href="{{ route('roles.dashboard.export', ['id' => $role->id, 'format' => 'print']) }}"
                id="rpPrintLink" target="_blank" rel="noopener"
                class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
@@ -107,13 +137,16 @@
                     <table id="dashboardCardTable" class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                         <thead>
                             <tr>
-                                <th scope="col">S No.</th>
+                                {{-- text-center on every header whose cells are
+                                     .text-center — a left-aligned title over centred
+                                     content reads as a misalignment. --}}
+                                <th scope="col" class="text-center">S No.</th>
                                 <th scope="col">Name</th>
-                                <th scope="col">Icon</th>
+                                <th scope="col" class="text-center">Icon</th>
                                 <th scope="col">Colour</th>
-                                <th scope="col">Order</th>
+                                <th scope="col" class="text-center">Order</th>
                                 <th scope="col">Created</th>
-                                <th scope="col">Status</th>
+                                <th scope="col" class="text-center">Status</th>
                                 <th scope="col">Action</th>
                             </tr>
                         </thead>
@@ -255,8 +288,8 @@
 
                         <div class="form-group">
                             <label class="rp-form-label" for="rp{{ ucfirst($mode) }}CardColor">Colour</label>
-                            <select class="form-select rp-control rp-card-color" name="color_class"
-                                    id="rp{{ ucfirst($mode) }}CardColor">
+                            <select class="form-select rp-control rp-card-color select2" name="color_class"
+                                    id="rp{{ ucfirst($mode) }}CardColor" data-placeholder="Colour">
                                 @foreach (\App\Services\RoleService::CARD_COLOURS as $class => $name)
                                     <option value="{{ $class }}">{{ $name }}</option>
                                 @endforeach
@@ -421,7 +454,7 @@ $(function () {
 
         var term = dt.search() || '';
 
-        ['rpDownloadLink', 'rpPrintLink'].forEach(function (id) {
+        ['rpCsvLink', 'rpExcelLink', 'rpPdfLink', 'rpPrintLink'].forEach(function (id) {
             var link = document.getElementById(id);
             if (!link) { return; }
             var base = link.href.split('?')[0];
@@ -757,7 +790,10 @@ $(function () {
 
         $('#rpEditCardId').val($btn.attr('data-id'));
         $('#rpEditCardLabel').val($btn.attr('data-label'));
-        $('#rpEditCardColor').val($btn.attr('data-color') || 'stat-icon-blue');
+        // change.select2 repaints the closed box; a bare .val() leaves Select2
+        // showing whatever the previous edit left there (§3c).
+        $('#rpEditCardColor').val($btn.attr('data-color') || 'stat-icon-blue')
+            .trigger('change.select2');
         $('#rpEditCardSort').val($btn.attr('data-sort'));
         // The Choices instance is built in shown.bs.modal, so stash the value
         // for it rather than assigning to a widget that does not exist yet.

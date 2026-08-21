@@ -29,7 +29,30 @@ class MenuService
         return [
             'categories' => SidebarCategory::where('is_active', 1)->orderBy('order', 'asc')->get(),
             'groups' => MenuGroup::where('is_active', 1)->orderBy('order', 'asc')->get(),
+            'parents' => $this->parentMenuOptions(),
         ];
+    }
+
+    /**
+     * Menus that actually have children, for the grid's Parent Menu filter.
+     *
+     * Read off parent_id rather than whereHas('children') because the children()
+     * relation is scoped to is_active = 1 — a parent whose only sub-menu is
+     * currently disabled would drop out of the list, and then its rows could not
+     * be filtered for at all. Carries group_id / category_id so the select can be
+     * narrowed by the Category and Group filters beside it.
+     */
+    public function parentMenuOptions()
+    {
+        $parentIds = Menu::query()
+            ->whereNotNull('parent_id')
+            ->distinct()
+            ->pluck('parent_id');
+
+        return Menu::query()
+            ->whereIn('id', $parentIds)
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name', 'group_id', 'category_id']);
     }
     
     
@@ -76,26 +99,41 @@ class MenuService
     {
         $menu = $this->find($id);
         $oldPermission = $menu->permission_name;
-        $newPermission = Str::slug($data['name'], '_');
         $data['order'] = $data['order'] ?? Menu::max('order') + 1;
         $menu->update($data);
 
-        if ($oldPermission !== $newPermission) {
+        // The permission to keep in step is the one the row now carries — the form
+        // has an editable Permission Name field, and 61 of the 243 live menus have
+        // a permission_name that is NOT slug(name). Re-deriving it from the name
+        // here (as this used to) renamed the wrong permission and, when the target
+        // name already existed, threw "A `x` permission already exists for guard
+        // `web`" — a hard 500 on Update for 36 of those rows.
+        $newPermission = $menu->permission_name;
 
-            $permission = Permission::where('name', $oldPermission)->first();
+        if (filled($newPermission) && $oldPermission !== $newPermission) {
+            $alreadyExists = Permission::where('name', $newPermission)
+                ->where('guard_name', 'web')
+                ->exists();
 
-            if ($permission) {
-                $permission->update([
-                    'name' => $newPermission,
-                    'guard_name' => 'web'
-                ]);
-            } else {
-                Permission::create([
-                    'name' => $newPermission,
-                    'guard_name' => 'web'
-                ]);
+            if (! $alreadyExists) {
+                $permission = Permission::where('name', $oldPermission)
+                    ->where('guard_name', 'web')
+                    ->first();
+
+                if ($permission) {
+                    $permission->update(['name' => $newPermission]);
+                } else {
+                    Permission::create([
+                        'name' => $newPermission,
+                        'guard_name' => 'web',
+                    ]);
+                }
             }
+            // else: a permission by that name is already on record. Reuse it —
+            // renaming the old one onto it is what Spatie rejects, and every role
+            // already granted the existing permission keeps working.
         }
+
         SidebarNavResolver::clearCache();
         self::clearStructureCache();
         return $menu;
@@ -150,6 +188,17 @@ class MenuService
             $query->where('group_id', (int) $groupId);
         }
 
+        // Parent Menu. "0" is the sentinel the select uses for "top level only" —
+        // a real parent_id is never 0, so it cannot collide with a menu id.
+        $parentId = $request->input('parent_id');
+        if (filled($parentId) && ctype_digit((string) $parentId)) {
+            if ((int) $parentId === 0) {
+                $query->whereNull('parent_id');
+            } else {
+                $query->where('parent_id', (int) $parentId);
+            }
+        }
+
         return $query;
     }
 
@@ -171,6 +220,7 @@ class MenuService
                     ? '<span class="sbm-slug">'.e($e->route).'</span>'
                     : '<span class="sbm-muted">&mdash;</span>'
             )
+            ->editColumn('attachment', fn ($e) => $this->attachmentLink($e))
             ->editColumn('permission_name', fn ($e) =>
                 filled($e->permission_name)
                     ? '<span class="sbm-slug">'.e($e->permission_name).'</span>'
@@ -188,10 +238,30 @@ class MenuService
             ->addColumn('action', fn ($e) => $this->actionButtons($e))
             ->rawColumns([
                 'action', 'status', 'icon', 'order', 'target',
-                'route', 'permission_name', 'group_name', 'parent_menu',
+                'route', 'attachment', 'permission_name', 'group_name', 'parent_menu',
             ])
             ->addIndexColumn()
             ->make(true);
+    }
+
+    /**
+     * Attachment cell — a link to the stored file, or an em dash.
+     *
+     * The sidebar does NOT render this yet: its links are hand-written in
+     * resources/views/components/menu/*.blade.php, not built from menus.route.
+     * The grid link is therefore the only way to reach an uploaded file today.
+     */
+    private function attachmentLink($data)
+    {
+        if (! filled($data->attachment)) {
+            return '<span class="sbm-muted">&mdash;</span>';
+        }
+
+        return '<a href="'.e(asset('storage/'.$data->attachment)).'" target="_blank" rel="noopener"'
+            .' class="sbm-attachment" title="'.e(basename((string) $data->attachment)).'">'
+            .'<i class="bi bi-paperclip" aria-hidden="true"></i>'
+            .'<span>'.e(basename((string) $data->attachment)).'</span>'
+            .'</a>';
     }
 
     /**
@@ -278,6 +348,7 @@ class MenuService
             'parent_id' => $data->parent_id,
             'name' => $data->name,
             'route' => $data->route,
+            'attachment' => $data->attachment,
             'permission_name' => $data->permission_name,
             'icon' => $data->icon,
             'order' => $data->order,
@@ -368,6 +439,8 @@ class MenuService
                 'value' => fn ($row) => (string) $row->name],
             ['key' => 'route', 'heading' => 'Url', 'class' => 'sbm-print-route',
                 'value' => fn ($row) => filled($row->route) ? (string) $row->route : '-'],
+            ['key' => 'attachment', 'heading' => 'Attachment', 'class' => 'sbm-print-attachment',
+                'value' => fn ($row) => filled($row->attachment) ? basename((string) $row->attachment) : '-'],
             ['key' => 'permission_name', 'heading' => 'Permission', 'class' => 'sbm-print-permission',
                 'value' => fn ($row) => filled($row->permission_name) ? (string) $row->permission_name : '-'],
             ['key' => 'icon', 'heading' => 'Icon', 'class' => 'sbm-print-icon',
@@ -420,6 +493,7 @@ class MenuService
                 $like = '%'.$search.'%';
                 $q->where('name', 'like', $like)
                     ->orWhere('route', 'like', $like)
+                    ->orWhere('attachment', 'like', $like)
                     ->orWhere('permission_name', 'like', $like)
                     ->orWhere('icon', 'like', $like)
                     ->orWhereHas('group', fn ($g) => $g->where('name', 'like', $like));
