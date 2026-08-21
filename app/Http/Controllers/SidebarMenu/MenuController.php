@@ -247,10 +247,18 @@ class MenuController extends Controller
      * store() would name it with a 40-character hash, which is what the grid and
      * every export would then display. Keep the original name, slugged, with a
      * short random suffix so two uploads of "report.pdf" cannot collide.
+     *
+     * The extension is taken from the file's CONTENT, never from the uploaded
+     * name. `mimes:` validates guessExtension(), so anything reaching here already
+     * guesses to one of the allowed types — but naming the file from the *client*
+     * extension would still let a genuine PNG called "payload.html" land as .html
+     * on the public disk, where the browser reads it back as markup rather than as
+     * an image. Deriving it here keeps the stored name and the validated type the
+     * same fact. Do not reintroduce getClientOriginalExtension() here.
      */
     private function storeAttachment($file): string
     {
-        $extension = strtolower($file->getClientOriginalExtension() ?: 'dat');
+        $extension = strtolower((string) $file->guessExtension() ?: 'dat');
         $base = pathinfo((string) $file->getClientOriginalName(), PATHINFO_FILENAME);
         $slug = \Illuminate\Support\Str::slug($base) ?: 'attachment';
 

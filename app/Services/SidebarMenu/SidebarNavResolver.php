@@ -19,6 +19,16 @@ class SidebarNavResolver
     private static array $structureMemo = [];
 
     /**
+     * Memo for routeExistsFor(), keyed by trimmed path. Per instance rather than a
+     * function static so it cannot survive into the next request on a persistent
+     * worker, where a stale "this path resolves" answer would outlive the route
+     * table it was computed from.
+     *
+     * @var array<string,bool>
+     */
+    private array $routeExistsMemo = [];
+
+    /**
      * Id-keyed maps of the three tiny structural tables (menus 223 rows,
      * menu_groups 23, sidebar_categories 5).
      *
@@ -733,27 +743,37 @@ class SidebarNavResolver
     /**
      * Does this relative path match a registered GET route?
      *
-     * Memoised per request because the breadcrumb resolves the same ancestor chain
-     * more than once per page (layout + component), and a RouteCollection match is
-     * a regex sweep over every route.
+     * Memoised because the breadcrumb resolves the same ancestor chain more than
+     * once per page (layout + component), and comparing against every route is a
+     * regex sweep. The memo is a per-instance property rather than a `static` so it
+     * cannot leak between requests on a persistent worker.
+     *
+     * Deliberately NOT RouteCollection::match(). That method does not merely test —
+     * it calls $route->bind($request), which overwrites the parameters on the shared
+     * Route instance. When a menu row stores a literal parameterised path (two rows
+     * store `admin/fc/joining-documents/30`), matching it here rebinds the very route
+     * the user is on, and the live request's parameters silently become the menu
+     * row's. Route::matches() runs the same URI comparison and binds nothing.
      */
     protected function routeExistsFor(string $path): bool
     {
-        static $memo = [];
-
         $key = trim($path, '/');
-        if (isset($memo[$key])) {
-            return $memo[$key];
+        if (isset($this->routeExistsMemo[$key])) {
+            return $this->routeExistsMemo[$key];
         }
 
         try {
-            app('router')->getRoutes()->match(
-                \Illuminate\Http\Request::create('/'.$key, 'GET')
-            );
+            $request = \Illuminate\Http\Request::create('/'.$key, 'GET');
 
-            return $memo[$key] = true;
+            foreach (app('router')->getRoutes()->getRoutesByMethod()['GET'] ?? [] as $route) {
+                if ($route->matches($request)) {
+                    return $this->routeExistsMemo[$key] = true;
+                }
+            }
+
+            return $this->routeExistsMemo[$key] = false;
         } catch (\Throwable $e) {
-            return $memo[$key] = false;
+            return $this->routeExistsMemo[$key] = false;
         }
     }
 
