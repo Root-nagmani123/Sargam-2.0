@@ -241,6 +241,27 @@
 
 .rp-modal { border-radius: 12px; }
 
+/* Same <form>-inside-.modal-content shape as the sidebar builder modals; see
+   the long note in sidebar-menu-admin.css. Harmless while these forms are
+   short, and it stops the footer escaping the moment one grows. */
+.rp-modal > form {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: 100%;
+}
+
+.rp-modal > form > .rp-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.rp-modal > form > .rp-modal-header,
+.rp-modal > form > .rp-modal-footer {
+    flex: 0 0 auto;
+}
+
 /* Brand band, per Figma: the header is solid navy with its title, subtitle and
    close button reversed out of it. The top corners have to be restated here —
    .modal-content is not overflow-hidden (that would clip the icon-picker

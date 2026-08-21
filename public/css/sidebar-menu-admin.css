@@ -231,6 +231,38 @@
 
 .sbm-modal { border-radius: 12px; }
 
+/* modal-dialog-scrollable + a <form> wrapper.
+   ---------------------------------------------------------------------
+   Bootstrap caps .modal-content and lets .modal-body scroll, but it assumes
+   header / body / footer are DIRECT flex children of .modal-content. These
+   modals wrap them in a <form>, so the form is the only flex item: it takes
+   its natural height (871px on Add Menu), overflows the capped content box,
+   and carries the footer with it — on a 800px-tall screen the Cancel /
+   Add Menu buttons sat at y=899, off the bottom of the window with no way to
+   scroll to them.
+
+   Make the form the flex column instead. min-height:0 is the load-bearing
+   part: a flex item defaults to min-height:auto and refuses to shrink below
+   its content, which is exactly what kept the body from scrolling. */
+.sbm-modal > form {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: 100%;
+}
+
+.sbm-modal > form > .sbm-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* Header and footer must not be squeezed by the scrolling body between them. */
+.sbm-modal > form > .sbm-modal-header,
+.sbm-modal > form > .sbm-modal-footer {
+    flex: 0 0 auto;
+}
+
 /* Brand band, per Figma: the header is solid navy with its title, subtitle and
    close button reversed out of it — the same treatment the Roles module's
    .rp-modal carries, so the two builders match. The top corners have to be
