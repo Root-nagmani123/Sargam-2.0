@@ -195,7 +195,7 @@ return [
     //
     // Reordering, deleting and every per-field lock keep their own flags; this one is only
     // about reaching the two editors.
-    'form_step_actions_enabled'     => (bool) env('FC_FORM_STEP_ACTIONS_ENABLED', true),
+    'form_step_actions_enabled'     => (bool) env('FC_FORM_STEP_ACTIONS_ENABLED', false),
 
     /*
     |--------------------------------------------------------------------------
@@ -244,5 +244,48 @@ return [
     |
     */
     'pdf_engine' => env('FC_REGISTRATION_PDF_ENGINE', 'mpdf'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Joining Documents FAQ
+    |--------------------------------------------------------------------------
+    |
+    | Destination of the "View FAQ" button above the Joining Documents tables.
+    |
+    | Set to an absolute URL to point at the hosted FAQ. Leave it empty to fall
+    | back to the static copy bundled at
+    | public/admin_assets/sample/joining_documents/joining_documents_faq.html —
+    | and if that file is missing too, the FAQ panel simply does not render.
+    |
+    */
+    'joining_documents_faq_url' => env(
+        'FC_JOINING_DOCS_FAQ_URL',
+        'https://lbsnaa-101fc-faq.lbsnaachatgpt.workers.dev/'
+    ),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Services that may not apply for an exemption
+    |--------------------------------------------------------------------------
+    |
+    | Trainees in these services must complete the Foundation Course, so the
+    | public exemption form refuses their application and points them at
+    | registration instead. Registration itself is unaffected.
+    |
+    | Values are service_master.service_short_name codes, compared EXACTLY and
+    | case-insensitively after trimming. Exact matching is deliberate: 'IFS' is
+    | the Indian Foreign Service, while the Indian Forest Service is a separate
+    | row coded 'IFS(AIS)'. A prefix or LIKE match would silently block Forest
+    | Service trainees, who are entitled to apply.
+    |
+    | Short codes are used rather than primary keys because the pks differ
+    | between environments. They are resolved to ids once and cached — see
+    | FcRosterApplicationGuardService::exemptionRestrictedServiceIds().
+    |
+    */
+    'exemption_restricted_services' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('FC_EXEMPTION_RESTRICTED_SERVICES', 'IAS,IFS'))
+    ))),
 
 ];

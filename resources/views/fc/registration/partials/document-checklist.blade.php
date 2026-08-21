@@ -46,10 +46,14 @@
         'doc_employee_info_sheet' => 'admin_assets/sample/joining_documents/employee_info_blank_form.pdf',
     ];
 
-    // Reference-only guidance document shown above the tables (not an upload slot).
-    // Same static-asset pattern as $staticBlankForms — hidden if the file is absent.
-    $faqDocPath = 'admin_assets/sample/joining_documents/joining_documents_faq.html';
-    $faqDocUrl  = file_exists(public_path($faqDocPath)) ? asset($faqDocPath) : null;
+    // Reference-only guidance shown above the tables (not an upload slot).
+    // Two independent destinations, both optional — the panel renders if EITHER
+    // is available and shows a button per available one:
+    //   $faqDocUrl    the static copy shipped in public/ (original behaviour)
+    //   $faqOnlineUrl the hosted searchable FAQ, from config
+    $faqDocPath   = 'admin_assets/sample/joining_documents/joining_documents_faq.html';
+    $faqDocUrl    = file_exists(public_path($faqDocPath)) ? asset($faqDocPath) : null;
+    $faqOnlineUrl = trim((string) config('fc.joining_documents_faq_url', '')) ?: null;
 @endphp
 
 @if(! $readonly)
@@ -60,25 +64,42 @@
     </div>
 @endif
 
-@if(! $readonly && $faqDocUrl)
+@if(! $readonly && ($faqDocUrl || $faqOnlineUrl))
     <div class="card border-0 shadow-sm mb-4" style="border-left:5px solid #004a93 !important; background:#f6faff;">
-        <div class="card-body p-3 d-flex align-items-center flex-wrap gap-3">
-            <span class="d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
-                  style="width:32px;height:32px;background:#004a93;color:#fff;"><i class="bi bi-question-lg"></i></span>
-            <div class="flex-grow-1" style="min-width:220px;">
-                <h6 class="fw-bold text-primary mb-1 text-uppercase" style="letter-spacing:0.5px;">
+        <div class="card-body p-3">
+            {{-- Heading strip and the button share one row, so the button sits level with the strip. --}}
+            <div class="d-flex align-items-stretch flex-wrap gap-3 mb-2">
+                {{-- margin:0 overrides the theme's !important heading margins, which would
+                     otherwise inflate this flex row and stretch the button past the strip. --}}
+                <h6 class="fw-bold text-primary mb-0 text-uppercase flex-grow-1 d-flex align-items-center"
+                    style="letter-spacing:0.5px; min-width:220px; margin:0 !important;">
                     Joining Documents &ndash; Frequently Asked Questions
                 </h6>
-                <p class="small text-secondary mb-0">
-                    Read this before filling the forms below. It explains each declaration
-                    (family details, close relations, dowry, home town, property returns, surety bond,
-                    CGEGIS, NPS and EIS) and answers common queries.
-                </p>
+                {{-- Orange→red gradient: the FAQ has to stand out against the navy page chrome. --}}
+                @if($faqDocUrl)
+                    <a href="{{ $faqDocUrl }}" target="_blank" rel="noopener"
+                       class="btn btn-sm text-nowrap fw-bold text-white px-3 py-0 d-flex align-items-center"
+                       style="background:linear-gradient(135deg,#f97316,#e11d48);border:0;font-size:.8rem;
+                              box-shadow:0 .35rem .9rem rgba(225,29,72,.35);letter-spacing:.3px;">
+                        <i class="bi bi-journal-text me-1"></i>View FAQ
+                    </a>
+                @endif
+                {{-- Hosted FAQ. rel includes noreferrer because this leaves the academy
+                     domain and the form URL carries the trainee's token in its path. --}}
+                @if($faqOnlineUrl)
+                    <a href="{{ $faqOnlineUrl }}" target="_blank" rel="noopener noreferrer"
+                       class="btn btn-sm text-nowrap fw-bold text-white px-3 py-0 d-flex align-items-center"
+                       style="background:linear-gradient(135deg,#0ea5e9,#004a93);border:0;font-size:.8rem;
+                              box-shadow:0 .35rem .9rem rgba(0,74,147,.35);letter-spacing:.3px;">
+                        <i class="bi bi-chat-dots me-1"></i>Ask FAQ Online
+                    </a>
+                @endif
             </div>
-            <a href="{{ $faqDocUrl }}" target="_blank" rel="noopener"
-               class="btn btn-primary btn-sm text-nowrap">
-                <i class="bi bi-journal-text me-1"></i>View FAQ
-            </a>
+            <p class="small text-secondary mb-0">
+                Read this before filling the forms below. It explains each declaration
+                (family details, close relations, dowry, home town, property returns, surety bond,
+                CGEGIS, NPS and EIS) and answers common queries.
+            </p>
         </div>
     </div>
 @endif
