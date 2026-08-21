@@ -9,7 +9,12 @@
                     <th scope="col">Name</th>
                     <th scope="col">Email</th>
                     <th scope="col">Contact Number</th>
+                    {{-- User Type is the user_category code (Student / Employee /
+                         Faculty / Admin); User Role is the Spatie role. The role
+                         column used to be headed "User Type", which named the
+                         wrong thing entirely. --}}
                     <th scope="col">User Type</th>
+                    <th scope="col">User Role</th>
                     <th scope="col">Action</th>
                 </tr>
             </thead>
@@ -21,6 +26,7 @@
                     <td>{{ trim($user->first_name . ' ' . $user->last_name) }}</td>
                     <td>{{ $user->email_id }}</td>
                     <td>{{ $user->mobile_no ?: '—' }}</td>
+                    <td class="users-usertype">{{ \App\Http\Controllers\Admin\UserController::userTypeLabel($user->User_type ?? '') }}</td>
                     <td class="users-usertype">{{ !empty($user->roles) ? $user->roles : 'No Role' }}</td>
                     <td>
                         <a href="{{ route('admin.users.assignRole', encrypt($user->pk)) }}"
@@ -33,7 +39,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="users-empty-state text-center">
+                    <td colspan="8" class="users-empty-state text-center">
                         <i class="material-icons material-symbols-rounded text-secondary opacity-50 d-block mb-2" style="font-size:48px;" aria-hidden="true">groups</i>
                         <h5 class="fw-semibold text-dark mb-1">No Users Found</h5>
                         <p class="text-secondary mb-0">Try adjusting your search or filters.</p>
@@ -53,7 +59,8 @@
     </nav>
     <div class="users-pagination-info d-flex align-items-center gap-2 order-1 order-md-2 ms-md-auto text-muted small">
         <span>Showing</span>
-        <select class="form-select form-select-sm users-per-page-select" id="usersPerPageFooter" aria-label="Items per page">
+        <select class="form-select form-select-sm users-per-page-select select2"
+                id="usersPerPageFooter" data-placeholder="Rows…" aria-label="Items per page">
             <option value="10" {{ $perPage == 10 ? 'selected' : '' }}>10</option>
             <option value="20" {{ $perPage == 20 ? 'selected' : '' }}>20</option>
             <option value="50" {{ $perPage == 50 ? 'selected' : '' }}>50</option>

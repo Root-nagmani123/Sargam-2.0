@@ -1,0 +1,360 @@
+/* ============================================================================
+   Useful Links (Setup) — admin pages
+   ----------------------------------------------------------------------------
+   The `ul-*` component layer for this module (the listing plus the shared
+   _form partial, which renders inside a modal AND on the standalone
+   create/edit pages). It implements the "new design" row-action stack
+   (docs/new-design-index-page.md §3b) and the Add/Edit modal (§3c), on top of
+   the `programme-dt-*` chrome in custom.css and the `--ds-*` tokens in
+   sargam-app.css.
+
+   Scoping:
+     .ul-page   — page root, put it on the container-fluid
+     .ul-modal  — modal root, put it on .modal-content
+   ⚠️ _form.blade.php is used in BOTH places, so anything it needs is scoped to
+   both roots — see the trap in §3c ("scope shared components to BOTH roots").
+
+   Load with:
+     <link rel="stylesheet" href="{{ asset('css/useful-links-admin.css') }}?v={{ @filemtime(public_path('css/useful-links-admin.css')) ?: time() }}">
+   ========================================================================= */
+
+/* ── Cell decorations ── */
+.ul-page .ul-muted { color: #98a2b3; user-select: none; }
+
+/* .programme-dt-table only wraps its 2nd column (custom.css:416). The URL sits
+   in column 3 and would otherwise render as one unbroken line and blow the
+   table out sideways. */
+.ul-page .programme-dt-table td.ul-col-url {
+    white-space: normal;
+    max-width: 320px;
+    word-break: break-all;
+}
+.ul-page .ul-url {
+    color: #2563eb;
+    text-decoration: none;
+    font-size: 0.8125rem;
+}
+.ul-page .ul-url:hover { text-decoration: underline; }
+
+.ul-page .ul-file {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.15rem 0.5rem;
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-radius: var(--ds-radius, 4px);
+    background: var(--ds-surface-2, #f8fafc);
+    color: #475467;
+    font-size: 0.8125rem;
+    text-decoration: none;
+}
+.ul-page .ul-file:hover { border-color: #004384; color: #004384; }
+
+.ul-page .ul-tab {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    border-radius: var(--ds-radius, 4px);
+    background: var(--ds-surface-2, #f8fafc);
+    border: 1px solid var(--ds-line, #e5e7eb);
+    color: #475467;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+.ul-page .ul-tab--new {
+    background: rgba(0, 67, 132, 0.08);
+    border-color: rgba(0, 67, 132, 0.18);
+    color: #004384;
+}
+
+/* ── Order column: the position number beside its drag handle ── */
+.ul-page .ul-order {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.ul-page .ul-order__num {
+    display: inline-block;
+    min-width: 28px;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--ds-radius, 4px);
+    background: rgba(0, 67, 132, 0.08);
+    color: #004384;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-align: center;
+}
+.ul-page .ul-drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #98a2b3;
+    cursor: grab;
+    user-select: none;
+    line-height: 1;
+}
+.ul-page .ul-drag-handle:active { cursor: grabbing; }
+.ul-page .ul-drag-handle > i { font-size: 1.15rem; }
+
+/* Dragging is only meaningful over the whole, unfiltered list — the page
+   disables the handles while a search is active and says so. */
+.ul-page.is-reorder-locked .ul-drag-handle {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+.ul-page .programme-dt-table tbody tr.ul-row-dragging { opacity: 0.55; }
+.ul-page .programme-dt-table tbody tr.ul-row-over td {
+    box-shadow: inset 0 2px 0 0 #004384;
+    background: rgba(0, 67, 132, 0.04);
+}
+
+.ul-page .ul-reorder-hint {
+    font-size: 0.8125rem;
+    color: var(--ds-ink-muted, #667085);
+}
+
+/* ── Row actions: icon over label ──
+   Each action is an equal-width column holding a fixed-height icon strip above
+   its caption. Equal widths keep the icon row evenly spaced even though the
+   captions differ in length (§3b trap 2). */
+.ul-page .ul-act-group {
+    display: inline-flex;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0.25rem;
+}
+
+.ul-page .ul-act {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    min-width: 62px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+}
+
+.ul-page .ul-act__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+}
+.ul-page .ul-act__icon > i { font-size: 1.1rem; line-height: 1; }
+.ul-page .ul-act__label { white-space: nowrap; }
+
+.ul-page .ul-act--edit { color: #2563eb; }
+.ul-page .ul-act--open { color: #067647; }
+.ul-page .ul-act--del { color: var(--bs-danger, #dc3545); }
+
+/* The delete <form> is only a wrapper — it must not add a box of its own. */
+.ul-page .ul-delete-form {
+    display: flex;
+    margin: 0;
+    padding: 0;
+}
+
+/* Keep the Action header over its content. */
+.ul-page .programme-dt-table th:last-child,
+.ul-page .programme-dt-table td:last-child {
+    text-align: left;
+    white-space: nowrap;
+}
+
+/* ── Empty state ── */
+.ul-page .ul-empty {
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: var(--ds-ink-muted, #667085);
+}
+.ul-page .ul-empty i {
+    font-size: 2.5rem;
+    opacity: 0.35;
+}
+
+/* ============================================================================
+   Add / Edit modal (§3c) and the standalone create / edit pages
+   ⚠️ Every rule below is scoped to BOTH roots: _form.blade.php renders inside
+   the modal (AJAX) and inside .ul-page on the full-page create/edit views. A
+   modal-only selector would leave the standalone forms unstyled.
+   ========================================================================= */
+
+.ul-modal { border-radius: 12px; }
+
+.ul-modal .ul-modal-header {
+    border-bottom: 1px solid #eaecf0;
+    padding: 1rem 1.25rem;
+    align-items: flex-start;
+}
+.ul-modal .ul-modal-header .modal-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--ds-ink, #101828);
+    margin: 0;
+}
+.ul-modal .ul-modal-sub {
+    margin: 2px 0 0;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--ds-ink-muted, #667085);
+}
+
+.ul-modal .ul-modal-body { padding: 1.25rem; }
+
+.ul-modal .ul-field-card,
+.ul-page .ul-field-card {
+    position: relative;
+    background: #eef1fc;
+    border-radius: 10px;
+    padding: 1.25rem;
+}
+
+/* Two columns so the form reads as a form and not as a tall single stack. The
+   grid gap owns the spacing — cells carry no margin of their own. */
+.ul-modal .ul-form-grid,
+.ul-page .ul-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.1rem 1.25rem;
+}
+.ul-modal .ul-form-grid > .form-group,
+.ul-page .ul-form-grid > .form-group { margin-bottom: 0; }
+.ul-modal .ul-form-grid--full,
+.ul-page .ul-form-grid--full { grid-column: 1 / -1; }
+
+@media (max-width: 575.98px) {
+    .ul-modal .ul-form-grid,
+    .ul-page .ul-form-grid { grid-template-columns: 1fr; }
+}
+
+.ul-modal .ul-form-label,
+.ul-page .ul-form-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+.ul-modal .ul-req,
+.ul-page .ul-req { color: #dc2626; margin-left: 1px; }
+
+.ul-modal .ul-control,
+.ul-page .ul-control {
+    background-color: #fff;
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--ds-ink, #101828);
+    box-shadow: none;
+}
+.ul-modal .ul-control::placeholder,
+.ul-page .ul-control::placeholder { color: #9ca3af; }
+.ul-modal .ul-control:focus,
+.ul-page .ul-control:focus {
+    border-color: #004384;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
+}
+
+.ul-modal .ul-form-help,
+.ul-page .ul-form-help {
+    margin: 0.375rem 0 0;
+    font-size: 0.75rem;
+    color: var(--ds-ink-muted, #667085);
+}
+
+.ul-modal .ul-field-card .invalid-feedback,
+.ul-page .ul-field-card .invalid-feedback { display: block; }
+
+/* "Either URL or a file" — one message under the pair, always block-level so it
+   does not collapse when empty-then-filled. */
+.ul-modal .ul-pair-error,
+.ul-page .ul-pair-error {
+    display: block;
+    margin-top: 0.375rem;
+    font-size: 0.8125rem;
+    color: #dc2626;
+    min-height: 1em;
+}
+
+.ul-modal .ul-current-file,
+.ul-page .ul-current-file {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.5rem;
+    padding: 0.25rem 0.6rem;
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-radius: var(--ds-radius, 4px);
+    background: #fff;
+    color: #475467;
+    font-size: 0.8125rem;
+    text-decoration: none;
+}
+.ul-modal .ul-current-file:hover,
+.ul-page .ul-current-file:hover { border-color: #004384; color: #004384; }
+
+.ul-modal .ul-modal-footer,
+.ul-page .ul-form-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    border-top: 0;
+    padding: 0.25rem 1.25rem 1.25rem;
+}
+.ul-page .ul-form-footer { padding: 1rem 0 0; }
+
+.ul-modal .ul-btn-cancel,
+.ul-page .ul-btn-cancel {
+    min-width: 108px;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    background: #fff;
+    color: #dc2626;
+    font-weight: 500;
+}
+.ul-modal .ul-btn-cancel:hover,
+.ul-page .ul-btn-cancel:hover {
+    background: #fef2f2;
+    border-color: #f87171;
+}
+.ul-modal .ul-btn-submit,
+.ul-page .ul-btn-submit {
+    min-width: 140px;
+    border: 1px solid #004384;
+    border-radius: 8px;
+    background: #004384;
+    color: #fff;
+    font-weight: 600;
+}
+.ul-modal .ul-btn-submit:hover,
+.ul-page .ul-btn-submit:hover {
+    background: #00356a;
+    border-color: #00356a;
+}
+.ul-modal .ul-btn-submit:disabled,
+.ul-page .ul-btn-submit:disabled {
+    background: #004384;
+    border-color: #004384;
+    opacity: 0.65;
+}
+
+/* ── Print: the grid only ── */
+@media print {
+    .modern-breadcrumb-wrapper,
+    .ul-page .programme-dt-toolbar,
+    .ul-page .ul-secondary-actions,
+    .ul-page .programme-dt-footer,
+    .ul-page .programme-dt-table th:last-child,
+    .ul-page .programme-dt-table td:last-child { display: none !important; }
+}

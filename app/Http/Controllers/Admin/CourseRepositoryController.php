@@ -261,7 +261,7 @@ class CourseRepositoryController extends Controller
             // Handle image upload
             if ($request->hasFile('category_image')) {
                 $image = $request->file('category_image');
-                $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $imageName = time() . '_' . uniqid() . '.' . safe_upload_extension($image);
                 $image->storeAs('course-repository/categories', $imageName, 'public');
                 $validated['category_image'] = 'course-repository/categories/' . $imageName;
             }
@@ -269,7 +269,7 @@ class CourseRepositoryController extends Controller
             // Handle attachment upload
             if ($request->hasFile('category_attachment')) {
                 $attachment = $request->file('category_attachment');
-                $attachmentName = time() . '_' . uniqid() . '.' . $attachment->getClientOriginalExtension();
+                $attachmentName = time() . '_' . uniqid() . '.' . safe_upload_extension($attachment);
                 $attachment->storeAs('course-repository/attachments', $attachmentName, 'public');
                 $validated['category_attachment'] = 'course-repository/attachments/' . $attachmentName;
             }
@@ -356,7 +356,7 @@ class CourseRepositoryController extends Controller
                 
                 // Store new image
                 $image = $request->file('category_image');
-                $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $imageName = time() . '_' . uniqid() . '.' . safe_upload_extension($image);
                 $image->storeAs('course-repository/categories', $imageName, 'public');
                 $validated['category_image'] = 'course-repository/categories/' . $imageName;
             }
@@ -370,7 +370,7 @@ class CourseRepositoryController extends Controller
 
                 // Store new attachment
                 $attachment = $request->file('category_attachment');
-                $attachmentName = time() . '_' . uniqid() . '.' . $attachment->getClientOriginalExtension();
+                $attachmentName = time() . '_' . uniqid() . '.' . safe_upload_extension($attachment);
                 $attachment->storeAs('course-repository/attachments', $attachmentName, 'public');
                 $validated['category_attachment'] = 'course-repository/attachments/' . $attachmentName;
             }
@@ -809,7 +809,7 @@ class CourseRepositoryController extends Controller
         $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
         $safeName = trim(preg_replace('/[^A-Za-z0-9_\-]+/', '_', $originalName), '_');
         $safeName = $safeName !== '' ? $safeName : 'file';
-        $extension = $file->getClientOriginalExtension();
+        $extension = safe_upload_extension($file, '');
 
         return $safeName . '_' . time() . ($extension ? '.' . $extension : '');
     }

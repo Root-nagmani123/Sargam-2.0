@@ -1,7 +1,7 @@
 <?php
 
 ######################################
-// DEVELOPER INFO 
+// DEVELOPER INFO
 // => MANJEET CHNAD (शैतान 💀)
 // => manjeetchand01@gmail.com
 // => +919997294527
@@ -16,15 +16,6 @@ use Illuminate\Http\Request;
 
 class SidebarCategoryService
 {
-
-    public function pageData(): array
-    {
-        return [
-            'columns' => $this->columns(),
-            'filters' => $this->filters(),
-        ];
-    }
-
     public function getAll()
     {
         return SidebarCategory::orderBy('order')->get();
@@ -79,156 +70,228 @@ class SidebarCategoryService
         return $deleted;
     }
 
-    public function columns(): array
-    {
-        return [
-            ['title' => 'Sr No.', 'data' => 'DT_RowIndex', 'orderable' => false, 'searchable' => false, 'className' => 'text-center text-secondary'],
-            ['title' => 'Name', 'data' => 'name', 'className' => 'fw-medium'],
-            ['title' => 'Slug', 'data' => 'slug', 'className' => 'font-monospace small'],
-            ['title' => 'Icon', 'data' => 'icon', 'className' => 'text-center'],
-            ['title' => 'Order', 'data' => 'order', 'className' => 'text-center'],
-            ['title' => 'Created', 'data' => 'created_at', 'className' => 'text-nowrap text-secondary small'],
-            ['title' => 'Status', 'data' => 'status', 'orderable' => false, 'searchable' => false, 'className' => 'text-center'],
-            ['title' => 'Action', 'data' => 'action', 'orderable' => false, 'searchable' => false, 'className' => 'text-end'],
-        ];
-    }
-
-    public function filters(): array
-    {
-        return [
-            [
-                'name' => 'role',
-                'label' => 'Role',
-                'options' => [
-                    'admin' => 'Admin',
-                    'manager' => 'Manager',
-                    'user' => 'User',
-                ],
-            ],
-            [
-                'name' => 'status',
-                'label' => 'Status',
-                'options' => [
-                    'active' => 'Active',
-                    'inactive' => 'Inactive',
-                ],
-            ],
-        ];
-    }
-
-    # @ Base Query
+    /**
+     * @ Base Query
+     *
+     * Deliberately UNORDERED. Yajra appends its `order[]` clauses to whatever
+     * the query already carries, so an ORDER BY here would stay the primary
+     * sort and every header click would silently do nothing. The grid asks for
+     * `order` ascending by default (its `order:` option); exportRows() adds the
+     * same default for the downloads.
+     */
     protected function baseQuery(Request $request)
     {
-        return SidebarCategory::orderBy('order', 'asc');
+        return SidebarCategory::query();
     }
 
     public function getDatatable(Request $request)
     {
         return DataTables::of($this->baseQuery($request))
-            ->addColumn('created_at', fn ($e) =>
+            // editColumn (not addColumn) on the four real DB columns: Yajra then
+            // still treats them as sortable/searchable SQL columns and only
+            // swaps the rendered value.
+            ->editColumn('created_at', fn ($e) =>
                 optional($e)->created_at ? optional($e)->created_at->format('d-m-Y') : '-'
             )
-            ->editColumn('status', fn ($e) =>
-                $this->statusBadge($e)
+            ->editColumn('slug', fn ($e) =>
+                '<span class="sbm-slug">'.e($e->slug).'</span>'
             )
-            ->addColumn('action', fn ($e) =>
-                $this->actionButtons($e)
+            ->editColumn('order', fn ($e) =>
+                $e->order === null ? '<span class="sbm-muted">—</span>' : $this->orderBadge($e)
             )
-            ->addColumn('order', fn ($e) =>
-                $e->order == null ? '-' : $this->orderBadge($e)
-            )
-            ->addColumn('icon', fn ($e) =>
-                $e->icon == null ? '-' : $this->iconBadge($e)
-            )
-            ->rawColumns(['action','status','icon','order'])
+            ->editColumn('icon', fn ($e) => $this->iconBadge($e))
+            ->addColumn('status', fn ($e) => $this->statusBadge($e))
+            ->addColumn('action', fn ($e) => $this->actionButtons($e))
+            ->rawColumns(['action', 'status', 'icon', 'order', 'slug'])
             ->addIndexColumn()
             ->make(true);
     }
 
     private function orderBadge($data)
     {
-        return '<span class="badge rounded-1 text-bg-primary px-3 py-2 fw-medium">'.e($data->order).'</span>';
+        return '<span class="sbm-order">'.e($data->order).'</span>';
     }
 
     private function iconBadge($data)
     {
-        if ($data->icon === null || $data->icon === '') {
-            return '<span class="text-secondary user-select-none">—</span>';
+        if ($data->icon === null || trim((string) $data->icon) === '') {
+            return '<span class="sbm-muted">—</span>';
         }
 
         $icon = trim($data->icon);
         if (str_contains($icon, 'bi-') || str_starts_with($icon, 'bi ')) {
             $iconClass = str_contains($icon, 'bi ') ? $icon : 'bi '.$icon;
 
-            return '<span class="d-inline-flex align-items-center justify-content-center rounded-2 border bg-light px-2 py-1" title="'.e($icon).'">'
-                .'<i class="'.e($iconClass).' fs-5 text-primary" aria-hidden="true"></i></span>';
+            return '<span class="sbm-icon-chip" title="'.e($icon).'">'
+                .'<i class="'.e($iconClass).'" aria-hidden="true"></i></span>';
         }
 
-        return '<span class="material-symbols-rounded fs-5 align-middle text-primary" aria-hidden="true">'.e($icon).'</span>';
+        return '<span class="sbm-icon-chip" title="'.e($icon).'">'
+            .'<span class="material-symbols-rounded" aria-hidden="true">'.e($icon).'</span></span>';
     }
 
+    /**
+     * Status column — a soft badge, display only. The control that changes it is
+     * the switch in the Action column (§3b). data-order lets a client-side sort
+     * order by state.
+     */
     private function statusBadge($data)
     {
-        $checked = $data->is_active ? 'checked' : '';
-        $ariaChecked = $data->is_active ? 'true' : 'false';
-        $switchId = 'sidebar-cat-status-'.(int) $data->id;
-        $label = 'Toggle active status for category '.e($data->name);
+        $isActive = (int) $data->is_active === 1;
 
-        return '
-            <div class="form-check form-switch d-flex justify-content-center mb-0">
-                <input
-                    class="form-check-input sidebar-category-status-toggle gigw-switch-touch"
-                    type="checkbox"
-                    role="switch"
-                    id="'.$switchId.'"
-                    '.$checked.'
-                    aria-label="'.$label.'"
-                    aria-checked="'.$ariaChecked.'"
-                    data-id="'.$data->id.'"
-                    data-table="sidebar_categories"
-                    data-column="is_active"
-                >
-            </div>
-        ';
+        return '<span class="status-pill badge rounded-1 '
+            .($isActive ? 'bg-success-subtle' : 'bg-danger-subtle').'">'
+            .($isActive ? 'Active' : 'Inactive')
+            .'</span>';
     }
 
-
-
+    /**
+     * Action column — Edit · status switch · Delete, three equal-width stacks of
+     * an icon over a caption (§3b).
+     *
+     * Delete is guarded: an ACTIVE category still drives the live sidebar, so it
+     * renders as a disabled span explaining why rather than a red icon that the
+     * page would refuse. The switch caption names the ACTION, not the state.
+     */
     private function actionButtons($data)
     {
-        $deleteUrl = route('sidebar.categories.destroy', $data->id);
-        $jsonData = htmlspecialchars(json_encode($data), ENT_QUOTES, 'UTF-8');
-        $nameQuoted = e($data->name);
+        $isActive = (int) $data->is_active === 1;
+        $name = e($data->name);
+        $switchId = 'sbmCatStatus'.(int) $data->id;
 
-        $buttons = '
-        <div class="d-inline-flex align-items-center justify-content-end flex-wrap gap-2" role="group" aria-label="Actions for '.$nameQuoted.'">
-            <button type="button"
-                class="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center edit-btn border-0 bg-transparent text-primary"
-                data-item="'.$jsonData.'"
-                title="Edit category"
-                aria-label="Edit category '.$nameQuoted.'">
-                <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">edit</i>
-            </button>
-        ';
+        $html = '<div class="sbm-act-group" role="group" aria-label="Actions for '.$name.'">';
 
-        if ($data->is_active != 1) {
-            $buttons .= '
-            <form action="'.$deleteUrl.'" method="POST" class="d-inline"
-                onsubmit="return confirm(\'Are you sure you want to delete this record?\');">
+        $html .= '
+            <button type="button" class="sbm-act sbm-act--edit sbm-edit-btn"
+                    data-id="'.(int) $data->id.'"
+                    data-name="'.$name.'"
+                    data-slug="'.e($data->slug).'"
+                    data-icon="'.e((string) $data->icon).'"
+                    data-order="'.e((string) $data->order).'"
+                    data-status="'.($isActive ? '1' : '0').'"
+                    title="Edit category" aria-label="Edit category '.$name.'">
+                <span class="sbm-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
+                <span class="sbm-act__label">Edit</span>
+            </button>';
+
+        // No .form-check/.form-switch wrapper — that combination yanks the input
+        // -2.375rem left (custom.css:107-112) and breaks this layout (§3b trap 1).
+        //
+        // Two classes, two jobs:
+        //   plain-status-toggle           — the design-system TOGGLE skin
+        //     (custom.css:41-95): pill track, sliding knob, gold off / green on.
+        //     It is the wrapper-less variant, which is exactly this layout. Drop
+        //     it and the input falls back to Bootstrap's square checkbox.
+        //   sidebar-category-status-toggle — this page's JS hook. Deliberately
+        //     NOT `status-toggle`: that one is bound globally by custom.js:170 to
+        //     the generic table/column endpoint, and this grid posts to its own
+        //     route instead.
+        $html .= '
+            <label class="sbm-act sbm-act--toggle" for="'.$switchId.'">
+                <span class="sbm-act__icon">
+                    <input class="form-check-input plain-status-toggle sidebar-category-status-toggle"
+                           type="checkbox" role="switch"
+                           id="'.$switchId.'"
+                           data-table="sidebar_categories" data-column="is_active"
+                           data-id="'.(int) $data->id.'" data-name="'.$name.'"
+                           '.($isActive ? 'checked' : '').'
+                           aria-label="'.($isActive ? 'Deactivate' : 'Activate').' category '.$name.'">
+                </span>
+                <span class="sbm-act__label">'.($isActive ? 'Deactivate' : 'Activate').'</span>
+            </label>';
+
+        if ($isActive) {
+            $html .= '
+            <span class="sbm-act sbm-act--del is-disabled"
+                  title="Deactivate this category before deleting it" aria-disabled="true">
+                <span class="sbm-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>
+                <span class="sbm-act__label">Delete</span>
+            </span>';
+        } else {
+            $html .= '
+            <form action="'.route('sidebar.categories.destroy', $data->id).'" method="POST" class="sbm-delete-form">
                 '.csrf_field().'
                 '.method_field('DELETE').'
-                <button type="submit"
-                        class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center delete-btn border-0 bg-transparent"
-                        aria-label="Delete category '.$nameQuoted.'">
-                    <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">delete</i>
+                <button type="submit" class="sbm-act sbm-act--del" data-name="'.$name.'"
+                        aria-label="Delete category '.$name.'">
+                    <span class="sbm-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>
+                    <span class="sbm-act__label">Delete</span>
                 </button>
-            </form>
-            ';
+            </form>';
         }
 
-        $buttons .= '</div>';
-
-        return $buttons;
+        return $html.'</div>';
     }
 
+    /* ────────────────────────────────────────────────────────────────────────
+       Exports
+       One definition feeds BOTH the CSV and the print view, so the two cannot
+       drift apart (docs/new-design-index-page.md §1). `key` is what the grid's
+       Columns modal sends back as ?cols=; keep the first column identical to
+       the grid's.
+       ──────────────────────────────────────────────────────────────────────── */
+
+    public function exportColumnDefs(): array
+    {
+        return [
+            ['key' => 'sno', 'heading' => 'Sr No.', 'class' => 'sbm-print-sno',
+                'value' => fn ($row, $index) => $index + 1],
+            ['key' => 'name', 'heading' => 'Name', 'class' => 'sbm-print-name',
+                'value' => fn ($row) => (string) $row->name],
+            ['key' => 'slug', 'heading' => 'Slug', 'class' => 'sbm-print-slug',
+                'value' => fn ($row) => (string) $row->slug],
+            ['key' => 'icon', 'heading' => 'Icon', 'class' => 'sbm-print-icon',
+                'value' => fn ($row) => filled($row->icon) ? (string) $row->icon : '-'],
+            ['key' => 'order', 'heading' => 'Order', 'class' => 'sbm-print-order',
+                'value' => fn ($row) => $row->order === null ? '-' : (string) $row->order],
+            ['key' => 'created_at', 'heading' => 'Created', 'class' => 'sbm-print-created',
+                'value' => fn ($row) => $row->created_at ? $row->created_at->format('d-m-Y') : '-'],
+            ['key' => 'status', 'heading' => 'Status', 'class' => 'sbm-print-status',
+                'value' => fn ($row) => (int) $row->is_active === 1 ? 'Active' : 'Inactive'],
+        ];
+    }
+
+    /**
+     * Columns still ticked in the grid's Columns modal, in table order. No
+     * ?cols= at all means "every column"; an unknown key is ignored.
+     */
+    public function exportColumns(?string $cols): array
+    {
+        $defs = $this->exportColumnDefs();
+
+        if (! filled($cols)) {
+            return $defs;
+        }
+
+        $wanted = array_filter(array_map('trim', explode(',', $cols)));
+        if (empty($wanted)) {
+            return $defs;
+        }
+
+        return array_values(array_filter(
+            $defs,
+            fn (array $def) => in_array($def['key'], $wanted, true)
+        ));
+    }
+
+    /**
+     * The rows the export writes — the same search term the grid is showing, so
+     * a download matches what is on screen.
+     */
+    public function exportRows(Request $request)
+    {
+        $query = $this->baseQuery($request)->orderBy('order', 'asc');
+
+        $search = trim((string) $request->input('q', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $like = '%'.$search.'%';
+                $q->where('name', 'like', $like)
+                    ->orWhere('slug', 'like', $like)
+                    ->orWhere('icon', 'like', $like);
+            });
+        }
+
+        return $query->get();
+    }
 }
