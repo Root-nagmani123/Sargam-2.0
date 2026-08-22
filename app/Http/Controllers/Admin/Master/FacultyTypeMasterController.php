@@ -162,7 +162,11 @@ class FacultyTypeMasterController extends Controller
             if ($request->pk) {
                 $facultyType = FacultyTypeMaster::findOrFail(decrypt($request->pk));
             } else {
-                $facultyType = FacultyTypeMaster::create($request->all());
+                // Not create($request->all()): the model is $guarded = [], so
+                // every request key would be writable, and the two real columns
+                // are assigned explicitly just below anyway. A bare instance also
+                // saves the redundant INSERT-then-UPDATE the create() caused.
+                $facultyType = new FacultyTypeMaster();
             }
 
             $facultyType->faculty_type_name = $request->faculty_type_name;

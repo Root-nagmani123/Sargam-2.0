@@ -179,15 +179,42 @@ trait ExportsMasterGrid
                 return $this->exportTooLargeResponse($rows->count(), $needed, $limit);
             }
 
-            return Pdf::loadView('admin.master.partials.export_pdf', $payload)
+            $pdf = Pdf::loadView('admin.master.partials.export_pdf', $payload)
                 ->setPaper('a4', $orientation)
                 ->setOptions([
                     'defaultFont'          => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    // The page-number script at the end of the view needs this.
-                    'isPhpEnabled'         => true,
-                ])
-                ->download($slug . '_' . $stamp . '.pdf');
+                    // Page numbers are stamped below through the canvas API, so the
+                    // view carries no <script type="text/php"> and the renderer never
+                    // executes document-supplied PHP. Stated explicitly because this
+                    // concern is shared by every master export: leaving the flag on
+                    // would arm all of them at once.
+                    'isPhpEnabled'         => false,
+                ]);
+
+            // page_text() walks the pages that already exist and substitutes
+            // {PAGE_COUNT} from the final page count, so it has to run after
+            // render(). download() below reuses that render rather than repeating it.
+            $pdf->render();
+
+            $dompdf  = $pdf->getDomPDF();
+            $canvas  = $dompdf->getCanvas();
+            $metrics = $dompdf->getFontMetrics();
+            $text    = 'Page {PAGE_NUM} of {PAGE_COUNT}';
+            $font    = $metrics->getFont('DejaVu Sans', 'normal');
+            $size    = 7;
+            $width   = $metrics->getTextWidth($text, $font, $size);
+
+            $canvas->page_text(
+                $canvas->get_width() - $width - 28,
+                $canvas->get_height() - 24,
+                $text,
+                $font,
+                $size,
+                [0.42, 0.45, 0.5]
+            );
+
+            return $pdf->download($slug . '_' . $stamp . '.pdf');
         }
 
         $header  = array_values(array_map(fn ($col) => $col['heading'], $columns));
