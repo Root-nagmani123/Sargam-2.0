@@ -37,8 +37,11 @@ var SVDR_CFG = window.SVDR_CFG || {};
             if (inline) params.push('inline=1');
             return BASE + '?' + params.join('&');
         }
-        var d = document.getElementById('svDownloadBtn');
-        if (d) d.addEventListener('click', function () { window.location.href = buildUrl('excel', false); });
+        // The CSV / Excel / PDF menu next to Download calls this builder, so
+        // every format carries the grid's live search, filters and columns.
+        window.MessExport = window.MessExport || {};
+        window.MessExport['svDownloadBtn'] = buildUrl;
+
         var p = document.getElementById('svPrintBtn');
         if (p) p.addEventListener('click', function () { window.open(buildUrl('pdf', true), '_blank'); });
     })();

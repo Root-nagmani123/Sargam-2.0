@@ -20,6 +20,9 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class StoreAllocationController extends Controller
 {
+    use Concerns\RaisesExportLimits;
+    use Concerns\StreamsMasterCsv;
+
     /**
      * Invalidate the available-quantity cache after mutations that change
      * mess_store_allocation_items (create/update/delete).
@@ -258,12 +261,20 @@ class StoreAllocationController extends Controller
         $fileName = 'mess-store-allocation-' . now()->format('Y-m-d_H-i-s');
 
         if ($format === 'pdf') {
-            @ini_set('memory_limit', '256M');
-            @set_time_limit(120);
+            $this->raiseMemoryLimit($this->pdfMemoryLimit());
+            $this->raiseTimeLimit(120);
+
+            // DomPDF cannot render an unbounded table — build the rows once,
+            // refuse politely if there are too many, and reuse them below.
+            $pdfRows = $export->pdfRows();
+
+            if ($tooLarge = $this->guardPdfRowCount($pdfRows, 'Mess Store Allocation')) {
+                return $tooLarge;
+            }
 
             $pdf = Pdf::loadView('mess.storeallocations.export_pdf', array_merge([
                 'headings' => $export->activeHeadings(),
-                'rows' => $export->pdfRows(),
+                'rows' => $pdfRows,
                 'filterLine' => $this->buildExportFilterLine($request),
                 'printedOn' => now()->format('d-m-Y H:i'),
                 'reportTitle' => 'Mess Store Allocation',
@@ -280,6 +291,11 @@ class StoreAllocationController extends Controller
             return $request->boolean('inline')
                 ? $pdf->stream($fileName . '.pdf')
                 : $pdf->download($fileName . '.pdf');
+        }
+
+        // Plain CSV: no branded header block — see Concerns\StreamsMasterCsv.
+        if ($format === 'csv') {
+            return $this->streamMasterCsv($export, $fileName);
         }
 
         return Excel::download($export, $fileName . '.xlsx', ExcelFormat::XLSX);

@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 @section('title', 'Add Subcategory Item')
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid mess-select2">
     <div class="card shadow-sm border-0">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
@@ -27,6 +27,7 @@
         </div>
     </div>
 </div>
+@include('mess.partials.select2-search')
 @endsection
 @push('scripts')
 <script>

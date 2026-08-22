@@ -15,7 +15,9 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class SubStoreController extends Controller
 {
+    use Concerns\RaisesExportLimits;
     use Concerns\FiltersByStatus;
+    use Concerns\StreamsMasterCsv;
 
     private const LIST_CACHE_EPOCH_KEY = 'mess_sub_store_master_list_epoch';
     private const DT_LIST_EPOCH_KEY = 'mess_sub_store_master_dt_list_epoch';
@@ -85,9 +87,14 @@ class SubStoreController extends Controller
 
         switch ($orderCol) {
             case 0:
-                $paged->orderBy('sub_store_name', $orderDir);
+                // S. No. has no column of its own to sort on — it follows the
+                // page, so sorting it means sorting the underlying order.
+                $paged->orderBy('id', $orderDir);
                 break;
             case 1:
+                $paged->orderBy('sub_store_name', $orderDir);
+                break;
+            case 2:
                 $paged->orderBy('status', $orderDir);
                 break;
             default:
@@ -102,7 +109,11 @@ class SubStoreController extends Controller
         $rows = $paged->get();
         $canDelete = function_exists('hasRole') && (hasRole('Super Admin') || hasRole('Mess-Admin'));
 
-        $data = $rows->map(fn (SubStore $subStore) => $this->buildSubStoreDatatableRow($subStore, $canDelete))->all();
+        // Column 0 is a running serial, not the primary key — the same "S. No."
+        // the export prints. It follows the page, so it always reads 1..n.
+        $data = $rows->values()
+            ->map(fn (SubStore $subStore, int $i) => $this->buildSubStoreDatatableRow($subStore, $canDelete, $start + $i + 1))
+            ->all();
 
         return response()->json([
             'draw' => $draw,
@@ -115,7 +126,7 @@ class SubStoreController extends Controller
     /**
      * @return string[]
      */
-    private function buildSubStoreDatatableRow(SubStore $subStore, bool $canDelete): array
+    private function buildSubStoreDatatableRow(SubStore $subStore, bool $canDelete, int $serial): array
     {
         $nameCell = '<div class="fw-semibold">' . e($subStore->sub_store_name) . '</div>';
         $isActive = ($subStore->status ?? 'active') === SubStore::STATUS_ACTIVE;
@@ -145,9 +156,10 @@ class SubStoreController extends Controller
                 . '</form>';
         }
 
-        $actions = '<div class="d-flex align-items-center substore-actions">' . $editBtn . $deleteForm . '</div>';
+        $actions = '<div class="d-flex align-items-center justify-content-center substore-actions">' . $editBtn . $deleteForm . '</div>';
 
         return [
+            (string) $serial,
             $nameCell,
             $statusCell,
             $actions,
@@ -178,12 +190,20 @@ class SubStoreController extends Controller
         $fileName = 'sub-store-master-' . now()->format('Y-m-d_H-i-s');
 
         if ($format === 'pdf') {
-            @ini_set('memory_limit', '256M');
-            @set_time_limit(120);
+            $this->raiseMemoryLimit($this->pdfMemoryLimit());
+            $this->raiseTimeLimit(120);
+
+            // DomPDF cannot render an unbounded table — build the rows once,
+            // refuse politely if there are too many, and reuse them below.
+            $pdfRows = $export->pdfRows();
+
+            if ($tooLarge = $this->guardPdfRowCount($pdfRows, 'Sub Store Master')) {
+                return $tooLarge;
+            }
 
             $pdf = Pdf::loadView('mess.sub-stores.export_pdf', array_merge([
                 'headings' => $export->activeHeadings(),
-                'rows' => $export->pdfRows(),
+                'rows' => $pdfRows,
                 'filterLine' => $export->filterLine(),
                 'printedOn' => now()->format('d-m-Y H:i'),
                 'reportTitle' => 'Sub Store Master',
@@ -200,6 +220,11 @@ class SubStoreController extends Controller
             return $request->boolean('inline')
                 ? $pdf->stream($fileName . '.pdf')
                 : $pdf->download($fileName . '.pdf');
+        }
+
+        // Plain CSV: no branded header block — see Concerns\StreamsMasterCsv.
+        if ($format === 'csv') {
+            return $this->streamMasterCsv($export, $fileName);
         }
 
         return Excel::download($export, $fileName . '.xlsx', ExcelFormat::XLSX);

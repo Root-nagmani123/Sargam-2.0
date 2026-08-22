@@ -13,7 +13,14 @@
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <span class="text-body-secondary small">Status</span>
-                    <span class="badge rounded-1 bg-{{ $purchaseOrder->status == 'approved' ? 'success' : ($purchaseOrder->status == 'rejected' ? 'danger' : ($purchaseOrder->status == 'completed' ? 'primary' : 'warning')) }}">
+                    @php
+                        // Same mapping the grid uses (PurchaseOrderController::buildPurchaseOrderRow):
+                        // approved/completed read as active, rejected as inactive, anything else pending.
+                        $statusMod = in_array($purchaseOrder->status, ['approved', 'completed'], true)
+                            ? 'active'
+                            : ($purchaseOrder->status === 'rejected' ? 'inactive' : 'pending');
+                    @endphp
+                    <span class="badge programme-status-badge programme-status-badge--{{ $statusMod }}">
                         {{ ucfirst($purchaseOrder->status) }}
                     </span>
                 </div>

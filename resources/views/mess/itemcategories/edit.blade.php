@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 @section('title', 'Edit Item Category')
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid mess-select2">
     <div class="card">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-start mb-3">
@@ -24,4 +24,5 @@
         </div>
     </div>
 </div>
+@include('mess.partials.select2-search')
 @endsection

@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 @section('title', 'Edit Material Management')
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid mess-select2">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>Edit Material Management #{{ $kitchenIssue->pk }}</h4>
         <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-secondary">Back to List</a>
@@ -112,4 +112,5 @@
         </div>
     </div>
 </div>
+@include('mess.partials.select2-search')
 @endsection

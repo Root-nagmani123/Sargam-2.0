@@ -164,7 +164,7 @@
 @php
     $clientTypeOptions = \App\Models\Mess\ClientType::clientTypes();
 @endphp
-<div class="container-fluid client-master-page">
+<div class="container-fluid client-master-page mess-select2">
     <x-breadcrum title="Client Master" :showBack="false">
         <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createClientTypeModal">
             <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
@@ -179,10 +179,14 @@
          simply has no on-screen control. --}}
     <div class="d-flex flex-wrap align-items-center justify-content-end gap-3 mb-3">
         <div class="d-flex flex-wrap gap-2 ms-auto">
-            <button type="button" class="btn client-master-export-btn" id="clientDownloadBtn">
-                <i class="material-symbols-rounded">download</i>
-                <span>Download</span>
-            </button>
+            <div class="dropdown">
+                <button type="button" class="btn client-master-export-btn dropdown-toggle mess-export-toggle"
+                        id="clientDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="material-symbols-rounded">download</i>
+                    <span>Download</span>
+                </button>
+                @include('mess.partials.download-formats', ['toggleId' => 'clientDownloadBtn'])
+            </div>
             <button type="button" class="btn client-master-export-btn" id="clientPrintBtn">
                 <i class="material-symbols-rounded">print</i>
                 <span>Print</span>
@@ -210,6 +214,7 @@
                     <table id="clientTypesTable" class="table table-hover programme-dt-table align-middle mb-0 w-100">
                         <thead>
                             <tr>
+                                <th scope="col">S. No.</th>
                                 <th scope="col">Client Types</th>
                                 <th scope="col">Client Name</th>
                                 <th scope="col" class="no-sort">Status</th>
@@ -268,7 +273,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label client-modal-label">Description</label>
-                            <textarea name="description" class="form-control client-modal-control" rows="3" placeholder="e.g. Enter Client Type Description....">{{ old('description') }}</textarea>
+                            <textarea name="description" class="form-control client-modal-control" rows="3" placeholder="e.g. Officer Trainees on the Foundation Course">{{ old('description') }}</textarea>
                             @error('description')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                         </div>
                     </div>
@@ -318,7 +323,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label client-modal-label">Description</label>
-                            <textarea name="description" id="edit_description" class="form-control client-modal-control" rows="3" placeholder="e.g. Enter Client Type Description...."></textarea>
+                            <textarea name="description" id="edit_description" class="form-control client-modal-control" rows="3" placeholder="e.g. Officer Trainees on the Foundation Course"></textarea>
                         </div>
                     </div>
                 </div>
@@ -337,18 +342,20 @@
 @include('components.mess-master-datatables', [
     'tableId' => 'clientTypesTable',
     'searchPlaceholder' => 'Search client types...',
-    'orderColumn' => 0,
-    'actionColumnIndex' => 3,
+    // Default order is unchanged; column 0 is now the serial.
+    'orderColumn' => 1,
+    'orderDir' => 'asc',
+    'actionColumnIndex' => 4,
     'infoLabel' => 'client types',
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.client-types.index'),
     'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
     'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
     'serverSideColumnDefs' => [
-        ['className' => 'text-center', 'targets' => [2, 3]],
+        ['className' => 'text-center', 'targets' => [3, 4]],
         // Status carries no sort caret in the design — the pills above the card
         // are how you slice by status here.
-        ['orderable' => false, 'targets' => [2]],
+        ['orderable' => false, 'targets' => [3]],
     ],
 ])
 @push('scripts')
@@ -372,8 +379,11 @@
         return BASE + '?' + params.join('&');
     }
 
-    var downloadBtn = document.getElementById('clientDownloadBtn');
-    if (downloadBtn) downloadBtn.addEventListener('click', function () { window.location.href = buildUrl('excel', false); });
+    // The CSV / Excel / PDF menu next to Download calls this builder, so
+    // every format carries the grid's live search, filters and columns.
+    window.MessExport = window.MessExport || {};
+    window.MessExport['clientDownloadBtn'] = buildUrl;
+
     var printBtn = document.getElementById('clientPrintBtn');
     if (printBtn) printBtn.addEventListener('click', function () { window.open(buildUrl('pdf', true), '_blank'); });
 })();
@@ -399,4 +409,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
+@include('mess.partials.select2-search')
 @endsection

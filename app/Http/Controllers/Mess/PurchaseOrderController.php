@@ -24,6 +24,9 @@ use Illuminate\Validation\ValidationException;
 
 class PurchaseOrderController extends Controller
 {
+    use Concerns\RaisesExportLimits;
+    use Concerns\StreamsMasterCsv;
+
     private const PURCHASE_ORDER_DT_LIST_EPOCH = 'purchase_order_dt_list_epoch';
 
     /**
@@ -102,12 +105,20 @@ class PurchaseOrderController extends Controller
         $fileName = 'purchase-order-' . now()->format('Y-m-d_H-i-s');
 
         if ($format === 'pdf') {
-            @ini_set('memory_limit', '256M');
-            @set_time_limit(120);
+            $this->raiseMemoryLimit($this->pdfMemoryLimit());
+            $this->raiseTimeLimit(120);
+
+            // DomPDF cannot render an unbounded table — build the rows once,
+            // refuse politely if there are too many, and reuse them below.
+            $pdfRows = $export->pdfRows();
+
+            if ($tooLarge = $this->guardPdfRowCount($pdfRows, 'Purchase Order')) {
+                return $tooLarge;
+            }
 
             $pdf = Pdf::loadView('mess.purchaseorders.export_pdf', array_merge([
                 'headings' => $export->activeHeadings(),
-                'rows' => $export->pdfRows(),
+                'rows' => $pdfRows,
                 'filterLine' => $this->buildExportFilterLine($request, $vendorIds, $storeIds),
                 'printedOn' => now()->format('d-m-Y H:i'),
                 'reportTitle' => 'Purchase Order',
@@ -124,6 +135,11 @@ class PurchaseOrderController extends Controller
             return $request->boolean('inline')
                 ? $pdf->stream($fileName . '.pdf')
                 : $pdf->download($fileName . '.pdf');
+        }
+
+        // Plain CSV: no branded header block — see Concerns\StreamsMasterCsv.
+        if ($format === 'csv') {
+            return $this->streamMasterCsv($export, $fileName);
         }
 
         return Excel::download($export, $fileName . '.xlsx', ExcelFormat::XLSX);
@@ -328,8 +344,8 @@ class PurchaseOrderController extends Controller
             $row = [
                 '<span class="fw-medium">' . ($rowStart + $index) . '</span>',
                 '<span class="po-order-no fw-semibold">' . e($po->po_number) . '</span>',
-                '<span class="text-body-secondary">' . e(optional($po->vendor)->name ?? 'N/A') . '</span>',
-                '<span class="text-body-secondary">' . e(optional($po->store)->store_name ?? 'N/A') . '</span>',
+                '<span>' . e(optional($po->vendor)->name ?? 'N/A') . '</span>',
+                '<span>' . e(optional($po->store)->store_name ?? 'N/A') . '</span>',
                 '<span class="badge programme-status-badge programme-status-badge--' . $statusMod . '">' . e(ucfirst($po->status)) . '</span>',
             ];
 
@@ -356,7 +372,7 @@ class PurchaseOrderController extends Controller
                         . '</form>';
                 }
 
-                $row[] = '<div class="po-actions-cell d-flex align-items-start justify-content-start">' . $viewBtn . $editBtn . $deleteForm . '</div>';
+                $row[] = '<div class="po-actions-cell d-flex align-items-center justify-content-center">' . $viewBtn . $editBtn . $deleteForm . '</div>';
             }
 
             return $row;

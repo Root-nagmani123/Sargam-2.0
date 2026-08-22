@@ -15,6 +15,9 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class StoreController extends Controller
 {
+    use Concerns\RaisesExportLimits;
+    use Concerns\StreamsMasterCsv;
+
     private const LIST_CACHE_EPOCH_KEY = 'mess_store_master_list_epoch';
     private const DT_LIST_EPOCH_KEY = 'mess_store_master_dt_list_epoch';
 
@@ -195,7 +198,7 @@ class StoreController extends Controller
                 . '</form>';
         }
 
-        $actions = '<div class="d-flex align-items-center store-actions">' . $editBtn . $deleteForm . '</div>';
+        $actions = '<div class="d-flex align-items-center justify-content-center store-actions">' . $editBtn . $deleteForm . '</div>';
 
         return [
             (string) $serial,
@@ -233,12 +236,20 @@ class StoreController extends Controller
         $fileName = 'store-master-' . now()->format('Y-m-d_H-i-s');
 
         if ($format === 'pdf') {
-            @ini_set('memory_limit', '256M');
-            @set_time_limit(120);
+            $this->raiseMemoryLimit($this->pdfMemoryLimit());
+            $this->raiseTimeLimit(120);
+
+            // DomPDF cannot render an unbounded table — build the rows once,
+            // refuse politely if there are too many, and reuse them below.
+            $pdfRows = $export->pdfRows();
+
+            if ($tooLarge = $this->guardPdfRowCount($pdfRows, 'Store Master')) {
+                return $tooLarge;
+            }
 
             $pdf = Pdf::loadView('mess.stores.export_pdf', array_merge([
                 'headings' => $export->activeHeadings(),
-                'rows' => $export->pdfRows(),
+                'rows' => $pdfRows,
                 'filterLine' => $export->filterLine(),
                 'printedOn' => now()->format('d-m-Y H:i'),
                 'reportTitle' => 'Store Master',
@@ -259,8 +270,14 @@ class StoreController extends Controller
                 : $pdf->download($fileName . '.pdf');
         }
 
+        // Plain CSV: no branded header block — see Concerns\StreamsMasterCsv.
+        if ($format === 'csv') {
+            return $this->streamMasterCsv($export, $fileName);
+        }
+
         // Styled workbook (logos, blue header band, bordered zebra rows) so the
-        // download visually matches the Print / PDF layout — a plain CSV can't.
+        // download visually matches the Print / PDF layout, which the CSV branch
+        // above deliberately does not.
         return Excel::download($export, $fileName . '.xlsx', ExcelFormat::XLSX);
     }
 

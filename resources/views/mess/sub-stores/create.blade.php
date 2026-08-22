@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 @section('title', 'Add Sub Store')
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid mess-select2">
     <div class="card">
         <div class="card-body">
             <h4 class="mb-3">Add Sub Store</h4>
@@ -19,4 +19,5 @@
         </div>
     </div>
 </div>
+@include('mess.partials.select2-search')
 @endsection

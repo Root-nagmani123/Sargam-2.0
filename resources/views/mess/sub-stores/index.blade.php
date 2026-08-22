@@ -160,7 +160,7 @@
 @endpush
 
 @section('content')
-<div class="container-fluid substore-master-page">
+<div class="container-fluid substore-master-page mess-select2">
     <x-breadcrum title="Sub Store Master" :showBack="false">
         <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createSubStoreModal">
             <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
@@ -175,10 +175,14 @@
          simply has no on-screen control. --}}
     <div class="d-flex flex-wrap align-items-center justify-content-end gap-3 mb-3">
         <div class="d-flex flex-wrap gap-2 ms-auto">
-            <button type="button" class="btn substore-master-export-btn" id="substoreDownloadBtn">
-                <i class="material-symbols-rounded">download</i>
-                <span>Download</span>
-            </button>
+            <div class="dropdown">
+                <button type="button" class="btn substore-master-export-btn dropdown-toggle mess-export-toggle"
+                        id="substoreDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="material-symbols-rounded">download</i>
+                    <span>Download</span>
+                </button>
+                @include('mess.partials.download-formats', ['toggleId' => 'substoreDownloadBtn'])
+            </div>
             <button type="button" class="btn substore-master-export-btn" id="substorePrintBtn">
                 <i class="material-symbols-rounded">print</i>
                 <span>Print</span>
@@ -206,6 +210,7 @@
                     <table id="subStoresTable" class="table table-hover programme-dt-table align-middle mb-0 w-100">
                         <thead>
                             <tr>
+                                <th scope="col">S. No.</th>
                                 <th scope="col">Sub Store Name</th>
                                 <th scope="col" class="no-sort">Status</th>
                                 <th scope="col">Action</th>
@@ -304,18 +309,20 @@
 @include('components.mess-master-datatables', [
     'tableId' => 'subStoresTable',
     'searchPlaceholder' => 'Search sub stores...',
-    'orderColumn' => 0,
-    'actionColumnIndex' => 2,
+    // Default order stays alphabetical by name; column 0 is now the serial.
+    'orderColumn' => 1,
+    'orderDir' => 'asc',
+    'actionColumnIndex' => 3,
     'infoLabel' => 'sub stores',
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.sub-stores.index'),
     'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
     'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
     'serverSideColumnDefs' => [
-        ['className' => 'text-center', 'targets' => [1, 2]],
+        ['className' => 'text-center', 'targets' => [2, 3]],
         // Status carries no sort caret in the design — the pills above the card
         // are how you slice by status here.
-        ['orderable' => false, 'targets' => [1]],
+        ['orderable' => false, 'targets' => [2]],
     ],
 ])
 @push('scripts')
@@ -339,8 +346,11 @@
         return BASE + '?' + params.join('&');
     }
 
-    var downloadBtn = document.getElementById('substoreDownloadBtn');
-    if (downloadBtn) downloadBtn.addEventListener('click', function () { window.location.href = buildUrl('excel', false); });
+    // The CSV / Excel / PDF menu next to Download calls this builder, so
+    // every format carries the grid's live search, filters and columns.
+    window.MessExport = window.MessExport || {};
+    window.MessExport['substoreDownloadBtn'] = buildUrl;
+
     var printBtn = document.getElementById('substorePrintBtn');
     if (printBtn) printBtn.addEventListener('click', function () { window.open(buildUrl('pdf', true), '_blank'); });
 })();
@@ -361,4 +371,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
+@include('mess.partials.select2-search')
 @endsection

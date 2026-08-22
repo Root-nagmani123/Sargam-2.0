@@ -199,10 +199,14 @@
          docs/new-design-index-page.md. Vendors carry no status column, so the row
          holds the exports alone and stays right-aligned (doc §1, "No status pills"). --}}
     <div class="d-flex justify-content-end gap-2 mb-3">
-        <button type="button" class="btn vendor-master-export-btn" id="vendorsDownloadBtn">
-            <i class="material-symbols-rounded">download</i>
-            <span>Download</span>
-        </button>
+        <div class="dropdown">
+            <button type="button" class="btn vendor-master-export-btn dropdown-toggle mess-export-toggle"
+                    id="vendorsDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="material-symbols-rounded">download</i>
+                <span>Download</span>
+            </button>
+            @include('mess.partials.download-formats', ['toggleId' => 'vendorsDownloadBtn'])
+        </div>
         <button type="button" class="btn vendor-master-export-btn" id="vendorsPrintBtn">
             <i class="material-symbols-rounded">print</i>
             <span>Print</span>
@@ -574,12 +578,10 @@
         return BASE + '?' + params.join('&');
     }
 
-    var downloadBtn = document.getElementById('vendorsDownloadBtn');
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', function () {
-            window.location.href = buildUrl('excel', false);
-        });
-    }
+    // The CSV / Excel / PDF menu next to Download calls this builder, so
+    // every format carries the grid's live search, filters and columns.
+    window.MessExport = window.MessExport || {};
+    window.MessExport['vendorsDownloadBtn'] = buildUrl;
 
     var printBtn = document.getElementById('vendorsPrintBtn');
     if (printBtn) {

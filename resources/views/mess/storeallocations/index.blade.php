@@ -432,10 +432,14 @@
 
     {{-- Download / Print bar (branded server-side exports — see admin.mess.storeallocations.export) --}}
     <div class="d-flex justify-content-end gap-2 mb-3">
-        <button type="button" class="btn store-alloc-export-btn" id="storeAllocDownloadBtn">
-            <i class="material-symbols-rounded">download</i>
-            <span>Download</span>
-        </button>
+        <div class="dropdown">
+            <button type="button" class="btn store-alloc-export-btn dropdown-toggle mess-export-toggle"
+                    id="storeAllocDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="material-symbols-rounded">download</i>
+                <span>Download</span>
+            </button>
+            @include('mess.partials.download-formats', ['toggleId' => 'storeAllocDownloadBtn'])
+        </div>
         <button type="button" class="btn store-alloc-export-btn" id="storeAllocPrintBtn">
             <i class="material-symbols-rounded">print</i>
             <span>Print</span>
@@ -1231,12 +1235,10 @@
         return BASE + '?' + params.join('&');
     }
 
-    var downloadBtn = document.getElementById('storeAllocDownloadBtn');
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', function () {
-            window.location.href = buildUrl('excel', false);
-        });
-    }
+    // The CSV / Excel / PDF menu next to Download calls this builder, so
+    // every format carries the grid's live search, filters and columns.
+    window.MessExport = window.MessExport || {};
+    window.MessExport['storeAllocDownloadBtn'] = buildUrl;
 
     var printBtn = document.getElementById('storeAllocPrintBtn');
     if (printBtn) {

@@ -46,7 +46,13 @@ $selectedClientType = (string) request()->input('client_type', '');
 
     {{-- Download / Print bar (branded server-side exports) --}}
     <div class="d-flex justify-content-end gap-2 mb-3">
-        <button type="button" class="btn svdr-master-export-btn" id="svDownloadBtn"><i class="material-symbols-rounded">download</i><span>Download</span></button>
+        <div class="dropdown">
+            <button type="button" class="btn svdr-master-export-btn dropdown-toggle mess-export-toggle"
+                    id="svDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="material-symbols-rounded">download</i><span>Download</span>
+            </button>
+            @include('mess.partials.download-formats', ['toggleId' => 'svDownloadBtn'])
+        </div>
         <button type="button" class="btn svdr-master-export-btn" id="svPrintBtn"><i class="material-symbols-rounded">print</i><span>Print</span></button>
     </div>
 
@@ -204,6 +210,7 @@ $selectedClientType = (string) request()->input('client_type', '');
 
     {{-- Branded delete-confirmation dialog + global success toast --}}
     @include('mess.partials.delete-confirm')
+@include('mess.partials.leave-form-confirm')
 
     @include('components.mess-master-datatables', [
     'tableId' => 'sellingVoucherDateRangeTable',
@@ -265,7 +272,7 @@ $selectedClientType = (string) request()->input('client_type', '');
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
 {{-- Add Report Modal --}}
-<div class="modal fade" id="addReportModal" tabindex="-1" aria-labelledby="addReportModalLabel" aria-hidden="true">
+<div class="modal fade" data-mess-confirm-leave id="addReportModal" tabindex="-1" aria-labelledby="addReportModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content">
             <form action="{{ route('admin.mess.selling-voucher-date-range.store') }}" method="POST" id="addReportForm"
@@ -387,7 +394,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                         <div class="col-md-4">
                             <label class="dr-label">Remarks/ Reference Number/ Order By</label>
                             <input type="text" name="remarks" class="form-control " value="{{ old('remarks') }}"
-                                placeholder="e.g. Lorem ipsum dolor">
+                                placeholder="e.g. Reference number, order by, etc.">
                         </div>
                     </div>
 
@@ -582,7 +589,7 @@ $selectedClientType = (string) request()->input('client_type', '');
 </div>
 
 {{-- Edit Report Modal --}}
-<div class="modal fade" id="editReportModal" tabindex="-1" aria-labelledby="editReportModalLabel" aria-hidden="true">
+<div class="modal fade" data-mess-confirm-leave id="editReportModal" tabindex="-1" aria-labelledby="editReportModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content">
             <form id="editReportForm" method="POST" action="" enctype="multipart/form-data">
@@ -681,7 +688,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                         <div class="col-md-4">
                             <label class="dr-label">Remarks/ Reference Number/ Order By</label>
                             <input type="text" name="remarks" class="form-control  edit-remarks"
-                                placeholder="e.g. Lorem ipsum dolor">
+                                placeholder="e.g. Reference number, order by, etc.">
                             <select name="inve_store_master_pk" class="form-select edit-store-id d-none" tabindex="-1" aria-hidden="true">
                                 <option value="">Select Store</option>
                                 @foreach($stores as $store)

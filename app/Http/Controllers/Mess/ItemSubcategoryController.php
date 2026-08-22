@@ -17,7 +17,9 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class ItemSubcategoryController extends Controller
 {
+    use Concerns\RaisesExportLimits;
     use Concerns\FiltersByStatus;
+    use Concerns\StreamsMasterCsv;
 
     private const DT_LIST_EPOCH_KEY = 'mess_item_subcategory_dt_list_epoch';
 
@@ -223,7 +225,7 @@ class ItemSubcategoryController extends Controller
                 . '</form>';
         }
 
-        $actions = '<div class="d-flex align-items-start justify-content-start itemsub-actions">' . $editBtn . $deleteForm . '</div>';
+        $actions = '<div class="d-flex align-items-center justify-content-center itemsub-actions">' . $editBtn . $deleteForm . '</div>';
 
         return [
             (string) $serial,
@@ -265,16 +267,24 @@ class ItemSubcategoryController extends Controller
         $fileName = 'sub-category-item-master-' . now()->format('Y-m-d_H-i-s');
 
         if ($format === 'pdf') {
-            // 512M, not the 256M the smaller masters use: this table is four
-            // figures of rows (1,105 on the dev data) and DomPDF exhausted 256M
-            // building the page, so Print returned a blank 500. The heavier mess
-            // reports (ReportController) already run at 512M.
-            @ini_set('memory_limit', '512M');
-            @set_time_limit(120);
+            // This table is four figures of rows (1,137 on the dev data) and
+            // peaks around 418MB in DomPDF — the case that used to return a
+            // blank 500 on the old 256M ceiling. The ceiling is now one
+            // module-wide figure; see Concerns\RaisesExportLimits.
+            $this->raiseMemoryLimit($this->pdfMemoryLimit());
+            $this->raiseTimeLimit(120);
+
+            // DomPDF cannot render an unbounded table — build the rows once,
+            // refuse politely if there are too many, and reuse them below.
+            $pdfRows = $export->pdfRows();
+
+            if ($tooLarge = $this->guardPdfRowCount($pdfRows, 'Sub-Category Item Master')) {
+                return $tooLarge;
+            }
 
             $pdf = Pdf::loadView('mess.itemsubcategories.export_pdf', array_merge([
                 'headings' => $export->activeHeadings(),
-                'rows' => $export->pdfRows(),
+                'rows' => $pdfRows,
                 'filterLine' => $export->filterLine(),
                 'printedOn' => now()->format('d-m-Y H:i'),
                 'reportTitle' => 'Sub-Category Item Master',
@@ -291,6 +301,11 @@ class ItemSubcategoryController extends Controller
             return $request->boolean('inline')
                 ? $pdf->stream($fileName . '.pdf')
                 : $pdf->download($fileName . '.pdf');
+        }
+
+        // Plain CSV: no branded header block — see Concerns\StreamsMasterCsv.
+        if ($format === 'csv') {
+            return $this->streamMasterCsv($export, $fileName);
         }
 
         return Excel::download($export, $fileName . '.xlsx', ExcelFormat::XLSX);

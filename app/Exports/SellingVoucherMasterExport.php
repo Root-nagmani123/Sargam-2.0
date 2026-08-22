@@ -7,7 +7,6 @@ use Maatwebsite\Excel\Concerns\{FromCollection, WithColumnWidths, WithEvents, Wi
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\{Alignment, Border, Fill};
-use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 
 /**
  * Styled Excel (.xlsx) export for the Selling Voucher listing.
@@ -19,6 +18,8 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
  */
 class SellingVoucherMasterExport implements FromCollection, WithColumnWidths, WithEvents, WithTitle
 {
+    use Concerns\RendersBrandedHeader;
+
     /** @var array<int,array<string,string>> */
     protected array $records;
     protected string $filterLine;
@@ -244,29 +245,20 @@ class SellingVoucherMasterExport implements FromCollection, WithColumnWidths, Wi
                 $sheet->getStyle("A{$headingRow}:{$lastCol}{$tableBottom}")->getBorders()
                     ->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('8FA3BD');
 
+                // A three-column report is narrower than the header block; give the
+                // last column the shortfall so the academy line and the 75-years
+                // logo stop overlapping.
+                $this->ensureHeaderRoom($sheet, $lastCol);
+
                 $this->placeLogo($sheet, public_path('admin_assets/images/logos/logo_new.png'), 'A1', 6);
 
                 $rightLogo = public_path('admin_assets/images/logos/constitution-75.png');
                 if (! is_file($rightLogo)) {
                     $rightLogo = public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png');
                 }
-                $this->placeLogo($sheet, $rightLogo, $lastCol . '1', 2);
+                $this->placeRightLogo($sheet, $rightLogo, $lastCol);
             },
         ];
-    }
-
-    private function placeLogo($sheet, string $path, string $coordinates, int $offsetX): void
-    {
-        if (! is_file($path) || ! is_readable($path)) {
-            return;
-        }
-        $drawing = new Drawing();
-        $drawing->setPath($path);
-        $drawing->setHeight(48);
-        $drawing->setCoordinates($coordinates);
-        $drawing->setOffsetX($offsetX);
-        $drawing->setOffsetY(3);
-        $drawing->setWorksheet($sheet);
     }
 
     /**

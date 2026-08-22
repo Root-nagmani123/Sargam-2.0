@@ -35,6 +35,9 @@ use Carbon\Carbon;
 
 class KitchenIssueController extends Controller
 {
+    use Concerns\RaisesExportLimits;
+    use Concerns\StreamsMasterCsv;
+
     private const SELLING_VOUCHER_DT_LIST_EPOCH = 'selling_voucher_dt_list_epoch';
 
     private const INDEX_MASTER_CACHE_EPOCH = 'kitchen_issue_index_master_epoch';
@@ -641,8 +644,8 @@ class KitchenIssueController extends Controller
      */
     public function export(Request $request)
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(180);
+        $this->raiseMemoryLimit($this->pdfMemoryLimit());
+        $this->raiseTimeLimit(180);
 
         $format = strtolower((string) $request->get('format', 'excel'));
         if (! in_array($format, ['csv', 'excel', 'xlsx', 'pdf'], true)) {
@@ -671,9 +674,17 @@ class KitchenIssueController extends Controller
         $fileName = 'selling-voucher-' . now()->format('Y-m-d_H-i-s');
 
         if ($format === 'pdf') {
+            // DomPDF cannot render an unbounded table — build the rows once,
+            // refuse politely if there are too many, and reuse them below.
+            $pdfRows = $export->pdfRows();
+
+            if ($tooLarge = $this->guardPdfRowCount($pdfRows, 'Selling Voucher')) {
+                return $tooLarge;
+            }
+
             $pdf = Pdf::loadView('mess.kitchen-issues.export_pdf', array_merge([
                 'headings' => $export->activeHeadings(),
-                'rows' => $export->pdfRows(),
+                'rows' => $pdfRows,
                 'filterLine' => $this->buildExportFilterLine($request),
                 'printedOn' => now()->format('d-m-Y H:i'),
                 'reportTitle' => 'Selling Voucher',
@@ -690,6 +701,11 @@ class KitchenIssueController extends Controller
             return $request->boolean('inline')
                 ? $pdf->stream($fileName . '.pdf')
                 : $pdf->download($fileName . '.pdf');
+        }
+
+        // Plain CSV: no branded header block — see Concerns\StreamsMasterCsv.
+        if ($format === 'csv') {
+            return $this->streamMasterCsv($export, $fileName);
         }
 
         return Excel::download($export, $fileName . '.xlsx', ExcelFormat::XLSX);
@@ -1100,12 +1116,32 @@ class KitchenIssueController extends Controller
     }
 
     /**
-     * Skip the default 30-day issue_date window when the user is clearly looking for specific records.
+     * Skip the default 30-day issue_date window once the user has filtered.
+     *
+     * The window exists so the first, unfiltered page stays cheap — not as a
+     * rule about which records exist. Nothing on screen announces it, so while
+     * it applied to a filtered query it read as a broken filter: every Final
+     * and Approved voucher in the data is older than 30 days, so choosing
+     * either Status returned an empty grid and the control looked dead.
+     *
+     * Any explicit filter is the user saying which records they want, so the
+     * default stands down and their choice decides the result. Only the bare
+     * listing still gets the window. This costs nothing measurable —
+     * kitchen_issue_master carries an index per filtered column, and an
+     * unwindowed status count runs in the same ~0.05s as the windowed one.
      */
     private function sellingVoucherShouldSkipDefaultDateWindow(Request $request): bool
     {
-        if ($request->filled('client_type_pk') || trim((string) $request->input('buyer_name', '')) !== '') {
-            return true;
+        foreach (['status', 'store', 'client_type', 'client_type_pk', 'payment_type'] as $filter) {
+            if ($request->filled($filter)) {
+                return true;
+            }
+        }
+
+        foreach (['buyer_name', 'return_status'] as $filter) {
+            if (trim((string) $request->input($filter, '')) !== '') {
+                return true;
+            }
         }
 
         $searchPayload = $request->input('search');

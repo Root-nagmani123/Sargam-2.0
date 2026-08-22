@@ -192,7 +192,7 @@
     $selectedCategoryId = $categoryIdFilter ?? request('category_id', '');
     $canDeleteItemSubcategory = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
-<div class="container-fluid itemsub-master-page">
+<div class="container-fluid itemsub-master-page mess-select2">
     <x-breadcrum title="Sub-Category Item Master" :showBack="false">
         <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createItemSubcategoryModal">
             <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
@@ -207,10 +207,14 @@
          simply has no on-screen control. --}}
     <div class="d-flex flex-wrap align-items-center justify-content-end gap-3 mb-3">
         <div class="d-flex flex-wrap gap-2 ms-auto">
-            <button type="button" class="btn itemsub-master-export-btn" id="itemsubDownloadBtn">
-                <i class="material-symbols-rounded">download</i>
-                <span>Download</span>
-            </button>
+            <div class="dropdown">
+                <button type="button" class="btn itemsub-master-export-btn dropdown-toggle mess-export-toggle"
+                        id="itemsubDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="material-symbols-rounded">download</i>
+                    <span>Download</span>
+                </button>
+                @include('mess.partials.download-formats', ['toggleId' => 'itemsubDownloadBtn'])
+            </div>
             <button type="button" class="btn itemsub-master-export-btn" id="itemsubPrintBtn">
                 <i class="material-symbols-rounded">print</i>
                 <span>Print</span>
@@ -333,7 +337,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label itemsub-modal-label">Description</label>
-                            <textarea name="description" class="form-control itemsub-modal-control" rows="3" placeholder="e.g. Enter Item Sub-Category Description....">{{ old('description') }}</textarea>
+                            <textarea name="description" class="form-control itemsub-modal-control" rows="3" placeholder="e.g. Loose leaf tea issued for morning service">{{ old('description') }}</textarea>
                             @error('description')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                         </div>
                     </div>
@@ -399,7 +403,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label itemsub-modal-label">Description</label>
-                            <textarea name="description" id="edit_description" class="form-control itemsub-modal-control" rows="3" placeholder="e.g. Enter Item Sub-Category Description...."></textarea>
+                            <textarea name="description" id="edit_description" class="form-control itemsub-modal-control" rows="3" placeholder="e.g. Loose leaf tea issued for morning service"></textarea>
                         </div>
                     </div>
                 </div>
@@ -482,10 +486,11 @@
         return BASE + '?' + params.join('&');
     }
 
-    var downloadBtn = document.getElementById('itemsubDownloadBtn');
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', function () { window.location.href = buildUrl('excel', false); });
-    }
+    // The CSV / Excel / PDF menu next to Download calls this builder, so
+    // every format carries the grid's live search, filters and columns.
+    window.MessExport = window.MessExport || {};
+    window.MessExport['itemsubDownloadBtn'] = buildUrl;
+
     var printBtn = document.getElementById('itemsubPrintBtn');
     if (printBtn) {
         printBtn.addEventListener('click', function () { window.open(buildUrl('pdf', true), '_blank'); });
@@ -666,4 +671,5 @@
 })();
 </script>
 @endpush
+@include('mess.partials.select2-search')
 @endsection

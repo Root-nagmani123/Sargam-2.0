@@ -41,6 +41,8 @@ use Illuminate\Support\Facades\Schema;
 
 class ReportController extends Controller
 {
+    use Concerns\RaisesExportLimits;
+
     use SortsMessReportData;
 
     /** @var array{enabled: string, seconds: string} */
@@ -1391,8 +1393,8 @@ class ReportController extends Controller
      */
     public function stockSummaryPdf(Request $request)
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(120);
+        $this->raiseMemoryLimit('512M');
+        $this->raiseTimeLimit(120);
 
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
         $toDate   = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
@@ -1452,8 +1454,8 @@ class ReportController extends Controller
      */
     public function stockPurchaseDetailsPdf(Request $request)
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(120);
+        $this->raiseMemoryLimit('512M');
+        $this->raiseTimeLimit(120);
 
         $queryData = $this->buildStockPurchaseDetailsQuery($request);
 
@@ -1503,8 +1505,8 @@ class ReportController extends Controller
      */
     public function stockBalanceTillDatePdf(Request $request)
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(120);
+        $this->raiseMemoryLimit('512M');
+        $this->raiseTimeLimit(120);
 
         $tillDate = $request->filled('till_date') ? $request->till_date : now()->format('Y-m-d');
         $storeIds = $this->normalizedIdList($request, 'store_id');
@@ -1577,8 +1579,8 @@ class ReportController extends Controller
      */
     public function purchaseSaleQuantityPdf(Request $request)
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(120);
+        $this->raiseMemoryLimit('512M');
+        $this->raiseTimeLimit(120);
 
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->startOfMonth()->format('Y-m-d');
         $toDate   = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');

@@ -162,7 +162,7 @@
 @php
     $storeTypes = \App\Models\Mess\Store::storeTypes();
 @endphp
-<div class="container-fluid store-master-page">
+<div class="container-fluid store-master-page mess-select2">
     <x-breadcrum title="Store Master" :showBack="false">
         <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createStoreModal">
             <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
@@ -176,10 +176,14 @@
          pills here (Sargam 2.0.pdf p4) — the ?status= filter is still served, it
          simply has no on-screen control. --}}
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
-        <button type="button" class="btn store-master-export-btn border-0" id="storesDownloadBtn">
-            <i class="material-symbols-rounded">download</i>
-            <span>Download</span>
-        </button>
+        <div class="dropdown">
+            <button type="button" class="btn store-master-export-btn border-0 dropdown-toggle mess-export-toggle"
+                    id="storesDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="material-symbols-rounded">download</i>
+                <span>Download</span>
+            </button>
+            @include('mess.partials.download-formats', ['toggleId' => 'storesDownloadBtn'])
+        </div>
         <button type="button" class="btn store-master-export-btn border-0" id="storesPrintBtn">
             <i class="material-symbols-rounded">print</i>
             <span>Print</span>
@@ -396,12 +400,10 @@
         return BASE + '?' + params.join('&');
     }
 
-    var downloadBtn = document.getElementById('storesDownloadBtn');
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', function () {
-            window.location.href = buildUrl('excel', false);
-        });
-    }
+    // The CSV / Excel / PDF menu next to Download calls this builder, so
+    // every format carries the grid's live search, filters and columns.
+    window.MessExport = window.MessExport || {};
+    window.MessExport['storesDownloadBtn'] = buildUrl;
 
     var printBtn = document.getElementById('storesPrintBtn');
     if (printBtn) {
@@ -551,4 +553,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
+@include('mess.partials.select2-search')
 @endsection

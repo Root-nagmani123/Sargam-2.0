@@ -36,20 +36,26 @@
     /* Native filter pills (Vendor / Store selects + date inputs) */
     .po-master-page .programme-dt-filter-select .form-select,
     .po-master-page .po-filter-date {
-        min-height: 40px;
+        /* An exact height, not a floor: min-height let Bootstrap's padding
+           render the selects at 45px and the dates at 41px beside 40px
+           buttons, so nothing in the row shared a centre line. */
+        height: var(--ds-control-h, 40px);
+        min-height: var(--ds-control-h, 40px);
         border-radius: 8px;
         border: 1px solid #d0d5dd;
         font-size: .9375rem;
         color: #344054;
         box-shadow: none;
     }
-    .po-master-page .po-filter-date { padding: .5rem .75rem; width: 165px; }
+    .po-master-page .po-filter-date { padding: .25rem .5rem; width: 150px; }
     .po-master-page .programme-dt-filter-select .form-select:focus,
     .po-master-page .po-filter-date:focus {
         border-color: var(--ds-primary, #004a93);
         box-shadow: 0 0 0 3px rgba(0, 74, 147, .12);
     }
     .po-master-page .po-filter-dash { color: #98a2b3; }
+    .po-master-page .programme-dt-btn-reset,
+    .po-master-page .programme-dt-btn-columns { height: var(--ds-control-h, 40px); }
 
     .po-master-page .dt-top:empty,
     .po-master-page .dt-foot:empty { display: none; margin: 0; }
@@ -112,7 +118,7 @@ $filterVendorId = ($filterVendorIds ?? [])[0] ?? '';
 $filterStoreId = ($filterStoreIds ?? [])[0] ?? '';
 $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' || $filterVendorId !== '' || $filterStoreId !== '';
 @endphp
-<div class="container-fluid po-ux po-master-page">
+<div class="container-fluid po-ux po-master-page mess-select2">
     <x-breadcrum title="Purchase Order" :showBack="false">
         <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
             <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
@@ -124,10 +130,14 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
 
     {{-- Download / Print bar (branded server-side exports — see admin.mess.purchaseorders.export) --}}
     <div class="d-flex justify-content-end gap-2 mb-3">
-        <button type="button" class="btn po-master-export-btn" id="poDownloadBtn">
-            <i class="material-symbols-rounded">download</i>
-            <span>Download</span>
-        </button>
+        <div class="dropdown">
+            <button type="button" class="btn po-master-export-btn dropdown-toggle mess-export-toggle"
+                    id="poDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="material-symbols-rounded">download</i>
+                <span>Download</span>
+            </button>
+            @include('mess.partials.download-formats', ['toggleId' => 'poDownloadBtn'])
+        </div>
         <button type="button" class="btn po-master-export-btn" id="poPrintBtn">
             <i class="material-symbols-rounded">print</i>
             <span>Print</span>
@@ -137,11 +147,17 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
     <div class="card po-master-card border-0">
         <div class="card-body">
             {{-- Toolbar: Vendor / Store / date-range filters (left) + Columns & search (right) --}}
-            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-3 programme-dt-toolbar">
+            {{-- align-items-start, not -center: this toolbar carries five filter
+                 pills plus a reset, and at the content width the sidebar leaves it
+                 has to wrap. Centring floated the Columns/search group halfway
+                 between the filter rows; aligning to the start keeps it on the
+                 first line where the eye expects it, and the filters wrap
+                 underneath themselves. --}}
+            <div class="d-flex flex-column flex-lg-row align-items-lg-start justify-content-between gap-3 mb-3 programme-dt-toolbar">
                 <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}" id="poFilterForm"
                       class="d-flex flex-wrap align-items-center gap-2">
                     <span class="programme-dt-filters-label">Filter</span>
-                    <div class="programme-dt-filter-select" style="width:170px;">
+                    <div class="programme-dt-filter-select" style="width:155px;">
                         <select name="vendor_id" class="form-select" aria-label="Filter by vendor" onchange="document.getElementById('poFilterForm').submit()">
                             <option value="">Vendor</option>
                             @foreach($vendors as $v)
@@ -149,7 +165,7 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
                             @endforeach
                         </select>
                     </div>
-                    <div class="programme-dt-filter-select" style="width:170px;">
+                    <div class="programme-dt-filter-select" style="width:155px;">
                         <select name="store_id" class="form-select" aria-label="Filter by store" onchange="document.getElementById('poFilterForm').submit()">
                             <option value="">Store</option>
                             @foreach($stores as $s)
@@ -157,15 +173,19 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
                             @endforeach
                         </select>
                     </div>
-                    <input type="date" name="date_from" class="form-control po-filter-date" value="{{ $filterDateFrom }}"
-                           aria-label="From date" max="{{ date('Y-m-d') }}" onchange="document.getElementById('poFilterForm').submit()">
-                    <span class="po-filter-dash">–</span>
-                    <input type="date" name="date_to" class="form-control po-filter-date" value="{{ $filterDateTo }}"
-                           aria-label="To date" max="{{ date('Y-m-d') }}" onchange="document.getElementById('poFilterForm').submit()">
+                    {{-- One wrapping unit: the toolbar has to wrap at this width, and a
+                         from-to pair split across two rows reads as two unrelated dates. --}}
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0 po-filter-daterange">
+                        <input type="date" name="date_from" class="form-control po-filter-date" value="{{ $filterDateFrom }}"
+                               aria-label="From date" max="{{ date('Y-m-d') }}" onchange="document.getElementById('poFilterForm').submit()">
+                        <span class="po-filter-dash">–</span>
+                        <input type="date" name="date_to" class="form-control po-filter-date" value="{{ $filterDateTo }}"
+                               aria-label="To date" max="{{ date('Y-m-d') }}" onchange="document.getElementById('poFilterForm').submit()">
+                    </div>
                     <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn programme-dt-btn-reset d-inline-flex align-items-center justify-content-center">Remove Filter</a>
                 </form>
 
-                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                <div class="d-flex align-items-center gap-2 ms-lg-auto flex-shrink-0">
                     <button type="button" class="btn programme-dt-btn-columns" id="btnPoColumns"
                             data-bs-toggle="modal" data-bs-target="#poColumnVisibilityModal" title="Show / hide columns">
                         <span>Columns</span>
@@ -567,6 +587,11 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
 'serverSide' => true,
 'ajaxUrlBase' => route('admin.mess.purchaseorders.index'),
 'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
+'serverSideColumnDefs' => [
+    // Status and Action centre on every other mess grid; this one carried
+    // no column defs at all, so both sat left of their own headings.
+    ['className' => 'text-center', 'targets' => [4, 5]],
+],
 ])
 @include('mess.partials.modal-dropdown-stability')
 
@@ -601,8 +626,11 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
         return BASE + '?' + params.join('&');
     }
 
-    var downloadBtn = document.getElementById('poDownloadBtn');
-    if (downloadBtn) downloadBtn.addEventListener('click', function () { window.location.href = buildUrl('excel', false); });
+    // The CSV / Excel / PDF menu next to Download calls this builder, so
+    // every format carries the grid's live search, filters and columns.
+    window.MessExport = window.MessExport || {};
+    window.MessExport['poDownloadBtn'] = buildUrl;
+
     var printBtn = document.getElementById('poPrintBtn');
     if (printBtn) printBtn.addEventListener('click', function () { window.open(buildUrl('pdf', true), '_blank'); });
 })();
@@ -3887,4 +3915,6 @@ $hasPoFilter = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '' ||
 
 })();
 </script>
+{{-- Toolbar filters only: the modal line-item dropdowns are Choices-managed. --}}
+@include('mess.partials.select2-search', ['only' => '#poFilterForm'])
 @endsection

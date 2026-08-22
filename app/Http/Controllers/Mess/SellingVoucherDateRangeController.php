@@ -37,6 +37,9 @@ use Illuminate\Support\MessageBag;
  */
 class SellingVoucherDateRangeController extends Controller
 {
+    use Concerns\RaisesExportLimits;
+    use Concerns\StreamsMasterCsv;
+
     private const SV_DATE_RANGE_DT_LIST_EPOCH = 'selling_voucher_date_range_dt_list_epoch';
 
     /**
@@ -337,8 +340,8 @@ class SellingVoucherDateRangeController extends Controller
      */
     public function export(Request $request)
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(180);
+        $this->raiseMemoryLimit($this->pdfMemoryLimit());
+        $this->raiseTimeLimit(180);
 
         $format = strtolower((string) $request->get('format', 'excel'));
         if (! in_array($format, ['csv', 'excel', 'xlsx', 'pdf'], true)) {
@@ -368,9 +371,17 @@ class SellingVoucherDateRangeController extends Controller
         $fileName = 'selling-voucher-date-range-' . now()->format('Y-m-d_H-i-s');
 
         if ($format === 'pdf') {
+            // DomPDF cannot render an unbounded table — build the rows once,
+            // refuse politely if there are too many, and reuse them below.
+            $pdfRows = $export->pdfRows();
+
+            if ($tooLarge = $this->guardPdfRowCount($pdfRows, $title)) {
+                return $tooLarge;
+            }
+
             $pdf = Pdf::loadView('mess.kitchen-issues.export_pdf', array_merge([
                 'headings' => $export->activeHeadings(),
-                'rows' => $export->pdfRows(),
+                'rows' => $pdfRows,
                 'filterLine' => $this->buildExportFilterLine($request),
                 'printedOn' => now()->format('d-m-Y H:i'),
                 'reportTitle' => $title,
@@ -387,6 +398,11 @@ class SellingVoucherDateRangeController extends Controller
             return $request->boolean('inline')
                 ? $pdf->stream($fileName . '.pdf')
                 : $pdf->download($fileName . '.pdf');
+        }
+
+        // Plain CSV: no branded header block — see Concerns\StreamsMasterCsv.
+        if ($format === 'csv') {
+            return $this->streamMasterCsv($export, $fileName);
         }
 
         return Excel::download($export, $fileName . '.xlsx', ExcelFormat::XLSX);

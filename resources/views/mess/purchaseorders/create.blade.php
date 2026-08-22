@@ -1,7 +1,44 @@
 @extends('admin.layouts.master')
 @section('title', 'Create Purchase Order')
+@push('styles')
+<style>
+    /* The Mess form control: the same 44px pill the Add Store / Add Vendor
+       modals use. This page had shipped Bootstrap's -sm variant, which put
+       32px controls at 12.25px next to a module that is 44px at 15px. */
+    .po-create-page .form-control,
+    .po-create-page .form-select {
+        min-height: 44px;
+        border-radius: 8px;
+        border: 1px solid var(--ds-line, #d0d5dd);
+        font-size: .9375rem;
+        color: var(--ds-ink, #1f2937);
+        padding: .5rem .875rem;
+    }
+
+    .po-create-page textarea.form-control { min-height: 76px; }
+
+    .po-create-page .form-control::placeholder { color: #98a2b3; }
+
+    .po-create-page .form-control:focus,
+    .po-create-page .form-select:focus {
+        border-color: var(--ds-primary, #004384);
+        box-shadow: 0 0 0 3px rgba(0, 67, 132, .12);
+    }
+
+    .po-create-page .form-label {
+        font-size: .875rem;
+        font-weight: 500;
+        color: var(--ds-ink, #1f2937);
+        margin-bottom: .35rem;
+    }
+
+    /* Row actions match the control height so the line item reads as one row. */
+    .po-create-page .item-row .remove-item { min-height: 44px; border-radius: 8px; }
+</style>
+@endpush
+
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid po-create-page mess-select2">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div>
             <h4 class="mb-0">Create Purchase Order</h4>
@@ -25,19 +62,19 @@
                         <div class="row g-3">
                             <div class="col-md-3">
                                 <label class="form-label">PO Number <span class="text-danger">*</span></label>
-                                <input type="text" name="po_number" class="form-control form-control-sm bg-light" value="{{ $po_number }}" readonly required>
+                                <input type="text" name="po_number" class="form-control bg-light" value="{{ $po_number }}" readonly required>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">PO Date <span class="text-danger">*</span></label>
-                                <input type="date" name="po_date" class="form-control form-control-sm" value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
+                                <input type="date" name="po_date" class="form-control" value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Delivery Date</label>
-                                <input type="date" name="delivery_date" class="form-control form-control-sm">
+                                <input type="date" name="delivery_date" class="form-control">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Vendor <span class="text-danger">*</span></label>
-                                <select name="vendor_id" class="form-select form-select-sm" required>
+                                <select name="vendor_id" class="form-select" required>
                                     <option value="">Select Vendor</option>
                                     @foreach($vendors as $vendor)
                                         <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
@@ -46,7 +83,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Store</label>
-                                <select name="store_id" class="form-select form-select-sm">
+                                <select name="store_id" class="form-select">
                                     <option value="">Select Store</option>
                                     @foreach($stores as $store)
                                         <option value="{{ $store->id }}">{{ $store->store_name }}</option>
@@ -55,7 +92,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Remarks</label>
-                                <textarea name="remarks" class="form-control form-control-sm" rows="2" placeholder="Optional remarks about this order"></textarea>
+                                <textarea name="remarks" class="form-control" rows="2" placeholder="Optional remarks about this order"></textarea>
                             </div>
                         </div>
                     </div>
@@ -68,7 +105,7 @@
                     </div>
                     <div class="card-body">
                         <label class="form-label">Bill / Attachment <small class="text-muted">(Optional)</small></label>
-                        <input type="file" name="bill_file" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                        <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp">
                         <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
                     </div>
                 </div>
@@ -84,8 +121,8 @@
         <div id="itemsContainer">
                 <div class="row g-2 align-items-end mb-2 item-row">
                     <div class="col-md-4">
-                        <label class="form-label form-label-sm">Item</label>
-                        <select name="items[0][item_subcategory_id]" class="form-select form-select-sm" required>
+                        <label class="form-label">Item</label>
+                        <select name="items[0][item_subcategory_id]" class="form-select" required>
                             <option value="">Select Item</option>
                             @foreach($itemSubcategories as $inv)
                                 <option value="{{ $inv->id }}">{{ $inv->item_name }}</option>
@@ -93,19 +130,19 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label form-label-sm">Quantity</label>
-                        <input type="number" name="items[0][quantity]" class="form-control form-control-sm" placeholder="Quantity" step="0.01" required>
+                        <label class="form-label">Quantity</label>
+                        <input type="number" name="items[0][quantity]" class="form-control" placeholder="Quantity" step="0.01" required>
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label form-label-sm">Unit</label>
-                        <input type="text" name="items[0][unit]" class="form-control form-control-sm" placeholder="Unit">
+                        <label class="form-label">Unit</label>
+                        <input type="text" name="items[0][unit]" class="form-control" placeholder="Unit">
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label form-label-sm">Unit Price</label>
-                        <input type="number" name="items[0][unit_price]" class="form-control form-control-sm" placeholder="Unit Price" step="0.01" required>
+                        <label class="form-label">Unit Price</label>
+                        <input type="number" name="items[0][unit_price]" class="form-control" placeholder="Unit Price" step="0.01" required>
                     </div>
                     <div class="col-md-2 d-flex align-items-end">
-                        <button type="button" class="btn btn-outline-danger btn-sm remove-item w-100" disabled>Remove</button>
+                        <button type="button" class="btn btn-outline-danger remove-item w-100" disabled>Remove</button>
                     </div>
                 </div>
         </div>
@@ -127,10 +164,13 @@ const itemSubcategories = @json($itemSubcategories);
 
 document.getElementById('addItem').addEventListener('click', function() {
     const container = document.getElementById('itemsContainer');
+    // Same markup as the first row above — same column widths, same control
+    // classes, same gutter and bottom alignment. Only the labels are dropped,
+    // because align-items-end lines these controls up under the first row's.
     const template = `
-        <div class="row mb-2 item-row">
+        <div class="row g-2 align-items-end mb-2 item-row">
             <div class="col-md-4">
-                <select name="items[${itemIndex}][item_subcategory_id]" class="form-control" required>
+                <select name="items[${itemIndex}][item_subcategory_id]" class="form-select" required>
                     <option value="">Select Item</option>
                     ${itemSubcategories.map(inv => `<option value="${inv.id}">${inv.item_name}</option>`).join('')}
                 </select>
@@ -144,8 +184,8 @@ document.getElementById('addItem').addEventListener('click', function() {
             <div class="col-md-2">
                 <input type="number" name="items[${itemIndex}][unit_price]" class="form-control" placeholder="Unit Price" step="0.01" required>
             </div>
-            <div class="col-md-2">
-                <button type="button" class="btn btn-danger btn-sm remove-item">Remove</button>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="button" class="btn btn-outline-danger remove-item w-100">Remove</button>
             </div>
         </div>
     `;
@@ -161,4 +201,5 @@ document.getElementById('itemsContainer').addEventListener('click', function(e) 
     }
 });
 </script>
+@include('mess.partials.select2-search')
 @endsection

@@ -17,7 +17,9 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class ItemCategoryController extends Controller
 {
+    use Concerns\RaisesExportLimits;
     use Concerns\FiltersByStatus;
+    use Concerns\StreamsMasterCsv;
 
     private const LIST_CACHE_EPOCH_KEY = 'mess_item_category_master_list_epoch';
     private const DT_LIST_EPOCH_KEY = 'mess_item_category_master_dt_list_epoch';
@@ -120,17 +122,22 @@ class ItemCategoryController extends Controller
 
         switch ($orderCol) {
             case 0:
-                $paged->orderBy('category_name', $orderDir);
+                // S. No. has no column of its own to sort on — it follows the
+                // page, so sorting it means sorting the underlying order.
+                $paged->orderBy('id', $orderDir);
                 break;
             case 1:
+                $paged->orderBy('category_name', $orderDir);
+                break;
+            case 2:
                 if (Schema::hasColumn('mess_item_categories', 'category_type')) {
                     $paged->orderBy('category_type', $orderDir);
                 }
                 break;
-            case 2:
+            case 3:
                 $paged->orderBy('description', $orderDir);
                 break;
-            case 3:
+            case 4:
                 if (Schema::hasColumn('mess_item_categories', 'status')) {
                     $paged->orderBy('status', $orderDir);
                 }
@@ -148,7 +155,11 @@ class ItemCategoryController extends Controller
         $canDelete = $this->canDeleteItemCategory();
         $categoryTypes = ItemCategory::categoryTypes();
 
-        $data = $rows->map(fn (ItemCategory $itemcategory) => $this->buildItemCategoryDatatableRow($itemcategory, $canDelete, $categoryTypes))->all();
+        // Column 0 is a running serial, not the primary key — the same "S. No."
+        // the export prints. It follows the page, so it always reads 1..n.
+        $data = $rows->values()
+            ->map(fn (ItemCategory $itemcategory, int $i) => $this->buildItemCategoryDatatableRow($itemcategory, $canDelete, $categoryTypes, $start + $i + 1))
+            ->all();
 
         return response()->json([
             'draw' => $draw,
@@ -161,7 +172,7 @@ class ItemCategoryController extends Controller
     /**
      * @return string[]
      */
-    private function buildItemCategoryDatatableRow(ItemCategory $itemcategory, bool $canDelete, array $categoryTypes): array
+    private function buildItemCategoryDatatableRow(ItemCategory $itemcategory, bool $canDelete, array $categoryTypes, int $serial): array
     {
         $nameCell = '<div class="fw-semibold">' . e($itemcategory->category_name) . '</div>';
         $typeLabel = $categoryTypes[$itemcategory->category_type ?? 'raw_material'] ?? ucfirst(str_replace('_', ' ', $itemcategory->category_type ?? ''));
@@ -196,9 +207,10 @@ class ItemCategoryController extends Controller
                 . '</form>';
         }
 
-        $actions = '<div class="d-flex align-items-center itemcat-actions">' . $editBtn . $deleteForm . '</div>';
+        $actions = '<div class="d-flex align-items-center justify-content-center itemcat-actions">' . $editBtn . $deleteForm . '</div>';
 
         return [
+            (string) $serial,
             $nameCell,
             $typeCell,
             $descriptionCell,
@@ -233,12 +245,20 @@ class ItemCategoryController extends Controller
         $fileName = 'category-item-master-' . now()->format('Y-m-d_H-i-s');
 
         if ($format === 'pdf') {
-            @ini_set('memory_limit', '256M');
-            @set_time_limit(120);
+            $this->raiseMemoryLimit($this->pdfMemoryLimit());
+            $this->raiseTimeLimit(120);
+
+            // DomPDF cannot render an unbounded table — build the rows once,
+            // refuse politely if there are too many, and reuse them below.
+            $pdfRows = $export->pdfRows();
+
+            if ($tooLarge = $this->guardPdfRowCount($pdfRows, 'Category Item Master')) {
+                return $tooLarge;
+            }
 
             $pdf = Pdf::loadView('mess.itemcategories.export_pdf', array_merge([
                 'headings' => $export->activeHeadings(),
-                'rows' => $export->pdfRows(),
+                'rows' => $pdfRows,
                 'filterLine' => $this->buildExportFilterLine($request),
                 'printedOn' => now()->format('d-m-Y H:i'),
                 'reportTitle' => 'Category Item Master',
@@ -255,6 +275,11 @@ class ItemCategoryController extends Controller
             return $request->boolean('inline')
                 ? $pdf->stream($fileName . '.pdf')
                 : $pdf->download($fileName . '.pdf');
+        }
+
+        // Plain CSV: no branded header block — see Concerns\StreamsMasterCsv.
+        if ($format === 'csv') {
+            return $this->streamMasterCsv($export, $fileName);
         }
 
         return Excel::download($export, $fileName . '.xlsx', ExcelFormat::XLSX);

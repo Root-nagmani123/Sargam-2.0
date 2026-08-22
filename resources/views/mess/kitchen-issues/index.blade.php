@@ -149,10 +149,14 @@
 
     {{-- Download / Print bar (branded server-side exports — see admin.mess.material-management.selling-vouchers-export) --}}
     <div class="d-flex justify-content-end gap-2 mb-3">
-        <button type="button" class="btn sv-master-export-btn" id="svDownloadBtn">
-            <i class="material-symbols-rounded">download</i>
-            <span>Download</span>
-        </button>
+        <div class="dropdown">
+            <button type="button" class="btn sv-master-export-btn dropdown-toggle mess-export-toggle"
+                    id="svDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="material-symbols-rounded">download</i>
+                <span>Download</span>
+            </button>
+            @include('mess.partials.download-formats', ['toggleId' => 'svDownloadBtn'])
+        </div>
         <button type="button" class="btn sv-master-export-btn" id="svPrintBtn">
             <i class="material-symbols-rounded">print</i>
             <span>Print</span>
@@ -328,6 +332,7 @@
 
     {{-- Branded delete-confirmation dialog + global success toast --}}
     @include('mess.partials.delete-confirm')
+@include('mess.partials.leave-form-confirm')
 
     @include('components.mess-master-datatables', [
         'tableId' => 'sellingVouchersTable',
@@ -375,8 +380,11 @@
             return BASE + '?' + params.join('&');
         }
 
-        var downloadBtn = document.getElementById('svDownloadBtn');
-        if (downloadBtn) downloadBtn.addEventListener('click', function () { window.location.href = buildUrl('excel', false); });
+        // The CSV / Excel / PDF menu next to Download calls this builder, so
+        // every format carries the grid's live search, filters and columns.
+        window.MessExport = window.MessExport || {};
+        window.MessExport['svDownloadBtn'] = buildUrl;
+
         var printBtn = document.getElementById('svPrintBtn');
         if (printBtn) printBtn.addEventListener('click', function () { window.open(buildUrl('pdf', true), '_blank'); });
     })();
@@ -1023,18 +1031,22 @@
 }
 
 /* ── Controls ── */
+/* The Mess form control. These were 32px at 12.5px with a 4px radius while
+   Add Store / Add Vendor / Add Sub Store / Create PO are all 44px at 15px
+   with an 8px radius, so the same module offered two different form styles.
+   The line-item grid below keeps its compact 28px controls — a table row is
+   the one place dense is right — and its .sv-items-table rules outrank this. */
 #addSellingVoucherModal .form-control,
 #addSellingVoucherModal .form-select,
 #editSellingVoucherModal .form-control,
 #editSellingVoucherModal .form-select {
-    height: 32px;
-    min-height: 32px;
-    padding: .25rem .5rem;
-    font-size: .78125rem;
+    min-height: 44px;
+    padding: .5rem .875rem;
+    font-size: .9375rem;
     line-height: 1.4;
-    color: #212529;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
+    color: var(--ds-ink, #1f2937);
+    border: 1px solid var(--ds-line, #d0d5dd);
+    border-radius: 8px;
     box-shadow: none;
 }
 
@@ -1072,19 +1084,21 @@
     margin-bottom: 0;
 }
 
+/* Choices renders its own box over the select, so it has to carry the same
+   measurements as the native controls above or the two disagree in one row. */
 #addSellingVoucherModal .ts-wrapper.choices .choices__inner,
 #editSellingVoucherModal .ts-wrapper.choices .choices__inner,
 #addSellingVoucherModal #modalItemsBody .ts-wrapper.choices .choices__inner,
 #editSellingVoucherModal #editModalItemsBody .ts-wrapper.choices .choices__inner {
     display: flex;
     align-items: center;
-    height: 32px;
-    min-height: 32px;
-    padding: 0 1.75rem 0 .5rem;
-    font-size: .78125rem;
+    height: 44px;
+    min-height: 44px;
+    padding: 0 1.75rem 0 .875rem;
+    font-size: .9375rem;
     background: #fff;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
+    border: 1px solid var(--ds-line, #d0d5dd);
+    border-radius: 8px;
     box-shadow: none;
 }
 
@@ -1659,7 +1673,7 @@
     border: 1px solid #dc3545;
 }
 </style>
-<div class="modal fade" id="addSellingVoucherModal" tabindex="-1" aria-labelledby="addSellingVoucherModalLabel" aria-hidden="true">
+<div class="modal fade" data-mess-confirm-leave id="addSellingVoucherModal" tabindex="-1" aria-labelledby="addSellingVoucherModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content">
             <form action="{{ route('admin.mess.material-management.store') }}" method="POST" id="sellingVoucherModalForm" enctype="multipart/form-data">
@@ -1837,7 +1851,7 @@
 #editSellingVoucherModal .modal-dialog { max-height: calc(100dvh - 2rem); margin: 1rem auto; }
 #editSellingVoucherModal .modal-content { max-height: calc(100dvh - 2rem); display: flex; flex-direction: column; }
 </style>
-<div class="modal fade" id="editSellingVoucherModal" tabindex="-1" aria-labelledby="editSellingVoucherModalLabel" aria-hidden="true">
+<div class="modal fade" data-mess-confirm-leave id="editSellingVoucherModal" tabindex="-1" aria-labelledby="editSellingVoucherModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content">
             <form id="editSellingVoucherForm" method="POST" action="" enctype="multipart/form-data">

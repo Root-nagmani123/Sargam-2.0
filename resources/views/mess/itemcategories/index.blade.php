@@ -181,7 +181,7 @@
     $categoryTypes = \App\Models\Mess\ItemCategory::categoryTypes();
     $selectedCategoryType = $categoryTypeFilter ?? request('category_type', '');
 @endphp
-<div class="container-fluid itemcat-master-page">
+<div class="container-fluid itemcat-master-page mess-select2">
     <x-breadcrum title="Category Item Master" :showBack="false">
         <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createItemCategoryModal">
             <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
@@ -196,10 +196,14 @@
          simply has no on-screen control. --}}
     <div class="d-flex flex-wrap align-items-center justify-content-end gap-3 mb-3">
         <div class="d-flex flex-wrap gap-2 ms-auto">
-            <button type="button" class="btn itemcat-master-export-btn" id="itemcatDownloadBtn">
-                <i class="material-symbols-rounded">download</i>
-                <span>Download</span>
-            </button>
+            <div class="dropdown">
+                <button type="button" class="btn itemcat-master-export-btn dropdown-toggle mess-export-toggle"
+                        id="itemcatDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="material-symbols-rounded">download</i>
+                    <span>Download</span>
+                </button>
+                @include('mess.partials.download-formats', ['toggleId' => 'itemcatDownloadBtn'])
+            </div>
             <button type="button" class="btn itemcat-master-export-btn" id="itemcatPrintBtn">
                 <i class="material-symbols-rounded">print</i>
                 <span>Print</span>
@@ -246,6 +250,7 @@
                     <table id="itemCategoriesTable" class="table table-hover programme-dt-table align-middle mb-0 w-100">
                         <thead>
                             <tr>
+                                <th scope="col">S. No.</th>
                                 <th scope="col">Category Name</th>
                                 <th scope="col">Category Type</th>
                                 <th scope="col">Item Category Description</th>
@@ -297,7 +302,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label itemcat-modal-label">Item Category Description</label>
-                            <textarea name="description" class="form-control itemcat-modal-control" rows="3" placeholder="e.g. Enter Item Category Description....">{{ old('description') }}</textarea>
+                            <textarea name="description" class="form-control itemcat-modal-control" rows="3" placeholder="e.g. Dry goods stored at room temperature">{{ old('description') }}</textarea>
                             @error('description')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-12">
@@ -349,7 +354,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label itemcat-modal-label">Item Category Description</label>
-                            <textarea name="description" id="edit_description" class="form-control itemcat-modal-control" rows="3" placeholder="e.g. Enter Item Category Description...."></textarea>
+                            <textarea name="description" id="edit_description" class="form-control itemcat-modal-control" rows="3" placeholder="e.g. Dry goods stored at room temperature"></textarea>
                         </div>
                         <div class="col-12">
                             <label class="form-label itemcat-modal-label">Status</label>
@@ -376,18 +381,20 @@
 @include('components.mess-master-datatables', [
     'tableId' => 'itemCategoriesTable',
     'searchPlaceholder' => 'Search category items...',
-    'orderColumn' => 0,
-    'actionColumnIndex' => 4,
+    // Default order is unchanged; column 0 is now the serial.
+    'orderColumn' => 1,
+    'orderDir' => 'asc',
+    'actionColumnIndex' => 5,
     'infoLabel' => 'category items',
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.itemcategories.index'),
     'dom' => '<"dt-top"f>rt<"dt-foot"lip>',
     'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
     'serverSideColumnDefs' => [
-        ['className' => 'text-center', 'targets' => [3, 4]],
+        ['className' => 'text-center', 'targets' => [4, 5]],
         // Status carries no sort caret in the design — the pills above the card
         // are how you slice by status here.
-        ['orderable' => false, 'targets' => [3]],
+        ['orderable' => false, 'targets' => [4]],
     ],
 ])
 @push('scripts')
@@ -420,12 +427,10 @@
         return BASE + '?' + params.join('&');
     }
 
-    var downloadBtn = document.getElementById('itemcatDownloadBtn');
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', function () {
-            window.location.href = buildUrl('excel', false);
-        });
-    }
+    // The CSV / Excel / PDF menu next to Download calls this builder, so
+    // every format carries the grid's live search, filters and columns.
+    window.MessExport = window.MessExport || {};
+    window.MessExport['itemcatDownloadBtn'] = buildUrl;
 
     var printBtn = document.getElementById('itemcatPrintBtn');
     if (printBtn) {
@@ -453,4 +458,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
+@include('mess.partials.select2-search')
 @endsection

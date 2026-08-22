@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 @section('title', 'ADD Selling Voucher')
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid mess-select2">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>ADD Selling Voucher</h4>
         <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-secondary">Back to List</a>
@@ -281,4 +281,5 @@
     if (checked) checked.dispatchEvent(new Event('change'));
 })();
 </script>
+@include('mess.partials.select2-search')
 @endsection

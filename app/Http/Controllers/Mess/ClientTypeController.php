@@ -17,7 +17,9 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class ClientTypeController extends Controller
 {
+    use Concerns\RaisesExportLimits;
     use Concerns\FiltersByStatus;
+    use Concerns\StreamsMasterCsv;
 
     private const LIST_CACHE_EPOCH_KEY = 'mess_client_type_master_list_epoch';
     private const DT_LIST_EPOCH_KEY = 'mess_client_type_master_dt_list_epoch';
@@ -88,12 +90,17 @@ class ClientTypeController extends Controller
 
         switch ($orderCol) {
             case 0:
-                $paged->orderBy('client_type', $orderDir);
+                // S. No. has no column of its own to sort on — it follows the
+                // page, so sorting it means sorting the underlying order.
+                $paged->orderBy('id', $orderDir);
                 break;
             case 1:
-                $paged->orderBy('client_name', $orderDir);
+                $paged->orderBy('client_type', $orderDir);
                 break;
             case 2:
+                $paged->orderBy('client_name', $orderDir);
+                break;
+            case 3:
                 $paged->orderBy('status', $orderDir);
                 break;
             default:
@@ -109,7 +116,11 @@ class ClientTypeController extends Controller
         $canDelete = function_exists('hasRole') && (hasRole('Super Admin') || hasRole('Mess-Admin'));
         $clientTypeOptions = ClientType::clientTypes();
 
-        $data = $rows->map(fn (ClientType $clientType) => $this->buildClientTypeDatatableRow($clientType, $canDelete, $clientTypeOptions))->all();
+        // Column 0 is a running serial, not the primary key — the same "S. No."
+        // the export prints. It follows the page, so it always reads 1..n.
+        $data = $rows->values()
+            ->map(fn (ClientType $clientType, int $i) => $this->buildClientTypeDatatableRow($clientType, $canDelete, $clientTypeOptions, $start + $i + 1))
+            ->all();
 
         return response()->json([
             'draw' => $draw,
@@ -122,7 +133,7 @@ class ClientTypeController extends Controller
     /**
      * @return string[]
      */
-    private function buildClientTypeDatatableRow(ClientType $clientType, bool $canDelete, array $clientTypeOptions): array
+    private function buildClientTypeDatatableRow(ClientType $clientType, bool $canDelete, array $clientTypeOptions, int $serial): array
     {
         $typeLabel = $clientTypeOptions[$clientType->client_type] ?? $clientType->client_type;
         $typeCell = '<div class="fw-semibold">' . e($typeLabel) . '</div>';
@@ -158,9 +169,10 @@ class ClientTypeController extends Controller
                 . '</form>';
         }
 
-        $actions = '<div class="d-flex align-items-center client-actions">' . $editBtn . $deleteForm . '</div>';
+        $actions = '<div class="d-flex align-items-center justify-content-center client-actions">' . $editBtn . $deleteForm . '</div>';
 
         return [
+            (string) $serial,
             $typeCell,
             $nameCell,
             $statusCell,
@@ -277,12 +289,20 @@ class ClientTypeController extends Controller
         $fileName = 'client-master-' . now()->format('Y-m-d_H-i-s');
 
         if ($format === 'pdf') {
-            @ini_set('memory_limit', '256M');
-            @set_time_limit(120);
+            $this->raiseMemoryLimit($this->pdfMemoryLimit());
+            $this->raiseTimeLimit(120);
+
+            // DomPDF cannot render an unbounded table — build the rows once,
+            // refuse politely if there are too many, and reuse them below.
+            $pdfRows = $export->pdfRows();
+
+            if ($tooLarge = $this->guardPdfRowCount($pdfRows, 'Client Master')) {
+                return $tooLarge;
+            }
 
             $pdf = Pdf::loadView('mess.client-types.export_pdf', array_merge([
                 'headings' => $export->activeHeadings(),
-                'rows' => $export->pdfRows(),
+                'rows' => $pdfRows,
                 'filterLine' => $export->filterLine(),
                 'printedOn' => now()->format('d-m-Y H:i'),
                 'reportTitle' => 'Client Master',
@@ -299,6 +319,11 @@ class ClientTypeController extends Controller
             return $request->boolean('inline')
                 ? $pdf->stream($fileName . '.pdf')
                 : $pdf->download($fileName . '.pdf');
+        }
+
+        // Plain CSV: no branded header block — see Concerns\StreamsMasterCsv.
+        if ($format === 'csv') {
+            return $this->streamMasterCsv($export, $fileName);
         }
 
         return Excel::download($export, $fileName . '.xlsx', ExcelFormat::XLSX);
