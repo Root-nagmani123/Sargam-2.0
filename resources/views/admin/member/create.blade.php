@@ -2,23 +2,26 @@
 
 @section('title', 'Member - Sargam | Lal Bahadur')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/member-admin.css') }}?v={{ @filemtime(public_path('css/member-admin.css')) ?: time() }}">
+@endpush
+
 @section('setup_content')
 
-<div class="container-fluid">
+<div class="container-fluid member-admin-page member-form-page">
 
-    <x-breadcrum title="Member" />
+    <x-breadcrum title="Add Member" />
     <x-session_message />
 
     <!-- start Vertical Steps Example -->
-    <div class="card">
-        <div class="card-body">
-            <h4 class="card-title mb-0">Add Member</h4>
-            <h6 class="card-subtitle mb-3"></h6>
-            <hr>
+    <div>
+        <div>
 
             <form id="member-form" enctype="multipart/form-data">
                 @csrf
-                <div id="wizard" class="wizard clearfix vertical">
+                <div id="wizard" class="wizard clearfix vertical"
+                    data-finish-label="Add Employee"
+                    data-cancel-url="{{ route('member.index') }}">
                     <h3>Member Information</h3>
                     <section id="step-1" class="step-section">
                         <!-- Content will be loaded via AJAX -->
@@ -57,6 +60,7 @@
 </div>
 
 @push('scripts')
+<script src="{{ asset('js/member-wizard.js') }}?v={{ @filemtime(public_path('js/member-wizard.js')) ?: time() }}"></script>
 <script>
 $(document).ready(function() {
     const form = $("#member-form");
@@ -150,6 +154,10 @@ $(document).ready(function() {
             });
         }
     });
+
+    // Rail numbering + the Cancel / Next (→ "Add Employee") pair. Presentation
+    // only — the wizard above still owns validation and submit.
+    window.MemberWizardUI.attach('#wizard');
 
     // --- Unsaved changes protection ---
     // Any edit inside the wizard (including fields loaded later via AJAX,
