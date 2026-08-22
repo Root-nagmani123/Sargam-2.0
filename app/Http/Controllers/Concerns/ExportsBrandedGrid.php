@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Concerns;
 use App\Exports\BrandedGridExport;
 use App\Support\ExportCsvHeader;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Dompdf\Dompdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Facades\Excel;
@@ -150,15 +151,24 @@ trait ExportsBrandedGrid
                 return $this->brandedGridMpdf($viewData, $fileBase . '_' . $stamp . '.pdf');
             }
 
-            return Pdf::loadView('admin.exports.branded_pdf', $viewData)
+            $pdf = Pdf::loadView('admin.exports.branded_pdf', $viewData)
                 ->setPaper('a4', 'portrait')
                 ->setOptions([
                     'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    // The page-number script in the view needs this.
-                    'isPhpEnabled' => true,
-                ])
-                ->download($fileBase . '_' . $stamp . '.pdf');
+                    // Page numbers come from stampPdfPageNumbers() below, not
+                    // from a <script type="text/php"> in the view, so this stays
+                    // off. It is a document-wide switch: with it on, ANY markup
+                    // that reaches the renderer executes server-side PHP, and
+                    // this path is now shared by every branded export.
+                    'isPhpEnabled' => false,
+                ]);
+
+            // Lay the document out first, then draw on it — see the method.
+            $pdf->render();
+            $this->stampPdfPageNumbers($pdf->getDomPDF());
+
+            return $pdf->download($fileBase . '_' . $stamp . '.pdf');
         }
 
         $header = array_values(array_map(fn ($col) => $col['heading'], $columns));
@@ -187,6 +197,43 @@ trait ExportsBrandedGrid
         }, $fileBase . '_' . $stamp . '.csv', [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
+    }
+
+    /**
+     * Draw "Page N of M" bottom-right on every page of a rendered DomPDF.
+     *
+     * The DomPDF counterpart of brandedGridMpdf()'s SetHTMLFooter(), and the
+     * reason isPhpEnabled can stay off: the view used to carry a
+     * <script type="text/php"> block, which only runs with that flag on — and
+     * the flag is document-wide, so it would also have executed any PHP that
+     * reached the renderer through the data.
+     *
+     * MUST be called after Dompdf::render(). Canvas::page_text() replays its
+     * callback over the pages that exist at call time and substitutes the real
+     * count then, so before the layout is complete there are no pages to draw
+     * on and nothing is emitted. (A CSS counter(pages) is not an option either:
+     * DomPDF resolves it too early and prints "of 0".)
+     */
+    private function stampPdfPageNumbers(Dompdf $dompdf): void
+    {
+        $canvas = $dompdf->getCanvas();
+        $fontMetrics = $dompdf->getFontMetrics();
+
+        $text = 'Page {PAGE_NUM} of {PAGE_COUNT}';
+        $font = $fontMetrics->getFont('DejaVu Sans', 'normal');
+        $size = 7;
+        $width = $fontMetrics->getTextWidth($text, $font, $size);
+
+        // Same position and grey the view's script block used, so the output is
+        // byte-for-byte the layout that was signed off.
+        $canvas->page_text(
+            $canvas->get_width() - $width - 28,
+            $canvas->get_height() - 24,
+            $text,
+            $font,
+            $size,
+            [0.42, 0.45, 0.5]
+        );
     }
 
     /**

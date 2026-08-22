@@ -65,13 +65,16 @@ class MemberExportFormatsTest extends TestCase
         // Heading row sits after the band + its blank spacer.
         $heading = str_getcsv($lines[5]);
         $this->assertSame(
-            ['S. No.', 'Employee Name', 'Employee ID', 'Mobile No', 'Email', 'Status'],
+            ['S. No.', 'Employee Name', 'Employee ID', 'Employee Type', 'Employee Group',
+                'Department', 'Mobile No', 'Email', 'Status'],
             $heading
         );
 
         $first = str_getcsv($lines[6]);
         $this->assertSame('1', $first[0], 'S. No. must start at 1');
-        $this->assertContains($first[5], ['Active', 'Inactive']);
+        // Status is the last column; index it off the heading rather than a
+        // literal, so adding a column can't make this silently assert on Email.
+        $this->assertContains($first[array_search('Status', $heading, true)], ['Active', 'Inactive']);
 
         fwrite(STDERR, "\ncsv rows: " . (count($lines) - 6) . ", heading: " . implode(' | ', $heading) . "\n");
     }
@@ -124,7 +127,7 @@ class MemberExportFormatsTest extends TestCase
 
         // All columns hidden falls back to the full set rather than an empty file.
         $empty = $this->fetch('/member/export/csv?cols=nothing_valid')->streamedContent();
-        $this->assertCount(6, str_getcsv(str_getcsv($empty, "\n")[5]));
+        $this->assertCount(9, str_getcsv(str_getcsv($empty, "\n")[5]));
     }
 
     public function test_pdf_and_excel_download_as_real_files(): void

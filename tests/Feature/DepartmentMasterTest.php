@@ -63,7 +63,7 @@ class DepartmentMasterTest extends TestCase
             'mst-page',
             'master-lookup-admin.css',
             'mst-modal',
-            'mst-field-card',
+            'mst-modal-body',
             'mst-btn-submit',
         ] as $needle) {
             $this->assertStringContainsString($needle, $html, "missing: {$needle}");

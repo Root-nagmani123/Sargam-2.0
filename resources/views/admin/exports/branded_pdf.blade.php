@@ -146,21 +146,12 @@
     </table>
 
     <div class="foot">Sargam 2.0 · Lal Bahadur Shastri National Academy of Administration</div>
-    @if ($engine !== 'mpdf')
-    {{-- Page numbers on every page. Must be the LAST thing in <body>: DomPDF
-         only resolves the page count once the whole document is laid out, so a
-         script placed earlier renders every page as "Page N of 1".
-         mPDF cannot execute this — it gets the same footer from
-         ExportsBrandedGrid::brandedGridMpdf() via SetHTMLFooter(). --}}
-    <script type="text/php">
-        if (isset($pdf)) {
-            $text = "Page {PAGE_NUM} of {PAGE_COUNT}";
-            $font = $fontMetrics->getFont("DejaVu Sans", "normal");
-            $size = 7;
-            $w = $fontMetrics->getTextWidth($text, $font, $size);
-            $pdf->page_text($pdf->get_width() - $w - 28, $pdf->get_height() - 24, $text, $font, $size, [0.42, 0.45, 0.5]);
-        }
-    </script>
-    @endif
+    {{-- No page-number markup here on purpose. Neither engine takes it from the
+         view: DomPDF is stamped on the canvas after render() by
+         ExportsBrandedGrid::stampPdfPageNumbers(), mPDF by SetHTMLFooter() in
+         brandedGridMpdf(). Doing it in the view would mean a
+         <script type="text/php"> block, which needs isPhpEnabled — a
+         document-wide switch that would let any data reaching this template
+         execute server-side PHP. --}}
 </body>
 </html>
