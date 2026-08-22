@@ -76,6 +76,8 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
     // Faulty Expertise Master Routes
     Route::prefix('faculty-expertise')->name('faculty.expertise.')->controller(FacultyExpertiseMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        // One action, four formats (csv | excel | pdf | print) - see ExportsMasterGrid.
+        Route::get('/export/{format?}', 'export')->name('export');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
@@ -119,6 +121,8 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
     // Faculty Type Master Routes
     Route::prefix('faculty-type-master')->name('faculty.type.master.')->controller(FacultyTypeMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        // One action, four formats (csv | excel | pdf | print) - see ExportsMasterGrid.
+        Route::get('/export/{format?}', 'export')->name('export');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
