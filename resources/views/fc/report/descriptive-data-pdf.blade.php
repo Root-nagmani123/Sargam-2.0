@@ -72,7 +72,7 @@
                             // file name, not the URL — a full URL is far wider than the cell
                             // and would wreck the column widths on a 28-column landscape page.
                             $stored = trim((string) $value);
-                            $fileUrl = $stored === '' ? '' : \App\Support\FC\FcUploadUrl::for($stored);
+                            $fileUrl = $stored === '' ? '' : \App\Support\FC\FcUploadUrl::for($stored, \App\Support\FC\FcUploadUrl::DEFAULT_PATH);
                             $value = $stored === '' ? '-' : basename($stored);
                         } else {
                             $value = trim((string) $value);
