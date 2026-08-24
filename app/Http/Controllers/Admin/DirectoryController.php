@@ -207,18 +207,26 @@ class DirectoryController extends Controller
      */
     private function resolveLbsnaaFilters(Request $request): array
     {
-        $section = (int) $request->query('section', 0);
-        $designation = (int) $request->query('designation', 0);
-
         $sections = $this->lbsnaaSectionOptions();
         $designations = $this->lbsnaaDesignationOptions();
 
-        $sectionName = $sections[$section] ?? null;
-        $designationName = $designations[$designation] ?? null;
+        // "No filter" cannot be spelled 0 here: department_master holds a real
+        // row at pk 0 ("NIAR"), so the old `(int) $request->query('section', 0)`
+        // default resolved to NIAR and stamped "Section: NIAR" on the header band
+        // of every unfiltered export. An absent or blank param never reaches the
+        // name lookup at all.
+        $sectionParam = $request->query('section');
+        $designationParam = $request->query('designation');
+
+        $section = ($sectionParam === null || $sectionParam === '') ? null : (int) $sectionParam;
+        $designation = ($designationParam === null || $designationParam === '') ? null : (int) $designationParam;
+
+        $sectionName = $section === null ? null : ($sections[$section] ?? null);
+        $designationName = $designation === null ? null : ($designations[$designation] ?? null);
 
         return [
-            'section' => $sectionName === null ? 0 : $section,
-            'designation' => $designationName === null ? 0 : $designation,
+            'section' => $sectionName === null ? 0 : (int) $section,
+            'designation' => $designationName === null ? 0 : (int) $designation,
             'sectionName' => $sectionName,
             'designationName' => $designationName,
         ];
