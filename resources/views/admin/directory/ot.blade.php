@@ -49,11 +49,6 @@
              Print is a server-rendered view, not window.print() on this page, so
              it comes off the same query as the other four (§1). --}}
         <div class="d-flex flex-wrap justify-content-end gap-2 dir-secondary-actions">
-            <a href="{{ route('admin.directory.ot.export', ['format' => 'print', 'status' => $status]) }}"
-               id="dirOtPrintLink" target="_blank" rel="noopener"
-               class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
-                <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
-            </a>
 
             <div class="dropdown">
                 <button type="button" id="dirOtDownloadToggle"
@@ -96,6 +91,11 @@
                     </li>
                 </ul>
             </div>
+             <a href="{{ route('admin.directory.ot.export', ['format' => 'print', 'status' => $status]) }}"
+               id="dirOtPrintLink" target="_blank" rel="noopener"
+               class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
+                <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
+            </a>
         </div>
     </div>
 

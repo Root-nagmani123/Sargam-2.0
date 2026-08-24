@@ -26,11 +26,6 @@
          filters, search term, ordering and columns the grid is showing. Print is
          a server-rendered view, not window.print() on this page. --}}
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 dir-secondary-actions">
-        <a href="{{ route('admin.directory.lbsnaa.export', ['format' => 'print']) }}"
-           id="lbsPrintLink" target="_blank" rel="noopener"
-           class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
-            <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
-        </a>
 
         <div class="dropdown">
             <button type="button" id="lbsDownloadToggle"
@@ -73,6 +68,11 @@
                 </li>
             </ul>
         </div>
+        <a href="{{ route('admin.directory.lbsnaa.export', ['format' => 'print']) }}"
+           id="lbsPrintLink" target="_blank" rel="noopener"
+           class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
+            <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
+        </a>
     </div>
 
     <div class="card overflow-hidden rounded-3">
@@ -89,7 +89,7 @@
                         <select id="lbsSection" class="form-select" aria-label="Section">
                             <option value="">Section</option>
                             @foreach($sections as $pk => $name)
-                                <option value="{{ $pk }}" title="{{ $name }}" @selected((int) $selectedSection === (int) $pk)>{{ $name }}</option>
+                                <option value="{{ $pk }}" title="{{ $name }}" @selected($selectedSection !== null && (string) $selectedSection === (string) $pk)>{{ $name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -98,7 +98,7 @@
                         <select id="lbsDesignation" class="form-select" aria-label="Designation">
                             <option value="">Designation</option>
                             @foreach($designations as $pk => $name)
-                                <option value="{{ $pk }}" title="{{ $name }}" @selected((int) $selectedDesignation === (int) $pk)>{{ $name }}</option>
+                                <option value="{{ $pk }}" title="{{ $name }}" @selected($selectedDesignation !== null && (string) $selectedDesignation === (string) $pk)>{{ $name }}</option>
                             @endforeach
                         </select>
                     </div>

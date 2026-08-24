@@ -69,8 +69,12 @@ class DirectoryController extends Controller
         return view('admin.directory.lbsnaa', [
             'sections' => $this->lbsnaaSectionOptions(),
             'designations' => $this->lbsnaaDesignationOptions(),
-            'selectedSection' => (int) $request->input('section', 0),
-            'selectedDesignation' => (int) $request->input('designation', 0),
+            // Neither is (int)-cast or defaulted to 0: department_master holds a
+            // real row at pk 0 ("NIAR"), so `0 === (int) $pk` matched it and the
+            // dropdown opened on NIAR instead of its "Section" placeholder on
+            // every plain page load. null means "no filter came in on the URL".
+            'selectedSection' => $request->filled('section') ? (string) $request->input('section') : null,
+            'selectedDesignation' => $request->filled('designation') ? (string) $request->input('designation') : null,
         ]);
     }
 
