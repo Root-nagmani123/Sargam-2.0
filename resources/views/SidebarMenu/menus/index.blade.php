@@ -162,7 +162,7 @@
                                 <th scope="col">Group</th>
                                 <th scope="col">Parent Menu</th>
                                 <th scope="col">Name</th>
-                                <th scope="col">Url</th>
+                                <th scope="col" style="max-width: 200px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">Url</th>
                                 <th scope="col">Attachment</th>
                                 <th scope="col">Permission</th>
                                 <th scope="col">Icon</th>
@@ -203,7 +203,6 @@
                 <div class="modal-header sbm-modal-header">
                     <div>
                         <h5 class="modal-title" id="MenuModalLabel">Add Menu</h5>
-                        <p class="sbm-modal-sub" id="MenuModalSub">Create a new menu inside a group.</p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -251,30 +250,11 @@
                                    autocomplete="off" maxlength="100">
                         </div>
 
-                        {{-- Destination: a menu needs a Url OR an Attachment, unless
-                             it is a container. The checkbox is what makes "neither"
-                             deliberate rather than an oversight — a menu has no
-                             children yet at create time, so it cannot be inferred. --}}
-                        <div class="form-group sbm-form-grid--full">
-                            <div class="form-check sbm-container-check">
-                                <input class="form-check-input" type="checkbox"
-                                       name="is_container" id="is_container" value="1">
-                                <label class="form-check-label" for="is_container">
-                                    This menu only holds sub-menus
-                                </label>
-                            </div>
-                            <p class="sbm-form-help">
-                                Tick for a parent menu that is not clickable itself. Its Url
-                                and Attachment stay empty.
-                            </p>
-                        </div>
-
                         <div class="form-group">
                             <label class="sbm-form-label" for="route">Url</label>
                             <input type="text" class="form-control sbm-control font-monospace" name="route" id="route"
                                    placeholder="e.g. admin/course-master" value="{{ old('route') }}"
                                    autocomplete="off" maxlength="255">
-                            <p class="sbm-form-help">Leave empty if this menu only holds sub-menus.</p>
                         </div>
 
                         {{-- Attachment: same types and 10 MB ceiling as Useful Links,

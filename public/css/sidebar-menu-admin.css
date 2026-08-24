@@ -228,6 +228,25 @@
     max-width: 260px;
 }
 
+/* Long routes/file names must wrap inside their own cell, not spill over the
+   next column's content. */
+.sbm-page .sbm-table-wide tbody td:nth-child(6) .sbm-slug,
+.sbm-page .sbm-table-wide tbody td:nth-child(7) .sbm-attachment {
+    display: inline-block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sbm-page .sbm-table-wide tbody td:nth-child(7) .sbm-attachment {
+    display: inline-flex;
+}
+
+.sbm-page .sbm-table-wide tbody td:nth-child(7) .sbm-attachment span {
+    min-width: 0;
+}
+
 /* ── Empty state ── */
 .sbm-page .sbm-empty {
     padding: 2.5rem 1rem;
