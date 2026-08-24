@@ -128,7 +128,7 @@ class FcStepReportExport implements FromQuery, WithChunkReading, WithEvents, Wit
                 $line[] = basename($value);
                 // Sheet row = serial + 1 for the heading row.
                 $this->links[$this->serial + 1][$this->columnIndex[$key]]
-                    = FcUploadUrl::for($value, StepReportController::FILE_PATH);
+                    = FcUploadUrl::for($value, StepReportController::filePathFor($this->report->key()));
                 continue;
             }
 

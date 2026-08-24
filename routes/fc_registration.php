@@ -408,29 +408,22 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
             ->defaults('report', $stepReportKey)
             ->middleware('can:'.$stepReportPermission)
             ->name($stepReportKey.'.export.documents');
+
+        // Serves this report's uploads. Inside the loop, so it carries the SAME permission as
+        // the report itself — which a single shared /step-file could not, the permission being
+        // per report and the route having sat outside this loop.
+        //
+        // The consequence is deliberate: a document link inside an already-distributed workbook
+        // now resolves only for someone holding that report's permission. Recipients who hold
+        // none get 403 where they previously got the file. That trade was chosen over leaving
+        // the endpoint open to any authenticated staff account.
+        Route::get('/'.$stepReportKey.'/file', [StepReportController::class, 'file'])
+            ->defaults('report', $stepReportKey)
+            ->middleware('can:'.$stepReportPermission)
+            ->name($stepReportKey.'.file');
     }
 
-    // Serves the step reports' uploads — AUTHENTICATED, unlike descriptive-data/file.
-    //
-    // That older route has no auth at all, deliberately, so an emailed workbook keeps resolving
-    // for a recipient who is not a Sargam user — a trade accepted for photographs and
-    // signatures. These reports' uploads are Aadhaar cards, PAN cards, cancelled cheques and
-    // medical documents, which should not be readable by an anonymous URL holder, so they get
-    // their own endpoint inside the auth group.
-    //
-    // `auth` only, and NO `can:` — which makes this the least-gated route in the family, while
-    // it carries the most sensitive files. That is a deliberate trade, not an oversight: the
-    // screens are gated per report so an admin cannot browse a report they have no permission
-    // for, but a document link inside an exported workbook has to keep working for the
-    // colleague it was sent to, who may hold no report permission at all. Reaching a file
-    // still requires both a login and possession of an unguessable token minted from that
-    // workbook.
-    //
-    // Revisit if forwarded exports stop being a requirement: adding
-    // ->middleware('can:'.$permission) here would close the gap, at the cost of breaking every
-    // document link in every workbook already sent.
-    Route::get('/step-file', [StepReportController::class, 'file'])
-        ->name('step-file');
+
 
     // Aggregated reports
     Route::get('/by-service',   [ReportController::class, 'byService'])->name('service');

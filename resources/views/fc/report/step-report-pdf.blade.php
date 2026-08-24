@@ -80,7 +80,7 @@
                      mPDF keeps the anchor live, so it still opens from the on-screen PDF. --}}
                 @if ($path !== '')
                     <div style="font-size:9pt;">
-                        <a href="{{ \App\Support\FC\FcUploadUrl::for($path, \App\Http\Controllers\FC\StepReportController::FILE_PATH) }}" style="color:#004a93;">Open document</a>
+                        <a href="{{ \App\Support\FC\FcUploadUrl::for($path, \App\Http\Controllers\FC\StepReportController::filePathFor($report->key())) }}" style="color:#004a93;">Open document</a>
                         <span style="color:#777;">({{ \Illuminate\Support\Str::limit(basename($path), 40) }})</span>
                     </div>
                 @else

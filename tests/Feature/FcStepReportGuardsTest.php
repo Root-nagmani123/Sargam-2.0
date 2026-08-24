@@ -36,7 +36,7 @@ class FcStepReportGuardsTest extends TestCase
         [$stored, $cleanup] = $this->temporaryUpload();
 
         try {
-            $stepToken = FcUploadUrl::encode($stored, StepReportController::FILE_PATH);
+            $stepToken = FcUploadUrl::encode($stored, StepReportController::filePathFor('bank-report'));
 
             // The open descriptive-data route must not serve a token minted for the
             // authenticated step-report endpoint. Before the audience existed it did, which
@@ -46,7 +46,7 @@ class FcStepReportGuardsTest extends TestCase
             // ...and the converse, so neither endpoint is a way into the other.
             $descToken = FcUploadUrl::encode($stored, FcUploadUrl::DEFAULT_PATH);
             $this->actingAs($this->superAdmin())
-                ->get('/admin/reports/step-file?t='.$descToken)
+                ->get('/admin/reports/bank-report/file?t='.$descToken)
                 ->assertNotFound();
         } finally {
             $cleanup();
@@ -75,9 +75,9 @@ class FcStepReportGuardsTest extends TestCase
         // json_encode() returns false here, which encrypted to an empty string and made the
         // file permanently unreachable. The payload is byte-transparent instead.
         $path = 'uploads/x/doc_'.chr(0xC3).chr(0x28).'.pdf';
-        $token = FcUploadUrl::encode($path, StepReportController::FILE_PATH);
+        $token = FcUploadUrl::encode($path, StepReportController::filePathFor('bank-report'));
 
-        $this->assertSame($path, FcUploadUrl::decode($token, StepReportController::FILE_PATH));
+        $this->assertSame($path, FcUploadUrl::decode($token, StepReportController::filePathFor('bank-report')));
     }
 
     /**
@@ -118,7 +118,7 @@ class FcStepReportGuardsTest extends TestCase
                     if (! str_contains($line, 'FcUploadUrl::for(')) {
                         continue;
                     }
-                    if (! str_contains($line, 'FILE_PATH') && ! str_contains($line, 'DEFAULT_PATH')) {
+                    if (! str_contains($line, 'filePathFor') && ! str_contains($line, 'DEFAULT_PATH')) {
                         $offenders[] = $file->getPathname().':'.($n + 1);
                     }
                 }
@@ -127,6 +127,74 @@ class FcStepReportGuardsTest extends TestCase
 
         $this->assertSame([], $offenders,
             'these call sites mint an upload URL without naming the endpoint that may serve it');
+    }
+
+    /**
+     * F-020: the document endpoint enforces the report's own permission.
+     *
+     * It used to require only a login plus a capability token, so any staff account sent a
+     * workbook could open the identity and medical documents it linked to. It now carries the
+     * same `can:` as the report screens. The trainee guard behind it is redundant while that
+     * gate stands and is asserted anyway — it is the rule that must never be relaxed, because
+     * `auth` admits FC roster sessions.
+     */
+    public function test_the_document_route_requires_the_reports_own_permission(): void
+    {
+        [$stored, $cleanup] = $this->temporaryUpload();
+
+        try {
+            $url = '/admin/reports/bank-report/file?t='
+                .FcUploadUrl::encode($stored, StepReportController::filePathFor('bank-report'));
+
+            // A permission holder is served.
+            $holder = $this->firstUserWith('bank_detail_report');
+            if ($holder) {
+                $this->actingAs($holder)->get($url)->assertOk();
+            }
+
+            // A staff account WITHOUT the permission is refused — the behaviour change.
+            $plain = User::whereIn('pk', DB::table('model_has_roles as mr')
+                ->join('roles as r', 'r.id', '=', 'mr.role_id')
+                ->where('r.name', 'Employee')->pluck('mr.model_id'))
+                ->whereNotIn('pk', DB::table('model_has_roles as mr')
+                    ->join('roles as r', 'r.id', '=', 'mr.role_id')
+                    ->whereIn('r.name', ['Super Admin', 'FC Reports Viewer'])->pluck('mr.model_id'))
+                ->first();
+
+            if ($plain) {
+                $this->assertTrue($plain->pk > 0, 'a real staff account must carry a positive id');
+                $this->actingAs($plain)->get($url)->assertForbidden();
+            }
+
+            // A trainee is refused, and would be even if the gate above were removed.
+            $roster = DB::table('fc_registration_master')
+                ->whereNotNull('user_id')->where('user_id', '!=', '')
+                ->whereNotNull('password')->where('password', '!=', '')->first();
+
+            if ($roster) {
+                $trainee = app(\App\Services\FC\FcRosterAuthService::class)->buildStagedUser($roster);
+                $this->assertTrue($trainee->pk < 0, 'a staged trainee must carry a negative id');
+                $this->actingAs($trainee)->get($url)->assertForbidden();
+            }
+        } finally {
+            $cleanup();
+        }
+    }
+
+    /** A token minted for one report cannot be redeemed at another report's file route. */
+    public function test_a_token_for_one_report_is_refused_by_another(): void
+    {
+        [$stored, $cleanup] = $this->temporaryUpload();
+
+        try {
+            $bankToken = FcUploadUrl::encode($stored, StepReportController::filePathFor('bank-report'));
+
+            $this->actingAs($this->superAdmin())
+                ->get('/admin/reports/pre-medical-history/file?t='.$bankToken)
+                ->assertNotFound();
+        } finally {
+            $cleanup();
+        }
     }
 
     // ── F-003 / F-011: every report endpoint carries a permission gate that resolves ────
@@ -149,7 +217,7 @@ class FcStepReportGuardsTest extends TestCase
             $gated++;
         }
 
-        $this->assertSame(16, $gated, 'expected 16 gated step-report endpoints');
+        $this->assertSame(20, $gated, 'expected 20 gated step-report endpoints (4 reports x screen + 3 exports + file)');
     }
 
     public function test_the_gated_permissions_exist_so_the_gate_can_ever_pass(): void

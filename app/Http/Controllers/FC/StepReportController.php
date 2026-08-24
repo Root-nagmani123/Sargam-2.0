@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\FC\FcForm;
 use App\Services\FC\FcBankDetailsReport;
 use App\Services\FC\FcPreMedicalHistoryReport;
+use App\Services\FC\FcRosterAuthService;
 use App\Services\FC\FcSpecialAssistantReport;
 use App\Services\FC\FcStepReport;
 use App\Services\FC\FcVisionStatementReport;
@@ -251,8 +252,19 @@ class StepReportController extends Controller
         ]);
     }
 
-    /** Endpoint that serves this family's uploads. Must match the route below. */
-    public const FILE_PATH = '/admin/reports/step-file';
+    /**
+     * Endpoint that serves ONE report's uploads. Must match the route registered in the
+     * per-report loop.
+     *
+     * Per report, not one shared endpoint, so the route can carry that report's own `can:`
+     * gate. A single /step-file could not: the permission differs per report and the route
+     * sits outside the loop that knows it. The report key also becomes part of the token's
+     * audience, so a Bank Details token cannot be redeemed at the Pre-Medical file route.
+     */
+    public static function filePathFor(string $reportKey): string
+    {
+        return '/admin/reports/'.$reportKey.'/file';
+    }
 
     /**
      * Serve one upload from an opaque token — the authenticated counterpart of the
@@ -264,13 +276,40 @@ class StepReportController extends Controller
      * cards, cancelled cheques and medical documents; inheriting that exemption would hand a
      * stranger identity documents from any forwarded export. Same opaque token, same path
      * safety — but behind the gate.
+     *
+     * Gated on the SAME per-report permission as the report's own screens. Opening a document
+     * therefore requires exactly what reading the report requires — a capability token alone is
+     * no longer sufficient.
+     *
+     * The cost is deliberate and was chosen over the alternative: a document link inside an
+     * already-distributed workbook now resolves only for someone holding that report's
+     * permission. Recipients who hold none get 403 where they previously got the file.
+     *
+     * The staged-user guard below is kept as defence in depth. It is redundant while the `can:`
+     * gate stands — a trainee holds no permission — but it costs nothing and states the rule
+     * that must never be relaxed: `auth` is not a staff check here, because Authenticate.php
+     * STEP 2 hydrates an FC roster session into Auth. Staged ids are negative by construction
+     * and real user_credentials ids positive, so no genuine staff account can collide with it.
      */
-    public function file(Request $request)
+    public function file(Request $request, string $report)
     {
+        // Staff only. A staged FC trainee satisfies `auth` but must never read another
+        // trainee's identity or medical documents, token in hand or not.
+        abort_if(
+            FcRosterAuthService::isStagedUserId($request->user()?->pk),
+            403,
+            'Trainee accounts cannot open report documents.'
+        );
+
         // Audience-scoped: a token minted for the open descriptive-data route is refused here,
         // and one minted here is refused there. Without it the `auth` above is only as strong
         // as the path segment in the URL, which a recipient can edit.
-        $path = FcUploadUrl::decode($request->query(FcUploadUrl::TOKEN_PARAM), self::FILE_PATH);
+        $this->report($report);   // 404 on an unknown key before anything else
+
+        $path = FcUploadUrl::decode(
+            $request->query(FcUploadUrl::TOKEN_PARAM),
+            self::filePathFor($report)
+        );
         abort_if($path === null, 404);
 
         // Resolves across every directory an FC upload can live in, catches the traversal
