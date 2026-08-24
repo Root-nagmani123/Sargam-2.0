@@ -28,6 +28,8 @@ use App\Exports\PendingFeedbackSummaryExport;
 use App\Exports\FeedbackDatabaseExport;
 use App\Services\FacultyFeedbackReportService;
 use App\Http\Controllers\Admin\Concerns\ScopesSessionFeedbackReports;
+use App\Support\FeedbackReportCache;
+use App\Support\FeedbackReportGrouping;
 use App\Support\FeedbackReportRouteRegistry;
 
 class FeedbackController extends Controller
@@ -96,27 +98,15 @@ class FeedbackController extends Controller
     }
 
 
-    private function baseDatabaseQuery(Request $request)
+    /**
+     * Joins + filters shared by the Feedback Database grid, its row count and its exports.
+     *
+     * Deliberately carries no SELECT / GROUP BY / ORDER BY so the row-count path can reuse
+     * it without paying for aggregation it throws away (see {@see databaseRowCount()}).
+     */
+    private function databaseQueryFoundation(Request $request)
     {
         $query = DB::table('topic_feedback as tf')
-            ->select([
-                'f.pk as faculty_id',
-                'f.full_name as faculty_name',
-                'f.email_id as faculty_email',
-                DB::raw('IFNULL(f.Permanent_Address, "N/A") as faculty_address'),
-                'c.course_name',
-                't.subject_topic',
-
-                // NULLIF so blank ratings never count as 0; remark-only groups average to NULL → shown as N/A.
-                DB::raw('ROUND(AVG(NULLIF(tf.content, "")) * 20, 2) as avg_content_percent'),
-                DB::raw('ROUND(AVG(NULLIF(tf.presentation, "")) * 20, 2) as avg_presentation_percent'),
-
-                DB::raw('COUNT(DISTINCT tf.student_master_pk) as participant_count'),
-                DB::raw('DATE(t.START_DATE) as session_date'),
-                DB::raw('GROUP_CONCAT(DISTINCT CASE WHEN tf.remark IS NOT NULL AND TRIM(tf.remark) != "" THEN tf.remark ELSE NULL END SEPARATOR " | ") as all_comments'),
-
-                't.pk as timetable_pk'
-            ])
             ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
             ->join('faculty_master as f', 'tf.faculty_pk', '=', 'f.pk')
             ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
@@ -154,28 +144,58 @@ class FeedbackController extends Controller
             });
         }
 
-        $query->groupBy(
-            'f.pk',
-            'f.full_name',
-            'f.email_id',
-            'f.Permanent_Address',
-            'c.course_name',
-            't.subject_topic',
-            't.START_DATE',
-            't.pk'
-        );
+        return $query;
+    }
+
+    /**
+     * Is the optional average-based HAVING filter active for this request?
+     *
+     * It can only be evaluated after aggregation, so its presence forces the row count
+     * down the expensive materialised path.
+     */
+    private function databaseHasConditionalFilter(Request $request): bool
+    {
+        return $request->filled('cond_field')
+            && $request->filled('cond_operator')
+            && $request->filled('cond_value')
+            && in_array($request->cond_field, ['content', 'presentation'], true)
+            && in_array($request->cond_operator, ['>=', '<=', '>', '<', '='], true);
+    }
+
+    private function baseDatabaseQuery(Request $request)
+    {
+        $query = $this->databaseQueryFoundation($request)
+            ->select([
+                'f.pk as faculty_id',
+                'f.full_name as faculty_name',
+                'f.email_id as faculty_email',
+                DB::raw('IFNULL(f.Permanent_Address, "N/A") as faculty_address'),
+                'c.course_name',
+                't.subject_topic',
+
+                // NULLIF so blank ratings never count as 0; remark-only groups average to NULL → shown as N/A.
+                DB::raw('ROUND(AVG(NULLIF(tf.content, "")) * 20, 2) as avg_content_percent'),
+                DB::raw('ROUND(AVG(NULLIF(tf.presentation, "")) * 20, 2) as avg_presentation_percent'),
+
+                DB::raw('COUNT(DISTINCT tf.student_master_pk) as participant_count'),
+                DB::raw('DATE(t.START_DATE) as session_date'),
+                DB::raw('GROUP_CONCAT(DISTINCT CASE WHEN tf.remark IS NOT NULL AND TRIM(tf.remark) != "" THEN tf.remark ELSE NULL END SEPARATOR " | ") as all_comments'),
+
+                't.pk as timetable_pk'
+            ]);
+
+        // Group on the two primary keys only. Every other selected column is functionally
+        // dependent on f.pk or t.pk, so listing them cannot split a group further — it only
+        // widens the sort key, and t.subject_topic being TEXT forced MySQL into a row-ID sort
+        // over the whole join. Same groups, same rows, roughly half the time.
+        $query->groupBy(FeedbackReportGrouping::DATABASE_GRID);
 
         // Conditional filter (content/presentation with comparison operator)
-        if ($request->filled('cond_field') && $request->filled('cond_operator') && $request->filled('cond_value')) {
-            $allowedFields = ['content', 'presentation'];
-            $allowedOperators = ['>=', '<=', '>', '<', '='];
-            $field = $request->cond_field;
-            $operator = $request->cond_operator;
-            $value = (float) $request->cond_value;
-
-            if (in_array($field, $allowedFields) && in_array($operator, $allowedOperators)) {
-                $query->havingRaw("ROUND(AVG(tf.{$field}) * 20, 2) {$operator} ?", [$value]);
-            }
+        if ($this->databaseHasConditionalFilter($request)) {
+            $query->havingRaw(
+                "ROUND(AVG(tf.{$request->cond_field}) * 20, 2) {$request->cond_operator} ?",
+                [(float) $request->cond_value]
+            );
         }
 
         $query->orderBy('t.START_DATE', 'ASC')
@@ -184,9 +204,40 @@ class FeedbackController extends Controller
                   TIME_TO_SEC(STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' - ', 1)), '%h:%i %p')),
                   86400
               ) ASC
-          ");
+          ")
+            // Deterministic tie-break. Date + session start time are not unique — several
+            // faculty share one slot — so without this the order of tied rows was whatever
+            // the plan happened to emit, and OFFSET/LIMIT could repeat or skip a row between
+            // pages. Grouping on the primary keys made that latent instability visible.
+            ->orderBy('t.pk', 'ASC')
+            ->orderBy('f.pk', 'ASC');
 
         return $query;
+    }
+
+    /**
+     * Number of grid rows for the current filters.
+     *
+     * Counting distinct group keys straight off the join avoids building every group's
+     * averages, participant counts and GROUP_CONCAT of remarks only to discard them.
+     * The HAVING filter has no such shortcut — it needs the aggregates — so that case
+     * keeps the original materialised count.
+     */
+    private function databaseRowCount(Request $request): int
+    {
+        if ($this->databaseHasConditionalFilter($request)) {
+            $query = $this->baseDatabaseQuery($request);
+
+            return DB::table(DB::raw("({$query->toSql()}) as sub"))
+                ->mergeBindings($query)
+                ->count();
+        }
+
+        $row = $this->databaseQueryFoundation($request)
+            ->selectRaw('COUNT(DISTINCT f.pk, t.pk) as aggregate')
+            ->first();
+
+        return (int) ($row->aggregate ?? 0);
     }
 
 
@@ -220,9 +271,7 @@ class FeedbackController extends Controller
             $page    = $request->page ?? 1;
 
             // Total rows count
-            $total = DB::table(DB::raw("({$query->toSql()}) as sub"))
-                ->mergeBindings($query)
-                ->count();
+            $total = $this->databaseRowCount($request);
 
             // Fetch paginated data
             $data = $query
@@ -272,32 +321,55 @@ class FeedbackController extends Controller
                 $this->assertFacultyReportCourseAccess($request, (int) $request->course_id);
             }
 
-            $facultyQuery = DB::table('topic_feedback as tf')
-                ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
-                ->join('faculty_master as f', 'tf.faculty_pk', '=', 'f.pk')
-                ->where('tf.is_submitted', 1)
-                // Include faculty who only received remark-only feedback (NULL ratings).
-                ->where(function ($q) {
-                    $q->whereRaw("(tf.content IS NOT NULL AND tf.content <> '')")
-                      ->orWhereRaw("(tf.presentation IS NOT NULL AND tf.presentation <> '')")
-                      ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
-                });
-
-            if ($request->filled('course_id')) {
-                $facultyQuery->where('t.course_master_pk', $request->course_id);
-            }
-
-            $faculties = $facultyQuery
-                ->select('f.pk', 'f.full_name')
-                ->distinct()
-                ->orderBy('f.full_name')
-                ->get();
+            // Same list for every viewer (access to the course is asserted above, not
+            // filtered here), so it is safe to share across users.
+            $faculties = FeedbackReportCache::remember(
+                'db_faculties:course:' . ($request->filled('course_id') ? (int) $request->course_id : 'all'),
+                FeedbackReportCache::TTL_LOOKUP,
+                fn () => $this->databaseFacultyOptions($request)
+            );
 
             return response()->json(['success' => true, 'faculties' => $faculties]);
         } catch (\Exception $e) {
             \Log::error('getDatabaseFaculties: ' . $e->getMessage());
+
             return response()->json(['success' => false, 'faculties' => []], 500);
         }
+    }
+
+    /**
+     * Faculty who have received qualifying feedback, optionally within one course.
+     *
+     * Driven from faculty_master with a semi-join rather than scanning every topic_feedback
+     * row and de-duplicating: this walks the few hundred faculty and stops at the first
+     * matching feedback row for each, instead of reading tens of thousands of rows only to
+     * collapse them back down to the same list.
+     */
+    private function databaseFacultyOptions(Request $request)
+    {
+        return DB::table('faculty_master as f')
+                ->select('f.pk', 'f.full_name')
+                ->whereExists(function ($sub) use ($request) {
+                    $sub->select(DB::raw(1))
+                        ->from('topic_feedback as tf')
+                        ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
+                        ->whereColumn('tf.faculty_pk', 'f.pk')
+                        ->where('tf.is_submitted', 1)
+                        // Include faculty who only received remark-only feedback (NULL ratings).
+                        ->where(function ($q) {
+                            $q->whereRaw("(tf.content IS NOT NULL AND tf.content <> '')")
+                              ->orWhereRaw("(tf.presentation IS NOT NULL AND tf.presentation <> '')")
+                              ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
+                        });
+
+                    if ($request->filled('course_id')) {
+                        $sub->where('t.course_master_pk', $request->course_id);
+                    }
+                })
+                ->orderBy('f.full_name')
+                // Deterministic tie-break so faculty sharing a name keep a stable order.
+                ->orderBy('f.pk')
+                ->get();
     }
 
     public function getTopicsForCourse(Request $request)
@@ -307,15 +379,20 @@ class FeedbackController extends Controller
                 'course_id' => 'required|integer'
             ]);
 
-            $topics = DB::table('timetable')
-                ->where('course_master_pk', $request->course_id)
-                ->whereNotNull('subject_topic')
-                ->where('subject_topic', '!=', '')
-                ->select('subject_topic')
-                ->distinct()
-                ->orderBy('subject_topic')
-                ->get()
-                ->pluck('subject_topic');
+            // Topic list for one course: reference data, identical for every viewer.
+            $topics = FeedbackReportCache::remember(
+                'topics:course:' . (int) $request->course_id,
+                FeedbackReportCache::TTL_LOOKUP,
+                fn () => DB::table('timetable')
+                    ->where('course_master_pk', $request->course_id)
+                    ->whereNotNull('subject_topic')
+                    ->where('subject_topic', '!=', '')
+                    ->select('subject_topic')
+                    ->distinct()
+                    ->orderBy('subject_topic')
+                    ->get()
+                    ->pluck('subject_topic')
+            );
 
             return response()->json([
                 'success' => true,
@@ -697,7 +774,7 @@ class FeedbackController extends Controller
                   ->orWhereNotNull('tf.presentation')
                   ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
             })
-            ->groupBy('tf.faculty_pk', 'tf.topic_name', 'cm.course_name', 'fm.full_name', 'tt.START_DATE', 'tt.class_session');
+            ->groupBy(FeedbackReportGrouping::FACULTY_AVERAGE);
 
         // Apply filters
         if (!empty($programName)) {
@@ -921,7 +998,7 @@ class FeedbackController extends Controller
                   ->orWhereNotNull('tf.presentation')
                   ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
             })
-            ->groupBy('tf.faculty_pk', 'tf.topic_name', 'cm.course_name', 'fm.full_name', 'tt.START_DATE', 'tt.class_session');
+            ->groupBy(FeedbackReportGrouping::FACULTY_AVERAGE);
 
         // Apply filters
         if (!empty($programName)) {
@@ -1105,7 +1182,7 @@ class FeedbackController extends Controller
                   ->orWhereNotNull('tf.presentation')
                   ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
             })
-            ->groupBy('tf.faculty_pk', 'tf.topic_name', 'cm.course_name', 'fm.full_name', 'tt.START_DATE', 'tt.class_session');
+            ->groupBy(FeedbackReportGrouping::FACULTY_AVERAGE);
 
         // Apply filters (EXACT same as showFacultyAverage)
         if (!empty($programName)) {
@@ -1303,7 +1380,7 @@ class FeedbackController extends Controller
                       ->orWhereNotNull('tf.presentation')
                       ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
                 })
-                ->groupBy('tf.faculty_pk', 'tf.topic_name', 'cm.course_name', 'fm.full_name', 'tt.START_DATE', 'tt.class_session');
+                ->groupBy(FeedbackReportGrouping::FACULTY_AVERAGE);
 
             if (!empty($programName)) {
                 $this->assertFacultyReportProgramAccess((int) $programName);
@@ -1632,7 +1709,7 @@ class FeedbackController extends Controller
                     ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
               });
         // Group by - ADD class_session to group by
-        $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'tt.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
+        $query->groupBy(FeedbackReportGrouping::FACULTY_VIEW);
 
         // Apply filters
         if ($programId && $programId !== '') {
@@ -1924,7 +2001,14 @@ class FeedbackController extends Controller
             $query->where('fm.full_name', 'LIKE', '%' . $searchTerm . '%');
         }
 
-        $faculties = $query->orderBy('fm.full_name')->limit(20)->get();
+        // Typeahead: fired on every keystroke, and the answer is the same for every
+        // viewer, so cache it per (type filter, search term).
+        $suggestionKey = 'faculty_suggestions:' . implode(',', $validTypes) . ':' . mb_strtolower(trim((string) $searchTerm));
+        $faculties = FeedbackReportCache::remember(
+            $suggestionKey,
+            FeedbackReportCache::TTL_SUGGESTIONS,
+            fn () => $query->orderBy('fm.full_name')->orderBy('tt.faculty_type')->limit(20)->get()
+        );
 
         // Map faculty types to display names (only Internal and Guest)
         $facultyTypeMap = [
@@ -2008,7 +2092,7 @@ class FeedbackController extends Controller
 
         $this->applyFeedbackReportCourseScope($query);
 
-        $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'tt.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
+        $query->groupBy(FeedbackReportGrouping::FACULTY_VIEW);
 
         if ($programId && $programId !== '') {
             $this->assertFacultyReportProgramAccess((int) $programId);
@@ -2295,7 +2379,7 @@ class FeedbackController extends Controller
 
             $this->applyFeedbackReportCourseScope($query);
 
-            $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'tt.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
+            $query->groupBy(FeedbackReportGrouping::FACULTY_VIEW);
 
             if ($programId && $programId !== '') {
                 $this->assertFacultyReportProgramAccess((int) $programId);
@@ -2769,6 +2853,43 @@ class FeedbackController extends Controller
         ]);
     }
 
+    /**
+     * One page of Feedback Details rows, fetched with a deferred join.
+     *
+     * The report sorts by columns from three different tables (timetable.START_DATE,
+     * faculty_master.full_name, student_master.first_name), so no index can serve the order:
+     * MySQL joins every matching row and sorts the lot to hand back ten. On the archived set
+     * that is ~20,800 fully-built rows — including the remark TEXT column and the concatenated
+     * student name — discarded to keep 10.
+     *
+     * Sorting a narrow projection first (primary key only) and then re-reading just those ten
+     * keys keeps the join and sort identical but stops the wide payload being carried through
+     * them. Same rows, same order, materially less work.
+     *
+     * Relies on the ORDER BY being a total order — tf.pk is appended above for that — so the
+     * narrow pass and the re-read agree on which ten rows to return.
+     *
+     * @param  \Illuminate\Database\Query\Builder  $query  fully filtered and ordered
+     */
+    private function feedbackDetailsPage($query, int $offset, int $perPage)
+    {
+        $pageKeys = (clone $query)
+            ->select('tf.pk')
+            ->offset($offset)
+            ->limit($perPage)
+            ->pluck('pk');
+
+        if ($pageKeys->isEmpty()) {
+            return collect();
+        }
+
+        // Re-read the full rows for just this page. The ORDER BY is still applied so the
+        // rows come back in report order rather than whatever the lookup returns.
+        return (clone $query)
+            ->whereIn('tf.pk', $pageKeys->all())
+            ->get();
+    }
+
     public function feedbackDetails(Request $request)
     {
 
@@ -2943,10 +3064,14 @@ class FeedbackController extends Controller
                 $query->where('fm.employee_master_pk', $facultyPk);
             }
 
-            // Order by
+            // Order by. tf.pk is a deterministic tie-break: date + faculty name + student
+            // first name is not unique, and with ties OFFSET/LIMIT may show one row on two
+            // pages while another is unreachable. Measured on this report before the fix:
+            // 4,708 rows reported, 4,707 actually reachable, 1 duplicated.
             $query->orderBy('tt.START_DATE', 'DESC')
                 ->orderBy('fm.full_name')
-                ->orderBy('sm.first_name');
+                ->orderBy('sm.first_name')
+                ->orderBy('tf.pk');
 
             // Get total count for pagination
             $totalRecords = $query->count();
@@ -2963,10 +3088,7 @@ class FeedbackController extends Controller
                 $currentPage = $totalPages;
             }
 
-            // Get paginated data
-            $feedbackData = $query->offset(($currentPage - 1) * $perPage)
-                ->limit($perPage)
-                ->get();
+            $feedbackData = $this->feedbackDetailsPage($query, ($currentPage - 1) * $perPage, $perPage);
 
             // Process data for display
             $processedData = $feedbackData->map(function ($item) {
@@ -3407,6 +3529,39 @@ class FeedbackController extends Controller
             '1' => 'dc3545',
         ];
 
+        /*
+         * Styling is applied per contiguous block of rows rather than per row/cell.
+         *
+         * PhpSpreadsheet charges per styling call, and this export runs to thousands of rows:
+         * a border applyFromArray for every row, plus one per rating cell and one per remark
+         * cell, took ~17 s of pure PHP for 4,708 rows and risked hitting max_execution_time.
+         *
+         * The output is unchanged. Stacked single-row outlines are indistinguishable from an
+         * outline around the block plus horizontal lines between its rows, and the blank row
+         * every 10 records is exactly what bounds each block. Rating fills reuse one prepared
+         * Style per rating via duplicateStyle() instead of re-parsing the same array each time.
+         */
+        $remarkColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(
+            array_search('Remarks', $headers, true) + 1
+        );
+
+        // One prepared style per rating. Note the (string) cast: PHP turns numeric array keys
+        // into integers, and the colour choice below compares against the string '3'.
+        $ratingStyles = [];
+        foreach ($ratingColors as $ratingKey => $rgb) {
+            $rating = (string) $ratingKey;
+            $prototype = new \PhpOffice\PhpSpreadsheet\Style\Style();
+            $prototype->applyFromArray([
+                'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => $rgb]],
+                'font' => ['bold' => true, 'color' => ['rgb' => in_array($rating, ['3']) ? '000000' : 'FFFFFF']],
+                'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+            ]);
+            $ratingStyles[$rating] = $prototype;
+        }
+
+        $blocks = [];
+        $blockStart = $row;
+
         foreach ($data as $index => $item) {
             $item['S.No.'] = $index + 1;
 
@@ -3418,32 +3573,37 @@ class FeedbackController extends Controller
                 // Apply special formatting for rating columns
                 if ($header === 'Content Rating' || $header === 'Presentation Rating') {
                     $rating = strval($value);
-                    if (isset($ratingColors[$rating])) {
-                        $sheet->getStyle($cell)->applyFromArray([
-                            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => $ratingColors[$rating]]],
-                            'font' => ['bold' => true, 'color' => ['rgb' => in_array($rating, ['3']) ? '000000' : 'FFFFFF']],
-                            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
-                        ]);
+                    if (isset($ratingStyles[$rating])) {
+                        $sheet->duplicateStyle($ratingStyles[$rating], $cell);
                     }
                 }
-
-                // Wrap text for remarks
-                if ($header === 'Remarks') {
-                    $sheet->getStyle($cell)->getAlignment()->setWrapText(true);
-                }
             }
-
-            // Add borders to the row
-            $sheet->getStyle('A' . $row . ':N' . $row)->applyFromArray([
-                'borders' => ['outline' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
-            ]);
 
             $row++;
 
             // Add a blank row after every 10 records for readability
             if (($index + 1) % 10 === 0) {
+                $blocks[] = [$blockStart, $row - 1];
                 $row++;
+                $blockStart = $row;
             }
+        }
+
+        // Trailing partial block (fewer than 10 records since the last blank row).
+        if ($blockStart < $row) {
+            $blocks[] = [$blockStart, $row - 1];
+        }
+
+        // Borders and remark wrapping, one call per block instead of one per row.
+        foreach ($blocks as [$firstRow, $lastRow]) {
+            $sheet->getStyle('A' . $firstRow . ':N' . $lastRow)->applyFromArray([
+                'borders' => [
+                    'outline' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN],
+                    'horizontal' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN],
+                ],
+            ]);
+            $sheet->getStyle($remarkColumn . $firstRow . ':' . $remarkColumn . $lastRow)
+                ->getAlignment()->setWrapText(true);
         }
 
         // Set column widths
@@ -3791,17 +3951,80 @@ class FeedbackController extends Controller
                 DB::raw("SUM(LEAST(COALESCE(tf.submitted_count, 0), {$expectedExpr})) as feedback_given"),
                 DB::raw("GROUP_CONCAT(DISTINCT c.course_name ORDER BY c.course_name SEPARATOR ', ') as course_summary_build"),
             ])
-            ->groupBy('sm.pk', 'sm.first_name', 'sm.middle_name', 'sm.last_name', 'sm.email', 'sm.generated_OT_code');
+            // sm.pk alone: name parts, email and OT code all hang off the student primary key,
+            // so listing them only widened the group sort key.
+            ->groupBy('sm.pk');
 
-        $state = $request->input('filter_feedback_state', 'not_given');
-        if ($state === 'given') {
-            $aggSub->havingRaw("SUM(CASE WHEN {$pExpr} > 0 THEN 1 ELSE 0 END) = 0")
-                ->havingRaw("SUM(CASE WHEN {$pExpr} <= 0 THEN 1 ELSE 0 END) >= 1");
-        } else {
-            $aggSub->havingRaw("SUM(CASE WHEN {$pExpr} > 0 THEN 1 ELSE 0 END) >= 1");
-        }
+        $this->applyPendingStudentsFeedbackStateHaving($aggSub, $request);
 
         return $aggSub;
+    }
+
+    /**
+     * "Feedback given / not given" filter — expressed over the per-student aggregates.
+     */
+    private function applyPendingStudentsFeedbackStateHaving($query, Request $request): void
+    {
+        $pExpr = $this->pendingStudentsPendingExpressionSql();
+
+        if ($request->input('filter_feedback_state', 'not_given') === 'given') {
+            $query->havingRaw("SUM(CASE WHEN {$pExpr} > 0 THEN 1 ELSE 0 END) = 0")
+                ->havingRaw("SUM(CASE WHEN {$pExpr} <= 0 THEN 1 ELSE 0 END) >= 1");
+        } else {
+            $query->havingRaw("SUM(CASE WHEN {$pExpr} > 0 THEN 1 ELSE 0 END) >= 1");
+        }
+    }
+
+    /**
+     * Student count for the current filters.
+     *
+     * Same grouping and HAVING as the display query, but selecting only what the HAVING
+     * needs: the count does not care about names, emails or the GROUP_CONCAT of course
+     * names, and building those for every student only to count the rows was most of the
+     * cost. The HAVING itself depends on the aggregates, so the grouping cannot be skipped.
+     */
+    /**
+     * One page of pending-feedback students, carrying the overall total with it.
+     *
+     * `pending_total` is a window count over the filtered set — evaluated before ORDER BY and
+     * LIMIT, so it is the total number of matching students, not the size of the page. Reading
+     * it off any returned row saves running the whole aggregate a second time just to count it.
+     *
+     * The column is ignored downstream: mergePendingGroupedAggregatesWithDetailRows() copies
+     * named fields, so it never reaches the JSON response.
+     *
+     * @return \Illuminate\Support\Collection<int, object>
+     */
+    private function pendingStudentsPage(
+        \Illuminate\Database\Query\Builder $outer,
+        string $sortColumn,
+        string $sortDirection,
+        int $offset,
+        int $perPage
+    ) {
+        return (clone $outer)
+            ->select('agg_students.*', DB::raw('COUNT(*) OVER () as pending_total'))
+            ->orderBy($sortColumn, $sortDirection)
+            ->offset($offset)
+            ->limit($perPage)
+            ->get();
+    }
+
+    private function pendingStudentsTotal(Request $request, \Illuminate\Database\Query\Builder $outer): int
+    {
+        // The search box matches student_name and course_summary_build, which the lean
+        // subquery below does not select. Count the full aggregate in that case.
+        if ($request->filled('search')) {
+            return (clone $outer)->count();
+        }
+
+        $countSub = (clone $this->buildPendingStudentsGroupedBaseQuery($request))
+            ->select(['sm.pk as student_pk'])
+            ->groupBy('sm.pk');
+
+        $this->applyPendingStudentsFeedbackStateHaving($countSub, $request);
+
+        return DB::query()->fromSub($countSub, 'agg_students')->count();
     }
 
     /**
@@ -3967,8 +4190,6 @@ class FeedbackController extends Controller
                 });
             }
 
-            $totalStudents = (clone $outer)->count();
-
             $sortBy = $request->input('sort_by', 'student_name');
             $sortDir = strtolower($request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
             $sortMap = [
@@ -3981,11 +4202,30 @@ class FeedbackController extends Controller
 
             $perPage = max(1, min((int) ($request->per_page ?: 20), 100));
             $page = max(1, (int) ($request->page ?: 1));
-            $totalPages = $totalStudents > 0 ? (int) ceil($totalStudents / $perPage) : 1;
-            $page = min($page, max($totalPages, 1));
-            $offset = ($page - 1) * $perPage;
 
-            $pageRows = (clone $outer)->orderBy($sortCol, $sortDir)->offset($offset)->limit($perPage)->get();
+            // Take the page and its total in ONE pass. COUNT(*) OVER () is evaluated across the
+            // whole filtered set before ORDER BY and LIMIT, so it returns the same number the
+            // separate count query did — without re-running the aggregate underneath, which is
+            // the expensive part of this report (timetable x enrolment x student, an attendance
+            // EXISTS and a feedback sub-aggregate).
+            $pageRows = $this->pendingStudentsPage($outer, $sortCol, $sortDir, ($page - 1) * $perPage, $perPage);
+
+            if ($pageRows->isNotEmpty()) {
+                $totalStudents = (int) $pageRows->first()->pending_total;
+                $totalPages = (int) ceil($totalStudents / $perPage);
+            } else {
+                // An empty page means either there is nothing to show at all or the requested
+                // page is past the end — the window function cannot say which, because it only
+                // reports on rows it returned. Fall back to counting, then clamp and re-read, so
+                // that asking for page 999 still lands on the last page as it always has.
+                $totalStudents = $this->pendingStudentsTotal($request, $outer);
+                $totalPages = $totalStudents > 0 ? (int) ceil($totalStudents / $perPage) : 1;
+                $page = min($page, max($totalPages, 1));
+
+                if ($totalStudents > 0) {
+                    $pageRows = $this->pendingStudentsPage($outer, $sortCol, $sortDir, ($page - 1) * $perPage, $perPage);
+                }
+            }
 
             if ($pageRows->isEmpty()) {
                 return response()->json([
@@ -5100,9 +5340,9 @@ class FeedbackController extends Controller
      */
     public function getPendingStats(Request $request)
     {
-        $cacheKey = 'pending_feedback_stats_' . ($request->course_pk ?? 'all');
+        $cacheKey = 'pending_stats:' . ($request->course_pk ?? 'all');
 
-        $stats = Cache::remember($cacheKey, 300, function () use ($request) {
+        $stats = FeedbackReportCache::remember($cacheKey, FeedbackReportCache::TTL_STATS, function () use ($request) {
             $query = DB::table('timetable as t')
                 ->select([
                     DB::raw('COUNT(DISTINCT t.pk) as total_sessions'),
