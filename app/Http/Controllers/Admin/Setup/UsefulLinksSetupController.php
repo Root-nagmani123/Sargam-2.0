@@ -23,6 +23,103 @@ class UsefulLinksSetupController extends Controller
         return view('admin.setup.useful_links.index', compact('usefulLinks'));
     }
 
+    /**
+     * Download / Print — one action, two formats, off the same query and the
+     * same column definitions, so the CSV and the printout can't drift apart
+     * (docs/new-design-index-page.md §1). ?q and ?cols are stamped on by the
+     * grid so the export carries what the user is looking at.
+     */
+    public function export(Request $request)
+    {
+        $this->authorizeAdmin();
+
+        $query = UsefulLink::query()->orderBy('position');
+
+        $search = trim((string) $request->input('q', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $like = '%'.$search.'%';
+                $q->where('label', 'like', $like)->orWhere('url', 'like', $like);
+            });
+        }
+
+        $rows = $query->get();
+        $columns = $this->exportColumns($request->input('cols'));
+
+        if ($request->input('format') === 'print') {
+            return view('admin.setup.useful_links.export_print', [
+                'rows' => $rows,
+                'columns' => $columns,
+                'search' => $search,
+                'exportDate' => now()->format('d-m-Y H:i'),
+            ]);
+        }
+
+        $filename = 'useful-links-'.now()->format('Y-m-d-His').'.csv';
+
+        return response()->streamDownload(function () use ($rows, $columns) {
+            $handle = fopen('php://output', 'w');
+            // BOM: without it Excel reads the file as ANSI and mangles any
+            // non-ASCII label.
+            fwrite($handle, "\xEF\xBB\xBF");
+            fputcsv($handle, array_column($columns, 'heading'));
+
+            foreach ($rows as $index => $row) {
+                fputcsv($handle, array_map(
+                    fn (array $col) => (string) $col['value']($row, $index),
+                    $columns
+                ));
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    /**
+     * One definition feeds BOTH the CSV and the print view. `key` is what the
+     * grid's Columns modal sends back as ?cols=; keep the first column
+     * identical to the grid's.
+     */
+    private function exportColumnDefs(): array
+    {
+        return [
+            ['key' => 'sno', 'heading' => 'S.No.', 'class' => 'ul-print-sno',
+                'value' => fn ($row, $index) => $index + 1],
+            ['key' => 'label', 'heading' => 'Label', 'class' => 'ul-print-label',
+                'value' => fn ($row) => (string) $row->label],
+            ['key' => 'url', 'heading' => 'URL', 'class' => 'ul-print-url',
+                'value' => fn ($row) => filled($row->url) ? (string) $row->url : '-'],
+            ['key' => 'file', 'heading' => 'File', 'class' => 'ul-print-file',
+                'value' => fn ($row) => filled($row->file_path) ? basename($row->file_path) : '-'],
+            ['key' => 'position', 'heading' => 'Order', 'class' => 'ul-print-order',
+                'value' => fn ($row) => (string) $row->position],
+            ['key' => 'target', 'heading' => 'Opens In', 'class' => 'ul-print-target',
+                'value' => fn ($row) => $row->target_blank ? 'New Tab' : 'Same Tab'],
+        ];
+    }
+
+    /** Columns still ticked in the grid's Columns modal, in table order. */
+    private function exportColumns(?string $cols): array
+    {
+        $defs = $this->exportColumnDefs();
+
+        if (! filled($cols)) {
+            return $defs;
+        }
+
+        $wanted = array_filter(array_map('trim', explode(',', $cols)));
+        if (empty($wanted)) {
+            return $defs;
+        }
+
+        return array_values(array_filter(
+            $defs,
+            fn (array $def) => in_array($def['key'], $wanted, true)
+        ));
+    }
+
     public function create(Request $request)
     {
         $this->authorizeAdmin();

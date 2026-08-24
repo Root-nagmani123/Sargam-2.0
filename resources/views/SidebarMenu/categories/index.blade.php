@@ -1,353 +1,601 @@
 @extends('admin.layouts.master')
-@section('title', 'Sidebar Categories')
+
+{{-- "Topbar Category", not "Sidebar Categories": that is the name on the menus
+     row this page hangs off (menu 202), and the breadcrumb component appends the
+     page title as its own crumb whenever the two disagree — which read
+     "… / Sidebar / Topbar Category / Sidebar Categories". --}}
+@section('title', 'Topbar Category')
+
+@push('styles')
+@include('admin.layouts.partials.select2-assets')
+{{-- Shared Sidebar Menu Builder chrome — the module stylesheet the Menu Groups
+     and Menus grids will use too, so the screens cannot drift apart.
+     See docs/new-design-index-page.md §3b/§3c. --}}
+<link rel="stylesheet"
+      href="{{ asset('css/sidebar-menu-admin.css') }}?v={{ @filemtime(public_path('css/sidebar-menu-admin.css')) ?: time() }}">
+@endpush
+
 @section('setup_content')
-@php
-    $sidebarCategoryDatatableLang = [
-        'emptyTable' => 'No categories found.',
-        'zeroRecords' => 'No matching categories.',
-        'processing' => 'Loading data…',
-        'search' => 'Search:',
-        'searchPlaceholder' => 'Search categories…',
-        'lengthMenu' => 'Show _MENU_ entries',
-        'info' => 'Showing _START_ to _END_ of _TOTAL_ categories',
-        'infoEmpty' => 'No categories to display',
-        'infoFiltered' => '(filtered from _MAX_ total categories)',
-        'paginate' => [
-            'first' => 'First',
-            'last' => 'Last',
-            'next' => 'Next',
-            'previous' => 'Previous',
-        ],
-    ];
-@endphp
-<style>
-    /* GIGW: minimum touch target ~44×44px, visible keyboard focus */
-    .sidebar-categories-page .btn-gigw-touch {
-        min-height: 2.75rem;
-        min-width: 2.75rem;
-        padding-inline: 1rem;
-    }
-    .sidebar-categories-page .btn-gigw-touch:focus-visible {
-        outline: 3px solid #004a93;
-        outline-offset: 2px;
-        box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.25);
-    }
-    .sidebar-categories-page .modal .btn:focus-visible {
-        outline: 3px solid #004a93;
-        outline-offset: 2px;
-    }
-    .sidebar-categories-page .gigw-table-btn {
-        min-height: 2.75rem;
-        align-items: center;
-    }
-    .sidebar-categories-page .gigw-icon-only-btn {
-        width: 2.75rem;
-        height: 2.75rem;
-        padding: 0;
-    }
-    .sidebar-categories-page .gigw-table-btn:focus-visible {
-        outline: 3px solid #004a93;
-        outline-offset: 2px;
-    }
-    .sidebar-categories-page .gigw-switch-touch {
-        width: 3rem;
-        height: 1.5rem;
-        cursor: pointer;
-    }
-    .sidebar-categories-page .gigw-switch-touch:focus-visible {
-        outline: 3px solid #004a93;
-        outline-offset: 3px;
-    }
-    .sidebar-categories-page #sidebar-category-table_wrapper .dataTables_filter input {
-        min-height: 2.75rem;
-        margin-left: 0.5rem;
-    }
-    .sidebar-categories-page #sidebar-category-table_wrapper .dataTables_length select {
-        min-height: 2.75rem;
-        min-width: 5rem;
-        margin-left: 0.35rem;
-        margin-right: 0.35rem;
-    }
-    .sidebar-categories-page #sidebar-category-table_wrapper .dataTables_paginate .page-link {
-        min-height: 2.75rem;
-        min-width: 2.75rem;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .sidebar-categories-page #sidebar-category-table_wrapper .dataTables_paginate .page-link:focus-visible {
-        outline: 3px solid #004a93;
-        outline-offset: 2px;
-    }
-    .sidebar-categories-page #sidebar-category-table {
-        --bs-table-striped-bg: rgba(0, 74, 147, 0.04);
-    }
-</style>
-<div class="container-fluid py-3 sidebar-categories-page">
-    <x-breadcrum title="Sidebar Categories" />
+<div class="container-fluid sbm-page">
+    <x-breadcrum title="Topbar Category" :showBack="false">
+        <button type="button"
+                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
+                id="sbmAddBtn">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+            <span>Add Category</span>
+        </button>
+    </x-breadcrum>
+
     <x-session_message />
-    <section class="datatables" aria-labelledby="sidebar-categories-heading">
-        <div class="card shadow-sm border-0 border-start border-4 border-primary rounded-3">
-            <div class="card-body p-3 p-md-4">
-                <header class="row align-items-center g-3 mb-3 mb-md-4 pb-3 border-bottom border-light">
-                    <div class="col-12 col-md">
-                        <h2 id="sidebar-categories-heading" class="h5 mb-0 fw-semibold text-body">
-                            Sidebar Categories
-                        </h2>
-                        <p class="small text-secondary mb-0 mt-1">
-                            Manage sidebar menu groups. Use a clear name and a short URL slug.
-                        </p>
-                    </div>
-                    <div class="col-12 col-md-auto">
-                        <button type="button"
-                            class="btn btn-primary btn-gigw-touch d-inline-flex align-items-center justify-content-center gap-2 w-100 w-md-auto"
-                            onclick="CategoryModal()">
-                            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                            <span>Add category</span>
-                        </button>
-                    </div>
-                </header>
-                <div class="overflow-hidden">
-                    <x-data-table.table
-                        :columns="$columns"
-                        :filters="[]"
-                        ajax-route="{{ route('sidebar.categories.index') }}"
-                        id="sidebar-category-table"
-                        table-class="table align-middle mb-0 caption-top shadow-sm"
-                        :datatable-language="$sidebarCategoryDatatableLang"
-                    />
+
+    {{-- Exports — ABOVE the card, per §1. Nothing here filters by status, so the
+         row keeps its place with the buttons alone on the right. --}}
+    <div class="d-flex flex-wrap align-items-end justify-content-end gap-3 mb-3">
+
+        <div class="d-flex flex-wrap align-items-end gap-2 sbm-secondary-actions">
+            {{-- ?q / ?cols are stamped on by sbmUpdateExportLinks(), so a download
+                 carries the same search and columns as the grid. --}}
+            <div class="dropdown">
+                <button type="button"
+                        class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                        id="sbmDownloadMenuBtn" data-bs-toggle="dropdown" aria-expanded="false"
+                        title="Download this list">
+                    <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end programme-dt-download-menu"
+                    aria-labelledby="sbmDownloadMenuBtn">
+                    <li>
+                        <a class="dropdown-item" id="sbmCsvLink"
+                           href="{{ route('sidebar.categories.export', ['format' => 'csv']) }}">
+                            <i class="bi bi-filetype-csv" aria-hidden="true"></i><span>CSV</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" id="sbmExcelLink"
+                           href="{{ route('sidebar.categories.export', ['format' => 'excel']) }}">
+                            <i class="bi bi-file-earmark-excel" aria-hidden="true"></i><span>Excel</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" id="sbmPdfLink"
+                           href="{{ route('sidebar.categories.export', ['format' => 'pdf']) }}">
+                            <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i><span>PDF</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            {{-- Print stays OUTSIDE the dropdown: it opens a sheet rather than
+                 saving a file, so it is not one of the download formats. --}}
+            <a href="{{ route('sidebar.categories.export', ['format' => 'print']) }}"
+               id="sbmPrintLink" target="_blank" rel="noopener"
+               class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
+                <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
+
+            {{-- Toolbar: columns + search on the right (§2). This grid has no
+                 filter selects, so there is nothing on the left to reset. --}}
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4
+                        programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="sbmBtnColumns"
+                            data-bs-toggle="modal" data-bs-target="#sbmColumnVisibilityModal"
+                            title="Show / hide columns"
+                            style="border: 1px solid #d0d5dd; background: #fff; color: #344054;">
+                        <span>Columns</span><i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+
+                    {{-- datatable-global-ui.js moves DataTables' own filter in here. --}}
+                    <div id="sbmDtSearch" class="programme-dt-search" data-dt-search-for="sidebarCategoriesTable"></div>
                 </div>
             </div>
+
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    {{-- Server-side: search, sort and paging are all SQL, so only the
+                         page on screen ever reaches the browser. No `dom`/colVis
+                         options here — the global script owns that chrome. --}}
+                    <table id="sidebarCategoriesTable"
+                           class="table table-hover align-middle mb-0 w-100 programme-dt-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Sr No.</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Slug</th>
+                                <th scope="col">Icon</th>
+                                <th scope="col">Order</th>
+                                <th scope="col">Created</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                {{-- Footer variant A — DataTables paginates, datatable-global-ui.js
+                     fills this in with the pager and "Showing [10] of N items" (§4). --}}
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3"
+                     data-dt-footer-for="sidebarCategoriesTable"></div>
+            </div>
+
         </div>
-    </section>
+    </div>
 </div>
 
+{{-- Add / Edit — one modal, two modes. Same header, field card, labels and
+     footer pair either way; only the title and the submit caption change (§3c). --}}
 <div class="modal fade" id="CategoryModal" tabindex="-1" aria-labelledby="CategoryModalLabel"
-    data-bs-backdrop="static" aria-modal="true" role="dialog">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content rounded-3 shadow">
-            <div class="modal-header border-bottom border-light py-3">
-                <h2 class="modal-title h5 fw-semibold mb-0" id="CategoryModalLabel">
-                    Add or edit sidebar category
-                </h2>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close dialog"></button>
+     data-bs-backdrop="static" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content sbm-modal border-0 shadow">
+            <form id="categoryForm" action="{{ route('sidebar.categories.store') }}" method="post" novalidate>
+                @csrf
+                <input type="hidden" name="id" id="categoryId">
+
+                <div class="modal-header sbm-modal-header">
+                    <div>
+                        <h5 class="modal-title" id="CategoryModalLabel">Add Category</h5>
+                        <p class="sbm-modal-sub" id="CategoryModalSub">Create a new top-bar category.</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body sbm-modal-body">
+                    {{-- Two columns: the grid gap owns the spacing, so the cells carry
+                         no margin of their own (.sbm-form-grid > .form-group). --}}
+                    <div class="sbm-field-card sbm-form-grid">
+                        <div class="form-group">
+                            <label class="sbm-form-label" for="name">Name<span class="sbm-req">*</span></label>
+                            <input type="text" class="form-control sbm-control" name="name" id="name"
+                                   placeholder="e.g. Training Resources" value="{{ old('name') }}"
+                                   autocomplete="off" maxlength="100" required aria-required="true">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="sbm-form-label" for="slug">Slug<span class="sbm-req">*</span></label>
+                            <input type="text" class="form-control sbm-control font-monospace" name="slug" id="slug"
+                                   placeholder="e.g. training-resources" value="{{ old('slug') }}"
+                                   readonly required aria-required="true" aria-describedby="slug-help"
+                                   autocomplete="off" maxlength="100">
+                            <p id="slug-help" class="sbm-form-help">
+                                Generated automatically from the name (lowercase, hyphenated).
+                            </p>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="sbm-form-label" for="order">Display order</label>
+                            <input type="number" class="form-control sbm-control" name="order" id="order"
+                                   placeholder="0" value="{{ old('order') }}" inputmode="numeric" min="0"
+                                   aria-describedby="order-help">
+                            <p id="order-help" class="sbm-form-help">Lower numbers appear first (optional).</p>
+                        </div>
+
+                        {{-- Status is editable here as well as from the row switch — a
+                             category created Inactive would otherwise need a second trip. --}}
+                        <div class="form-group">
+                            <label class="sbm-form-label" for="is_active">Status<span class="sbm-req">*</span></label>
+                            <select class="form-select sbm-control select2" name="is_active" id="is_active"
+                                    data-placeholder="Status" required aria-required="true">
+                                <option value="1">Active</option>
+                                <option value="0">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer sbm-modal-footer">
+                    <button type="button" class="btn sbm-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn sbm-btn-submit" id="SubmitCategoryForm">Add Category</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="sbmColumnVisibilityModal" tabindex="-1" aria-labelledby="sbmColumnVisibilityLabel"
+     aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="sbmColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body pt-3">
-                <form id="categoryForm" action="" method="post" novalidate>
-                    @csrf
-                    <input type="hidden" name="id" id="categoryId">
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-medium" for="name">
-                            Name
-                            <span class="text-danger" aria-hidden="true">*</span>
-                            <span class="visually-hidden">(required)</span>
-                        </label>
-                        <input type="text" class="form-control" name="name" id="name"
-                            placeholder="Enter category name" value="{{ old('name') }}"
-                            autocomplete="off" maxlength="100" required aria-required="true">
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-medium" for="slug">
-                            Slug
-                            <span class="text-danger" aria-hidden="true">*</span>
-                            <span class="visually-hidden">(required)</span>
-                        </label>
-                        <input type="text" class="form-control font-monospace" name="slug" id="slug"
-                            placeholder="e.g. training-resources" value="{{ old('slug') }}"
-                            readonly required aria-required="true" aria-describedby="slug-help"
-                            autocomplete="off" maxlength="100">
-                        <p id="slug-help" class="form-text mb-0">
-                            Generated automatically from the category name (lowercase, hyphenated).
-                        </p>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-medium" for="icon">Icon</label>
-                        <input type="text" class="form-control font-monospace" name="icon" id="icon"
-                            placeholder="e.g. bi-house" value="{{ old('icon') }}"
-                            autocomplete="off" maxlength="100" aria-describedby="icon-help">
-                        <p id="icon-help" class="form-text mb-0">Bootstrap Icons class name (optional).</p>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-medium" for="order">Display order</label>
-                        <input type="number" class="form-control" name="order" id="order" placeholder="0"
-                            value="{{ old('order') }}" inputmode="numeric" min="0" aria-describedby="order-help">
-                        <p id="order-help" class="form-text mb-0">Lower numbers appear first (optional).</p>
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label fw-medium" for="is_active">Status</label>
-                        <select class="form-select" name="is_active" id="is_active" required aria-required="true">
-                            <option value="1">Active</option>
-                            <option value="0">Inactive</option>
-                        </select>
-                    </div>
-                    <div class="d-flex flex-column flex-sm-row gap-2 gap-sm-3 mt-4 pt-2 border-top border-light">
-                        <button type="submit" class="btn btn-success btn-gigw-touch order-2 order-sm-1"
-                            id="SubmitCategoryForm">
-                            <i class="bi bi-check-lg me-2" aria-hidden="true"></i>Save
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary btn-gigw-touch order-1 order-sm-2"
-                            data-bs-dismiss="modal">
-                            <i class="bi bi-x-lg me-2" aria-hidden="true"></i>Cancel
-                        </button>
-                    </div>
-                </form>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="sidebarCatColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
 @endsection
-@section('script')
-<script>
-    $(document).on('click', '.edit-btn', function () {
-        let data = $(this).data('item');
-        CategoryModal(data);
-    })
 
-    function CategoryModal(data = null) {
-        $('input[name="_method"]').remove();
+@push('scripts')
+<script>
+$(function () {
+    'use strict';
+
+    var STORE_URL = "{{ route('sidebar.categories.store') }}";
+    var UPDATE_BASE = "{{ url('sidebar/categories') }}";
+
+    /* ── DataTable (server-side) ─────────────────────────────────────────────
+       `sargamServerOrder` keeps ordering on the server, so clicking a header
+       re-sorts the WHOLE set rather than shuffling the visible page. The default
+       sort is the Display order column (index 4) — the service's query is left
+       unordered on purpose so a header click isn't overruled by it. ── */
+    var dt = $('#sidebarCategoriesTable').DataTable({
+        serverSide: true,
+        processing: true,
+        sargamServerOrder: true,
+        searching: true,
+        searchDelay: 400,          // search as you type, one query per pause
+        // No default sort — rows arrive in the database's own order until a
+        // header is clicked. Use [[4, 'asc']] to open on Display order instead.
+        order: [],
+        /* footer.blade.php:80 turns the Responsive extension on globally. It
+           deals with a table wider than its box by HIDING columns (on a narrow
+           screen that takes the Action column away) and swaps in its own +/−
+           child-row chrome, which is not this design's. The panel's
+           .table-responsive scrolls horizontally instead — §3. */
+        responsive: false,
+        ajax: {
+            url: "{{ route('sidebar.categories.index') }}"
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'text-center' },
+            { data: 'name', name: 'name' },
+            { data: 'slug', name: 'slug' },
+            { data: 'icon', name: 'icon', className: 'text-center' },
+            { data: 'order', name: 'order', className: 'text-center' },
+            { data: 'created_at', name: 'created_at', className: 'text-nowrap' },
+            { data: 'status', name: 'is_active', orderable: false, searchable: false, className: 'text-center' },
+            { data: 'action', name: 'action', orderable: false, searchable: false }
+        ],
+        language: {
+            emptyTable: '<div class="sbm-empty">' +
+                '<i class="bi bi-folder-x d-block mb-2" aria-hidden="true"></i>' +
+                '<h6 class="fw-semibold mb-1">No Categories Found</h6>' +
+                '<p class="mb-0 small">Get started by adding your first sidebar category.</p>' +
+                '</div>',
+            zeroRecords: '<div class="sbm-empty">' +
+                '<i class="bi bi-search d-block mb-2" aria-hidden="true"></i>' +
+                '<h6 class="fw-semibold mb-1">No Categories Found</h6>' +
+                '<p class="mb-0 small">No category matches your search.</p>' +
+                '</div>'
+        }
+    });
+
+    /* ── Column visibility (DataTables column API) ────────────────────────────
+       Hidden columns are stored by LABEL, not index: an index would point at a
+       different column the moment one is added, silently hiding the wrong one.
+       An unknown label is simply ignored, so a renamed column comes back
+       visible — the safe direction to fail in. ── */
+    var COL_KEY = 'sidebarCatGrid:hiddenColumns:v1';
+
+    /* Header index -> the export key the server understands
+       (SidebarCategoryService::exportColumnDefs()). Positional: '' marks a column
+       that is not in the export at all — here, Action.
+       ⚠️ Adding a column to the table means adding an entry here too. */
+    var SBM_EXPORT_COLUMN_KEYS = ['sno', 'name', 'slug', 'icon', 'order', 'created_at', 'status', ''];
+    var SBM_EXPORT_COL_COUNT = SBM_EXPORT_COLUMN_KEYS.filter(Boolean).length;
+
+    /* Keep Download and Print carrying exactly the columns still on screen, plus
+       the search term currently applied to the grid. */
+    function sbmUpdateExportLinks() {
+        var keys = [];
+        dt.columns().every(function () {
+            var key = SBM_EXPORT_COLUMN_KEYS[this.index()];
+            if (key && this.visible()) { keys.push(key); }
+        });
+
+        var term = dt.search() || '';
+
+        ['sbmCsvLink', 'sbmExcelLink', 'sbmPdfLink', 'sbmPrintLink'].forEach(function (id) {
+            var link = document.getElementById(id);
+            if (!link) { return; }
+            var base = link.href.split('?')[0];
+            var params = new URLSearchParams(link.href.split('?')[1] || '');
+
+            params.delete('q');
+            if (term !== '') { params.set('q', term); }
+
+            params.delete('cols');
+            // Omit ?cols= entirely while nothing is hidden — the server reads
+            // "no cols" as "every column".
+            if (keys.length !== SBM_EXPORT_COL_COUNT) { params.set('cols', keys.join(',')); }
+
+            var qs = params.toString();
+            link.href = base + (qs ? '?' + qs : '');
+        });
+    }
+
+    // Search-as-you-type has to re-stamp the links, not just redraw the grid.
+    dt.on('search.dt', sbmUpdateExportLinks);
+
+    function getHiddenCols() {
+        try {
+            var parsed = JSON.parse(localStorage.getItem(COL_KEY) || '[]');
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) { return []; }
+    }
+
+    function persistHiddenCols(cols) {
+        try { localStorage.setItem(COL_KEY, JSON.stringify(cols)); } catch (e) { /* noop */ }
+    }
+
+    function buildColumnToggles() {
+        var $grid = $('#sidebarCatColumnToggleGrid');
+        var hidden = getHiddenCols();
+
+        dt.columns().every(function () {
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (title) { this.visible(hidden.indexOf(title) === -1, false); }
+        });
+        dt.columns.adjust();
+
+        if (!$grid.length) { return; }
+        $grid.empty();
+
+        dt.columns().every(function () {
+            var index = this.index();
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (!title) { return; }
+
+            var inputId = 'sbmcolvis_' + index;
+            var $checkbox = $('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .prop('checked', hidden.indexOf(title) === -1);
+
+            $checkbox.on('change', function () {
+                var cols = getHiddenCols();
+                var pos = cols.indexOf(title);
+                if (this.checked) {
+                    if (pos !== -1) { cols.splice(pos, 1); }
+                } else if (pos === -1) {
+                    cols.push(title);
+                }
+                persistHiddenCols(cols);
+                dt.column(index).visible(this.checked, false);
+                dt.columns.adjust();
+                sbmUpdateExportLinks();
+            });
+
+            $('<div class="col-12 col-sm-6 col-md-4"></div>').append(
+                $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                    .attr('for', inputId)
+                    .append($checkbox)
+                    .append($('<span></span>').text(title))
+            ).appendTo($grid);
+        });
+    }
+
+    buildColumnToggles();
+    // Stamp the saved column state onto the export links on first paint too —
+    // otherwise a preference restored from localStorage wouldn't reach the server
+    // until the user opened the modal and toggled something.
+    sbmUpdateExportLinks();
+
+    /* ── Status switch ───────────────────────────────────────────────────────
+       This grid has its own endpoint rather than the generic table/column one
+       custom.js binds `.status-toggle` to, so the confirm + AJAX live here. The
+       badge and the switch are in different columns, so redraw from the server
+       on success rather than hand-mirroring them. ── */
+    $(document).on('change', '.sidebar-category-status-toggle', function () {
+        var $checkbox = $(this);
+        var id = $checkbox.data('id');
+        var value = $checkbox.is(':checked') ? 1 : 0;
+        var actionText = value === 1 ? 'activate' : 'deactivate';
+        var name = $checkbox.data('name') || 'this category';
+
+        function revert() { $checkbox.prop('checked', value !== 1); }
+
+        function send() {
+            $.ajax({
+                url: "{{ route('sidebar.categories.status', ':id') }}".replace(':id', id),
+                type: 'GET',
+                data: { _token: "{{ csrf_token() }}", is_active: value },
+                success: function (response) {
+                    if (response && response.success) {
+                        if (typeof toastr !== 'undefined') { toastr.success(response.message); }
+                    } else if (typeof toastr !== 'undefined') {
+                        toastr.error((response && response.message) || 'Something went wrong');
+                    }
+                    // Current page, not page 1 — keeps the user where they were.
+                    dt.ajax.reload(null, false);
+                },
+                error: function () {
+                    if (typeof toastr !== 'undefined') { toastr.error('Something went wrong'); }
+                    revert();
+                }
+            });
+        }
+
+        if (typeof Swal === 'undefined' || typeof Swal.fire !== 'function') {
+            if (window.confirm('Are you sure you want to ' + actionText + ' "' + name + '"?')) { send(); }
+            else { revert(); }
+            return;
+        }
+
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'Do you want to ' + actionText + ' "' + name + '"?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, ' + actionText,
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#004384',
+            reverseButtons: true
+        }).then(function (result) {
+            if (result.isConfirmed) { send(); } else { revert(); }
+        });
+    });
+
+    /* ── Delete: confirm before submitting ───────────────────────────────── */
+    $(document).on('submit', '.sbm-delete-form', function (e) {
+        var form = this;
+        if ($(form).data('confirmed')) { return; }
+        e.preventDefault();
+
+        var name = $(form).find('.sbm-act--del').data('name') || 'this category';
+
+        if (typeof Swal === 'undefined' || typeof Swal.fire !== 'function') {
+            if (window.confirm('Delete "' + name + '"? This cannot be undone.')) {
+                $(form).data('confirmed', true);
+                form.submit();
+            }
+            return;
+        }
+
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'Delete "' + name + '"? This cannot be undone.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#d92d20',
+            reverseButtons: true
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                $(form).data('confirmed', true);
+                form.submit();
+            }
+        });
+    });
+
+    /* ── Add / Edit modal ────────────────────────────────────────────────────
+       One modal, two modes. Everything that differs between them is set here:
+       the title, the submit caption, the form action and the _method spoof. ── */
+    function openCategoryModal(data) {
+        var $form = $('#categoryForm');
+
+        $form.find('input[name="_method"]').remove();
+        if ($form.data('validator')) { $form.validate().resetForm(); }
+        $form.find('.is-invalid, .is-valid').removeClass('is-invalid is-valid');
+        $form.find('.invalid-feedback').remove();
         $('#slug').removeData('manual');
+        $('#SubmitCategoryForm').prop('disabled', false).removeAttr('aria-busy');
+
         if (data) {
+            $('#CategoryModalLabel').text('Edit Category');
+            $('#CategoryModalSub').text('Update “' + (data.name || 'this category') + '”.');
+            $('#SubmitCategoryForm').text('Update Category');
             $('#categoryId').val(data.id);
             $('#name').val(data.name);
             $('#slug').val(data.slug);
             $('#icon').val(data.icon);
             $('#order').val(data.order);
-            $('#is_active').val(data.is_active);
-            $('#categoryForm').attr('action', '/sidebar/categories/' + data.id);
-            $('#categoryForm').append('<input type="hidden" name="_method" value="PUT">');
+            // change.select2 or Edit opens showing the placeholder (§3c).
+            $('#is_active').val(String(data.status) === '1' ? '1' : '0').trigger('change.select2');
+            $form.attr('action', UPDATE_BASE + '/' + data.id)
+                 .append('<input type="hidden" name="_method" value="PUT">');
         } else {
-            $('#categoryForm')[0].reset();
+            $('#CategoryModalLabel').text('Add Category');
+            $('#CategoryModalSub').text('Create a new top-bar category.');
+            $('#SubmitCategoryForm').text('Add Category');
+            $form[0].reset();
+            // Repaint Select2 or Add opens showing the last Edit's status.
+            $form.find('select.select2').trigger('change.select2');
             $('#categoryId').val('');
-            $('#categoryForm').attr('action', '/sidebar/categories');
+            $form.attr('action', STORE_URL);
         }
-        $('#CategoryModal').modal('show');
+
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('CategoryModal')).show();
     }
 
+    $('#sbmAddBtn').on('click', function () { openCategoryModal(null); });
+
+    $(document).on('click', '.sbm-edit-btn', function () {
+        var $btn = $(this);
+        openCategoryModal({
+            id: $btn.attr('data-id'),
+            name: $btn.attr('data-name'),
+            slug: $btn.attr('data-slug'),
+            icon: $btn.attr('data-icon'),
+            order: $btn.attr('data-order'),
+            status: $btn.attr('data-status')
+        });
+    });
+
+    // Slug mirrors the name until the user types their own.
     $('#name').on('keyup', function () {
-        if ($('#slug').data('manual') !== true) {
-            let slug = $(this).val()
-                .toLowerCase()
-                .trim()
+        if ($('#slug').data('manual') === true) { return; }
+        $('#slug').val(
+            $(this).val().toLowerCase().trim()
                 .replace(/ /g, '-')
                 .replace(/[^\w-]+/g, '')
-                .replace(/--+/g, '-');
+                .replace(/--+/g, '-')
+        );
+    });
 
-            $('#slug').val(slug);
+    $('#slug').on('keyup', function () { $(this).data('manual', true); });
+
+    /* ── Validation ─────────────────────────────────────────────────────────
+       `novalidate` on the form leaves enforcement to jquery-validate, which can
+       show a message next to the field instead of a native bubble. ── */
+    $.validator.addMethod('nameRegex', function (value, element) {
+        return this.optional(element) || /^[A-Za-z .'-]+$/.test(value);
+    }, "Name can only contain letters, spaces, ., ' and -.");
+
+    $.validator.addMethod('slugRegex', function (value, element) {
+        return this.optional(element) || /^[a-z0-9-]+$/.test(value);
+    }, 'Slug can only contain lowercase letters, numbers and hyphens.');
+
+    $('#categoryForm').validate({
+        ignore: '.ignore',
+        rules: {
+            name: { required: true, minlength: 2, maxlength: 100, nameRegex: true },
+            slug: { required: true, minlength: 2, maxlength: 100, slugRegex: true },
+            icon: { maxlength: 100 },
+            order: { required: false, digits: true },
+            is_active: { required: true }
+        },
+        messages: {
+            name: {
+                required: 'Please enter category name',
+                minlength: 'Name must be at least 2 characters',
+                maxlength: 'Name must be less than 100 characters'
+            },
+            slug: {
+                required: 'Slug is required',
+                minlength: 'Slug must be at least 2 characters',
+                maxlength: 'Slug must be less than 100 characters'
+            },
+            icon: { maxlength: 'Icon must be less than 100 characters' },
+            order: { digits: 'Order must be a number' },
+            is_active: { required: 'Please select status' }
+        },
+        errorClass: 'is-invalid',
+        validClass: 'is-valid',
+        errorElement: 'div',
+        highlight: function (element) {
+            $(element).addClass('is-invalid').removeClass('is-valid');
+        },
+        unhighlight: function (element) {
+            $(element).removeClass('is-invalid').addClass('is-valid');
+        },
+        errorPlacement: function (error, element) {
+            error.addClass('invalid-feedback');
+            element.closest('.form-group').append(error);
+        },
+        submitHandler: function (form) {
+            var $btn = $('#SubmitCategoryForm');
+            $btn.prop('disabled', true).attr('aria-busy', 'true').html(
+                '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' +
+                '<span>Processing…</span>'
+            );
+            form.submit();
         }
     });
-
-    $('#slug').on('keyup', function () {
-        $(this).data('manual', true);
-    });
-
-    $(document).ready(function () {
-        $.validator.addMethod("nameRegex", function(value, element) {
-            return this.optional(element) || /^[A-Za-z .'-]+$/.test(value);
-        }, "Name can only contain letters, spaces, ., ' and -.");
-
-        // Slug validation (only lowercase, dash)
-        $.validator.addMethod("slugRegex", function(value, element) {
-            return this.optional(element) || /^[a-z0-9-]+$/.test(value);
-        }, "Slug can only contain lowercase letters, numbers and hyphens.");
-
-
-        $("#categoryForm").validate({
-            ignore: ".ignore",
-            rules: {
-                name: {
-                    required: true,
-                    minlength: 2,
-                    maxlength: 100,
-                    nameRegex: true,
-                },
-                slug: {
-                    required: true,
-                    minlength: 2,
-                    maxlength: 100,
-                    slugRegex: true
-                },
-                icon: {
-                    maxlength: 100
-                },
-                order: {
-                    required: false,
-                    digits: true
-                },
-                is_active: {
-                    required: true
-                }
-            },
-            messages: {
-                name: {
-                    required: "Please enter category name",
-                    minlength: "Name must be at least 2 characters",
-                    maxlength: "Name must be less than 100 characters"
-                },
-                slug: {
-                    required: "Slug is required",
-                    minlength: "Slug must be at least 2 characters",
-                    maxlength: "Slug must be less than 100 characters"
-                },
-                icon: {
-                    maxlength: "Icon must be less than 100 characters"
-                },
-                order: {
-                    digits: "Order must be a number"
-                },
-                is_active: {
-                    required: "Please select status"
-                }
-            },
-            errorClass: "is-invalid",
-            validClass: "is-valid",
-            errorElement: "div",
-            highlight: function (element) {
-                $(element).addClass("is-invalid").removeClass("is-valid");
-            },
-            unhighlight: function (element) {
-                $(element).removeClass("is-invalid").addClass("is-valid");
-            },
-            errorPlacement: function (error, element) {
-                error.addClass("invalid-feedback");
-                element.closest(".form-group").append(error);
-            },
-            submitHandler: function (form) {
-                let btn = $("#SubmitCategoryForm");
-                btn.prop("disabled", true);
-                btn.attr("aria-busy", "true");
-                btn.html(
-                    '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' +
-                    '<span>Processing…</span>'
-                );
-                form.submit();
-            }
-        });
-
-        $(document).on('change', '.sidebar-category-status-toggle', function () {
-            let id = $(this).data('id');
-            let value = $(this).is(':checked') ? 1 : 0;
-            let column = $(this).data('column');
-            
-            $.ajax({
-                url: "{{ route('sidebar.categories.status', ':id') }}".replace(':id', id),
-                type: "GET",
-                data: {
-                    _token: "{{ csrf_token() }}",
-                    is_active: value
-                },
-                success: function (response) {
-                    if (response.success) {
-                        toastr.success(response.message);
-                    } else {
-                        toastr.error(response.message);
-                    }
-                    $('#sidebar-category-table').DataTable().ajax.reload();
-                },
-                error: function (xhr) {
-                    toastr.error('Something went wrong');
-                }
-            });
-        });
-    });
+});
 </script>
-@endsection
+@endpush

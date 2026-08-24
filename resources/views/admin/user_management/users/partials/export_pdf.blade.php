@@ -1,58 +1,153 @@
-<!DOCTYPE html>
+{{-- Users → PDF (DomPDF).
+
+     Landscape: seven columns including an email address do not fit A4 portrait.
+
+     Deliberately NOT sharing export_print.blade.php's CSS: DomPDF has no
+     print-color-adjust, no @media print and only partial CSS support, and it
+     needs base64 image data rather than asset() URLs. The visual language is
+     kept identical by hand — same navy, same header order, same zebra.
+
+     Expects: $columns (label / width / centre), $rows, $filterLine (plain text
+     or null), $exportDate, and optionally $note / $totalRows when the controller
+     truncated the row set to keep DomPDF inside its memory limit. --}}
+@php
+    $logoFor = function (string $relative): ?string {
+        $path = public_path($relative);
+        if (! is_file($path) || ! is_readable($path)) {
+            return null;
+        }
+        $mime = str_ends_with(strtolower($relative), '.png') ? 'image/png' : 'image/jpeg';
+
+        return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($path));
+    };
+
+    $emblem = $logoFor('images/ashoka.png');
+    $logo   = $logoFor('images/lbsnaa_logo.jpg');
+@endphp
+<!doctype html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Users Export</title>
+    <title>Users — LBSNAA</title>
     <style>
-        * { font-family: DejaVu Sans, sans-serif; }
-        body { margin: 0; color: #1f2937; }
-        .report-head { margin-bottom: 12px; }
-        .report-head h1 { font-size: 16px; margin: 0 0 2px; }
-        .report-head .meta { font-size: 10px; color: #6b7280; }
-        table { width: 100%; border-collapse: collapse; font-size: 10px; }
-        thead th {
-            background: #f3f4f6;
-            border: 1px solid #d1d5db;
-            padding: 5px 6px;
+        @page { size: A4 landscape; margin: 10mm 10mm; }
+        * { font-family: 'DejaVu Sans', sans-serif; }
+        body { margin: 0; padding: 0; color: #1f2937; font-size: 9px; }
+
+        table.pdf-hdr { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+        table.pdf-hdr td { vertical-align: middle; padding: 0; }
+        table.pdf-hdr .logo { width: 120px; }
+        table.pdf-hdr .logo img { height: 44px; }
+        table.pdf-hdr .centre { text-align: center; }
+
+        .inst { font-size: 12px; font-weight: bold; color: #003366; line-height: 1.3; }
+        .sub  { font-size: 8px; color: #4b5563; margin-top: 2px; }
+        .rule { border-bottom: 2px solid #003366; margin-bottom: 6px; }
+
+        .report-title { text-align: center; font-size: 12px; font-weight: bold; color: #003366; margin: 5px 0 2px; }
+        .meta  { text-align: center; font-size: 8px; color: #6b7280; margin-bottom: 6px; }
+        .total { text-align: center; font-size: 9px; font-weight: bold; color: #003366;
+                 background: #eef2f8; padding: 3px 0; margin-bottom: 6px; }
+        /* A truncated sheet has to SAY it is truncated, or it reads as the whole
+           list and quietly under-reports. */
+        .note  { text-align: center; font-size: 8px; color: #92400e; background: #fef3c7;
+                 border: 0.8px solid #fcd34d; padding: 4px 6px; margin-bottom: 6px; }
+
+        table.data-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        table.data-table th, table.data-table td {
+            border: 0.8px solid #cccccc;
+            padding: 4px 5px;
             text-align: left;
-            font-weight: bold;
-        }
-        tbody td {
-            border: 1px solid #e5e7eb;
-            padding: 4px 6px;
             vertical-align: top;
+            word-wrap: break-word;
         }
-        tbody tr:nth-child(even) td { background: #fafafa; }
-        .empty { text-align: center; padding: 18px; color: #6b7280; }
+        table.data-table thead th {
+            background: #003366;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 8.5px;
+            border-color: #002244;
+        }
+        table.data-table tbody tr:nth-child(even) { background: #f4f7fb; }
+
+        /* Must out-specify `table.data-table th, table.data-table td` above, which
+           sets text-align: left — a bare .centre-col loses to it and the centred
+           columns silently render left-aligned. */
+        table.data-table th.centre-col,
+        table.data-table td.centre-col { text-align: center; }
+
+        .empty { text-align: center; padding: 16px; color: #6b7280; }
+        .foot  { margin-top: 8px; text-align: center; font-size: 7px; color: #6b7280; }
     </style>
 </head>
 <body>
-    <div class="report-head">
-        <h1>Users</h1>
-        <div class="meta">Generated: {{ $generatedAt }} &middot; {{ count($rows) }} record(s)</div>
-    </div>
 
-    <table>
+    <table class="pdf-hdr">
+        <tr>
+            <td class="logo">
+                @if($emblem)<img src="{{ $emblem }}" alt="">@endif
+                @if($logo)<img src="{{ $logo }}" alt="">@endif
+            </td>
+            <td class="centre">
+                <div class="inst">LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION</div>
+                <div class="sub">Mussoorie, Uttarakhand &nbsp;|&nbsp; Sargam 2.0</div>
+            </td>
+            {{-- Mirrors the logo cell so the centre block stays optically centred. --}}
+            <td class="logo"></td>
+        </tr>
+    </table>
+
+    <div class="rule"></div>
+
+    <div class="report-title">USERS</div>
+    <div class="meta">
+        @if(filled($filterLine)){{ $filterLine }} &nbsp;|&nbsp; @endif Generated: {{ $exportDate }}
+    </div>
+    <div class="total">Total Records: {{ number_format($totalRows ?? count($rows)) }}</div>
+
+    @if (!empty($note))
+        <div class="note">{{ $note }}</div>
+    @endif
+
+    {{-- DomPDF ignores <colgroup> widths, so a width has to sit on the cell
+         itself. $columns is already filtered to whatever is still ticked in the
+         grid's Columns modal, and the rows were built from the same list, so the
+         two can't fall out of step. --}}
+    <table class="data-table">
         <thead>
             <tr>
-                @foreach($headings as $heading)
-                <th>{{ $heading }}</th>
+                @foreach ($columns as $col)
+                    <th class="{{ $col['centre'] ? 'centre-col' : '' }}" style="width: {{ $col['width'] }};">
+                        {{ $col['label'] }}
+                    </th>
                 @endforeach
             </tr>
         </thead>
         <tbody>
-            @forelse($rows as $row)
-            <tr>
-                @foreach($row as $cell)
-                <td>{{ $cell }}</td>
-                @endforeach
-            </tr>
+            @forelse ($rows as $row)
+                <tr>
+                    @foreach ($columns as $i => $col)
+                        <td class="{{ $col['centre'] ? 'centre-col' : '' }}">{{ $row[$i] ?? '' }}</td>
+                    @endforeach
+                </tr>
             @empty
-            <tr>
-                <td class="empty" colspan="{{ max(count($headings), 1) }}">No records found.</td>
-            </tr>
+                <tr><td colspan="{{ max(count($columns), 1) }}" class="empty">No users to export</td></tr>
             @endforelse
         </tbody>
     </table>
+
+    <div class="foot">Sargam 2.0 · Users · Lal Bahadur Shastri National Academy of Administration</div>
+    {{-- Page numbers on every page. Must be the LAST thing in <body>: DomPDF
+         only resolves the page count once the whole document is laid out, so a
+         script placed earlier renders every page as "Page N of 1". --}}
+    <script type="text/php">
+        if (isset($pdf)) {
+            $text = "Page {PAGE_NUM} of {PAGE_COUNT}";
+            $font = $fontMetrics->getFont("DejaVu Sans", "normal");
+            $size = 7;
+            $w = $fontMetrics->getTextWidth($text, $font, $size);
+            $pdf->page_text($pdf->get_width() - $w - 28, $pdf->get_height() - 20, $text, $font, $size, [0.42, 0.45, 0.5]);
+        }
+    </script>
 </body>
 </html>
