@@ -246,14 +246,14 @@
                         <div class="form-group">
                             <label class="sbm-form-label" for="name">Name<span class="sbm-req">*</span></label>
                             <input type="text" class="form-control sbm-control" name="name" id="name"
-                                   placeholder="e.g. Course Master" value="{{ old('name') }}"
+                                   placeholder="e.g. Course Master"
                                    autocomplete="off" maxlength="100">
                         </div>
 
                         <div class="form-group">
                             <label class="sbm-form-label" for="route">Url</label>
                             <input type="text" class="form-control sbm-control font-monospace" name="route" id="route"
-                                   placeholder="e.g. admin/course-master" value="{{ old('route') }}"
+                                   placeholder="e.g. admin/course-master"
                                    autocomplete="off" maxlength="255">
                         </div>
 
@@ -291,7 +291,7 @@
                             <label class="sbm-form-label" for="permission_name">Permission Name</label>
                             <input type="text" class="form-control sbm-control font-monospace"
                                    name="permission_name" id="permission_name"
-                                   placeholder="e.g. course_master" value="{{ old('permission_name') }}"
+                                   placeholder="e.g. course_master"
                                    autocomplete="off" maxlength="255">
                             <p class="sbm-form-help">
                                 Filled in from the name until you edit it. A menu with no permission is
@@ -310,7 +310,7 @@
                                        aria-hidden="true">label</i>
                                 </span>
                                 <input type="text" class="form-control sbm-control" name="icon" id="icon"
-                                       placeholder="Click to search &amp; pick an icon" value="{{ old('icon') }}"
+                                        placeholder="Click to search &amp; pick an icon"
                                        autocomplete="off" maxlength="100">
                             </div>
                             <div class="icon-picker-panel d-none" id="iconPickerPanel">
@@ -322,7 +322,7 @@
                         <div class="form-group">
                             <label class="sbm-form-label" for="order">Display order</label>
                             <input type="number" class="form-control sbm-control" name="order" id="order"
-                                   placeholder="0" value="{{ old('order') }}" inputmode="numeric" min="0">
+                                   placeholder="0" inputmode="numeric" min="0">
                             <p class="sbm-form-help">Lower numbers appear first (optional).</p>
                         </div>
 
