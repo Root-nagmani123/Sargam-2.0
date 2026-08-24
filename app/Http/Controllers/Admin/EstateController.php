@@ -3784,6 +3784,9 @@ class EstateController extends Controller
         DB::table('estate_house_master')
             ->where('pk', $housePk)
             ->update(['used_home_status' => $status]);
+
+        // Define House listing me occupancy turant dikhe — cached payload chhod do.
+        $this->bumpEstateCacheVersion();
     }
 
     private function refreshHouseUsedStatusFromPossession(int $housePk): void
@@ -3838,6 +3841,8 @@ class EstateController extends Controller
                 ->where('pk', $housePk)
                 ->where('vacant_renovation_status', 2)
                 ->update(['vacant_renovation_status' => 1]);
+
+            $this->bumpEstateCacheVersion();
         }
     }
 
@@ -4421,6 +4426,9 @@ class EstateController extends Controller
             EstateHouse::create($data);
         }
 
+        // Nayi house rows turant listing me dikhein — cached DataTable payload chhod do.
+        $this->bumpEstateCacheVersion();
+
         $message = $count === 1 ? 'Estate house added successfully.' : $count . ' estate houses added successfully.';
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json(['success' => true, 'message' => $message]);
@@ -4436,7 +4444,7 @@ class EstateController extends Controller
     {
         $draw = (int) $request->get('draw', 1);
         $fingerprint = $this->defineHouseDataTableCacheFingerprint($request);
-        $cacheKey = 'estate_dh:v1:' . md5(json_encode($fingerprint));
+        $cacheKey = 'estate_dh:v1:' . $this->estateCacheVersion() . ':' . md5(json_encode($fingerprint));
 
         $payload = $this->rememberUpdateMeterReadingCache($cacheKey, function () use ($request) {
             return $this->computeDefineHouseDataTablePayload($request);
@@ -4703,6 +4711,9 @@ class EstateController extends Controller
         $house->modify_by = Auth::id();
         $house->save();
 
+        // Licence fee / water charge jaisi edit turant listing me dikhe — cached DataTable payload chhod do.
+        $this->bumpEstateCacheVersion();
+
         $message = 'Estate house updated successfully.';
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json(['success' => true, 'message' => $message]);
@@ -4761,6 +4772,8 @@ class EstateController extends Controller
         }
 
         $house->delete();
+
+        $this->bumpEstateCacheVersion();
 
         $message = 'Estate house deleted successfully.';
         if ($request->ajax() || $request->wantsJson()) {
@@ -6001,6 +6014,9 @@ class EstateController extends Controller
      */
     public function updateMeterReadingOfOther()
     {
+        // Screen aur uska store endpoint ek hi rule par — {@see storeMeterReadingsOther()}.
+        abort_unless(isEstateAuthority(), 403, 'You do not have permission to access this estate section.');
+
         $campuses = DB::table('estate_campus_master')
             ->orderBy('campus_name')
             ->get(['pk', 'campus_name']);
@@ -6242,6 +6258,9 @@ class EstateController extends Controller
         ));
     }
 
+    /** Estate listing cache version token ki key ({@see estateCacheVersion()}). */
+    private const ESTATE_CACHE_VERSION_KEY = 'estate:cache_ver';
+
     /**
      * Cache for Update Meter Reading APIs, Update Meter No list, Pending Meter Reading report,
      * Generate Estate Bill for Other (data), Generate Estate Bill (LBSNAA page list),
@@ -6259,6 +6278,75 @@ class EstateController extends Controller
         $repository = RedisBackedCache::repositoryForStore($storeName);
 
         return [$enabled, $ttl, $repository, $storeName];
+    }
+
+    /**
+     * Bill row par Define House ke charges lagne ka audit record (shared standards §17: money path).
+     *
+     * Sirf tab likhta hai jab amount waqai badal raha ho — kaun, kaunsi reading row, aur kis value se
+     * kis par. Koi nayi table nahi: application log channel me jaata hai.
+     *
+     * @param  'l'|'o'  $type  LBSNAA ya Other bill row
+     * @param  array<string, float>  $charges  freeze hone wale naye amounts
+     * @param  array<string, mixed>  $current  row par abhi ke amounts
+     */
+    private function logEstateBillChargeChange(string $type, int $readingPk, array $charges, array $current): void
+    {
+        $changed = [];
+        foreach ($charges as $column => $newValue) {
+            $oldValue = $current[$column] ?? null;
+            if ($oldValue === null || $oldValue === '' || abs((float) $oldValue - (float) $newValue) > 0.001) {
+                $changed[$column] = [
+                    'from' => ($oldValue === null || $oldValue === '') ? null : (float) $oldValue,
+                    'to' => (float) $newValue,
+                ];
+            }
+        }
+
+        if ($changed === []) {
+            return;
+        }
+
+        \Illuminate\Support\Facades\Log::info('Estate bill charge set from Define House', [
+            'bill_type' => $type,
+            'reading_pk' => $readingPk,
+            'user_id' => Auth::id(),
+            'changes' => $changed,
+        ]);
+    }
+
+    /**
+     * Estate listing cache ka version token.
+     *
+     * Define House list aur bill lists {@see rememberUpdateMeterReadingCache()} se cache hoti hain (default 5 min)
+     * aur unki key me paging / search / filter shaamil hote hain — is liye kisi ek key ko delete karna practical
+     * nahi. Har estate write (Define House add/edit/delete, meter reading save) par {@see bumpEstateCacheVersion()}
+     * ye counter badha deta hai: purani keys apne aap chhoot jaati hain aur listing turant naya data dikhati hai.
+     */
+    private function estateCacheVersion(): int
+    {
+        try {
+            [, , $repository] = $this->resolveUpdateMeterReadingCacheConfig();
+
+            return max(1, (int) $repository->get(self::ESTATE_CACHE_VERSION_KEY, 1));
+        } catch (\Throwable $e) {
+            return 1;
+        }
+    }
+
+    /**
+     * Estate write ke baad cached listings ko taaza karo ({@see estateCacheVersion()}).
+     */
+    private function bumpEstateCacheVersion(): void
+    {
+        try {
+            [, , $repository] = $this->resolveUpdateMeterReadingCacheConfig();
+            $repository->forever(self::ESTATE_CACHE_VERSION_KEY, $this->estateCacheVersion() + 1);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Estate: cache version bump failed, list TTL tak purana data dikha sakti hai.', [
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -7040,9 +7128,15 @@ class EstateController extends Controller
             ];
             if ($emrdHasWaterCharges) {
                 $rowSelect[] = 'emrd.water_charges';
+                $rowSelect[] = 'ehm.water_charge as ehm_water_charge';
             }
             if ($emrdHasLicenceFees) {
                 $rowSelect[] = 'emrd.licence_fees';
+                $rowSelect[] = 'ehm.licence_fee as ehm_licence_fee';
+            }
+            // Issued (verify ho chuke) bill ka amount freeze rehta hai — us decision ke liye chahiye.
+            if (\Illuminate\Support\Facades\Schema::hasColumn('estate_month_reading_details', 'notify_employee_status')) {
+                $rowSelect[] = 'emrd.notify_employee_status';
             }
             $row = DB::table('estate_month_reading_details as emrd')
                 ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
@@ -7068,6 +7162,10 @@ class EstateController extends Controller
                         ->with('error', 'Meter reading cannot be updated for houses that have been returned.');
                 }
             }
+
+            // Define House ke freeze hone wale charges: if ($row) block me bharte hain, aur nayi
+            // bill-period row wale insert branch me bhi chahiye — isliye pehle hi initialise.
+            $masterCharges = [];
 
             if ($row) {
                 // New Meter No. is frozen everywhere except the edit flow. Enforce that server-side too: a submitted
@@ -7146,6 +7244,24 @@ class EstateController extends Controller
                 $update['electricty_charges'] = $m1Charge + $m2Charge;
                 if (\Illuminate\Support\Facades\Schema::hasColumn('estate_month_reading_details', 'per_unit')) {
                     $update['per_unit'] = $u1 + $u2;
+                }
+
+                // Other flow jaisa hi: bill isi save par banta hai, isliye us waqt ka Define House
+                // (estate_house_master) licence fee / water charge bill row par freeze hota hai.
+                // Rules {@see \App\Support\EstateBillCharges}: master ka 0/null "set nahi hai" hai, aur
+                // issue ho chuke bill par amount nahi badalta — wo neeche nayi bill-period row par hi lagta hai.
+                $masterCharges = \App\Support\EstateBillCharges::fromHouseMaster(
+                    $row->ehm_water_charge ?? null,
+                    $row->ehm_licence_fee ?? null,
+                    $emrdHasWaterCharges,
+                    $emrdHasLicenceFees
+                );
+                if ($masterCharges !== [] && ! \App\Support\EstateBillCharges::isIssuedBill($row->notify_employee_status ?? 0)) {
+                    $update = array_merge($update, $masterCharges);
+                    $this->logEstateBillChargeChange('l', (int) $resolvePk, $masterCharges, [
+                        'water_charges' => $row->water_charges ?? null,
+                        'licence_fees' => $row->licence_fees ?? null,
+                    ]);
                 }
             }
 
@@ -7261,7 +7377,14 @@ class EstateController extends Controller
                     if ($emrdHasLicenceFees && ! array_key_exists('licence_fees', $insertData) && property_exists($row, 'licence_fees')) {
                         $insertData['licence_fees'] = $row->licence_fees;
                     }
+                    // Nayi bill-period row = naya bill. Source row issued ho tab bhi naye bill par aaj ke
+                    // Define House charges lagte hain — warna pichhle mahine ka purana amount copy ho jata.
+                    $insertData = array_merge($insertData, $masterCharges);
                     $resolvePk = (int) DB::table('estate_month_reading_details')->insertGetId($insertData);
+                    $this->logEstateBillChargeChange('l', $resolvePk, $masterCharges, [
+                        'water_charges' => $row->water_charges ?? null,
+                        'licence_fees' => $row->licence_fees ?? null,
+                    ]);
 
                     if (
                         $row
@@ -7434,6 +7557,9 @@ class EstateController extends Controller
                 $meterNoQuery = [];
             }
         }
+
+        // Naya bill turant bill lists me dikhe — cached payload chhod do.
+        $this->bumpEstateCacheVersion();
 
         return redirect()
             ->route('admin.estate.update-meter-no', $meterNoQuery)
@@ -8183,6 +8309,9 @@ class EstateController extends Controller
      */
     public function getMeterReadingListOther(Request $request)
     {
+        // Screen ka data endpoint — wahi rule jo page aur store par hai.
+        abort_unless(isEstateAuthority(), 403, 'You do not have permission to access this estate section.');
+
         $billMonth = $request->get('bill_month');
         $billYear = $request->get('bill_year');
         $campusId = $request->get('campus_id');
@@ -8601,6 +8730,11 @@ class EstateController extends Controller
      */
     public function storeMeterReadingsOther(Request $request)
     {
+        // Bill likhne wala endpoint hai — LBSNAA wale storeMeterReadings() jaisa hi server-side guard.
+        // isEstateAuthority() = 'Estate Admin' || 'Super Admin' — roles table me estate ka role yahi hai
+        // (id 8), aur meter/bill screens poore controller me isi par gate karti hain.
+        abort_unless(isEstateAuthority(), 403, 'You do not have permission to update reading and meter no.');
+
         $readingsIn = $request->input('readings', []);
         if (is_array($readingsIn)) {
             foreach ($readingsIn as $i => $r) {
@@ -8814,6 +8948,9 @@ class EstateController extends Controller
                             // Old meter no. fallback — units ke liye meter-replacement detect karne me chahiye.
                             'ehm.meter_one as ehm_meter_one',
                             'ehm.meter_two as ehm_meter_two',
+                            // Define House ka aaj ka licence fee / water charge — bill isi save par banta hai.
+                            'ehm.water_charge as ehm_water_charge',
+                            'ehm.licence_fee as ehm_licence_fee',
                             DB::raw('COALESCE(epo.estate_unit_type_master_pk, ' . $houseDerivedExpr . ') as electric_unit_type_pk_resolved'),
                         ])
                         ->first();
@@ -8894,6 +9031,28 @@ class EstateController extends Controller
                     $update['meter_one_elec_charge'] = $charge;
                     $m2 = (float) ($row->meter_two_elec_charge ?? 0);
                     $update['electricty_charges'] = $charge + $m2;
+                }
+
+                // Bill isi save par generate hota hai — isliye licence fee / water charge us waqt ke Define House
+                // (estate_house_master) se lekar bill row par freeze ho jaate hain. Naye bill-month ki row pichhli
+                // row se copy hoti hai, is liye ye na karein to Define House ka naya amount naye bill me kabhi
+                // nahi aata. Rules {@see \App\Support\EstateBillCharges}: master ka 0/null "set nahi hai" hai,
+                // aur verify ho chuke (issued) bill ka amount nahi badalta — Define House ki agli change sirf
+                // agle bill par aati hai.
+                $masterCharges = $otherPossessionCtx
+                    ? \App\Support\EstateBillCharges::fromHouseMaster(
+                        $otherPossessionCtx->ehm_water_charge ?? null,
+                        $otherPossessionCtx->ehm_licence_fee ?? null,
+                        $emroHasWaterCharges,
+                        $emroHasLicenceFees
+                    )
+                    : [];
+                if ($masterCharges !== [] && ! \App\Support\EstateBillCharges::isIssuedBill($row->notify_employee_status ?? 0)) {
+                    $update = array_merge($update, $masterCharges);
+                    $this->logEstateBillChargeChange('o', (int) $row->pk, $masterCharges, [
+                        'water_charges' => $row->water_charges ?? null,
+                        'licence_fees' => $row->licence_fees ?? null,
+                    ]);
                 }
 
                 if ($newMeterNoDigits !== '') {
@@ -9029,6 +9188,9 @@ class EstateController extends Controller
                             $insertData['payroll_recovery_head_amount'] = $row->payroll_recovery_head_amount ?? null;
                         }
                         $insertData = array_merge($insertData, $update);
+                        // Nayi bill-period row = naya bill: source row issued ho tab bhi aaj ke Define House
+                        // charges lagte hain (warna pichhle mahine ka purana amount copy ho jata).
+                        $insertData = array_merge($insertData, $masterCharges);
                         if (\Illuminate\Support\Facades\Schema::hasColumn('estate_month_reading_details_other', 'notify_employee_status')
                             && ! array_key_exists('notify_employee_status', $insertData)) {
                             $insertData['notify_employee_status'] = 0;
@@ -9039,6 +9201,10 @@ class EstateController extends Controller
                         }
                         $newPk = (int) DB::table('estate_month_reading_details_other')->insertGetId($insertData);
                         $resolvedOtherReadingPkByFormPk[$formPk] = $newPk;
+                        $this->logEstateBillChargeChange('o', $newPk, $masterCharges, [
+                            'water_charges' => $row->water_charges ?? null,
+                            'licence_fees' => $row->licence_fees ?? null,
+                        ]);
 
                         if (
                             $newMeterNoDigits !== ''
@@ -9172,6 +9338,9 @@ class EstateController extends Controller
                 break;
             }
         }
+
+        // Naya bill turant "Generate Estate Bill for Other" list me dikhe — cached payload chhod do.
+        $this->bumpEstateCacheVersion();
 
         return redirect()
             ->route('admin.estate.possession-for-others')
@@ -9784,7 +9953,7 @@ class EstateController extends Controller
                 'ln' => Schema::hasColumn('employee_master', 'last_name') ? 1 : 0,
             ];
 
-            $cacheKey = 'estate_geb_lbs:v4:' . md5(json_encode([
+            $cacheKey = 'estate_geb_lbs:v4:' . $this->estateCacheVersion() . ':' . md5(json_encode([
                 'bm' => $billMonth,
                 'ust' => $ustKey,
                 'q' => $search,
@@ -12195,14 +12364,15 @@ class EstateController extends Controller
             $showMeterTwo = (int) ($r->meter_two ?? 0) !== 0 || $prev2 > 0 || $curr2 > 0;
             // Use electricity amount saved on the bill (set when meter reading was saved), not current slab rates.
             $totalCharge = (float) ($r->electricty_charges ?? 0);
-            // Prefer Define House (estate_house_master) licence_fee so changes in Define House reflect here
+            // Bill ka apna licence fee / water charge — ye bill generate hote waqt Define House se freeze hua tha.
+            // Define House me baad me hui change bane hue bill par nahi aati (agla bill naya amount uthata hai),
+            // aur print / PDF bhi yahi amount dikhate hain. Purani rows me 0/null ho tabhi Define House se lo.
             $licence = (float) ($r->licence_fees ?? 0);
-            if (isset($r->ehm_licence_fee) && $r->ehm_licence_fee !== null && $r->ehm_licence_fee !== '') {
+            if ($licence <= 0 && isset($r->ehm_licence_fee) && $r->ehm_licence_fee !== null && $r->ehm_licence_fee !== '') {
                 $licence = (float) $r->ehm_licence_fee;
             }
-            // Prefer Define House water_charge so changes in Define House reflect here
             $water = (float) ($r->water_charges ?? 0);
-            if (isset($r->ehm_water_charge) && $r->ehm_water_charge !== null && $r->ehm_water_charge !== '') {
+            if ($water <= 0 && isset($r->ehm_water_charge) && $r->ehm_water_charge !== null && $r->ehm_water_charge !== '') {
                 $water = (float) $r->ehm_water_charge;
             }
             $grandTotal = $totalCharge + $licence + $water;
@@ -12262,7 +12432,7 @@ class EstateController extends Controller
         $billMonthStr = date('F', mktime(0, 0, 0, $monthNum, 1));
 
         $hasReturnHomeStatusCol = Schema::hasColumn('estate_possession_other', 'return_home_status');
-        $cacheKey = 'estate_gebo:v2:' . md5(json_encode([
+        $cacheKey = 'estate_gebo:v3:' . $this->estateCacheVersion() . ':' . md5(json_encode([
             'bm' => $billMonthStr,
             'by' => $billYearStr,
             'rh' => $hasReturnHomeStatusCol ? 1 : 0,
