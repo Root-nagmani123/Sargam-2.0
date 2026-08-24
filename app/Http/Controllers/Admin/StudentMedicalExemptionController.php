@@ -585,6 +585,20 @@ class StudentMedicalExemptionController extends Controller
         );
     }
 
+    /**
+     * Display name for a comment's author. The User model's table (user_credentials)
+     * has no `name` column, only first_name/last_name.
+     */
+    private function commentCreatorName(StudentMedicalExemptionComment $comment): string
+    {
+        $user = $comment->creator;
+        if (!$user) {
+            return 'N/A';
+        }
+        $name = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
+        return $name !== '' ? $name : 'N/A';
+    }
+
     public function store(Request $request)
     {
         // Catch PHP-level upload errors (e.g. file exceeded upload_max_filesize in php.ini)
@@ -751,7 +765,7 @@ class StudentMedicalExemptionController extends Controller
             'speciality',
             'course',
             'employee',
-            'comments',
+            'comments.creator',
         ])->findOrFail(decrypt($id));
 
         $from = $record->from_date ? Carbon::parse($record->from_date) : null;
@@ -784,6 +798,8 @@ class StudentMedicalExemptionController extends Controller
                 return [
                     'comment' => $c->comment,
                     'comment_date' => Carbon::parse($c->comment_date)->format('d-m-Y'),
+                    'created_by_name' => $this->commentCreatorName($c),
+                    'created_date' => $c->created_date ? Carbon::parse($c->created_date)->format('d-m-Y h:i A') : null,
                 ];
             })->values(),
             'document_url' => $record->Doc_upload ? asset('storage/' . $record->Doc_upload) : null,
@@ -797,7 +813,7 @@ class StudentMedicalExemptionController extends Controller
 
     public function edit($id)
     {
-        $record = StudentMedicalExemption::with('comments')->findOrFail(decrypt($id));
+        $record = StudentMedicalExemption::with('comments.creator')->findOrFail(decrypt($id));
         $courses = CourseMaster::where('active_inactive', '1')
             ->where('end_date', '>=', now()->toDateString())
             ->orderBy('course_name')
@@ -872,6 +888,7 @@ class StudentMedicalExemptionController extends Controller
             'pt_comments.*.pk' => 'nullable|numeric',
             'pt_comments.*.comment' => 'nullable|string|max:1000',
             'pt_comments.*.comment_date' => 'required_with:pt_comments.*.comment|date',
+            'pt_comments.*.edited' => 'nullable|boolean',
             'exemption_medical_speciality_pk' => 'required|numeric',
             'Description' => 'nullable|string',
             'active_inactive' => 'required|boolean',
@@ -935,12 +952,16 @@ class StudentMedicalExemptionController extends Controller
                 continue;
             }
             if (!empty($comment['pk'])) {
+                $updateData = [
+                    'comment' => $comment['comment'],
+                    'comment_date' => $comment['comment_date'],
+                ];
+                if (!empty($comment['edited'])) {
+                    $updateData['created_date'] = now();
+                }
                 StudentMedicalExemptionComment::where('pk', $comment['pk'])
                     ->where('student_medical_exemption_pk', $record->pk)
-                    ->update([
-                        'comment' => $comment['comment'],
-                        'comment_date' => $comment['comment_date'],
-                    ]);
+                    ->update($updateData);
                 $submittedIds[] = (int) $comment['pk'];
             } else {
                 $new = StudentMedicalExemptionComment::create([

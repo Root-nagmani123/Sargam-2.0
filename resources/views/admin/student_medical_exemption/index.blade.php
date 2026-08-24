@@ -1342,54 +1342,113 @@ $(document).ready(function() {
         }
         $form.on('change', '#smeMedicalCase, #courseDropdown', applyPtTimesIfExempted);
 
-        // Medical Case = PT Exemption -> show the Doctor's Comments section; keep at
-        // least one (dated today, editable) row present whenever it's visible.
-        var smeCommentRowSeq = 0;
+        // Medical Case = PT Exemption -> show the Doctor's Comments section: a table
+        // of past comments (who / what / when) plus a plain textarea to add a new
+        // one. The author of a comment can Edit their own row, which loads it back
+        // into the textarea; submitting then updates that entry in place instead of
+        // appending. The backend syncs pt_comments[] wholesale (deletes any existing
+        // pk not resubmitted), so on submit we resend every existing comment's pk
+        // (with the edited one's text swapped in) plus any brand-new comment.
+        var smeExistingComments = [];
+        var smeCurrentUserId = String($form.find('#smePtCommentSection').attr('data-current-user') || '');
+        var smeEditingPk = null;
+        try {
+            smeExistingComments = JSON.parse($form.find('#smePtCommentSection').attr('data-existing') || '[]');
+        } catch (e) { /* no-op */ }
         function todayYmd(){
             var d = new Date();
             return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
         }
-        function addCommentRow(comment, date, pk){
-            var idx = smeCommentRowSeq++;
-            var pkField = pk ? '<input type="hidden" name="pt_comments[' + idx + '][pk]" value="' + pk + '">' : '';
-            var $row = $(
-                '<div class="row g-3 mb-2 sme-comment-row" data-row="' + idx + '">' +
-                    pkField +
-                    '<div class="col-md-8">' +
-                        '<textarea name="pt_comments[' + idx + '][comment]" class="form-control" rows="2" placeholder="eg. You can go for normal exercise">' + $('<div>').text(comment || '').html() + '</textarea>' +
-                    '</div>' +
-                    '<div class="col-md-3">' +
-                        '<input type="date" name="pt_comments[' + idx + '][comment_date]" class="form-control" value="' + (date || todayYmd()) + '">' +
-                    '</div>' +
-                    '<div class="col-md-1 d-flex align-items-start">' +
-                        '<button type="button" class="btn btn-sm btn-outline-danger sme-remove-comment-btn" title="Remove">&times;</button>' +
-                    '</div>' +
-                '</div>'
-            );
-            $form.find('#smePtCommentsList').append($row);
+        function renderCommentsTable(){
+            var $tbody = $form.find('#smePtCommentsTable tbody');
+            if (!$tbody.length) return;
+            $tbody.empty();
+            smeExistingComments.forEach(function(c){
+                var isOwn = smeCurrentUserId !== '' && String(c.created_by) === smeCurrentUserId;
+                var actions = isOwn
+                    ? '<button type="button" class="btn btn-sm btn-link p-0 me-2 sme-edit-comment-btn" data-pk="' + c.pk + '">Edit</button>' +
+                      '<button type="button" class="btn btn-sm btn-link p-0 text-danger sme-delete-comment-btn" data-pk="' + c.pk + '">Delete</button>'
+                    : '';
+                $tbody.append(
+                    '<tr' + (smeEditingPk === c.pk ? ' class="table-active"' : '') + '>' +
+                        '<td>' + $('<div>').text(c.created_by_name || 'N/A').html() + '</td>' +
+                        '<td>' + $('<div>').text(c.comment || '').html() + '</td>' +
+                        '<td>' + $('<div>').text(c.created_date || '').html() + '</td>' +
+                        '<td>' + actions + '</td>' +
+                    '</tr>'
+                );
+            });
+            $form.find('#smePtCommentsTableWrap').toggle(smeExistingComments.length > 0);
         }
-        $form.on('click', '#smeAddCommentBtn', function(){ addCommentRow('', todayYmd()); });
-        $form.on('click', '.sme-remove-comment-btn', function(){
-            $(this).closest('.sme-comment-row').remove();
+        $form.on('click', '.sme-edit-comment-btn', function(){
+            var pk = parseInt($(this).data('pk'), 10);
+            var target = smeExistingComments.find(function(c){ return c.pk === pk; });
+            if (!target) return;
+            smeEditingPk = pk;
+            $form.find('#smePtCommentText').val(target.comment).focus();
+            $form.find('#smePtCommentEditingNote').show();
+            renderCommentsTable();
         });
+        $form.on('click', '#smePtCommentCancelEdit', function(e){
+            e.preventDefault();
+            smeEditingPk = null;
+            $form.find('#smePtCommentText').val('');
+            $form.find('#smePtCommentEditingNote').hide();
+            renderCommentsTable();
+        });
+        $form.on('click', '.sme-delete-comment-btn', function(){
+            var pk = parseInt($(this).data('pk'), 10);
+            if (!confirm('Delete this comment?')) return;
+            smeExistingComments = smeExistingComments.filter(function(c){ return c.pk !== pk; });
+            if (smeEditingPk === pk) {
+                smeEditingPk = null;
+                $form.find('#smePtCommentText').val('');
+                $form.find('#smePtCommentEditingNote').hide();
+            }
+            renderCommentsTable();
+            syncCommentRow();
+        });
+        function syncCommentRow(){
+            var $list = $form.find('#smePtCommentsList');
+            $list.empty();
+            var idx = 0;
+            var newComment = $.trim($form.find('#smePtCommentText').val() || '');
+            smeExistingComments.forEach(function(c){
+                var isBeingEdited = smeEditingPk === c.pk;
+                var text = isBeingEdited ? newComment : c.comment;
+                if (isBeingEdited && text === '') return;
+                var editedField = isBeingEdited ? '<input type="hidden" name="pt_comments[' + idx + '][edited]" value="1">' : '';
+                $list.append(
+                    '<input type="hidden" name="pt_comments[' + idx + '][pk]" value="' + c.pk + '">' +
+                    '<input type="hidden" name="pt_comments[' + idx + '][comment]" value="' + $('<div>').text(text).html() + '">' +
+                    '<input type="hidden" name="pt_comments[' + idx + '][comment_date]" value="' + c.comment_date + '">' +
+                    editedField
+                );
+                idx++;
+            });
+            if (smeEditingPk === null && newComment !== '') {
+                $list.append(
+                    '<input type="hidden" name="pt_comments[' + idx + '][comment]" value="' + $('<div>').text(newComment).html() + '">' +
+                    '<input type="hidden" name="pt_comments[' + idx + '][comment_date]" value="' + todayYmd() + '">'
+                );
+            }
+        }
+        $form.on('input', '#smePtCommentText', syncCommentRow);
+        $form.on('submit', syncCommentRow);
         function togglePtCommentRow(){
             var $section = $form.find('#smePtCommentSection');
             if (!$section.length) return;
             var isPtExemption = $form.find('#smeMedicalCase').val() === 'PT Exemption';
             $section.toggle(isPtExemption);
-            if (isPtExemption && $form.find('#smePtCommentsList .sme-comment-row').length === 0) {
-                addCommentRow('', todayYmd());
-            }
             if (!isPtExemption) {
+                smeEditingPk = null;
+                $form.find('#smePtCommentText').val('');
+                $form.find('#smePtCommentEditingNote').hide();
                 $form.find('#smePtCommentsList').empty();
             }
         }
-        // Prefill existing comments (edit mode) before wiring the toggle so they
-        // aren't wiped out if the record's medical case is already PT Exemption.
-        try {
-            var existingComments = JSON.parse($form.find('#smePtCommentsList').attr('data-existing') || '[]');
-            existingComments.forEach(function(c){ addCommentRow(c.comment, c.comment_date, c.pk); });
-        } catch (e) { /* no-op */ }
+        renderCommentsTable();
+        syncCommentRow();
         $form.on('change', '#smeMedicalCase', togglePtCommentRow);
         togglePtCommentRow();
 
@@ -1670,14 +1729,16 @@ $(document).ready(function() {
             '</div>' +
             (data.pt_comments && data.pt_comments.length ?
             '<h6 class="sme-view-section-title">Doctor\'s Comments</h6>' +
-            data.pt_comments.map(function(c) {
-                return '<div class="row g-3 mt-1">' +
-                    '<div class="col-md-8"><div class="sme-view-field"><span class="sme-view-label">Comment</span>' +
-                        '<div class="sme-view-text">' + smeEsc(c.comment) + '</div></div></div>' +
-                    '<div class="col-md-4"><div class="sme-view-field"><span class="sme-view-label">Date</span>' +
-                        '<div class="sme-view-text">' + smeEsc(c.comment_date) + '</div></div></div>' +
-                '</div>';
-            }).join('') : '') +
+            '<div class="table-responsive mt-1"><table class="table table-sm table-bordered align-middle mb-0">' +
+                '<thead class="table-light"><tr><th>Name</th><th>Comment</th><th>Date &amp; Time</th></tr></thead>' +
+                '<tbody>' + data.pt_comments.map(function(c) {
+                    return '<tr>' +
+                        '<td>' + smeEsc(c.created_by_name) + '</td>' +
+                        '<td>' + smeEsc(c.comment) + '</td>' +
+                        '<td>' + smeEsc(c.created_date) + '</td>' +
+                    '</tr>';
+                }).join('') + '</tbody>' +
+            '</table></div>' : '') +
             '<h6 class="sme-view-section-title">Attachment</h6>' +
             '<div>' + docHtml + '</div>';
     }

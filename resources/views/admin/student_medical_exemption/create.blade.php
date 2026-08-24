@@ -240,11 +240,9 @@
                     </div>
 
                     <div class="col-12 sme-remarks-row" id="smePtCommentSection" style="display:none;">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label class="form-label mb-0">Doctor's Comments</label>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="smeAddCommentBtn">+ Add Comment</button>
-                        </div>
-                        <div id="smePtCommentsList"></div>
+                        <label class="form-label">Doctor's Comments</label>
+                        <textarea id="smePtCommentText" class="form-control" rows="3" placeholder="eg. You can go for normal exercise"></textarea>
+                        <div id="smePtCommentsList" style="display:none;"></div>
                     </div>
 
                     <div class="col-12">
@@ -316,41 +314,30 @@ $(document).ready(function() {
     $('#smeMedicalCase').on('change', applyPtTimesIfExempted);
     $('#courseDropdown').on('change', applyPtTimesIfExempted);
 
-    // Medical Case = PT Exemption -> show the Doctor's Comments section; keep at
-    // least one (dated today, editable) row present whenever it's visible.
-    var smeCommentRowSeq = 0;
+    // Medical Case = PT Exemption -> show the Doctor's Comments section as a single
+    // plain textarea; it's still submitted as pt_comments[0] (dated today) behind
+    // the scenes so the existing backend handling is unchanged.
     function todayYmd() {
         var d = new Date();
         return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     }
-    function addCommentRow(comment, date) {
-        var idx = smeCommentRowSeq++;
-        var $row = $(
-            '<div class="row g-3 mb-2 sme-comment-row" data-row="' + idx + '">' +
-                '<div class="col-md-8">' +
-                    '<textarea name="pt_comments[' + idx + '][comment]" class="form-control" rows="2" placeholder="eg. You can go for normal exercise">' + $('<div>').text(comment || '').html() + '</textarea>' +
-                '</div>' +
-                '<div class="col-md-3">' +
-                    '<input type="date" name="pt_comments[' + idx + '][comment_date]" class="form-control" value="' + (date || todayYmd()) + '">' +
-                '</div>' +
-                '<div class="col-md-1 d-flex align-items-start">' +
-                    '<button type="button" class="btn btn-sm btn-outline-danger sme-remove-comment-btn" title="Remove">&times;</button>' +
-                '</div>' +
-            '</div>'
+    function syncCommentRow() {
+        var comment = $('#smePtCommentText').val() || '';
+        var $list = $('#smePtCommentsList');
+        $list.empty();
+        if ($.trim(comment) === '') return;
+        $list.append(
+            '<input type="hidden" name="pt_comments[0][comment]" value="' + $('<div>').text(comment).html() + '">' +
+            '<input type="hidden" name="pt_comments[0][comment_date]" value="' + todayYmd() + '">'
         );
-        $('#smePtCommentsList').append($row);
     }
-    $('#smeAddCommentBtn').on('click', function() { addCommentRow('', todayYmd()); });
-    $(document).on('click', '.sme-remove-comment-btn', function() {
-        $(this).closest('.sme-comment-row').remove();
-    });
+    $('#smePtCommentText').on('input', syncCommentRow);
+    $('.sme-form').on('submit', syncCommentRow);
     function togglePtCommentRow() {
         var isPtExemption = $('#smeMedicalCase').val() === 'PT Exemption';
         $('#smePtCommentSection').toggle(isPtExemption);
-        if (isPtExemption && $('#smePtCommentsList .sme-comment-row').length === 0) {
-            addCommentRow('', todayYmd());
-        }
         if (!isPtExemption) {
+            $('#smePtCommentText').val('');
             $('#smePtCommentsList').empty();
         }
     }
