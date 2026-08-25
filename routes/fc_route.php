@@ -13,6 +13,10 @@ use App\Http\Controllers\Admin\Registration\FcJoiningDocumentController;
 use App\Http\Controllers\Admin\Registration\StudentImportController;
 use App\Http\Controllers\Admin\Registration\EnrollementController;
 use App\Http\Controllers\Admin\PeerEvaluationController;
+use App\Http\Controllers\Admin\PeerEventController;
+use App\Http\Controllers\Admin\PeerReflectionFieldController;
+use App\Http\Controllers\Admin\PeerEvaluationReportController;
+use App\Http\Controllers\Admin\PeerEvaluationColumnController;
 
 
 
@@ -405,18 +409,14 @@ Route::post('/admin/peer/groups/update-marks', [PeerEvaluationController::class,
 // Keep your existing routes for reflection fields, etc.
 
 
-// Courses
-Route::post('/admin/peer/course/add', [PeerEvaluationController::class, 'addCourse'])->name('admin.peer.course.add');
 
-//update course
-Route::post('/admin/peer/course/update', [PeerEvaluationController::class, 'updateCourse'])
-    ->name('admin.peer.course.update');
 	
-//delete course
-Route::delete('/admin/peer/course/delete/{id}', [PeerEvaluationController::class, 'deleteCourse'])
-    ->name('admin.peer.course.delete');
 
 
+
+// Course CRUD routes removed: Peer Evaluation reads course_master now, and
+// courses are created in Course Master (admin/programme). See
+// 2026_08_24_000002_point_peer_evaluation_at_course_master.
 
 // Events (now belong to courses)
 Route::post('/admin/peer/event/add', [PeerEvaluationController::class, 'addEvent'])->name('admin.peer.event.add');
@@ -450,3 +450,125 @@ Route::post('/enrollment/{student}', [EnrollementController::class, 'update'])->
 // Import to OT List
 Route::post('/student-enrollment/import-to-ot-list', [EnrollementController::class, 'import'])
     ->name('student.enrollment.import');
+
+
+/*
+|--------------------------------------------------------------------------
+| Peer Evaluation -> Manage Events
+|--------------------------------------------------------------------------
+| The standalone CRUD grid for peer_events. The legacy combined admin panel
+| (admin.peer.index) keeps its own inline event box and its own routes; these
+| belong to PeerEventController and are the ones the "Manage Events" screen and
+| its exports use.
+|
+| Guarded with 'auth' only. `can:` middleware has NO super-admin bypass in this
+| app, so gating these would 403 everyone until a matching permission row plus a
+| grantable menus row exists -- the sidebar/menu layer already scopes access.
+*/
+Route::middleware(['auth'])->prefix('admin/peer/events')->group(function () {
+    Route::get('/', [PeerEventController::class, 'index'])->name('admin.peer.events.index');
+    // Two segments deliberately. A single-segment path here would be swallowed by
+    // the legacy `GET /admin/peer/events/{courseId}` route (getEventsByCourse),
+    // which is registered earlier in this file and would answer with its own [].
+    Route::get('/options/courses', [PeerEventController::class, 'coursesByStatus'])
+        ->name('admin.peer.events.courses-by-status');
+    Route::get('/export/{format}', [PeerEventController::class, 'export'])
+        ->whereIn('format', ['csv', 'excel', 'pdf', 'print'])
+        ->name('admin.peer.events.export');
+    Route::post('/', [PeerEventController::class, 'store'])->name('admin.peer.events.store');
+    Route::put('/{id}', [PeerEventController::class, 'update'])
+        ->whereNumber('id')->name('admin.peer.events.update');
+    Route::delete('/{id}', [PeerEventController::class, 'destroy'])
+        ->whereNumber('id')->name('admin.peer.events.destroy');
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| Peer Evaluation -> Manage Reflection Fields
+|--------------------------------------------------------------------------
+| Reflection fields are the free-text questions under the scored grid on a peer
+| evaluation form. Scope is course -> event -> group, every level optional.
+|
+| NOTE the two-segment paths for /options and /preview. A single-segment path
+| under this prefix would still be fine here (the legacy wildcard is on
+| admin/peer/events, not admin/peer/reflection-fields), but keeping the same
+| shape as the events routes means one less thing to get wrong later.
+|
+| 'auth' only: `can:` middleware has NO super-admin bypass in this app, so
+| gating these would 403 everyone until a permission row plus a grantable menus
+| row exists. The sidebar/menu layer already scopes access.
+*/
+Route::middleware(['auth'])->prefix('admin/peer/reflection-fields')->group(function () {
+    Route::get('/', [PeerReflectionFieldController::class, 'index'])
+        ->name('admin.peer.reflection-fields.index');
+    Route::get('/options/scope', [PeerReflectionFieldController::class, 'options'])
+        ->name('admin.peer.reflection-fields.options');
+    Route::get('/preview/form', [PeerReflectionFieldController::class, 'preview'])
+        ->name('admin.peer.reflection-fields.preview');
+    Route::get('/export/{format}', [PeerReflectionFieldController::class, 'export'])
+        ->whereIn('format', ['csv', 'excel', 'pdf', 'print'])
+        ->name('admin.peer.reflection-fields.export');
+    Route::post('/', [PeerReflectionFieldController::class, 'store'])
+        ->name('admin.peer.reflection-fields.store');
+    Route::put('/{id}', [PeerReflectionFieldController::class, 'update'])
+        ->whereNumber('id')->name('admin.peer.reflection-fields.update');
+    Route::delete('/{id}', [PeerReflectionFieldController::class, 'destroy'])
+        ->whereNumber('id')->name('admin.peer.reflection-fields.destroy');
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| Peer Evaluation -> Evaluation Reports
+|--------------------------------------------------------------------------
+| Read-only reporting over peer_scores. Two-segment paths for /options,
+| /export and /export-detail keep the same shape as the other peer routes.
+| The {member} segment is a peer_group_members.id.
+*/
+Route::middleware(['auth'])->prefix('admin/peer/reports')->group(function () {
+    Route::get('/', [PeerEvaluationReportController::class, 'index'])
+        ->name('admin.peer.reports.index');
+    Route::get('/options/scope', [PeerEvaluationReportController::class, 'options'])
+        ->name('admin.peer.reports.options');
+    Route::get('/export/{format}', [PeerEvaluationReportController::class, 'export'])
+        ->whereIn('format', ['csv', 'excel', 'pdf', 'print'])
+        ->name('admin.peer.reports.export');
+    Route::get('/{member}/export/{format}', [PeerEvaluationReportController::class, 'exportDetail'])
+        ->whereNumber('member')
+        ->whereIn('format', ['csv', 'excel', 'pdf', 'print'])
+        ->name('admin.peer.reports.export-detail');
+    Route::get('/{member}', [PeerEvaluationReportController::class, 'show'])
+        ->whereNumber('member')->name('admin.peer.reports.show');
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| Peer Evaluation -> Manage Evaluation Columns
+|--------------------------------------------------------------------------
+| Three nested levels: events -> groups -> columns. The two nested levels are
+| fetched on demand and return rendered HTML, so the markup stays in blades.
+| Two-segment paths throughout, matching the other peer routes.
+*/
+Route::middleware(['auth'])->prefix('admin/peer/columns')->group(function () {
+    Route::get('/', [PeerEvaluationColumnController::class, 'index'])
+        ->name('admin.peer.columns.index');
+    Route::get('/options/scope', [PeerEvaluationColumnController::class, 'options'])
+        ->name('admin.peer.columns.options');
+    Route::get('/export/{format}', [PeerEvaluationColumnController::class, 'export'])
+        ->whereIn('format', ['csv', 'excel', 'pdf', 'print'])
+        ->name('admin.peer.columns.export');
+    Route::get('/event/{event}/groups', [PeerEvaluationColumnController::class, 'groups'])
+        ->whereNumber('event')->name('admin.peer.columns.groups');
+    Route::get('/group/{group}/columns', [PeerEvaluationColumnController::class, 'columns'])
+        ->whereNumber('group')->name('admin.peer.columns.columns');
+    Route::put('/group/{group}/buffer', [PeerEvaluationColumnController::class, 'updateBufferMarks'])
+        ->whereNumber('group')->name('admin.peer.columns.buffer');
+    Route::post('/', [PeerEvaluationColumnController::class, 'store'])
+        ->name('admin.peer.columns.store');
+    Route::put('/{id}', [PeerEvaluationColumnController::class, 'update'])
+        ->whereNumber('id')->name('admin.peer.columns.update');
+    Route::delete('/{id}', [PeerEvaluationColumnController::class, 'destroy'])
+        ->whereNumber('id')->name('admin.peer.columns.destroy');
+});

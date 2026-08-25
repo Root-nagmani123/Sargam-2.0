@@ -1,0 +1,820 @@
+/* ============================================================================
+   Peer Evaluation — admin screens
+   ----------------------------------------------------------------------------
+   The `pe-*` component layer for the Peer Evaluation module's "new design"
+   pages, starting with Manage Events. Implements the row-action stack
+   (docs/new-design-index-page.md §3b), the matching Add/Edit modals (§3c) and
+   the delete-confirmation dialog.
+
+   Scoping:
+     .pe-page   — page root, put it on the container-fluid
+     .pe-modal  — modal root, put it on .modal-content
+   Both are required so these rules can beat Bootstrap's without !important
+   while still being unable to leak into other modules.
+
+   Load with:
+     <link rel="stylesheet" href="{{ asset('css/peer-evaluation-admin.css') }}?v={{ @filemtime(public_path('css/peer-evaluation-admin.css')) ?: time() }}">
+   ========================================================================= */
+
+/* ── Row actions: icon over label ──
+   Each action is an equal-width column holding a fixed-height icon strip above
+   its caption. Equal widths keep the icon row evenly spaced even though the
+   captions differ in width. */
+.pe-page .pe-act-group {
+    display: inline-flex;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0.5rem;
+}
+
+.pe-page .pe-act {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    min-width: 48px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+}
+
+.pe-page .pe-act__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+}
+.pe-page .pe-act__icon > i {
+    font-size: 1.05rem;
+    line-height: 1;
+}
+.pe-page .pe-act__label { white-space: nowrap; }
+
+.pe-page .pe-act--edit { color: #2563eb; }
+.pe-page .pe-act--del { color: var(--bs-danger, #dc3545); }
+
+/* An event that still owns groups can't be deleted — the server refuses it, so
+   the control is rendered disabled rather than as a button that always fails. */
+.pe-page .pe-act--del.is-disabled {
+    color: #98a2b3;
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+/* Keep the Action header over its content. */
+.pe-page .programme-dt-table th:last-child,
+.pe-page .programme-dt-table td:last-child {
+    text-align: left;
+    white-space: nowrap;
+}
+
+/* .programme-dt-table only wraps its 2nd column (custom.css:416); Event Name is
+   column 3 and can be long, so give it its own wrap rule rather than widening
+   the global one. */
+.pe-page .programme-dt-table td:nth-child(3) {
+    white-space: normal;
+    max-width: 320px;
+}
+
+/* The two-line "Event Created Date" heading would otherwise force the column
+   wider than its d/m/Y content needs. */
+.pe-page .programme-dt-table th { vertical-align: middle; }
+
+/* Download / Print, above the card. Same grey-outline language as the toolbar's
+   Columns button so the two rows read as one system. */
+.pe-page .pe-secondary-actions .pe-export-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 4px;
+    background: #fff;
+    color: #004384;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.pe-page .pe-secondary-actions .pe-export-btn:hover {
+    background: #f9fafb;
+    border-color: #98a2b3;
+    color: #00356a;
+}
+.pe-page .pe-secondary-actions .pe-export-btn i { font-size: 1rem; line-height: 1; }
+
+/* The "Filter" label sits alongside programme-dt-filters-label's grey styling;
+   only the width of the select wrapper differs from the shared default. */
+.pe-page .programme-dt-filter-select { width: 190px; }
+
+/* ============================================================================
+   Add / Edit Event modals (§3c)
+   ========================================================================= */
+
+.pe-modal { border-radius: 12px; }
+
+.pe-modal .pe-modal-header {
+    border-bottom: 0;
+    padding: 1.25rem 1.25rem 0.5rem;
+}
+.pe-modal .pe-modal-header .modal-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #101828;
+    margin: 0;
+}
+
+.pe-modal .pe-modal-body { padding: 0.75rem 1.25rem 0.25rem; }
+
+.pe-modal .pe-form-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+.pe-modal .pe-req { color: #dc2626; margin-left: 1px; }
+
+.pe-modal .pe-control {
+    background-color: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: #101828;
+    box-shadow: none;
+}
+.pe-modal .pe-control::placeholder { color: #9ca3af; }
+.pe-modal .pe-control:focus {
+    border-color: #004384;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
+}
+.pe-modal textarea.pe-control {
+    resize: vertical;
+    min-height: 84px;
+}
+/* An un-picked <select>/<input type=date> should read as a placeholder, not as
+   a value. Both go solid once a real value is chosen (.pe-has-value, set by the
+   page script). */
+.pe-modal .pe-control.pe-placeholder { color: #9ca3af; }
+
+/* Field-level validation message. Hidden until the submit handler fills it. */
+.pe-modal .pe-error {
+    display: none;
+    margin-top: 0.3rem;
+    font-size: 0.75rem;
+    color: #dc2626;
+}
+.pe-modal .pe-error.is-shown { display: block; }
+.pe-modal .pe-control.is-invalid {
+    border-color: #f87171;
+    box-shadow: none;
+}
+
+.pe-modal .pe-modal-footer {
+    border-top: 0;
+    justify-content: end;
+    gap: 0.75rem;
+    padding: 0.75rem 1.25rem 1.25rem;
+}
+.pe-modal .pe-btn-cancel {
+    min-width: 108px;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    background: #fff;
+    color: #dc2626;
+    font-weight: 500;
+}
+.pe-modal .pe-btn-cancel:hover {
+    background: #fef2f2;
+    border-color: #f87171;
+    color: #b91c1c;
+}
+.pe-modal .pe-btn-submit {
+    min-width: 132px;
+    border: 1px solid #004384;
+    border-radius: 8px;
+    background: #004384;
+    color: #fff;
+    font-weight: 600;
+}
+.pe-modal .pe-btn-submit:hover {
+    background: #00356a;
+    border-color: #00356a;
+    color: #fff;
+}
+.pe-modal .pe-btn-submit:disabled {
+    opacity: 0.65;
+    cursor: progress;
+}
+
+/* ============================================================================
+   Delete confirmation
+   ----------------------------------------------------------------------------
+   A FILLED tinted disc, not the outlined circle programme-confirm-icon draws —
+   this is the module's own dialog, so it carries its own icon rule.
+   ========================================================================= */
+
+.pe-confirm { border-radius: 16px; }
+
+.pe-confirm .pe-confirm-icon {
+    width: 4.5rem;
+    height: 4.5rem;
+    margin-inline: auto;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fde8ec;
+    color: #f5334f;
+    font-size: 1.9rem;
+    line-height: 1;
+}
+
+.pe-confirm .pe-confirm-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #101828;
+}
+
+.pe-confirm .pe-confirm-message {
+    font-size: 0.9375rem;
+    color: #667085;
+    line-height: 1.5;
+    margin-bottom: 0;
+}
+
+.pe-confirm .pe-confirm-btn {
+    flex: 0 1 auto;
+    min-width: 9.5rem;
+    padding: 0.65rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9375rem;
+}
+.pe-confirm .pe-confirm-cancel {
+    border: 1px solid #fca5a5;
+    background: #fff;
+    color: #dc2626;
+}
+.pe-confirm .pe-confirm-cancel:hover {
+    background: #fef2f2;
+    border-color: #f87171;
+    color: #b91c1c;
+}
+.pe-confirm .pe-confirm-ok {
+    border: 1px solid #f5334f;
+    background: #f5334f;
+    color: #fff;
+}
+.pe-confirm .pe-confirm-ok:hover {
+    background: #dc2140;
+    border-color: #dc2140;
+    color: #fff;
+}
+.pe-confirm .pe-confirm-ok:disabled {
+    opacity: 0.7;
+    cursor: progress;
+}
+
+/* ============================================================================
+   Print / narrow screens
+   ========================================================================= */
+
+@media (max-width: 575.98px) {
+    .pe-page .pe-secondary-actions .pe-export-btn { flex: 1 1 auto; justify-content: center; }
+    .pe-confirm .pe-confirm-btn { flex: 1 1 100%; }
+}
+
+@media print {
+    .pe-page .pe-secondary-actions,
+    .pe-page .programme-dt-toolbar,
+    .pe-page .programme-dt-footer,
+    .pe-page .pe-act-group {
+        display: none;
+    }
+}
+
+/* ============================================================================
+   Manage Reflection Fields
+   ----------------------------------------------------------------------------
+   Adds a Status column and a four-action row group (Edit · Preview Form ·
+   status switch · Delete) on top of the shared pe-* layer above.
+   ========================================================================= */
+
+/* Status column: soft badge, display only.
+   The theme ships the *-subtle BACKGROUNDS but not the text-*-emphasis colours,
+   so without these the label renders black. */
+.pe-page .status-pill {
+    padding: 0.4em 0.85em;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+.pe-page .status-pill.bg-success-subtle { color: #146c43; }
+.pe-page .status-pill.bg-danger-subtle  { color: #b02a37; }
+
+/* Four actions instead of two: widen the column so the longest caption
+   ("Deactivate") doesn't stretch its own stack past the others and leave the
+   icon row unevenly spaced. */
+.pe-page .pe-act-group--wide .pe-act { min-width: 66px; }
+
+.pe-page .pe-act--preview { color: #2563eb; }
+.pe-page .pe-act--toggle { color: #475467; }
+
+/* The switch deliberately has NO .form-check/.form-switch ancestor: that
+   combination pulls .form-check-input -2.375rem left (custom.css:107-112) for the
+   switch-BESIDE-label layout, which would knock it ~38px off centre here. The
+   skin is keyed on .form-check-input.status-toggle and still applies. */
+.pe-page .pe-act__icon .form-check-input {
+    margin: 0;
+    float: none;
+}
+
+/* Two-line caption ("Preview / Form") must not push its stack taller than the
+   others, or the icon row stops sharing a baseline. */
+.pe-page .pe-act__label { line-height: 1.15; }
+
+/* .programme-dt-table only wraps its 2nd column (custom.css:416); Field Label is
+   column 4 and can be a whole sentence. */
+.pe-page .prf-col-wrap {
+    white-space: normal;
+    max-width: 320px;
+}
+
+/* ============================================================================
+   Form Preview
+   ========================================================================= */
+
+.pe-preview-page .pe-preview-heading {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #101828;
+}
+
+/* Greyed, non-interactive scope selects — this page previews one scope rather
+   than re-filtering. */
+.pe-preview-page .pe-preview-scope .form-select:disabled {
+    background-color: #f2f4f7;
+    color: #667085;
+    opacity: 1;
+}
+
+.pe-preview-page .pe-preview-modes .btn {
+    border: 1px solid #d0d5dd;
+    background: #fff;
+    color: #344054;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    padding: 0.4rem 0.9rem;
+}
+.pe-preview-page .pe-preview-modes .btn.active {
+    background: #004384;
+    border-color: #004384;
+    color: #fff;
+}
+
+.pe-preview-page .pe-preview-edit {
+    color: #2563eb;
+    line-height: 1;
+    text-decoration: none;
+}
+.pe-preview-page .pe-preview-edit:hover { color: #1d4ed8; }
+
+.pe-preview-page .pe-preview-remarks {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #475467;
+}
+
+.pe-preview-page .pe-preview-member {
+    font-weight: 600;
+    color: #101828;
+}
+.pe-preview-page .pe-preview-otcode {
+    font-size: 0.75rem;
+    color: #667085;
+}
+
+.pe-preview-page .pe-preview-score {
+    width: 118px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.875rem;
+}
+.pe-preview-page .pe-preview-score:disabled {
+    background-color: #fff;
+    color: #101828;
+    opacity: 1;
+}
+
+/* Preview footer: the real form's three buttons, rendered inert. Colours are
+   kept so the preview reads like the real thing, with opacity carrying the
+   "you can't press this" signal. */
+.pe-preview-page .pe-preview-btn {
+    min-width: 132px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    padding: 0.6rem 1rem;
+}
+.pe-preview-page .pe-preview-btn:disabled { opacity: 0.65; }
+.pe-preview-page .pe-preview-btn--cancel {
+    border: 1px solid #fca5a5;
+    background: #fff;
+    color: #dc2626;
+}
+.pe-preview-page .pe-preview-btn--reset {
+    border: 1px solid #fcd34d;
+    background: #fff;
+    color: #b45309;
+}
+.pe-preview-page .pe-preview-btn--submit {
+    border: 1px solid #004384;
+    background: #004384;
+    color: #fff;
+}
+
+@media (max-width: 575.98px) {
+    .pe-preview-page .pe-preview-modes { margin-left: 0 !important; width: 100%; }
+    .pe-preview-page .pe-preview-btn { flex: 1 1 100%; }
+}
+
+/* Preview fields are disabled so nothing can be typed, but they must still LOOK
+   like the live form: Bootstrap's :disabled fill would turn every box grey-blue
+   and hide that these are empty inputs awaiting text. */
+.pe-preview-page textarea.pe-control:disabled,
+.pe-preview-page .form-control:disabled {
+    background-color: #fff;
+    color: #101828;
+    opacity: 1;
+    cursor: default;
+}
+.pe-preview-page textarea.pe-control:disabled::placeholder {
+    color: #9ca3af;
+}
+
+/* ============================================================================
+   Select2 inside the toolbar's filter slots
+   ----------------------------------------------------------------------------
+   .programme-dt-filter-select is a fixed-width wrapper built for a native
+   <select> (and themed for Choices.js); Select2 renders its own box inside it,
+   so match the height, radius and border of the plain control next to it.
+   ========================================================================= */
+
+.pe-page .programme-dt-filter-select .select2-container { width: 100% !important; }
+
+.pe-page .programme-dt-filter-select .select2-container--default .select2-selection--single {
+    /* 40px matches the Columns button and the plain controls beside it. */
+    height: 40px;
+    border: 1px solid #d0d5dd;
+    border-radius: 4px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+}
+.pe-page .programme-dt-filter-select .select2-container--default .select2-selection--single
+    .select2-selection__rendered {
+    /* select2-theme.css pins this span to height:40px, which overflows the flex
+       parent and pushes the label to the top edge instead of centring it. Let the
+       span size to its text and hand the centring back to align-items. */
+    height: auto;
+    line-height: 1.2;
+    padding-left: 0.75rem;
+    padding-right: 2rem;
+    color: #101828;
+    font-size: 0.875rem;
+}
+.pe-page .programme-dt-filter-select .select2-container--default .select2-selection--single
+    .select2-selection__placeholder {
+    color: #667085;
+}
+.pe-page .programme-dt-filter-select .select2-container--default .select2-selection--single
+    .select2-selection__arrow {
+    height: 36px;
+}
+
+/* The modal controls already carry .pe-control's look; Select2 replaces the box,
+   so restate it on the widget. Scoped to .pe-modal so it can't reach the toolbar. */
+.pe-modal .select2-container--default .select2-selection--single {
+    height: 38px; /* matches .pe-control's padding + font-size in the modal */
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+}
+.pe-modal .select2-container--default .select2-selection--single .select2-selection__rendered {
+    height: auto; /* same theme override as the toolbar rule above */
+    line-height: 1.2;
+    padding-left: 0.75rem;
+    padding-right: 2rem;
+    color: #101828;
+    font-size: 0.875rem;
+}
+.pe-modal .select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: #9ca3af;
+}
+.pe-modal .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px;
+}
+.pe-modal .select2-container--default.select2-container--focus .select2-selection--single,
+.pe-modal .select2-container--default.select2-container--open .select2-selection--single {
+    border-color: #004384;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
+}
+
+/* A Select2-skinned control is invalid via its sibling <select>, which is hidden -
+   so paint the widget instead when the submit handler flags the field. */
+.pe-modal select.pe-control.is-invalid + .select2-container .select2-selection--single {
+    border-color: #f87171;
+}
+
+/* ============================================================================
+   Evaluation Reports
+   ========================================================================= */
+
+/* Headline tiles. One flex row that wraps to two-up on small screens. */
+.per-page .per-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    height: 100%;
+    padding: 1rem 1.1rem;
+    background: #fff;
+    border: 1px solid #eaecf0;
+    border-radius: 12px;
+}
+
+.per-page .per-stat__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    font-size: 1.15rem;
+}
+.per-page .per-stat__icon--blue   { background: #e8f0fe; color: #1a56db; }
+.per-page .per-stat__icon--indigo { background: #eef1fc; color: #4338ca; }
+.per-page .per-stat__icon--sky    { background: #e6f4fb; color: #0369a1; }
+.per-page .per-stat__icon--pink   { background: #fde8ec; color: #dc2626; }
+.per-page .per-stat__icon--navy   { background: #e8eef6; color: #004384; }
+
+.per-page .per-stat__body { display: flex; flex-direction: column; min-width: 0; }
+.per-page .per-stat__value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #101828;
+    line-height: 1.15;
+}
+.per-page .per-stat__label {
+    font-size: 0.75rem;
+    color: #667085;
+    line-height: 1.25;
+}
+
+/* OT name is a link into that person's report. */
+.per-page .per-ot-link {
+    color: #1a56db;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.per-page .per-ot-link:hover { color: #143fa5; }
+
+/* Overall score reads as a result, not as another table cell. */
+.per-page .per-score { color: #12805c; font-weight: 600; }
+.per-page .per-score--empty { color: #98a2b3; font-weight: 400; }
+
+/* The grid is wide (six fixed columns + one per criterion), so stop the name and
+   group columns from wrapping into unreadable slivers. .table-responsive scrolls
+   instead. */
+.per-page .programme-dt-table th,
+.per-page .programme-dt-table td { white-space: nowrap; }
+.per-page .programme-dt-table th { vertical-align: middle; }
+
+/* custom.css:416 wraps the table's SECOND column at max-width 420px - meant for a
+   long-text column, but here column 2 is the OT's name and it broke every name
+   onto two lines. That selector carries a pseudo-class, so it out-specifies the
+   rule above; match it to win. */
+.per-page .programme-dt-table td:nth-child(2),
+.per-page .programme-dt-table th:nth-child(2) {
+    white-space: nowrap;
+    max-width: none;
+}
+
+/* ── Detail report ── */
+
+.per-detail-page .per-detail-heading {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #101828;
+}
+
+.per-detail-page .per-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 3.5rem;
+}
+.per-detail-page .per-summary__label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #667085;
+    margin-bottom: 0.25rem;
+}
+.per-detail-page .per-summary__value {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #101828;
+}
+.per-detail-page .per-summary__value--score { color: #1a56db; }
+
+.per-detail-page .per-detail-name { font-weight: 600; color: #101828; }
+.per-detail-page .per-detail-code { font-size: 0.75rem; color: #667085; }
+
+/* Scores sit in a soft box, echoing the input they were typed into. */
+.per-detail-page .per-score-box {
+    display: inline-block;
+    min-width: 74px;
+    padding: 0.35rem 0.6rem;
+    background: #f2f4f7;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: #101828;
+}
+.per-detail-page .per-score-box--avg {
+    background: #fff;
+    border: 1px solid #d0d5dd;
+}
+
+/* Every other column is nowrap, so without a reserved width the browser hands
+   Remarks whatever is left - which was almost nothing, wrapping the text into a
+   ~10-line cell and blowing the row height out. min-width makes the column claim
+   real space and lets .table-responsive scroll instead. */
+.per-detail-page .per-detail-remarks {
+    white-space: normal;
+    min-width: 320px;
+    max-width: 380px;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: #475467;
+}
+
+/* Average band closes the table. */
+.per-detail-page .per-detail-average {
+    background: #eef1fc;
+    font-weight: 600;
+}
+.per-detail-page .per-detail-average td { color: #101828; }
+
+/* The detail table wraps its Remarks column; the rest stays on one line. */
+.per-detail-page .per-detail-table th,
+.per-detail-page .per-detail-table td { white-space: nowrap; }
+.per-detail-page .per-detail-table td.per-detail-remarks { white-space: normal; }
+
+@media (max-width: 991.98px) {
+    .per-detail-page .per-summary { gap: 0.85rem 2rem; }
+}
+
+/* ============================================================================
+   Manage Evaluation Columns
+   ----------------------------------------------------------------------------
+   Three nested levels. Level 2 sits in the parent's DataTables child row on a
+   tinted ground; level 3 sits inside that on a white card, so the depth reads
+   without indentation gymnastics.
+   ========================================================================= */
+
+.pec-page .pec-link {
+    color: #1a56db;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.pec-page .pec-link:hover { color: #143fa5; }
+
+/* The chevron + caption toggle reuses .pe-act, so it lines up with the row
+   actions further down the tree. */
+.pec-page .pec-toggle,
+.pec-page .pec-toggle-group {
+    color: #1a56db;
+    min-width: 56px;
+}
+.pec-page .pec-toggle:disabled,
+.pec-page .pec-toggle-group:disabled { opacity: 0.55; cursor: progress; }
+
+/* Level 2 ground. The child <td> DataTables creates carries no padding of its
+   own, so the tint has to come from the wrapper. */
+.pec-page .pec-child-wrap { padding: 0; }
+.pec-page .pec-level--groups {
+    background: #eef1fc;
+    border-radius: 10px;
+    padding: 0.75rem;
+    margin: 0.25rem 0 0.75rem;
+}
+
+/* Level 3 card, sitting inside the level-2 tint. */
+.pec-page .pec-level--columns { padding: 0 0 0.5rem; }
+.pec-page .pec-columns-card {
+    background: #fff;
+    border: 1px solid #e4e7ec;
+    border-radius: 10px;
+    padding: 1rem;
+}
+
+.pec-page .pec-subtable {
+    background: transparent;
+    font-size: 0.8125rem;
+}
+.pec-page .pec-subtable thead th {
+    background: #fff;
+    color: #475467;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    border-bottom: 1px solid #e4e7ec;
+    padding: 0.65rem 0.75rem;
+    white-space: nowrap;
+}
+.pec-page .pec-subtable tbody td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #eaecf0;
+    vertical-align: middle;
+}
+.pec-page .pec-subtable tbody tr:last-child td { border-bottom: 0; }
+
+/* Level 2's header sits on the tint, so give it the tint too rather than a white
+   band floating in the middle of it. */
+.pec-page .pec-level--groups .pec-subtable thead th { background: transparent; }
+
+.pec-page .pec-columns-table .pec-col-name {
+    font-weight: 600;
+    color: #101828;
+    white-space: normal;
+    max-width: 200px;
+}
+.pec-page .pec-buffer { font-variant-numeric: tabular-nums; }
+
+/* The type tabs are the same pill component as the page-level Active/Archived
+   row, just smaller. */
+.pec-page .pec-type-tabs { display: inline-flex; }
+.pec-page .pec-type-tabs .programme-status-pill { font-size: 0.8125rem; }
+
+/* ── Add-columns modal: repeatable cards ── */
+
+.pec-page-modal .pec-section-title,
+.pe-modal .pec-section-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #101828;
+}
+
+.pe-modal .pec-column-card {
+    background: #f9fafb;
+    border: 1px solid #eaecf0;
+    border-radius: 10px;
+    padding: 0.85rem;
+}
+.pe-modal .pec-column-card + .pec-column-card { margin-top: 0.75rem; }
+
+.pe-modal .pec-card-actions {
+    display: flex;
+    gap: 0.4rem;
+    justify-content: flex-end;
+}
+
+/* Plain (non-!important) display so jQuery show()/hide() works - Bootstrap's
+   d-flex would win over an inline style and both buttons would always show. */
+.pe-modal .pec-card-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border: 0;
+    border-radius: 7px;
+    color: #fff;
+    font-size: 0.9rem;
+    line-height: 1;
+    transition: filter 0.15s ease;
+}
+.pe-modal .pec-card-btn:hover { filter: brightness(0.92); }
+.pe-modal .pec-card-btn--remove { background: #ef4444; }
+.pe-modal .pec-card-btn--add { background: #2563eb; }
+
+.pe-modal .pec-radio-row .form-check-input { margin-top: 0; }
+.pe-modal .pec-card-error { margin-top: 0.4rem; }
+
+@media (max-width: 767.98px) {
+    .pe-modal .pec-card-actions { justify-content: flex-start; margin-top: 0.5rem; }
+}

@@ -17,7 +17,7 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use App\Models\PeerGroup;
 use App\Models\PeerEvent;
-use App\Models\PeerCourse;
+use App\Models\CourseMaster;
 use App\Models\PeerColumn;
 use App\Models\PeerReflectionField;
 
@@ -29,16 +29,31 @@ class PeerEvaluationController extends Controller
     public function index()
     {
         // Get courses with their events and group counts
-       /*  $courses = PeerCourse::with(['events' => function ($query) {
-            $query->active()->withCount('groups');
-        }])->active()->withCount(['events', 'groups'])->get(); */
 		
-		$courses = PeerCourse::with(['events' => function ($query) {
-		$query->active()->withCount('groups');
-		}])
-		->active()
-		->withCount(['events', 'groups'])
-		->paginate(5); 
+		// Courses come from course_master now (peer_courses was retired by
+		// 2026_08_24_000002_point_peer_evaluation_at_course_master). Only courses
+		// that already carry peer content are listed - course_master has 145 rows
+		// and paging through the ones with nothing attached is just noise. Use
+		// "Manage Events" to attach an event to a new course.
+		$courses = CourseMaster::query()
+			->where(function ($query) {
+				$query->whereExists(function ($sub) {
+					$sub->selectRaw('1')->from('peer_events')
+						->whereColumn('peer_events.course_id', 'course_master.pk');
+				})->orWhereExists(function ($sub) {
+					$sub->selectRaw('1')->from('peer_groups')
+						->whereColumn('peer_groups.course_id', 'course_master.pk');
+				});
+			})
+			->withCount([
+				'peerEvents as events_count',
+				'peerGroups as groups_count',
+			])
+			->with(['peerEvents' => function ($query) {
+				$query->active()->withCount('groups');
+			}])
+			->orderBy('course_name')
+			->paginate(5); 
 
         // Get events with their course and group counts
         $events = PeerEvent::active()->withCount('groups')->get();
@@ -57,90 +72,9 @@ class PeerEvaluationController extends Controller
         return view('admin.forms.peer_evaluation.admin', compact('courses', 'groups', 'columns', 'reflectionFields', 'events'));
     }
 
-    // ==================== COURSE MANAGEMENT METHODS ====================
-
-    /**
-     * Add new course
-     */
-    public function addCourse(Request $request)
-    {
-        $request->validate([
-            'course_name' => 'required|string|max:255|unique:peer_courses,course_name'
-        ]);
-
-        try {
-            $course = PeerCourse::create([
-                'course_name' => $request->course_name,
-                'is_active' => true
-            ]);
-
-          /*   return response()->json([
-                'success' => true,
-                'message' => 'Course added successfully'
-            ]); */
-			return response()->json([
-            'success' => true,
-            'message' => 'Course added successfully',
-            'course' => [
-                'id' => $course->id,
-                'course_name' => $course->course_name,
-                'events_count' => 0,
-                'groups_count' => 0
-            ]
-			]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to add course: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-	
-		/**
-		 * Update exiting course
-		 */
-		public function updateCourse(Request $request)
-		{
-			$request->validate([
-				'course_id' => 'required|exists:peer_courses,id',
-				'course_name' => 'required|string|max:255|unique:peer_courses,course_name,' . $request->course_id
-			]);
-
-			PeerCourse::where('id', $request->course_id)->update([
-				'course_name' => $request->course_name
-			]);
-
-			return response()->json([
-				'success' => true,
-				'message' => 'You have successfully updated the course!' 
-			]);
-		}
-
-
-		/**
-		 * Delete exiting course
-		 */
-		public function deleteCourse($id)
-		{
-			$course = PeerCourse::withCount(['events', 'groups'])->findOrFail($id);
-
-			if ($course->events_count > 0 || $course->groups_count > 0) {
-				return response()->json([
-					'success' => false,
-					'message' => 'Cannot delete course with events or groups'
-				], 400);
-			}
-
-			$course->delete();
-			//return response()->json(['success' => true]);
-			return response()->json([
-				'success' => true,
-				 'message' => 'Course deleted successfully!'
-			]);
-		}
-
-
-
+    // Course CRUD lived here. Courses are course_master rows now, owned by
+    // Course Master (admin/programme) - this module no longer creates or
+    // deletes them. See 2026_08_24_000002_point_peer_evaluation_at_course_master.
 
     // ==================== EVENT MANAGEMENT METHODS ====================
 
@@ -151,7 +85,7 @@ class PeerEvaluationController extends Controller
     {
         $request->validate([
             'event_name' => 'required|string|max:255',
-            'course_id' => 'required|exists:peer_courses,id'
+            'course_id' => 'required|exists:course_master,pk'
         ]);
 
         try {
@@ -195,7 +129,7 @@ class PeerEvaluationController extends Controller
     {
         $request->validate([
             'group_name' => 'required|string|max:255',
-            'course_id' => 'required|exists:peer_courses,id',
+            'course_id' => 'required|exists:course_master,pk',
             'event_id' => 'required|exists:peer_events,id',
             'max_marks' => 'required|numeric|min:1|max:100'
         ]);
@@ -308,7 +242,7 @@ class PeerEvaluationController extends Controller
     {
         $request->validate([
             'column_name' => 'required|string|max:255',
-            'course_id' => 'nullable|exists:peer_courses,id',
+            'course_id' => 'nullable|exists:course_master,pk',
             'event_id' => 'nullable|exists:peer_events,id'
         ]);
 
@@ -384,7 +318,7 @@ class PeerEvaluationController extends Controller
     {
         $request->validate([
             'field_label' => 'required|string|max:255',
-            'course_id' => 'nullable|exists:peer_courses,id',
+            'course_id' => 'nullable|exists:course_master,pk',
             'event_id' => 'nullable|exists:peer_events,id'
         ]);
 
@@ -506,6 +440,34 @@ class PeerEvaluationController extends Controller
                         ]
                     );
                 }
+            }
+
+            // Per-evaluator remark about one evaluated OT. Keyed the same way the
+            // scores above are (member + group + evaluator) so the Evaluation
+            // Report can line a remark up with that evaluator's scores. Blank
+            // boxes are skipped rather than stored as empty rows.
+            foreach ($request->input('remarks', []) as $memberId => $remark) {
+                $remark = is_string($remark) ? trim($remark) : '';
+
+                if ($remark === '') {
+                    DB::table('peer_evaluation_remarks')
+                        ->where(['member_id' => $memberId, 'group_id' => $groupId, 'evaluator_id' => $userId])
+                        ->delete();
+                    continue;
+                }
+
+                DB::table('peer_evaluation_remarks')->updateOrInsert(
+                    [
+                        'member_id' => $memberId,
+                        'group_id' => $groupId,
+                        'evaluator_id' => $userId,
+                    ],
+                    [
+                        'remarks' => mb_substr($remark, 0, 2000),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]
+                );
             }
 
             foreach ($reflections as $fieldId => $description) {

@@ -71,6 +71,12 @@
                                 {{-- Table Section --}}
                                 <div class="table-responsive">
                                     <table class="table table-hover align-middle mb-0">
+                                        <caption class="peer-remarks-toggle-wrap caption-top px-4 pt-3 pb-0">
+                                            <label class="d-inline-flex align-items-center gap-2 mb-0 small fw-semibold text-dark">
+                                                <input type="checkbox" class="form-check-input m-0" id="peerRemarksToggle">
+                                                <span>Remarks</span>
+                                            </label>
+                                        </caption>
                                         <thead class="table-light">
                                             <tr>
                                                 <th class="fw-semibold text-uppercase small text-muted border-0 py-3 ps-4">Sr.No</th>
@@ -80,10 +86,17 @@
                                                     <th class="fw-semibold text-uppercase small text-muted border-0 py-3 text-center">
                                                         <div class="d-flex flex-column align-items-center">
                                                             <span class="mb-1">{{ $column->column_name }}</span>
-                                                            <small class="text-muted fw-normal">(1-{{ $selectedGroup->max_marks ?? 10 }})</small>
+                                                            <small class="text-muted fw-normal">(1-{{ $column->max_marks ?? ($selectedGroup->max_marks ?? 10) }})</small>
                                                         </div>
                                                     </th>
                                                 @endforeach
+                                                {{-- Remarks: one free-text note per evaluated OT, stored in
+                                                     peer_evaluation_remarks and shown on that OT's Evaluation
+                                                     Report beside this evaluator's scores. Hidden until the
+                                                     toggle above is ticked, matching the design. --}}
+                                                <th class="fw-semibold text-uppercase small text-muted border-0 py-3 peer-remarks-col d-none">
+                                                    Remarks
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -105,9 +118,13 @@
                                                     @foreach ($columns as $column)
                                                         <td class="text-center">
                                                             <div class="score-input-wrapper">
+                                                                {{-- The COLUMN's own max wins over the group's:
+                                                                     Manage Evaluation Columns gives each column its
+                                                                     own Max Marks, and the group value is only the
+                                                                     default a new column starts from. --}}
                                                                 <input type="number" 
                                                                     min="1" 
-                                                                    max="{{ $selectedGroup->max_marks ?? 10 }}"
+                                                                    max="{{ $column->max_marks ?? ($selectedGroup->max_marks ?? 10) }}"
                                                                     name="scores[{{ $member->id }}][{{ $column->id }}]"
                                                                     class="form-control form-control-lg text-center score-input fw-bold border-2" 
                                                                     value="0" 
@@ -117,6 +134,14 @@
                                                             </div>
                                                         </td>
                                                     @endforeach
+                                                    <td class="peer-remarks-col d-none">
+                                                        <textarea name="remarks[{{ $member->id }}]"
+                                                                  class="form-control"
+                                                                  rows="2"
+                                                                  maxlength="2000"
+                                                                  placeholder="Optional note about {{ $member->first_name }}"
+                                                                  aria-label="Remarks for {{ $member->first_name }}"></textarea>
+                                                    </td>
                                                 </tr>
                                             @endforeach
                                         </tbody>
@@ -378,7 +403,21 @@
                 document.getElementById('groupForm').submit();
             });
         }
-    </script>
+    
+    /* Remarks column toggle. Uses .d-none (a Bootstrap utility) rather than
+       jQuery .hide(): the cells are <td>/<th>, and toggling a class keeps the
+       column's header and body in step with one attribute. */
+    (function () {
+        var toggle = document.getElementById('peerRemarksToggle');
+        if (!toggle) { return; }
+
+        toggle.addEventListener('change', function () {
+            document.querySelectorAll('.peer-remarks-col').forEach(function (cell) {
+                cell.classList.toggle('d-none', !toggle.checked);
+            });
+        });
+    })();
+</script>
 
     <style>
         :root {

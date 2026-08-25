@@ -13,6 +13,7 @@ class PeerReflectionField extends Model
         'field_label',
         'course_id',
         'event_id',
+        'group_id',
         'is_active'
     ];
 
@@ -24,12 +25,25 @@ class PeerReflectionField extends Model
 
     public function course(): BelongsTo
     {
-        return $this->belongsTo(PeerCourse::class, 'course_id');
+        // course_id is a course_master.pk since
+        // 2026_08_24_000002_point_peer_evaluation_at_course_master; course_master
+        // keys on `pk`, not `id`, so the owner key has to be named explicitly.
+        return $this->belongsTo(CourseMaster::class, 'course_id', 'pk');
     }
 
     public function event(): BelongsTo
     {
         return $this->belongsTo(PeerEvent::class, 'event_id');
+    }
+
+    /**
+     * Optional group scope. All three of course/event/group are nullable: a field
+     * with none set is a GLOBAL field shown on every evaluation form, which is how
+     * the seeded "Overall comment" style fields work.
+     */
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(PeerGroup::class, 'group_id');
     }
 
     public function scopeActive($query)

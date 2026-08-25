@@ -11,7 +11,7 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 @extends('admin.layouts.master')
-@section('title', 'Peer Evaluation - Admin Panel | Sargam Admin')
+@section('title', 'Peer Evaluation - Admin Panel')
 @section('setup_content')
 
 
@@ -20,16 +20,19 @@
     <div class="card p-3" >
         <h4 class="mb-4">Peer Evaluation - Admin Panel  </h4>
 
-        {{-- Manage Courses Section --}}
+        {{-- Courses Section.
+             Courses are course_master rows now and are created in Course Master,
+             not here - peer_courses was retired by
+             2026_08_24_000002_point_peer_evaluation_at_course_master. This lists
+             the courses that already carry peer content; use Manage Events to
+             attach an event to a course that isn't listed yet. --}}
         <div class="mb-4">
-            <h5>Manage Courses</h5>
-            <div class="input-group mb-3">
-                <input type="text" id="course_name" class="form-control" placeholder="Enter Course Name">
-                <button class="btn btn-info" id="addCourseBtn">Add Course</button>
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                <h5 class="mb-0">Courses</h5>
+                <a href="{{ route('admin.peer.events.index') }}" class="btn btn-sm btn-outline-primary">
+                    Manage Events
+                </a>
             </div>
-			
-			<span id="courseMessage" class="text-danger small ms-2" style="display:none;"></span>
-			
 
             {{-- Courses List --}}
             <div class="mt-3">
@@ -40,13 +43,13 @@
     <div class="accordion-item mb-2">
 
         <h2 class="accordion-header d-flex align-items-center justify-content-between px-3 py-2"
-            id="heading{{ $course->id }}">
+            id="heading{{ $course->pk }}">
 
             <!-- Accordion Toggle -->
             <button class="accordion-button collapsed flex-grow-1 me-2" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#collapse{{ $course->id }}"
+                    data-bs-target="#collapse{{ $course->pk }}"
                     aria-expanded="false"
-                    aria-controls="collapse{{ $course->id }}">
+                    aria-controls="collapse{{ $course->pk }}">
                 <strong>{{ $course->course_name }}</strong>
 			</button>
 
@@ -56,23 +59,6 @@
                 <span class="badge bg-primary">{{ $course->events_count }} Events</span>
                 <span class="badge bg-secondary">{{ $course->groups_count }} Groups</span>
 
-                <!-- Edit -->
-                <button type="button"
-					class="btn btn-sm btn-outline-warning edit-course-btn"
-					data-id="{{ $course->id }}"
-					data-name="{{ $course->course_name }}"
-					title="Edit Course">
-					<i class="fa-solid fa-pen"></i>
-				</button>
-
-                <!-- Delete -->
-                <button type="button"
-					class="btn btn-sm btn-outline-danger delete-course-btn"
-					data-id="{{ $course->id }}"
-					title="Delete Course">
-					<i class="fa-solid fa-trash"></i>
-				</button>
-								
             </div>
 		
 		
@@ -80,9 +66,9 @@
         </h2>
 
         <!-- COLLAPSE BODY -->
-        <div id="collapse{{ $course->id }}"
+        <div id="collapse{{ $course->pk }}"
              class="accordion-collapse collapse"
-             aria-labelledby="heading{{ $course->id }}"
+             aria-labelledby="heading{{ $course->pk }}"
              data-bs-parent="#coursesAccordion">
 
             <div class="accordion-body">
@@ -92,15 +78,15 @@
                     <input type="text"
                            class="form-control event-input"
                            placeholder="Add Event to {{ $course->course_name }}"
-                           data-course-id="{{ $course->id }}">
+                           data-course-id="{{ $course->pk }}">
                     <button class="btn btn-outline-primary add-event-btn"
-                            data-course-id="{{ $course->id }}">
+                            data-course-id="{{ $course->pk }}">
                         Add Event
                     </button>
                 </div>
 
                 <!-- Events List -->
-                @foreach ($course->events as $event)
+                @foreach ($course->peerEvents as $event)
                     <div class="mb-2 p-2 border rounded d-flex justify-content-between align-items-center">
                         <div>
                             <strong>{{ $event->event_name }}</strong>
@@ -133,7 +119,7 @@
                     <select class="form-control" id="group_course_id">
                         <option value="">Select Course</option>
                         @foreach ($courses as $course)
-                            <option value="{{ $course->id }}">{{ $course->course_name }}</option>
+                            <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -264,7 +250,7 @@
                     <select class="form-control" id="column_course_id">
                         <option value="">Global Column</option>
                         @foreach ($courses as $course)
-                            <option value="{{ $course->id }}">{{ $course->course_name }}</option>
+                            <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -360,7 +346,7 @@
                     <select class="form-select form-select-lg" id="reflection_course_id">
                         <option value="">Global Field</option>
                         @foreach ($courses as $course)
-                            <option value="{{ $course->id }}">{{ $course->course_name }}</option>
+                            <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -521,135 +507,7 @@
                     }
                 });
 
-                // Add Course
-				
-           	function validateCourseName() {
-			const courseName = $('#course_name').val().trim();
-			
-			if (!courseName) {
-				$('#courseMessage')
-					.removeClass('text-success')
-					.addClass('text-danger')
-					.text('Please enter course name')
-					.show();
-				return false;
-			}
-
-				$('#courseMessage').hide().text('');
-				return true;
-			}
-
-			$('#course_name').on('keyup', function () {
-				if ($(this).val().trim().length > 0) {
-					$('#courseMessage').fadeOut();
-				}
-			});
-
-			$('#course_name').on('blur', function () {
-				validateCourseName();
-			});
-
-		//$('#addCourseBtn').click(function () {
-		$(document).on('click', '#addCourseBtn', function () {
-
-		const courseName = $('#course_name').val().trim();
-
-		$('#courseMessage').hide().removeClass('text-success text-danger').text('');
-
-	   /* if (!courseName) {
-			$('#courseMessage').addClass('text-danger')
-				.text('Please enter course name')
-				.show();
-			return;
-		}*/
-		
-		if (!validateCourseName()) {
-			return;
-		}
-
-		$.post('{{ route('admin.peer.course.add') }}', {
-			_token: '{{ csrf_token() }}',
-			course_name: courseName
-		}, function (response) {
-
-		if (response.success) {
-
-           $('#courseMessage')
-           .addClass('text-success')
-           .text(response.message)
-           .show();
-
-           $('#course_name').val('');
-
-           setTimeout(() => $('#courseMessage').fadeOut(), 3000);
-           const course = response.course;
-
-            const html = `
-<div class="accordion-item mb-2">
-
-    <h2 class="accordion-header d-flex align-items-center justify-content-between px-3 py-2"
-        id="heading${course.id}">
-
-        <button class="accordion-button collapsed flex-grow-1 me-2"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#collapse${course.id}">
-            <strong>${course.course_name}</strong>
-        </button>
-
-        <div class="d-flex align-items-center gap-2">
-
-            <span class="badge bg-primary">0 Events</span>
-            <span class="badge bg-secondary">0 Groups</span>
-
-            <button type="button"
-                class="btn btn-sm btn-outline-warning edit-course-btn"
-                data-id="${course.id}"
-                data-name="${course.course_name}"
-                title="Edit Course">
-                <i class="fa-solid fa-pen"></i>
-            </button>
-
-            <button type="button"
-                class="btn btn-sm btn-outline-danger delete-course-btn"
-                data-id="${course.id}"
-                title="Delete Course">
-                <i class="fa-solid fa-trash"></i>
-            </button>
-
-        </div>
-    </h2>
-
-    <div id="collapse${course.id}"
-        class="accordion-collapse collapse"
-        data-bs-parent="#coursesAccordion">
-
-        <div class="accordion-body">
-            <div class="input-group input-group-sm mb-3">
-                <input type="text"
-                    class="form-control event-input"
-                    placeholder="Add Event to ${course.course_name}"
-                    data-course-id="${course.id}">
-                <button class="btn btn-outline-primary add-event-btn"
-                    data-course-id="${course.id}">
-                    Add Event
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-`;
-$('#coursesAccordion').prepend(html);
-        }
-
-    }).fail(function () {
-        $('#courseMessage').addClass('text-danger')
-            .text('Error adding course')
-            .show();
-    });
-});
-
-          // Add Event to Course
+                // Add Event (inline, per course)
                 //$('.add-event-btn').click(function() {
 			$(document).on('click', '.add-event-btn', function () {
     const courseId = $(this).data('course-id');
@@ -1057,134 +915,12 @@ $('#coursesAccordion').prepend(html);
 		
 		
 <!-- Edit Course Modal -->
-<div class="modal fade" id="editCourseModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Course</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
 
-            <div class="modal-body">
-                <input type="hidden" id="editCourseId">
-                <input type="text" class="form-control" id="editCourseName">
-            </div>
-
-            <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button class="btn btn-primary" id="updateCourseBtn">Update</button>
-            </div>
-        </div>
-    </div>
-</div>
-		
     @endsection
 	
 @section('scripts')
 
 <script>
-// EDIT COURSE
-$(document).on('click', '.edit-course-btn', function (e) {
-    e.stopPropagation(); // Prevent accordion toggle
-    const id = $(this).data('id');
-    const name = $(this).data('name');
-    $('#editCourseId').val(id);
-    $('#editCourseName').val(name);
-
-    const modal = new bootstrap.Modal(document.getElementById('editCourseModal'));
-    modal.show();
-});
-
-// UPDATE COURSE
-$(document).on('click', '#updateCourseBtn', function () {
-    const id = $('#editCourseId').val();
-    const name = $('#editCourseName').val();
-
-    if (!name.trim()) {
-        alert('Course name is required');
-        return;
-    }
-
-    $.ajax({
-        url: "{{ route('admin.peer.course.update') }}",
-        type: "POST",
-        data: {
-            _token: "{{ csrf_token() }}",
-            course_id: id,
-            course_name: name
-        },
-        success: function (res) {
-    const heading = $('#heading' + id);
-
-    // Update accordion button text
-		heading.find('.accordion-button strong').text(name);
-
-		// Update edit button's data-name attribute for future edits
-		heading.find('.edit-course-btn').data('name', name);
-
-		// Close modal
-		const modalEl = document.getElementById('editCourseModal');
-		const modal = bootstrap.Modal.getInstance(modalEl);
-		modal.hide();
-
-		// Show success message
-		$('#successMessage')
-			.removeClass('text-danger')
-			.addClass('successMessage')
-			.text(res.message)
-			.fadeIn();
-
-		// Hide after 3 seconds
-		setTimeout(() => $('#successMessage').fadeOut(), 3000);
-	},
-        error: function (xhr) {
-            alert(xhr.responseJSON?.message || 'Update failed');
-        }
-    });
-});
-
-// DELETE COURSE
-$(document).on('click', '.delete-course-btn', function (e) {
-    e.stopPropagation();
-
-    const id = $(this).data('id');
-
-    if (!confirm('Are you sure you want to delete this course?')) return;
-
-    $.ajax({
-        url: "{{ route('admin.peer.course.delete', ':id') }}".replace(':id', id),
-        type: "DELETE",
-        data: {
-            _token: "{{ csrf_token() }}"
-        },
-        success: function (res) {
-
-            // remove row
-            $('#heading' + id).closest('.accordion-item').remove();
-
-            // success message
-            $('#successMessage')
-                .removeClass('text-danger')
-                .addClass('text-success')
-                .text(res.message)
-                .fadeIn();
-
-            
-            setTimeout(() => {
-                $('#successMessage').fadeOut();
-            }, 3000);
-        },
-        error: function (xhr) {
-            $('#successMessage')
-                .removeClass('text-success')
-                .addClass('text-danger')
-                .text(xhr.responseJSON?.message || 'Delete failed')
-                .fadeIn();
-        }
-    });
-});
-
-
 </script>
 
 <script>
@@ -1225,6 +961,10 @@ $(document).ready(function() {
         pageLength: 10
     });
 	
+    // Closes the setTimeout arrow above. PRE-EXISTING BUG: the matching close for
+    // $(document).ready() was missing, so this whole block was a syntax error and
+    // none of these four DataTables ever initialised.
+    }, 0);
 });
 </script>
 

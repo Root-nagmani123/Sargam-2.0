@@ -42,6 +42,23 @@ class CourseMaster extends Model
         });
     }
 
+    /**
+     * Peer Evaluation events / groups hanging off this course.
+     *
+     * peer_events.course_id and peer_groups.course_id became course_master.pk in
+     * 2026_08_24_000002_point_peer_evaluation_at_course_master; before that the
+     * module kept its own peer_courses table.
+     */
+    public function peerEvents()
+    {
+        return $this->hasMany(PeerEvent::class, 'course_id', 'pk');
+    }
+
+    public function peerGroups()
+    {
+        return $this->hasMany(PeerGroup::class, 'course_id', 'pk');
+    }
+
     public function courseCordinatorMater()
     {
         return $this->hasMany(CourseCordinatorMaster::class, 'courses_master_pk', 'pk');
