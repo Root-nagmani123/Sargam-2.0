@@ -1043,14 +1043,23 @@ class GroupMappingController extends Controller
                 'group'       => $group,
                 'printedOn'   => now()->format('d-m-Y H:i'),
                 'reportTitle' => 'Course Group Mapping - Student List',
-                'logo'        => $this->lbsnaaLogoDataUri(),
+                // Data URI only. lbsnaaLogoDataUri() falls back to a remote URL when no
+                // local file matches, and this renderer no longer fetches over the
+                // network — passing that URL would leave the <img> pointing at something
+                // dompdf will not load. The blade guards on an empty value and renders
+                // logo-less, which is the correct outcome for a missing local asset.
+                'logo'        => $this->pdfInlineLogo(),
             ])
                 ->setPaper('a4', 'portrait')
                 ->setOptions([
                     'defaultFont'          => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled'      => true,
-                    'isPhpEnabled'         => true,
+                    // Both off deliberately. A report has no reason to execute PHP, and
+                    // isPhpEnabled turns any raw block that later appears in the view into
+                    // server-side code execution on stored data. With the logo inlined
+                    // above, nothing needs fetching over the network either.
+                    'isRemoteEnabled'      => false,
+                    'isPhpEnabled'         => false,
                     'dpi'                  => 96,
                 ]);
 
@@ -1479,6 +1488,21 @@ class GroupMappingController extends Controller
         }
 
         return $url;
+    }
+
+    /**
+     * The LBSNAA logo for a renderer that does not fetch remote URLs.
+     *
+     * lbsnaaLogoDataUri() ends in a remote https fallback, which is fine for the older
+     * landscape export that still allows remote fetches but useless once isRemoteEnabled
+     * is off. Returning an empty string instead lets the blade's `@if($logo)` guard drop
+     * the <img> entirely rather than emit one dompdf will refuse to load.
+     */
+    private function pdfInlineLogo(): string
+    {
+        $logo = $this->lbsnaaLogoDataUri();
+
+        return str_starts_with($logo, 'data:') ? $logo : '';
     }
 
     private function lbsnaaLogoDataUri(): string

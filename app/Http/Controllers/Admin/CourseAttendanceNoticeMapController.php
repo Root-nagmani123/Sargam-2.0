@@ -423,8 +423,13 @@ $noticeCount = $memos->groupBy(function($item) {
             ->setOptions([
                 'defaultFont' => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => true,
-                'isPhpEnabled' => true,
+                // Both off deliberately. A report has no reason to execute PHP, and
+                // isPhpEnabled turns any raw block that later appears in the view into
+                // server-side code execution on admin-authored content. The only image
+                // here is $logo, which is a base64 data URI or null, so nothing needs to
+                // be fetched over the network either.
+                'isRemoteEnabled' => false,
+                'isPhpEnabled' => false,
                 'dpi' => 96,
             ]);
 
