@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CadreMaster;
+use App\Models\CourseCordinatorMaster;
 use App\Models\CourseMaster;
+use App\Models\FacultyMaster;
 use App\Models\ServiceMaster;
 use App\Models\StudentMaster;
 use App\Models\StudentMasterCourseMap;
@@ -17,12 +19,15 @@ use Carbon\Carbon;
 
 class WhosWhoController extends Controller
 {
+    /** @var array<int, int>|null|false Faculty CC/ACC course PKs (null = unrestricted). */
+    private $facultyCcAccCourseIdsMemo = false;
+
     /**
      * Display the Who's Who page
      */
     public function index()
     {
-        $cacheKey = 'whos_who_courses:v1:' . Carbon::now()->format('Y-m-d');
+        $cacheKey = $this->coursesCacheKey();
         $courses = DataTableRedisCache::remember(
             $cacheKey,
             [
@@ -45,7 +50,7 @@ class WhosWhoController extends Controller
     public function getCourses()
     {
         try {
-            $cacheKey = 'whos_who_courses:v1:' . Carbon::now()->format('Y-m-d');
+            $cacheKey = $this->coursesCacheKey();
             $courses = DataTableRedisCache::remember(
                 $cacheKey,
                 [
@@ -77,10 +82,154 @@ class WhosWhoController extends Controller
     {
         $currentDate = Carbon::now()->format('Y-m-d');
 
-        return CourseMaster::where('active_inactive', 1)
-            ->where('end_date', '>=', $currentDate)
-            ->orderBy('course_name')
+        $query = CourseMaster::where('active_inactive', 1)
+            ->where('end_date', '>=', $currentDate);
+
+        $allowedCourseIds = $this->facultyCcAccCourseIds();
+        if ($allowedCourseIds !== null) {
+            if ($allowedCourseIds === []) {
+                return collect();
+            }
+            $query->whereIn('pk', $allowedCourseIds);
+        }
+
+        return $query->orderBy('course_name')
             ->get(['pk', 'course_name', 'couse_short_name']);
+    }
+
+    /**
+     * Course list cache must be per faculty, otherwise a faculty user would
+     * receive the shared "all active courses" payload.
+     */
+    private function coursesCacheKey(): string
+    {
+        $allowedCourseIds = $this->facultyCcAccCourseIds();
+        $scope = $allowedCourseIds === null
+            ? 'all'
+            : 'f' . (int) (auth()->id() ?? 0) . ':' . implode('-', $allowedCourseIds);
+
+        return 'whos_who_courses:v2:' . Carbon::now()->format('Y-m-d') . ':' . md5($scope);
+    }
+
+    /**
+     * Faculty (portal) users may only see courses where they are CC or ACC.
+     * Admin / Super Admin keep the full active-course list.
+     *
+     * @return array<int, int>|null null = no extra restriction
+     */
+    private function facultyCcAccCourseIds(): ?array
+    {
+        if ($this->facultyCcAccCourseIdsMemo !== false) {
+            return $this->facultyCcAccCourseIdsMemo;
+        }
+
+        if (! is_faculty_portal_user() || hasRole('Super Admin')) {
+            return $this->facultyCcAccCourseIdsMemo = null;
+        }
+
+        $identityIds = $this->loggedInFacultyCoordinatorIdentityIds();
+        if ($identityIds === []) {
+            return $this->facultyCcAccCourseIdsMemo = [];
+        }
+
+        $ids = CourseCordinatorMaster::where(function ($query) use ($identityIds) {
+            $query->whereIn('Coordinator_name', $identityIds)
+                ->orWhereIn('Assistant_Coordinator_name', $identityIds);
+            foreach ($identityIds as $identityId) {
+                $query->orWhereRaw('FIND_IN_SET(?, Assistant_Coordinator_name)', [$identityId]);
+            }
+        })
+            ->pluck('courses_master_pk')
+            ->unique()
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
+        return $this->facultyCcAccCourseIdsMemo = $ids;
+    }
+
+    /**
+     * IDs stored on course_coordinator_master for this login (faculty pk and/or employee pk).
+     *
+     * user_credentials.user_id is often a stale employee pk, so get_auth_faculty_master_pk()
+     * can resolve the wrong faculty. Prefer email / name matches, then fall back to the helper.
+     *
+     * @return array<int, int>
+     */
+    private function loggedInFacultyCoordinatorIdentityIds(): array
+    {
+        $user = auth()->user();
+        if (! $user) {
+            return [];
+        }
+
+        $facultyPks = collect($this->facultyPksMatchingLoginIdentity($user));
+
+        if ($facultyPks->isEmpty()) {
+            $helperPk = get_auth_faculty_master_pk();
+            if ($helperPk) {
+                $facultyPks->push((int) $helperPk);
+            }
+        }
+
+        if ($facultyPks->isEmpty()) {
+            return [];
+        }
+
+        $employeePks = FacultyMaster::whereIn('pk', $facultyPks->all())
+            ->pluck('employee_master_pk')
+            ->filter()
+            ->map(fn ($id) => (int) $id);
+
+        return $facultyPks
+            ->merge($employeePks)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Faculty records that belong to the logged-in person (email, then name).
+     *
+     * @return array<int, int>
+     */
+    private function facultyPksMatchingLoginIdentity($user): array
+    {
+        $pks = collect();
+        $email = strtolower(trim((string) ($user->email_id ?? '')));
+        $first = strtolower(trim((string) ($user->first_name ?? '')));
+        $last = strtolower(trim((string) ($user->last_name ?? '')));
+
+        if ($email !== '') {
+            $employeePks = DB::table('employee_master')
+                ->whereRaw('LOWER(TRIM(email)) = ?', [$email])
+                ->pluck('pk');
+            if ($employeePks->isNotEmpty()) {
+                $pks = $pks->merge(
+                    FacultyMaster::whereIn('employee_master_pk', $employeePks)->pluck('pk')
+                );
+            }
+
+            $pks = $pks->merge(
+                FacultyMaster::where(function ($q) use ($email) {
+                    $q->whereRaw('LOWER(TRIM(email_id)) = ?', [$email])
+                        ->orWhereRaw('LOWER(TRIM(alternate_email_id)) = ?', [$email]);
+                })->pluck('pk')
+            );
+        }
+
+        if ($pks->isEmpty() && $first !== '' && $last !== '') {
+            $pks = $pks->merge(
+                FacultyMaster::whereRaw('LOWER(TRIM(first_name)) = ?', [$first])
+                    ->whereRaw('LOWER(TRIM(last_name)) = ?', [$last])
+                    ->pluck('pk')
+            );
+        }
+
+        return $pks->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
     }
 
     /**
@@ -125,6 +274,25 @@ class WhosWhoController extends Controller
                 $serviceId = '';
             }
 
+            $allowedCourseIds = $this->facultyCcAccCourseIds();
+            if ($allowedCourseIds !== null) {
+                if ($allowedCourseIds === []) {
+                    return response()->json([
+                        'success' => true,
+                        'students' => [],
+                        'count' => 0,
+                    ]);
+                }
+                if (! empty($courseId) && ! in_array((int) $courseId, $allowedCourseIds, true)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Selected course is not assigned to you as CC/ACC',
+                        'students' => [],
+                        'count' => 0,
+                    ]);
+                }
+            }
+
             if (!empty($courseId) && $courseId > 0) {
                 if (! CourseMaster::where('pk', $courseId)->where('active_inactive', 1)->exists()) {
                     return response()->json([
@@ -136,7 +304,7 @@ class WhosWhoController extends Controller
                 }
             }
 
-            $cacheKey = 'whos_who_students:v2:' . md5(json_encode([
+            $cacheKey = 'whos_who_students:v3:' . md5(json_encode([
                 'name' => $name,
                 'course_id' => $courseId,
                 'cadre_id' => $cadreId,
@@ -144,6 +312,7 @@ class WhosWhoController extends Controller
                 'page' => $page,
                 'per_page' => $perPage,
                 'sort_by' => $sortBy,
+                'faculty_scope' => $allowedCourseIds,
             ]));
 
             return response()->json(
@@ -224,7 +393,20 @@ class WhosWhoController extends Controller
          * When a course is selected, we filter by course_master_pk column in the mapping table
          * This ensures we only get students enrolled in that specific course
          */
-        if (!empty($courseId) && $courseId > 0) {
+        $allowedCourseIds = $this->facultyCcAccCourseIds();
+        if ($allowedCourseIds !== null) {
+            if ($allowedCourseIds === []) {
+                $query->whereRaw('1 = 0');
+            } elseif (! empty($courseId) && $courseId > 0) {
+                if (! in_array((int) $courseId, $allowedCourseIds, true)) {
+                    $query->whereRaw('1 = 0');
+                } else {
+                    $query->where('student_master_course__map.course_master_pk', $courseId);
+                }
+            } else {
+                $query->whereIn('student_master_course__map.course_master_pk', $allowedCourseIds);
+            }
+        } elseif (!empty($courseId) && $courseId > 0) {
             $query->where('student_master_course__map.course_master_pk', $courseId);
         }
 
