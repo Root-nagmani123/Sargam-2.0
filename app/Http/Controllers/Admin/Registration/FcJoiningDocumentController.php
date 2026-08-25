@@ -288,9 +288,16 @@ class FcJoiningDocumentController extends Controller
         // <username>_<rank>_<exam year> — the same rule every other FC archive uses, so one
         // trainee is named identically wherever they are exported. This used to be built from
         // first_name + last_name, which matched nothing else in the app.
-        $roster = DB::table('fc_registration_master')
-            ->where('user_id', $student->user_name)
-            ->first(['rank', 'exam_year']);
+        // Guarded, not because user_name is nullable today — user_credentials.user_name is
+        // NOT NULL — but because Laravel rewrites a null binding to `IS NULL`, which matches
+        // every roster row that has no username. first() would then stamp an unrelated
+        // trainee's rank and exam year onto this archive's filename, silently and with no
+        // error. The guard makes that failure impossible rather than merely unlikely.
+        $roster = filled($student->user_name)
+            ? DB::table('fc_registration_master')
+                ->where('user_id', $student->user_name)
+                ->first(['rank', 'exam_year'])
+            : null;
 
         $used = [];
         $cleanName = fc_archive_entry_stem(
