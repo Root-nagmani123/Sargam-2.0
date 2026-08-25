@@ -20,6 +20,7 @@ use App\Models\PeerEvent;
 use App\Models\CourseMaster;
 use App\Models\PeerColumn;
 use App\Models\PeerReflectionField;
+use App\Support\PeerEvaluationForm;
 
 class PeerEvaluationController extends Controller
 {
@@ -412,167 +413,298 @@ class PeerEvaluationController extends Controller
     }
 
     /**
-     * Store evaluation scores and reflections
+     * Record one evaluator's submission for one group.
+     *
+     * Authorisation and validation both run off PeerEvaluationForm - the same
+     * class user_index() renders from - so anything that could not be shown is
+     * also refused here.
+     *
+     * The previous version trusted the request completely: any authenticated
+     * caller could post any group_id with any member_id, any column_id and any
+     * score, whether or not they were in the group and whether or not the form
+     * was open.
      */
     public function store(Request $request)
     {
-        $scores = $request->input('scores', []);
-        $reflections = $request->input('reflections', []);
-        $groupId = $request->input('group_id');
-        $userId = auth()->id();
+        $userPk = (int) auth()->user()->pk;
+
+        $validated = $request->validate([
+            'group_id' => ['required', 'integer'],
+            'scores' => ['array'],
+            'remarks' => ['array'],
+            'remarks.*' => ['nullable', 'string', 'max:2000'],
+            'reflections' => ['array'],
+            'reflections.*' => ['nullable', 'string', 'max:5000'],
+        ]);
+
+        $group = DB::table('peer_groups')->where('id', $validated['group_id'])->first();
+
+        if (! $group) {
+            return back()->withInput()->with('error', 'That peer group no longer exists.');
+        }
+
+        // Membership, not role: holding an admin role does not put you in the
+        // group, and peer_scores has nowhere to record a non-member.
+        $membership = PeerEvaluationForm::membershipOf((int) $group->id, $userPk);
+
+        if (! $membership) {
+            return back()->withInput()->with('error', 'You are not a member of this group.');
+        }
+
+        if ($closed = PeerEvaluationForm::closedReason($group)) {
+            return back()->withInput()->with('error', $closed);
+        }
+
+        // Resolved server-side. Ids in the request are only ever checked against
+        // these, never trusted.
+        $peerIds = PeerEvaluationForm::peersFor($group, (int) $membership->id)
+            ->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $columns = PeerEvaluationForm::columnsFor($group)->keyBy('id');
+        $fieldIds = PeerEvaluationForm::reflectionFieldsFor($group)
+            ->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        // The remarks box is offered when any criterion on the form asks for one:
+        // the design puts one remark against the evaluated OT, not one per
+        // criterion, so a single flag anywhere in scope opens it.
+        $allowsRemarks = $columns->contains(fn ($column) => (bool) $column->has_remarks);
+
+        $clean = [];
+        $distributed = 0.0;
+
+        foreach ((array) $request->input('scores', []) as $memberId => $columnScores) {
+            $memberId = (int) $memberId;
+
+            if (! in_array($memberId, $peerIds, true)) {
+                return back()->withInput()->with(
+                    'error',
+                    'That submission scored somebody who is not one of your peers in this group.'
+                );
+            }
+
+            foreach ((array) $columnScores as $columnId => $score) {
+                $column = $columns->get((int) $columnId);
+
+                if (! $column) {
+                    return back()->withInput()->with(
+                        'error',
+                        'That submission used a criterion that is not on this form.'
+                    );
+                }
+
+                // An untouched box is not a zero - leave it unrecorded so the
+                // report can tell "not scored" from "scored nothing".
+                if ($score === null || $score === '') {
+                    continue;
+                }
+
+                if (! is_numeric($score)) {
+                    return back()->withInput()->with('error', 'Scores have to be numbers.');
+                }
+
+                $score = (float) $score;
+                // The column's own cap wins; the group value is only the default
+                // a new column starts from. Same rule the form renders with.
+                $max = (float) ($column->max_marks ?? $group->max_marks ?? 10);
+
+                if ($score < 0 || $score > $max) {
+                    return back()->withInput()->with('error', sprintf(
+                        '%s has to be between 0 and %s.',
+                        $column->column_name,
+                        self::trimDecimals($max)
+                    ));
+                }
+
+                if ($column->evaluation_type === PeerColumn::TYPE_DISTRIBUTE_MARKS) {
+                    $distributed += $score;
+                }
+
+                $clean[$memberId][(int) $column->id] = $score;
+            }
+        }
+
+        // buffer_marks is one pool per evaluator across the group's "Distribute
+        // Marks" criteria, so it can only be checked once the whole submission is
+        // known - not per box as it is typed.
+        $buffer = (float) ($group->buffer_marks ?? 0);
+
+        if ($buffer > 0 && $distributed > $buffer) {
+            return back()->withInput()->with('error', sprintf(
+                'You have handed out %s marks but the pool for this group is %s.',
+                self::trimDecimals($distributed),
+                self::trimDecimals($buffer)
+            ));
+        }
 
         try {
             DB::beginTransaction();
 
-            foreach ($scores as $memberId => $columns) {
-                foreach ($columns as $columnId => $score) {
+            foreach ($clean as $memberId => $columnScores) {
+                foreach ($columnScores as $columnId => $score) {
                     DB::table('peer_scores')->updateOrInsert(
                         [
                             'member_id' => $memberId,
                             'column_id' => $columnId,
-                            'group_id' => $groupId,
-                            'evaluator_id' => $userId
+                            'group_id' => $group->id,
+                            'evaluator_id' => $userPk,
                         ],
                         [
                             'score' => $score,
                             'created_at' => now(),
-                            'updated_at' => now()
+                            'updated_at' => now(),
                         ]
                     );
                 }
             }
 
-            // Per-evaluator remark about one evaluated OT. Keyed the same way the
-            // scores above are (member + group + evaluator) so the Evaluation
-            // Report can line a remark up with that evaluator's scores. Blank
-            // boxes are skipped rather than stored as empty rows.
-            foreach ($request->input('remarks', []) as $memberId => $remark) {
-                $remark = is_string($remark) ? trim($remark) : '';
+            if ($allowsRemarks) {
+                // One free-text note per evaluated OT, keyed the same way the
+                // scores are so the Evaluation Report can line a remark up with
+                // that evaluator's scores. A cleared box deletes the row rather
+                // than storing an empty one.
+                foreach ((array) $request->input('remarks', []) as $memberId => $remark) {
+                    $memberId = (int) $memberId;
 
-                if ($remark === '') {
-                    DB::table('peer_evaluation_remarks')
-                        ->where(['member_id' => $memberId, 'group_id' => $groupId, 'evaluator_id' => $userId])
+                    if (! in_array($memberId, $peerIds, true)) {
+                        continue;
+                    }
+
+                    $remark = is_string($remark) ? trim($remark) : '';
+
+                    if ($remark === '') {
+                        DB::table('peer_evaluation_remarks')
+                            ->where([
+                                'member_id' => $memberId,
+                                'group_id' => $group->id,
+                                'evaluator_id' => $userPk,
+                            ])
+                            ->delete();
+                        continue;
+                    }
+
+                    DB::table('peer_evaluation_remarks')->updateOrInsert(
+                        [
+                            'member_id' => $memberId,
+                            'group_id' => $group->id,
+                            'evaluator_id' => $userPk,
+                        ],
+                        [
+                            'remarks' => mb_substr($remark, 0, 2000),
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]
+                    );
+                }
+            }
+
+            foreach ((array) $request->input('reflections', []) as $fieldId => $description) {
+                $fieldId = (int) $fieldId;
+
+                if (! in_array($fieldId, $fieldIds, true)) {
+                    continue;
+                }
+
+                $description = is_string($description) ? trim($description) : '';
+
+                if ($description === '') {
+                    DB::table('reflection_responses')
+                        ->where([
+                            'evaluator_id' => $userPk,
+                            'field_id' => $fieldId,
+                            'group_id' => $group->id,
+                        ])
                         ->delete();
                     continue;
                 }
 
-                DB::table('peer_evaluation_remarks')->updateOrInsert(
+                DB::table('reflection_responses')->updateOrInsert(
                     [
-                        'member_id' => $memberId,
-                        'group_id' => $groupId,
-                        'evaluator_id' => $userId,
+                        'evaluator_id' => $userPk,
+                        'field_id' => $fieldId,
+                        'group_id' => $group->id,
                     ],
                     [
-                        'remarks' => mb_substr($remark, 0, 2000),
+                        'description' => $description,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]
                 );
             }
 
-            foreach ($reflections as $fieldId => $description) {
-                DB::table('reflection_responses')->updateOrInsert(
-                    [
-                        'evaluator_id' => $userId,
-                        'field_id' => $fieldId,
-                        'group_id' => $groupId
-                    ],
-                    [
-                        'description' => $description,
-                        'created_at' => now(),
-                        'updated_at' => now()
-                    ]
-                );
-            }
-
             DB::commit();
-            return back()->with('success', 'Evaluation submitted successfully!');
+
+            return redirect()->route('peer.index', ['group_id' => $group->id])
+                ->with('success', 'Evaluation submitted successfully!');
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Failed to store evaluation: ' . $e->getMessage());
-            return back()->with('error', 'Failed to submit evaluation: ' . $e->getMessage());
+
+            return back()->withInput()->with('error', 'Failed to submit evaluation. Please try again.');
         }
     }
 
+    /** "10.00" -> "10", "7.50" -> "7.5". Marks are decimals but read as counts. */
+    private static function trimDecimals(float $value): string
+    {
+        return rtrim(rtrim(number_format($value, 2, '.', ''), '0'), '.');
+    }
+
     /**
-     * Display user evaluation form
+     * The OT-facing evaluation form.
+     *
+     * Every decision about what appears here - which groups, which criteria,
+     * which peers, whether the form is open at all - comes from
+     * App\Support\PeerEvaluationForm, and store() validates against the same
+     * class. They used to run separate queries, which is how a column belonging
+     * to another course could be rendered, and how any column_id in the table
+     * could be posted back.
      */
     public function user_index(Request $request)
     {
-       $userId = auth()->user()->user_id;
-$groupId = $request->query('group_id');
+        $userPk = (int) auth()->user()->pk;
 
-if ($groupId && hasRole('Student-OT')) {
+        // Only groups this OT is actually a member of. Membership is resolved
+        // through the login handle, not by comparing ids - see
+        // PeerEvaluationForm's identity note.
+        $groups = PeerEvaluationForm::groupsFor($userPk);
 
-    $isMember = DB::table('peer_group_members')
-        ->where('member_pk', $userId)
-        ->where('group_id', $groupId)
-        ->exists(); // ✅ faster than first()
+        $requested = $request->query('group_id');
 
-    if (!$isMember) {
-      return redirect()->back()
-    ->with('error', 'You are not a member of the selected group.');
+        // With no explicit pick, land on a group that is actually open rather
+        // than on whichever row sorted first.
+        $selectedGroup = filled($requested)
+            ? $groups->firstWhere('id', (int) $requested)
+            : ($groups->first(fn ($g) => PeerEvaluationForm::closedReason($g) === null) ?? $groups->first());
 
-    }
-}
+        if (filled($requested) && ! $selectedGroup) {
+            return redirect()->route('peer.index')
+                ->with('error', 'You are not a member of the selected group.');
+        }
 
-        
-      
-       $groups = DB::table('peer_groups')
-    ->select(
-        'peer_groups.id',
-        'peer_groups.group_name',
-        DB::raw('COUNT(peer_group_members.id) as member_count')
-    )
-    ->leftJoin(
-        'peer_group_members',
-        'peer_groups.id',
-        '=',
-        'peer_group_members.group_id'
-    )
-    ->groupBy('peer_groups.id', 'peer_groups.group_name')
-    ->get();
-
-
-
-        $selectedGroupId = $request->query('group_id', $groups->first()->id ?? null);
-        $selectedGroup = null;
+        $selectedGroupId = $selectedGroup->id ?? null;
         $columns = collect();
         $reflectionFields = collect();
+        $members = collect();
+        $answers = ['scores' => [], 'remarks' => [], 'reflections' => []];
+        $closedReason = null;
+        $allowsRemarks = false;
 
-        if ($selectedGroupId) {
-            $selectedGroup = DB::table('peer_groups')->where('id', $selectedGroupId)->first();
+        if ($selectedGroup) {
+            $closedReason = PeerEvaluationForm::closedReason($selectedGroup);
 
-            if ($selectedGroup) {
-                $columns = DB::table('peer_columns')
-                    ->where('is_visible', 1)
-                    ->where(function ($query) use ($selectedGroup) {
-                        $query->where('course_id', $selectedGroup->course_id)
-                            ->orWhereNull('course_id');
-                    })
-                    ->get();
+            $membership = PeerEvaluationForm::membershipOf($selectedGroup->id, $userPk);
 
-                $reflectionFields = DB::table('peer_reflection_fields')
-                    ->where('is_active', 1)
-                    ->where(function ($query) use ($selectedGroup) {
-                        $query->where('course_id', $selectedGroup->course_id)
-                            ->orWhereNull('course_id');
-                    })
-                    ->get();
-            }
-
-            $members = DB::table('peer_group_members')
-            ->leftJoin('user_credentials', 'peer_group_members.member_pk', '=', 'user_credentials.user_id')
-            ->leftjoin('student_master', 'user_credentials.user_name', '=', 'student_master.user_id')
-                ->where('peer_group_members.group_id', $selectedGroupId);
-                 if(hasRole('Student-OT')) {
-                $members = $members->where('peer_group_members.member_pk', '!=', $userId);
-                 }
-                $members = $members->select('id', 'member_pk', 'student_master.display_name as first_name', 'student_master.user_id', 'student_master.generated_OT_code as ot_code')
-                ->get();
-                // print_r($members); exit;
-        } else {
-            $members = [];
+            $columns = PeerEvaluationForm::columnsFor($selectedGroup);
+            // The remarks toggle only appears when a criterion asks for one.
+            // store() gates the same way, so the column can never be shown
+            // without somewhere to save it.
+            $allowsRemarks = $columns->contains(fn ($column) => (bool) $column->has_remarks);
+            $reflectionFields = PeerEvaluationForm::reflectionFieldsFor($selectedGroup);
+            // Nobody evaluates themselves, so the evaluator's own row is dropped.
+            $members = PeerEvaluationForm::peersFor($selectedGroup, $membership?->id);
+            // Submitting twice is an edit (store() uses updateOrInsert), so the
+            // form has to reopen showing what was saved - otherwise the second
+            // submit would overwrite good answers with the default 0.
+            $answers = PeerEvaluationForm::existingAnswers($selectedGroup->id, $userPk);
         }
 
         return view('admin.forms.peer_evaluation.index', compact(
@@ -581,7 +713,10 @@ if ($groupId && hasRole('Student-OT')) {
             'members',
             'selectedGroupId',
             'reflectionFields',
-            'selectedGroup'
+            'selectedGroup',
+            'closedReason',
+            'allowsRemarks',
+            'answers'
         ));
     }
 
@@ -641,20 +776,66 @@ if ($groupId && hasRole('Student-OT')) {
             'member_pks.*' => 'required|integer'
         ]);
 
-        foreach ($request->member_pks as $memberPk) {
-            $exists = DB::table('peer_group_members')
-                ->where('group_id', $groupId)
-                ->where('member_pk', $memberPk)
-                ->exists();
+        $group = DB::table('peer_groups')->where('id', $groupId)->first();
 
-            if (!$exists) {
-                DB::table('peer_group_members')->insert([
+        if (! $group) {
+            return back()->with('error', 'That peer group no longer exists.');
+        }
+
+        // member_pk is a student_master.pk, and the rest of the row is a copy of
+        // that student. This used to insert group_id + member_pk alone, leaving
+        // user_id NULL - and user_id is the login handle every OT-facing query
+        // matches on (PeerGroupSource::EVALUATOR_JOIN), so a member added here
+        // could never open the form or be credited with a score. Same columns
+        // PeerGroupSource::syncMembers() writes, so both paths agree.
+        $students = DB::table('student_master')
+            ->whereIn('pk', $request->member_pks)
+            ->get(['pk', 'first_name', 'middle_name', 'last_name', 'generated_OT_code', 'user_id'])
+            ->keyBy('pk');
+
+        $courseName = $group->course_id
+            ? DB::table('course_master')->where('pk', $group->course_id)->value('course_name')
+            : null;
+        $eventName = $group->event_id
+            ? DB::table('peer_events')->where('id', $group->event_id)->value('event_name')
+            : null;
+
+        $skipped = 0;
+
+        foreach ($request->member_pks as $memberPk) {
+            $student = $students->get($memberPk);
+
+            if (! $student) {
+                $skipped++;
+                continue;
+            }
+
+            $name = trim(preg_replace('/\s+/', ' ', implode(' ', array_filter([
+                $student->first_name, $student->middle_name, $student->last_name,
+            ]))));
+
+            DB::table('peer_group_members')->updateOrInsert(
+                [
                     'group_id' => $groupId,
                     'member_pk' => $memberPk,
+                ],
+                [
+                    'user_name' => $name ?: 'Unnamed',
+                    'ot_code' => $student->generated_OT_code,
+                    'user_id' => $student->user_id,
+                    'course_name' => $courseName,
+                    'event_name' => $eventName,
                     'created_at' => now(),
-                    'updated_at' => now()
-                ]);
-            }
+                    'updated_at' => now(),
+                ]
+            );
+        }
+
+        if ($skipped > 0) {
+            return back()->with(
+                'error',
+                $skipped . ' of the selected people are not in student_master and were not added.'
+            );
         }
 
         return back()->with('success', 'Members added to group successfully!');
@@ -752,63 +933,35 @@ if ($groupId && hasRole('Student-OT')) {
     }
 
     /**
-     * Show groups available to user
+     * "My Groups" - every peer group this OT belongs to, open or not.
+     *
+     * Rows link straight into peer.index; that is the one OT-facing form, and
+     * this screen only decides which group it opens on. Closed groups are still
+     * listed, with the reason, rather than silently disappearing.
      */
     public function user_groups()
     {
-         $userId = auth()->user()->user_id;
+        $groups = PeerEvaluationForm::groupsFor((int) auth()->user()->pk)
+            ->map(function ($group) {
+                $group->closed_reason = PeerEvaluationForm::closedReason($group);
 
-    $groups = DB::table('peer_groups as g')
-        // ->join('peer_courses as c', 'g.course_id', '=', 'c.id')
-        ->join('peer_group_members as m', 'g.id', '=', 'm.group_id')
-        ->where('g.is_form_active', 1);
-
-    // ✅ Student ko sirf uske groups
-    if (hasRole('Student-OT')) {
-        $groups->where('m.user_id', $userId);
-    }
-
-    $groups = $groups->select(
-            'g.id',
-            'g.group_name',
-            DB::raw('MAX(m.course_name) as course_name'),
-            DB::raw('MAX(m.event_name) as event_name'),
-            // DB::raw('GROUP_CONCAT(DISTINCT m.ot_code SEPARATOR ", ") as ot_codes')
-        )
-        ->groupBy('g.id', 'g.group_name')
-        ->get();
-
-        // print_r($groups);
-        // exit;
-
-
+                return $group;
+            });
 
         return view('admin.forms.peer_evaluation.user_groups', compact('groups'));
     }
 
     /**
-     * Show evaluation form for specific group
+     * Legacy deep link: /peer/evaluate/{group}.
+     *
+     * The view this rendered (peer_evaluation.user_evaluation) has never existed
+     * in the repo, so every hit on this route was a 500. There is one OT-facing
+     * form and it is peer.index, so send the caller there instead of building a
+     * second half of the same screen. The route stays so old links keep working.
      */
     public function user_evaluation($groupId)
     {
-        $userId = auth()->id();
-
-        $group = DB::table('peer_groups')
-            ->where('id', $groupId)
-            ->where('is_form_active', 1)
-            ->first();
-
-        if (!$group || !DB::table('peer_group_members')->where('group_id', $groupId)->where('user_id', $userId)->exists()) {
-            abort(403, 'You are not authorized for this group.');
-        }
-
-        $columns = DB::table('peer_columns')->where('is_visible', 1)->get();
-        $members = DB::table('peer_group_members')
-            ->where('group_id', $groupId)
-            ->select('member_pk', 'user_name as first_name', 'user_id')
-            ->get();
-
-        return view('admin.forms.peer_evaluation.user_evaluation', compact('group', 'columns', 'members'));
+        return redirect()->route('peer.index', ['group_id' => (int) $groupId]);
     }
 
     /**
@@ -915,25 +1068,12 @@ if ($groupId && hasRole('Student-OT')) {
             // print_r($members);
             
 
-        // Get columns related to this group's course and event
-        $columns = DB::table('peer_columns')
-            ->where('is_visible', 1)
-            ->where(function ($query) use ($currentGroup) {
-                // Course-specific columns
-                $query->where('course_id', $currentGroup->course_id)
-                    // Event-specific columns for this course
-                    ->orWhere(function ($q) use ($currentGroup) {
-                        $q->where('course_id', $currentGroup->course_id)
-                            ->where('event_id', $currentGroup->event_id);
-                    })
-                    // Global columns (no course/event association)
-                    ->orWhere(function ($q) {
-                        $q->whereNull('course_id')
-                            ->whereNull('event_id');
-                    });
-            })->orderBy('id')
-            ->get();
-      
+        // Whatever the OTs were actually scored on. This used to scope on
+        // course/event only, so a column belonging to a DIFFERENT group of the
+        // same course showed up as an empty extra column on this grid.
+        // PeerEvaluationForm is the same reader the form itself renders from.
+        $columns = PeerEvaluationForm::columnsFor($currentGroup);
+
 
         $scores = DB::table('peer_scores')
             ->leftJoin('user_credentials', 'peer_scores.evaluator_id', '=', 'user_credentials.pk')
@@ -947,25 +1087,9 @@ if ($groupId && hasRole('Student-OT')) {
             // print_r($scores); exit;
                 
 
-        // Get reflection fields related to this group's course and event
-        $reflectionFields = DB::table('peer_reflection_fields')
-            ->where('is_active', 1)
-            ->where(function ($query) use ($currentGroup) {
-                // Course-specific reflection fields
-                $query->where('course_id', $currentGroup->course_id)
-                    // Event-specific reflection fields for this course
-                    ->orWhere(function ($q) use ($currentGroup) {
-                        $q->where('course_id', $currentGroup->course_id)
-                            ->where('event_id', $currentGroup->event_id);
-                    })
-                    // Global reflection fields (no course/event association)
-                    ->orWhere(function ($q) {
-                        $q->whereNull('course_id')
-                            ->whereNull('event_id');
-                    });
-            })
-            ->get();
-            
+        // Same scoping as the columns above, for the same reason.
+        $reflectionFields = PeerEvaluationForm::reflectionFieldsFor($currentGroup);
+
 
         $reflectionResponses = DB::table('reflection_responses')
             ->leftJoin('user_credentials', 'reflection_responses.evaluator_id', '=', 'user_credentials.pk')
@@ -1000,10 +1124,27 @@ if ($groupId && hasRole('Student-OT')) {
      */
     public function exportSubmissions(Request $request, $groupId)
     {
-        $format = $request->input('format');
+        $group = DB::table('peer_groups')->where('id', $groupId)->first();
+
+        if (! $group) {
+            return back()->with('error', 'That peer group no longer exists.');
+        }
+
+        // The format arrives as a query string, so it can be absent or anything
+        // at all. It used to be passed straight through to the download
+        // filename: no format meant a file called "..._submissions." and
+        // PhpSpreadsheet blew up with "No ReaderType or WriterType could be
+        // detected". Only the two the screen offers are accepted.
+        $format = strtolower((string) $request->input('format'));
+
+        if (! in_array($format, ['xlsx', 'csv', 'pdf'], true)) {
+            return back()->with('error', 'Pick Excel or CSV before exporting.');
+        }
 
         $members = DB::table('peer_group_members')
-            ->leftJoin('user_credentials', 'peer_group_members.user_id', '=', 'user_credentials.pk')
+            ->leftJoin('user_credentials', function ($join) {
+                $join->whereRaw(\App\Support\PeerGroupSource::EVALUATOR_JOIN);
+            })
             ->where('peer_group_members.group_id', $groupId)
             ->select(
                 'peer_group_members.id',
@@ -1016,7 +1157,10 @@ if ($groupId && hasRole('Student-OT')) {
             )
             ->get();
 
-        $columns = DB::table('peer_columns')->get();
+        // Was DB::table('peer_columns')->get(): every column in the system,
+        // including other courses'. The export has to show the same criteria the
+        // OTs were actually scored on, which is what the form itself renders.
+        $columns = PeerEvaluationForm::columnsFor($group);
 
         $scores = DB::table('peer_scores')
             ->leftJoin('user_credentials', 'peer_scores.evaluator_id', '=', 'user_credentials.pk')
@@ -1028,7 +1172,9 @@ if ($groupId && hasRole('Student-OT')) {
             )
             ->get();
 
-        $reflectionFields = DB::table('peer_reflection_fields')->where('is_active', 1)->get();
+        // Same reason as the columns above: scoped to this group, not every
+        // active field in the system.
+        $reflectionFields = PeerEvaluationForm::reflectionFieldsFor($group);
 
         $reflectionResponses = DB::table('reflection_responses')
             ->leftJoin('user_credentials', 'reflection_responses.evaluator_id', '=', 'user_credentials.pk')
@@ -1043,7 +1189,6 @@ if ($groupId && hasRole('Student-OT')) {
                 return $item->evaluator_id . '-' . $item->field_id;
             });
 
-        $group = DB::table('peer_groups')->where('id', $groupId)->first();
         $groupName = $group->group_name ?? 'Group';
 
         if ($format === 'pdf') {

@@ -30,6 +30,36 @@
                     </div>
                 @endif
 
+                {{-- store() refuses a submission by redirecting back with 'error'
+                     (not in the group, form closed, score over the column's max,
+                     Distribute Marks over the group's pool). Without this the
+                     rejection was silent and the OT saw an unchanged form. --}}
+                @if (session('error'))
+                    <div class="alert alert-danger alert-dismissible fade show shadow-sm border-0 rounded-3 mb-4" role="alert">
+                        <div class="d-flex align-items-center">
+                            <i class="material-icons material-symbols-rounded text-danger me-3" style="font-size: 1.5rem;">error</i>
+                            <div class="flex-grow-1">
+                                <strong>Not submitted.</strong> {{ session('error') }}
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
+
+                {{-- Why the form below is read-only: group inactive, form not
+                     switched on, or today is outside the event's start/end dates.
+                     Same sentence store() would answer with. --}}
+                @if (!empty($closedReason))
+                    <div class="alert alert-warning border-0 rounded-3 shadow-sm mb-4" role="alert">
+                        <div class="d-flex align-items-center">
+                            <i class="material-icons material-symbols-rounded text-warning me-3" style="font-size: 1.5rem;">lock_clock</i>
+                            <div class="flex-grow-1">
+                                <strong>This evaluation is not open.</strong> {{ $closedReason }}
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
                 {{-- Group Selection --}}
                 <div class="mb-4">
                     <form method="GET" action="{{ route('peer.index') }}" id="groupForm">
@@ -71,12 +101,18 @@
                                 {{-- Table Section --}}
                                 <div class="table-responsive">
                                     <table class="table table-hover align-middle mb-0">
-                                        <caption class="peer-remarks-toggle-wrap caption-top px-4 pt-3 pb-0">
-                                            <label class="d-inline-flex align-items-center gap-2 mb-0 small fw-semibold text-dark">
-                                                <input type="checkbox" class="form-check-input m-0" id="peerRemarksToggle">
-                                                <span>Remarks</span>
-                                            </label>
-                                        </caption>
+                                        {{-- Offered only when a criterion on this form asks for remarks
+                                             (peer_columns.has_remarks, set on Manage Evaluation Columns).
+                                             store() applies the same gate, so a toggle shown here always
+                                             has somewhere to save to. --}}
+                                        @if ($allowsRemarks)
+                                            <caption class="peer-remarks-toggle-wrap caption-top px-4 pt-3 pb-0">
+                                                <label class="d-inline-flex align-items-center gap-2 mb-0 small fw-semibold text-dark">
+                                                    <input type="checkbox" class="form-check-input m-0" id="peerRemarksToggle">
+                                                    <span>Remarks</span>
+                                                </label>
+                                            </caption>
+                                        @endif
                                         <thead class="table-light">
                                             <tr>
                                                 <th class="fw-semibold text-uppercase small text-muted border-0 py-3 ps-4">Sr.No</th>
@@ -86,7 +122,7 @@
                                                     <th class="fw-semibold text-uppercase small text-muted border-0 py-3 text-center">
                                                         <div class="d-flex flex-column align-items-center">
                                                             <span class="mb-1">{{ $column->column_name }}</span>
-                                                            <small class="text-muted fw-normal">(1-{{ $column->max_marks ?? ($selectedGroup->max_marks ?? 10) }})</small>
+                                                            <small class="text-muted fw-normal">(0-{{ $column->max_marks ?? ($selectedGroup->max_marks ?? 10) }})</small>
                                                         </div>
                                                     </th>
                                                 @endforeach
@@ -94,9 +130,11 @@
                                                      peer_evaluation_remarks and shown on that OT's Evaluation
                                                      Report beside this evaluator's scores. Hidden until the
                                                      toggle above is ticked, matching the design. --}}
-                                                <th class="fw-semibold text-uppercase small text-muted border-0 py-3 peer-remarks-col d-none">
-                                                    Remarks
-                                                </th>
+                                                @if ($allowsRemarks)
+                                                    <th class="fw-semibold text-uppercase small text-muted border-0 py-3 peer-remarks-col d-none">
+                                                        Remarks
+                                                    </th>
+                                                @endif
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -122,26 +160,34 @@
                                                                      Manage Evaluation Columns gives each column its
                                                                      own Max Marks, and the group value is only the
                                                                      default a new column starts from. --}}
-                                                                <input type="number" 
-                                                                    min="1" 
+                                                                {{-- min="0": store() accepts 0..max, and the box
+                                                                     defaults to 0, so min="1" made every untouched
+                                                                     score fail the browser's own validation. --}}
+                                                                <input type="number"
+                                                                    min="0"
                                                                     max="{{ $column->max_marks ?? ($selectedGroup->max_marks ?? 10) }}"
+                                                                    step="any"
                                                                     name="scores[{{ $member->id }}][{{ $column->id }}]"
-                                                                    class="form-control form-control-lg text-center score-input fw-bold border-2" 
-                                                                    value="0" 
+                                                                    class="form-control form-control-lg text-center score-input fw-bold border-2"
+                                                                    value="{{ old("scores.{$member->id}.{$column->id}", $answers['scores'][$member->id][$column->id] ?? 0) }}"
                                                                     required
+                                                                    @if (!empty($closedReason)) disabled @endif
                                                                     onchange="validateScore(this)"
                                                                     aria-label="Score for {{ $column->column_name }}">
                                                             </div>
                                                         </td>
                                                     @endforeach
-                                                    <td class="peer-remarks-col d-none">
-                                                        <textarea name="remarks[{{ $member->id }}]"
-                                                                  class="form-control"
-                                                                  rows="2"
-                                                                  maxlength="2000"
-                                                                  placeholder="Optional note about {{ $member->first_name }}"
-                                                                  aria-label="Remarks for {{ $member->first_name }}"></textarea>
-                                                    </td>
+                                                    @if ($allowsRemarks)
+                                                        <td class="peer-remarks-col d-none">
+                                                            <textarea name="remarks[{{ $member->id }}]"
+                                                                      class="form-control"
+                                                                      rows="2"
+                                                                      maxlength="2000"
+                                                                      @if (!empty($closedReason)) disabled @endif
+                                                                      placeholder="Optional note about {{ $member->first_name }}"
+                                                                      aria-label="Remarks for {{ $member->first_name }}">{{ old("remarks.{$member->id}", $answers['remarks'][$member->id] ?? '') }}</textarea>
+                                                        </td>
+                                                    @endif
                                                 </tr>
                                             @endforeach
                                         </tbody>
@@ -161,11 +207,13 @@
                                                     {{ $field->field_label }}
                                                 </label>
                                                 <textarea 
-                                                    name="reflections[{{ $field->id }}]" 
-                                                    class="form-control reflection-textarea border-2 rounded-3" 
+                                                    name="reflections[{{ $field->id }}]"
+                                                    class="form-control reflection-textarea border-2 rounded-3"
                                                     rows="5"
+                                                    maxlength="5000"
+                                                    @if (!empty($closedReason)) disabled @endif
                                                     placeholder="Enter your detailed description for {{ $field->field_label }}..."
-                                                    style="resize: vertical;"></textarea>
+                                                    style="resize: vertical;">{{ old("reflections.{$field->id}", $answers['reflections'][$field->id] ?? '') }}</textarea>
                                                 <div class="form-text">
                                                     <i class="material-icons material-symbols-rounded me-1 align-middle" style="font-size: 0.875rem;">info</i>
                                                     Provide thoughtful and constructive feedback
@@ -177,12 +225,17 @@
 
                                 {{-- Action Buttons --}}
                                 <div class="card-footer bg-white border-0 p-4 d-flex gap-3 flex-wrap">
-                                    <button type="submit" class="btn btn-success btn-lg px-5 rounded-pill shadow-sm fw-semibold">
-                                        <i class="material-icons material-symbols-rounded me-2 align-middle" style="font-size: 1.125rem;">send</i> 
+                                    {{-- Disabled, not hidden: the OT can still read back what they
+                                         submitted after the window closes. store() refuses it either
+                                         way - this only saves them the round trip. --}}
+                                    <button type="submit" class="btn btn-success btn-lg px-5 rounded-pill shadow-sm fw-semibold"
+                                        @if (!empty($closedReason)) disabled @endif>
+                                        <i class="material-icons material-symbols-rounded me-2 align-middle" style="font-size: 1.125rem;">send</i>
                                         Submit Evaluation
                                     </button>
-                                    <button type="button" class="btn btn-outline-warning btn-lg px-5 rounded-pill fw-semibold" onclick="resetScores()">
-                                        <i class="material-icons material-symbols-rounded me-2 align-middle" style="font-size: 1.125rem;">refresh</i> 
+                                    <button type="button" class="btn btn-outline-warning btn-lg px-5 rounded-pill fw-semibold" onclick="resetScores()"
+                                        @if (!empty($closedReason)) disabled @endif>
+                                        <i class="material-icons material-symbols-rounded me-2 align-middle" style="font-size: 1.125rem;">refresh</i>
                                         Reset Scores
                                     </button>
                                     <div class="ms-auto d-flex align-items-center text-muted small">

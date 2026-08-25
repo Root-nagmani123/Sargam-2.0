@@ -26,11 +26,17 @@
                                 <td>{{ $group->course_name ?? '-' }}</td>
                                 <td>{{ $group->event_name ?? '-' }}</td>
 
+                                {{-- Closed groups stay listed and stay clickable: the OT can still
+                                     read back what they submitted. The reason is the same sentence
+                                     the form and store() give. --}}
                                 <td>
                                     <a href="{{ route('peer.index', ['group_id' => $group->id]) }}"
-                                        class="btn btn-success btn-sm">
-                                        Submit Evaluation
+                                        class="btn btn-sm {{ $group->closed_reason ? 'btn-outline-secondary' : 'btn-success' }}">
+                                        {{ $group->closed_reason ? 'View' : 'Submit Evaluation' }}
                                     </a>
+                                    @if ($group->closed_reason)
+                                        <div class="small text-muted mt-1">{{ $group->closed_reason }}</div>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach

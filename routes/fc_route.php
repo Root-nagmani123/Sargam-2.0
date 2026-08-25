@@ -339,9 +339,17 @@ Route::prefix('admin')->group(function () {
 });
 
 // User Routes
-Route::get('/peer-evaluation', [PeerEvaluationController::class, 'user_index'])->name('peer.index');
-Route::post('/peer-evaluation', [PeerEvaluationController::class, 'store'])->name('peer.store');
-Route::get('/peer-evaluation/group/{groupId}/members', [PeerEvaluationController::class, 'getGroupMembers'])->name('peer.group.members');
+//
+// 'auth' is not decoration here: user_index() and store() both read
+// auth()->user()->pk to work out which groups the caller belongs to, so a guest
+// request used to fatal on a null user. The POST twin of this path was a SECOND
+// registration of the name peer.store - unauthenticated, and reachable directly
+// even though route('peer.store') resolved to the guarded peer/store below. It
+// is gone; the guarded one in the peer prefix group is the only submit endpoint.
+Route::middleware('auth')->group(function () {
+    Route::get('/peer-evaluation', [PeerEvaluationController::class, 'user_index'])->name('peer.index');
+    Route::get('/peer-evaluation/group/{groupId}/members', [PeerEvaluationController::class, 'getGroupMembers'])->name('peer.group.members');
+});
 
 
 // Group Members Routes
@@ -440,8 +448,12 @@ Route::post('/admin/peer/reflection/add', [PeerEvaluationController::class, 'add
 Route::post('/admin/peer/reflection/toggle/{id}', [PeerEvaluationController::class, 'toggleReflectionField']);
 Route::post('/admin/peer/reflection/delete/{id}', [PeerEvaluationController::class, 'deleteReflectionField']);
 
-// Keep your existing routes for backward compatibility if needed
-Route::get('/admin/peer/courses/{eventId}', [PeerEvaluationController::class, 'getCoursesByEvent']); // Keep if used elsewhere
+// GET /admin/peer/courses/{eventId} used to live here, pointing at
+// PeerEvaluationController::getCoursesByEvent. That method does not exist - it
+// was dropped when 2026_08_24_000002_point_peer_evaluation_at_course_master
+// flipped the hierarchy from event->courses to course->events - so every request
+// to it was a 500, and nothing in the app links to it. The live replacement is
+// GET /admin/peer/events/{courseId} (getEventsByCourse), registered above.
 
 // Enrollment edit routes
 Route::get('/enrollment/{student}/edit', [EnrollementController::class, 'edit'])->name('enrollment.edit');
