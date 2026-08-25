@@ -41,7 +41,11 @@ class MemoDisciplineController extends Controller
             ->select('cm.*')
             ->get();
     } else {
+        // Only courses that have actually started (start_year <= today) and not
+        // yet ended (end_date > now) — feeds both the Program Name filter and the
+        // Generate Discipline Memo modal's Course dropdown (same $courses).
         $courseQuery = CourseMaster::where('active_inactive', 1)
+            ->where('start_year', '<=', now()->toDateString())
             ->where('end_date', '>=', now()->toDateString());
         if (!empty($data_course_id)) {
             $courseQuery->whereIn('pk', $data_course_id);
@@ -735,7 +739,10 @@ private function buildDisciplineExportData(Request $request): array
     {
         $data_course_id = get_Role_by_course();
 
+        // Only courses that have actually started (start_year <= today) and not
+        // yet ended (end_date > now) — same rule as index()'s Course dropdown.
         $query = CourseMaster::where('active_inactive', 1)
+            ->where('start_year', '<=', now()->toDateString())
             ->where('end_date', '>=', now()->toDateString());
 
         if (!empty($data_course_id)) {

@@ -10,11 +10,24 @@
 
             <div class="bg-white p-4 rounded shadow-sm mt-3" >
 
-                <h5 class="text-center fw-bold mb-3">{{ $template_details->course_name ?? 'Course Name' }}</h5>
-            <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+                <div class="d-flex align-items-center justify-content-between gap-3 mb-2">
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                        <img src="{{ asset('images/ashoka.png') }}" alt="National Emblem of India"
+                            style="height:64px;width:auto;object-fit:contain;">
+                        <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo"
+                            style="height:64px;width:auto;object-fit:contain;">
+                    </div>
+                    <div class="text-center flex-grow-1 px-2">
+                        <h5 class="fw-bold mb-1">{{ $template_details->course_name ?? 'Course Name' }}</h5>
+                        <p class="mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <img src="{{ asset('images/azadi.png') }}" alt="Azadi Ka Amrit Mahotsav"
+                            style="height:64px;width:auto;object-fit:contain;">
+                    </div>
+                </div>
             <hr>
 
-            <p class="mb-1">{{ $type == 'memo' ? 'SHOW CAUSE MEMO' : 'SHOW CAUSE NOTICE' }}</p>
             <p><strong>Date:</strong> {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }} </p>
 
             <div class="table-responsive mb-3">
@@ -29,13 +42,27 @@
                         </tr>
                     </thead>
                     <tbody>
+                        {{-- Missing values render as an em dash, never as sample text.
+                             'Topic Name' / 'Venue' / '06:00-07:00' read as real content
+                             in a document a participant may quote back in a disciplinary
+                             reply, so an empty cell has to look empty. --}}
+                        @forelse($sessionRows ?? [] as $row)
+                        <tr>
+                            <td>{{ \Carbon\Carbon::parse($row->session_date)->format('d/m/Y') }}</td>
+                            <td>{{ $row->session_count }}</td>
+                            <td>{{ $row->topics ?: '—' }}</td>
+                            <td>{{ $row->venues ?: '—' }}</td>
+                            <td>{{ $row->sessions ?: '—' }}</td>
+                        </tr>
+                        @empty
                         <tr>
                             <td>{{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}</td>
                             <td>1</td>
-                            <td>{{ $template_details->subject_topic ?? 'Topic Name' }}</td>
-                            <td>{{ $template_details->venue_name ?? 'Venue' }}</td>
-                            <td>{{ $template_details->session_time ?? '' }}</td>
+                            <td>{{ $template_details->subject_topic ?? '—' }}</td>
+                            <td>{{ $template_details->venue_name ?? '—' }}</td>
+                            <td>{{ $template_details->session_time ?? '—' }}</td>
                         </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -45,8 +72,7 @@
             </div>
 
             <p>
-                <strong>{{ $template_details->display_name ?? 'Student Name' }}, {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>
-                Remarks: {{ $type == 'memo' ? 'Show Cause Memo' : 'Show Cause Notice' }} for {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}
+                <strong>{{ $template_details->display_name ?? 'Student Name' }}, {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong>
             </p>
 
             <div class="text-end">
@@ -56,6 +82,13 @@
                 <strong>{{ $template_details->director_name ?? 'Director Name' }}</strong><br>{{ $template_details->director_designation ?? 'Director Designation' }}
             </div>
 
+            {{-- Exemption table removed. It rendered the literals 3 / 0 / 0 / 3 under real
+                 headings ("Total Exemption Have", "Total Exemption Taken", "MOD on SAT / SUN",
+                 "Exemption Balance") for every student on every notice and memo —
+                 conversation_student() computes and passes no exemption data at all.
+                 A Show Cause document is quoted back in disciplinary replies and read by
+                 the reviewing officer, so fabricated figures there are worse than none.
+                 Restore this block only together with a query that populates it. --}}
 
                 <h6 class="fw-bold">Conversation</h6>
 
