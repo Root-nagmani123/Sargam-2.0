@@ -285,8 +285,21 @@ class FcJoiningDocumentController extends Controller
             'accounts_cancelled_cheque' => 'Cancelled Cheque',
         ];
 
-        $fullName = trim($student->first_name . ' ' . $student->last_name);
-        $cleanName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $fullName);
+        // <username>_<rank>_<exam year> — the same rule every other FC archive uses, so one
+        // trainee is named identically wherever they are exported. This used to be built from
+        // first_name + last_name, which matched nothing else in the app.
+        $roster = DB::table('fc_registration_master')
+            ->where('user_id', $student->user_name)
+            ->first(['rank', 'exam_year']);
+
+        $used = [];
+        $cleanName = fc_archive_entry_stem(
+            $student->user_name ?? null,
+            $roster->rank ?? null,
+            $roster->exam_year ?? null,
+            trim($student->first_name . ' ' . $student->last_name),
+            $used
+        );
         $zipFileName = $cleanName . '_joining_documents.zip';
         $tempFile = storage_path("app/temp/{$zipFileName}");
 

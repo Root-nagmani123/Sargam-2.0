@@ -454,8 +454,9 @@ abstract class FcStepReport
 
         $like = '%'.$term.'%';
         $extra = $this->extraSearchColumns();
+        $rosterJoined = fc_report_roster_alias_joined($query);
 
-        $query->where(function ($sub) use ($like, $extra) {
+        $query->where(function ($sub) use ($like, $extra, $rosterJoined) {
             foreach (['first_name', 'middle_name', 'last_name', 'full_name', 'email', 'mobile_no'] as $column) {
                 if (fc_schema_has_column('student_master_firsts', $column)) {
                     $sub->orWhere("s1.{$column}", 'like', $like);
@@ -465,8 +466,19 @@ abstract class FcStepReport
                 $sub->orWhere($qualified, 'like', $like);
             }
             $sub->orWhere('uc.user_name', 'like', $like);
+
+            // The Username column is not always uc.user_name: an unmigrated trainee's
+            // tracker id is an fc_registration_master.pk, so the roster username is what
+            // fc_report_login_username_sql() renders for them. Searching only `uc` meant
+            // the term a user can literally read in the column returned no rows, while a
+            // credentials name that is NOT displayed did match.
+            if ($rosterJoined) {
+                $sub->orWhere('frm.user_id', 'like', $like);
+            }
         });
     }
+
+
 
     /**
      * Narrow the columns to the ones still ticked in the Columns menu.
