@@ -21,8 +21,22 @@ class FcAdminSmsController extends Controller
 {
     public function index(Request $request, FcAdminSmsBulkService $bulk): View
     {
+        $currentDate = now()->format('Y-m-d');
+
+        // Same "active" scope as the Dynamic Forms admin list (Form Management):
+        // is_active plus linked course not yet ended (or no linked course) — so a form
+        // whose course has ended can't still be picked here for a bulk SMS/Email send.
         $forms = FcForm::query()
             ->where('is_active', true)
+            ->where(function ($q) use ($currentDate) {
+                $q->whereNull('course_master_pk')
+                    ->orWhereHas('courseMaster', function ($c) use ($currentDate) {
+                        $c->where(function ($e) use ($currentDate) {
+                            $e->whereNull('end_date')
+                                ->orWhere('end_date', '>=', $currentDate);
+                        });
+                    });
+            })
             ->orderByRaw('LOWER(form_name)')
             ->get(['id', 'form_name', 'form_slug']);
 
