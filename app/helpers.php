@@ -1941,16 +1941,144 @@ if (! function_exists('fc_report_login_username_sql')) {
     function fc_report_login_username_sql(string $trackerTable, ?string $alias = null): string
     {
         $t = $alias ?? $trackerTable;
-        $parts = ["NULLIF(TRIM(uc.user_name), '')"];
+        $u = fc_user_col($trackerTable);
 
-        if (fc_schema_has_table('fc_registration_master')) {
+        // `frm` / `uc_frm` only exist when the tracker is keyed by user_id — mirror the
+        // join conditions in fc_report_apply_tracker_user_resolution() exactly, or this
+        // SQL references aliases that were never joined.
+        $hasRoster = $u === 'user_id' && fc_schema_has_table('fc_registration_master');
+
+        $parts = [];
+
+        if ($hasRoster) {
+            // The tracker's user_id is NOT one id space: it holds a user_credentials.pk for a
+            // migrated trainee and an fc_registration_master.pk for one who registered through
+            // /fc/login and was never migrated (see fc_user_val()). Both tables number from 1,
+            // so one integer can be a live credentials pk AND a live roster pk belonging to two
+            // DIFFERENT people. Reading credentials first therefore rendered a stranger's
+            // username — roster pk 3 ("shailitm") displayed as credentials pk 3 ("rohit.kumar").
+            //
+            // fc_user_val() switches to storing the CREDENTIALS pk the moment a trainee is
+            // migrated. So a roster row whose username owns no credentials record proves this
+            // id is still in the roster id space, and the roster username is the right one.
+            // Resolve that case first; every other case keeps the original ordering.
+            $parts[] = fc_report_roster_username_case('frm');
+        }
+
+        $parts[] = "NULLIF(TRIM(uc.user_name), '')";
+
+        if ($hasRoster) {
             $parts[] = "NULLIF(TRIM(frm.user_id), '')";
             $parts[] = "NULLIF(TRIM(uc_frm.user_name), '')";
         }
 
-        $parts[] = "CAST(`{$t}`.`user_id` AS CHAR)";
+        $parts[] = "CAST(`{$t}`.`{$u}` AS CHAR)";
 
         return 'COALESCE('.implode(', ', $parts).')';
+    }
+}
+
+if (! function_exists('fc_archive_entry_stem')) {
+    /**
+     * The ONE archive naming rule: <username>_<rank>_<exam year>.
+     *
+     * Every FC download that names something after a trainee — ZIP folders, per-trainee PDFs,
+     * exported photos — goes through this, because five call sites previously each rolled their
+     * own and drifted: two used the full name instead of the username, and two disagreed on
+     * whether the name or the username came first.
+     *
+     * Blank parts are dropped rather than left as stray underscores ("lbs0999", not "lbs0999__"),
+     * and $fallback is used when the username reduces to nothing — a folder called "_154_2026"
+     * identifies nobody.
+     *
+     * Collisions get a numeric suffix and are tracked case-insensitively, because Windows and
+     * macOS treat "Ravi_Kumar" and "ravi_kumar" as the same entry when the archive is unpacked.
+     *
+     * @param  array<string,int>  $used  by reference — the collision ledger for this archive
+     */
+    function fc_archive_entry_stem(
+        ?string $username,
+        ?string $rank,
+        ?string $examYear,
+        string $fallback,
+        array &$used
+    ): string {
+        $clean = static fn ($v) => trim((string) preg_replace('/[^A-Za-z0-9]+/', '_', (string) $v), '_');
+
+        $name = $clean($username);
+        if ($name === '') {
+            $name = $clean($fallback);
+        }
+        if ($name === '') {
+            $name = 'trainee_'.(count($used) + 1);
+        }
+
+        $stem = implode('_', array_filter(
+            [$name, $clean($rank), $clean($examYear)],
+            static fn ($v) => $v !== ''
+        ));
+
+        $key = strtolower($stem);
+        if (isset($used[$key])) {
+            $stem .= '_'.(++$used[$key]);
+        } else {
+            $used[$key] = 1;
+        }
+
+        return $stem;
+    }
+}
+
+if (! function_exists('fc_report_roster_username_case')) {
+    /**
+     * SQL deciding when the ROSTER username is the right one for a tracker row.
+     *
+     * The tracker's user_id is either a user_credentials.pk or an fc_registration_master.pk,
+     * and both tables number from 1 — so one integer can be a live credentials pk AND a live
+     * roster pk belonging to two different people. fc_user_val() stores the CREDENTIALS pk from
+     * the moment a trainee is migrated, so a roster row whose username owns no credentials
+     * record proves this id is still a roster pk and the roster username is the correct one.
+     *
+     * Returns an expression usable as the FIRST arm of a COALESCE; NULL when it does not apply.
+     */
+    function fc_report_roster_username_case(string $frmAlias = 'frm'): string
+    {
+        return "CASE WHEN `{$frmAlias}`.`pk` IS NOT NULL
+                      AND NULLIF(TRIM(`{$frmAlias}`.`user_id`), '') IS NOT NULL
+                      AND NOT EXISTS (
+                            SELECT 1 FROM user_credentials uc_chk
+                             WHERE uc_chk.user_name = `{$frmAlias}`.`user_id`
+                      )
+                     THEN TRIM(`{$frmAlias}`.`user_id`) END";
+    }
+}
+
+if (! function_exists('fc_report_roster_alias_joined')) {
+    /**
+     * Is the `frm` roster alias part of this query?
+     *
+     * fc_report_apply_tracker_user_resolution() joins it only for user_id-keyed trackers, and
+     * the search builders have no $form to re-derive that from, so the query's own join list is
+     * the authority — naming frm.user_id without the join is an unknown-column error.
+     *
+     * @param  \Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder  $query
+     */
+    function fc_report_roster_alias_joined($query): bool
+    {
+        if (! fc_schema_has_table('fc_registration_master')) {
+            return false;
+        }
+
+        $inner = method_exists($query, 'getQuery') ? $query->getQuery() : $query;
+
+        foreach ($inner->joins ?? [] as $join) {
+            $table = $join->table ?? null;
+            if (is_string($table) && preg_match('/\bas\s+frm\b/i', $table)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 

@@ -505,28 +505,13 @@ class StepReportController extends Controller
      */
     private function folderName(object $row, array &$usedFolders): string
     {
-        $name = FcUploadFile::safeName((string) ($row->login_username ?? ''));
-        if ($name === '') {
-            $name = FcUploadFile::safeName((string) ($row->display_name ?? ''));
-        }
-        if ($name === '') {
-            $name = 'trainee_'.($row->link_id ?? count($usedFolders) + 1);
-        }
-
-        $stem = implode('_', array_filter([
-            $name,
-            FcUploadFile::safeName((string) ($row->reg_rank ?? '')),
-            FcUploadFile::safeName((string) ($row->exam_year ?? '')),
-        ], fn ($v) => $v !== ''));
-
-        $key = strtolower($stem);
-        if (isset($usedFolders[$key])) {
-            $stem .= '_'.(++$usedFolders[$key]);
-        } else {
-            $usedFolders[$key] = 1;
-        }
-
-        return $stem;
+        return fc_archive_entry_stem(
+            $row->login_username ?? null,
+            $row->reg_rank ?? null,
+            $row->exam_year ?? null,
+            (string) ($row->display_name ?? ''),
+            $usedFolders
+        );
     }
 
     /**
