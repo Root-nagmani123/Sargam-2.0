@@ -165,10 +165,13 @@ class FacultyExpertiseMasterController extends Controller
             // Create new record
             $expertise = new FacultyExpertiseMaster();
             $expertise->created_date = now();
+            // Assigned on create only, for the same reason created_date is:
+            // the column records who made the row, so an edit by a second
+            // user must not overwrite it. User's primary key is `pk`, not
+            // `id` - ->id resolved to null here before this PR.
+            $expertise->created_by = auth()->user()?->getKey();
         }
         $expertise->expertise_name = $request->expertise_name;
-        // User's primary key is `pk`, not `id` — ->id resolves to null here.
-        $expertise->created_by = auth()->user()?->getKey();
 
         try {
             $expertise->save();

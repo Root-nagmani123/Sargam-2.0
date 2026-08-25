@@ -8,6 +8,7 @@ use App\Support\ExportCsvHeader;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -134,6 +135,23 @@ trait ExportsMasterGrid
         $orientation = $orientation === 'landscape' ? 'landscape' : 'portrait';
         $exportDate = now()->format('d-m-Y h:i A');
         $stamp      = now()->format('YmdHis');
+
+        // Section 17: an export of personal data needs an audit record.
+        // These grids carry names, email addresses and mobile numbers, and
+        // until now a bulk download left no trace of who took it. One line
+        // here rather than one per controller: all four adopters and all
+        // four formats funnel through this method, so a per-controller call
+        // would be four sites to keep in step and four chances to forget.
+        // Logged before the render so a download that dies mid-stream (the
+        // PDF memory guard below can refuse one) is still recorded.
+        Log::info('Master grid export', [
+            'actor'  => optional(auth()->user())->getKey(),
+            'slug'   => $slug,
+            'format' => $format,
+            'rows'   => $rows->count(),
+            'filter' => $filterLine,
+            'ip'     => request()->ip(),
+        ]);
 
         $payload = [
             'reportTitle' => $reportTitle,

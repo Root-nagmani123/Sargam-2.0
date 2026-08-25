@@ -898,6 +898,17 @@ class FacultyController extends Controller
      */
     function excelExportFaculty()
     {
+        // The widest personal-data export in the module - 34 columns including
+        // bank account, IFSC and PAN. Audited for the same reason the grid
+        // exports are (see ExportsMasterGrid), and deliberately not left as
+        // the one unaudited way out of the module.
+        Log::info('Faculty full-detail workbook export', [
+            'actor'  => optional(auth()->user())->getKey(),
+            'slug'   => 'faculty_full_details',
+            'format' => 'excel',
+            'ip'     => request()->ip(),
+        ]);
+
         return Excel::download(new \App\Exports\FacultyExport(), 'Faculty_FullDetails_' . date('YmdHis') . '.xlsx');
     }
 

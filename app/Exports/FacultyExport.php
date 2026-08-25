@@ -2,6 +2,7 @@
 namespace App\Exports;
 
 use App\Models\FacultyMaster;
+use App\Support\ExportCellValue;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithCustomStartCell;
@@ -252,7 +253,12 @@ class FacultyExport implements
         $sectorName  = $this->sectorMap[$faculty->faculty_sector] ?? '-';
         $serviceName = $this->serviceMap[$faculty->service_master_pk] ?? '-';
 
-        return [
+        // The full-detail workbook is the only export that carried raw strings
+        // into PhpSpreadsheet, whose default binder stores a leading "=" as a
+        // real formula cell. Route every value through the same neutraliser the
+        // grid exports use, so no download from this module can contain a live
+        // formula. Non-strings (the S. No. counter) are returned untouched.
+        return array_map([ExportCellValue::class, 'safe'], [
             ++$this->index,
             $faculty->faculty_code ?? '',
             optional($faculty->facultyTypeMaster)->faculty_type_name ?? '',
@@ -291,6 +297,6 @@ class FacultyExport implements
             $sectorName,
             $serviceName,
             $expertiseAreas,
-        ];
+        ]);
     }
 }
