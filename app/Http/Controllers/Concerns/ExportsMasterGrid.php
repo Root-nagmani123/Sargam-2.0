@@ -144,6 +144,16 @@ trait ExportsMasterGrid
         // would be four sites to keep in step and four chances to forget.
         // Logged before the render so a download that dies mid-stream (the
         // PDF memory guard below can refuse one) is still recorded.
+        //
+        // The `filter` key records the user's search term, which can contain a
+        // person's name. That is deliberate, not an oversight: "who exported
+        // what" is much weaker without "what did they narrow it to" - an export
+        // of a single named person and an export of the whole table are very
+        // different events, and Section 17 asks for the target of the action.
+        // The cost is that names can reach the application log, which usually
+        // has longer retention and a wider read audience than the database.
+        // Weighed and accepted; if log retention policy changes, this is the
+        // line to revisit - hash the filter, or reduce it to a boolean.
         Log::info('Master grid export', [
             'actor'  => optional(auth()->user())->getKey(),
             'slug'   => $slug,

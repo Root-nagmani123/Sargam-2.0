@@ -81,7 +81,10 @@ class ToggleStatusAllowListTest extends TestCase
      */
     public function test_the_allow_list_permits_only_status_columns(): void
     {
-        $permitted = ['active_inactive', 'status', 'is_active', 'visible'];
+        // active_room is the odd one out: hostel_building_master stores its
+        // status in a varchar(1) under that name. It earns its place because
+        // it IS that table's status column, not because the list is elastic.
+        $permitted = ['active_inactive', 'status', 'is_active', 'visible', 'active_room'];
 
         foreach ($this->allowList() as $table => $rule) {
             foreach ($rule['columns'] as $column) {

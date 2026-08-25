@@ -6,7 +6,6 @@ use App\DataTables\CourseMasterDataTable;
 use App\DataTables\FacultyDataTable;
 use App\DataTables\GroupMappingDataTable;
 use App\DataTables\Master\EmployeeTypeMasterDataTable;
-use App\DataTables\MemberDataTable;
 use App\DataTables\RoleDataTable;
 use App\Http\Controllers\Admin\IssueManagement\IssueCategoryController;
 use App\Http\Controllers\Admin\IssueManagement\IssueEscalationMatrixController;
@@ -4601,7 +4600,7 @@ class UserController extends Controller
         'floor_master'                        => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'group_type_master_course_master_map' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'hostel_building_floor_mapping'       => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'hostel_building_master'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'hostel_building_master'              => ['id_column' => 'pk', 'columns' => ['active_room']],
         'hostel_floor_room_mapping'           => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'hostel_room_master'                  => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'issue_category_master'               => ['id_column' => 'pk', 'columns' => ['status']],
@@ -4617,7 +4616,7 @@ class UserController extends Controller
         'state_district_mapping'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'state_master'                        => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'states'                              => ['id_column' => 'pk', 'columns' => ['status']],
-        'stream_master'                       => ['id_column' => 'pk', 'columns' => ['status']],
+        'stream_master'                       => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'subject_master'                      => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'subject_module_master'               => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'user_role_master'                    => ['id_column' => 'pk', 'columns' => ['active_inactive']],
@@ -4665,9 +4664,6 @@ public function toggleStatus(Request $request)
 
         if ($table === 'employee_type_master') {
             EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
-        }
-        if ($table === 'employee_master') {
-            MemberDataTable::bumpListingCacheEpoch();
         }
         if ($table === 'faculty_expertise_master') {
             FacultyExpertiseMasterController::bumpListCacheEpoch();
