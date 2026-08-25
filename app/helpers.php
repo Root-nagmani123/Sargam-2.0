@@ -2041,15 +2041,53 @@ if (! function_exists('fc_report_roster_username_case')) {
      *
      * Returns an expression usable as the FIRST arm of a COALESCE; NULL when it does not apply.
      */
-    function fc_report_roster_username_case(string $frmAlias = 'frm'): string
+    function fc_report_roster_username_case(string $frmAlias = 'frm', ?string $identityAlias = 's1'): string
     {
-        return "CASE WHEN `{$frmAlias}`.`pk` IS NOT NULL
-                      AND NULLIF(TRIM(`{$frmAlias}`.`user_id`), '') IS NOT NULL
+        $f = $frmAlias;
+
+        // IDENTITY CORROBORATION.
+        //
+        // A roster row sitting at the same number proves nothing on its own. The migration test
+        // below establishes that the roster PERSON has no login — it does not establish that the
+        // roster person is the trainee on this row. Because the two pk spaces overlap, the row
+        // may belong to somebody else entirely, and preferring their username would be the same
+        // wrong-identity bug this CASE exists to fix, running in the other direction.
+        //
+        // So where the trainee's own profile carries a mobile or an email, require it to match
+        // the roster row before trusting the roster username. Where it carries neither there is
+        // nothing to compare against and the migration test stands alone — that residue is the
+        // only case this cannot decide, and it is the one where no evidence exists either way.
+        $corroborated = '1 = 1';
+        if ($identityAlias !== null) {
+            $s = $identityAlias;
+            $checks = [];
+
+            if (fc_schema_has_column('student_master_firsts', 'mobile_no')
+                && fc_schema_has_column('fc_registration_master', 'contact_no')) {
+                $checks[] = "NULLIF(TRIM(`{$s}`.`mobile_no`), '') IS NULL";
+                $checks[] = "NULLIF(TRIM(`{$f}`.`contact_no`), '') IS NULL";
+                $checks[] = "TRIM(`{$s}`.`mobile_no`) = TRIM(`{$f}`.`contact_no`)";
+            }
+
+            if (fc_schema_has_column('student_master_firsts', 'email')
+                && fc_schema_has_column('fc_registration_master', 'email')) {
+                $checks[] = "(NULLIF(TRIM(`{$s}`.`email`), '') IS NOT NULL
+                              AND LOWER(TRIM(`{$s}`.`email`)) = LOWER(TRIM(`{$f}`.`email`)))";
+            }
+
+            if ($checks !== []) {
+                $corroborated = '('.implode("\n                           OR ", $checks).')';
+            }
+        }
+
+        return "CASE WHEN `{$f}`.`pk` IS NOT NULL
+                      AND NULLIF(TRIM(`{$f}`.`user_id`), '') IS NOT NULL
                       AND NOT EXISTS (
                             SELECT 1 FROM user_credentials uc_chk
-                             WHERE uc_chk.user_name = `{$frmAlias}`.`user_id`
+                             WHERE uc_chk.user_name = `{$f}`.`user_id`
                       )
-                     THEN TRIM(`{$frmAlias}`.`user_id`) END";
+                      AND {$corroborated}
+                     THEN TRIM(`{$f}`.`user_id`) END";
     }
 }
 
