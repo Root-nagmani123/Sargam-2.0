@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CadreMaster;
+use App\Models\CourseCordinatorMaster;
 use App\Models\CourseMaster;
 use App\Models\ServiceMaster;
 use App\Models\StudentMaster;
@@ -22,7 +23,8 @@ class WhosWhoController extends Controller
      */
     public function index()
     {
-        $cacheKey = 'whos_who_courses:v1:' . Carbon::now()->format('Y-m-d');
+        $facultyPk = $this->coordinatorScopedFacultyPk();
+        $cacheKey = 'whos_who_courses:v1:' . ($facultyPk ?: 'all') . ':' . Carbon::now()->format('Y-m-d');
         $courses = DataTableRedisCache::remember(
             $cacheKey,
             [
@@ -30,7 +32,7 @@ class WhosWhoController extends Controller
                 'seconds' => 'FACULTY_WHOS_WHO_CACHE_SECONDS',
             ],
             'WhosWhoController@index',
-            fn () => $this->queryActiveCoursesForWhosWho()
+            fn () => $this->queryActiveCoursesForWhosWho($facultyPk)
         );
 
         $cadres = CadreMaster::orderBy('cadre_name')->get(['pk', 'cadre_name']);
@@ -45,7 +47,8 @@ class WhosWhoController extends Controller
     public function getCourses()
     {
         try {
-            $cacheKey = 'whos_who_courses:v1:' . Carbon::now()->format('Y-m-d');
+            $facultyPk = $this->coordinatorScopedFacultyPk();
+            $cacheKey = 'whos_who_courses:v1:' . ($facultyPk ?: 'all') . ':' . Carbon::now()->format('Y-m-d');
             $courses = DataTableRedisCache::remember(
                 $cacheKey,
                 [
@@ -53,7 +56,7 @@ class WhosWhoController extends Controller
                     'seconds' => 'FACULTY_WHOS_WHO_CACHE_SECONDS',
                 ],
                 'WhosWhoController@getCourses',
-                fn () => $this->queryActiveCoursesForWhosWho()
+                fn () => $this->queryActiveCoursesForWhosWho($facultyPk)
             );
 
             return response()->json([
@@ -70,17 +73,50 @@ class WhosWhoController extends Controller
 
     /**
      * Active courses for Who's Who (shared cache key with {@see getCourses}).
+     * When $facultyPk is given, the list is restricted to courses where that
+     * faculty is the Course Coordinator (CC) or Assistant Course Coordinator (ACC).
      *
      * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\CourseMaster>
      */
-    private function queryActiveCoursesForWhosWho()
+    private function queryActiveCoursesForWhosWho(?int $facultyPk = null)
     {
         $currentDate = Carbon::now()->format('Y-m-d');
 
         return CourseMaster::where('active_inactive', 1)
             ->where('end_date', '>=', $currentDate)
+            ->when($facultyPk, function ($query) use ($facultyPk) {
+                $query->whereIn('pk', $this->coordinatorCourseIds($facultyPk));
+            })
             ->orderBy('course_name')
             ->get(['pk', 'course_name', 'couse_short_name']);
+    }
+
+    /**
+     * Course pks where the given faculty is CC (Coordinator_name) or ACC
+     * (Assistant_Coordinator_name) in course_coordinator_master.
+     *
+     * @return \Illuminate\Support\Collection<int, int>
+     */
+    private function coordinatorCourseIds(int $facultyPk)
+    {
+        return CourseCordinatorMaster::where('Coordinator_name', $facultyPk)
+            ->orWhereRaw('FIND_IN_SET(?, Assistant_Coordinator_name)', [$facultyPk])
+            ->pluck('courses_master_pk')
+            ->unique()
+            ->filter();
+    }
+
+    /**
+     * Faculty pk to scope the Who's Who course list by, or null to show all
+     * courses (non-faculty / admin users).
+     */
+    private function coordinatorScopedFacultyPk(): ?int
+    {
+        if (! is_faculty_portal_user()) {
+            return null;
+        }
+
+        return get_auth_faculty_master_pk();
     }
 
     /**
