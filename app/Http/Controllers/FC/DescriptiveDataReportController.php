@@ -143,7 +143,13 @@ class DescriptiveDataReportController extends Controller
      */
     public function file(Request $request)
     {
-        $path = FcUploadUrl::decode($request->query(FcUploadUrl::TOKEN_PARAM));
+        // Audience-scoped: this route is deliberately unauthenticated for PHOTOGRAPHS AND
+        // SIGNATURES only. Naming its audience stops it serving a token minted for the
+        // step reports, whose uploads are Aadhaar cards, PAN cards and medical documents.
+        $path = FcUploadUrl::decode(
+            $request->query(FcUploadUrl::TOKEN_PARAM),
+            FcUploadUrl::DEFAULT_PATH
+        );
         abort_if($path === null, 404);
 
         // Resolve through the codebase's own resolver, which knows every place an upload can
@@ -312,7 +318,8 @@ class DescriptiveDataReportController extends Controller
                         $value = $row->{$key} ?? null;
 
                         if ($field['type'] === 'file') {
-                            $line[] = FcUploadUrl::for($value);
+                            // DEFAULT_PATH named explicitly: photographs and signatures.
+                            $line[] = FcUploadUrl::for($value, FcUploadUrl::DEFAULT_PATH);
                         } elseif ($field['type'] === 'date') {
                             $line[] = $this->formatDateValue($value);
                         } else {
@@ -382,6 +389,7 @@ class DescriptiveDataReportController extends Controller
             DB::raw("`s1`.`{$s1Col}` as `link_id`"),
             DB::raw("NULLIF(TRIM(`s1`.`photo_path`), '') as `photo_path`"),
             DB::raw($this->photoNameSql().' as `display_name`'),
+            DB::raw(fc_report_login_username_sql($form->trackerStorageTable(), $form->trackerStorageTable()).' as `login_username`'),
         ];
 
         // rank / exam year live on the roster, which is only joined when the tracker keys on
@@ -536,22 +544,13 @@ class DescriptiveDataReportController extends Controller
      */
     private function photoEntryName(object $row, string $extension, array &$usedNames): string
     {
-        $name = $this->zipSafeName((string) ($row->display_name ?? ''));
-        if ($name === '') {
-            $name = 'trainee_'.($row->link_id ?? count($usedNames) + 1);
-        }
-
-        $stem = implode('_', array_filter(
-            [$name, $this->zipSafeName((string) ($row->reg_rank ?? '')), $this->zipSafeName((string) ($row->exam_year ?? ''))],
-            fn ($v) => $v !== ''
-        ));
-
-        $key = strtolower($stem);
-        if (isset($usedNames[$key])) {
-            $stem .= '_'.(++$usedNames[$key]);
-        } else {
-            $usedNames[$key] = 1;
-        }
+        $stem = fc_archive_entry_stem(
+            $row->login_username ?? null,
+            $row->reg_rank ?? null,
+            $row->exam_year ?? null,
+            (string) ($row->display_name ?? ''),
+            $usedNames
+        );
 
         return $stem.($extension !== '' ? '.'.$extension : '');
     }
@@ -849,18 +848,6 @@ class DescriptiveDataReportController extends Controller
             ->where('fc_forms.is_active', 1)
             ->orderBy('fc_forms.form_name')
             ->get(['fc_forms.id', 'fc_forms.form_name', 'cm.course_name']);
-    }
-
-    /**
-     * Filename-safe form of an archive entry name.
-     *
-     * Unlike slug(), this returns '' when nothing survives stripping — slug() substitutes the
-     * literal "course", which is right for a download filename and very wrong for a trainee's
-     * photo. The caller falls back to the trainee id instead.
-     */
-    private function zipSafeName(string $value): string
-    {
-        return trim((string) preg_replace('/[^A-Za-z0-9]+/', '_', $value), '_');
     }
 
     private function slug(?string $value): string

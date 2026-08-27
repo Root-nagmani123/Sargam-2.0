@@ -9,6 +9,7 @@ const routes = {
     'toggleStatus': baseUrl + '/admin/toggle-status',
     'groupMappingExcelUpload': baseUrl + '/group-mapping/import-group-mapping',
     'groupMappingGetGroupNamesByType': baseUrl + '/group-mapping/get-group-names-by-type',
+    'groupMappingGetStudentByOtCode': baseUrl + '/group-mapping/get-student-by-otcode',
     'groupMappingStudentList': baseUrl + '/group-mapping/student-list',
     'groupMappingStudentUpdate': baseUrl + '/group-mapping/student-update',
     'groupMappingStudentDelete': baseUrl + '/group-mapping/student-delete',

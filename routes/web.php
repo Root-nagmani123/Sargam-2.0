@@ -596,12 +596,18 @@ Route::middleware(['auth'])->group(function () {
         Route::post('store', 'store')->name('store');
         Route::post('import-group-mapping', 'importGroupMapping')->name('import');
         Route::post('get-group-names-by-type', 'getGroupNamesByType')->name('get.group.names.by.type');
+        // Throttled: the Add Student modal fires this on a 400ms keystroke debounce,
+        // so a few dozen calls a minute is normal use and anything far above that is
+        // someone walking the OT-code space.
+        Route::post('get-student-by-otcode', 'getStudentByOtCode')->name('get.student.by.otcode')
+            ->middleware('throttle:60,1');
         Route::post('add-single-student', 'addSingleStudent')->name('add.single.student');
         Route::post('student-list', 'studentList')->name('student.list');
         Route::post('student-update', 'updateStudent')->name('student.update');
         Route::delete('student-delete', 'deleteStudent')->name('student.delete');
         Route::post('send-message', 'sendMessage')->name('send.message');
         Route::get('export-student-list/{id?}', 'exportStudentList')->name('export.student.list');
+        Route::get('export-student-list-pdf/{id?}', 'exportStudentListPdf')->name('export.student.list.pdf');
         Route::get('filter-faculties', 'filterFaculties')->name('filter.faculties');
         Route::get('filter-courses', 'filterCourses')->name('filter.courses');
         Route::get('download-pdf', 'downloadPdf')->name('download.pdf');
@@ -772,18 +778,6 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         Route::post('/reject/{id}', 'reject')->name('reject');
         Route::post('/approve-group/{id}', 'approveGroup')->name('approve_group');
         Route::post('/reject-group/{id}', 'rejectGroup')->name('reject_group');
-    });
-
-    // Visitor/Gate Pass Routes
-    Route::prefix('security/visitor-pass')->name('admin.security.visitor_pass.')->controller(\App\Http\Controllers\Admin\Security\VisitorPassController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::post('/store', 'store')->name('store');
-        Route::get('/show/{id}', 'show')->name('show');
-        Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::post('/update/{id}', 'update')->name('update');
-        Route::delete('/delete/{id}', 'delete')->name('delete');
-        Route::post('/checkout/{id}', 'checkOut')->name('checkout');
     });
 
     // ============================================
@@ -980,16 +974,28 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
             Route::get('/get-template-by-course', 'getTemplateByCourse')->name('getTemplateByCourse'); // <-- Template AJAX route
             Route::get('/templates-by-type', 'getTemplatesByType')->name('getTemplatesByType'); // list templates for a course+type picker
             Route::post('/get-student-attendance-by-topic', 'getStudentAttendanceBytopic')->name('getStudentAttendanceBytopic'); // <-- New AJAX route
-            Route::post('/store_memo_notice', 'store_memo_notice')->name('store_memo_notice');
-            Route::post('/store_memo_status', 'store_memo_status')->name('store_memo_status');
-            Route::post('/memo/update/{id}', 'updateMemoStatus')->name('update_memo_status');
-            Route::get('/notice/edit/{id}', 'editNotice')->name('editNotice');
-            Route::post('/notice/update-template/{id}', 'updateNoticeTemplate')->name('update_notice_template');
-            Route::post('/end-chat', 'endChat')->name('endChat');
+
+            // Write actions on disciplinary records. Gated as a block rather than method
+            // by method — the per-method checks were applied to only some of these, so
+            // creating a memo, closing a case with a marks deduction, and deleting
+            // conversation messages all ran for any authenticated user. A route added
+            // inside this group now inherits the check instead of having to remember it.
+            // Participant-facing routes are deliberately outside it.
+            Route::middleware('memo.notice.manager')->group(function () {
+                Route::post('/store_memo_notice', 'store_memo_notice')->name('store_memo_notice');
+                Route::post('/store_memo_status', 'store_memo_status')->name('store_memo_status');
+                Route::post('/memo/update/{id}', 'updateMemoStatus')->name('update_memo_status');
+                Route::get('/notice/edit/{id}', 'editNotice')->name('editNotice');
+                Route::post('/notice/update-template/{id}', 'updateNoticeTemplate')->name('update_notice_template');
+                Route::post('/end-chat', 'endChat')->name('endChat');
+            });
             Route::post('/memo_notice_conversation', 'memo_notice_conversation')->name('memo_notice_conversation');
             Route::post('/memo_notice_conversation_student', 'memo_notice_conversation_student')->name('memo_notice_conversation_student');
             Route::post('/memo_notice_conversation_model', 'memo_notice_conversation_model')->name('memo_notice_conversation_model');
+            // Reached only from the admin conversation view (conversation.blade.php);
+            // the participant's own view is chat.blade.php and does not link here.
             Route::delete('/notice-delete-Message/{id}/{type}', [CourseAttendanceNoticeMapController::class, 'noticedeleteMessage'])
+                ->middleware('memo.notice.manager')
                 ->name('noticedeleteMessage');
             Route::delete('/record-delete/{id}/{type}', 'destroyRecord')->name('destroy');
             //  Route::get('/user_chat', function () {
@@ -1010,7 +1016,11 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     Route::get('/send_notice/students', [CourseAttendanceNoticeMapController::class, 'getStudentsForNotice'])->name('send.notice.students');
     Route::get('/send_notice/list/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'noticeListModal'])->name('send.notice.list.modal');
     Route::get('/send_notice/list-page/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'noticeListPage'])->name('send.notice.list.page');
-    Route::post('/send_notice_direct_save', [CourseAttendanceNoticeMapController::class, 'send_direct_notice_save'])->name('send.notice.direct.save');
+    // Issues a notice against a named participant — same class of write as the actions
+    // inside the memo-notice group, so it carries the same gate.
+    Route::post('/send_notice_direct_save', [CourseAttendanceNoticeMapController::class, 'send_direct_notice_save'])
+        ->middleware('memo.notice.manager')
+        ->name('send.notice.direct.save');
     Route::get('/attendance_send_notice/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'view_all_notice_list'])->name('attendance.send_notice');
     Route::post('/notice_direct_save', [CourseAttendanceNoticeMapController::class, 'notice_direct_save'])->name('notice.direct.save');
 
@@ -1101,9 +1111,12 @@ Route::get('/fc-front', function () {
     return view('fc.front_page');
 })->name('fc.front');
 
-Route::get('/admin/memo-conversation', function () {
-    return view('admin.courseAttendanceNoticeMap.memo_conversation'); // or any other view you want to show
-})->name('admin.courseAttendanceNoticeMap.memo_conversation');
+// The `admin.courseAttendanceNoticeMap.memo_conversation` route and its view were
+// removed: the closure passed no data and the Blade was a static mockup end to end —
+// a fixed course ("88th Foundation Course"), a fixed date (22/11/2013), Lorem ipsum
+// topics, a named real participant, a named signatory, and an invented exemption
+// table. Nothing linked to it (no Blade, no controller, no `menus` row), so it served
+// only to render a fabricated disciplinary document at a live URL.
 
 //route for admin notice/ memo conversation
 // Route::get('/admin/memo-notice', function () {
@@ -1329,7 +1342,18 @@ Route::middleware(['auth'])->group(function () {
     Route::get('course-repository/document/{pk}/edit-data', [CourseRepositoryController::class, 'getDocument'])->name('course-repository.document.edit-data');
     Route::post('course-repository/document/{pk}/update', [CourseRepositoryController::class, 'updateDocument'])->name('course-repository.document.update');
     Route::delete('course-repository/document/{pk}', [CourseRepositoryController::class, 'deleteDocument'])->name('course-repository.document.delete');
-    Route::get('course-repository/document/{pk}/download', [CourseRepositoryController::class, 'downloadDocument'])->name('course-repository.document.download');
+    // Both document read actions are throttled. They take a sequential primary key, so
+    // without a rate limit the whole corpus is walkable by incrementing it; 120/min is
+    // far above any human browsing pattern and far below a useful scrape. This bounds
+    // bulk retrieval — it is not an access-control decision, which is still open.
+    Route::get('course-repository/document/{pk}/download', [CourseRepositoryController::class, 'downloadDocument'])
+        ->middleware('throttle:120,1')
+        ->name('course-repository.document.download');
+    // Inline viewer source. Exists so the in-page PDF iframe never needs a
+    // public /storage URL, which the web server would serve without a session.
+    Route::get('course-repository/document/{pk}/stream', [CourseRepositoryController::class, 'streamDocument'])
+        ->middleware('throttle:120,1')
+        ->name('course-repository.document.stream');
 
     // Search route
     Route::get('course-repository-search', [CourseRepositoryController::class, 'search'])->name('course-repository.search');

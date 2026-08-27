@@ -208,6 +208,22 @@
                                                 </div>
                                                 
                                                 @if($record->type == 'Memo')
+                                                    @if(!empty($record->session_date) && !empty($record->memo_time))
+                                                    <div class="col-sm-6 col-md-4 col-lg-3">
+                                                        <div class="border-start border-3 border-warning ps-3 py-1">
+                                                            <small class="text-muted fw-semibold d-block">Memo Date &amp; Time</small>
+                                                            <span class="fw-medium">{{ \Carbon\Carbon::parse($record->session_date)->format('d/m/Y') }}, {{ \Carbon\Carbon::parse($record->memo_time)->format('h:i A') }}</span>
+                                                        </div>
+                                                    </div>
+                                                    @endif
+                                                    @if(!empty($record->memo_venue))
+                                                    <div class="col-sm-6 col-md-4 col-lg-3">
+                                                        <div class="border-start border-3 border-warning ps-3 py-1">
+                                                            <small class="text-muted fw-semibold d-block">Memo Venue</small>
+                                                            <span class="fw-medium">{{ $record->memo_venue }}</span>
+                                                        </div>
+                                                    </div>
+                                                    @endif
                                                     @if(isset($record->response))
                                                     <div class="col-sm-6 col-md-4 col-lg-3">
                                                         <div class="border-start border-3 border-warning ps-3 py-1">
