@@ -385,7 +385,10 @@ class WhosWhoController extends Controller
                 $q->where('status', 1); // Only active students from student_master
             })
             ->whereHas('course', function ($q) {
-                $q->where('active_inactive', 1); // Only active courses from course_master
+                // Same "currently active" definition as queryActiveCoursesForWhosWho(),
+                // so the course dropdown and the student grid never disagree.
+                $q->where('active_inactive', 1)
+                    ->where('end_date', '>=', Carbon::now()->format('Y-m-d'));
             });
 
         /**
@@ -628,7 +631,8 @@ class WhosWhoController extends Controller
                     ->where('student_master_pk', $student->pk)
                     ->where('active_inactive', 1)
                     ->whereHas('course', function ($q) {
-                        $q->where('active_inactive', 1);
+                        $q->where('active_inactive', 1)
+                            ->where('end_date', '>=', Carbon::now()->format('Y-m-d'));
                     })
                     ->first();
                 $course = $firstCourseMap ? $firstCourseMap->course : null;
@@ -648,7 +652,8 @@ class WhosWhoController extends Controller
                     ->where('student_master_pk', $student->pk)
                     ->where('active_inactive', 1)
                     ->whereHas('course', function ($q) {
-                        $q->where('active_inactive', 1);
+                        $q->where('active_inactive', 1)
+                            ->where('end_date', '>=', Carbon::now()->format('Y-m-d'));
                     })
                     ->get();
             }
