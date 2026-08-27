@@ -278,11 +278,7 @@ class UserController extends Controller
                  // Counted as DISTINCT active enrolments so a student in several
                  // accessible courses is not double-counted.
                  $roleCourseIds = get_Role_by_course();
-                 $totalStudents = StudentMasterCourseMap::query()
-                     ->where('active_inactive', 1)
-                     ->when(! empty($roleCourseIds), fn ($q) => $q->whereIn('course_master_pk', $roleCourseIds))
-                     ->distinct('student_master_pk')
-                     ->count('student_master_pk');
+                 $totalStudents = $this->dashboardTotalStudentsCount($roleCourseIds);
              } else {
                  $totalSessions = 0;
              }
@@ -293,16 +289,11 @@ class UserController extends Controller
 
         // Super Admin / PA / Admin also see the "Total Students" / "Student Details"
         // cards, but they are NOT faculty-portal users, so the block above skips them
-        // and $totalStudents stayed 0. Compute it here, scoped by the viewer's course
-        // access — get_Role_by_course(): empty = all (Super Admin/PA), [-1] = none →
-        // whereIn([-1]) yields 0. Same DISTINCT-enrolment basis as the faculty branch.
+        // and $totalStudents stayed 0. Compute it here on the same basis as the
+        // faculty branch (see dashboardTotalStudentsCount()).
         if (! hasRole('Student-OT') && ! is_faculty_portal_user()) {
             $roleCourseIds = get_Role_by_course();
-            $totalStudents = StudentMasterCourseMap::query()
-                ->where('active_inactive', 1)
-                ->when(! empty($roleCourseIds), fn ($q) => $q->whereIn('course_master_pk', $roleCourseIds))
-                ->distinct('student_master_pk')
-                ->count('student_master_pk');
+            $totalStudents = $this->dashboardTotalStudentsCount($roleCourseIds);
         }
 
         if ($request->boolean('calendar_only')) {
@@ -1103,6 +1094,8 @@ class UserController extends Controller
         // have already ended so their old attendance stays viewable; "active" (default)
         // shows currently-running courses. The payload scopes students accordingly;
         // the course-option queries below switch their end_date comparison to match.
+        // Date-only comparison (see resolveDashboardStudentListPayload()): end_date is
+        // a DATE, so a course ending today must stay "active" all day.
         $archive = $request->input('status') === 'archive';
         $courseDateOp = $archive ? '<' : '>=';
 
@@ -1187,7 +1180,7 @@ class UserController extends Controller
             ->where('gmap.active_inactive', 1)
             ->where('cgroup.active_inactive', 1)
             ->where('cm.active_inactive', 1)
-            ->where('cm.end_date', $courseDateOp, now())
+            ->where('cm.end_date', $courseDateOp, now()->toDateString())
             ->where('fm.active_inactive', 1);
 
         // Filter by logged-in faculty if available. A non-admin viewer with no
@@ -1239,7 +1232,7 @@ class UserController extends Controller
             ->join('faculty_master as fm', 'gmap.facility_id', '=', 'fm.pk')
             ->where('gmap.active_inactive', 1)
             ->where('cm.active_inactive', 1)
-            ->where('cm.end_date', $courseDateOp, now())
+            ->where('cm.end_date', $courseDateOp, now()->toDateString())
             ->where('fm.active_inactive', 1);
 
         // Filter by logged-in faculty if available (see the counsellor-type note above).
@@ -1290,7 +1283,7 @@ class UserController extends Controller
 
         $courseOptions = ($seesAllCourses
                 ? CourseMaster::where('active_inactive', '1')
-                    ->where('end_date', $courseDateOp, now())
+                    ->where('end_date', $courseDateOp, now()->toDateString())
                     ->orderBy('course_name')
                     ->get(['pk', 'course_name', 'couse_short_name', 'start_year', 'end_date'])
                     // toBase(): Eloquent\Collection::merge() keys items by getKey(),
@@ -1317,7 +1310,7 @@ class UserController extends Controller
             ->join('faculty_master as fm', 'gmap.facility_id', '=', 'fm.pk')
             ->where('gmap.active_inactive', 1)
             ->where('cm.active_inactive', 1)
-            ->where('cm.end_date', $courseDateOp, now())
+            ->where('cm.end_date', $courseDateOp, now()->toDateString())
             ->where('fm.active_inactive', 1)
             ->whereNotNull('gmap.group_name')
             ->where('gmap.group_name', '!=', '');
@@ -1367,8 +1360,8 @@ class UserController extends Controller
 
         // Tab counts (All / Present / Absent) for the initial render; the DataTable
         // response refreshes them live on every filter change. A date range
-        // (Present/Absent Today cards, or Time Period filter) switches Present/Absent
-        // to one-row-per-student, marked-only buckets matching the dashboard cards.
+        // (Present/Absent Today cards, or Time Period filter) narrows Present/Absent
+        // to the marked-only sessions, one row per session like the All tab.
         if ($request->filled('from_date') || $request->filled('to_date')) {
             [$presentStudents, $absentStudents] = $this->collapseDateScopedAttendance($students);
         } else {
@@ -1440,7 +1433,11 @@ class UserController extends Controller
         // per participant — every student of the selected course is listed. The
         // Time Period filter here only scopes the count columns (see $rowMeta
         // below), so pass false to keep all students visible regardless of dates.
-        $sessionRows = $this->applyDashboardStudentListFilters($payload['students'], $request, false);
+        // $applySearch = false: the search box is applied in
+        // otParticipantsDataTableResponse() instead, over THIS page's columns
+        // (House Name, Duty Type and the count columns). Letting the shared
+        // filter search first would drop every row on a House Name query.
+        $sessionRows = $this->applyDashboardStudentListFilters($payload['students'], $request, false, false);
 
         $byStudent = [];
         foreach ($sessionRows as $m) {
@@ -1521,7 +1518,7 @@ class UserController extends Controller
         $courseDateOp = $status === 'archive' ? '<' : '>=';
         if (hasRole('Super Admin') || hasRole('Admin') || hasRole('PA')) {
             $courseOptions = CourseMaster::where('active_inactive', '1')
-                ->where('end_date', $courseDateOp, now())
+                ->where('end_date', $courseDateOp, now()->toDateString())
                 ->orderBy('course_name')
                 ->get(['pk', 'course_name', 'couse_short_name', 'start_year', 'end_date']);
         } else {
@@ -1999,6 +1996,36 @@ class UserController extends Controller
     }
 
     /**
+     * Count for the dashboard's "Total Students" / "Student Details" cards.
+     *
+     * Must match what the card OPENS — /dashboard/students, whose payload
+     * (resolveDashboardStudentListPayload()) lists students of courses that are
+     * active AND not yet ended. Counting enrolment rows alone over-reports for
+     * Super Admin / PA / Admin, who have no course restriction and so pick up
+     * every inactive and finished course too.
+     *
+     * @param  array<int, int|string>  $roleCourseIds  get_Role_by_course(): [] = no
+     *                                 restriction (Super Admin / Admin / PA),
+     *                                 [-1] = no access → count 0.
+     */
+    private function dashboardTotalStudentsCount(array $roleCourseIds): int
+    {
+        return (int) StudentMasterCourseMap::query()
+            ->where('student_master_course__map.active_inactive', 1)
+            ->whereIn('student_master_course__map.course_master_pk', function ($q) use ($roleCourseIds) {
+                $q->select('pk')
+                    ->from('course_master')
+                    ->where('active_inactive', 1)
+                    ->where('end_date', '>=', now()->toDateString());
+                if (! empty($roleCourseIds)) {
+                    $q->whereIn('pk', $roleCourseIds);
+                }
+            })
+            ->distinct()
+            ->count('student_master_course__map.student_master_pk');
+    }
+
+    /**
      * @return array{students: \Illuminate\Support\Collection, availableCourses: \Illuminate\Support\Collection, facultyPk: int|null}
      */
     private function resolveDashboardStudentListPayload(?Request $request = null, bool $withTotals = true): array
@@ -2022,6 +2049,10 @@ class UserController extends Controller
         // Active vs Archive scope. Only the OT-participants page sends status=archive;
         // everything else (student list, export) omits it and stays on "active".
         // Archive = course has ended (end_date < today); Active = still running.
+        // Compared against now()->toDateString(), NOT now(): course_master.end_date
+        // is a DATE, so a full datetime would read '2026-08-27' as 00:00:00 and
+        // archive a course part-way through its own last day — dropping it (and its
+        // students) from the Course filter and the list while it is still running.
         $archive = ($request?->input('status') === 'archive');
         $dateOp = $archive ? '<' : '>=';
 
@@ -2037,14 +2068,14 @@ class UserController extends Controller
                 // Course set feeding the primary (enrollment) student source.
                 if ($seesAllCourses) {
                     $activeCoordinatorCourses = CourseMaster::where('active_inactive', 1)
-                        ->where('end_date', $dateOp, now())
+                        ->where('end_date', $dateOp, now()->toDateString())
                         ->pluck('pk');
                 } else {
                     $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
                     $activeCoordinatorCourses = $coordinatorCourses->isNotEmpty()
                         ? CourseMaster::whereIn('pk', $coordinatorCourses)
                             ->where('active_inactive', 1)
-                            ->where('end_date', $dateOp, now())
+                            ->where('end_date', $dateOp, now()->toDateString())
                             ->pluck('pk')
                         : collect([]);
                 }
@@ -2083,7 +2114,7 @@ class UserController extends Controller
                     $groupMapCourseIds = $groupMappings->pluck('course_name')->unique();
                     $activeCourseIds = CourseMaster::whereIn('pk', $groupMapCourseIds)
                         ->where('active_inactive', 1)
-                        ->where('end_date', $dateOp, now())
+                        ->where('end_date', $dateOp, now()->toDateString())
                         ->pluck('pk');
 
                     if ($activeCourseIds->isNotEmpty()) {
@@ -2149,7 +2180,7 @@ class UserController extends Controller
                     if ($taughtRows->isNotEmpty()) {
                         $activeTaughtCourseIds = CourseMaster::whereIn('pk', $taughtRows->pluck('course_pk')->unique()->filter())
                             ->where('active_inactive', 1)
-                            ->where('end_date', $dateOp, now())
+                            ->where('end_date', $dateOp, now()->toDateString())
                             ->pluck('pk');
                         $activeTaughtSet = $activeTaughtCourseIds->map(fn ($p) => (string) $p)->all();
 
@@ -2314,8 +2345,8 @@ class UserController extends Controller
                             && $course->active_inactive == 1
                             && isset($course->end_date)
                             && ($archive
-                                ? Carbon::parse($course->end_date)->lt(now())
-                                : Carbon::parse($course->end_date)->gte(now()));
+                                ? Carbon::parse($course->end_date)->startOfDay()->lt(now()->startOfDay())
+                                : Carbon::parse($course->end_date)->startOfDay()->gte(now()->startOfDay()));
                     })
                     ->unique('pk')
                     ->map(function ($course) {
@@ -2329,7 +2360,7 @@ class UserController extends Controller
             }
         } elseif (hasRole('Super Admin')) {
             $activeCourseIds = CourseMaster::where('active_inactive', 1)
-                ->where('end_date', $dateOp, now())
+                ->where('end_date', $dateOp, now()->toDateString())
                 ->pluck('pk');
 
             $superAdminStudentMaps = StudentMasterCourseMap::with([
@@ -2369,8 +2400,8 @@ class UserController extends Controller
                         && $course->active_inactive == 1
                         && isset($course->end_date)
                         && ($archive
-                            ? Carbon::parse($course->end_date)->lt(now())
-                            : Carbon::parse($course->end_date)->gte(now()));
+                            ? Carbon::parse($course->end_date)->startOfDay()->lt(now()->startOfDay())
+                            : Carbon::parse($course->end_date)->startOfDay()->gte(now()->startOfDay()));
                 })
                 ->unique('pk')
                 ->map(fn ($c) => ['pk' => $c->pk, 'course_name' => $c->course_name])
@@ -2858,7 +2889,7 @@ class UserController extends Controller
         return false;
     }
 
-    private function applyDashboardStudentListFilters($students, Request $request, bool $applySessionDateFilter = true)
+    private function applyDashboardStudentListFilters($students, Request $request, bool $applySessionDateFilter = true, bool $applySearch = true)
     {
         $courseId = $request->input('course_id');
         $roleFilter = $request->input('role_filter');
@@ -2869,7 +2900,11 @@ class UserController extends Controller
         $session = (string) $request->input('session', '');
         $topic = (string) $request->input('topic', '');
         $participant = (string) $request->input('participant', '');
-        $searchInput = $request->input('search', '');
+        // The DataTables search box. Callers that run their own search over the
+        // columns THEY render (e.g. the OT participants page, whose House Name /
+        // Duty Type / count columns don't exist here) pass $applySearch = false so
+        // this narrower haystack doesn't drop their rows first.
+        $searchInput = $applySearch ? $request->input('search', '') : '';
         $searchValue = is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput;
         $search = strtolower(trim((string) $searchValue));
 
@@ -2970,15 +3005,16 @@ class UserController extends Controller
     }
 
     /**
-     * Collapse the per-session rows into ONE ROW PER STUDENT (per tab) for a
+     * Split the per-session rows into the Present / Absent buckets for a
      * date-scoped attendance view (the Present/Absent Today cards, or any Time
-     * Period filter). Only students GENUINELY MARKED (status != 0) within range are
-     * counted; no-session default rows are dropped (not treated as "Present").
-     *   - Present = attended any NON-absent marked session in range
-     *   - Absent  = had ANY absent (status 3) marked session in range
-     * A student can therefore appear in BOTH tabs (present in some sessions, absent
-     * in others). The absent row carries its absent session's date so the Absent
-     * Reason resolves against that day.
+     * Period filter). Only sessions GENUINELY MARKED (status != 0) within range are
+     * kept; no-session default rows are dropped (not treated as "Present").
+     *   - Present = every NON-absent marked session in range
+     *   - Absent  = every absent (status 3) marked session in range
+     * Rows stay ONE PER SESSION, matching the All tab: a student marked in two
+     * sessions shows two rows. A student can appear in BOTH tabs (present in some
+     * sessions, absent in others), and each row carries its own session date so the
+     * Absent Reason resolves against that day.
      *
      * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection} [present, absent]
      */
@@ -3002,17 +3038,17 @@ class UserController extends Controller
                 continue;
             }
 
-            // Present bucket: any non-absent marked session.
-            $presentRow = $marked->first(fn ($m) => (int) $m->attendance_status !== 3);
-            if ($presentRow) {
+            // Present bucket: EVERY non-absent marked session, so a student marked
+            // present in several sessions of the range shows one row per session
+            // exactly like the All tab.
+            foreach ($marked->filter(fn ($m) => (int) $m->attendance_status !== 3) as $presentRow) {
                 $presentRow->attendance_present = true;
                 $present->push($presentRow);
             }
 
-            // Absent bucket: any absent (status 3) marked session. Use that session
-            // as the row so its date drives the Absent Reason lookup.
-            $absentRow = $marked->first(fn ($m) => (int) $m->attendance_status === 3);
-            if ($absentRow) {
+            // Absent bucket: EVERY absent (status 3) marked session. Each row keeps
+            // its own session date so the Absent Reason resolves against that day.
+            foreach ($marked->filter(fn ($m) => (int) $m->attendance_status === 3) as $absentRow) {
                 $absentRow->attendance_present = false;
                 $absent->push($absentRow);
             }
