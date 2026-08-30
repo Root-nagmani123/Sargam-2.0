@@ -212,6 +212,8 @@ function addGroupRow(groupName, groupId, maxRows) {
     });
     // Re-init Choices on both the restored source row and the fresh clone.
     if (typeof window.fcInitChoices === 'function') { window.fcInitChoices(); }
+    // The clone starts blank, so any conditional field in it must hide again.
+    if (typeof window.fcApplyConditionalFields === 'function') { window.fcApplyConditionalFields(); }
 }
 
 $(document).ready(function () {
@@ -383,8 +385,10 @@ document.querySelectorAll('.fc-file-upload[data-max-kb]').forEach(function (inpu
 
 // Choices.js searchable dropdowns + conditional show/hide.
 // A field marked with .choices-field becomes a searchable dropdown; a field carrying
-// data-fc-cond-* is shown only when another field in the same row holds a given value
-// (e.g. Spouse Name appears only when "Is your spouse also registering?" = Yes).
+// data-fc-cond-* is shown only when the field named in data-fc-cond-field — in the same
+// row — holds data-fc-cond-value. Both attributes come from the Form Builder
+// (fc_form_group_fields.condition_field / condition_value), so new conditional questions
+// are configured by an admin, not coded here.
 (function () {
     function initChoices() {
         if (typeof window.Choices === 'undefined') { return; }
@@ -416,13 +420,28 @@ document.querySelectorAll('.fc-file-upload[data-max-kb]').forEach(function (inpu
         f.classList.remove('is-invalid');
     }
 
+    // Current value of the controlling field inside one row. Matching on the name SUFFIX
+    // (`…[field_name]`) rather than the full name keeps this working for cloned rows,
+    // whose input names are renumbered by addGroupRow().
+    function controllingValue(scope, fieldName) {
+        var suffix = '[' + fieldName + ']';
+        var radios = scope.querySelectorAll('input[type=radio][name$="' + suffix + '"]');
+        if (radios.length) {
+            for (var i = 0; i < radios.length; i++) {
+                if (radios[i].checked) { return radios[i].value; }
+            }
+            return null;
+        }
+        var el = scope.querySelector('[name$="' + suffix + '"]');
+        return el ? el.value : null;
+    }
+
     function applyConditionalFields() {
-        document.querySelectorAll('[data-fc-cond-name]').forEach(function (el) {
-            var name = el.getAttribute('data-fc-cond-name');
-            var want = el.getAttribute('data-fc-cond-value');
+        document.querySelectorAll('[data-fc-cond-field]').forEach(function (el) {
+            var field = el.getAttribute('data-fc-cond-field');
+            var want  = el.getAttribute('data-fc-cond-value');
             var scope = el.closest('.repeatable-row') || document;
-            var checked = scope.querySelector('input[name="' + name + '"]:checked');
-            var show = !!(checked && checked.value === want);
+            var show  = controllingValue(scope, field) === want;
             el.style.display = show ? '' : 'none';
             if (!show) {
                 el.querySelectorAll('select, input, textarea').forEach(clearField);
@@ -430,11 +449,17 @@ document.querySelectorAll('.fc-file-upload[data-max-kb]').forEach(function (inpu
         });
     }
 
-    document.addEventListener('change', function (e) {
-        if (e.target && e.target.matches && e.target.matches('input[type=radio]')) {
-            applyConditionalFields();
+    // Any control can be the trigger (radio, dropdown, text), so re-evaluate on every
+    // change; the reset button on a row fires no change event, hence the click hook.
+    document.addEventListener('change', applyConditionalFields);
+    document.addEventListener('click', function (e) {
+        if (e.target && e.target.closest && e.target.closest('.remove-row-btn')) {
+            setTimeout(applyConditionalFields, 0);
         }
     });
+
+    // Exposed so "Add Row" can re-evaluate the freshly cloned row.
+    window.fcApplyConditionalFields = applyConditionalFields;
 
     // Exposed so the "Add Row" clone logic can (re)initialise Choices on new rows.
     window.fcInitChoices = initChoices;
