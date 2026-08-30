@@ -382,8 +382,10 @@
         /* ── Filters ── */
         $('#courseFilter').on('change', function() { applyFilter({ course_id: this.value }); });
         // Cadre Counsellor cascades off Cadre: no cadre → hidden and cleared; a cadre
-        // → visible, listing only that cadre's counsellors. `keep` restores a
-        // selection carried in the URL on first paint.
+        // → VISIBLE, listing that cadre's counsellors. When the cadre has none
+        // mapped the control still shows, disabled, reading "No counsellor mapped"
+        // — hiding it outright looked like the filter was missing. `keep` restores
+        // a selection carried in the URL on first paint.
         function refreshCounsellorOptions(keep) {
             const cadre = $('#cadreFilter').val() || '';
             const $item = $('#otItemCounsellor');
@@ -391,14 +393,18 @@
             const list = (cadre && COUNSELLORS_BY_CADRE[cadre]) ? COUNSELLORS_BY_CADRE[cadre] : [];
 
             const previous = keep !== undefined ? String(keep) : String($sel.val() || '');
-            $sel.empty().append($('<option>', { value: '', text: 'Cadre Counsellor' }));
+            $sel.empty().append($('<option>', {
+                value: '',
+                text: list.length ? 'Cadre Counsellor' : 'No counsellor mapped',
+            }));
             list.forEach(function(f) {
                 $sel.append($('<option>', { value: String(f.pk), text: f.name }));
             });
             // Keep the previous counsellor only if the new cadre still has them.
             const stillValid = previous !== '' && list.some(f => String(f.pk) === previous);
             $sel.val(stillValid ? previous : '');
-            $item.toggle(!!cadre && list.length > 0);
+            $sel.prop('disabled', list.length === 0);
+            $item.toggle(!!cadre);
             return !stillValid && previous !== '';
         }
 
