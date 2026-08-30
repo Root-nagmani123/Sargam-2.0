@@ -319,16 +319,23 @@
     <x-breadcrum title="{{ $listTitle ?? 'Student List' }}" :showBack="true" />
     <x-session_message />
 
-    {{-- Summary cards — TODAY's actual marked attendance (distinct students),
-         resolved server-side in the controller ($cardCounts). These are a
-         fixed daily snapshot and intentionally do NOT follow the table filters. --}}
+    {{-- Summary cards — marked attendance as DISTINCT STUDENTS, resolved
+         server-side ($cardCounts) from the very same Present / Absent collections
+         the tabs below render, so the two can never disagree. They cover the
+         selected Time Period (today when none is set) and are refreshed live from
+         the DataTable response on every filter change. --}}
     @php
         $cardCounts = $cardCounts ?? ['total' => 0, 'present_today' => 0, 'absent_today' => 0];
-        $snapshotDate = $snapshotDate ?? null;
-        $snapshotIso = $snapshotDate ? \Carbon\Carbon::parse($snapshotDate)->toDateString() : \Carbon\Carbon::today()->toDateString();
-        $snapshotLabel = $snapshotDate
-            ? (\Carbon\Carbon::parse($snapshotDate)->isToday() ? 'Today' : \Carbon\Carbon::parse($snapshotDate)->format('d M Y'))
-            : 'Today';
+        // $snapshotDate is [from, to] for the window the cards cover.
+        $snapshotWindow = is_array($snapshotDate ?? null) ? $snapshotDate : null;
+        $snapshotFrom = $snapshotWindow[0] ?? ($snapshotDate ?: \Carbon\Carbon::today()->toDateString());
+        $snapshotTo = $snapshotWindow[1] ?? $snapshotFrom;
+        $snapshotFromC = \Carbon\Carbon::parse($snapshotFrom);
+        $snapshotToC = \Carbon\Carbon::parse($snapshotTo);
+        // "Today" for today, a single date for a one-day window, else a range.
+        $snapshotLabel = $snapshotFromC->isSameDay($snapshotToC)
+            ? ($snapshotFromC->isToday() ? 'Today' : $snapshotFromC->format('d M Y'))
+            : $snapshotFromC->format('d M') . ' – ' . $snapshotToC->format('d M Y');
     @endphp
     <div class="row row-cols-1 row-cols-sm-3 g-3 mb-3 sl-summary-cards">
         <div class="col">
@@ -340,37 +347,37 @@
                         </div>
                         <div class="flex-grow-1 min-w-0">
                             <p class="stat-title">OT/ Participants Details</p>
-                            <p class="stat-value">{{ $pad($cardCounts['total']) }}</p>
+                            <p class="stat-value sl-card-count" data-card="total">{{ $pad($cardCounts['total']) }}</p>
                         </div>
                     </div>
                 </div>
             </a>
         </div>
         <div class="col">
-            <a href="{{ route('admin.dashboard.students', ['attendance' => 'present', 'from_date' => $snapshotIso, 'to_date' => $snapshotIso]) }}" class="text-decoration-none d-block h-100">
+            <a href="{{ route('admin.dashboard.students', ['attendance' => 'present', 'from_date' => $snapshotFrom, 'to_date' => $snapshotTo, 'status' => ($filters['status'] ?? 'active')]) }}" class="text-decoration-none d-block h-100">
                 <div class="card stat-card h-100 p-3">
                     <div class="d-flex align-items-center gap-3">
                         <div class="stat-icon-wrapper stat-icon-green">
                             <i class="material-symbols-rounded" aria-hidden="true">groups</i>
                         </div>
                         <div class="flex-grow-1 min-w-0">
-                            <p class="stat-title">Present {{ $snapshotLabel }}</p>
-                            <p class="stat-value">{{ $pad($cardCounts['present_today']) }}</p>
+                            <p class="stat-title">Present <span class="sl-card-window">{{ $snapshotLabel }}</span></p>
+                            <p class="stat-value sl-card-count" data-card="present_today">{{ $pad($cardCounts['present_today']) }}</p>
                         </div>
                     </div>
                 </div>
             </a>
         </div>
         <div class="col">
-            <a href="{{ route('admin.dashboard.students', ['attendance' => 'absent', 'from_date' => $snapshotIso, 'to_date' => $snapshotIso]) }}" class="text-decoration-none d-block h-100">
+            <a href="{{ route('admin.dashboard.students', ['attendance' => 'absent', 'from_date' => $snapshotFrom, 'to_date' => $snapshotTo, 'status' => ($filters['status'] ?? 'active')]) }}" class="text-decoration-none d-block h-100">
                 <div class="card stat-card h-100 p-3">
                     <div class="d-flex align-items-center gap-3">
                         <div class="stat-icon-wrapper stat-icon-rose">
                             <i class="material-symbols-rounded" aria-hidden="true">badge</i>
                         </div>
                         <div class="flex-grow-1 min-w-0">
-                            <p class="stat-title">Absent {{ $snapshotLabel }}</p>
-                            <p class="stat-value">{{ $pad($cardCounts['absent_today']) }}</p>
+                            <p class="stat-title">Absent <span class="sl-card-window">{{ $snapshotLabel }}</span></p>
+                            <p class="stat-value sl-card-count" data-card="absent_today">{{ $pad($cardCounts['absent_today']) }}</p>
                         </div>
                     </div>
                 </div>
@@ -710,6 +717,37 @@
         }
 
         function padCount(n) { n = parseInt(n, 10) || 0; return (n < 10 ? '0' : '') + n; }
+
+        // Summary cards follow the same server response as the tab counters, so a
+        // filter change never leaves them showing the page-load values.
+        const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        function windowLabel(from, to) {
+            if (!from) { return 'Today'; }
+            to = to || from;
+            const f = from.split('-'), t = to.split('-');
+            if (f.length !== 3 || t.length !== 3) { return 'Today'; }
+            const fLabel = f[2] + ' ' + MONTHS[parseInt(f[1], 10) - 1];
+            const tLabel = t[2] + ' ' + MONTHS[parseInt(t[1], 10) - 1] + ' ' + t[0];
+            if (from === to) {
+                const today = new Date();
+                const iso = today.getFullYear() + '-'
+                    + String(today.getMonth() + 1).padStart(2, '0') + '-'
+                    + String(today.getDate()).padStart(2, '0');
+                return from === iso ? 'Today' : (fLabel + ' ' + f[0]);
+            }
+            return fLabel + ' – ' + tLabel;
+        }
+        function updateCardCounts(counts, win) {
+            if (counts) {
+                Object.keys(counts).forEach(function(k) {
+                    $('.sl-card-count[data-card="' + k + '"]').text(padCount(counts[k]));
+                });
+            }
+            if (win) {
+                $('.sl-card-window').text(windowLabel(win.from, win.to));
+            }
+        }
+
         function updateTabCounts(counts) {
             if (!counts) { return; }
             ['all', 'present', 'absent'].forEach(function(k) {
@@ -785,6 +823,7 @@
           .on('xhr.dt', function(e, settings, json) {
               setTableLoading(false);
               if (json && json.counts) { updateTabCounts(json.counts); }
+              if (json && json.cardCounts) { updateCardCounts(json.cardCounts, json.cardWindow); }
               if (json && json.filterOptions) { applyCascadingFilterOptions(json.filterOptions); }
           })
           .on('error.dt', function() { setTableLoading(false); })

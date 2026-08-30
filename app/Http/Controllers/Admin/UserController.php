@@ -1117,56 +1117,6 @@ class UserController extends Controller
             return $this->dashboardStudentListDataTableResponse($request, $students);
         }
 
-        // Attendance summary cards (top of page) reflect TODAY's actual marked
-        // attendance only — distinct students marked in a session dated today —
-        // independent of the table's live filters. A student with no session
-        // marked today is simply not counted here (unlike the per-row roster
-        // default further down, which shows unmarked students as "Present").
-        $todayStr = now()->toDateString();
-        $scopePks = $students->pluck('student_master_pk')->filter()->unique()->values()->all();
-        $cardCounts = [
-            'total' => count($scopePks),
-            'present_today' => 0,
-            'absent_today' => 0,
-        ];
-        // The Present/Absent cards reflect the CURRENT date (the list opens scoped
-        // to today). On an off-day with no marked session the counts simply read 0.
-        $snapshotDate = $todayStr;
-        if (! empty($scopePks)) {
-            $dayAttendance = DB::table('course_student_attendance as a')
-                ->join('timetable as t', 'a.timetable_pk', '=', 't.pk')
-                ->whereIn('a.Student_master_pk', $scopePks)
-                ->whereDate('t.START_DATE', $snapshotDate)
-                ->get(['a.Student_master_pk as spk', 'a.status']);
-
-            // Count per distinct student (a student can have several sessions that
-            // day). Only genuinely MARKED sessions count (status 0 = not marked is
-            // ignored). Present = attended any non-absent session; Absent = had any
-            // Absent (status 3) session. A student with both counts in BOTH — mirrors
-            // the Present/Absent tabs (see collapseDateScopedAttendance()).
-            $presentSpks = [];
-            $absentSpks = [];
-            foreach ($dayAttendance->groupBy('spk') as $spk => $rows) {
-                $marked = $rows->filter(fn ($r) => (int) $r->status !== 0);
-                if ($marked->isEmpty()) {
-                    continue;
-                }
-                if ($marked->contains(fn ($r) => (int) $r->status !== 3)) {
-                    $presentSpks[$spk] = true;
-                }
-                if ($marked->contains(fn ($r) => (int) $r->status === 3)) {
-                    $absentSpks[$spk] = true;
-                }
-            }
-            // Students on PT Exemption / Stationed Leave today are absent-with-reason
-            // even without an attendance record — mirror the Absent list.
-            foreach ($this->leaveBasedAbsentees($scopePks, $snapshotDate, $snapshotDate) as $spk => $d) {
-                $absentSpks[$spk] = true;
-            }
-            $cardCounts['present_today'] = count($presentSpks);
-            $cardCounts['absent_today'] = count($absentSpks);
-        }
-
         // Get counsellor type names and courses from group_type_master_course_master_map
         // From group_type_master_course_master_map, get faculty_id, type_name and course_name
         // Then match type_name (pk) with course_group_type_master to get the type_name
@@ -1355,26 +1305,31 @@ class UserController extends Controller
         // Course so the OT list only shows participants of the chosen course.
         $participantOptions = $this->dashboardStudentListParticipantOptions($students, $request);
 
-        // Server-side filters (Course / ACC / Group / Cadre / House / Session / Participant).
-        $students = $this->applyDashboardStudentListFilters($students, $request);
+        // Kept for the "OT/ Participants Details" card, which counts the roster the
+        // linked page shows — filters applied, but WITHOUT the session-date drop.
+        $rosterStudents = $students;
 
-        // Tab counts (All / Present / Absent) for the initial render; the DataTable
-        // response refreshes them live on every filter change. A date range
-        // (Present/Absent Today cards, or Time Period filter) narrows Present/Absent
-        // to the marked-only sessions, one row per session like the All tab.
-        if ($request->filled('from_date') || $request->filled('to_date')) {
-            [$presentStudents, $absentStudents] = $this->collapseDateScopedAttendance($students);
-        } else {
-            // Present/Absent details require a date; without one these tabs are empty.
-            $presentStudents = collect();
-            $absentStudents = collect();
-        }
+        // Tab sets for the initial render. Built by the SAME method the DataTable
+        // response uses (dashboardStudentListTabSets), so the first paint already
+        // matches what the first AJAX draw reports — previously this path collapsed
+        // the buckets itself and skipped the PT / Stationed-leave absentees, so the
+        // Absent count jumped as soon as the table refreshed.
+        [$students, $presentStudents, $absentStudents] = $this->dashboardStudentListTabSets($request, $students);
 
         $tabCounts = [
             'all' => $students->count(),
             'present' => $presentStudents->count(),
             'absent' => $absentStudents->count(),
         ];
+
+        // Summary cards, derived from those same tab sets — see
+        // dashboardStudentListCardCounts().
+        [$cardCounts, $snapshotDate] = $this->dashboardStudentListCardCounts(
+            $request,
+            $rosterStudents,
+            $presentStudents,
+            $absentStudents
+        );
 
         $attendance = $request->input('attendance', 'all');
         $students = $attendance === 'present'
@@ -1458,6 +1413,21 @@ class UserController extends Controller
         }
         $participants = collect(array_values($byStudent));
 
+        // Cadre Counsellor filter (the dependent dropdown that opens beside Cadre).
+        // Resolved from the group-map tables rather than the row objects — this
+        // page's payload is loaded without group mappings. Applied here so the
+        // page-load render and the DataTable response both see it.
+        $counsellorFaculty = (string) $request->input('counsellor_faculty', '');
+        if ($counsellorFaculty !== '') {
+            $counselled = $this->studentPksForCounsellorFaculty(
+                $counsellorFaculty,
+                $participants->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all()
+            );
+            $participants = $participants
+                ->filter(fn ($p) => isset($counselled[(int) $p->student_master_pk]))
+                ->values();
+        }
+
         // Show every student of the selected course — no Present/Absent split.
         $rows = $participants;
         $totalParticipants = $participants->count();
@@ -1481,6 +1451,11 @@ class UserController extends Controller
         $houseOptions = $students
             ->map(fn ($m) => $m->house_name ?? null)
             ->filter()->unique()->sort()->values();
+        // Cadre => Cadre Counsellor options. Sent whole so picking a cadre fills the
+        // dependent dropdown instantly, with no extra round trip.
+        $counsellorsByCadre = $this->otParticipantsCounsellorOptions(
+            $students->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all()
+        );
         // Session options are independent of the Time Period — see resolveScopedSessionOptions().
         $sessionOptions = $this->resolveScopedSessionOptions(
             $students->pluck('student_master_pk')->filter()->unique()->values()->all()
@@ -1509,6 +1484,7 @@ class UserController extends Controller
             'participant' => (string) $request->input('participant', ''),
             'course_id' => (string) $request->input('course_id', ''),
             'cadre' => (string) $request->input('cadre', ''),
+            'counsellor_faculty' => $counsellorFaculty,
             'status' => $status,
         ];
 
@@ -1538,8 +1514,90 @@ class UserController extends Controller
 
         return view('admin.dashboard.ot_participants_list', compact(
             'availableCourses', 'courseOptions', 'filters', 'cadreOptions', 'houseOptions',
-            'sessionOptions', 'participantOptions'
+            'sessionOptions', 'participantOptions', 'counsellorsByCadre'
         ));
+    }
+
+    /**
+     * Cadre → Cadre Counsellor options for the OT participants page.
+     *
+     * A participant's counsellor is the faculty mapped to the course group they
+     * belong to (student_course_group_map → group_type_master_course_master_map
+     * .facility_id → faculty_master). Grouping that by the student's cadre gives
+     * the dependent dropdown that opens beside Cadre: pick "Bihar" and you get the
+     * faculty who actually counsel Bihar participants, not every faculty on record.
+     *
+     * Scoped to the students already in view, so the options can never offer a
+     * counsellor whose participants this viewer cannot see.
+     *
+     * @param  array<int, int>  $studentPks
+     * @return array<string, array<int, array{pk: string, name: string}>>  cadre => counsellors
+     */
+    private function otParticipantsCounsellorOptions(array $studentPks): array
+    {
+        if (empty($studentPks)) {
+            return [];
+        }
+
+        $rows = DB::table('student_course_group_map as scg')
+            ->join('group_type_master_course_master_map as gmap', 'scg.group_type_master_course_master_map_pk', '=', 'gmap.pk')
+            ->join('faculty_master as fm', 'gmap.facility_id', '=', 'fm.pk')
+            ->join('student_master as sm', 'scg.student_master_pk', '=', 'sm.pk')
+            ->join('cadre_master as cad', 'sm.cadre_master_pk', '=', 'cad.pk')
+            ->whereIn('scg.student_master_pk', $studentPks)
+            ->where('scg.active_inactive', 1)
+            ->where('gmap.active_inactive', 1)
+            ->where('fm.active_inactive', 1)
+            ->distinct()
+            ->orderBy('cad.cadre_name')
+            ->orderBy('fm.full_name')
+            ->get(['cad.cadre_name', 'fm.pk as faculty_pk', 'fm.full_name as faculty_name']);
+
+        $byCadre = [];
+        foreach ($rows as $r) {
+            $cadre = (string) ($r->cadre_name ?? '');
+            $name = trim((string) ($r->faculty_name ?? ''));
+            if ($cadre === '' || empty($r->faculty_pk)) {
+                continue;
+            }
+            $byCadre[$cadre][(string) $r->faculty_pk] = [
+                'pk' => (string) $r->faculty_pk,
+                // Blank full_name rows still need a label to be selectable.
+                'name' => $name !== '' ? $name : ('Faculty #' . $r->faculty_pk),
+            ];
+        }
+
+        // Drop the faculty-pk keys — the front-end just iterates the list.
+        return array_map('array_values', $byCadre);
+    }
+
+    /**
+     * Participants counselled by one faculty, as a spk => true lookup.
+     *
+     * Backs the Cadre Counsellor filter on the OT participants page. That page
+     * loads its payload without group mappings ($withTotals = false), so the row
+     * objects carry no counsellor to filter on — resolve it from the map tables
+     * instead.
+     *
+     * @param  array<int, int>  $studentPks
+     * @return array<int, true>
+     */
+    private function studentPksForCounsellorFaculty($facultyPk, array $studentPks): array
+    {
+        if (empty($studentPks) || (string) $facultyPk === '') {
+            return [];
+        }
+
+        return DB::table('student_course_group_map as scg')
+            ->join('group_type_master_course_master_map as gmap', 'scg.group_type_master_course_master_map_pk', '=', 'gmap.pk')
+            ->whereIn('scg.student_master_pk', $studentPks)
+            ->where('gmap.facility_id', $facultyPk)
+            ->where('scg.active_inactive', 1)
+            ->where('gmap.active_inactive', 1)
+            ->distinct()
+            ->pluck('scg.student_master_pk')
+            ->mapWithKeys(fn ($v) => [(int) $v => true])
+            ->all();
     }
 
     /**
@@ -3123,6 +3181,54 @@ class UserController extends Controller
     }
 
     /**
+     * Summary-card counts for the student list, derived from the SAME tab sets the
+     * Present / Absent tabs render — so the cards can never disagree with the tabs
+     * beneath them.
+     *
+     *   total         → distinct students on the roster the "OT/ Participants
+     *                   Details" card links to: the page's filters applied, but NOT
+     *                   the session-date drop, since that page lists every
+     *                   participant regardless of the Time Period.
+     *   present_today → DISTINCT STUDENTS in the Present tab set
+     *   absent_today  → DISTINCT STUDENTS in the Absent tab set
+     *
+     * The tab counters count ROWS (one per marked session), the cards count PEOPLE;
+     * both read the same collections, so a student marked in three sessions adds
+     * three to the tab and one to the card.
+     *
+     * The window is whatever the Time Period filter holds, falling back to today
+     * when no range is set. The cards previously hard-coded today regardless of the
+     * filter, so selecting any other range left them reading a different day than
+     * the table.
+     *
+     * @return array{0: array<string, int>, 1: array{0: string, 1: string}} [counts, [fromDate, toDate]]
+     */
+    private function dashboardStudentListCardCounts(
+        Request $request,
+        $students,
+        $presentStudents,
+        $absentStudents
+    ): array {
+        $today = now()->toDateString();
+        $from = (string) ($request->input('from_date') ?: $today);
+        $to = (string) ($request->input('to_date') ?: $from);
+
+        $distinct = fn ($rows) => collect($rows)
+            ->pluck('student_master_pk')
+            ->filter()
+            ->unique()
+            ->count();
+
+        $counts = [
+            'total' => $distinct($this->applyDashboardStudentListFilters($students, $request, false)),
+            'present_today' => $distinct($presentStudents),
+            'absent_today' => $distinct($absentStudents),
+        ];
+
+        return [$counts, [$from, $to]];
+    }
+
+    /**
      * Server-side JSON for dashboard student list DataTables.
      */
     private function dashboardStudentListDataTableResponse(Request $request, $students)
@@ -3145,6 +3251,8 @@ class UserController extends Controller
         $participantOptions = $this->dashboardStudentListParticipantOptions($students, $request);
 
         [$filteredAll, $presentAll, $absentAll] = $this->dashboardStudentListTabSets($request, $students);
+
+        [$cardCounts, $cardWindow] = $this->dashboardStudentListCardCounts($request, $students, $presentAll, $absentAll);
 
         $counts = [
             'all' => $filteredAll->count(),
@@ -3317,6 +3425,11 @@ class UserController extends Controller
             'recordsTotal' => $recordsTotal,
             'recordsFiltered' => $recordsFiltered,
             'counts' => $counts,
+            // Fresh summary-card counts + the window they cover, so the cards above
+            // the table follow every filter change instead of staying on the value
+            // rendered at page load.
+            'cardCounts' => $cardCounts,
+            'cardWindow' => ['from' => $cardWindow[0], 'to' => $cardWindow[1]],
             // Fresh cascading dropdown options for the current date range + session.
             'filterOptions' => [
                 'session' => $sessionOptions->values()->all(),

@@ -137,6 +137,15 @@
                             @endforeach
                         </select>
                     </div>
+
+                    {{-- Cadre Counsellor — dependent on Cadre. Hidden until a cadre is
+                         picked, then filled from COUNSELLORS_BY_CADRE with the faculty
+                         who actually counsel that cadre's participants. --}}
+                    <div class="sl-filter-item" id="otItemCounsellor" style="display:none;">
+                        <select id="counsellorFacultyFilter" class="form-select sl-filter-select" aria-label="Filter by cadre counsellor">
+                            <option value="">Cadre Counsellor</option>
+                        </select>
+                    </div>
                     @endif
 
                     <div class="sl-filter-item">
@@ -246,6 +255,10 @@
         const ACADEMY_EN = 'Lal Bahadur Shastri National Academy of Administration, Mussoorie';
         const filters = @json($filters ?? []);
         const baseUrl = "{{ route('admin.dashboard.ot-participants') }}";
+        // { "<cadre>": [{pk, name}, ...] } — the faculty who counsel each cadre's
+        // participants. Sent whole at page load so the dependent dropdown fills
+        // without a round trip.
+        const COUNSELLORS_BY_CADRE = @json($counsellorsByCadre ?? new stdClass);
         const LOCKED_COLUMNS = [0, 1, 2]; // S.No, OT Code, Name — frozen & always visible
         const DUTY_TYPE_COL = 7; // "Duty Type" — only meaningful for a single-day filter
         let dt = null;
@@ -273,6 +286,8 @@
                 status: currentStatus,
                 course_id: $('#courseFilter').val() || '',
                 cadre: $('#cadreFilter').val() || '',
+                // Only meaningful alongside a cadre — cleared with it below.
+                counsellor_faculty: $('#counsellorFacultyFilter').val() || '',
                 session: $('#sessionFilter').val() || '',
                 participant: $('#participantFilter').val() || '',
                 from_date: (filters.from_date || '').toString(),
@@ -366,7 +381,35 @@
 
         /* ── Filters ── */
         $('#courseFilter').on('change', function() { applyFilter({ course_id: this.value }); });
-        $('#cadreFilter').on('change', function() { applyFilter({ cadre: this.value }); });
+        // Cadre Counsellor cascades off Cadre: no cadre → hidden and cleared; a cadre
+        // → visible, listing only that cadre's counsellors. `keep` restores a
+        // selection carried in the URL on first paint.
+        function refreshCounsellorOptions(keep) {
+            const cadre = $('#cadreFilter').val() || '';
+            const $item = $('#otItemCounsellor');
+            const $sel = $('#counsellorFacultyFilter');
+            const list = (cadre && COUNSELLORS_BY_CADRE[cadre]) ? COUNSELLORS_BY_CADRE[cadre] : [];
+
+            const previous = keep !== undefined ? String(keep) : String($sel.val() || '');
+            $sel.empty().append($('<option>', { value: '', text: 'Cadre Counsellor' }));
+            list.forEach(function(f) {
+                $sel.append($('<option>', { value: String(f.pk), text: f.name }));
+            });
+            // Keep the previous counsellor only if the new cadre still has them.
+            const stillValid = previous !== '' && list.some(f => String(f.pk) === previous);
+            $sel.val(stillValid ? previous : '');
+            $item.toggle(!!cadre && list.length > 0);
+            return !stillValid && previous !== '';
+        }
+
+        $('#cadreFilter').on('change', function() {
+            // Dropping an out-of-cadre counsellor must reach the server too, so
+            // refresh the options BEFORE reading the filter state.
+            refreshCounsellorOptions();
+            applyFilter({ cadre: this.value });
+        });
+        $('#counsellorFacultyFilter').on('change', function() { applyFilter({ counsellor_faculty: this.value }); });
+        refreshCounsellorOptions(filters.counsellor_faculty || '');
         $('#sessionFilter').on('change', function() { applyFilter({ session: this.value }); });
         $('#participantFilter').on('change', function() { applyFilter({ participant: this.value }); });
         $('#resetFilters').on('click', function() { window.location.href = baseUrl; });
@@ -455,6 +498,9 @@
             if ($('#courseFilter').val()) { parts.push('Course: ' + course); }
             const cadre = $('#cadreFilter').val();
             if (cadre) { parts.push('Cadre: ' + cadre); }
+            if ($('#counsellorFacultyFilter').val()) {
+                parts.push('Cadre Counsellor: ' + $('#counsellorFacultyFilter option:selected').text().trim());
+            }
             const period = $('#timePeriodFilter').val().trim();
             if (period) { parts.push('Time Period: ' + period); }
             parts.push('Status: ' + (currentStatus === 'archive' ? 'Archived' : 'Active'));
