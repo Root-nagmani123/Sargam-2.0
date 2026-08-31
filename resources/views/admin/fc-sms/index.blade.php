@@ -168,7 +168,7 @@
                         <select name="form_id" id="fcSmsFormFilter" class="form-select">
                             @foreach(($forms ?? []) as $form)
                                 <option value="{{ (int) $form->id }}" {{ (int) ($selectedFormId ?? 0) === (int) $form->id ? 'selected' : '' }}>
-                                    {{ $form->form_name }} ({{ $form->form_slug }})
+                                    {{ $form->form_name }}
                                 </option>
                             @endforeach
                         </select>
@@ -178,13 +178,10 @@
                             <div>
                                 <div class="fc-sms-field-label mb-1">Selected Template</div>
                                 <div class="fc-sms-summary-name">{{ $preview['form_name'] }}</div>
-                                @if(! empty($preview['form_slug']))
-                                    <span class="fc-sms-summary-slug mt-1">{{ $preview['form_slug'] }}</span>
-                                @endif
                             </div>
                             <div class="fc-sms-summary-date">
                                 <i class="bi bi-calendar-event text-muted" aria-hidden="true"></i>
-                                <span class="label">Registration last date (B2)</span>
+                                <span class="label">Registration last date</span>
                                 <span class="value ms-auto">{{ $preview['last_date'] }}</span>
                             </div>
                         </div>
@@ -223,7 +220,6 @@
                                            {{ old('template', 'b1') === $key ? 'checked' : '' }} required>
                                     <label class="form-check-label" for="tpl_{{ $key }}">
                                         <span class="fc-sms-option-title">{{ $tpl['label'] }}</span>
-                                        <span class="fc-sms-code-badge ms-1">{{ $tpl['code'] }}</span>
                                         <div class="fc-sms-option-help">{{ $tpl['help'] }}</div>
                                     </label>
                                 </div>
