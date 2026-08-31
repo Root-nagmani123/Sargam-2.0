@@ -11,17 +11,24 @@
     <div class="timetable-report-tabs mb-4">
         <ul class="nav nav-tabs border-0" id="timetableReportTab" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="active-tab-btn" type="button" role="tab"
-                        aria-selected="true" data-mode="active">
+                <button class="nav-link {{ ($initialCourseMode ?? 'active') === 'active' ? 'active' : '' }}" id="active-tab-btn" type="button" role="tab"
+                        aria-selected="{{ ($initialCourseMode ?? 'active') === 'active' ? 'true' : 'false' }}" data-mode="active">
                     <i class="material-icons me-2" aria-hidden="true" style="font-size:18px;vertical-align:middle">check_circle</i>
                     Active Courses
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="archive-tab-btn" type="button" role="tab"
-                        aria-selected="false" data-mode="archive">
+                <button class="nav-link {{ ($initialCourseMode ?? 'active') === 'archive' ? 'active' : '' }}" id="archive-tab-btn" type="button" role="tab"
+                        aria-selected="{{ ($initialCourseMode ?? 'active') === 'archive' ? 'true' : 'false' }}" data-mode="archive">
                     <i class="material-icons me-2" aria-hidden="true" style="font-size:18px;vertical-align:middle">archive</i>
                     Archived Courses
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {{ ($initialCourseMode ?? 'active') === 'all' ? 'active' : '' }}" id="all-tab-btn" type="button" role="tab"
+                        aria-selected="{{ ($initialCourseMode ?? 'active') === 'all' ? 'true' : 'false' }}" data-mode="all">
+                    <i class="material-icons me-2" aria-hidden="true" style="font-size:18px;vertical-align:middle">list_alt</i>
+                    All Courses
                 </button>
             </li>
         </ul>
@@ -48,10 +55,16 @@
                     <!-- Faculty -->
                     <div class="col-12 col-md-4 col-lg-3">
                         <label for="filter_faculty" class="form-label">Faculty</label>
-                        <select class="form-select select2-filter" id="filter_faculty" name="faculty_pk">
-                            <option value="">-- All Faculty --</option>
+                        {{-- A faculty viewer only ever sees their own sessions, so the
+                             control is pinned to them rather than offering a choice that
+                             the server would override anyway. --}}
+                        <select class="form-select select2-filter" id="filter_faculty" name="faculty_pk"
+                            @if(!empty($lockedFacultyPk)) disabled @endif>
+                            @if(empty($lockedFacultyPk))
+                                <option value="">-- All Faculty --</option>
+                            @endif
                             @foreach($faculties as $faculty)
-                                <option value="{{ $faculty->pk }}">{{ $faculty->full_name }} ({{ $faculty->faculty_code }})</option>
+                                <option value="{{ $faculty->pk }}" @selected(!empty($lockedFacultyPk) && (int) $faculty->pk === (int) $lockedFacultyPk)>{{ $faculty->full_name }} ({{ $faculty->faculty_code }})</option>
                             @endforeach
                         </select>
                     </div>
@@ -246,7 +259,7 @@ $(document).ready(function() {
     var dataUrl  = "{{ route('timetable-report.data') }}";
     var columnStorageKey = 'timetableReportGrid:columns:v1';
     var inputDebounceTimer = null;
-    var currentMode = 'active';
+    var currentMode = @json($initialCourseMode ?? 'active');
 
     // ── Course data for Active / Archive switching ──
     var activeCourseOptions = '<option value="">-- All Courses --</option>'
@@ -259,6 +272,21 @@ $(document).ready(function() {
             + '<option value="{{ $course->pk }}">{{ addslashes($course->course_name) }}</option>'
         @endforeach
         ;
+    // "All Courses" mode spans both lists, so its dropdown has to as well.
+    var allCourseOptions = '<option value="">-- All Courses --</option>'
+        @foreach($activeCourses as $course)
+            + '<option value="{{ $course->pk }}">{{ addslashes($course->course_name) }}</option>'
+        @endforeach
+        @foreach($archivedCourses as $course)
+            + '<option value="{{ $course->pk }}">{{ addslashes($course->course_name) }}</option>'
+        @endforeach
+        ;
+
+    function courseOptionsFor(mode) {
+        if (mode === 'archive') return archivedCourseOptions;
+        if (mode === 'all')     return allCourseOptions;
+        return activeCourseOptions;
+    }
 
     // ── Active / Archive tab toggle ──
     $('#timetableReportTab .nav-link').on('click', function() {
@@ -275,7 +303,7 @@ $(document).ready(function() {
         if ($courseSelect.hasClass('select2-hidden-accessible')) {
             $courseSelect.select2('destroy');
         }
-        $courseSelect.html(currentMode === 'archive' ? archivedCourseOptions : activeCourseOptions);
+        $courseSelect.html(courseOptionsFor(currentMode));
         $courseSelect.select2({
             placeholder: '-- All Courses --',
             allowClear: true,
@@ -554,7 +582,7 @@ $(document).ready(function() {
 '</div>\n' +
 '\n' +
 '<div class="report-meta">\n' +
-'    <strong>Course Mode:</strong> ' + (currentMode === 'archive' ? 'Archived' : 'Active') + ' &nbsp;&nbsp;|&nbsp;&nbsp; ' +
+'    <strong>Course Mode:</strong> ' + (currentMode === 'archive' ? 'Archived' : (currentMode === 'all' ? 'All' : 'Active')) + ' &nbsp;&nbsp;|&nbsp;&nbsp; ' +
 '    <strong>Printed:</strong> ' + new Date().toLocaleDateString('en-IN') + ' ' + new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}) + '\n' +
 '</div>\n' +
 '\n' +
@@ -643,7 +671,7 @@ $(document).ready(function() {
     // ── Reset ──
     $('#btnReset').on('click', function() {
         // Reset to Active tab
-        if (currentMode !== 'active') {
+        if (currentMode !== 'active') { // reset returns to the Active tab
             $('#timetableReportTab .nav-link').removeClass('active').attr('aria-selected', 'false');
             $('#active-tab-btn').addClass('active').attr('aria-selected', 'true');
             currentMode = 'active';

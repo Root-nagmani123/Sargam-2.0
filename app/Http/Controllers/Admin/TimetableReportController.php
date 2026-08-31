@@ -8,6 +8,7 @@ use App\Models\FacultyMaster;
 use App\Models\VenueMaster;
 use App\Models\CourseGroupTypeMaster;
 use App\Exports\TimetableReportExport;
+use App\Services\Timetable\FacultySessionScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -58,9 +59,18 @@ class TimetableReportController extends Controller
     /**
      * Show the timetable report page (with filter dropdowns).
      */
-    public function index()
+    public function index(Request $request)
     {
         $currentDate = now()->toDateString();
+
+        // Which course tab the page opens on. The dashboard's Total Sessions card
+        // links here with course_mode=all so the grid it lands on holds exactly the
+        // sessions the card counted; without it the page would open on Active and
+        // show a smaller number than the card.
+        $initialCourseMode = $request->get('course_mode');
+        if (! in_array($initialCourseMode, ['active', 'archive', 'all'], true)) {
+            $initialCourseMode = 'active';
+        }
 
         $activeCourses = CourseMaster::where('active_inactive', 1)
             ->where(function ($q) use ($currentDate) {
@@ -77,7 +87,15 @@ class TimetableReportController extends Controller
             ->orderBy('course_name')
             ->get();
 
-        $faculties    = FacultyMaster::select('pk', 'full_name', 'faculty_code')->orderBy('full_name')->get();
+        // A faculty viewer gets a one-entry Faculty dropdown — their own. data()
+        // and buildExportData() enforce the same scope regardless of what is
+        // posted, so this only keeps the UI honest about what they can ask for.
+        $lockedFacultyPk = FacultySessionScope::lockedFacultyPk();
+
+        $faculties = FacultyMaster::select('pk', 'full_name', 'faculty_code')
+            ->when($lockedFacultyPk !== null, fn ($q) => $q->where('pk', $lockedFacultyPk))
+            ->orderBy('full_name')
+            ->get();
         $venues       = VenueMaster::where('active_inactive', 1)->select('venue_id', 'venue_name')->orderBy('venue_name')->get();
         $courseGroups = CourseGroupTypeMaster::select('pk', 'type_name')->orderBy('type_name')->get();
 
@@ -86,7 +104,9 @@ class TimetableReportController extends Controller
             'archivedCourses',
             'faculties',
             'venues',
-            'courseGroups'
+            'courseGroups',
+            'lockedFacultyPk',
+            'initialCourseMode'
         ));
     }
 
@@ -127,28 +147,19 @@ class TimetableReportController extends Controller
 
         // Active / Archive course mode (same logic as feedback_average)
         $courseMode = $request->get('course_mode', 'active');
-        $currentDate = now()->toDateString();
-        if ($courseMode === 'active') {
-            $query->where('c.active_inactive', 1)
-                  ->where(function ($q) use ($currentDate) {
-                      $q->whereNull('c.end_date')
-                        ->orWhereDate('c.end_date', '>=', $currentDate);
-                  });
-        } elseif ($courseMode === 'archive') {
-            $query->where('c.active_inactive', 1)
-                  ->whereDate('c.end_date', '<', $currentDate);
-        }
+        FacultySessionScope::applyCourseMode($query, $courseMode);
 
         if ($request->filled('course_pk')) {
             $query->where('t.course_master_pk', $request->course_pk);
         }
 
-        if ($request->filled('faculty_pk')) {
-            $facultyPk = $request->faculty_pk;
-            $query->where(function ($q) use ($facultyPk) {
-                $q->whereRaw("JSON_CONTAINS(COALESCE(NULLIF(t.faculty_master, ''), '[]'), CAST(? AS JSON))", [$facultyPk])
-                  ->orWhere('t.faculty_master', $facultyPk);
-            });
+        // A faculty viewer is pinned to their own sessions whatever faculty_pk the
+        // request carries — the dropdown only offers them, but the parameter is
+        // theirs to edit, so the lock lives here rather than in the form.
+        $facultyPk = FacultySessionScope::lockedFacultyPk() ?? $request->input('faculty_pk');
+
+        if ($facultyPk !== null && $facultyPk !== '') {
+            FacultySessionScope::applyFaculty($query, (int) $facultyPk);
         }
 
         if ($request->filled('subject_topic')) {
@@ -192,7 +203,20 @@ class TimetableReportController extends Controller
         }
 
         // ── Counts ──
-        $totalCount    = DB::table('timetable')->count();
+        // recordsTotal is the "of N total" DataTables prints next to the filtered
+        // number. For a locked faculty that has to be THEIR session count, not the
+        // Academy's — otherwise the grid announces how many sessions exist that
+        // they cannot see.
+        $lockedFacultyPk = FacultySessionScope::lockedFacultyPk();
+
+        if ($lockedFacultyPk !== null) {
+            $totalQuery = DB::table('timetable as t');
+            FacultySessionScope::applyFaculty($totalQuery, $lockedFacultyPk);
+            $totalCount = $totalQuery->count();
+        } else {
+            $totalCount = DB::table('timetable')->count();
+        }
+
         $filteredCount = $query->count();
 
         // ── Ordering ──
@@ -310,29 +334,19 @@ class TimetableReportController extends Controller
                 'vm.venue_name', 'sm.subject_name', 'smm.module_name'
             );
 
-        $courseMode   = $request->get('course_mode', 'active');
-        $currentDate = now()->toDateString();
-
-        if ($courseMode === 'active') {
-            $query->where('c.active_inactive', 1)
-                  ->where(function ($q) use ($currentDate) {
-                      $q->whereNull('c.end_date')
-                        ->orWhereDate('c.end_date', '>=', $currentDate);
-                  });
-        } elseif ($courseMode === 'archive') {
-            $query->where('c.active_inactive', 1)
-                  ->whereDate('c.end_date', '<', $currentDate);
-        }
+        $courseMode = $request->get('course_mode', 'active');
+        FacultySessionScope::applyCourseMode($query, $courseMode);
 
         if ($request->filled('course_pk')) {
             $query->where('t.course_master_pk', $request->course_pk);
         }
-        if ($request->filled('faculty_pk')) {
-            $facultyPk = $request->faculty_pk;
-            $query->where(function ($q) use ($facultyPk) {
-                $q->whereRaw("JSON_CONTAINS(COALESCE(NULLIF(t.faculty_master, ''), '[]'), CAST(? AS JSON))", [$facultyPk])
-                  ->orWhere('t.faculty_master', $facultyPk);
-            });
+        // A faculty viewer is pinned to their own sessions whatever faculty_pk the
+        // request carries — the dropdown only offers them, but the parameter is
+        // theirs to edit, so the lock lives here rather than in the form.
+        $facultyPk = FacultySessionScope::lockedFacultyPk() ?? $request->input('faculty_pk');
+
+        if ($facultyPk !== null && $facultyPk !== '') {
+            FacultySessionScope::applyFaculty($query, (int) $facultyPk);
         }
         if ($request->filled('subject_topic')) {
             $query->where('t.subject_topic', 'LIKE', '%' . $request->subject_topic . '%');
@@ -439,8 +453,10 @@ class TimetableReportController extends Controller
         if ($request->filled('course_pk')) {
             $filterSummary['course_name'] = CourseMaster::where('pk', $request->course_pk)->value('course_name') ?? '';
         }
-        if ($request->filled('faculty_pk')) {
-            $filterSummary['faculty_name'] = FacultyMaster::where('pk', $request->faculty_pk)->value('full_name') ?? '';
+        // $facultyPk, not the request: a locked faculty sends no faculty_pk, and the
+        // export header still has to say whose sessions these are.
+        if ($facultyPk !== null && $facultyPk !== '') {
+            $filterSummary['faculty_name'] = FacultyMaster::where('pk', $facultyPk)->value('full_name') ?? '';
         }
         if ($request->filled('faculty_type')) {
             $filterSummary['faculty_type'] = match ((int) $request->faculty_type) {

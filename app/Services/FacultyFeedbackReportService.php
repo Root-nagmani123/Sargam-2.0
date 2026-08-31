@@ -60,6 +60,31 @@ class FacultyFeedbackReportService
             ->values();
     }
 
+    /**
+     * How many submitted feedbacks this faculty has received — the dashboard's
+     * "Total Feedback" card.
+     *
+     * Same base as {@see getAllProcessedItems()}: submitted only, this faculty
+     * only, and confined to the courses they may see, so the card cannot show a
+     * number the report itself would never reach.
+     */
+    public function getTotalFeedbackCount(int $facultyPk): int
+    {
+        $accessibleIds = $this->getAccessibleCourseIds($facultyPk);
+
+        if ($accessibleIds->isEmpty()) {
+            return 0;
+        }
+
+        return DB::table('topic_feedback as tf')
+            ->join('timetable as tt', 'tf.timetable_pk', '=', 'tt.pk')
+            ->join('course_master as cm', 'tt.course_master_pk', '=', 'cm.pk')
+            ->where('tf.is_submitted', 1)
+            ->where('tf.faculty_pk', $facultyPk)
+            ->whereIn('cm.pk', $accessibleIds)
+            ->count();
+    }
+
     public function getPrograms(int $facultyPk, string $courseType = 'current'): Collection
     {
         $courseIds = $this->getAccessibleCourseIds($facultyPk);

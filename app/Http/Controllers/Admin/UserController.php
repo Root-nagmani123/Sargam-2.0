@@ -56,6 +56,8 @@ use App\Models\CourseCordinatorMaster;
 use App\Models\StudentMasterCourseMap;
 use App\Models\StudentMaster;
 use App\Services\Attendance\OtExemptionResolver;
+use App\Services\FacultyFeedbackReportService;
+use App\Services\Timetable\FacultySessionScope;
 use App\Services\FC\RegistrationService;
 use App\Models\CourseStudentAttendance;
 use App\Models\CourseGroupTimetableMapping;
@@ -235,6 +237,8 @@ class UserController extends Controller
         $todayTimetable = collect([]);
         $totalSessions = 0;
         $totalStudents = 0;
+        $facultyTotalSessions = 0;
+        $facultyTotalFeedback = 0;
         $isCCorACC = false;
         $userId = Auth::user()->user_id;
          if(hasRole('Student-OT')){
@@ -261,6 +265,17 @@ class UserController extends Controller
                                ->orWhereRaw('FIND_IN_SET(?, faculty_master)', [$facultyPk]);
                      })
                      ->count();
+
+                 // "Total Sessions" card — every timetable session assigned to this
+                 // faculty. Counted through the same scope the Timetable Session
+                 // Report filters by, and the card links to that report's All Courses
+                 // view, so the page it opens holds exactly these rows.
+                 $facultyTotalSessions = FacultySessionScope::countFor($facultyPk, 'all');
+
+                 // "Total Feedback" card — submitted feedback for this faculty, on
+                 // the Session Feedback Report's own query base.
+                 $facultyTotalFeedback = app(FacultyFeedbackReportService::class)
+                     ->getTotalFeedbackCount($facultyPk);
 
                  // Check if faculty is CC or ACC
                  $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
@@ -345,6 +360,10 @@ class UserController extends Controller
         $isSuperAdmin   = hasRole('Super Admin');
         $isStudentOT    = hasRole('Student-OT');
         $isFacultyRole  = hasRole('Internal Faculty') || hasRole('Guest Faculty');
+        // The two faculty cards below key off portal membership, not those two role
+        // names — the only faculty role actually present is "Faculty", which
+        // $isFacultyRole does not match.
+        $isFacultyPortalUser = is_faculty_portal_user();
 
         // Role-scoped course IDs for "My Course Participant" ([] = all, [-1] = none, [pks] = restricted)
         $myCourseIds = get_Role_by_course();
@@ -367,6 +386,10 @@ class UserController extends Controller
             'ot_mdo_escort'           => ['count' => $MDO_count ?? 0,                              'link' => route('ot.mdo.escrot.exemption.view'),                         'visible' => !$isSecurityRole && $isStudentOT],
             'total_inhouse_faculty'   => ['count' => $total_internal_faculty,                      'link' => route('admin.dashboard.inhouse_faculty'),                      'visible' => !$isSecurityRole && !$isStudentOT],
             'session_details'         => ['count' => $totalSessions,                               'link' => route('admin.dashboard.sessions'),                             'visible' => !$isSecurityRole && ($isFacultyRole || $isSuperAdmin)],
+            // Faculty-only cards. Both open a report that scopes itself to the
+            // logged-in faculty server-side, so the count and the page agree.
+            'total_sessions'          => ['count' => $facultyTotalSessions,                        'link' => route('timetable-report.index', ['course_mode' => 'all']),                               'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            'total_feedback'          => ['count' => $facultyTotalFeedback,                        'link' => route('faculty.session_feedback.details'),                     'visible' => !$isSecurityRole && $isFacultyPortalUser],
             'total_students'          => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
             'student_details'         => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
             'my_course_participant'   => ['count' => StudentMasterCourseMap::query()->when(!empty($myCourseIds), fn($q) => $q->whereIn('course_master_pk', $myCourseIds))->count(), 'link' => route('my.course.participant'),                                'visible' => true],
@@ -428,6 +451,8 @@ class UserController extends Controller
             'todayTimetable',
             'totalSessions',
             'totalStudents',
+            'facultyTotalSessions',
+            'facultyTotalFeedback',
             'isCCorACC',
             'todayFamilyApprovals',
             'fullFamilyApprovals',
