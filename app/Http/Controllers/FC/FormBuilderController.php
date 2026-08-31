@@ -442,6 +442,10 @@ class FormBuilderController extends Controller
             'lookup_label_column'  => 'nullable|string|max:100',
             'css_class'            => ['nullable', 'string', Rule::in(array_keys(FcFormField::columnLayoutOptions()))],
             'is_active'            => 'nullable|boolean',
+            // Conditional display: show this field only while a sibling field in the same
+            // group holds condition_value. Both blank = always shown.
+            'condition_field'      => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-Z_][a-zA-Z0-9_]*$/'],
+            'condition_value'      => 'nullable|string|max:200',
         ]);
 
         $data['css_class'] = FcFormField::normalizeColumnLayout($data['css_class'] ?? null);
@@ -452,6 +456,14 @@ class FormBuilderController extends Controller
 
         $data['is_required'] = $request->boolean('is_required');
         $data['is_active'] = $request->boolean('is_active');
+
+        // A field cannot depend on itself, and a controlling field with no value to match
+        // would hide the dependent field forever — store neither half in that case.
+        if (($data['condition_field'] ?? '') === '' || $data['condition_field'] === $data['field_name']
+            || ($data['condition_value'] ?? '') === '') {
+            $data['condition_field'] = null;
+            $data['condition_value'] = null;
+        }
 
         return $data;
     }

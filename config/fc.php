@@ -195,7 +195,7 @@ return [
     //
     // Reordering, deleting and every per-field lock keep their own flags; this one is only
     // about reaching the two editors.
-    'form_step_actions_enabled'     => (bool) env('FC_FORM_STEP_ACTIONS_ENABLED', false),
+    'form_step_actions_enabled'     => (bool) env('FC_FORM_STEP_ACTIONS_ENABLED', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -273,10 +273,13 @@ return [
     | registration instead. Registration itself is unaffected.
     |
     | Values are service_master.service_short_name codes, compared EXACTLY and
-    | case-insensitively after trimming. Exact matching is deliberate: 'IFS' is
-    | the Indian Foreign Service, while the Indian Forest Service is a separate
-    | row coded 'IFS(AIS)'. A prefix or LIKE match would silently block Forest
-    | Service trainees, who are entitled to apply.
+    | case-insensitively after trimming. Exact matching is deliberate: a prefix
+    | or LIKE match on 'IAS' would also catch any future code that merely starts
+    | with those letters, blocking trainees who are entitled to apply.
+    |
+    | Only the IAS is restricted. Every other service — the Indian Foreign
+    | Service ('IFS') and the Indian Forest Service ('IFS(AIS)') included — may
+    | apply for an exemption.
     |
     | Short codes are used rather than primary keys because the pks differ
     | between environments. They are resolved to ids once and cached — see
@@ -285,7 +288,7 @@ return [
     */
     'exemption_restricted_services' => array_values(array_filter(array_map(
         'trim',
-        explode(',', (string) env('FC_EXEMPTION_RESTRICTED_SERVICES', 'IAS,IFS'))
+        explode(',', (string) env('FC_EXEMPTION_RESTRICTED_SERVICES', 'IAS'))
     ))),
 
 ];
