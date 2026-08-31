@@ -148,28 +148,32 @@ class AttendanceDataExport implements FromArray, WithColumnWidths, WithEvents, W
                 }
             }
 
-            // Get attendance status from saved record or determine based on exemptions
-            // Priority: Exemptions from Tables > Saved Attendance (Medical/Other) > Saved Attendance (MDO/Escort/Present/Late/Absent) > Default Present
+            // Get attendance status from saved record or determine based on exemptions.
+            // Priority: Exemptions from Tables > Saved Attendance > Default Present.
+            // An OT on duty or exempt counts as Present — they are away on Academy
+            // work, not missing — and that outranks the saved row, which may have
+            // been marked before the duty was assigned. The MDO Duty / Escort
+            // columns still name why. AttendanceController::save writes the same '1'.
             $attendanceStatus = 'Not Marked';
             $mdoDuty = 'No';
             $escortDuty = 'No';
 
             // First, check exemptions from tables (these take priority)
             if ($hasMedicalExempt || $hasOtherExempt) {
-                $attendanceStatus = 'Not Marked';
+                $attendanceStatus = 'Present';
             } elseif ($hasMdoDuty) {
-                $attendanceStatus = 'Not Marked';
+                $attendanceStatus = 'Present';
                 $mdoDuty = 'MDO Duty';
             } elseif ($hasEscortDuty) {
-                $attendanceStatus = 'Not Marked';
+                $attendanceStatus = 'Present';
                 $escortDuty = 'Yes';
             } elseif ($attendance) {
                 // No exemptions from tables, check saved attendance
                 $status = $attendance->status;
                 
-                // Handle Medical (6) and Other (7) exemptions - show "Not Marked"
+                // Medical (6) and Other (7) were saved as an exemption — also Present.
                 if ($status == 6 || $status == 7) {
-                    $attendanceStatus = 'Not Marked';
+                    $attendanceStatus = 'Present';
                 } else {
                     // Handle Present, Late, Absent, MDO (4), Escort (5)
                     // Ensure Late (2) and Absent (3) are properly displayed
@@ -184,11 +188,11 @@ class AttendanceDataExport implements FromArray, WithColumnWidths, WithEvents, W
                             $attendanceStatus = 'Absent';
                             break;
                         case 4:
-                            $attendanceStatus = 'Not Marked'; // MDO Duty
+                            $attendanceStatus = 'Present'; // on MDO Duty, counted as attending
                             $mdoDuty = 'MDO Duty';
                             break;
                         case 5:
-                            $attendanceStatus = 'Not Marked'; // Escort Duty
+                            $attendanceStatus = 'Present'; // on Escort Duty, counted as attending
                             $escortDuty = 'Yes';
                             break;
                         default:

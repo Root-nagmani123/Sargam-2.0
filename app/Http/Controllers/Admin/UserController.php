@@ -55,6 +55,7 @@ use App\Models\VenueMaster;
 use App\Models\CourseCordinatorMaster;
 use App\Models\StudentMasterCourseMap;
 use App\Models\StudentMaster;
+use App\Services\Attendance\OtExemptionResolver;
 use App\Services\FC\RegistrationService;
 use App\Models\CourseStudentAttendance;
 use App\Models\CourseGroupTimetableMapping;
@@ -4086,6 +4087,41 @@ class UserController extends Controller
                 SUM(CASE WHEN status = '0' OR status IS NULL THEN 1 ELSE 0 END) as not_marked_count
             ")
             ->first();
+
+        // A session the OT was on MDO/Escort/Other duty or medically exempt for counts
+        // as Present, not Late or Absent — the same rule AttendanceController::save
+        // applies on write. The saved row can still hold the Late/Absent it was marked
+        // with when the duty was assigned after the fact, so those rows are moved into
+        // the Present bucket here rather than being counted against the OT.
+        if ($attendanceSummary) {
+            $dutyCorrectedRows = CourseStudentAttendance::where('Student_master_pk', $studentPk)
+                ->whereIn('status', ['2', '3'])
+                ->whereNotNull('timetable_pk')
+                ->get(['course_master_pk', 'timetable_pk', 'status']);
+
+            $covered = OtExemptionResolver::coveredSessionsFor(
+                (int) $studentPk,
+                $dutyCorrectedRows->map(fn ($row) => [
+                    'course' => (int) $row->course_master_pk,
+                    'timetable' => (int) $row->timetable_pk,
+                ])->all()
+            );
+
+            $movedLate = 0;
+            $movedAbsent = 0;
+
+            foreach ($dutyCorrectedRows as $row) {
+                if (!isset($covered[(int) $row->course_master_pk . '|' . (int) $row->timetable_pk])) {
+                    continue;
+                }
+
+                (int) $row->status === 2 ? $movedLate++ : $movedAbsent++;
+            }
+
+            $attendanceSummary->present_count = (int) $attendanceSummary->present_count + $movedLate + $movedAbsent;
+            $attendanceSummary->late_count = (int) $attendanceSummary->late_count - $movedLate;
+            $attendanceSummary->absent_count = (int) $attendanceSummary->absent_count - $movedAbsent;
+        }
 
         // Calculate total expected sessions (timetables) for student's course groups
         $studentGroupPks = StudentCourseGroupMap::where('student_master_pk', $studentPk)
