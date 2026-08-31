@@ -41,13 +41,21 @@ final class FeedbackReportGrouping
      * Replaces: tf.faculty_pk, tf.topic_name, cm.course_name, fm.full_name,
      *           tt.START_DATE, tt.class_session
      *
-     * Only fm.full_name is dropped — it is determined by tf.faculty_pk. cm.course_name,
-     * tt.START_DATE and tt.class_session are NOT determined by anything in this key (the key
-     * carries no timetable or course primary key), so removing them would merge rows that the
-     * report currently keeps apart. They stay.
+     * fm.full_name is dropped and fm.pk grouped in its place. Dropping the name alone is not
+     * enough: it is logically determined by tf.faculty_pk through the fm.pk join equality, but
+     * MySQL's ONLY_FULL_GROUP_BY does not infer dependency across that join and rejects the
+     * query with error 1055. Grouping fm.pk — faculty_master's primary key — is a dependency
+     * MySQL does recognise, so every fm.* column becomes selectable while the group key stays
+     * an integer instead of a varchar. fm.pk equals tf.faculty_pk on every row (inner join), so
+     * the grouping is unchanged.
+     *
+     * cm.course_name, tt.START_DATE and tt.class_session are NOT determined by anything in this
+     * key (the key carries no timetable or course primary key), so removing them would merge
+     * rows that the report currently keeps apart. They stay.
      */
     public const FACULTY_AVERAGE = [
         'tf.faculty_pk',
+        'fm.pk',
         'tf.topic_name',
         'cm.course_name',
         'tt.START_DATE',

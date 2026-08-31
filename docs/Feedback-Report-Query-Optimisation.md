@@ -305,7 +305,17 @@ is not configured. Please smoke-test the four cached endpoints after switching.
 
 ## Verifying that report data is unchanged
 
-Two scripts, both re-runnable:
+Two snapshot harnesses were written for this work and **removed from the branch before
+merge** — they were verification scaffolding, not shipping code. Restore them from git
+history when a future change touches these queries:
+
+```bash
+git checkout 0b24c7b67 -- scripts/feedback_report_snapshot.php \
+                          scripts/student_feedback_snapshot.php \
+                          scripts/feedback_snapshot_diff.py
+```
+
+Once restored, both are re-runnable:
 
 ```bash
 # Admin reports: 83 report/filter combinations
