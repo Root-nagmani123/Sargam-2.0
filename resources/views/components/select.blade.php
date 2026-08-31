@@ -14,7 +14,8 @@
     @if($required) required @endif
     @if($multiple) multiple @endif
 >
-    <option value="">Select</option>
+    {{-- Callers that pass a placeholder get it here; everyone else keeps "Select". --}}
+    <option value="">{{ filled($placeholder) ? $placeholder : 'Select' }}</option>
     @foreach($options as $optionValue => $optionLabel)
         <option value="{{ $optionValue }}" 
             @if($multiple) 

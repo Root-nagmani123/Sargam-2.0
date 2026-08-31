@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\DataTables\MemberDataTable;
+use App\Http\Controllers\Concerns\ExportsBrandedGrid;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -12,15 +13,51 @@ use App\Http\Requests\Admin\Member\{
     StoreMemberStep4Request,
     StoreMemberStep5Request,
 };
-use App\Models\{EmployeeMaster, EmployeeRoleMapping, UserCredential, City};
+use App\Models\{EmployeeMaster, EmployeeRoleMapping, UserCredential, City,
+    EmployeeTypeMaster, EmployeeGroupMaster, DepartmentMaster};
 use App\Exports\MemberExport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\AppellationMaster;
 class MemberController extends Controller
 {
+    use ExportsBrandedGrid;
+
     public function index(MemberDataTable $dataTable)
     {
-        return $dataTable->render('admin.member.index');
+        return $dataTable->render('admin.member.index', $this->listingFilterOptions());
+    }
+
+    /**
+     * Options for the listing's Type / Group / Department dropdowns.
+     *
+     * Only active rows, and only ones actually used by an employee — the three
+     * masters carry retired entries, and a dropdown that offers 71 departments
+     * where 40 can never match is a filter that mostly returns nothing.
+     *
+     * @return array{employeeTypes: \Illuminate\Support\Collection, employeeGroups: \Illuminate\Support\Collection, departments: \Illuminate\Support\Collection}
+     */
+    private function listingFilterOptions(): array
+    {
+        $inUse = fn (string $column) => EmployeeMaster::query()
+            ->whereNotNull($column)
+            ->where($column, '!=', '')
+            ->distinct()
+            ->pluck($column);
+
+        return [
+            'employeeTypes' => EmployeeTypeMaster::whereIn('pk', $inUse('emp_type'))
+                ->where('active_inactive', 1)
+                ->orderBy('category_type_name')
+                ->pluck('category_type_name', 'pk'),
+            'employeeGroups' => EmployeeGroupMaster::whereIn('pk', $inUse('emp_group_pk'))
+                ->where('active_inactive', 1)
+                ->orderBy('emp_group_name')
+                ->pluck('emp_group_name', 'pk'),
+            'departments' => DepartmentMaster::whereIn('pk', $inUse('department_master_pk'))
+                ->where('active_inactive', 1)
+                ->orderBy('department_name')
+                ->pluck('department_name', 'pk'),
+        ];
     }
 
     public function create()
@@ -335,7 +372,88 @@ class MemberController extends Controller
     public function show($id)
     {
         $member = EmployeeMaster::with('appellationMaster')->findOrFail(decrypt($id));
-        return view('admin.member.show', compact('member'));
+
+        return view('admin.member.show', [
+            'member' => $member,
+            'sections' => $this->memberProfileSections($member),
+        ]);
+    }
+
+    /**
+     * One member's profile, grouped into the sections both the View screen and
+     * the print sheet render.
+     *
+     * Built here rather than in either view so the printed copy cannot quietly
+     * drift from the screen it was printed off — the same reason the listing's
+     * four export formats share one column list.
+     *
+     * A '__wide' marker means "every field after this one spans the full width".
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function memberProfileSections(EmployeeMaster $member): array
+    {
+        return [
+            'Personal Information' => [
+                'Title' => optional($member->appellationMaster)->appettation_name,
+                'First Name' => $member->first_name,
+                'Middle Name' => $member->middle_name,
+                'Last Name' => $member->last_name,
+                "Father's / Husband's Name" => $member->father_name,
+                'Date of Birth' => $member->dob,
+                'Gender' => EmployeeMaster::gender[$member->gender] ?? null,
+                'Marital Status' => EmployeeMaster::maritalStatus[$member->marital_status] ?? null,
+                'Height (Without Shoes)' => filled($member->height) ? $member->height . ' cm' : null,
+            ],
+            'Employment Details' => [
+                'Employee ID' => $member->emp_id,
+                'User ID' => optional($member->userCredential)->user_name,
+                'Employee Type' => optional($member->employeeType)->category_type_name,
+                'Employee Group' => optional($member->employeeGroup)->emp_group_name,
+                'Designation' => optional($member->designation)->designation_name,
+                'Department' => optional($member->department)->department_name,
+            ],
+            'Contact Information' => [
+                'Personal Email' => $member->email,
+                'Official Email' => $member->officalemail,
+                'Mobile Number' => $member->mobile,
+                'Emergency Contact Number' => $member->emergency_contact_no,
+                'Landline Number' => $member->landline_contact_no,
+                'Residence Number' => $member->residence_no,
+            ],
+            'Address' => [
+                'Country' => optional(\App\Models\Country::find($member->country_master_pk))->country_name,
+                'State' => optional(\App\Models\State::find($member->state_master_pk))->state_name,
+                'District' => optional(\App\Models\District::find($member->state_district_mapping_pk))->district_name,
+                'City' => optional(City::find($member->city))->city_name,
+                'Postal Code' => $member->zipcode,
+                '__wide' => true,
+                'Current Address' => $member->current_address,
+                'Permanent Address' => $member->permanent_address,
+                'Home Address Data' => $member->home_town_details,
+            ],
+        ];
+    }
+
+    /**
+     * Branded print sheet for ONE member — the row-level Print action.
+     *
+     * The listing's Print gives the whole filtered table; this gives the single
+     * profile, which is what you want when handing someone their own record. It
+     * is a server-rendered page like every other export here, not window.print()
+     * over the View screen, so it carries the letterhead and none of the app
+     * chrome (docs/new-design-index-page.md §1).
+     */
+    public function printMember($id)
+    {
+        $member = EmployeeMaster::with('appellationMaster')->findOrFail(decrypt($id));
+
+        return view('admin.member.print', [
+            'member' => $member,
+            'sections' => $this->memberProfileSections($member),
+            'assignedRoles' => $member->assignedRoles(),
+            'exportDate' => now()->format('d-m-Y h:i A'),
+        ]);
     }
 
     public function edit($id) {
@@ -411,6 +529,157 @@ class MemberController extends Controller
             'message' => "Step $step validated.",
         ], 200);
     }
+    /**
+     * The listing's export columns - deliberately the same nine the grid shows,
+     * in the same order, so a downloaded report can be reconciled against the
+     * screen it came from (docs/new-design-index-page.md section 1).
+     *
+     * One definition feeds CSV, Excel, PDF and Print; none of them may build
+     * their own column list.
+     *
+     * @return array<string, array{heading:string, class:string, value:callable}>
+     */
+    private function exportColumnDefs(): array
+    {
+        return [
+            'sno' => [
+                'heading' => 'S. No.',
+                'class' => 'col-sno',
+                'value' => fn ($row, int $index) => $index + 1,
+            ],
+            'employee_name' => [
+                'heading' => 'Employee Name',
+                'class' => 'col-name',
+                'value' => function ($row) {
+                    $appellation = $row->appellation ? ($row->appellationMaster->appettation_name ?? null) : null;
+
+                    $parts = array_filter(
+                        array_map(
+                            fn ($part) => trim((string) $part),
+                            [$appellation, $row->first_name, $row->middle_name, $row->last_name]
+                        ),
+                        fn ($part) => $part !== ''
+                    );
+
+                    return implode(' ', $parts);
+                },
+            ],
+            'employee_id' => [
+                'heading' => 'Employee ID',
+                'class' => 'col-empid',
+                'value' => fn ($row) => (string) $row->emp_id,
+            ],
+            'employee_type' => [
+                'heading' => 'Employee Type',
+                'class' => 'col-type',
+                'value' => fn ($row) => (string) optional($row->employeeType)->category_type_name,
+            ],
+            'employee_group' => [
+                'heading' => 'Employee Group',
+                'class' => 'col-group',
+                'value' => fn ($row) => (string) optional($row->employeeGroup)->emp_group_name,
+            ],
+            'department' => [
+                'heading' => 'Department',
+                'class' => 'col-dept',
+                'value' => fn ($row) => (string) optional($row->department)->department_name,
+            ],
+            'mobile_no' => [
+                'heading' => 'Mobile No',
+                'class' => 'col-mobile',
+                'value' => fn ($row) => (string) $row->mobile,
+            ],
+            'email' => [
+                'heading' => 'Email',
+                'class' => 'col-email',
+                'value' => fn ($row) => (string) $row->email,
+            ],
+            'status' => [
+                'heading' => 'Status',
+                'class' => 'col-status',
+                'value' => fn ($row) => ((int) $row->status === 1) ? 'Active' : 'Inactive',
+            ],
+        ];
+    }
+
+    /**
+     * Member listing -> CSV / Excel / PDF / Print, all through
+     * {@see \App\Http\Controllers\Concerns\ExportsBrandedGrid}.
+     *
+     * The four run off one query and one column list, and honour whatever the
+     * grid is showing: the search box and the Columns modal, plus a
+     * ?status_filter= when one is deep-linked. Print is a server-rendered
+     * branded view, not window.print() over the screen.
+     */
+    public function export(Request $request, string $format = 'csv')
+    {
+        $format = strtolower($format);
+        abort_unless(in_array($format, ['csv', 'excel', 'pdf', 'print'], true), 404);
+
+        $filters = MemberDataTable::resolveFilters();
+        $search = trim((string) $request->query('q', ''));
+
+        // Same relations MemberDataTable::query() loads - the Type / Group /
+        // Department columns read them, and this query is not paginated, so
+        // lazy-loading them would be three round trips per exported row.
+        $query = EmployeeMaster::query()->with([
+            'appellationMaster',
+            'employeeType',
+            'employeeGroup',
+            'department',
+        ]);
+        MemberDataTable::applyListingFilters($query, $filters, $search);
+        $rows = $query->orderBy('pk', 'desc')->get();
+
+        // One filter description, rendered by all four formats. The dropdowns are
+        // named on the sheet, not just applied to it — a report that silently
+        // omits 1,700 rows is indistinguishable from a broken one.
+        $filterParts = array_filter([
+            $filters['status'] !== '' ? 'Status: ' . ucfirst($filters['status']) : null,
+            $filters['type'] ? 'Type: ' . (EmployeeTypeMaster::find($filters['type'])->category_type_name ?? $filters['type']) : null,
+            $filters['group'] ? 'Group: ' . (EmployeeGroupMaster::find($filters['group'])->emp_group_name ?? $filters['group']) : null,
+            $filters['department'] ? 'Department: ' . (DepartmentMaster::find($filters['department'])->department_name ?? $filters['department']) : null,
+            $search !== '' ? 'Search: ' . $search : null,
+        ]);
+
+        return $this->brandedGridResponse(
+            $format,
+            'Members',
+            'Members',
+            $rows,
+            $this->resolveExportColumns($this->exportColumnDefs(), $request),
+            $filterParts === [] ? null : implode('  |  ', $filterParts),
+            [
+                'emptyText' => 'No members to export',
+                'centeredKeys' => ['sno', 'status'],
+                'textKeys' => ['employee_id', 'mobile_no'],
+                // This grid is four figures deep, and DomPDF needs ~276 MB to lay
+                // out the 1,000-row cap — a hard OOM fatal (blank page, no error)
+                // wherever memory_limit is 256M. mPDF does the same page in
+                // ~144 MB and half the time. See ExportsBrandedGrid::$pdfRowCap.
+                'pdfEngine' => 'mpdf',
+                // Nine columns on A4 portrait: Name and Email give up the room
+                // Type / Group / Department need. Percentages, so the sheet still
+                // fills the page when the Columns modal drops some of them.
+                'columnStyles' => '
+        .col-sno    { width: 5%;  text-align: center; }
+        .col-name   { width: 17%; }
+        .col-empid  { width: 10%; }
+        .col-type   { width: 11%; }
+        .col-group  { width: 10%; }
+        .col-dept   { width: 13%; }
+        .col-mobile { width: 10%; }
+        .col-email  { width: 16%; }
+        .col-status { width: 8%;  text-align: center; }',
+            ]
+        );
+    }
+
+    /**
+     * The legacy full-profile dump (every employee_master column). Kept alongside
+     * the grid exports above because it is a different report, not a format of
+     * the same one — dropping it would lose data the grid exports don't carry.
+     */
     public function excelExport(Request $request)
     {
         $fileName = 'members-'.date('d-m-Y').'.xlsx';
