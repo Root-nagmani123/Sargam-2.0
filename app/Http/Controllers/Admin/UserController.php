@@ -6,7 +6,6 @@ use App\DataTables\CourseMasterDataTable;
 use App\DataTables\FacultyDataTable;
 use App\DataTables\GroupMappingDataTable;
 use App\DataTables\Master\EmployeeTypeMasterDataTable;
-use App\DataTables\MemberDataTable;
 use App\DataTables\RoleDataTable;
 use App\Http\Controllers\Admin\IssueManagement\IssueCategoryController;
 use App\Http\Controllers\Admin\IssueManagement\IssueEscalationMatrixController;
@@ -4586,24 +4585,111 @@ class UserController extends Controller
         }
     }
 
+    /**
+     * Tables this generic status endpoint may write, with the key column and
+     * the status column allowed for each.
+     *
+     * The endpoint takes the table, column and key column straight from the
+     * request, so without this list any authenticated session can write any
+     * column of any table (accepted-risk record SAST-2026-08-21-01). The list
+     * is the complete set of screens that post here - every element carrying
+     * the global `.status-toggle` class under resources/views, app/ and
+     * public/ - so no screen that worked before is refused.
+     *
+     * Screens with their own toggle route never reach this method and are
+     * deliberately absent: member (`/member/{id}/toggle-status`), the sidebar
+     * screens, security vehicle pass/type (own `data-url`), and everything on
+     * `.plain-status-toggle`, which posts through a hidden form instead.
+     *
+     * Adding a status switch to a new screen means adding its row here.
+     */
+    private const TOGGLE_STATUS_ALLOWED = [
+        'appellation_master'                  => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'building_floor_room_mapping'         => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'building_master'                     => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'caste_category_master'               => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'city_master'                         => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'class_session_master'                => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'country_master'                      => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'course_master'                       => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'course_memo_decision_mapp'           => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'department_master'                   => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'designation_master'                  => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'discipline_master'                   => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'employee_group_master'               => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'employee_type_master'                => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'faculty_expertise_master'            => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'faculty_master'                      => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'faculty_type_master'                 => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'fc_exemption_master'                 => ['id_column' => 'pk', 'columns' => ['visible']],
+        'fc_registration_master'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'floor_master'                        => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'group_type_master_course_master_map' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'hostel_building_floor_mapping'       => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'hostel_building_master'              => ['id_column' => 'pk', 'columns' => ['active_room']],
+        'hostel_floor_room_mapping'           => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'hostel_room_master'                  => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'issue_category_master'               => ['id_column' => 'pk', 'columns' => ['status']],
+        'issue_priority_master'               => ['id_column' => 'pk', 'columns' => ['status']],
+        'issue_sub_category_master'           => ['id_column' => 'pk', 'columns' => ['status']],
+        'memo_conclusion_master'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'memo_type_master'                    => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'news'                                => ['id_column' => 'pk', 'columns' => ['status']],
+        'notices_notification'                => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'ot_hostel_room_details'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'sec_id_cardno_config_map'            => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'sec_id_cardno_master'                => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'state_district_mapping'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'state_master'                        => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'states'                              => ['id_column' => 'pk', 'columns' => ['status']],
+        'stream_master'                       => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'subject_master'                      => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'subject_module_master'               => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'user_role_master'                    => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'venue_master'                        => ['id_column' => 'venue_id', 'columns' => ['active_inactive']],
+    ];
+
 public function toggleStatus(Request $request)
 {
     try {
-        $idColumn = $request->id_column ?? 'pk';
-        $table = $request->table;
-        $column = $request->column;
-        $id = $request->id;
-        $status = $request->status;
+        $table    = (string) $request->input('table', '');
+        $column   = (string) $request->input('column', '');
+        $idColumn = (string) ($request->input('id_column') ?: 'pk');
+        $id       = $request->input('id');
+        $status   = $request->input('status');
 
-        DB::table($request->table)
+        $allowed = self::TOGGLE_STATUS_ALLOWED[$table] ?? null;
+
+        // Refuse anything the UI never asks for: an unlisted table, a column
+        // that is not that table's status column, a key column other than the
+        // one the screen uses, a non-numeric id, or a status outside 0/1.
+        if ($allowed === null
+            || ! in_array($column, $allowed['columns'], true)
+            || $idColumn !== $allowed['id_column']
+            || ! is_numeric($id)
+            || ! in_array((int) $status, [0, 1], true)) {
+
+            \Log::warning('Rejected a toggle-status request outside the allow-list', [
+                'user'      => optional(auth()->user())->getKey(),
+                'table'     => $table,
+                'column'    => $column,
+                'id_column' => $idColumn,
+                'status'    => $status,
+            ]);
+
+            return response()->json([
+                'message' => 'This status change is not permitted.',
+            ], 422);
+        }
+
+        $status = (int) $status;
+
+        DB::table($table)
             ->where($idColumn, $id)
             ->update([$column => $status]);
 
         if ($table === 'employee_type_master') {
             EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
-        }
-        if ($table === 'employee_master') {
-            MemberDataTable::bumpListingCacheEpoch();
         }
         if ($table === 'faculty_expertise_master') {
             FacultyExpertiseMasterController::bumpListCacheEpoch();

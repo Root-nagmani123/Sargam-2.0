@@ -5,7 +5,7 @@
     "keywords": ["framework", "laravel"],
     "license": "MIT",
     "require": {
-        "php": "^8.0",
+        "php": "^8.2",
         "adldap2/adldap2-laravel": "^6.1",
         "arcanedev/log-viewer": "^9.0",
         "barryvdh/laravel-dompdf": "^3.1",
@@ -21,7 +21,8 @@
         "microsoft/azure-storage-blob": "^1.5",
         "mpdf/mpdf": "^8.2",
         "spatie/laravel-permission": "^6.16",
-        "yajra/laravel-datatables-export": "^1.2",
+        "yajra/laravel-datatables-buttons": "^9.1",
+        "yajra/laravel-datatables-html": "^9.4",
         "yajra/laravel-datatables-fractal": "^10.0"
     },
     "require-dev": {
@@ -72,7 +73,10 @@
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
-        "platform-check": false
+        "platform-check": false,
+        "platform": {
+            "php": "8.2.12"
+        }
     },
     "minimum-stability": "dev",
     "prefer-stable": true

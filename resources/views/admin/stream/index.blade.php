@@ -53,8 +53,8 @@
                                     <td>
                                         <div class="form-check form-switch">
                                             <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                data-table="stream_master" data-column="status"
-                                                data-id="{{ $stream->pk }}" {{ $stream->status == 1 ? 'checked' : '' }}>
+                                                data-table="stream_master" data-column="active_inactive"
+                                                data-id="{{ $stream->pk }}" {{ $stream->active_inactive == 1 ? 'checked' : '' }}>
                                         </div>
                                     </td>
                                     <td>

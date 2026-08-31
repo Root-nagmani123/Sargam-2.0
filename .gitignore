@@ -15,8 +15,6 @@ npm-debug.log
 yarn-error.log
 /.idea
 /.vscode
-composer.lock
-composer.json
 
 # Project-specific ignores
 testsargam2_dump1811_20012026.sql
