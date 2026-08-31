@@ -3799,6 +3799,39 @@ class UserController extends Controller
             }
         }
 
+        // Absences on sessions the OT was actually on MDO/Escort/Other duty or
+        // medically exempt for count as Present, not against them — the rule
+        // AttendanceController::save applies on write. Resolved for every counselee
+        // up front: the loop below runs one aggregate per OT already, and asking
+        // per OT here would multiply that several times over.
+        $absenceRows = CourseStudentAttendance::whereIn('Student_master_pk', array_keys($byStudent))
+            ->where('status', '3')
+            ->whereNotNull('timetable_pk')
+            ->get(['Student_master_pk', 'course_master_pk', 'timetable_pk']);
+
+        $coveredAbsences = OtExemptionResolver::coveredSessions(
+            $absenceRows->map(fn ($r) => [
+                'student' => (int) $r->Student_master_pk,
+                'course' => (int) $r->course_master_pk,
+                'timetable' => (int) $r->timetable_pk,
+            ])->all()
+        );
+
+        // student pk => how many of its absences are duty-covered, per course.
+        $dutyCoveredAbsences = [];
+        foreach ($absenceRows as $r) {
+            $key = OtExemptionResolver::sessionKey(
+                (int) $r->Student_master_pk,
+                (int) $r->course_master_pk,
+                (int) $r->timetable_pk
+            );
+
+            if (isset($coveredAbsences[$key])) {
+                $bucket = (int) $r->Student_master_pk . '|' . (int) $r->course_master_pk;
+                $dutyCoveredAbsences[$bucket] = ($dutyCoveredAbsences[$bucket] ?? 0) + 1;
+            }
+        }
+
         $counselees = [];
         foreach ($byStudent as $studentPk => $row) {
             $student = $row->student;
@@ -3823,6 +3856,11 @@ class UserController extends Controller
             $totalSessions = (int) ($att->total_sessions ?? 0);
             $present = (int) ($att->present_count ?? 0);
             $late = (int) ($att->late_count ?? 0);
+
+            // Duty-covered absences read as Present, so they count towards the
+            // percentage instead of dragging it down.
+            $present += $dutyCoveredAbsences[$studentPk . '|' . $coursePk] ?? 0;
+
             $attendancePct = $totalSessions > 0 ? (int) round((($present + $late) / $totalSessions) * 100) : 0;
 
             $exemptionsCount = StudentMedicalExemption::where('student_master_pk', $studentPk)
@@ -4099,9 +4137,9 @@ class UserController extends Controller
                 ->whereNotNull('timetable_pk')
                 ->get(['course_master_pk', 'timetable_pk', 'status']);
 
-            $covered = OtExemptionResolver::coveredSessionsFor(
-                (int) $studentPk,
+            $covered = OtExemptionResolver::coveredSessions(
                 $dutyCorrectedRows->map(fn ($row) => [
+                    'student' => (int) $studentPk,
                     'course' => (int) $row->course_master_pk,
                     'timetable' => (int) $row->timetable_pk,
                 ])->all()
@@ -4111,7 +4149,13 @@ class UserController extends Controller
             $movedAbsent = 0;
 
             foreach ($dutyCorrectedRows as $row) {
-                if (!isset($covered[(int) $row->course_master_pk . '|' . (int) $row->timetable_pk])) {
+                $key = OtExemptionResolver::sessionKey(
+                    (int) $studentPk,
+                    (int) $row->course_master_pk,
+                    (int) $row->timetable_pk
+                );
+
+                if (!isset($covered[$key])) {
                     continue;
                 }
 

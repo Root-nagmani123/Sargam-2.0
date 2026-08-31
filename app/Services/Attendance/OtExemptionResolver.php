@@ -91,25 +91,32 @@ class OtExemptionResolver
         return $this->reasonFor($studentId) !== null;
     }
 
+    /** The key {@see coveredSessions()} answers under. */
+    public static function sessionKey(int $studentId, int $coursePk, int $timetablePk): string
+    {
+        return $studentId . '|' . $coursePk . '|' . $timetablePk;
+    }
+
     /**
-     * Batch counterpart to {@see isExempt()}: which of the given saved sessions this
-     * OT is on duty or exempt for.
+     * Batch counterpart to {@see isExempt()}: which of the given saved sessions the
+     * OT named on each is on duty or exempt for.
      *
-     * One instance answers one session for ~5 queries. A caller re-checking every
-     * saved row an OT has (the profile attendance summary, where a session covered
-     * by a duty must count as Present even though the row still holds the Late or
-     * Absent it was marked with) would pay that per row. This resolves the whole
-     * set with a fixed number of queries and the same rules.
+     * One instance answers one session for ~5 queries. The callers here re-check
+     * whole result sets — every saved row an OT has (the profile summary), every
+     * OT on a session (the defaulter list), every counselee's absences — where
+     * that per-row cost is not affordable. This answers the whole set with a fixed
+     * number of queries and the same rules.
      *
-     * @param  array<int, array{course: int, timetable: int}> $sessions
-     * @return array<string, true> "course|timetable" keys, covered sessions only
+     * @param  array<int, array{student: int, course: int, timetable: int}> $sessions
+     * @return array<string, true> {@see sessionKey()} keys, covered sessions only
      */
-    public static function coveredSessionsFor(int $studentId, array $sessions): array
+    public static function coveredSessions(array $sessions): array
     {
         if (empty($sessions)) {
             return [];
         }
 
+        $studentPks = array_values(array_unique(array_column($sessions, 'student')));
         $timetablePks = array_values(array_unique(array_column($sessions, 'timetable')));
         $coursePks = array_values(array_unique(array_column($sessions, 'course')));
 
@@ -128,8 +135,8 @@ class OtExemptionResolver
 
         $dutyTypes = array_filter(MDOEscotDutyMap::getMdoDutyTypes());
 
-        // Grouped by type|course|date so the per-session lookup below is a hash hit.
-        $duties = empty($dutyTypes) ? collect() : MDOEscotDutyMap::where('selected_student_list', $studentId)
+        // Grouped by student|type|course|date so the lookup below is a hash hit.
+        $duties = empty($dutyTypes) ? collect() : MDOEscotDutyMap::whereIn('selected_student_list', $studentPks)
             ->whereIn('course_master_pk', $coursePks)
             ->whereIn('mdo_duty_type_master_pk', array_values($dutyTypes))
             ->where(function ($q) use ($dates) {
@@ -139,17 +146,19 @@ class OtExemptionResolver
                 }
             })
             ->get()
-            ->groupBy(fn ($r) => $r->mdo_duty_type_master_pk . '|' . $r->course_master_pk . '|' . substr((string) $r->mdo_date, 0, 10));
+            ->groupBy(fn ($r) => $r->selected_student_list . '|' . $r->mdo_duty_type_master_pk . '|'
+                . $r->course_master_pk . '|' . substr((string) $r->mdo_date, 0, 10));
 
-        $medicals = StudentMedicalExemption::where('student_master_pk', $studentId)
+        $medicals = StudentMedicalExemption::whereIn('student_master_pk', $studentPks)
             ->whereIn('course_master_pk', $coursePks)
             ->where('active_inactive', 1)
-            ->get();
+            ->get()
+            ->groupBy(fn ($e) => $e->student_master_pk . '|' . $e->course_master_pk);
 
         $covered = [];
 
         foreach ($sessions as $session) {
-            $key = $session['course'] . '|' . $session['timetable'];
+            $key = self::sessionKey((int) $session['student'], (int) $session['course'], (int) $session['timetable']);
             if (isset($covered[$key])) {
                 continue;
             }
@@ -163,7 +172,7 @@ class OtExemptionResolver
             $window = self::windowFor($timetable->START_DATE, $timetable->class_session);
 
             foreach ($dutyTypes as $typePk) {
-                $group = $duties->get($typePk . '|' . $session['course'] . '|' . $date);
+                $group = $duties->get($session['student'] . '|' . $typePk . '|' . $session['course'] . '|' . $date);
                 $duty = $group ? $group->first() : null;
 
                 if ($duty && self::overlapsSession($timetable->class_session, $duty->Time_from, $duty->Time_to)) {
@@ -172,9 +181,8 @@ class OtExemptionResolver
                 }
             }
 
-            foreach ($medicals as $exemption) {
-                $inRange = (string) $exemption->course_master_pk === (string) $session['course']
-                    && substr((string) $exemption->from_date, 0, 10) <= $date
+            foreach ($medicals->get($session['student'] . '|' . $session['course'], collect()) as $exemption) {
+                $inRange = substr((string) $exemption->from_date, 0, 10) <= $date
                     && (empty($exemption->to_date) || substr((string) $exemption->to_date, 0, 10) >= $date);
 
                 if ($inRange && self::medicalCovers($exemption, $window)) {
@@ -233,7 +241,7 @@ class OtExemptionResolver
 
     /**
      * Whether a medical exemption already known to span this session's DATE also
-     * covers the session itself. Shared with {@see coveredSessionsFor()} so the
+     * covers the session itself. Shared with {@see coveredSessions()} so the
      * batch path and the per-session path cannot drift.
      *
      * @param array{start: int, end: int}|null $session
