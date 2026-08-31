@@ -203,8 +203,16 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                             </div>
                             <div class="flex-grow-1 min-w-0">
                                 <p class="stat-title">{{ $card['label'] }}</p>
-                                @php $v = (int) $card['count']; @endphp
-                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                                @php
+                                    // Counts are whole numbers and keep their 0-padding, but a
+                                    // marks total can carry a half mark, and (int) would have
+                                    // shown 13.5 as 13.
+                                    $v = is_numeric($card['count']) ? (float) $card['count'] : 0;
+                                    $statValue = floor($v) == $v
+                                        ? ($v < 10 ? sprintf('%02d', $v) : (string) (int) $v)
+                                        : rtrim(rtrim(number_format($v, 2, '.', ''), '0'), '.');
+                                @endphp
+                                <p class="stat-value">{{ $statValue }}</p>
                             </div>
                         </div>
                     </div>

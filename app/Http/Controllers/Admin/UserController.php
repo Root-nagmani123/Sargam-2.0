@@ -60,6 +60,7 @@ use App\Services\FacultyFeedbackReportService;
 use App\Services\Timetable\FacultySessionScope;
 use App\Services\FC\RegistrationService;
 use App\Models\CourseStudentAttendance;
+use App\Models\MemoDiscipline;
 use App\Models\CourseGroupTimetableMapping;
 use App\Models\SecurityParmIdApply;
 use App\Models\SecurityDupPermIdApply;
@@ -234,6 +235,7 @@ class UserController extends Controller
 //   print_r($emp_data);exit;
         $exemptionCount = 0;
         $MDO_count = 0;
+        $disciplineMarksDeducted = 0;
         $todayTimetable = collect([]);
         $totalSessions = 0;
         $totalStudents = 0;
@@ -252,6 +254,17 @@ class UserController extends Controller
 
             // Fetch today's timetable for the logged-in student
             $todayTimetable = $this->getTodayTimetableForStudent($userId);
+         }
+
+         // "Total Marks Deducted in Discipline" — this OT's concluded discipline
+         // memos only, which is what the Discipline module treats as deducted.
+         //
+         // Gated on isOfficerTraineeUser(), not hasRole('Student-OT') like the block
+         // above: Student-OT is a session pseudo-role set at login, so an OT who
+         // arrives holding only the Spatie "Officer Trainee" role would have been
+         // shown a card reading zero over real deductions.
+         if (isOfficerTraineeUser()) {
+             $disciplineMarksDeducted = MemoDiscipline::totalMarksDeductedFor((int) $userId);
          }
 
          // Calculate total sessions for faculty portal users (Faculty / Internal / Guest)
@@ -384,6 +397,9 @@ class UserController extends Controller
             'pending_id_approval1'    => ['count' => $todayApproval1IdCardRequests ?? 0,           'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => !$isSecurityRole && ($todayApproval1IdCardRequests ?? 0) > 0],
             'pending_dup_id_approval1'=> ['count' => $todayApproval1DuplicateIdCardRequests ?? 0,  'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => !$isSecurityRole && ($todayApproval1DuplicateIdCardRequests ?? 0) > 0],
             'ot_mdo_escort'           => ['count' => $MDO_count ?? 0,                              'link' => route('ot.mdo.escrot.exemption.view'),                         'visible' => !$isSecurityRole && $isStudentOT],
+            // Opens the OT's own read-only discipline memo list, which is where the
+            // memos behind this figure are itemised.
+            'discipline_marks_deducted' => ['count' => $disciplineMarksDeducted,                   'link' => route('memo.discipline.ot_index'),                             'visible' => !$isSecurityRole && $isStudentOT],
             'total_inhouse_faculty'   => ['count' => $total_internal_faculty,                      'link' => route('admin.dashboard.inhouse_faculty'),                      'visible' => !$isSecurityRole && !$isStudentOT],
             'session_details'         => ['count' => $totalSessions,                               'link' => route('admin.dashboard.sessions'),                             'visible' => !$isSecurityRole && ($isFacultyRole || $isSuperAdmin)],
             // Faculty-only cards. Both open a report that scopes itself to the
@@ -448,6 +464,7 @@ class UserController extends Controller
             'total_internal_faculty',
             'exemptionCount',
             'MDO_count',
+            'disciplineMarksDeducted',
             'todayTimetable',
             'totalSessions',
             'totalStudents',
