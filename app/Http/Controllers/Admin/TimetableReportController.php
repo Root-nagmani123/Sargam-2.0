@@ -63,12 +63,11 @@ class TimetableReportController extends Controller
     {
         $currentDate = now()->toDateString();
 
-        // Which course tab the page opens on. The dashboard's Total Sessions card
-        // links here with course_mode=all so the grid it lands on holds exactly the
-        // sessions the card counted; without it the page would open on Active and
-        // show a smaller number than the card.
+        // Which course tab the page opens on. Active unless the URL asks otherwise —
+        // the dashboard's Total Sessions card counts active-course sessions and links
+        // here without a mode, so it lands on the tab holding exactly those rows.
         $initialCourseMode = $request->get('course_mode');
-        if (! in_array($initialCourseMode, ['active', 'archive', 'all'], true)) {
+        if (! in_array($initialCourseMode, ['active', 'archive'], true)) {
             $initialCourseMode = 'active';
         }
 

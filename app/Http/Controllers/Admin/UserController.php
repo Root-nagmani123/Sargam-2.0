@@ -279,11 +279,13 @@ class UserController extends Controller
                      })
                      ->count();
 
-                 // "Total Sessions" card — every timetable session assigned to this
-                 // faculty. Counted through the same scope the Timetable Session
-                 // Report filters by, and the card links to that report's All Courses
-                 // view, so the page it opens holds exactly these rows.
-                 $facultyTotalSessions = FacultySessionScope::countFor($facultyPk, 'all');
+                 // "Total Sessions" card — this faculty's sessions on ACTIVE courses.
+                 // Counted through the same scope the Timetable Session Report filters
+                 // by, on the Active course mode the report opens in, so the card and
+                 // the page it opens hold the same rows. Archived-course sessions are
+                 // deliberately excluded: they are finished programmes, and pulling
+                 // them in made the report list courses that had already ended.
+                 $facultyTotalSessions = FacultySessionScope::countFor($facultyPk, 'active');
 
                  // "Total Feedback" card — submitted feedback for this faculty, on
                  // the Session Feedback Report's own query base.
@@ -404,7 +406,7 @@ class UserController extends Controller
             'session_details'         => ['count' => $totalSessions,                               'link' => route('admin.dashboard.sessions'),                             'visible' => !$isSecurityRole && ($isFacultyRole || $isSuperAdmin)],
             // Faculty-only cards. Both open a report that scopes itself to the
             // logged-in faculty server-side, so the count and the page agree.
-            'total_sessions'          => ['count' => $facultyTotalSessions,                        'link' => route('timetable-report.index', ['course_mode' => 'all']),                               'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            'total_sessions'          => ['count' => $facultyTotalSessions,                        'link' => route('timetable-report.index'),                               'visible' => !$isSecurityRole && $isFacultyPortalUser],
             'total_feedback'          => ['count' => $facultyTotalFeedback,                        'link' => route('faculty.session_feedback.details'),                     'visible' => !$isSecurityRole && $isFacultyPortalUser],
             'total_students'          => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
             'student_details'         => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],

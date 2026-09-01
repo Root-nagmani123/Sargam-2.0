@@ -28,6 +28,7 @@ use App\Exports\PendingFeedbackSummaryExport;
 use App\Exports\FeedbackDatabaseExport;
 use App\Services\FacultyFeedbackReportService;
 use App\Http\Controllers\Admin\Concerns\ScopesSessionFeedbackReports;
+use App\Services\Timetable\FacultySessionScope;
 use App\Support\FeedbackReportRouteRegistry;
 
 class FeedbackController extends Controller
@@ -3685,7 +3686,15 @@ class FeedbackController extends Controller
      */
     private function pendingStudentsPendingExpressionSql(): string
     {
-        return '(' . expected_feedback_count_sql('t') . ' - COALESCE(tf.submitted_count, 0))';
+        // A session with three Teaching faculty expects three feedbacks — but on the
+        // faculty portal only the viewer's own is in scope, so exactly one is
+        // expected. Leaving it at three counted colleagues' missing feedback as this
+        // faculty's, which is what made the totals read too high.
+        $expected = $this->facultyReportViewerPk() !== null
+            ? '1'
+            : expected_feedback_count_sql('t');
+
+        return '(' . $expected . ' - COALESCE(tf.submitted_count, 0))';
     }
 
     /**
@@ -3699,13 +3708,24 @@ class FeedbackController extends Controller
      */
     private function buildPendingStudentsGroupedBaseQuery(Request $request): \Illuminate\Database\Query\Builder
     {
-        // Count distinct faculty PKs submitted per student per session — prevents over-count from duplicate topic_feedback rows
-        $feedbackSub = DB::raw("(
-            SELECT timetable_pk, student_master_pk, COUNT(DISTINCT faculty_pk) as submitted_count
-            FROM topic_feedback
-            WHERE is_submitted = 1
-            GROUP BY timetable_pk, student_master_pk
-        ) as tf");
+        $viewerFacultyPk = $this->facultyReportViewerPk();
+
+        // Count distinct faculty PKs submitted per student per session — prevents over-count from duplicate topic_feedback rows.
+        // On the faculty portal only the viewer's own feedback counts, matching the
+        // single expected feedback in pendingStudentsPendingExpressionSql().
+        $feedbackSub = $viewerFacultyPk !== null
+            ? DB::raw("(
+                SELECT timetable_pk, student_master_pk, COUNT(DISTINCT faculty_pk) as submitted_count
+                FROM topic_feedback
+                WHERE is_submitted = 1 AND faculty_pk = " . (int) $viewerFacultyPk . "
+                GROUP BY timetable_pk, student_master_pk
+            ) as tf")
+            : DB::raw("(
+                SELECT timetable_pk, student_master_pk, COUNT(DISTINCT faculty_pk) as submitted_count
+                FROM topic_feedback
+                WHERE is_submitted = 1
+                GROUP BY timetable_pk, student_master_pk
+            ) as tf");
 
         // Deduplicated enrollment: one row per (course, student) regardless of duplicate smcm entries
         $smcmSub = DB::raw("(
@@ -3743,6 +3763,13 @@ class FeedbackController extends Controller
             ");
 
         $this->applyFeedbackReportCourseScope($query, 'c.pk');
+
+        // Course scope alone still spans every faculty teaching those courses, so the
+        // faculty portal narrows to the viewer's own sessions as well. Same predicate
+        // the Timetable Session Report uses, so both agree on what "my sessions" is.
+        if ($viewerFacultyPk !== null) {
+            FacultySessionScope::applyFaculty($query, $viewerFacultyPk, 't');
+        }
 
         if ($request->filled('course_pk')) {
             $this->assertFacultyReportProgramAccess((int) $request->course_pk);
@@ -3853,8 +3880,17 @@ class FeedbackController extends Controller
         // Resolve the feedback faculty list per session up-front, then batch-load names.
         $facultyByRowKey = [];
         $facultyNamePks = [];
+        $viewerFacultyPk = $this->facultyReportViewerPk();
+
         foreach ($detailRows as $idx => $row) {
             $facultyPks = $this->resolveSessionFeedbackFacultyPks($row->faculty_details, $row->faculty_master);
+
+            // A session's expanded rows list one line per Teaching faculty. On the
+            // faculty portal the other names are out of scope, so only the viewer's
+            // line remains — otherwise the detail contradicts the totals above it.
+            if ($viewerFacultyPk !== null) {
+                $facultyPks = array_values(array_filter($facultyPks, fn ($pk) => (int) $pk === $viewerFacultyPk));
+            }
             $facultyByRowKey[$idx] = $facultyPks;
             foreach ($facultyPks as $fpk) {
                 $facultyNamePks[$fpk] = true;

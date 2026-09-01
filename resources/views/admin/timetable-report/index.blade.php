@@ -24,13 +24,7 @@
                     Archived Courses
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link {{ ($initialCourseMode ?? 'active') === 'all' ? 'active' : '' }}" id="all-tab-btn" type="button" role="tab"
-                        aria-selected="{{ ($initialCourseMode ?? 'active') === 'all' ? 'true' : 'false' }}" data-mode="all">
-                    <i class="material-icons me-2" aria-hidden="true" style="font-size:18px;vertical-align:middle">list_alt</i>
-                    All Courses
-                </button>
-            </li>
+
         </ul>
     </div>
 
@@ -272,20 +266,8 @@ $(document).ready(function() {
             + '<option value="{{ $course->pk }}">{{ addslashes($course->course_name) }}</option>'
         @endforeach
         ;
-    // "All Courses" mode spans both lists, so its dropdown has to as well.
-    var allCourseOptions = '<option value="">-- All Courses --</option>'
-        @foreach($activeCourses as $course)
-            + '<option value="{{ $course->pk }}">{{ addslashes($course->course_name) }}</option>'
-        @endforeach
-        @foreach($archivedCourses as $course)
-            + '<option value="{{ $course->pk }}">{{ addslashes($course->course_name) }}</option>'
-        @endforeach
-        ;
-
     function courseOptionsFor(mode) {
-        if (mode === 'archive') return archivedCourseOptions;
-        if (mode === 'all')     return allCourseOptions;
-        return activeCourseOptions;
+        return mode === 'archive' ? archivedCourseOptions : activeCourseOptions;
     }
 
     // ── Active / Archive tab toggle ──
@@ -582,7 +564,7 @@ $(document).ready(function() {
 '</div>\n' +
 '\n' +
 '<div class="report-meta">\n' +
-'    <strong>Course Mode:</strong> ' + (currentMode === 'archive' ? 'Archived' : (currentMode === 'all' ? 'All' : 'Active')) + ' &nbsp;&nbsp;|&nbsp;&nbsp; ' +
+'    <strong>Course Mode:</strong> ' + (currentMode === 'archive' ? 'Archived' : 'Active') + ' &nbsp;&nbsp;|&nbsp;&nbsp; ' +
 '    <strong>Printed:</strong> ' + new Date().toLocaleDateString('en-IN') + ' ' + new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}) + '\n' +
 '</div>\n' +
 '\n' +
