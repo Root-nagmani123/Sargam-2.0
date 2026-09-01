@@ -195,11 +195,11 @@
     <div class="card shadow-sm mb-4">
         <div class="card-body p-4">
             <div class="row g-3 align-items-end">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="nameFilter" class="form-label fw-semibold">Search</label>
-                    <input type="text" class="form-control" id="nameFilter" placeholder="Name or OT code">
+                    <input type="text" class="form-control" id="nameFilter" placeholder="Search">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="courseFilter" class="form-label fw-semibold">Course Name</label>
                     <select class="form-select" id="courseFilter">
                         <option value="">All Courses</option>
@@ -230,9 +230,15 @@
                     <button type="button" class="btn btn-outline-secondary flex-grow-1" id="resetFilters">
                         <i class="bi bi-arrow-clockwise me-1"></i> Reset
                     </button>
-                    <button type="button" class="btn btn-primary flex-grow-1" id="downloadPdfBtn">
-                        <i class="bi bi-file-earmark-pdf me-1"></i> PDF
-                    </button>
+                    <div class="dropdown flex-grow-1">
+                        <button type="button" class="btn btn-primary dropdown-toggle w-100" id="whosWhoDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-download me-1"></i> Download
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-1 py-2" aria-labelledby="whosWhoDownloadBtn">
+                            <li><button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="downloadExcelBtn"><i class="bi bi-file-earmark-excel text-success"></i><span>Download Excel</span></button></li>
+                            <li><button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="downloadPdfBtn"><i class="bi bi-filetype-pdf text-danger"></i><span>Download PDF</span></button></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -700,6 +706,16 @@ document.addEventListener('DOMContentLoaded', function() {
         if (cadreFilter.value) params.append('cadre_id', cadreFilter.value);
         if (serviceFilter.value) params.append('service_id', serviceFilter.value);
         window.open('{{ route("admin.faculty.whos-who.download-pdf") }}?' + params.toString(), '_blank');
+    });
+
+    document.getElementById('downloadExcelBtn').addEventListener('click', function() {
+        const params = new URLSearchParams();
+        const name = nameFilter.value.trim();
+        if (name) params.append('name', name);
+        if (courseFilter.value) params.append('course_id', courseFilter.value);
+        if (cadreFilter.value) params.append('cadre_id', cadreFilter.value);
+        if (serviceFilter.value) params.append('service_id', serviceFilter.value);
+        window.open('{{ route("admin.faculty.whos-who.download-excel") }}?' + params.toString(), '_blank');
     });
 
     // Initial load - courses are already loaded from backend, just fetch students

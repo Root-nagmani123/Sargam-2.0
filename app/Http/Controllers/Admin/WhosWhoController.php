@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\WhosWhoExport;
 use App\Http\Controllers\Controller;
 use App\Models\CadreMaster;
 use App\Models\CourseMaster;
@@ -14,6 +15,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Maatwebsite\Excel\Excel as ExcelWriter;
+use Maatwebsite\Excel\Facades\Excel;
 
 class WhosWhoController extends Controller
 {
@@ -136,7 +139,7 @@ class WhosWhoController extends Controller
                 }
             }
 
-            $cacheKey = 'whos_who_students:v2:' . md5(json_encode([
+            $cacheKey = 'whos_who_students:v3:' . md5(json_encode([
                 'name' => $name,
                 'course_id' => $courseId,
                 'cadre_id' => $cadreId,
@@ -228,13 +231,24 @@ class WhosWhoController extends Controller
             $query->where('student_master_course__map.course_master_pk', $courseId);
         }
 
-        // Filter by name
+        // Universal search across name, rank, cadre, service, contact, email, room, district/city
         if (!empty($name)) {
             $query->whereHas('studentMaster', function ($q) use ($name) {
                 $q->where('display_name', 'like', '%' . $name . '%')
                     ->orWhere('first_name', 'like', '%' . $name . '%')
                     ->orWhere('last_name', 'like', '%' . $name . '%')
-                    ->orWhere('generated_OT_code', 'like', '%' . $name . '%');
+                    ->orWhere('generated_OT_code', 'like', '%' . $name . '%')
+                    ->orWhere('rank', 'like', '%' . $name . '%')
+                    ->orWhere('contact_no', 'like', '%' . $name . '%')
+                    ->orWhere('email', 'like', '%' . $name . '%')
+                    ->orWhere('room_no', 'like', '%' . $name . '%')
+                    ->orWhere('city', 'like', '%' . $name . '%')
+                    ->orWhereHas('cadre', function ($cadreQuery) use ($name) {
+                        $cadreQuery->where('cadre_name', 'like', '%' . $name . '%');
+                    })
+                    ->orWhereHas('service', function ($serviceQuery) use ($name) {
+                        $serviceQuery->where('service_name', 'like', '%' . $name . '%');
+                    });
             });
         }
 
@@ -651,6 +665,92 @@ class WhosWhoController extends Controller
             return redirect()
                 ->route('admin.faculty.whos-who')
                 ->with('error', 'Error generating PDF: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Download Who's Who directory as a formatted Excel workbook (respects current filters).
+     */
+    public function downloadExcel(Request $request)
+    {
+        try {
+            $exportRequest = $request->duplicate();
+            $exportRequest->merge([
+                'for_export' => true,
+                'sort_by' => 'roll_asc',
+            ]);
+
+            $payload = $this->buildStudentsResponsePayload($exportRequest);
+            $students = $payload['students'] ?? [];
+
+            if (empty($students)) {
+                return redirect()
+                    ->route('admin.faculty.whos-who')
+                    ->with('error', 'No students found for the selected filters.');
+            }
+
+            $courseId = $request->input('course_id', '');
+            $cadreId = $request->input('cadre_id', '');
+            $serviceId = $request->input('service_id', '');
+            $search = trim((string) $request->input('name', ''));
+
+            $courseLabel = $courseId
+                ? (optional(CourseMaster::find((int) $courseId))->course_name ?? 'Selected Course')
+                : '';
+            $cadreLabel = $cadreId
+                ? (optional(CadreMaster::find((int) $cadreId))->cadre_name ?? 'Selected Cadre')
+                : '';
+            $serviceLabel = $serviceId
+                ? (optional(ServiceMaster::find((int) $serviceId))->service_name ?? 'Selected Service')
+                : '';
+
+            $headings = [
+                'Code', 'Name', 'Rank', 'Cadre', 'Service', 'Course', 'Batch',
+                'Counsellor', 'House', 'Contact No', 'Email', 'Room No',
+                'Date of Birth', 'Domicile', 'District', 'Category', 'Address',
+            ];
+
+            $rows = array_map(function ($student) {
+                return [
+                    $student['code'] ?? 'N/A',
+                    $student['name'] ?? 'N/A',
+                    $student['rank'] ?? 'N/A',
+                    $student['cadre'] ?? 'N/A',
+                    $student['service'] ?? 'N/A',
+                    $student['courseName'] ?? 'N/A',
+                    $student['batch'] ?? 'N/A',
+                    $student['counsellor'] ?? 'N/A',
+                    $student['house'] ?? 'N/A',
+                    $student['contact'] ?? 'N/A',
+                    $student['email'] ?? 'N/A',
+                    $student['room'] ?? 'N/A',
+                    $student['dob'] ?? 'N/A',
+                    $student['domicile'] ?? 'N/A',
+                    $student['district'] ?? 'N/A',
+                    $student['category'] ?? 'N/A',
+                    $student['address'] ?? 'N/A',
+                ];
+            }, $students);
+
+            $filename = 'whos-who-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+
+            return Excel::download(
+                new WhosWhoExport(
+                    $headings,
+                    $rows,
+                    $courseLabel,
+                    $cadreLabel,
+                    $serviceLabel,
+                    $search,
+                    Carbon::now()->format('d M Y, h:i A'),
+                ),
+                $filename,
+                ExcelWriter::XLSX
+            );
+        } catch (\Exception $e) {
+            return redirect()
+                ->route('admin.faculty.whos-who')
+                ->with('error', 'Error generating Excel: ' . $e->getMessage());
         }
     }
 

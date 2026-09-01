@@ -29,3 +29,6 @@ docker-compose.yml
 /SECURITY_MODULE_IMPLEMENTATION.md
 /ISSUE_REPORT_NOTIFICATIONS.md
 .htaccess
+/docs/code-review-guidline-old
+/docs/code-review-guildline
+/review-history.md
