@@ -246,7 +246,6 @@ class WhosWhoController extends Controller
                     ->orWhere('rank', 'like', '%' . $name . '%')
                     ->orWhere('contact_no', 'like', '%' . $name . '%')
                     ->orWhere('email', 'like', '%' . $name . '%')
-                    ->orWhere('room_no', 'like', '%' . $name . '%')
                     ->orWhere('city', 'like', '%' . $name . '%')
                     ->orWhereHas('cadre', function ($cadreQuery) use ($name) {
                         $cadreQuery->where('cadre_name', 'like', '%' . $name . '%');
