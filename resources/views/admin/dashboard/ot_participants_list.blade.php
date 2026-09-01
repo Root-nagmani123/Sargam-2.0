@@ -148,6 +148,28 @@
                     </div>
                     @endif
 
+                    {{-- House Group — the course's House Group from Course Group
+                         Mapping ("Nanda Devi", "Stok Kangri"), matching the
+                         House Group column. --}}
+                    @if(($houseGroupOptions ?? collect())->isNotEmpty())
+                    <div class="sl-filter-item">
+                        <select id="houseGroupFilter" class="form-select sl-filter-select" aria-label="Filter by house group">
+                            <option value="">House Group</option>
+                            @foreach($houseGroupOptions as $hg)
+                                <option value="{{ $hg }}" {{ (string)($filters['house_group'] ?? '') === (string)$hg ? 'selected' : '' }}>{{ $hg }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- House Group Faculty — dependent on House Group, filled from
+                         FACULTY_BY_HOUSE_GROUP (gmap.facility_id of the house group). --}}
+                    <div class="sl-filter-item" id="otItemHouseFaculty" style="display:none;">
+                        <select id="houseFacultyFilter" class="form-select sl-filter-select" aria-label="Filter by house group faculty">
+                            <option value="">House Group Faculty</option>
+                        </select>
+                    </div>
+                    @endif
+
                     <div class="sl-filter-item">
                         <div class="sl-daterange-wrap">
                             <span class="sl-daterange-label">Time Period</span>
@@ -187,7 +209,9 @@
                                     <th>Name</th>
                                     <th>Email</th>
                                     <th>Cadre</th>
-                                    <th>House Name</th>
+                                    <th>Cadre Counsellor</th>
+                                    <th>House Group Faculty</th>
+                                    <th>House Group</th>
                                     <th>Total Duty (Count)</th>
                                     <th>Duty Type</th>
                                     <th>Total Medical Exemption Count</th>
@@ -258,9 +282,13 @@
         // { "<cadre>": [{pk, name}, ...] } — the faculty who counsel each cadre's
         // participants. Sent whole at page load so the dependent dropdown fills
         // without a round trip.
-        const COUNSELLORS_BY_CADRE = @json($counsellorsByCadre ?? new stdClass);
+        // Rebuilt from every DataTable response (`filterOptions`) so the dropdowns
+        // only ever offer values that still have rows under the current filters.
+        let COUNSELLORS_BY_CADRE = @json($counsellorsByCadre ?? new stdClass);
+        let FACULTY_BY_HOUSE_GROUP = @json($facultyByHouseGroup ?? new stdClass);
         const LOCKED_COLUMNS = [0, 1, 2]; // S.No, OT Code, Name — frozen & always visible
-        const DUTY_TYPE_COL = 7; // "Duty Type" — only meaningful for a single-day filter
+        // Index tracks the <thead> order above — bump it when a column is inserted before it.
+        const DUTY_TYPE_COL = 9; // "Duty Type" — only meaningful for a single-day filter
         let dt = null;
 
         // Duty Type is per-day, so it only makes sense when the Time Period is a single
@@ -288,6 +316,9 @@
                 cadre: $('#cadreFilter').val() || '',
                 // Only meaningful alongside a cadre — cleared with it below.
                 counsellor_faculty: $('#counsellorFacultyFilter').val() || '',
+                house_group: $('#houseGroupFilter').val() || '',
+                // Only meaningful alongside a house group — cleared with it.
+                house_faculty: $('#houseFacultyFilter').val() || '',
                 session: $('#sessionFilter').val() || '',
                 participant: $('#participantFilter').val() || '',
                 from_date: (filters.from_date || '').toString(),
@@ -345,6 +376,12 @@
                 type: 'GET',
                 data: function(d) {
                     Object.assign(d, getFilterState());
+                },
+                dataSrc: function(json) {
+                    // Re-scope the filter dropdowns to what this result set can
+                    // still reach, before the rows are handed to DataTables.
+                    applyFilterOptions(json.filterOptions);
+                    return json.data || [];
                 }
             },
             columns: [
@@ -353,6 +390,8 @@
                 { data: 'name', name: 'name' },
                 { data: 'email', name: 'email' },
                 { data: 'cadre', name: 'cadre' },
+                { data: 'counsellor', name: 'counsellor' },
+                { data: 'house_faculty', name: 'house_faculty' },
                 { data: 'house', name: 'house' },
                 { data: 'duty_count', name: 'duty_count', orderable: false, searchable: false },
                 { data: 'duty_type', name: 'duty_type', orderable: false, searchable: false },
@@ -386,26 +425,71 @@
         // mapped the control still shows, disabled, reading "No counsellor mapped"
         // — hiding it outright looked like the filter was missing. `keep` restores
         // a selection carried in the URL on first paint.
-        function refreshCounsellorOptions(keep) {
-            const cadre = $('#cadreFilter').val() || '';
-            const $item = $('#otItemCounsellor');
-            const $sel = $('#counsellorFacultyFilter');
-            const list = (cadre && COUNSELLORS_BY_CADRE[cadre]) ? COUNSELLORS_BY_CADRE[cadre] : [];
+        function refreshDependentFaculty(opts) {
+            const parent = $(opts.parent).val() || '';
+            const $item = $(opts.item);
+            const $sel = $(opts.select);
+            const list = (parent && opts.map[parent]) ? opts.map[parent] : [];
 
-            const previous = keep !== undefined ? String(keep) : String($sel.val() || '');
+            const previous = opts.keep !== undefined ? String(opts.keep) : String($sel.val() || '');
             $sel.empty().append($('<option>', {
                 value: '',
-                text: list.length ? 'Cadre Counsellor' : 'No counsellor mapped',
+                text: list.length ? opts.placeholder : opts.emptyText,
             }));
             list.forEach(function(f) {
                 $sel.append($('<option>', { value: String(f.pk), text: f.name }));
             });
-            // Keep the previous counsellor only if the new cadre still has them.
+            // Keep the previous faculty only if the new parent value still has them.
             const stillValid = previous !== '' && list.some(f => String(f.pk) === previous);
             $sel.val(stillValid ? previous : '');
             $sel.prop('disabled', list.length === 0);
-            $item.toggle(!!cadre);
+            $item.toggle(!!parent);
             return !stillValid && previous !== '';
+        }
+
+        function refreshCounsellorOptions(keep) {
+            return refreshDependentFaculty({
+                parent: '#cadreFilter', item: '#otItemCounsellor', select: '#counsellorFacultyFilter',
+                map: COUNSELLORS_BY_CADRE, placeholder: 'Cadre Counsellor',
+                emptyText: 'No counsellor mapped', keep: keep,
+            });
+        }
+
+        // House Group Faculty cascades off House Group, exactly as Cadre Counsellor
+        // cascades off Cadre.
+        function refreshHouseFacultyOptions(keep) {
+            return refreshDependentFaculty({
+                parent: '#houseGroupFilter', item: '#otItemHouseFaculty', select: '#houseFacultyFilter',
+                map: FACULTY_BY_HOUSE_GROUP, placeholder: 'House Group Faculty',
+                emptyText: 'No faculty mapped', keep: keep,
+            });
+        }
+
+        // Rebuild a plain <select> from a list of values, keeping the current
+        // selection when it survives. The selected value is always kept as an
+        // option even if the server no longer lists it, so the control never
+        // silently shows a different filter than the one in effect.
+        function rebuildValueSelect($sel, values, placeholder) {
+            if (!$sel.length) { return; }
+            const previous = String($sel.val() || '');
+            const list = (values || []).map(String);
+            if (previous !== '' && list.indexOf(previous) === -1) { list.push(previous); list.sort(); }
+
+            $sel.empty().append($('<option>', { value: '', text: placeholder }));
+            list.forEach(function(v) { $sel.append($('<option>', { value: v, text: v })); });
+            $sel.val(previous);
+        }
+
+        // Apply the re-scoped option lists that came back with the rows.
+        function applyFilterOptions(opts) {
+            if (!opts) { return; }
+            if (opts.counsellorsByCadre) { COUNSELLORS_BY_CADRE = opts.counsellorsByCadre; }
+            if (opts.facultyByHouseGroup) { FACULTY_BY_HOUSE_GROUP = opts.facultyByHouseGroup; }
+            rebuildValueSelect($('#cadreFilter'), opts.cadre, 'Cadre');
+            rebuildValueSelect($('#houseGroupFilter'), opts.houseGroup, 'House Group');
+            // The parents may have been rebuilt, so the dependent lists follow them.
+            refreshCounsellorOptions($('#counsellorFacultyFilter').val() || '');
+            refreshHouseFacultyOptions($('#houseFacultyFilter').val() || '');
         }
 
         $('#cadreFilter').on('change', function() {
@@ -415,7 +499,15 @@
             applyFilter({ cadre: this.value });
         });
         $('#counsellorFacultyFilter').on('change', function() { applyFilter({ counsellor_faculty: this.value }); });
+        $('#houseGroupFilter').on('change', function() {
+            // Dropping an out-of-house faculty must reach the server too, so refresh
+            // the options BEFORE reading the filter state.
+            refreshHouseFacultyOptions();
+            applyFilter({ house_group: this.value });
+        });
+        $('#houseFacultyFilter').on('change', function() { applyFilter({ house_faculty: this.value }); });
         refreshCounsellorOptions(filters.counsellor_faculty || '');
+        refreshHouseFacultyOptions(filters.house_faculty || '');
         $('#sessionFilter').on('change', function() { applyFilter({ session: this.value }); });
         $('#participantFilter').on('change', function() { applyFilter({ participant: this.value }); });
         $('#resetFilters').on('click', function() { window.location.href = baseUrl; });
@@ -450,7 +542,9 @@
             { title: 'Name', data: 'name', w: 12 },
             { title: 'Email', data: 'email', w: 14 },
             { title: 'Cadre', data: 'cadre', w: 8 },
-            { title: 'House Name', data: 'house', w: 8 },
+            { title: 'Cadre Counsellor', data: 'counsellor', w: 10 },
+            { title: 'House Group Faculty', data: 'house_faculty', w: 10 },
+            { title: 'House Group', data: 'house', w: 8 },
             { title: 'Total Duty (Count)', data: 'duty_count', w: 6 },
             { title: 'Duty Type', data: 'duty_type', w: 8 },
             { title: 'Total Medical Exemption Count', data: 'medical', w: 7 },
@@ -506,6 +600,11 @@
             if (cadre) { parts.push('Cadre: ' + cadre); }
             if ($('#counsellorFacultyFilter').val()) {
                 parts.push('Cadre Counsellor: ' + $('#counsellorFacultyFilter option:selected').text().trim());
+            }
+            const houseGroup = $('#houseGroupFilter').val();
+            if (houseGroup) { parts.push('House Group: ' + houseGroup); }
+            if ($('#houseFacultyFilter').val()) {
+                parts.push('House Group Faculty: ' + $('#houseFacultyFilter option:selected').text().trim());
             }
             const period = $('#timePeriodFilter').val().trim();
             if (period) { parts.push('Time Period: ' + period); }
@@ -602,7 +701,9 @@
         });
 
         /* ── Dynamic columns: show / hide ── */
-        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v1';
+        // Stored values are column INDEXES, so bump the version whenever the column
+        // order changes — v1 entries would otherwise hide the wrong columns.
+        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v3';
         function otGetHiddenCols() {
             try { const raw = localStorage.getItem(otColStorageKey); const arr = raw ? JSON.parse(raw) : []; return Array.isArray(arr) ? arr : []; }
             catch (e) { return []; }
