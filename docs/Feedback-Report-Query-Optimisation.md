@@ -204,23 +204,43 @@ unique tie-break.
 
 ## Latent bug found, preserved, and NOT fixed here
 
-**47 sessions never ask trainees for feedback, and no one is told.**
+**15 sessions collected no feedback at all, and no one was told. All of them closed in
+December 2025, so nothing can be recovered — see "Scale and current status" below before
+planning any fix.**
 
 `timetable.faculty_master` holds a JSON array of id *strings* (`["92"]`) for 606 rows, but a
-bare JSON *number* (`3`, `8`, `5`) for 47 rows — all with `feedback_checkbox = 1`. For those 47:
+bare JSON *number* (`3`, `8`, `5`) for 47 rows. For those 47:
 
 - `JSON_VALID('3')` is **true**, so the first branch of the predicate applies;
 - `JSON_CONTAINS(3, '"3"')` is **false**, because a JSON number never equals a JSON string;
 - the `NOT JSON_VALID(...)` fallback therefore never runs.
 
-So no faculty matches, the session never appears in any trainee's pending list, and feedback for
-it is silently never collected. This predates the optimisation.
+So no faculty matches, the session does not appear in a trainee's pending list, and feedback for
+it is not collected. This predates the optimisation.
+
+### Scale and current status
+
+Measured 2026-09-01. The three counts are different questions and are easy to conflate:
+
+| Measure | Count |
+| --- | --- |
+| Rows with a scalar (non-array) `faculty_master` | 47 |
+| …of those, with `feedback_checkbox = 1` (i.e. that ask for feedback) | 28 |
+| …of those, that collected **nothing at all** — the actual loss | **15** |
+
+The other 13 of the 28 did collect feedback (25 submitted rows) despite the broken predicate.
+Why they succeeded is **not established** — some other write path evidently reaches them. Do not
+assume the predicate is the only route to `topic_feedback`.
+
+**The window is closed.** Scalar rows cover sessions from 2025-12-03 to 2025-12-26 only; every
+row before and since holds a proper array (2006-02-04 .. 2026-07-10). Whatever wrote the scalar
+form stopped in December 2025. All 28 checkbox-on sessions have ended, and **none sits on a
+still-active course**, so no fix — data or code — recovers any feedback.
 
 The rewrite **reproduces this exactly** rather than fixing it, and
 `StudentFeedbackFacultyExpansionTest::test_scalar_json_faculty_master_still_matches_no_faculty`
-asserts it stays reproduced. Fixing it here would have silently started asking trainees for
-feedback on 47 more sessions as a side effect of a performance change — that is a product
-decision, not a refactor.
+asserts it stays reproduced. Fixing it here would have changed reported history as a side effect
+of a performance change — that is a product decision, not a refactor.
 
 **To fix it deliberately**, normalise the data rather than loosening the query:
 
@@ -234,8 +254,15 @@ UPDATE timetable SET faculty_master = JSON_ARRAY(CAST(faculty_master AS CHAR))
 WHERE JSON_VALID(faculty_master) AND JSON_TYPE(faculty_master) <> 'ARRAY';
 ```
 
-After that the 47 sessions start behaving like every other legacy session, and the test above
-will need its expectation updated to match the decision.
+After that the 47 rows behave like every other legacy session, and the test above will need its
+expectation updated to match the decision.
+
+**The reason to run this is not feedback recovery** — those sessions are closed. It is that seven
+other files read `timetable.faculty_master` with the same `JSON_CONTAINS` / `FIND_IN_SET` pattern
+(`DashboardController`, `UserController` at three sites, `TimetableReportController`,
+`CourseAttendanceNoticeMapController`, `CalendarController`, `FacultyFeedbackReportService`), and
+each of them silently under-reports these 47 sessions in historical views. One `UPDATE` corrects
+all of them; changing any single query corrects one.
 
 ---
 
