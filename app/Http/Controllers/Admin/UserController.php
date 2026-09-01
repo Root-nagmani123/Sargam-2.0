@@ -287,8 +287,9 @@ class UserController extends Controller
                  // them in made the report list courses that had already ended.
                  $facultyTotalSessions = FacultySessionScope::countFor($facultyPk, 'active');
 
-                 // "Total Feedback" card — submitted feedback for this faculty, on
-                 // the Session Feedback Report's own query base.
+                 // "Total Feedback" card — this faculty's submitted feedback on active
+                 // courses, counted the way the /faculty_view report the card opens
+                 // counts it, so the figure is verifiable on the page it leads to.
                  $facultyTotalFeedback = app(FacultyFeedbackReportService::class)
                      ->getTotalFeedbackCount($facultyPk);
 
@@ -407,7 +408,7 @@ class UserController extends Controller
             // Faculty-only cards. Both open a report that scopes itself to the
             // logged-in faculty server-side, so the count and the page agree.
             'total_sessions'          => ['count' => $facultyTotalSessions,                        'link' => route('timetable-report.index'),                               'visible' => !$isSecurityRole && $isFacultyPortalUser],
-            'total_feedback'          => ['count' => $facultyTotalFeedback,                        'link' => route('faculty.session_feedback.details'),                     'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            'total_feedback'          => ['count' => $facultyTotalFeedback,                        'link' => route('admin.feedback.faculty_view'),                     'visible' => !$isSecurityRole && $isFacultyPortalUser],
             'total_students'          => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
             'student_details'         => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
             'my_course_participant'   => ['count' => StudentMasterCourseMap::query()->when(!empty($myCourseIds), fn($q) => $q->whereIn('course_master_pk', $myCourseIds))->count(), 'link' => route('my.course.participant'),                                'visible' => true],

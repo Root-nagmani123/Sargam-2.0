@@ -1512,6 +1512,28 @@ class FeedbackController extends Controller
         ];
     }
 
+    /**
+     * Confine a /faculty_view query to the logged-in faculty's own feedback.
+     *
+     * That page is the admin feedback report and is NOT behind
+     * EnsureFacultyPortalUser, so the request attributes the session-feedback
+     * reports rely on are absent here; the lock is resolved from the session the
+     * same way the Timetable Session Report does it. Super Admin is not confined,
+     * so the admin view is unchanged.
+     *
+     * Applied on top of the faculty_name filter rather than instead of it: that
+     * filter is a free-text LIKE the viewer can set to any colleague's name, so it
+     * cannot serve as the boundary.
+     */
+    private function applyFacultyViewOwnerScope($query): void
+    {
+        $lockedFacultyPk = FacultySessionScope::lockedFacultyPk();
+
+        if ($lockedFacultyPk !== null) {
+            $query->where('tf.faculty_pk', $lockedFacultyPk);
+        }
+    }
+
     public function facultyView(Request $request)
     {
         // Handle POST requests (form submissions)
@@ -1644,6 +1666,10 @@ class FeedbackController extends Controller
         if ($facultyName && $facultyName !== 'All Faculty') {
             $query->where('fm.full_name', 'LIKE', '%' . $facultyName . '%');
         }
+
+        // ...then confined to the viewer, if they are a faculty. The name filter
+        // above is a free-text LIKE, so it is not a boundary — this is.
+        $this->applyFacultyViewOwnerScope($query);
 
         if (!empty($facultyType)) {
             $query->whereIn('tt.faculty_type', $facultyType);
@@ -1913,6 +1939,11 @@ class FeedbackController extends Controller
             ->where('fm.full_name', '!=', '')
             ->groupBy('fm.full_name', 'tt.faculty_type');
 
+        // A faculty viewer's autocomplete offers only their own name — otherwise the
+        // control lists every colleague who has feedback, which is a disclosure in
+        // itself even though the report behind it is scoped.
+        $this->applyFacultyViewOwnerScope($query);
+
         // Only apply type filter when specific types are requested
         if (!empty($validTypes)) {
             $query->whereIn('tt.faculty_type', $validTypes);
@@ -2019,6 +2050,10 @@ class FeedbackController extends Controller
         if ($facultyName && $facultyName !== 'All Faculty') {
             $query->where('fm.full_name', 'LIKE', '%' . $facultyName . '%');
         }
+
+        // ...then confined to the viewer, if they are a faculty. The name filter
+        // above is a free-text LIKE, so it is not a boundary — this is.
+        $this->applyFacultyViewOwnerScope($query);
 
         if (!empty($facultyType)) {
             $query->whereIn('tt.faculty_type', $facultyType);
@@ -2305,6 +2340,10 @@ class FeedbackController extends Controller
             if ($facultyName && $facultyName !== 'All Faculty') {
                 $query->where('fm.full_name', 'LIKE', '%' . $facultyName . '%');
             }
+
+            // ...then confined to the viewer, if they are a faculty. The name filter
+            // above is a free-text LIKE, so it is not a boundary — this is.
+            $this->applyFacultyViewOwnerScope($query);
             if (!empty($facultyType)) {
                 $query->whereIn('tt.faculty_type', $facultyType);
             }

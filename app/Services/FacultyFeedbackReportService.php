@@ -61,27 +61,30 @@ class FacultyFeedbackReportService
     }
 
     /**
-     * How many submitted feedbacks this faculty has received — the dashboard's
-     * "Total Feedback" card.
+     * How many submitted feedbacks this faculty has received on ACTIVE courses —
+     * the dashboard's "Total Feedback" card.
      *
-     * Same base as {@see getAllProcessedItems()}: submitted only, this faculty
-     * only, and confined to the courses they may see, so the card cannot show a
-     * number the report itself would never reach.
+     * Mirrors the /faculty_view report the card opens, which is where the number
+     * has to be verifiable: submitted only, this faculty only, and the report's
+     * default "current" course mode (active and not yet ended). A feedback
+     * qualifies if it carries a rating OR a remark, because remark-only sessions
+     * store no ratings by design — requiring both would silently drop them, the
+     * same rule facultyView() applies.
      */
     public function getTotalFeedbackCount(int $facultyPk): int
     {
-        $accessibleIds = $this->getAccessibleCourseIds($facultyPk);
-
-        if ($accessibleIds->isEmpty()) {
-            return 0;
-        }
-
         return DB::table('topic_feedback as tf')
             ->join('timetable as tt', 'tf.timetable_pk', '=', 'tt.pk')
             ->join('course_master as cm', 'tt.course_master_pk', '=', 'cm.pk')
             ->where('tf.is_submitted', 1)
             ->where('tf.faculty_pk', $facultyPk)
-            ->whereIn('cm.pk', $accessibleIds)
+            ->where('cm.active_inactive', 1)
+            ->whereDate('cm.end_date', '>=', now()->toDateString())
+            ->where(function ($q) {
+                $q->whereNotNull('tf.content')
+                    ->orWhereNotNull('tf.presentation')
+                    ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
+            })
             ->count();
     }
 
