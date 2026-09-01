@@ -2,20 +2,31 @@
 
 namespace App\Support;
 
-use App\Models\CourseMaster;
-
 /**
  * The Active / Archived pills shared by the Peer Evaluation admin grids.
  *
- * "Archived" means here exactly what it means on Course Master, so the rule is
- * CourseMaster's own scopeActiveRunning() / scopeArchived() and nothing else.
- * Those two are written as exact complements (2 + 143 = 145 today), so a course
- * lands in exactly one pill and none can fall through a gap.
+ * "Active" here means the course is RUNNING RIGHT NOW - enabled, already started
+ * and not yet finished. A course whose start date is still in the future is
+ * upcoming, not active, and must not appear under the Active pill or in the
+ * Filter dropdowns that follow it.
  *
- * One class because there are now two consumers (Manage Events, Manage Reflection
- * Fields) and three shapes of query, and they must not drift:
+ * That is deliberately stricter than CourseMaster::scopeActiveRunning(), which
+ * only checks `active_inactive = 1 AND end_date >= today` and so counts upcoming
+ * courses as active. The ongoing-vs-upcoming split written here is the same one
+ * the rest of the app uses (DashboardController, MemoNoticeController): ongoing
+ * is `start_year <= today`, upcoming is `start_year > today`.
  *
- *   forCourses()  - the query IS over course_master        (direct scopes)
+ * The two pills are written as exact complements - archive() is the literal
+ * De Morgan negation of active() - so every course lands in exactly one of them.
+ * Upcoming courses therefore fall under Archived rather than into a gap; if they
+ * fell into neither, an event created ahead of time on a not-yet-started course
+ * would be invisible on both tabs and unreachable from the grid.
+ *
+ * One class because there are four consumers (Manage Events, Manage Reflection
+ * Fields, Evaluation Reports, Manage Evaluation Columns) and two shapes of query,
+ * and they must not drift:
+ *
+ *   forCourses()  - the query IS over course_master        (direct conditions)
  *   forRelated()  - the query is over a peer_* table       (correlated EXISTS)
  *
  * ⚠️ These are NOT interchangeable. Inside a subquery whose FROM is also
@@ -40,8 +51,8 @@ final class PeerCourseStatusScope
     public static function forCourses($query, $status)
     {
         return self::normalise($status) === self::ARCHIVE
-            ? $query->archived()
-            : $query->activeRunning();
+            ? self::archive($query)
+            : self::active($query);
     }
 
     /**
@@ -63,12 +74,10 @@ final class PeerCourseStatusScope
                     ->from('course_master')
                     ->whereColumn('course_master.pk', $courseIdColumn);
 
-                $model = new CourseMaster();
-
                 if ($archived) {
-                    $model->scopeArchived($sub);
+                    self::archive($sub);
                 } else {
-                    $model->scopeActiveRunning($sub);
+                    self::active($sub);
                 }
             });
         };
@@ -80,6 +89,43 @@ final class PeerCourseStatusScope
         return $query->where(function ($outer) use ($exists, $courseIdColumn) {
             $exists($outer);
             $outer->orWhereNull($courseIdColumn);
+        });
+    }
+
+    /**
+     * Enabled AND already started AND not yet finished.
+     *
+     * Columns are qualified because forRelated() applies this inside a subquery
+     * that sits under a peer_* outer query; unqualified names there would be
+     * resolved against whichever table happens to own them.
+     */
+    private static function active($query)
+    {
+        $today = now()->toDateString();
+
+        return $query->where('course_master.active_inactive', 1)
+            ->whereNotNull('course_master.start_year')
+            ->where('course_master.start_year', '<=', $today)
+            ->whereNotNull('course_master.end_date')
+            ->where('course_master.end_date', '>=', $today);
+    }
+
+    /**
+     * The exact complement of active(): disabled courses, upcoming ones, finished
+     * ones, and anything missing a date. Written as the negation rather than as
+     * its own condition so the two can never overlap or leave a course in neither.
+     */
+    private static function archive($query)
+    {
+        $today = now()->toDateString();
+
+        return $query->where(function ($q) use ($today) {
+            $q->where('course_master.active_inactive', '!=', 1)
+                ->orWhereNull('course_master.active_inactive')
+                ->orWhereNull('course_master.start_year')
+                ->orWhere('course_master.start_year', '>', $today)
+                ->orWhereNull('course_master.end_date')
+                ->orWhere('course_master.end_date', '<', $today);
         });
     }
 }
