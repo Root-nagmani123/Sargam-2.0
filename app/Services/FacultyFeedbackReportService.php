@@ -61,15 +61,24 @@ class FacultyFeedbackReportService
     }
 
     /**
-     * How many submitted feedbacks this faculty has received on ACTIVE courses —
-     * the dashboard's "Total Feedback" card.
+     * How many Officer Trainees have given this faculty feedback on ACTIVE courses
+     * — the dashboard's "Total Feedback" card.
      *
-     * Mirrors the /faculty_view report the card opens, which is where the number
-     * has to be verifiable: submitted only, this faculty only, and the report's
-     * default "current" course mode (active and not yet ended). A feedback
-     * qualifies if it carries a rating OR a remark, because remark-only sessions
-     * store no ratings by design — requiring both would silently drop them, the
-     * same rule facultyView() applies.
+     * DISTINCT student, deliberately: the card answers "how many gave feedback",
+     * one number and nothing else. It is not the rating tally the report prints
+     * (Excellent / Very Good / Good per session), and not the report's record
+     * count either — one record there is one session, and a single session can
+     * carry dozens of OTs' feedback.
+     *
+     * An OT who rated several of this faculty's sessions is still one OT. Counting
+     * rows instead would answer "how many feedbacks", which is a different
+     * question and reads high next to the roster.
+     *
+     * Scope matches the /faculty_view report the card opens: submitted only, this
+     * faculty only, and its default "current" course mode (active and not yet
+     * ended). A feedback qualifies if it carries a rating OR a remark, because
+     * remark-only sessions store no ratings by design — requiring both would
+     * silently drop them, the same rule facultyView() applies.
      */
     public function getTotalFeedbackCount(int $facultyPk): int
     {
@@ -85,7 +94,8 @@ class FacultyFeedbackReportService
                     ->orWhereNotNull('tf.presentation')
                     ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
             })
-            ->count();
+            ->distinct()
+            ->count('tf.student_master_pk');
     }
 
     public function getPrograms(int $facultyPk, string $courseType = 'current'): Collection
