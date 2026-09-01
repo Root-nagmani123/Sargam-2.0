@@ -3030,6 +3030,19 @@ class UserController extends Controller
         $present = collect();
         $absent = collect();
 
+        // Which rows a duty/exemption covers. Resolved for the whole set up front —
+        // two queries — so a session the OT was on duty for lands in Present rather
+        // than being counted as an absence against them, the same way the badge and
+        // AttendanceController::save treat it.
+        $dutyFlags = $this->dashboardDutyExemptionFlags(collect($rows)->values());
+        $dutyCovered = [];
+        foreach (collect($rows)->values() as $i => $row) {
+            if ($this->dashboardRowIsDutyPresent((int) ($row->attendance_status ?? 0), $dutyFlags[$i] ?? [])) {
+                $dutyCovered[spl_object_id($row)] = true;
+            }
+        }
+        $isAbsentRow = fn ($m) => (int) $m->attendance_status === 3 && ! isset($dutyCovered[spl_object_id($m)]);
+
         foreach ($rows->groupBy('student_master_pk') as $spk => $group) {
             if (empty($spk)) {
                 continue;
@@ -3045,16 +3058,17 @@ class UserController extends Controller
                 continue;
             }
 
-            // Present bucket: any non-absent marked session.
-            $presentRow = $marked->first(fn ($m) => (int) $m->attendance_status !== 3);
+            // Present bucket: any marked session that is not an absence — a session
+            // covered by a duty/exemption counts here even if it was saved Absent.
+            $presentRow = $marked->first(fn ($m) => ! $isAbsentRow($m));
             if ($presentRow) {
                 $presentRow->attendance_present = true;
                 $present->push($presentRow);
             }
 
-            // Absent bucket: any absent (status 3) marked session. Use that session
-            // as the row so its date drives the Absent Reason lookup.
-            $absentRow = $marked->first(fn ($m) => (int) $m->attendance_status === 3);
+            // Absent bucket: any genuine absence. Use that session as the row so its
+            // date drives the Absent Reason lookup.
+            $absentRow = $marked->first($isAbsentRow);
             if ($absentRow) {
                 $absentRow->attendance_present = false;
                 $absent->push($absentRow);
@@ -3245,6 +3259,7 @@ class UserController extends Controller
             $showEscort = $statusCode === 5 || $flags['escort'];
             $showMedical = $statusCode === 6 || $flags['medical'];
             $showOther = $statusCode === 7 || $flags['other'];
+            $dutyPresent = $this->dashboardRowIsDutyPresent($statusCode, $flags);
 
             $data[] = [
                 's_no' => $start + $idx + 1,
@@ -3273,8 +3288,14 @@ class UserController extends Controller
                 // Attendance status; for an absent student the reason (Stationed
                 // Leave / PT Exemption / Medical Exemption, when one covers the day)
                 // is shown right below the "Absent" badge so it's visible in the list.
-                'status' => (function () use ($studentMap, $statusCode, $isAbsent, $absentReasons, $idx) {
+                'status' => (function () use ($studentMap, $statusCode, $isAbsent, $absentReasons, $idx, $dutyPresent) {
                     $present = ($studentMap->attendance_present ?? true);
+                    // A duty/exemption row is Present whatever the saved code says,
+                    // and outranks the Late badge below: the MDO column on this very
+                    // row already says the OT was on duty.
+                    if ($dutyPresent) {
+                        return '<span class="sl-status-badge sl-status-present">Present</span>';
+                    }
                     // "Late" (status 2) is an attended-but-late state — the Present
                     // bucket already keeps it (status !== 3), so it appears in both
                     // the All and Present views. Show a distinct amber "Late" badge
@@ -3556,6 +3577,31 @@ class UserController extends Controller
     }
 
     /**
+     * Whether a duty or exemption covers this row's session, which makes the OT
+     * Present however the attendance row was saved.
+     *
+     * An OT on MDO / Escort / Other duty or a medical exemption is away on Academy
+     * work, not missing, and AttendanceController::save writes Present for exactly
+     * these. The saved row can still hold a Late/Absent marked before the duty was
+     * assigned, so the listing resolves it rather than trusting the code — which is
+     * why an MDO row here used to read "Late" while the MDO column beside it said
+     * "MDO".
+     *
+     * $flags come from dashboardDutyExemptionFlags(), the same source that fills the
+     * MDO / Escort / Other Exemptions columns, so a row cannot contradict itself.
+     *
+     * @param array{mdo: bool, escort: bool, medical: bool, other: bool} $flags
+     */
+    private function dashboardRowIsDutyPresent(int $statusCode, array $flags): bool
+    {
+        return in_array($statusCode, [4, 5, 6, 7], true)
+            || ! empty($flags['mdo'])
+            || ! empty($flags['escort'])
+            || ! empty($flags['medical'])
+            || ! empty($flags['other']);
+    }
+
+    /**
      * Human label for a session row's attendance status code
      * (1 Present, 2 Late, 3 Absent, 4 MDO, 5 Escort, 6 Medical Exempt,
      * 7 Other Exempt; 0/blank falls back to the present/absent flag).
@@ -3700,7 +3746,10 @@ class UserController extends Controller
             // Attendance status text: Present / Late / Absent, with the leave-based
             // reason (PT Exemption / Stationed Leave) appended for an absent row —
             // matching the on-screen badge (Late = status 2 attended-but-late).
-            $statusText = $isAbsent ? 'Absent' : ($statusCode === 2 ? 'Late' : 'Present');
+            $flagsForStatus = $dutyExemptionFlags[$index] ?? ['mdo' => false, 'escort' => false, 'medical' => false, 'other' => false];
+            $statusText = $this->dashboardRowIsDutyPresent($statusCode, $flagsForStatus)
+                ? 'Present'
+                : ($isAbsent ? 'Absent' : ($statusCode === 2 ? 'Late' : 'Present'));
             if ($isAbsent) {
                 $reason = $absentReasons[$index] ?? '-';
                 if ($reason !== '-') {
