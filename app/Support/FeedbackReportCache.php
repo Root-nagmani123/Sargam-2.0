@@ -9,9 +9,23 @@ use Throwable;
 /**
  * Cache for the read-mostly lookups behind the session-feedback reports.
  *
- * Backed by whichever store {@see RedisBackedCache} resolves — Redis in any environment
- * that sets REDIS_BACKED_CACHE_STORE=redis, falling back to cache.default otherwise, so
- * this works unchanged on a box with no Redis installed.
+ * Backed by whichever store {@see RedisBackedCache} resolves.
+ *
+ * DEPLOYMENT REQUIREMENT: this environment must be able to reach the store the chain resolves
+ * to. With neither REDIS_BACKED_CACHE_STORE nor APP_REDIS_CACHE_STORE set, that name is "redis" —
+ * and because "redis" is always present in config/cache.php, the cache.default fallback in
+ * RedisBackedCache::repositoryForStore() is NOT reached. Two configurations satisfy this:
+ *
+ *   - CACHE_DRIVER=redis with a reachable Redis — the deployed production setting. The resolved
+ *     store and the fallback are then the same store, so the unreachable fallback is moot.
+ *   - REDIS_BACKED_CACHE_STORE set explicitly to a reachable store (e.g. `file`) — needed on any
+ *     box where Redis is absent, such as a developer machine or a CI worker with no .env.
+ *
+ * Where neither holds, every remember()/bust()/generation() call throws inside the store, is
+ * report()ed, and falls through to computing: no caching at all, and one reported exception per
+ * call on hot paths including the per-keystroke typeahead. Nothing serves wrong data, but
+ * nothing is cached either. The same chain backs the Estate, Mess and DataTable caches, so this
+ * is not specific to these reports.
  *
  * Invalidation is by generation counter rather than by deleting keys. Entries are namespaced
  * with the current generation; submitting feedback bumps it, so every existing entry becomes

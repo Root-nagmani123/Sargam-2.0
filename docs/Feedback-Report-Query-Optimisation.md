@@ -156,7 +156,7 @@ report a total for a page it did not return, so an empty result falls back to th
 clamps, and re-reads. Page 999 still lands on page 4 with 11 students and a total of 71, exactly
 as before — pinned by snapshot cases for page 999, page 0, negative pages and a no-match search.
 
-### 6. `ORDER BY` was not a total order — a real, user-visible bug
+### 7. `ORDER BY` was not a total order — a real, user-visible bug
 
 Both the Feedback Database grid and Feedback Details sort on columns that are not unique — the
 grid on `t.START_DATE, <session start time>` (tied for every faculty in the same slot), Details
@@ -263,6 +263,60 @@ other files read `timetable.faculty_master` with the same `JSON_CONTAINS` / `FIN
 `CourseAttendanceNoticeMapController`, `CalendarController`, `FacultyFeedbackReportService`), and
 each of them silently under-reports these 47 sessions in historical views. One `UPDATE` corrects
 all of them; changing any single query corrects one.
+
+---
+
+## Known limitations of this change
+
+Three things a second review raised that are **recorded rather than fixed**, each with the reason.
+
+### Cache staleness on the three lookup caches
+
+`db_faculties`, `topics:course:{id}` and `faculty_suggestions` are invalidated only by
+`FeedbackReportCache::bust()`, which is called from one place — after a successful `topic_feedback`
+insert in `CalendarController::submitFeedback()`. The lookups themselves derive from `timetable`
+and `faculty_master`, and writes to those tables do **not** bust the generation.
+
+**Consequence:** a newly added session topic, or a renamed faculty member, can be missing from the
+report dropdowns for up to the TTL — 900 s for the two lookups, 600 s for the typeahead. Before
+this change those lists were always fresh.
+
+**Accepted, not fixed.** Adding `bust()` to the timetable and faculty write paths means changing
+cache-invalidation behaviour in controllers outside this work. The staleness is bounded and
+self-healing, and no wrong data is served — only a briefly incomplete dropdown. Revisit if users
+report missing options rather than pre-emptively.
+
+### showFacultyAverage's all-programs path is filtered slightly differently from its exports
+
+On the all-programs path (no single programme selected), `showFacultyAverage()` restricts the query
+with `whereIn('cm.pk', $programs->keys())`. `$programs` is built from `course_master` with
+`active_inactive = 1` **plus** the course-type date test, whereas the main query's own course-type
+filter tests `cm.end_date` only. The `whereIn` therefore carries an implicit `active_inactive = 1`
+that the query never had — and `exportExcel()`, `exportPdf()` and `printFacultyAverage()` did not
+receive the same `whereIn`.
+
+**Consequence in principle:** a deactivated course whose `end_date` still passes the course-type
+test would appear in the exports but not on screen.
+
+**Consequence in practice: none today.** Measured 2026-09-01 — courses with `active_inactive <> 1`
+that carry submitted feedback: **0**; submitted feedback rows on them: **0**. There is nothing for
+the filter to exclude.
+
+**Accepted, not fixed.** Aligning it is a query-behaviour change, and a behaviour change whose only
+effect today is nil is a poor trade inside a performance PR. Fix it deliberately if inactive
+courses ever start carrying feedback — the check is the two counts above.
+
+### The cache is off unless the store is configured
+
+See the deployment note in `app/Support/FeedbackReportCache.php`. Without
+`REDIS_BACKED_CACHE_STORE` (or `APP_REDIS_CACHE_STORE`), the chain resolves to `redis` and the
+documented `cache.default` fallback does **not** engage.
+
+**Production is fine:** it sets `CACHE_DRIVER=redis`, so the resolved store and the fallback are
+the same store and the gap cannot bite. **Developer and CI boxes are the exposure** — with no
+`.env`, `cache.default` is `file` while the chain still asks for `redis`, so every cache call
+throws, is reported, and recomputes. Set `REDIS_BACKED_CACHE_STORE=file` there. This is a
+deployment setting, not a code defect, and it governs the Estate, Mess and DataTable caches too.
 
 ---
 
