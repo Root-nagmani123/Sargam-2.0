@@ -10,7 +10,8 @@
      plain <select> stops being scannable fast. Only the CSS is per-page: the
      library's JS is global (admin/layouts/footer.blade.php). --}}
 <link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
-<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
+<link rel="stylesheet"
+      href="{{ asset('css/select2-theme.css') }}?v={{ @filemtime(public_path('css/select2-theme.css')) ?: time() }}">
 @endpush
 
 @section('setup_content')

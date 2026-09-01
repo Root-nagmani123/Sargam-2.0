@@ -49,7 +49,14 @@ final class PeerEvaluationForm
     {
         return $query
             ->where(function ($q) use ($group) {
-                $q->where('group_id', $group->id)->orWhereNull('group_id');
+                // Written the same way as the two below rather than as a plain
+                // where(): the Manage Reflection Fields preview can be opened on a
+                // scope with no group at all, and `group_id = NULL` is never true
+                // in SQL, so the branch has to be left out instead of compared.
+                $q->whereNull('group_id');
+                if (filled($group->id)) {
+                    $q->orWhere('group_id', $group->id);
+                }
             })
             ->where(function ($q) use ($group) {
                 $q->whereNull('event_id');

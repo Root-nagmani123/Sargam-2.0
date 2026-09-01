@@ -116,12 +116,38 @@ class PeerEvaluationColumnController extends Controller
         return $query->orderBy('course_name')->pluck('course_name', 'pk');
     }
 
+    /**
+     * Every course the user may touch, each tagged active or archive.
+     *
+     * The modal is deliberately NOT filtered by the Active / Archived pill - a
+     * column can legitimately be added to a course that has finished - so without
+     * the tag travelling alongside the name there is nothing in the dropdown to
+     * tell the two apart.
+     *
+     * The CASE is CourseMaster::scopeActiveRunning() written per row: doing it in
+     * SQL keeps the two definitions identical and tags every course in one pass,
+     * where running both scopes would be two queries and could drift.
+     */
     private function allCourseOptions()
     {
         $query = CourseMaster::query();
         $this->applyRoleScope($query);
 
-        return $query->orderBy('course_name')->pluck('course_name', 'pk');
+        return $query
+            ->selectRaw(
+                "course_master.pk, course_master.course_name,
+                 CASE WHEN course_master.active_inactive = 1
+                           AND course_master.end_date >= ?
+                      THEN ? ELSE ? END AS peer_status",
+                [now()->toDateString(), PeerCourseStatusScope::ACTIVE, PeerCourseStatusScope::ARCHIVE]
+            )
+            ->orderBy('course_name')
+            ->get()
+            ->map(fn ($course) => [
+                'id' => (string) $course->pk,
+                'name' => $course->course_name,
+                'status' => $course->peer_status,
+            ]);
     }
 
     /**
@@ -168,10 +194,31 @@ class PeerEvaluationColumnController extends Controller
             ->map(fn ($name, $id) => ['id' => (string) $id, 'name' => $name])
             ->values();
 
+        // Which evaluation type each group of this event has already committed to,
+        // so the modal can grey out the other one instead of letting the admin fill
+        // the form and be refused on submit. assertSingleEvaluationType() is still
+        // the authority - this is only the hint.
+        $usedTypes = [];
+
+        if (filled($eventId)) {
+            $usedTypes = DB::table('peer_columns')
+                ->join('peer_groups', 'peer_groups.id', '=', 'peer_columns.group_id')
+                ->where('peer_groups.event_id', $eventId)
+                ->whereNotNull('peer_groups.group_map_pk')
+                ->pluck('peer_columns.evaluation_type', 'peer_groups.group_map_pk')
+                ->toArray();
+        }
+
         $payload = [
             'success' => true,
             'events' => $shape($events->orderBy('event_name')->pluck('event_name', 'id')),
-            'groups' => $shape(PeerGroupSource::options($groupCourseId)->pluck('label', 'pk')),
+            'groups' => PeerGroupSource::options($groupCourseId)
+                ->map(fn ($group) => [
+                    'id' => (string) $group->pk,
+                    'name' => $group->label,
+                    'used_type' => $usedTypes[$group->pk] ?? null,
+                ])
+                ->values(),
         ];
 
         if ($status !== null) {
@@ -208,22 +255,34 @@ class PeerEvaluationColumnController extends Controller
             'group_ids.*' => ['integer', Rule::exists(PeerGroupSource::TABLE, 'pk')],
             'event_id' => ['required', 'integer', Rule::exists('peer_events', 'id')],
             'evaluation_type' => ['required', Rule::in(array_keys(PeerColumn::TYPES))],
+            // Group-level, and only meaningful for Distribute Marks: it is the one
+            // pool an OT shares out across the group, not a per-column cap.
+            'buffer_marks' => [
+                'required_if:evaluation_type,' . PeerColumn::TYPE_DISTRIBUTE_MARKS,
+                'nullable', 'numeric', 'min:0.01', 'max:99999.99',
+            ],
             'columns' => ['required', 'array', 'min:1'],
             'columns.*.column_name' => ['required', 'string', 'max:255'],
             'columns.*.max_marks' => ['required', 'numeric', 'min:0.01', 'max:9999.99'],
-            'columns.*.has_remarks' => ['required', 'boolean'],
+            // One answer for the whole submit, not one per column. The OT form puts
+            // a single remark against the evaluated person rather than one per
+            // criterion, so asking per column offered a choice that could not be
+            // honoured.
+            'has_remarks' => ['required', 'boolean'],
         ], [
             'group_ids.required' => 'Please pick at least one group.',
             'group_ids.*.exists' => 'One of the selected groups no longer exists.',
             'event_id.required' => 'Please pick an event.',
+            'buffer_marks.required_if' => 'Please set the Buffer Marks for OTs.',
         ], [
             'group_ids' => 'Group Name',
             'group_ids.*' => 'Group Name',
             'event_id' => 'Event Name',
             'evaluation_type' => 'Evaluation Type',
+            'buffer_marks' => 'Buffer Marks for OTs',
             'columns.*.column_name' => 'Column Name',
             'columns.*.max_marks' => 'Max Marks',
-            'columns.*.has_remarks' => 'Remarks',
+            'has_remarks' => 'Remarks',
         ]);
 
         // The same group twice would write every column twice and then trip the
@@ -252,6 +311,18 @@ class PeerEvaluationColumnController extends Controller
 
                 foreach ($groups as $group) {
                     $this->assertNamesAreUnique($group, $validated['columns']);
+                    $this->assertSingleEvaluationType($group, $validated['evaluation_type']);
+                }
+
+                // The pool belongs to the group, so it is stored once per group
+                // rather than copied onto every column. Only Distribute Marks
+                // submits it; Rate Peers leaves whatever the group already had.
+                if ($validated['evaluation_type'] === PeerColumn::TYPE_DISTRIBUTE_MARKS
+                    && filled($validated['buffer_marks'] ?? null)) {
+                    foreach ($groups as $group) {
+                        $group->buffer_marks = $validated['buffer_marks'];
+                        $group->save();
+                    }
                 }
 
                 $count = 0;
@@ -261,7 +332,7 @@ class PeerEvaluationColumnController extends Controller
                         PeerColumn::create([
                             'column_name' => $column['column_name'],
                             'max_marks' => $column['max_marks'],
-                            'has_remarks' => (bool) $column['has_remarks'],
+                            'has_remarks' => (bool) $validated['has_remarks'],
                             'evaluation_type' => $validated['evaluation_type'],
                             'group_id' => $group->id,
                             // Denormalised from the group so the grid and the
@@ -321,11 +392,33 @@ class PeerEvaluationColumnController extends Controller
         ]);
 
         if ($column->group_id) {
+            $group = PeerGroup::find($column->group_id);
+
             $this->assertNamesAreUnique(
-                PeerGroup::find($column->group_id),
+                $group,
                 [['column_name' => $validated['column_name']]],
                 $column->id
             );
+
+            // Switching one column's type is the other way a group ends up with
+            // both, so the same rule applies here - ignoring this column, which is
+            // the one being moved.
+            if ($group && $validated['evaluation_type'] !== $column->evaluation_type) {
+                $clash = PeerColumn::where('group_id', $group->id)
+                    ->whereKeyNot($column->id)
+                    ->where('evaluation_type', '<>', $validated['evaluation_type'])
+                    ->value('evaluation_type');
+
+                if ($clash) {
+                    throw ValidationException::withMessages([
+                        'evaluation_type' => sprintf(
+                            '%s already uses %s. A group can only use one evaluation type.',
+                            $group->group_name,
+                            PeerColumn::TYPES[$clash] ?? $clash
+                        ),
+                    ]);
+                }
+            }
         }
 
         try {
@@ -364,6 +457,37 @@ class PeerEvaluationColumnController extends Controller
         }
 
         return $this->ok($request, 'Column deleted successfully.');
+    }
+
+    /**
+     * A group runs ONE kind of evaluation, never both.
+     *
+     * The two are scored under incompatible rules: Rate Peers caps each criterion
+     * separately, while Distribute Marks shares one group-level pool
+     * (peer_groups.buffer_marks) across its criteria. A group holding both gives
+     * the OT one form governed by two contradictory rules, and the pool total can
+     * only be checked against the columns that actually belong to it.
+     *
+     * Existing mixed groups are left alone - this only stops NEW columns from
+     * creating or extending a mix.
+     */
+    private function assertSingleEvaluationType(PeerGroup $group, string $type): void
+    {
+        $existing = PeerColumn::where('group_id', $group->id)
+            ->where('evaluation_type', '<>', $type)
+            ->value('evaluation_type');
+
+        if (! $existing) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'evaluation_type' => sprintf(
+                '%s already uses %s. A group can only use one evaluation type.',
+                $group->group_name,
+                PeerColumn::TYPES[$existing] ?? $existing
+            ),
+        ]);
     }
 
     /**

@@ -12,6 +12,7 @@ use App\Models\PeerGroup;
 use App\Models\PeerGroupMember;
 use App\Models\PeerReflectionField;
 use App\Support\PeerCourseStatusScope;
+use App\Support\PeerEvaluationForm;
 use App\Support\PeerGroupSource;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -359,58 +360,62 @@ class PeerReflectionFieldController extends Controller
     /**
      * Read-only preview of the evaluation form a given scope produces.
      *
-     * Two modes, both from the mockups:
-     *   reflection - just the "Reflection & Feedback" block (the default, and what
-     *                the grid's "Preview Form" row action opens)
-     *   full       - the scored Evaluation Form grid above it as well
-     *
      * Everything renders disabled: this is a preview of what an Officer Trainee
      * would see, not a form an admin can submit.
+     *
+     * The whole point is that it agrees with the real thing, so the criteria, the
+     * reflection fields and the members all come from App\Support\PeerEvaluationForm
+     * - the same class the OT-facing form renders from. Running its own queries is
+     * what let this screen show columns belonging to OTHER groups of the event: the
+     * column query filtered on course and event but never on group.
+     *
+     * The single "full form" view replaced a Reflection Only / Full Form pair. The
+     * reflection-only half showed a fragment of a form nobody ever sees, and the
+     * scored grid above it is the part that needed checking.
      */
     public function preview(Request $request)
     {
-        $courseId = $request->query('course_id');
-        $eventId = $request->query('event_id');
         $groupId = $request->query('group_id');
-        $mode = $request->query('mode') === 'full' ? 'full' : 'reflection';
 
-        // Fields matching this scope, plus the global ones - exactly what the real
-        // form would show.
-        $fields = PeerReflectionField::query()
-            ->active()
-            ->where(fn ($q) => $q->whereNull('course_id')->when(filled($courseId), fn ($w) => $w->orWhere('course_id', $courseId)))
-            ->where(fn ($q) => $q->whereNull('event_id')->when(filled($eventId), fn ($w) => $w->orWhere('event_id', $eventId)))
-            ->where(fn ($q) => $q->whereNull('group_id')->when(filled($groupId), fn ($w) => $w->orWhere('group_id', $groupId)))
-            ->orderBy('id')
-            ->get();
+        // The real peer_groups row wins over the query string. A group's own
+        // course_id / event_id are what the OT form scopes by, so trusting the URL
+        // could preview a combination that will never be rendered for anyone.
+        $group = filled($groupId) ? PeerGroup::find($groupId) : null;
 
-        $columns = collect();
-        $members = collect();
+        // Reached from the Reflection Fields grid, a field may have no group at
+        // all. PeerEvaluationForm reads only these three, and handles a null id by
+        // matching group-less rows.
+        $scope = $group ?: (object) [
+            'id' => null,
+            'course_id' => $request->query('course_id'),
+            'event_id' => $request->query('event_id'),
+        ];
 
-        if ($mode === 'full') {
-            $columns = PeerColumn::query()
-                ->visible()
-                ->where(fn ($q) => $q->whereNull('course_id')->when(filled($courseId), fn ($w) => $w->orWhere('course_id', $courseId)))
-                ->where(fn ($q) => $q->whereNull('event_id')->when(filled($eventId), fn ($w) => $w->orWhere('event_id', $eventId)))
-                ->orderBy('id')
-                ->get();
+        $fields = PeerEvaluationForm::reflectionFieldsFor($scope);
+        $columns = PeerEvaluationForm::columnsFor($scope);
 
-            if (filled($groupId)) {
-                $members = PeerGroupMember::where('group_id', $groupId)->orderBy('id')->get();
-            }
-        }
+        // No self-exclusion here: an admin previewing the form is not one of the
+        // OTs, so every member of the group is listed.
+        $members = $group ? PeerEvaluationForm::peersFor($group, null) : collect();
+
+        // Same gate the OT form uses - the Remarks column exists only when a
+        // criterion on this form actually asks for one.
+        $allowsRemarks = $columns->contains(fn ($column) => (bool) $column->has_remarks);
+
+        $courseId = $scope->course_id;
+        $eventId = $scope->event_id;
 
         return view('admin.forms.peer_evaluation.reflection_fields.preview', [
-            'mode' => $mode,
             'fields' => $fields,
             'columns' => $columns,
             'members' => $members,
+            'allowsRemarks' => $allowsRemarks,
             'courseId' => $courseId,
             'eventId' => $eventId,
-            'groupId' => $groupId,
+            'groupId' => $group->id ?? null,
             'courseName' => filled($courseId) ? CourseMaster::whereKey($courseId)->value('course_name') : null,
             'eventName' => filled($eventId) ? PeerEvent::whereKey($eventId)->value('event_name') : null,
-            'groupName' => filled($groupId) ? PeerGroup::whereKey($groupId)->value('group_name') : null,
+            'groupName' => $group->group_name ?? null,
         ]);
     }
 

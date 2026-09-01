@@ -6,7 +6,8 @@
 <link rel="stylesheet"
       href="{{ asset('css/peer-evaluation-admin.css') }}?v={{ @filemtime(public_path('css/peer-evaluation-admin.css')) ?: time() }}">
 <link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
-<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
+<link rel="stylesheet"
+      href="{{ asset('css/select2-theme.css') }}?v={{ @filemtime(public_path('css/select2-theme.css')) ?: time() }}">
 @endpush
 
 @section('setup_content')
@@ -131,18 +132,22 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body pe-modal-body">
+                    {{-- This list is NOT narrowed by the Active / Archived pill on
+                         the grid - a column can be added to a course that has
+                         finished - so each option carries its own status and
+                         renders a pill, otherwise the two are indistinguishable
+                         here. --}}
                     <div class="pe-field mb-3">
                         <label class="pe-form-label" for="pecAddCourseId">Course Name</label>
-                        <select class="form-select pe-control js-pec-select2" id="pecAddCourseId" name="course_id">
+                        <select class="form-select pe-control js-pec-select2 js-pec-course-status" id="pecAddCourseId" name="course_id">
                             <option value="">Select Course</option>
-                            @foreach($modalCourses as $id => $name)
-                                <option value="{{ $id }}">{{ $name }}</option>
+                            @foreach($modalCourses as $course)
+                                <option value="{{ $course['id'] }}" data-status="{{ $course['status'] }}">{{ $course['name'] }}</option>
                             @endforeach
                         </select>
                         <div class="pe-error"></div>
                     </div>
 
-                    <div class="pe-field mb-3">
                     {{-- Event is REQUIRED. A column saved without one still wrote a
                          peer_columns row, but the grid is built event -> group ->
                          column, so that row appeared nowhere and looked like a
@@ -181,6 +186,19 @@
                                 </label>
                             @endforeach
                         </div>
+                        <div class="pe-form-hint" id="pecAddTypeLock"></div>
+                        <div class="pe-error"></div>
+                    </div>
+
+                    {{-- Buffer is the single pool an OT shares out across the whole
+                         group, so it lives on peer_groups and only means anything
+                         for Distribute Marks. Hidden for Rate Peers rather than
+                         disabled, because for that type there is no pool at all. --}}
+                    <div class="pe-field mb-3 d-none" id="pecAddBufferWrap">
+                        <label class="pe-form-label" for="pecAddBuffer">Buffer Marks for OTs<span class="pe-req">*</span></label>
+                        <input type="number" class="form-control pe-control" id="pecAddBuffer" name="buffer_marks"
+                               value="100.00" step="0.01" min="0.01" max="99999.99">
+                        <div class="pe-form-hint">Applied to every group selected above.</div>
                         <div class="pe-error"></div>
                     </div>
 
@@ -200,27 +218,12 @@
                                            name="columns[0][column_name]" placeholder="eg. Presentation Skills"
                                            maxlength="255" required>
                                 </div>
-                                <div class="col-12 col-md-3">
+                                <div class="col-12 col-md-5">
                                     <label class="pe-form-label">Max Marks<span class="pe-req">*</span></label>
                                     <input type="number" class="form-control pe-control pec-max"
                                            name="columns[0][max_marks]" value="10.00" step="0.01" min="0.01" max="9999.99" required>
                                 </div>
-                                <div class="col-12 col-md-3">
-                                    <span class="pe-form-label d-block">Remarks<span class="pe-req">*</span></span>
-                                    <div class="d-flex gap-3 pec-radio-row">
-                                        <label class="d-inline-flex align-items-center gap-2 mb-0">
-                                            <input class="form-check-input m-0 pec-remarks" type="radio"
-                                                   name="columns[0][has_remarks]" value="1" checked>
-                                            <span>Yes</span>
-                                        </label>
-                                        <label class="d-inline-flex align-items-center gap-2 mb-0">
-                                            <input class="form-check-input m-0 pec-remarks" type="radio"
-                                                   name="columns[0][has_remarks]" value="0">
-                                            <span>No</span>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-12 col-md-1">
+                                <div class="col-12 col-md-2">
                                     <div class="pec-card-actions">
                                         <button type="button" class="pec-card-btn pec-card-btn--remove" title="Remove this column"
                                                 aria-label="Remove this column">
@@ -237,6 +240,28 @@
                         </div>
                     </div>
                     <div class="pe-error" id="pecColumnsError"></div>
+
+                    {{-- Remarks is a property of the FORM, not of a criterion. The
+                         OT writes one note about the person being evaluated, not
+                         one per column, so asking per column offered a choice the
+                         evaluation form could never honour. One answer here is
+                         applied to every column in this submit. --}}
+                    <hr class="my-3">
+                    <h6 class="pec-section-title mb-3">Additional Settings</h6>
+                    <div class="pe-field mb-1">
+                        <span class="pe-form-label d-block">Remarks<span class="pe-req">*</span></span>
+                        <div class="d-flex gap-3 pec-radio-row">
+                            <label class="d-inline-flex align-items-center gap-2 mb-0">
+                                <input class="form-check-input m-0" type="radio" name="has_remarks" value="1" checked>
+                                <span>Yes</span>
+                            </label>
+                            <label class="d-inline-flex align-items-center gap-2 mb-0">
+                                <input class="form-check-input m-0" type="radio" name="has_remarks" value="0">
+                                <span>No</span>
+                            </label>
+                        </div>
+                        <div class="pe-error"></div>
+                    </div>
                 </div>
                 <div class="modal-footer pe-modal-footer">
                     <button type="button" class="btn pe-btn-cancel" data-bs-dismiss="modal">Cancel</button>
@@ -382,6 +407,9 @@
     var DESTROY_URL = @json(route('admin.peer.columns.destroy', ['id' => '__ID__']));
     var BUFFER_URL = @json(route('admin.peer.columns.buffer', ['group' => '__ID__']));
     var CSRF = @json(csrf_token());
+    // Same labels the server uses, so the "already uses X" notice reads the way the
+    // 422 for the same rule would.
+    var TYPE_LABELS = @json($types);
     var EXPORT_COLUMN_KEYS = ['sno', 'course_name', '', 'event_name', ''];
 
     var dt = null;
@@ -481,8 +509,35 @@
                 allowClear: !$sel.prop('required')
             };
             if ($parent && $parent.length) { opts.dropdownParent = $parent; }
+
+            // Course pickers render an Active / Archived pill beside the name. The
+            // modal's list is not narrowed by the grid's status pill, so this is
+            // the only thing distinguishing a running course from a finished one.
+            if ($sel.hasClass('js-pec-course-status')) {
+                opts.templateResult = renderCourseOption;
+                opts.templateSelection = renderCourseOption;
+                opts.escapeMarkup = function (markup) { return markup; };
+            }
+
             $sel.select2(opts);
         });
+    }
+
+    // Select2 hands us the <option> via .element; a search-result row for "no
+    // match" has none, so guard before reaching for the attribute.
+    function renderCourseOption(state) {
+        var text = $('<span>').text(state.text || '');
+        if (!state.id || !state.element) { return text; }
+
+        var status = $(state.element).data('status');
+        if (!status) { return text; }
+
+        var isActive = String(status) === 'active';
+        var $pill = $('<span>')
+            .addClass('pec-course-pill ' + (isActive ? 'pec-course-pill--active' : 'pec-course-pill--archived'))
+            .text(isActive ? 'Active' : 'Archived');
+
+        return $('<span>').addClass('pec-course-option').append(text).append($pill);
     }
 
     // Keyed on the option's VALUE, not on its position: the multi-select group
@@ -491,7 +546,13 @@
     function fill($sel, list, keep) {
         $sel.find('option').filter(function () { return this.value !== ''; }).remove();
         $.each(list, function (i, item) {
-            $sel.append($('<option>', { value: item.id, text: item.name }));
+            var $opt = $('<option>', { value: item.id, text: item.name });
+            // Carried so the Evaluation Type radios can lock themselves to whatever
+            // the picked group already uses, instead of letting the admin fill the
+            // form and be refused on submit.
+            if (item.used_type) { $opt.attr('data-used-type', item.used_type); }
+            if (item.status) { $opt.attr('data-status', item.status); }
+            $sel.append($opt);
         });
 
         // Only re-select what the new list actually still offers.
@@ -583,7 +644,6 @@
             $card.attr('data-index', index);
             $card.find('.pec-name').attr('name', 'columns[' + index + '][column_name]');
             $card.find('.pec-max').attr('name', 'columns[' + index + '][max_marks]');
-            $card.find('.pec-remarks').attr('name', 'columns[' + index + '][has_remarks]');
             // Plain show/hide, not .d-none: Bootstrap's display utilities are
             // !important, so a class toggle here would fight jQuery.
             $card.find('.pec-card-btn--remove').toggle($cards.length > 1);
@@ -736,6 +796,10 @@
             $('#pecColumnsContainer .pec-column-card').not(':first').remove();
             syncColumnCards();
 
+            $('#pecAddBufferWrap').addClass('d-none');
+            $('#pecAddBuffer').val('100.00');
+            applyAddTypeRules();
+
             var course = $('#pecCourseFilter').val();
             $form.find('[name="course_id"]').val(course || '');
             loadOptions({
@@ -744,6 +808,48 @@
                 $group: $form.find('[name="group_ids[]"]')
             });
         });
+
+        /**
+         * Keep the Add form honest about the two type-driven rules:
+         *
+         *   - Buffer Marks is a Distribute Marks concept only (it is the group's
+         *     shared pool), so it is shown and required only for that type.
+         *   - A group runs one evaluation type. If any picked group already has
+         *     columns, the other radio is disabled with the reason, rather than
+         *     letting the admin fill the form and be refused by the server.
+         */
+        function applyAddTypeRules() {
+            var $form = $('#pecAddForm');
+            var $groupSel = $form.find('[name="group_ids[]"]');
+            var $radios = $form.find('input[name="evaluation_type"]');
+
+            var locked = null;
+            var lockedBy = '';
+
+            $.each($groupSel.val() || [], function (i, value) {
+                var $opt = $groupSel.find('option[value="' + value + '"]');
+                var used = $opt.attr('data-used-type');
+                if (used && !locked) { locked = used; lockedBy = $opt.text(); }
+            });
+
+            $radios.prop('disabled', false);
+            $('#pecAddTypeLock').removeClass('is-shown').text('');
+
+            if (locked) {
+                $radios.filter('[value!="' + locked + '"]').prop('disabled', true);
+                $radios.filter('[value="' + locked + '"]').prop('checked', true);
+                $('#pecAddTypeLock')
+                    .text(lockedBy + ' already uses ' + (TYPE_LABELS[locked] || locked)
+                        + '. A group can only use one evaluation type.')
+                    .addClass('is-shown');
+            }
+
+            var isDistribute = $radios.filter(':checked').val() === 'distribute_marks';
+            $('#pecAddBufferWrap').toggleClass('d-none', !isDistribute);
+            $('#pecAddBuffer').prop('required', isDistribute);
+        }
+
+        $('#pecAddForm').on('change', 'input[name="evaluation_type"], [name="group_ids[]"]', applyAddTypeRules);
 
         $('#pecAddModal, #pecEditModal').on('shown.bs.modal', function () {
             initSelect2($(this), $(this));
@@ -761,11 +867,13 @@
 
         $('#pecAddForm').on('change', 'select[name="event_id"]', function () {
             var $form = $(this).closest('form');
+            // The group list only carries used_type once the event is known, so the
+            // type lock is re-evaluated after the rebuild, not before it.
             loadOptions({
                 courseId: $form.find('[name="course_id"]').val(),
                 eventId: $(this).val(),
                 $group: $form.find('[name="group_ids[]"]')
-            });
+            }).done(applyAddTypeRules);
         });
 
         $('#pecColumnsContainer').on('click', '.pec-card-btn--add', function () {
@@ -782,10 +890,6 @@
             // two into one radio group and keeps only the last checked one -
             // silently clearing card 0's selection. Renaming after the fact is too
             // late: the state is already gone.
-            var nextIndex = $('#pecColumnsContainer .pec-column-card').length;
-            $clone.find('.pec-remarks').attr('name', 'columns[' + nextIndex + '][has_remarks]')
-                .prop('checked', false).filter('[value="1"]').prop('checked', true);
-
             $('#pecColumnsContainer').append($clone);
             syncColumnCards();
         });

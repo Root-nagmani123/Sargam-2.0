@@ -81,7 +81,6 @@
                                                     'course_id' => $group->course_id,
                                                     'event_id'  => $group->event_id,
                                                     'group_id'  => $group->id,
-                                                    'mode'      => 'full',
                                                ])) }}"
                                                class="pe-act pe-act--preview" title="Preview the form this column appears on">
                                                 <span class="pe-act__icon"><i class="bi bi-clipboard-check" aria-hidden="true"></i></span>

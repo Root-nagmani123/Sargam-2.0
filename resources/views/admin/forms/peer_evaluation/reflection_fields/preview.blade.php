@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', $mode === 'full' ? 'Full Form Preview' : 'Preview Reflection Fields')
+@section('title', 'Full Form Preview')
 
 @push('styles')
 <link rel="stylesheet"
@@ -9,7 +9,7 @@
 
 @section('setup_content')
 @php
-    // The scope query string, reused by the mode links and the edit pencil.
+    // The scope query string, reused by the edit pencil.
     $scope = array_filter([
         'course_id' => $courseId,
         'event_id'  => $eventId,
@@ -17,7 +17,7 @@
     ]);
 @endphp
 <div class="container-fluid pe-page pe-preview-page">
-    <x-breadcrum :title="$mode === 'full' ? 'Full Form Preview' : 'Preview Reflection Fields'"
+    <x-breadcrum :title="'Full Form Preview'"
                  :items="[
                      ['label' => 'Home', 'url' => route('admin.dashboard')],
                      ['label' => 'Setup', 'url' => null],
@@ -47,28 +47,26 @@
         <a href="{{ route('admin.peer.reflection-fields.index') }}"
            class="btn programme-dt-btn-reset">Remove Filter</a>
 
-        {{-- Not in the mockups, but both of them exist and nothing else reaches the
-             other one. One control, two states. --}}
-        <div class="btn-group ms-auto pe-preview-modes" role="group" aria-label="Preview mode">
-            <a href="{{ route('admin.peer.reflection-fields.preview', $scope + ['mode' => 'reflection']) }}"
-               class="btn {{ $mode === 'reflection' ? 'active' : '' }}"
-               @if($mode === 'reflection') aria-current="page" @endif>Reflection Only</a>
-            <a href="{{ route('admin.peer.reflection-fields.preview', $scope + ['mode' => 'full']) }}"
-               class="btn {{ $mode === 'full' ? 'active' : '' }}"
-               @if($mode === 'full') aria-current="page" @endif>Full Form</a>
-        </div>
+        {{-- The Reflection Only / Full Form pair lived here. Reflection-only showed
+             a fragment of a form no OT is ever served, so there is one view now:
+             the whole form, which is the thing worth checking. --}}
     </div>
 
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
 
-            @if($mode === 'full')
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
                     <h6 class="pe-preview-heading mb-0">Evaluation Form</h6>
+                    {{-- Live, not disabled: it is the one control on this page that
+                         has something to show, and it behaves exactly like the OT
+                         form's own toggle. Rendered only when a criterion on this
+                         form asks for remarks, same gate the real form applies. --}}
+                    @if($allowsRemarks)
                     <label class="d-inline-flex align-items-center gap-2 mb-0 pe-preview-remarks">
-                        <input type="checkbox" class="form-check-input m-0" disabled>
+                        <input type="checkbox" class="form-check-input m-0" id="pePreviewRemarksToggle">
                         <span>Remarks</span>
                     </label>
+                    @endif
                 </div>
 
                 <div class="programme-dt-panel mb-4">
@@ -78,11 +76,20 @@
                                 <tr>
                                     <th scope="col">S. No.</th>
                                     <th scope="col">Name &amp; OT Code</th>
+                                    {{-- The range is the column's OWN max, not a
+                                         hardcoded 10: Manage Evaluation Columns
+                                         gives each criterion its own Max Marks and
+                                         the OT form caps on that, so printing
+                                         "(1-10)" against a column capped at 5 was a
+                                         preview of a form that does not exist. --}}
                                     @forelse($columns as $column)
-                                        <th scope="col">{{ $column->column_name }} (1-10)</th>
+                                        <th scope="col">{{ $column->column_name }} (0-{{ rtrim(rtrim(number_format((float) ($column->max_marks ?? 10), 2, '.', ''), '0'), '.') }})</th>
                                     @empty
                                         <th scope="col">Score</th>
                                     @endforelse
+                                    @if($allowsRemarks)
+                                        <th scope="col" class="pe-preview-remarks-col d-none">Remarks</th>
+                                    @endif
                                 </tr>
                             </thead>
                             <tbody>
@@ -90,14 +97,15 @@
                                     <tr>
                                         <td>{{ str_pad($index + 1, 2, '0', STR_PAD_LEFT) }}</td>
                                         <td>
-                                            <div class="pe-preview-member">{{ $member->user_name ?: 'Unnamed' }}</div>
+                                            <div class="pe-preview-member">{{ $member->first_name ?: 'Unnamed' }}</div>
                                             <div class="pe-preview-otcode">- {{ $member->ot_code ?: 'No OT code' }}</div>
                                         </td>
                                         @forelse($columns as $column)
                                             <td>
                                                 <input type="number" class="form-control pe-preview-score"
-                                                       value="0.00" step="0.01" min="0" max="10" disabled
-                                                       aria-label="{{ $column->column_name }} for {{ $member->user_name }}">
+                                                       value="0.00" step="0.01" min="0"
+                                                       max="{{ $column->max_marks ?? 10 }}" disabled
+                                                       aria-label="{{ $column->column_name }} for {{ $member->first_name }}">
                                             </td>
                                         @empty
                                             <td>
@@ -105,10 +113,17 @@
                                                        value="0.00" step="0.01" disabled aria-label="Score">
                                             </td>
                                         @endforelse
+                                        @if($allowsRemarks)
+                                            <td class="pe-preview-remarks-col d-none">
+                                                <textarea class="form-control pe-control" rows="2" disabled
+                                                          placeholder="Optional note about {{ $member->first_name }}"
+                                                          aria-label="Remarks for {{ $member->first_name }}"></textarea>
+                                            </td>
+                                        @endif
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="{{ 2 + max(1, $columns->count()) }}" class="text-center py-4 text-body-secondary">
+                                        <td colspan="{{ 2 + max(1, $columns->count()) + ($allowsRemarks ? 1 : 0) }}" class="text-center py-4 text-body-secondary">
                                             @if(! $groupId)
                                                 Pick a group to preview its members — this scope has no group set.
                                             @else
@@ -121,7 +136,6 @@
                         </table>
                     </div>
                 </div>
-            @endif
 
             <div class="d-flex align-items-center gap-2 mb-3">
                 <h6 class="pe-preview-heading mb-0">Reflection &amp; Feedback</h6>
@@ -159,4 +173,21 @@
         </div>
     </div>
 </div>
+
+@if($allowsRemarks)
+    <script>
+        /* Same behaviour as the OT form's own Remarks toggle: the cells are
+           <th>/<td>, so one class keeps the header and the body in step. */
+        (function () {
+            var toggle = document.getElementById('pePreviewRemarksToggle');
+            if (!toggle) { return; }
+
+            toggle.addEventListener('change', function () {
+                document.querySelectorAll('.pe-preview-remarks-col').forEach(function (cell) {
+                    cell.classList.toggle('d-none', !toggle.checked);
+                });
+            });
+        })();
+    </script>
+@endif
 @endsection
