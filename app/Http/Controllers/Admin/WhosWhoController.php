@@ -129,7 +129,10 @@ class WhosWhoController extends Controller
             }
 
             if (!empty($courseId) && $courseId > 0) {
-                if (! CourseMaster::where('pk', $courseId)->where('active_inactive', 1)->exists()) {
+                if (! CourseMaster::where('pk', $courseId)
+                    ->where('active_inactive', 1)
+                    ->where('end_date', '>=', Carbon::now()->format('Y-m-d'))
+                    ->exists()) {
                     return response()->json([
                         'success' => false,
                         'message' => 'Selected course not found or inactive',
@@ -184,6 +187,7 @@ class WhosWhoController extends Controller
         $perPage = $request->input('per_page', 10);
         $sortBy = $request->input('sort_by', 'name_asc');
         $forExport = filter_var($request->input('for_export'), FILTER_VALIDATE_BOOLEAN);
+        $currentDate = Carbon::now()->format('Y-m-d');
 
         // Convert course_id to integer if provided and validate
         if (!empty($courseId) && $courseId > 0) {
@@ -218,8 +222,9 @@ class WhosWhoController extends Controller
             ->whereHas('studentMaster', function ($q) {
                 $q->where('status', 1); // Only active students from student_master
             })
-            ->whereHas('course', function ($q) {
-                $q->where('active_inactive', 1); // Only active courses from course_master
+            ->whereHas('course', function ($q) use ($currentDate) {
+                $q->where('active_inactive', 1) // Only active courses from course_master
+                    ->where('end_date', '>=', $currentDate); // Exclude courses that have already ended
             });
 
         /**
@@ -459,8 +464,9 @@ class WhosWhoController extends Controller
                 $firstCourseMap = StudentMasterCourseMap::with('course')
                     ->where('student_master_pk', $student->pk)
                     ->where('active_inactive', 1)
-                    ->whereHas('course', function ($q) {
-                        $q->where('active_inactive', 1);
+                    ->whereHas('course', function ($q) use ($currentDate) {
+                        $q->where('active_inactive', 1)
+                            ->where('end_date', '>=', $currentDate);
                     })
                     ->first();
                 $course = $firstCourseMap ? $firstCourseMap->course : null;
@@ -479,8 +485,9 @@ class WhosWhoController extends Controller
                 $enrolledCourses = StudentMasterCourseMap::with('course')
                     ->where('student_master_pk', $student->pk)
                     ->where('active_inactive', 1)
-                    ->whereHas('course', function ($q) {
-                        $q->where('active_inactive', 1);
+                    ->whereHas('course', function ($q) use ($currentDate) {
+                        $q->where('active_inactive', 1)
+                            ->where('end_date', '>=', $currentDate);
                     })
                     ->get();
             }
