@@ -99,7 +99,7 @@ class FeedbackReportOptimizationTest extends TestCase
         ) x")->n;
 
         $narrow = DB::selectOne("SELECT COUNT(*) AS n FROM (
-            SELECT 1 $from GROUP BY f.pk, t.pk
+            SELECT 1 $from GROUP BY " . implode(', ', FeedbackReportGrouping::DATABASE_GRID) . "
         ) x")->n;
 
         $this->assertSame(
@@ -109,7 +109,9 @@ class FeedbackReportOptimizationTest extends TestCase
             . 'eight-column key — a dropped column is no longer functionally dependent.'
         );
 
-        $this->assertSame(['f.pk', 't.pk'], FeedbackReportGrouping::DATABASE_GRID);
+        // c.pk joins f.pk and t.pk so that every selected table contributes a primary key;
+        // see the note in FeedbackReportGrouping on constant-false predicates.
+        $this->assertSame(['f.pk', 't.pk', 'c.pk'], FeedbackReportGrouping::DATABASE_GRID);
     }
 
     /**
@@ -468,5 +470,101 @@ class FeedbackReportOptimizationTest extends TestCase
             'computed',
             FeedbackReportCache::remember('test:fallback', 60, fn () => 'computed')
         );
+    }
+
+    /**
+     * Put the container's request into faculty-portal mode with no accessible courses.
+     *
+     * ScopesSessionFeedbackReports reads these off request() rather than the injected
+     * Request, so the container instance is what has to be replaced.
+     */
+    private function actAsFacultyPortalUserWithoutCourses(string $method, string $verb): Request
+    {
+        $request = Request::create('/faculty-report-probe', $verb, ['faculty_name' => 'All Faculty']);
+        $request->attributes->set('is_faculty_feedback_report', true);
+        $request->attributes->set('faculty_report_faculty_pk', 1);
+        $request->attributes->set('faculty_report_course_ids', []);
+
+        $this->app->instance('request', $request);
+
+        return $request;
+    }
+
+    /**
+     * A viewer scoped to zero courses must get an empty report, not a database error.
+     *
+     * applyFeedbackReportCourseScope() emits whereRaw('1 = 0') for such a viewer. A GROUP BY
+     * that names fewer columns than it selects survives only while MySQL can infer the missing
+     * dependencies across the join equalities -- and a constant-false predicate makes the
+     * optimiser drop those joins, so the inference fails and ONLY_FULL_GROUP_BY raises 1055.
+     * Every reduced key in FeedbackReportGrouping therefore has to carry one primary key per
+     * joined table whose columns it selects. This test is what catches it if one goes missing.
+     *
+     * @dataProvider scopedReportMethods
+     */
+    public function test_a_viewer_with_no_accessible_courses_does_not_break_the_report(
+        string $method,
+        string $verb
+    ): void {
+        $this->skipUnlessFeedbackData();
+        $this->actingAsSuperAdmin();
+
+        $request = $this->actAsFacultyPortalUserWithoutCourses($method, $verb);
+
+        try {
+            (new FeedbackController())->{$method}($request);
+        } catch (\Illuminate\Database\QueryException $e) {
+            $this->fail(
+                $method . '() raised a database error for a viewer scoped to zero courses: '
+                . $e->getMessage()
+            );
+        }
+
+        $this->assertTrue(true, $method . '() completed for a zero-course viewer.');
+    }
+
+    /** @return array<string, array{0: string, 1: string}> */
+    public static function scopedReportMethods(): array
+    {
+        return [
+            'faculty average'        => ['showFacultyAverage', 'GET'],
+            'faculty average excel'  => ['exportExcel', 'GET'],
+            'faculty average pdf'    => ['exportPdf', 'GET'],
+            'faculty average print'  => ['printFacultyAverage', 'GET'],
+            'faculty feedback export' => ['exportFacultyFeedback', 'POST'],
+            'faculty feedback print' => ['printFacultyFeedback', 'GET'],
+            'feedback details'       => ['feedbackDetails', 'GET'],
+            'feedback details export' => ['exportFeedbackDetails', 'POST'],
+        ];
+    }
+
+    /**
+     * Every reduced key must name a primary key for each joined table it selects from.
+     *
+     * The failure above is only visible at runtime on one code path; this asserts the rule
+     * directly against the constants, so widening a projection without adding the matching
+     * key fails here too.
+     */
+    public function test_every_reduced_group_key_carries_a_primary_key_per_joined_table(): void
+    {
+        $expected = [
+            'DATABASE_GRID'   => ['f.pk', 't.pk', 'c.pk'],
+            'FACULTY_AVERAGE' => ['fm.pk'],
+            'FACULTY_VIEW'    => ['tt.pk', 'cm.pk', 'fm.pk'],
+        ];
+
+        foreach ($expected as $constant => $requiredKeys) {
+            $actual = constant(FeedbackReportGrouping::class . '::' . $constant);
+
+            foreach ($requiredKeys as $key) {
+                $this->assertContains(
+                    $key,
+                    $actual,
+                    $constant . ' no longer groups ' . $key . '. Without it the dependency for that '
+                    . "table's columns rests on the join equality, which MySQL discards under a "
+                    . 'constant-false WHERE, raising error 1055.'
+                );
+            }
+        }
     }
 }

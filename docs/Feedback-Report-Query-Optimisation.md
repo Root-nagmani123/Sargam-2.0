@@ -310,7 +310,7 @@ merge** — they were verification scaffolding, not shipping code. Restore them 
 history when a future change touches these queries:
 
 ```bash
-git checkout 0b24c7b67 -- scripts/feedback_report_snapshot.php \
+git checkout 4b1d67655 -- scripts/feedback_report_snapshot.php \
                           scripts/student_feedback_snapshot.php \
                           scripts/feedback_snapshot_diff.py
 ```
@@ -318,7 +318,7 @@ git checkout 0b24c7b67 -- scripts/feedback_report_snapshot.php \
 Once restored, both are re-runnable:
 
 ```bash
-# Admin reports: 83 report/filter combinations
+# Admin reports: 120 report/filter combinations
 php scripts/feedback_report_snapshot.php /tmp/before --timing
 #   ...apply changes...
 php scripts/feedback_report_snapshot.php /tmp/after --timing
