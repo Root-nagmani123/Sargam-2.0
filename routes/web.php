@@ -1291,7 +1291,15 @@ Route::middleware(['auth'])->group(function () {
             ->orderBy('end_date', 'desc')
             ->value('pk');
 
-        return view('admin.feedback.faculty_view', compact('programs', 'currentProgram'));
+        // Faculty Name opens pinned to the logged-in faculty; FeedbackController
+        // enforces the same scope on every query behind this page.
+        $lockedFacultyPk = \App\Services\Timetable\FacultySessionScope::lockedFacultyPk();
+        $lockedFacultyName = $lockedFacultyPk !== null
+            ? (\App\Models\FacultyMaster::where('pk', $lockedFacultyPk)->value('full_name') ?: null)
+            : null;
+        $currentFaculty = $lockedFacultyName;
+
+        return view('admin.feedback.faculty_view', compact('programs', 'currentProgram', 'lockedFacultyName', 'currentFaculty'));
     })->name('admin.feedback.faculty_view');
 
     //  dashboard page route

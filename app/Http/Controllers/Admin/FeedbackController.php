@@ -1534,6 +1534,23 @@ class FeedbackController extends Controller
         }
     }
 
+    /**
+     * The name /faculty_view's Faculty Name field is pinned to, or null when the
+     * viewer may search freely.
+     *
+     * Deliberately NOT memoised in a method static: that outlives the request under
+     * a persistent worker, and a cached name would then be served to whoever asked
+     * next — an admin was handed the previous faculty's name and a read-only field.
+     */
+    private function facultyViewLockedName(): ?string
+    {
+        $pk = FacultySessionScope::lockedFacultyPk();
+
+        return $pk !== null
+            ? (FacultyMaster::where('pk', $pk)->value('full_name') ?: null)
+            : null;
+    }
+
     public function facultyView(Request $request)
     {
         // Handle POST requests (form submissions)
@@ -1561,6 +1578,16 @@ class FeedbackController extends Controller
         if (is_string($facultyType)) {
             $facultyType = [$facultyType];
         }
+
+        // A faculty viewer searches only themselves. Their own name replaces whatever
+        // was submitted, so a colleague's name typed into the field cannot turn the
+        // page into a confusing empty result — the query is scoped either way, but
+        // the filter should say what it is actually doing.
+        $lockedFacultyName = $this->facultyViewLockedName();
+        if ($lockedFacultyName !== null) {
+            $facultyName = $lockedFacultyName;
+        }
+
         // Get programs based on course type - THIS MUST BE OUTSIDE THE IF/ELSE
         $programsQuery = DB::table('course_master')
             ->select('pk as id', 'course_name', 'active_inactive', 'start_year', 'end_date');
@@ -1909,6 +1936,7 @@ class FeedbackController extends Controller
             'courseType' => $courseType,
             'selectedFacultyTypes' => $facultyType,
             'refreshTime' => now()->format('d-M-Y H:i'),
+            'lockedFacultyName' => $lockedFacultyName,
         ]);
     }
 
@@ -1989,6 +2017,9 @@ class FeedbackController extends Controller
         $exportType = $request->input('export_type', 'excel');
         if (is_string($facultyType)) {
             $facultyType = [$facultyType];
+        }
+        if ($lockedFacultyName = $this->facultyViewLockedName()) {
+            $facultyName = $lockedFacultyName; // a faculty exports only their own
         }
         $facultyTypeMap = [
             '1' => 'Internal',
@@ -2290,6 +2321,9 @@ class FeedbackController extends Controller
                 $facultyType = [$facultyType];
             }
             $facultyTypeMap = ['1' => 'Internal', '2' => 'Guest'];
+            if ($lockedFacultyName = $this->facultyViewLockedName()) {
+                $facultyName = $lockedFacultyName; // a faculty prints only their own
+            }
 
             $query = DB::table('topic_feedback as tf')
                 ->join('timetable as tt', 'tf.timetable_pk', '=', 'tt.pk')

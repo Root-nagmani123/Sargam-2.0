@@ -252,12 +252,16 @@ body {
 
                         <div class="mb-4 suggestions-container">
                             <label class="form-label">Faculty Name</label>
+                            {{-- A faculty viewer's own name, fixed: the report behind this page
+                                 is scoped to them regardless, so an editable box would only
+                                 offer searches that can never return anything. --}}
                             <input type="text" name="faculty_name" class="form-control"
-                                value="{{ $currentFaculty ?? '' }}" id="facultySearch" placeholder="Type to search..."
-                                autocomplete="off" />
+                                value="{{ ($lockedFacultyName ?? null) ?: ($currentFaculty ?? '') }}" id="facultySearch"
+                                placeholder="{{ ($lockedFacultyName ?? null) ? '' : 'Type to search...' }}"
+                                autocomplete="off" @readonly(!empty($lockedFacultyName)) />
 
                             <!-- Suggestions dropdown -->
-                            <div class="suggestions-list" id="facultySuggestions">
+                            <div class="suggestions-list" id="facultySuggestions" @if(!empty($lockedFacultyName)) hidden @endif>
                                 @php
                                 $facultySuggestions = $facultySuggestions ?? collect([]);
                                 @endphp
@@ -508,6 +512,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const filterForm = document.getElementById('filterForm');
     const facultySearch = document.getElementById('facultySearch');
     const suggestionsList = document.getElementById('facultySuggestions');
+    // Pinned for a faculty viewer — no lookups to run, nothing to drop down.
+    const facultyNameLocked = @json(!empty($lockedFacultyName));
     const facultyTypeCheckboxes = document.querySelectorAll('.faculty-type-checkbox');
     const courseTypeRadios = document.querySelectorAll('.course-type-radio');
     const programSelect = document.getElementById('programSelect');
@@ -545,6 +551,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Fetch faculty suggestions from server
     function fetchFacultySuggestions(selectedTypes, searchTerm = '') {
+        if (facultyNameLocked) { return; } // pinned to this faculty — nothing to look up
         const params = new URLSearchParams();
 
         selectedTypes.forEach(type => {
@@ -629,7 +636,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Faculty type checkbox change
     facultyTypeCheckboxes.forEach(checkbox => {
         checkbox.addEventListener('change', function() {
-            facultySearch.value = ''; // Clear faculty search when type changes
+            if (!facultyNameLocked) {
+                facultySearch.value = ''; // Clear faculty search when type changes
+            }
             updateFacultySuggestions();
             goToPage(1); // Reset to page 1
         });
@@ -649,8 +658,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set default course type to archived
         document.querySelector('input[name="course_type"][value="archived"]').checked = true;
 
-        // Clear suggestions
-        facultySearch.value = '';
+        // Clear suggestions. A pinned name survives Reset: it is not a filter the
+        // viewer chose, so there is nothing to reset it to.
+        if (facultyNameLocked) {
+            facultySearch.value = @json($lockedFacultyName ?? '');
+        } else {
+            facultySearch.value = '';
+        }
         suggestionsList.innerHTML = '';
         suggestionsList.style.display = 'none';
 
