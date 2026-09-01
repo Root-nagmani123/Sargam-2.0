@@ -24,6 +24,15 @@ namespace App\Support;
  * IMPORTANT: only drop a column here when a primary key that determines it is present.
  * topic_feedback.topic_name is stored per feedback row and is NOT determined by timetable_pk,
  * so it stays in every key that originally carried it.
+ *
+ * IMPORTANT: group the determining primary key itself, not merely a column joined to it.
+ * MySQL infers dependency across a join equality only while that join survives query
+ * preparation. When the WHERE clause is constant-false -- which Laravel emits for
+ * whereIn($column, []) and which ScopesSessionFeedbackReports writes literally as
+ * whereRaw('1 = 0') for a viewer with no accessible courses -- the optimiser drops the join,
+ * the equality carrying the proof disappears, and ONLY_FULL_GROUP_BY rejects the query with
+ * error 1055. Grouping the primary key is a dependency MySQL recognises unconditionally, and
+ * it never changes the grouping because the key is already constant within each group.
  */
 final class FeedbackReportGrouping
 {
@@ -32,8 +41,11 @@ final class FeedbackReportGrouping
      *
      * Replaces: f.pk, f.full_name, f.email_id, f.Permanent_Address,
      *           c.course_name, t.subject_topic, t.START_DATE, t.pk
+     *
+     * c.pk is grouped even though t.course_master_pk determines it: see the note on
+     * constant-false predicates below.
      */
-    public const DATABASE_GRID = ['f.pk', 't.pk'];
+    public const DATABASE_GRID = ['f.pk', 't.pk', 'c.pk'];
 
     /**
      * Faculty Average report (showFacultyAverage, exportExcel, exportPdf, printFacultyAverage).
@@ -71,11 +83,20 @@ final class FeedbackReportGrouping
      *           tt.class_session, tf.timetable_pk
      *
      * tf.timetable_pk determines every tt.* and (through timetable.course_master_pk) every cm.*
-     * column; tf.faculty_pk determines fm.full_name. Twelve keys collapse to three.
+     * column; tf.faculty_pk determines fm.full_name. Twelve keys collapse to five.
+     *
+     * tt.pk, cm.pk and fm.pk are grouped alongside, for the reason given below. All three add
+     * no group boundary: tt.pk equals tf.timetable_pk and fm.pk equals tf.faculty_pk on every
+     * row of these inner joins, and cm.pk is determined by tt.course_master_pk, so each is
+     * already constant within a group. One primary key is needed per joined table whose columns
+     * are selected -- grouping only some of them still leaves the rest resolved by inference.
      */
     public const FACULTY_VIEW = [
         'tf.timetable_pk',
         'tf.faculty_pk',
         'tf.topic_name',
+        'tt.pk',
+        'cm.pk',
+        'fm.pk',
     ];
 }
