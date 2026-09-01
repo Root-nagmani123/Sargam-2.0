@@ -332,10 +332,11 @@ Route::post('registration/deactivate-filtered', [RegistrationImportController::c
 Route::prefix('admin')->group(function () {
     Route::get('/peer-evaluation', [PeerEvaluationController::class, 'index'])->name('admin.peer.index');
     Route::post('/peer/group/store', [PeerEvaluationController::class, 'storeGroup'])->name('admin.peer.group.store');
-    Route::post('/peer/column/store', [PeerEvaluationController::class, 'storeColumn'])->name('admin.peer.column.store');
-    Route::post('/peer/toggle/{id}', [PeerEvaluationController::class, 'toggleColumn'])->name('admin.peer.toggle');
     Route::post('/peer/group/delete/{id}', [PeerEvaluationController::class, 'deleteGroup'])->name('admin.peer.group.delete');
-    Route::post('/peer/column/delete/{id}', [PeerEvaluationController::class, 'deleteColumn'])->name('admin.peer.column.delete');
+    // storeColumn / toggleColumn / deleteColumn were registered here. The first
+    // two never had a method to call (a 500 on every hit); the third backed the
+    // duplicate column editor that used to sit on admin/peer-evaluation. Columns
+    // are owned by PeerEvaluationColumnController (admin/peer/columns) now.
 });
 
 // User Routes
@@ -387,10 +388,10 @@ Route::get('admin/peer/export/{groupId}', [PeerEvaluationController::class, 'exp
 // web.php
 Route::post('admin/peer/group/toggle-form/{id}', [PeerEvaluationController::class, 'toggleForm'])->name('admin.peer.group.toggleForm');
 
-// Reflection Fields
-Route::post('/admin/peer/reflection/add', [PeerEvaluationController::class, 'addReflectionField'])->name('admin.peer.reflection.add');
-Route::post('/admin/peer/reflection/toggle/{id}', [PeerEvaluationController::class, 'toggleReflectionField'])->name('admin.peer.reflection.toggle');
-Route::post('/admin/peer/reflection/delete/{id}', [PeerEvaluationController::class, 'deleteReflectionField'])->name('admin.peer.reflection.delete');
+// Reflection Fields lived here (add / toggle / delete), duplicated verbatim
+// further down this file. Both sets are gone: the editor they served was removed
+// from admin/peer-evaluation, and PeerReflectionFieldController
+// (admin/peer/reflection-fields) is the only writer now.
 
 // Additional Admin Routes for Peer Evaluation Groups max marks
 Route::post('/admin/peer/groups/add', [PeerEvaluationController::class, 'addGroup'])->name('admin.peer.groups.add');
@@ -435,18 +436,8 @@ Route::post('/admin/peer/group/add', [PeerEvaluationController::class, 'addGroup
 Route::post('/admin/peer/group/toggle-form/{id}', [PeerEvaluationController::class, 'toggleFormStatus']);
 Route::post('/admin/peer/group/delete/{id}', [PeerEvaluationController::class, 'deleteGroup']);
 
-// Columns with course/event (updated hierarchy)
-Route::post('/admin/peer/column/add', [PeerEvaluationController::class, 'addColumn'])->name('admin.peer.column.add');
-Route::post('/admin/peer/column/toggle/{id}', [PeerEvaluationController::class, 'toggleColumnVisibility']);
-Route::post('/admin/peer/column/delete/{id}', [PeerEvaluationController::class, 'deleteColumn']);
-
 // Max marks
 Route::post('/admin/peer/groups/update-marks', [PeerEvaluationController::class, 'updateMaxMarks'])->name('admin.peer.groups.update-marks');
-
-// Reflection fields (add these new routes)
-Route::post('/admin/peer/reflection/add', [PeerEvaluationController::class, 'addReflectionField'])->name('admin.peer.reflection.add');
-Route::post('/admin/peer/reflection/toggle/{id}', [PeerEvaluationController::class, 'toggleReflectionField']);
-Route::post('/admin/peer/reflection/delete/{id}', [PeerEvaluationController::class, 'deleteReflectionField']);
 
 // GET /admin/peer/courses/{eventId} used to live here, pointing at
 // PeerEvaluationController::getCoursesByEvent. That method does not exist - it

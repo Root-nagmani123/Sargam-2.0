@@ -11,14 +11,13 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 @extends('admin.layouts.master')
-@section('title', 'Peer Evaluation - Admin Panel')
+@section('title', 'Manage Groups')
 @section('setup_content')
 
 
 <div class="container-fluid">
-     <x-breadcrum title="Peer Evaluation - Admin Panel" />
+     <x-breadcrum title="Manage Groups" />
     <div class="card p-3" >
-        <h4 class="mb-4">Peer Evaluation - Admin Panel  </h4>
 
         {{-- Courses Section.
              Courses are course_master rows now and are created in Course Master,
@@ -241,195 +240,10 @@
             </div>
         </div>
 
-        {{-- Manage Columns Section --}}
-        <div class="mb-4">
-            <h5>Manage Evaluation Columns</h5>
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <label class="form-label">Course (Optional)</label>
-                    <select class="form-control" id="column_course_id">
-                        <option value="">Global Column</option>
-                        @foreach ($courses as $course)
-                            <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Event (Optional)</label>
-                    <select class="form-control" id="column_event_id" disabled>
-                        <option value="">Select Event</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Column Name</label>
-                    <input type="text" id="column_name" class="form-control" placeholder="Enter Column Name">
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button class="btn btn-primary" id="addColumnBtn">Add Column</button>
-                </div>
-            </div>
-
-            {{-- Columns List --}}
-          <div class="mt-3">
-    <h6>Existing Columns:</h6>
-    <div class="table-responsive">
-    <table class="table table-bordered align-middle" id="datatable-groups">
-            <thead class="bg-primary text-white">
-                <tr>
-                    <th scope="col">Column Name</th>
-                    <th scope="col">Course</th>
-                    <th scope="col">Event</th>
-                    <th scope="col" class="text-center">Visible</th>
-                    <th scope="col" class="text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($columns as $column)
-                    <tr>
-                        <td>
-                            <span
-                                class="badge {{ $column->is_visible ? 'bg-success' : 'bg-secondary' }} me-1">
-                                {{ $column->column_name }}
-                            </span>
-                        </td>
-                        <td>
-                            @if ($column->course)
-                                <small class="text-muted">{{ $column->course->course_name }}</small>
-                            @else
-                                <small class="text-muted">—</small>
-                            @endif
-                        </td>
-                        <td>
-                            @if ($column->event)
-                                <small class="text-muted">{{ $column->event->event_name }}</small>
-                            @else
-                                <small class="text-muted">—</small>
-                            @endif
-                        </td>
-                        <td class="text-center">
-    <div class="form-check form-switch d-inline-block">
-        <input type="checkbox" 
-            class="form-check-input toggle-column"
-            data-id="{{ $column->id }}"
-            id="toggleColumn{{ $column->id }}"
-            {{ $column->is_visible ? 'checked' : '' }}
-            title="Toggle Visibility">
-    </div>
-</td>
-
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-danger delete-column"
-                                data-id="{{ $column->id }}" title="Delete"
-                                {{ $column->is_visible == 1 ? 'disabled' : '' }}
-                                >
-                                <iconify-icon icon="solar:trash-bin-minimalistic-bold" class="fs-7">
-                                                     </iconify-icon>
-                            </button>
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
-</div>
-
-        </div>
-
-        {{-- Manage Reflection Fields --}}
-        <div class="mb-5 mt-5">
-            <h5 class="section-title d-flex align-items-center">
-                <i class="fas fa-lightbulb me-2"></i>Manage Reflection Fields
-            </h5>
-            <div class="row g-3 mt-4 mb-4">
-                <div class="col-lg-3 col-md-6">
-                    <label class="form-label fw-600"><i class="fas fa-book-open me-2" style="color: #004a93;"></i>Course (Optional)</label>
-                    <select class="form-select form-select-lg" id="reflection_course_id">
-                        <option value="">Global Field</option>
-                        @foreach ($courses as $course)
-                            <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <label class="form-label fw-600"><i class="fas fa-calendar-alt me-2" style="color: #004a93;"></i>Event (Optional)</label>
-                    <select class="form-select form-select-lg" id="reflection_event_id" disabled>
-                        <option value="">Select Event</option>
-                    </select>
-                </div>
-                <div class="col-lg-4 col-md-6">
-                    <label class="form-label fw-600"><i class="fas fa-pen me-2" style="color: #004a93;"></i>Reflection Field Name</label>
-                    <input type="text" id="reflection_field" class="form-control form-control-lg"
-                        placeholder="Enter Reflection Field Name">
-                </div>
-                <div class="col-lg-2 col-md-6 d-flex align-items-end">
-                    <button class="btn btn-secondary btn-modern w-100" id="addReflectionBtn"><i class="fas fa-plus me-2"></i>Add Field</button>
-                </div>
-            </div>  
-            {{-- Reflection Fields List --}}
-            <div class="mt-4">
-                <h6 class="mb-3"><i class="fas fa-list me-2" style="color: #004a93;"></i>Existing Reflection Fields:</h6>
-                <div class="table-responsive">
-                    <table class="table table-modern" id="datatable-reflection-fields">
-                        <thead>
-                            <tr>
-                                <th scope="col"><i class="fas fa-pen me-1"></i>Field Label</th>
-                                <th scope="col"><i class="fas fa-book-open me-1"></i>Course</th>
-                                <th scope="col"><i class="fas fa-calendar-alt me-1"></i>Event</th>
-                                <th scope="col" class="text-center"><i class="fas fa-toggle-on me-1"></i>Active</th>
-                                <th scope="col" class="text-center"><i class="fas fa-cog me-1"></i>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($reflectionFields as $field)
-                                <tr>
-                                    <td>
-                                        <span class="badge badge-modern {{ $field->is_active ? 'bg-success' : 'bg-secondary' }}">
-                                            {{ $field->field_label }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        @if ($field->course_name)
-                                            <small class="text-muted">{{ $field->course_name }}</small>
-                                        @else
-                                            <small class="text-muted">Global</small>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if ($field->event_name)
-                                            <small class="text-muted">{{ $field->event_name }}</small>
-                                        @else
-                                            <small class="text-muted">Global</small>
-                                        @endif
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="form-check form-switch d-inline-block">
-                                            <input type="checkbox"
-                                                class="form-check-input toggle-reflection"
-                                                data-id="{{ $field->id }}"
-                                                id="toggleReflection{{ $field->id }}"
-                                                {{ $field->is_active ? 'checked' : '' }}
-                                                title="Toggle Active">
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        <button class="btn btn-sm btn-outline-danger delete-reflection"
-                                            data-id="{{ $field->id }}"
-                                            title="Delete"
-                                            {{ $field->is_active == 1 ? 'disabled' : '' }}>
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
 
             <div class="alert alert-info">
-                <strong>Note:</strong> This is the admin panel for managing courses, events, groups and columns.
+                <strong>Note:</strong> This page manages evaluation groups and their members. Events,
+                evaluation columns and reflection fields each have their own screen under Peer Evaluation.
                 Users will see the evaluation form on the user side.
             </div>
         </div>
@@ -442,52 +256,6 @@
                 $('#group_course_id').change(function() {
                     const courseId = $(this).val();
                     const eventSelect = $('#group_event_id');
-
-                    if (courseId) {
-                        $.get('/admin/peer/events/' + courseId, function(events) {
-                            eventSelect.empty().append('<option value="">Select Event</option>');
-                            events.forEach(event => {
-                                eventSelect.append(
-                                    `<option value="${event.id}">${event.event_name}</option>`
-                                );
-                            });
-                            eventSelect.prop('disabled', false);
-                        }).fail(function() {
-                            alert('Error loading events');
-                        });
-                    } else {
-                        eventSelect.empty().append('<option value="">Select Event</option>').prop('disabled',
-                            true);
-                    }
-                });
-
-                // Load events when course is selected for columns
-                $('#column_course_id').change(function() {
-                    const courseId = $(this).val();
-                    const eventSelect = $('#column_event_id');
-
-                    if (courseId) {
-                        $.get('/admin/peer/events/' + courseId, function(events) {
-                            eventSelect.empty().append('<option value="">Select Event</option>');
-                            events.forEach(event => {
-                                eventSelect.append(
-                                    `<option value="${event.id}">${event.event_name}</option>`
-                                );
-                            });
-                            eventSelect.prop('disabled', false);
-                        }).fail(function() {
-                            alert('Error loading events');
-                        });
-                    } else {
-                        eventSelect.empty().append('<option value="">Select Event</option>').prop('disabled',
-                            true);
-                    }
-                });
-
-                // Load events when course is selected for reflection fields
-                $('#reflection_course_id').change(function() {
-                    const courseId = $(this).val();
-                    const eventSelect = $('#reflection_event_id');
 
                     if (courseId) {
                         $.get('/admin/peer/events/' + courseId, function(events) {
@@ -600,57 +368,6 @@
                         });
                     });
 
-                // Add Column with Course and Event
-               $('#addColumnBtn').click(function () {
-
-    const courseId   = $('#column_course_id').val();
-    const eventId    = $('#column_event_id').val();
-    const columnName = $('#column_name').val();
-
-    if (!columnName) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Validation Error',
-            text: 'Please enter column name'
-        });
-        return;
-    }
-
-    $.post('{{ route('admin.peer.column.add') }}', {
-        _token: '{{ csrf_token() }}',
-        course_id: courseId || null,
-        event_id: eventId || null,
-        column_name: columnName
-    }, function (response) {
-
-        if (response.success) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Saved!',
-                text: 'Column added successfully',
-                confirmButtonText: 'OK'
-            }).then(() => {
-            location.reload();
-            });
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: response.message || 'Something went wrong'
-            });
-        }
-
-    }).fail(function () {
-        Swal.fire({
-            icon: 'error',
-            title: 'Server Error',
-            text: 'Error adding column'
-        });
-    });
-
-});
-
-
                 // Update Max Marks
                 $('.update-marks').click(function() {
                     const groupId = $(this).data('id');
@@ -750,142 +467,6 @@
                     }
                 });
 
-                // Toggle Column Visibility
-                $('.toggle-column').change(function() {
-                    const checkbox = $(this);
-                    const id = checkbox.data('id');
-
-                    $.post('/admin/peer/column/toggle/' + id, {
-                        _token: '{{ csrf_token() }}'
-                    }, function(response) {
-                        if (response.success) {
-                            location.reload();
-                        } else {
-                            alert('Error: ' + response.message);
-                            checkbox.prop('checked', !checkbox.is(':checked'));
-                        }
-                    }).fail(function() {
-                        alert('Error updating column visibility');
-                        checkbox.prop('checked', !checkbox.is(':checked'));
-                    });
-                });
-
-                // Delete Column
-                $('.delete-column').click(function() {
-                    if (confirm('Are you sure you want to delete this column?')) {
-                        const id = $(this).data('id');
-                        $.post('/admin/peer/column/delete/' + id, {
-                            _token: '{{ csrf_token() }}'
-                        }, function(response) {
-                            if (response.success) {
-                                location.reload();
-                            } else {
-                                alert('Error: ' + response.message);
-                            }
-                        }).fail(function() {
-                            alert('Error deleting column');
-                        });
-                    }
-                });
-
-                // Add Reflection Field with Course and Event
-               $('#addReflectionBtn').click(function () {
-
-                        const courseId = $('#reflection_course_id').val();
-                        const eventId = $('#reflection_event_id').val();
-                        const fieldLabel = $('#reflection_field').val();
-
-                        if (!fieldLabel) {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Validation Error',
-                                text: 'Please enter reflection field label'
-                            });
-                            return;
-                        }
-
-                        $.post('{{ route('admin.peer.reflection.add') }}', {
-                            _token: '{{ csrf_token() }}',
-                            field_label: fieldLabel,
-                            course_id: courseId || null,
-                            event_id: eventId || null
-                        }, function (response) {
-
-                            if (response.success) {
-
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Saved!',
-                                    text: 'Reflection field added successfully',
-                                    timer: 1500,
-                                    showConfirmButton: false
-                                });
-
-                                location.reload(); // optional clear input
-
-                            } else {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Error',
-                                    text: response.message
-                                });
-                            }
-
-                        }).fail(function () {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Server Error',
-                                text: 'Error adding reflection field'
-                            });
-                        });
-                    });
-
-
-                // Toggle Reflection Field
-                $('.toggle-reflection').change(function() {
-                    const checkbox = $(this);
-                    const id = checkbox.data('id');
-
-                    $.post('/admin/peer/reflection/toggle/' + id, {
-                        _token: '{{ csrf_token() }}'
-                    }, function(response) {
-                        if (response.success) {
-                            const badge = checkbox.closest('.card').find('.badge');
-                            if (response.new_state) {
-                                badge.removeClass('bg-secondary').addClass('bg-success');
-                            } else {
-                                badge.removeClass('bg-success').addClass('bg-secondary');
-                            }
-                        } else {
-                            alert('Error: ' + response.message);
-                            checkbox.prop('checked', !checkbox.is(':checked'));
-                        }
-                    }).fail(function() {
-                        alert('Error updating reflection field');
-                        checkbox.prop('checked', !checkbox.is(':checked'));
-                    });
-                });
-
-                // Delete Reflection Field
-                $('.delete-reflection').click(function() {
-                    if (confirm('Are you sure you want to delete this reflection field?')) {
-                        const button = $(this);
-                        const id = button.data('id');
-
-                        $.post('/admin/peer/reflection/delete/' + id, {
-                            _token: '{{ csrf_token() }}'
-                        }, function(response) {
-                            if (response.success) {
-                               // location.reload();
-                                $('#datatable-columns').DataTable().ajax.reload(null, false);
-                            } else {
-                                alert('Error: ' + response.message);
-                            }
-                        }).fail(function() {
-                            alert('Error deleting reflection field');
-                        });
-                    }
-                });
             });
         </script>
 
@@ -939,27 +520,9 @@ $(document).ready(function() {
             paginate: { previous: "Prev", next: "Next" }
         }
     });
-   var table2 = $('#datatable-groups').DataTable({
-        paging: true,
-        searching: true,
-        ordering: true,
-        lengthMenu: [5, 10, 25, 50],
-        pageLength: 10
-    });
-    var table3 = $('#datatable-columns').DataTable({
-        paging: true,
-        searching: true,
-        ordering: true,
-        lengthMenu: [5, 10, 25, 50],
-        pageLength: 10
-    });
-    var table4 = $('#datatable-reflection-fields').DataTable({
-        paging: true,
-        searching: true,
-        ordering: true,
-        lengthMenu: [5, 10, 25, 50],
-        pageLength: 10
-    });
+    // There is no #datatable-groups element. The Groups List table below the
+    // course accordion is the one initialised above - it carries the id
+    // "datatable-courses" despite listing groups.
 	
     // Closes the setTimeout arrow above. PRE-EXISTING BUG: the matching close for
     // $(document).ready() was missing, so this whole block was a syntax error and

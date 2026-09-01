@@ -19,7 +19,6 @@ use App\Models\PeerGroup;
 use App\Models\PeerEvent;
 use App\Models\CourseMaster;
 use App\Models\PeerColumn;
-use App\Models\PeerReflectionField;
 use App\Support\PeerEvaluationForm;
 
 class PeerEvaluationController extends Controller
@@ -56,21 +55,21 @@ class PeerEvaluationController extends Controller
 			->orderBy('course_name')
 			->paginate(5); 
 
-        // Get events with their course and group counts
-        $events = PeerEvent::active()->withCount('groups')->get();
-
         // Get groups with member count using proper Eloquent
         $groups = PeerGroup::with(['course', 'event'])
             ->withCount('members')
             ->where('is_active', 1)
             ->get();
 
-        $columns = PeerColumn::with(['course', 'event'])->get();
-
-        // Get reflection fields with their course and event
-        $reflectionFields = PeerReflectionField::with(['course', 'event'])->get();
-
-        return view('admin.forms.peer_evaluation.admin', compact('courses', 'groups', 'columns', 'reflectionFields', 'events'));
+        // Columns and reflection fields are NOT loaded here. This page manages
+        // groups; PeerEvaluationColumnController and PeerReflectionFieldController
+        // own those two, each on its own screen under Peer Evaluation, and the
+        // duplicate editors that used to sit on this page have been removed.
+        //
+        // A flat $events list went out with them. The view never read it - the
+        // per-course events it renders come off $courses->peerEvents - so it was
+        // an extra query and a withCount on every page load for nothing.
+        return view('admin.forms.peer_evaluation.admin', compact('courses', 'groups'));
     }
 
     // Course CRUD lived here. Courses are course_master rows now, owned by
@@ -233,170 +232,6 @@ class PeerEvaluationController extends Controller
             ], 500);
         }
     }
-
-    // ==================== COLUMN MANAGEMENT METHODS ====================
-
-    /**
-     * Add new column with optional course/event association
-     */
-    public function addColumn(Request $request)
-    {
-        $request->validate([
-            'column_name' => 'required|string|max:255',
-            'course_id' => 'nullable|exists:course_master,pk',
-            'event_id' => 'nullable|exists:peer_events,id'
-        ]);
-
-        try {
-            PeerColumn::create([
-                'column_name' => $request->column_name,
-                'course_id' => $request->course_id,
-                'event_id' => $request->event_id,
-                'is_visible' => true
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Column added successfully'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error adding column: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Toggle column visibility
-     */
-    public function toggleColumnVisibility($id)
-    {
-        try {
-            $column = PeerColumn::findOrFail($id);
-            $column->is_visible = !$column->is_visible;
-            $column->save();
-
-            return response()->json([
-                'success' => true,
-                'is_visible' => $column->is_visible
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Delete column
-     */
-    public function deleteColumn($id)
-    {
-        try {
-            $column = PeerColumn::findOrFail($id);
-            $column->delete();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Column deleted successfully'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error deleting column: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    // ==================== REFLECTION FIELDS MANAGEMENT ====================
-
-    /**
-     * Add reflection field with optional course/event association
-     */
-    public function addReflectionField(Request $request)
-    {
-        $request->validate([
-            'field_label' => 'required|string|max:255',
-            'course_id' => 'nullable|exists:course_master,pk',
-            'event_id' => 'nullable|exists:peer_events,id'
-        ]);
-
-        try {
-            DB::table('peer_reflection_fields')->insert([
-                'field_label' => $request->field_label,
-                'course_id' => $request->course_id,
-                'event_id' => $request->event_id,
-                'is_active' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Reflection field added successfully.'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to add reflection field: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Toggle reflection field active status
-     */
-    public function toggleReflectionField($id)
-    {
-        try {
-            $field = DB::table('peer_reflection_fields')->where('id', $id)->first();
-
-            if ($field) {
-                $newState = !$field->is_active;
-                DB::table('peer_reflection_fields')
-                    ->where('id', $id)
-                    ->update(['is_active' => $newState]);
-
-                return response()->json([
-                    'success' => true,
-                    'new_state' => $newState
-                ]);
-            }
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Reflection field not found'
-            ], 404);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to toggle reflection field'
-            ], 500);
-        }
-    }
-
-    /**
-     * Delete reflection field
-     */
-    public function deleteReflectionField($id)
-    {
-        try {
-            DB::table('peer_reflection_fields')->where('id', $id)->delete();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Reflection field deleted successfully'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to delete reflection field'
-            ], 500);
-        }
-    }
-
     // ==================== EXISTING METHODS (Keep as is) ====================
 
     /**
