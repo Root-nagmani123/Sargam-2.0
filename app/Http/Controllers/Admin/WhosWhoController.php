@@ -536,11 +536,12 @@ class WhosWhoController extends Controller
 
             $cadreName = $student->cadre->cadre_name ?? null;
 
-            // Format batch
+            // Format batch (start_year and end_date are both date columns)
             $batch = 'N/A';
             if ($course && $course->start_year) {
-                $endYear = $course->end_date ? Carbon::parse($course->end_date)->format('Y') : (Carbon::parse($course->start_year)->addYear()->format('Y'));
-                $batch = $course->start_year . '-' . $endYear;
+                $startYear = Carbon::parse($course->start_year)->format('Y');
+                $endYear = $course->end_date ? Carbon::parse($course->end_date)->format('Y') : Carbon::parse($course->start_year)->addYear()->format('Y');
+                $batch = $startYear . '-' . $endYear;
             }
 
             $students[] = [
@@ -680,74 +681,23 @@ class WhosWhoController extends Controller
     public function downloadExcel(Request $request)
     {
         try {
-            $exportRequest = $request->duplicate();
-            $exportRequest->merge([
-                'for_export' => true,
-                'sort_by' => 'roll_asc',
-            ]);
-
-            $payload = $this->buildStudentsResponsePayload($exportRequest);
-            $students = $payload['students'] ?? [];
-
-            if (empty($students)) {
+            $export = $this->buildExportData($request);
+            if ($export === null) {
                 return redirect()
                     ->route('admin.faculty.whos-who')
                     ->with('error', 'No students found for the selected filters.');
             }
 
-            $courseId = $request->input('course_id', '');
-            $cadreId = $request->input('cadre_id', '');
-            $serviceId = $request->input('service_id', '');
-            $search = trim((string) $request->input('name', ''));
-
-            $courseLabel = $courseId
-                ? (optional(CourseMaster::find((int) $courseId))->course_name ?? 'Selected Course')
-                : '';
-            $cadreLabel = $cadreId
-                ? (optional(CadreMaster::find((int) $cadreId))->cadre_name ?? 'Selected Cadre')
-                : '';
-            $serviceLabel = $serviceId
-                ? (optional(ServiceMaster::find((int) $serviceId))->service_name ?? 'Selected Service')
-                : '';
-
-            $headings = [
-                'Code', 'Name', 'Rank', 'Cadre', 'Service', 'Course', 'Batch',
-                'Counsellor', 'House', 'Contact No', 'Email', 'Room No',
-                'Date of Birth', 'Domicile', 'District', 'Category', 'Address',
-            ];
-
-            $rows = array_map(function ($student) {
-                return [
-                    $student['code'] ?? 'N/A',
-                    $student['name'] ?? 'N/A',
-                    $student['rank'] ?? 'N/A',
-                    $student['cadre'] ?? 'N/A',
-                    $student['service'] ?? 'N/A',
-                    $student['courseName'] ?? 'N/A',
-                    $student['batch'] ?? 'N/A',
-                    $student['counsellor'] ?? 'N/A',
-                    $student['house'] ?? 'N/A',
-                    $student['contact'] ?? 'N/A',
-                    $student['email'] ?? 'N/A',
-                    $student['room'] ?? 'N/A',
-                    $student['dob'] ?? 'N/A',
-                    $student['domicile'] ?? 'N/A',
-                    $student['district'] ?? 'N/A',
-                    $student['category'] ?? 'N/A',
-                    $student['address'] ?? 'N/A',
-                ];
-            }, $students);
-
             $filename = 'whos-who-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
 
             return Excel::download(
                 new WhosWhoExport(
-                    $headings,
-                    $rows,
-                    $courseLabel,
-                    $cadreLabel,
-                    $serviceLabel,
-                    $search,
+                    $export['headings'],
+                    $export['rows'],
+                    $export['courseLabel'],
+                    $export['cadreLabel'],
+                    $export['serviceLabel'],
+                    $export['search'],
                     Carbon::now()->format('d M Y, h:i A'),
                 ),
                 $filename,
@@ -758,6 +708,113 @@ class WhosWhoController extends Controller
                 ->route('admin.faculty.whos-who')
                 ->with('error', 'Error generating Excel: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Download Who's Who directory as a CSV file (respects current filters).
+     */
+    public function downloadCsv(Request $request)
+    {
+        try {
+            $export = $this->buildExportData($request);
+            if ($export === null) {
+                return redirect()
+                    ->route('admin.faculty.whos-who')
+                    ->with('error', 'No students found for the selected filters.');
+            }
+
+            $filename = 'whos-who-' . now()->format('Y-m-d_H-i-s') . '.csv';
+
+            return response()->streamDownload(function () use ($export) {
+                $handle = fopen('php://output', 'w');
+                // UTF-8 BOM so Excel renders non-ASCII names correctly
+                fwrite($handle, "\xEF\xBB\xBF");
+                fputcsv($handle, $export['headings']);
+                foreach ($export['rows'] as $row) {
+                    fputcsv($handle, $row);
+                }
+                fclose($handle);
+            }, $filename, [
+                'Content-Type' => 'text/csv',
+            ]);
+        } catch (\Exception $e) {
+            return redirect()
+                ->route('admin.faculty.whos-who')
+                ->with('error', 'Error generating CSV: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Shared headings/rows/labels builder for Excel and CSV exports.
+     *
+     * @return array{headings: array, rows: array, courseLabel: string, cadreLabel: string, serviceLabel: string, search: string}|null
+     */
+    private function buildExportData(Request $request): ?array
+    {
+        $exportRequest = $request->duplicate();
+        $exportRequest->merge([
+            'for_export' => true,
+            'sort_by' => 'roll_asc',
+        ]);
+
+        $payload = $this->buildStudentsResponsePayload($exportRequest);
+        $students = $payload['students'] ?? [];
+
+        if (empty($students)) {
+            return null;
+        }
+
+        $courseId = $request->input('course_id', '');
+        $cadreId = $request->input('cadre_id', '');
+        $serviceId = $request->input('service_id', '');
+        $search = trim((string) $request->input('name', ''));
+
+        $courseLabel = $courseId
+            ? (optional(CourseMaster::find((int) $courseId))->course_name ?? 'Selected Course')
+            : '';
+        $cadreLabel = $cadreId
+            ? (optional(CadreMaster::find((int) $cadreId))->cadre_name ?? 'Selected Cadre')
+            : '';
+        $serviceLabel = $serviceId
+            ? (optional(ServiceMaster::find((int) $serviceId))->service_name ?? 'Selected Service')
+            : '';
+
+        $headings = [
+            'Code', 'Name', 'Rank', 'Cadre', 'Service', 'Course', 'Batch',
+            'Counsellor', 'House', 'Contact No', 'Email', 'Room No',
+            'Date of Birth', 'Domicile', 'District', 'Category', 'Address',
+        ];
+
+        $rows = array_map(function ($student) {
+            return [
+                $student['code'] ?? 'N/A',
+                $student['name'] ?? 'N/A',
+                $student['rank'] ?? 'N/A',
+                $student['cadre'] ?? 'N/A',
+                $student['service'] ?? 'N/A',
+                $student['courseName'] ?? 'N/A',
+                $student['batch'] ?? 'N/A',
+                $student['counsellor'] ?? 'N/A',
+                $student['house'] ?? 'N/A',
+                $student['contact'] ?? 'N/A',
+                $student['email'] ?? 'N/A',
+                $student['room'] ?? 'N/A',
+                $student['dob'] ?? 'N/A',
+                $student['domicile'] ?? 'N/A',
+                $student['district'] ?? 'N/A',
+                $student['category'] ?? 'N/A',
+                $student['address'] ?? 'N/A',
+            ];
+        }, $students);
+
+        return [
+            'headings' => $headings,
+            'rows' => $rows,
+            'courseLabel' => $courseLabel,
+            'cadreLabel' => $cadreLabel,
+            'serviceLabel' => $serviceLabel,
+            'search' => $search,
+        ];
     }
 
     /**

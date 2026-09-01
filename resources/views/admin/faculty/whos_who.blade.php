@@ -226,18 +226,22 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-2 d-flex gap-2">
-                    <button type="button" class="btn btn-outline-secondary flex-grow-1" id="resetFilters">
-                        <i class="bi bi-arrow-clockwise me-1"></i> Reset
-                    </button>
-                    <div class="dropdown flex-grow-1">
-                        <button type="button" class="btn btn-primary dropdown-toggle w-100" id="whosWhoDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-download me-1"></i> Download
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold d-none d-md-block">&nbsp;</label>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary flex-grow-1" id="resetFilters">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Reset
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-1 py-2" aria-labelledby="whosWhoDownloadBtn">
-                            <li><button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="downloadExcelBtn"><i class="bi bi-file-earmark-excel text-success"></i><span>Download Excel</span></button></li>
-                            <li><button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="downloadPdfBtn"><i class="bi bi-filetype-pdf text-danger"></i><span>Download PDF</span></button></li>
-                        </ul>
+                        <div class="dropdown flex-grow-1">
+                            <button type="button" class="btn btn-primary dropdown-toggle w-100" id="whosWhoDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-download me-1"></i> Download
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-1 py-2" aria-labelledby="whosWhoDownloadBtn">
+                                <li><button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="downloadExcelBtn"><i class="bi bi-file-earmark-excel text-success"></i><span>Download Excel</span></button></li>
+                                <li><button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="downloadCsvBtn"><i class="bi bi-filetype-csv text-primary"></i><span>Download CSV</span></button></li>
+                                <li><button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="downloadPdfBtn"><i class="bi bi-filetype-pdf text-danger"></i><span>Download PDF</span></button></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -716,6 +720,16 @@ document.addEventListener('DOMContentLoaded', function() {
         if (cadreFilter.value) params.append('cadre_id', cadreFilter.value);
         if (serviceFilter.value) params.append('service_id', serviceFilter.value);
         window.open('{{ route("admin.faculty.whos-who.download-excel") }}?' + params.toString(), '_blank');
+    });
+
+    document.getElementById('downloadCsvBtn').addEventListener('click', function() {
+        const params = new URLSearchParams();
+        const name = nameFilter.value.trim();
+        if (name) params.append('name', name);
+        if (courseFilter.value) params.append('course_id', courseFilter.value);
+        if (cadreFilter.value) params.append('cadre_id', cadreFilter.value);
+        if (serviceFilter.value) params.append('service_id', serviceFilter.value);
+        window.open('{{ route("admin.faculty.whos-who.download-csv") }}?' + params.toString(), '_blank');
     });
 
     // Initial load - courses are already loaded from backend, just fetch students
