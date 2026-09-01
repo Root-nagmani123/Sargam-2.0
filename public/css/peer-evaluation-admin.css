@@ -818,3 +818,52 @@
 @media (max-width: 767.98px) {
     .pe-modal .pec-card-actions { justify-content: flex-start; margin-top: 0.5rem; }
 }
+
+/* =====================================================================
+   Course option rows — Active / Archived indicator
+   ---------------------------------------------------------------------
+   Drawn by the Manage Events modal's Select2 templateResult/templateSelection,
+   so it appears both in the open list and on the closed control. Rules are NOT
+   scoped to .pe-modal: Select2 renders the dropdown panel into the modal, but
+   the closed control's rendered span lives in its own .select2-container, and
+   scoping would style one and miss the other.
+   ===================================================================== */
+.pe-course-opt {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+.pe-course-opt__name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pe-course-opt__badge {
+    flex: 0 0 auto;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+}
+.pe-course-opt__badge.is-active { background: #d1e7dd; color: #146c43; }
+.pe-course-opt__badge.is-archived { background: #e9ecef; color: #5c636a; }
+
+/* The course's own date range, under End Date, so the clamped inputs explain
+   themselves rather than just refusing dates. */
+.pe-modal .pe-course-window {
+    margin-top: 0.35rem;
+    font-size: 0.8125rem;
+    color: #667085;
+}
+
+/* One-line explanation under a control (e.g. the multi-select group picker). */
+.pe-modal .pe-form-hint {
+    margin-top: 0.35rem;
+    font-size: 0.8125rem;
+    color: #667085;
+}

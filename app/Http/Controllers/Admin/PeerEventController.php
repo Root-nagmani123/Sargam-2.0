@@ -7,7 +7,9 @@ use App\Exports\PeerEventExport;
 use App\Http\Controllers\Controller;
 use App\Models\CourseMaster;
 use App\Models\PeerEvent;
+use App\Support\PeerCourseStatusScope;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
@@ -51,9 +53,10 @@ class PeerEventController extends Controller
      * Courses in the given status scope, for the grid's Filter dropdown.
      *
      * The dropdown must follow the Active / Archived pill, so it lists the same
-     * courses the grid is showing events for. Scope comes from CourseMaster's own
-     * scopeActiveRunning() / scopeArchived() via PeerEventDataTable, so the pill,
-     * the grid and this list can never disagree.
+     * courses the grid is showing events for. Scope comes from
+     * PeerCourseStatusScope via PeerEventDataTable, so the pill, the grid and
+     * this list can never disagree. Note that "active" there means RUNNING NOW:
+     * a course that has not started yet is upcoming, and sits under Archived.
      */
     private function courseOptionsForStatus(string $status)
     {
@@ -72,13 +75,58 @@ class PeerEventController extends Controller
      * existing one may sit on an archived course - restricting the modal to the
      * pill currently on screen would make those uneditable. Select2 handles the
      * length (145 courses today).
+     *
+     * Each row carries the status the Active / Archived pills would put it in, so
+     * the modal can label it, plus the course's own date window, which bounds the
+     * event's Start / End Date.
+     *
+     * @return \Illuminate\Support\Collection<int, array{id:string,name:string,status:string,start_date:?string,end_date:?string}>
      */
     private function allCourseOptions()
     {
         $query = CourseMaster::query();
         $this->applyRoleScope($query);
 
-        return $query->orderBy('course_name')->pluck('course_name', 'pk');
+        $courses = $query->orderBy('course_name')->get(['pk', 'course_name', 'start_year', 'end_date']);
+
+        // Which of these count as Active is ASKED of the scope rather than
+        // re-implemented in PHP here. A second copy of the rule would drift from
+        // the SQL one the first time either changed, and then the badge in this
+        // dropdown would disagree with the pill the grid is showing.
+        $activeQuery = CourseMaster::query();
+        $this->applyRoleScope($activeQuery);
+        PeerCourseStatusScope::forCourses($activeQuery, PeerCourseStatusScope::ACTIVE);
+        $activeIds = $activeQuery->pluck('pk')->flip();
+
+        return $courses->map(fn ($course) => [
+            'id' => (string) $course->pk,
+            'name' => $course->course_name,
+            'status' => $activeIds->has($course->pk)
+                ? PeerCourseStatusScope::ACTIVE
+                : PeerCourseStatusScope::ARCHIVE,
+            'start_date' => self::isoDate($course->start_year),
+            'end_date' => self::isoDate($course->end_date),
+        ]);
+    }
+
+    /** d/m/Y for a message the user reads. */
+    private static function display(?string $isoDate): string
+    {
+        return $isoDate ? Carbon::parse($isoDate)->format(self::DISPLAY_DATE) : '';
+    }
+
+    /** Y-m-d for a date column that may arrive as a string, a Carbon or null. */
+    private static function isoDate($value): ?string
+    {
+        if (blank($value)) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value)->toDateString();
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     /**
@@ -186,6 +234,11 @@ class PeerEventController extends Controller
      * uniqueness rule has to be scoped to the submitted course, not global.
      *
      * course_id is validated against course_master.pk - peer_courses is gone.
+     *
+     * The event's dates must sit INSIDE its course's own window. The modal already
+     * clamps the two date inputs with min/max, but that is a convenience, not a
+     * guard - the request is what counts, so the window is re-derived here from
+     * course_master rather than trusted from the form.
      */
     private function validated(Request $request, ?int $ignoreId = null): array
     {
@@ -196,16 +249,44 @@ class PeerEventController extends Controller
             $unique->ignore($ignoreId);
         }
 
+        $course = CourseMaster::find($request->input('course_id'));
+        $courseStart = $course ? self::isoDate($course->start_year) : null;
+        $courseEnd = $course ? self::isoDate($course->end_date) : null;
+
+        $startRules = ['required', 'date'];
+        $endRules = ['required', 'date', 'after_or_equal:start_date'];
+        $messages = [
+            'event_name.unique' => 'This course already has an event with that name.',
+            'end_date.after_or_equal' => 'End Date cannot be before Start Date.',
+        ];
+
+        if ($courseStart) {
+            $startRules[] = 'after_or_equal:' . $courseStart;
+            $messages['start_date.after_or_equal'] =
+                'Start Date cannot be before the course starts (' . self::display($courseStart) . ').';
+        }
+
+        if ($courseEnd) {
+            $startRules[] = 'before_or_equal:' . $courseEnd;
+            $endRules[] = 'before_or_equal:' . $courseEnd;
+            $messages['start_date.before_or_equal'] =
+                'Start Date cannot be after the course ends (' . self::display($courseEnd) . ').';
+            $messages['end_date.before_or_equal'] =
+                'End Date cannot be after the course ends (' . self::display($courseEnd) . ').';
+        }
+
+        // end_date deliberately carries no after_or_equal:$courseStart. It is
+        // already >= start_date, and start_date is already >= $courseStart, so the
+        // rule would be redundant - and a second after_or_equal on the same field
+        // would have to share one message with the start_date comparison above.
+
         $validated = $request->validate([
             'course_id' => ['required', 'integer', Rule::exists('course_master', 'pk')],
             'event_name' => ['required', 'string', 'max:255', $unique],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'start_date' => $startRules,
+            'end_date' => $endRules,
             'description' => ['nullable', 'string', 'max:5000'],
-        ], [
-            'event_name.unique' => 'This course already has an event with that name.',
-            'end_date.after_or_equal' => 'End Date cannot be before Start Date.',
-        ], [
+        ], $messages, [
             // Without these the messages read "The course id field is required."
             // instead of naming the labels the modal actually shows.
             'course_id' => 'Course Name',

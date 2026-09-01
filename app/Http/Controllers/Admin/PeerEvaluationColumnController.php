@@ -13,6 +13,7 @@ use App\Support\PeerCourseStatusScope;
 use App\Support\PeerGroupSource;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -183,65 +184,124 @@ class PeerEvaluationColumnController extends Controller
     // ==================== CRUD ====================
 
     /**
-     * Add one or more columns to a group in a single submit.
+     * Add one or more columns to one or more groups in a single submit.
      *
-     * The modal repeats a Column Name / Max Marks / Remarks card, so this takes an
-     * array. course_id and event_id are taken from the GROUP rather than trusted
-     * from the form - the three selects are only a picker.
+     * Two dimensions here, both arrays:
+     *   columns[]    the modal's repeatable Column Name / Max Marks / Remarks card
+     *   group_ids[]  the groups that whole set of columns goes on
+     * Every column is created on every group, so the result is |columns| x |groups|
+     * rows. Doing that here rather than making the user re-fill the form once per
+     * group is the whole point of the multi-select.
+     *
+     * event_id is REQUIRED. It used to be nullable, and a column saved without one
+     * still wrote a peer_columns row - but the grid is built event -> group ->
+     * column, so that row rendered nowhere and read as a failed save.
+     *
+     * course_id and event_id on the row are taken from the GROUP rather than
+     * trusted from the form - the three selects are only a picker.
      */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            // A Course Group Mapping pk; linked below into a peer_groups row.
-            'group_id' => ['required', 'integer', Rule::exists(PeerGroupSource::TABLE, 'pk')],
-            'event_id' => ['nullable', 'integer', Rule::exists('peer_events', 'id')],
+            // Course Group Mapping pks; each linked below into a peer_groups row.
+            'group_ids' => ['required', 'array', 'min:1'],
+            'group_ids.*' => ['integer', Rule::exists(PeerGroupSource::TABLE, 'pk')],
+            'event_id' => ['required', 'integer', Rule::exists('peer_events', 'id')],
             'evaluation_type' => ['required', Rule::in(array_keys(PeerColumn::TYPES))],
             'columns' => ['required', 'array', 'min:1'],
             'columns.*.column_name' => ['required', 'string', 'max:255'],
             'columns.*.max_marks' => ['required', 'numeric', 'min:0.01', 'max:9999.99'],
             'columns.*.has_remarks' => ['required', 'boolean'],
-        ], [], [
-            'group_id' => 'Group Name',
+        ], [
+            'group_ids.required' => 'Please pick at least one group.',
+            'group_ids.*.exists' => 'One of the selected groups no longer exists.',
+            'event_id.required' => 'Please pick an event.',
+        ], [
+            'group_ids' => 'Group Name',
+            'group_ids.*' => 'Group Name',
+            'event_id' => 'Event Name',
             'evaluation_type' => 'Evaluation Type',
             'columns.*.column_name' => 'Column Name',
             'columns.*.max_marks' => 'Max Marks',
             'columns.*.has_remarks' => 'Remarks',
         ]);
 
-        $group = PeerGroupSource::link($request->input('event_id'), $validated['group_id']);
-
-        if (! $group) {
-            throw ValidationException::withMessages([
-                'group_id' => 'That group could not be linked. Please pick another.',
-            ]);
-        }
-
-        $this->assertNamesAreUnique($group, $validated['columns']);
+        // The same group twice would write every column twice and then trip the
+        // uniqueness check against rows this very request had just inserted.
+        $groupIds = array_values(array_unique($validated['group_ids']));
 
         try {
-            foreach ($validated['columns'] as $column) {
-                PeerColumn::create([
-                    'column_name' => $column['column_name'],
-                    'max_marks' => $column['max_marks'],
-                    'has_remarks' => (bool) $column['has_remarks'],
-                    'evaluation_type' => $validated['evaluation_type'],
-                    'group_id' => $group->id,
-                    // Denormalised from the group so the grid and the Rating Type
-                    // filter don't have to join back through peer_groups.
-                    'course_id' => $group->course_id,
-                    'event_id' => $group->event_id,
-                    'is_visible' => true,
-                ]);
-            }
+            $created = DB::transaction(function () use ($validated, $groupIds) {
+                // Link EVERY group and check EVERY group's names before writing a
+                // single column. Interleaving the two would leave the groups
+                // processed first holding new columns while a clash on a later
+                // group aborted the request - a half-applied submit.
+                $groups = [];
+
+                foreach ($groupIds as $groupId) {
+                    $group = PeerGroupSource::link($validated['event_id'], $groupId);
+
+                    if (! $group) {
+                        throw ValidationException::withMessages([
+                            'group_ids' => 'One of those groups could not be linked. Please pick another.',
+                        ]);
+                    }
+
+                    $groups[] = $group;
+                }
+
+                foreach ($groups as $group) {
+                    $this->assertNamesAreUnique($group, $validated['columns']);
+                }
+
+                $count = 0;
+
+                foreach ($groups as $group) {
+                    foreach ($validated['columns'] as $column) {
+                        PeerColumn::create([
+                            'column_name' => $column['column_name'],
+                            'max_marks' => $column['max_marks'],
+                            'has_remarks' => (bool) $column['has_remarks'],
+                            'evaluation_type' => $validated['evaluation_type'],
+                            'group_id' => $group->id,
+                            // Denormalised from the group so the grid and the
+                            // Rating Type filter don't have to join back through
+                            // peer_groups.
+                            'course_id' => $group->course_id,
+                            'event_id' => $group->event_id,
+                            'is_visible' => true,
+                        ]);
+                        $count++;
+                    }
+                }
+
+                return ['columns' => $count, 'groups' => count($groups)];
+            });
+        } catch (ValidationException $e) {
+            // The transaction has already rolled back. Let the 422 through rather
+            // than reporting it as a server error below.
+            throw $e;
         } catch (\Throwable $e) {
             Log::error('Peer evaluation column create failed', ['error' => $e->getMessage()]);
 
             return $this->fail($request, 'Could not add the columns. Please try again.');
         }
 
-        $count = count($validated['columns']);
+        return $this->ok($request, $this->addedMessage($created['columns'], $created['groups']));
+    }
 
-        return $this->ok($request, $count === 1 ? 'Column added successfully.' : "{$count} columns added successfully.");
+    /** "2 columns added across 3 groups.", and the singular variants of it. */
+    private function addedMessage(int $columns, int $groups): string
+    {
+        if ($groups === 1) {
+            return $columns === 1
+                ? 'Column added successfully.'
+                : "{$columns} columns added successfully.";
+        }
+
+        $noun = $columns === 1 ? 'column' : 'columns';
+
+        return "{$columns} {$noun} added across {$groups} groups.";
     }
 
     public function update(Request $request, $id)
@@ -336,8 +396,18 @@ class PeerEvaluationColumnController extends Controller
 
         $clash = array_intersect($names, $existing);
         if ($clash !== []) {
+            // array_intersect keeps the keys of its first argument, and $names was
+            // built with array_map over $columns - so the key indexes straight back
+            // into the submitted row and the message can quote what the user
+            // actually typed rather than the lower-cased comparison key.
+            $index = array_key_first($clash);
+            $typed = trim((string) $columns[$index]['column_name']);
+
+            // Named, not "this group": one submit can now target several groups,
+            // so "this group" would leave the user guessing which one clashed.
             throw ValidationException::withMessages([
-                'columns' => 'This group already has a column called "' . reset($clash) . '".',
+                'columns' => 'The group "' . $group->group_name . '" already has a column called "'
+                    . $typed . '".',
             ]);
         }
     }

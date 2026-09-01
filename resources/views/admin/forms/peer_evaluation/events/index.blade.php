@@ -374,6 +374,25 @@
         });
     }
 
+    /* Active / Archived badge beside a course, in the list AND on the closed
+       control. Returns a jQuery object on purpose: a string would be escaped by
+       Select2 and the markup would show up as text. */
+    function courseOption(state) {
+        if (!state.id) { return state.text; }
+
+        var $option = $(state.element);
+        var status = $option.data('status');
+        if (!status) { return state.text; }
+
+        return $('<span class="pe-course-opt"></span>')
+            .append($('<span class="pe-course-opt__name"></span>').text(state.text))
+            .append(
+                $('<span class="pe-course-opt__badge"></span>')
+                    .addClass(status === 'active' ? 'is-active' : 'is-archived')
+                    .text($option.data('status-label') || status)
+            );
+    }
+
     /* Select2 on the Course Name select.
        dropdownParent must be the modal or the search box can't take focus. Init is
        idempotent so re-opening the modal doesn't stack instances. */
@@ -387,9 +406,56 @@
                 width: '100%',
                 dropdownParent: $modal,
                 placeholder: 'Select Course',
-                allowClear: false
+                allowClear: false,
+                templateResult: courseOption,
+                templateSelection: courseOption
             });
         });
+    }
+
+    /* An event lives inside its course, so Start / End Date are clamped to the
+       course's own window. This is a hint only - PeerEventController re-derives
+       the window from course_master and rejects anything outside it, because the
+       min/max attributes are trivially bypassed.
+
+       clearOutOfRange is false while a form is being POPULATED (edit): a stored
+       event that predates the course's current dates should still load, and let
+       the server say so on save. It is true when the USER picks a course, where
+       silently keeping dates from the previous course would be worse. */
+    function applyCourseDateBounds($form, clearOutOfRange) {
+        var $option = $form.find('select[name="course_id"] option:selected');
+        var min = $option.data('start-date') || '';
+        var max = $option.data('end-date') || '';
+
+        $form.find('input[name="start_date"], input[name="end_date"]').each(function () {
+            var $input = $(this);
+
+            if (min) { $input.attr('min', min); } else { $input.removeAttr('min'); }
+            if (max) { $input.attr('max', max); } else { $input.removeAttr('max'); }
+
+            var value = $input.val();
+            if (clearOutOfRange && value && ((min && value < min) || (max && value > max))) {
+                $input.val('');
+            }
+        });
+
+        $form.find('.pe-course-window').remove();
+        if (min || max) {
+            $form.find('input[name="end_date"]').closest('.pe-field')
+                .append(
+                    $('<div class="pe-course-window"></div>')
+                        .text('Within the course: ' + (min ? dmy(min) : '—') + ' to ' + (max ? dmy(max) : '—'))
+                );
+        }
+
+        syncPlaceholderState($form);
+    }
+
+    // ISO (what the <option> carries and the date input uses) -> d/m/Y (what the
+    // rest of this screen shows).
+    function dmy(iso) {
+        var parts = String(iso).split('-');
+        return parts.length === 3 ? parts[2] + '/' + parts[1] + '/' + parts[0] : iso;
     }
 
     // Select2 renders its own box, so a programmatic value change only shows up
@@ -536,6 +602,7 @@
             if (course) { $form.find('[name="course_id"]').val(course); }
             syncPlaceholderState($form);
             refreshCourseSelect2($form);
+            applyCourseDateBounds($form, false);
         });
 
         $('#peAddEventModal').on('shown.bs.modal', function () {
@@ -567,6 +634,9 @@
             $form.find('[name="description"]').val($btn.data('description'));
             syncPlaceholderState($form);
             refreshCourseSelect2($form);
+            // false: an event stored before the course's dates were last edited
+            // must still load. The server is what rejects it, on save.
+            applyCourseDateBounds($form, false);
 
             bootstrap.Modal.getOrCreateInstance(document.getElementById('peEditEventModal')).show();
         });
@@ -579,6 +649,12 @@
         // Keep the grey/solid placeholder state in step with what the user picks.
         $('#peAddEventForm, #peEditEventForm').on('change', 'select.pe-control, input[type="date"].pe-control', function () {
             $(this).toggleClass('pe-placeholder', !$(this).val());
+        });
+
+        // A different course means a different allowed window, so re-clamp and
+        // drop any date the new course can't hold.
+        $('#peAddEventForm, #peEditEventForm').on('change', 'select[name="course_id"]', function () {
+            applyCourseDateBounds($(this).closest('form'), true);
         });
 
         /* Delete */

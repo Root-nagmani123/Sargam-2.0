@@ -143,18 +143,30 @@
                     </div>
 
                     <div class="pe-field mb-3">
-                        <label class="pe-form-label" for="pecAddEventId">Event Name</label>
-                        <select class="form-select pe-control js-pec-select2" id="pecAddEventId" name="event_id">
+                    {{-- Event is REQUIRED. A column saved without one still wrote a
+                         peer_columns row, but the grid is built event -> group ->
+                         column, so that row appeared nowhere and looked like a
+                         failed save. PeerEvaluationColumnController enforces the
+                         same rule server-side. --}}
+                    <div class="pe-field mb-3">
+                        <label class="pe-form-label" for="pecAddEventId">Event Name<span class="pe-req">*</span></label>
+                        <select class="form-select pe-control js-pec-select2" id="pecAddEventId" name="event_id" required>
                             <option value="">Select Event</option>
                         </select>
                         <div class="pe-error"></div>
                     </div>
 
+                    {{-- Multiple: the same set of columns usually has to go on every
+                         group of an event, and adding them one group at a time is
+                         the same form filled N times. No empty placeholder <option>
+                         here - a multi-select would offer it as a pickable value -
+                         so the placeholder comes from data-placeholder instead. --}}
                     <div class="pe-field mb-3">
                         <label class="pe-form-label" for="pecAddGroupId">Group Name<span class="pe-req">*</span></label>
-                        <select class="form-select pe-control js-pec-select2" id="pecAddGroupId" name="group_id" required>
-                            <option value="">Select Group</option>
+                        <select class="form-select pe-control js-pec-select2" id="pecAddGroupId"
+                                name="group_ids[]" data-placeholder="Select Groups" multiple required>
                         </select>
+                        <div class="pe-form-hint">Pick one or more groups. Every column below is added to each of them.</div>
                         <div class="pe-error"></div>
                     </div>
 
@@ -463,7 +475,9 @@
             if ($sel.data('select2')) { return; }
             var opts = {
                 width: '100%',
-                placeholder: $sel.find('option:first').text() || 'Select',
+                // data-placeholder first: a multi-select carries no empty
+                // placeholder <option> to read the text off.
+                placeholder: $sel.data('placeholder') || $sel.find('option:first').text() || 'Select',
                 allowClear: !$sel.prop('required')
             };
             if ($parent && $parent.length) { opts.dropdownParent = $parent; }
@@ -471,12 +485,22 @@
         });
     }
 
+    // Keyed on the option's VALUE, not on its position: the multi-select group
+    // picker has no empty placeholder <option>, so ":not(:first)" would have kept
+    // a real group on every rebuild.
     function fill($sel, list, keep) {
-        $sel.find('option:not(:first)').remove();
+        $sel.find('option').filter(function () { return this.value !== ''; }).remove();
         $.each(list, function (i, item) {
             $sel.append($('<option>', { value: item.id, text: item.name }));
         });
-        $sel.val(keep && $sel.find('option[value="' + keep + '"]').length ? keep : '');
+
+        // Only re-select what the new list actually still offers.
+        var wanted = $.isArray(keep) ? keep : (keep ? [keep] : []);
+        var kept = $.grep(wanted, function (value) {
+            return $sel.find('option[value="' + value + '"]').length > 0;
+        });
+
+        $sel.val($sel.prop('multiple') ? kept : (kept[0] || ''));
         // Select2 re-reads <option>s live but only re-renders on this event.
         $sel.trigger('change.select2');
     }
@@ -590,7 +614,10 @@
                 return;
             }
 
-            var $field = $form.find('[name="' + field + '"]').first();
+            // Laravel names array fields "group_ids" or "group_ids.0"; the control
+            // itself is named "group_ids[]". Try both shapes.
+            var base = field.replace(/\.\d+$/, '');
+            var $field = $form.find('[name="' + base + '"], [name="' + base + '[]"]').first();
             $field.addClass('is-invalid');
             $field.closest('.pe-field').find('.pe-error').first().addClass('is-shown').text(msg);
         });
@@ -714,7 +741,7 @@
             loadOptions({
                 courseId: course,
                 $event: $form.find('[name="event_id"]'),
-                $group: $form.find('[name="group_id"]')
+                $group: $form.find('[name="group_ids[]"]')
             });
         });
 
@@ -728,7 +755,7 @@
             loadOptions({
                 courseId: $(this).val(),
                 $event: $form.find('[name="event_id"]'),
-                $group: $form.find('[name="group_id"]')
+                $group: $form.find('[name="group_ids[]"]')
             });
         });
 
@@ -737,7 +764,7 @@
             loadOptions({
                 courseId: $form.find('[name="course_id"]').val(),
                 eventId: $(this).val(),
-                $group: $form.find('[name="group_id"]')
+                $group: $form.find('[name="group_ids[]"]')
             });
         });
 
@@ -781,9 +808,11 @@
                 .done(function (res) {
                     var inst = bootstrap.Modal.getInstance(document.getElementById('pecAddModal'));
                     if (inst) { inst.hide(); }
-                    var groupId = $form.find('[name="group_id"]').val();
+                    // One submit can now touch several groups, so refresh each
+                    // level-3 pane that happens to be open.
+                    var groupIds = $form.find('[name="group_ids[]"]').val() || [];
                     if (dt) { dt.ajax.reload(null, false); }
-                    refreshOpenGroup(groupId);
+                    $.each(groupIds, function (i, groupId) { refreshOpenGroup(groupId); });
                     toast((res && res.message) || 'Columns added successfully.');
                 })
                 .fail(function (xhr) {

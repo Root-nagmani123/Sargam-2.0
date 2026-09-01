@@ -30,7 +30,7 @@
 .select2-container--default .select2-selection--single .select2-selection__rendered {
     width: 100%;
     padding-left: 0.875rem;
-    padding-right: 2rem;                 /* room for the caret */
+    padding-right: 3.25rem;              /* room for the caret AND a possible clear (x) */
     line-height: normal;
     font-size: 0.95rem;
     color: var(--ds-ink, #1f2937);
@@ -62,6 +62,41 @@
 .select2-container--default.select2-container--open .select2-selection--single .select2-selection__arrow b {
     margin-top: -2px;
     transform: rotate(-135deg);          /* flip up when open */
+}
+
+/* Clear (×) on an allowClear select.
+   ---------------------------------------------------------------------
+   Select2 renders it INSIDE .select2-selection__rendered, as the FIRST child,
+   before the value, and positions it with `float: right`. That float does
+   nothing inside a box that is white-space:nowrap / overflow:hidden, so the ×
+   lands hard against the left edge of the value and sits off-centre vertically —
+   which is exactly what it looked like. Take it out of the text flow and park it
+   beside the caret instead. .select2-selection--single is position:relative
+   above, so this anchors to the control, not to the page. */
+.select2-container--default .select2-selection--single .select2-selection__clear {
+    position: absolute;
+    top: 50%;
+    right: 34px;                         /* clear of the caret: 28px wide at right:6px */
+    transform: translateY(-50%);
+    float: none;
+    margin: 0;
+    padding: 0 0.15rem;
+    font-size: 1.05rem;
+    font-weight: 400;
+    line-height: 1;
+    color: #667085;
+    cursor: pointer;
+}
+.select2-container--default .select2-selection--single .select2-selection__clear:hover {
+    color: var(--bs-danger, #dc3545);
+}
+
+/* Where :has() is available, a control with no × gives the padding back, so a
+   long value truncates as late as it used to. Purely an enhancement: without it
+   every control simply keeps the wider gutter reserved above. */
+.select2-container--default .select2-selection--single
+    .select2-selection__rendered:not(:has(.select2-selection__clear)) {
+    padding-right: 2rem;
 }
 
 /* Invalid state — paired with a .is-invalid <select> */
