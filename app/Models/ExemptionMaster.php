@@ -17,7 +17,10 @@ class ExemptionMaster extends Model
         'effective_from',
         'gender',
         'exemption_days',
+        'max_exemption_per_month',
+        'description',
         'apply_cutoff_time',
+        'freeze_before_minutes',
         'active_inactive',
         'created_by',
         'created_date',
@@ -27,6 +30,8 @@ class ExemptionMaster extends Model
     protected $casts = [
         'effective_from' => 'date',
         'exemption_days' => 'decimal:1',
+        'max_exemption_per_month' => 'decimal:1',
+        'freeze_before_minutes' => 'integer',
     ];
 
     public function course()

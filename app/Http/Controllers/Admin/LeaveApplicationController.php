@@ -212,12 +212,15 @@ class LeaveApplicationController extends Controller
 
             if ($ptConfig && ! $this->leaveService->isLeaveStartDateAllowedForApply(
                 $ptConfig->apply_cutoff_time,
-                $validated['from_date']
+                $validated['from_date'],
+                null,
+                (int) ($ptConfig->freeze_before_minutes ?? 0)
             )) {
                 return back()->withInput()->withErrors([
                     'from_date' => $this->leaveService->applyCutoffErrorMessage(
                         'PT exemption',
-                        $ptConfig->apply_cutoff_time
+                        $ptConfig->apply_cutoff_time,
+                        (int) ($ptConfig->freeze_before_minutes ?? 0)
                     ),
                 ]);
             }
@@ -267,6 +270,30 @@ class LeaveApplicationController extends Controller
                 return back()->withInput()->withErrors([
                     'to_date' => 'Requested days exceed your remaining PT balance (' . number_format($balance['remaining'], 1) . ' days).',
                 ]);
+            }
+
+            $ptConfig = $this->leaveService->getActivePtExemptionConfig(
+                $context['course_pk'],
+                $context['student']->gender ?? null,
+                $validated['from_date']
+            );
+            $maxPerMonth = (float) ($ptConfig->max_exemption_per_month ?? 0);
+
+            if ($maxPerMonth > 0) {
+                $monthlyUsed = $this->leaveService->getPtMonthlyUsage(
+                    $context['student_pk'],
+                    $context['course_pk'],
+                    $validated['from_date'],
+                    $application?->pk
+                );
+
+                if ($monthlyUsed + $totalDays > $maxPerMonth) {
+                    return back()->withInput()->withErrors([
+                        'to_date' => 'Requested days exceed the max PT exemption allowed per month ('
+                            . number_format($maxPerMonth, 1) . ' days). You have already used/requested '
+                            . number_format($monthlyUsed, 1) . ' day(s) this month.',
+                    ]);
+                }
             }
         }
 
@@ -543,19 +570,25 @@ class LeaveApplicationController extends Controller
             'activePtExemption' => $activePt,
             'ptEarliestFromDate' => $this->leaveService->resolveEarliestFromDate(
                 $ptConfigMinDate,
-                $activePt?->apply_cutoff_time
+                $activePt?->apply_cutoff_time,
+                (int) ($activePt?->freeze_before_minutes ?? 0)
             ),
             'stationedEarliestFromDate' => $this->leaveService->resolveEarliestFromDate(
                 $stationedConfigMinDate,
                 $activeStationed?->apply_cutoff_time
             ),
-            'ptCutoffTimeDisplay' => $this->leaveService->formatCutoffTimeDisplay($activePt?->apply_cutoff_time),
+            'ptCutoffTimeDisplay' => $this->leaveService->formatCutoffTimeDisplay(
+                $activePt?->apply_cutoff_time,
+                (int) ($activePt?->freeze_before_minutes ?? 0)
+            ),
             'stationedCutoffTimeDisplay' => $this->leaveService->formatCutoffTimeDisplay($activeStationed?->apply_cutoff_time),
             'ptCutoffPassedToday' => $activePt
                 && $activePt->apply_cutoff_time
                 && ! $this->leaveService->isLeaveStartDateAllowedForApply(
                     $activePt->apply_cutoff_time,
-                    now()->toDateString()
+                    now()->toDateString(),
+                    null,
+                    (int) ($activePt->freeze_before_minutes ?? 0)
                 ),
             'stationedCutoffPassedToday' => $activeStationed
                 && $activeStationed->apply_cutoff_time

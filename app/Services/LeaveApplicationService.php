@@ -142,6 +142,30 @@ class LeaveApplicationService
     }
 
     /**
+     * PT exemption days already used or pending by a student within the calendar
+     * month containing the given date (excludes the application being edited, if any).
+     */
+    public function getPtMonthlyUsage(
+        int $studentPk,
+        int $coursePk,
+        string $withinDate,
+        ?int $ignoreApplicationPk = null
+    ): float {
+        $monthStart = Carbon::parse($withinDate)->startOfMonth()->toDateString();
+        $monthEnd = Carbon::parse($withinDate)->endOfMonth()->toDateString();
+
+        return (float) LeaveApplication::query()
+            ->where('student_master_pk', $studentPk)
+            ->where('course_master_pk', $coursePk)
+            ->where('leave_type', LeaveApplication::TYPE_PT_EXEMPTION)
+            ->whereIn('status', [LeaveApplication::STATUS_APPROVED, LeaveApplication::STATUS_PENDING])
+            ->whereDate('from_date', '<=', $monthEnd)
+            ->whereDate('to_date', '>=', $monthStart)
+            ->when($ignoreApplicationPk, fn ($q) => $q->where('pk', '!=', $ignoreApplicationPk))
+            ->sum('total_days');
+    }
+
+    /**
      * Latest active stationed-leave config for a course as of a given date
      * (defaults to today). Uses the leave start date when validating applications.
      */
@@ -253,10 +277,16 @@ class LeaveApplicationService
     }
 
     /**
-     * Officer trainees may apply for leave starting today only before the configured PT/cutoff time.
+     * Officer trainees may apply for leave starting today only before the configured
+     * PT/cutoff time, minus an optional freeze window (e.g. freeze of 30 minutes on a
+     * 06:00 PT start time closes applications at 05:30).
      */
-    public function isLeaveStartDateAllowedForApply(?string $cutoffTime, string $fromDate, ?Carbon $now = null): bool
-    {
+    public function isLeaveStartDateAllowedForApply(
+        ?string $cutoffTime,
+        string $fromDate,
+        ?Carbon $now = null,
+        int $freezeBeforeMinutes = 0
+    ): bool {
         if (blank($cutoffTime)) {
             return true;
         }
@@ -269,25 +299,26 @@ class LeaveApplicationService
             return true;
         }
 
-        $cutoff = Carbon::parse($today->toDateString() . ' ' . $cutoffTime);
+        $cutoff = Carbon::parse($today->toDateString() . ' ' . $cutoffTime)
+            ->subMinutes($freezeBeforeMinutes);
 
         return $now->lt($cutoff);
     }
 
-    public function applyCutoffErrorMessage(string $leaveTypeLabel, ?string $cutoffTime): string
+    public function applyCutoffErrorMessage(string $leaveTypeLabel, ?string $cutoffTime, int $freezeBeforeMinutes = 0): string
     {
         $timeDisplay = $cutoffTime
-            ? Carbon::parse($cutoffTime)->format('h:i A')
+            ? Carbon::parse($cutoffTime)->subMinutes($freezeBeforeMinutes)->format('h:i A')
             : '';
 
-        return 'You cannot apply for ' . $leaveTypeLabel . ' starting today after PT timing ('
-            . $timeDisplay . '). Please select a future start date.';
+        return 'You cannot apply for ' . $leaveTypeLabel . ' starting today after '
+            . $timeDisplay . '. Please select a future start date.';
     }
 
     /**
      * Earliest selectable start date considering effective-from and same-day apply cutoff.
      */
-    public function resolveEarliestFromDate(?string $configMinDate, ?string $cutoffTime): ?string
+    public function resolveEarliestFromDate(?string $configMinDate, ?string $cutoffTime, int $freezeBeforeMinutes = 0): ?string
     {
         $candidates = array_filter([
             $configMinDate,
@@ -300,20 +331,20 @@ class LeaveApplicationService
 
         $min = max($candidates);
 
-        if (! $this->isLeaveStartDateAllowedForApply($cutoffTime, now()->toDateString())) {
+        if (! $this->isLeaveStartDateAllowedForApply($cutoffTime, now()->toDateString(), null, $freezeBeforeMinutes)) {
             $min = max($min, now()->addDay()->toDateString());
         }
 
         return $min;
     }
 
-    public function formatCutoffTimeDisplay(?string $cutoffTime): ?string
+    public function formatCutoffTimeDisplay(?string $cutoffTime, int $freezeBeforeMinutes = 0): ?string
     {
         if (blank($cutoffTime)) {
             return null;
         }
 
-        return Carbon::parse($cutoffTime)->format('h:i A');
+        return Carbon::parse($cutoffTime)->subMinutes($freezeBeforeMinutes)->format('h:i A');
     }
 
     /**

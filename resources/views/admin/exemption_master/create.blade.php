@@ -137,6 +137,28 @@
                     </div>
                 </div>
 
+                <div class="row g-4 mb-4">
+                    <div class="col-12 col-md-3">
+                        <label for="freeze_before_minutes" class="form-label fw-semibold">Freeze Before (Minutes)</label>
+                        <input type="number" step="1" min="0" max="1440"
+                            id="freeze_before_minutes" name="freeze_before_minutes" class="form-control"
+                            value="{{ old('freeze_before_minutes', $maleRecord ? (int) $maleRecord->freeze_before_minutes : 0) }}"
+                            placeholder="0">
+                        <small class="text-muted">Apply closes this many minutes before PT Start Time.</small>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label for="max_exemption_per_month" class="form-label fw-semibold">Max Exemption Per Month <span class="text-danger">*</span></label>
+                        <div class="input-group days-input-group">
+                            <input type="number" step="0.1" min="0.1" max="999.9"
+                                id="max_exemption_per_month" name="max_exemption_per_month" class="form-control" required
+                                value="{{ old('max_exemption_per_month', $maleRecord ? number_format((float) $maleRecord->max_exemption_per_month, 1, '.', '') : '') }}"
+                                placeholder="0.0">
+                            <span class="input-group-text">In Days</span>
+                        </div>
+                        <small class="text-muted">Applies equally to Male and Female officer trainees.</small>
+                    </div>
+                </div>
+
                 <h3 class="h6 fw-semibold mb-2">PT Exemption Count (Per Academic Year)</h3>
                 <hr class="mt-0 mb-3">
 
@@ -175,6 +197,12 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <div class="mb-4">
+                    <label for="description" class="form-label fw-semibold">Description</label>
+                    <textarea id="description" name="description" class="form-control" rows="3" maxlength="1000"
+                        placeholder="Add any remarks or notes for this PT exemption configuration (optional)">{{ old('description', $maleRecord->description ?? '') }}</textarea>
                 </div>
 
                 <div class="d-flex flex-wrap justify-content-end gap-2">

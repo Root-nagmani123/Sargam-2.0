@@ -93,9 +93,19 @@ class ExemptionMasterController extends Controller
             'apply_cutoff_time' => 'required|date_format:H:i',
             'male_exemption_days' => 'required|numeric|min:0|max:999.9',
             'female_exemption_days' => 'required|numeric|min:0|max:999.9',
+            'max_exemption_per_month' => 'required|numeric|min:0.1|max:999.9',
+            'description' => 'nullable|string|max:1000',
+            'freeze_before_minutes' => 'nullable|integer|min:0|max:1440',
         ]);
 
         $this->assertCourseAllowed((int) $validated['course_master_pk']);
+
+        $maxAllowedPerMonth = min((float) $validated['male_exemption_days'], (float) $validated['female_exemption_days']);
+        if ((float) $validated['max_exemption_per_month'] > $maxAllowedPerMonth) {
+            return back()->withInput()->withErrors([
+                'max_exemption_per_month' => 'Max exemption per month cannot exceed the PT exemption count allocated per academic year.',
+            ]);
+        }
 
         $course = CourseMaster::find($validated['course_master_pk']);
         if (blank($course?->pt_start_time)) {
@@ -122,7 +132,10 @@ class ExemptionMasterController extends Controller
                 $validated['effective_from'],
                 'Male',
                 (float) $validated['male_exemption_days'],
+                (float) $validated['max_exemption_per_month'],
                 $validated['apply_cutoff_time'],
+                $validated['description'] ?? null,
+                (int) ($validated['freeze_before_minutes'] ?? 0),
                 $user->pk ?? null,
                 $now
             );
@@ -132,7 +145,10 @@ class ExemptionMasterController extends Controller
                 $validated['effective_from'],
                 'Female',
                 (float) $validated['female_exemption_days'],
+                (float) $validated['max_exemption_per_month'],
                 $validated['apply_cutoff_time'],
+                $validated['description'] ?? null,
+                (int) ($validated['freeze_before_minutes'] ?? 0),
                 $user->pk ?? null,
                 $now
             );
@@ -166,7 +182,10 @@ class ExemptionMasterController extends Controller
         string $effectiveFrom,
         string $gender,
         float $exemptionDays,
+        float $maxExemptionPerMonth,
         string $applyCutoffTime,
+        ?string $description,
+        int $freezeBeforeMinutes,
         ?int $createdBy,
         $now
     ): void {
@@ -178,7 +197,10 @@ class ExemptionMasterController extends Controller
         if ($record) {
             $record->update([
                 'exemption_days' => $exemptionDays,
+                'max_exemption_per_month' => $maxExemptionPerMonth,
                 'apply_cutoff_time' => $applyCutoffTime,
+                'description' => $description,
+                'freeze_before_minutes' => $freezeBeforeMinutes,
                 'active_inactive' => 1,
                 'modified_date' => $now,
             ]);
@@ -191,7 +213,10 @@ class ExemptionMasterController extends Controller
             'effective_from' => $effectiveFrom,
             'gender' => $gender,
             'exemption_days' => $exemptionDays,
+            'max_exemption_per_month' => $maxExemptionPerMonth,
             'apply_cutoff_time' => $applyCutoffTime,
+            'description' => $description,
+            'freeze_before_minutes' => $freezeBeforeMinutes,
             'active_inactive' => 1,
             'created_by' => $createdBy,
             'created_date' => $now,
