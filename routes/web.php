@@ -53,6 +53,7 @@ use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
 use App\Http\Controllers\Admin\Master\AppellationMasterController;
+use App\Http\Controllers\Admin\Master\LeaveNatureMasterController;
 use App\Http\Controllers\Admin\FeedbackController;
 use App\Http\Controllers\Admin\Estate\{
     EstateCampusController,
@@ -883,6 +884,15 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         Route::post('/store', 'store')->name('store');
         Route::post('/status/{id}', 'status')->name('status');
         Route::delete('/delete/{id}', 'destroy')->name('destroy');
+    });
+
+    // Leave Nature Master (Leave Management)
+    Route::prefix('master/leave-nature-master')->name('master.leave-nature.')->controller(LeaveNatureMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::delete('/delete/{id}', 'destroy')->name('delete');
     });
 
     // Stationed Leave Master (Leave Management)
