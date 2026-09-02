@@ -1519,7 +1519,12 @@ class UserController extends Controller
     {
         // Skip the payload's per-student total_* / notice-memo N+1 loop — this page
         // computes its counts separately via otParticipantsRowMeta (batched).
-        $payload = $this->resolveDashboardStudentListPayload($request, false);
+        //
+        // $coordinatedOnly: participants are the roster of the courses this viewer
+        // coordinates (course_coordinator_master), and nothing else — no group-mapped
+        // or merely-taught courses, no memo-only students. The "OT/ Participants
+        // Details" card on the student list counts the same set, so the two agree.
+        $payload = $this->resolveDashboardStudentListPayload($request, false, true);
         $availableCourses = $payload['availableCourses'];
 
         $participants = $this->otParticipantsRowsFor($request, $payload['students']);
@@ -2547,7 +2552,7 @@ class UserController extends Controller
     /**
      * @return array{students: \Illuminate\Support\Collection, availableCourses: \Illuminate\Support\Collection, facultyPk: int|null}
      */
-    private function resolveDashboardStudentListPayload(?Request $request = null, bool $withTotals = true): array
+    private function resolveDashboardStudentListPayload(?Request $request = null, bool $withTotals = true, bool $coordinatedOnly = false): array
     {
         $students = collect([]);
         $availableCourses = collect([]);
@@ -2622,7 +2627,10 @@ class UserController extends Controller
                 $source2Students = collect([]);
                 // Group-mapping source is faculty-specific; Super Admin already has
                 // every student via source1, so skip it when there's no faculty pk.
-                $groupMappings = $facultyPk
+                // $coordinatedOnly callers (the OT participants page and the card that
+                // opens it) want the course_coordinator_master roster and nothing
+                // else, so sources 2 and 3 are skipped for them entirely.
+                $groupMappings = ($facultyPk && ! $coordinatedOnly)
                     ? DB::table('group_type_master_course_master_map')
                         ->where('facility_id', $facultyPk)
                         ->where('active_inactive', 1)
@@ -2684,7 +2692,7 @@ class UserController extends Controller
                 // in here (the session-level scope in expandStudentRowsBySession then
                 // keeps only this faculty's own sessions for such non-coordinated courses).
                 $source3Students = collect([]);
-                if ($facultyPk && ! $seesAllCourses) {
+                if ($facultyPk && ! $seesAllCourses && ! $coordinatedOnly) {
                     $taughtRows = DB::table('course_student_attendance as a')
                         ->join('timetable as t', 'a.timetable_pk', '=', 't.pk')
                         ->where(function ($q) use ($facultyPk) {
@@ -2757,12 +2765,14 @@ class UserController extends Controller
                 // active-course list (their course has expired or their enrolment is
                 // inactive), so their memo history still surfaces here. Scoped to what
                 // the current viewer is allowed to see.
-                // NOT gated on $withTotals: this decides WHICH ROWS exist, not which
-                // counts are attached. Gating it made the student list's "OT/
-                // Participants Details" card (which counts these rows) disagree with
-                // the OT participants page it links to — the card read 50 while the
-                // page rendered "Data not found."
-                $this->appendStudentsWithMemos($uniqueStudents, $seenStudentCourseKeys, $seesAllCourses, $facultyPk);
+                //
+                // Student-list only. These students are not on any coordinated course
+                // roster, so counting them as "participants" overstated the OT/
+                // Participants Details card — it read 50 for a Super Admin whose only
+                // active course has no enrolments at all.
+                if (! $coordinatedOnly) {
+                    $this->appendStudentsWithMemos($uniqueStudents, $seenStudentCourseKeys, $seesAllCourses, $facultyPk);
+                }
 
                 // Batch-load House Name (hostel room, keyed by student_master.user_id == hostel user_name)
                 // and the latest attendance status per student (for Present/Absent).
@@ -3816,8 +3826,15 @@ class UserController extends Controller
             ->unique()
             ->count();
 
+        // "OT/ Participants Details" counts the COORDINATED roster only — the rows
+        // sourced from course_coordinator_master (source 'cc_acc'), which is exactly
+        // what the OT participants page this card opens now lists. Group-mapped,
+        // merely-taught and memo-only rows are on the student list below but are not
+        // participants of a course this viewer coordinates, so they are not counted.
+        $coordinated = collect($students)->filter(fn ($m) => ($m->source ?? null) === 'cc_acc');
+
         $counts = [
-            'total' => $distinct($this->applyDashboardStudentListFilters($students, $request, false)),
+            'total' => $distinct($this->applyDashboardStudentListFilters($coordinated, $request, false)),
             'present_today' => $distinct($presentStudents),
             'absent_today' => $distinct($absentStudents),
         ];
