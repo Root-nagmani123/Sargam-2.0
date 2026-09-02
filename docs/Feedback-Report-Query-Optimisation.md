@@ -268,7 +268,17 @@ all of them; changing any single query corrects one.
 
 ## Known limitations of this change
 
-Three things a second review raised that are **recorded rather than fixed**, each with the reason.
+Things review raised that are **recorded rather than fixed**, each with the reason.
+
+| Limitation | Accepted by | Review by |
+| --- | --- | --- |
+| Cache staleness on the three lookup caches | _unassigned — Feedback module owner to sign_ | next change to these reports |
+| showFacultyAverage all-programs filter divergence | _unassigned — Feedback module owner to sign_ | when any course carries feedback while `active_inactive <> 1` |
+| Derived tables not bounded by `feedback_checkbox` | _unassigned — Feedback module owner to sign_ | when `timetable` grows by an order of magnitude |
+
+Each is Low or Advisory, each was measured, and each fix would change behaviour for no present
+benefit. The accepter column is deliberately blank rather than filled with a guess: an accepted
+risk with no name against it is a note, not a decision.
 
 ### Cache staleness on the three lookup caches
 
@@ -305,6 +315,22 @@ the filter to exclude.
 **Accepted, not fixed.** Aligning it is a query-behaviour change, and a behaviour change whose only
 effect today is nil is a poor trade inside a performance PR. Fix it deliberately if inactive
 courses ever start carrying feedback — the check is the two counts above.
+
+### The derived tables are not bounded by feedback_checkbox
+
+`OLD_FACULTY_JSON_TABLE` and `TEACHING_FACULTY_JSON_TABLE` expand every `timetable` row on each
+student-feedback page load, though only sessions with `feedback_checkbox = 1` can survive the
+consumers' join — 653 rows expanded for the 613 that matter, about 6% waste today.
+
+Adding `WHERE tt.feedback_checkbox = 1` inside each derived table looks free, and measured against
+the consumers' join it is: 677 (session, faculty) pairs either way, 21 fewer rows expanded.
+**It was tried and reverted.** `StudentFeedbackFacultyExpansionTest` pins these derived tables as
+reproducing the original `JSON_CONTAINS` predicate *exactly* — unconditionally, not merely after
+the consumer filters — and the narrowed version fails that assertion, along with the eight
+synthetic-shape cases whose fixture has no `feedback_checkbox` column.
+
+**Accepted, not fixed.** The equivalence contract is worth more than 6% of an expansion that is
+cheap at this scale. Revisit together with the tests if `timetable` grows by an order of magnitude.
 
 ### The cache is off unless the store is configured
 

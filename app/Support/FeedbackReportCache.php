@@ -62,16 +62,43 @@ final class FeedbackReportCache
      *
      * Cache problems must never take a report down, so a store failure falls through to
      * computing the value directly.
+     *
+     * The callback is invoked OUTSIDE every try block, and so runs exactly once. Wrapping
+     * Repository::remember() instead would put the callback inside the catch's reach: a callback
+     * that throws — a QueryException from the report query, say — would be report()ed as though
+     * the cache had failed and then executed a second time, doubling the work at the moment the
+     * database is already in trouble. The get/put split below is what Repository::remember() does
+     * internally (miss on null, put, return), so the caching semantics are unchanged.
      */
     public static function remember(string $key, int $ttl, Closure $callback)
     {
+        $store = null;
+        $namespaced = null;
+
         try {
-            return self::store()->remember(self::namespaced($key), $ttl, $callback);
+            $store = self::store();
+            $namespaced = self::namespaced($key);
+
+            $cached = $store->get($namespaced);
+            if ($cached !== null) {
+                return $cached;
+            }
         } catch (Throwable $e) {
             report($e);
-
-            return $callback();
+            $store = null;
         }
+
+        $value = $callback();
+
+        if ($store !== null) {
+            try {
+                $store->put($namespaced, $value, $ttl);
+            } catch (Throwable $e) {
+                report($e);
+            }
+        }
+
+        return $value;
     }
 
     /**

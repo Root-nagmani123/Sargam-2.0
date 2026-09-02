@@ -232,4 +232,50 @@ class StudentFeedbackFacultyExpansionTest extends TestCase
 
         return array_values(array_unique($pairs));
     }
+    /**
+     * The Teaching expansion is deliberately LOOSER than the JSON_CONTAINS predicate it replaced.
+     *
+     * JSON_CONTAINS(faculty_details, JSON_OBJECT('faculty_pk', 12, 'role', 'Teaching')) compared
+     * JSON values: a JSON string "12" never equalled the JSON number 12, and 'teaching' never
+     * equalled 'Teaching'. The rewrite reads faculty_pk through BIGINT and compares role with a
+     * collation-dependent SQL '=', so both of those now match.
+     *
+     * No row the application writes today takes either shape — buildFacultyDetails() casts the id
+     * to int and writes the role verbatim — so this is not a live divergence. It is pinned here so
+     * that an import or a hand-edited row cannot widen the report silently: if MySQL's behaviour or
+     * the constant changes, this test says so.
+     *
+     * @dataProvider teachingShapeDivergences
+     */
+    public function test_teaching_expansion_is_looser_than_the_predicate_it_replaced(
+        string $json,
+        int $jsonContainsMatches,
+        int $jsonTableMatches
+    ): void {
+        $row = DB::selectOne(
+            'SELECT
+                JSON_CONTAINS(CAST(? AS JSON), JSON_OBJECT("faculty_pk", 12, "role", "Teaching")) AS old_pred,
+                (SELECT COUNT(*) FROM JSON_TABLE(CAST(? AS JSON), "$" COLUMNS(
+                    faculty_pk BIGINT PATH "$.faculty_pk",
+                    role       VARCHAR(64) PATH "$.role")) jt
+                  WHERE jt.role = "Teaching" AND jt.faculty_pk = 12) AS new_pred',
+            [$json, $json]
+        );
+
+        $this->assertSame($jsonContainsMatches, (int) $row->old_pred, 'Original predicate changed behaviour.');
+        $this->assertSame($jsonTableMatches, (int) $row->new_pred, 'Rewritten expansion changed behaviour.');
+    }
+
+    /** @return array<string, array{0: string, 1: int, 2: int}> */
+    public static function teachingShapeDivergences(): array
+    {
+        return [
+            // shape                        => [json, JSON_CONTAINS, JSON_TABLE]
+            'numeric id, exact role'        => ['{"faculty_pk": 12, "role": "Teaching"}', 1, 1],
+            'string id, exact role'         => ['{"faculty_pk": "12", "role": "Teaching"}', 0, 1],
+            'numeric id, lower-case role'   => ['{"faculty_pk": 12, "role": "teaching"}', 0, 1],
+            'numeric id, different role'    => ['{"faculty_pk": 12, "role": "Chair"}', 0, 0],
+            'different id, exact role'      => ['{"faculty_pk": 99, "role": "Teaching"}', 0, 0],
+        ];
+    }
 }
