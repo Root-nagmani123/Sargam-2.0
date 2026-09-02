@@ -99,6 +99,16 @@
                 <i class="bi bi-printer" aria-hidden="true"></i>
                 <span>Print</span>
             </button>
+            <div class="dropdown">
+                <button type="button" class="btn sl-toolbar-btn dropdown-toggle border-0" id="otListDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-download" aria-hidden="true"></i>
+                    <span>Download</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-1 py-2" aria-labelledby="otListDownloadBtn">
+                    <li><button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="otListDownloadCsv"><i class="bi bi-file-earmark-excel text-success"></i><span>Download Excel</span></button></li>
+                    <li><button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="otListDownloadPdf"><i class="bi bi-filetype-pdf text-danger"></i><span>Download PDF</span></button></li>
+                </ul>
+            </div>
         </div>
     </div>
 
@@ -699,6 +709,25 @@
                     alert('Unable to load data for printing. Please try again.');
                 });
         });
+
+        /* ── Download (Excel / PDF) ── */
+        // The file follows the on-screen view: same filters, same Active/Archived
+        // tab, same search text.
+        function buildDownloadUrl(format) {
+            const params = new URLSearchParams();
+            Object.entries(getFilterState()).forEach(function([k, v]) {
+                if (v !== '' && v !== null && v !== undefined) { params.set(k, v); }
+            });
+            const search = dt ? dt.search() : '';
+            if (search) { params.set('search', search); }
+            const base = format === 'csv'
+                ? "{{ route('admin.dashboard.ot-participants.export', ['format' => 'csv']) }}"
+                : "{{ route('admin.dashboard.ot-participants.export', ['format' => 'pdf']) }}";
+            const q = params.toString();
+            return q ? base + '?' + q : base;
+        }
+        $('#otListDownloadCsv').on('click', function(e) { e.preventDefault(); window.location.href = buildDownloadUrl('csv'); });
+        $('#otListDownloadPdf').on('click', function(e) { e.preventDefault(); window.open(buildDownloadUrl('pdf'), '_blank'); });
 
         /* ── Dynamic columns: show / hide ── */
         // Stored values are column INDEXES, so bump the version whenever the column

@@ -2217,45 +2217,260 @@ class UserController extends Controller
     }
 
     /**
+     * Export the OT / Participants List as Excel, PDF or a printable page.
+     *
+     * Uses the SAME pipeline as the on-screen table — same coordinated-roster
+     * payload, same filters, same search — so the file always matches what the
+     * viewer is looking at, including the Active / Archived tab.
+     */
+    public function otParticipantsExport(Request $request, string $format)
+    {
+        if (! in_array($format, ['csv', 'pdf', 'print'], true)) {
+            abort(404);
+        }
+
+        // Anyone who can VIEW the list may export it — same guard as the student
+        // list export, so the download never 403s for someone the table works for.
+        $exportFacultyPk = get_auth_faculty_master_pk();
+        if (! hasRole('Super Admin')
+            && ! hasRole('Training Induction Admin')
+            && ! hasRole('Training MCTP Admin')
+            && ! hasRole('Training IST')
+            && ! is_faculty_portal_user()
+            && ! ($exportFacultyPk && ! hasRole('Student-OT'))) {
+            abort(403, 'You are not authorized to export the OT / Participants list.');
+        }
+
+        $payload = $this->resolveDashboardStudentListPayload($request, false, true);
+        $rows = $this->otParticipantsRowsFor($request, $payload['students']);
+
+        $rowMeta = $this->otParticipantsRowMeta(
+            $rows->pluck('student_master_pk')->all(),
+            $request->input('from_date') ?: null,
+            $request->input('to_date') ?: null
+        );
+
+        // The search box narrows the export exactly as it narrows the table.
+        $rows = $this->otParticipantsApplySearch($request, $rows, $rowMeta);
+
+        $exportData = $this->otParticipantsExportData($rows, $rowMeta);
+
+        $timestamp = now()->format('Ymd_His');
+        $fileBase = "ot_participants_{$timestamp}";
+        $reportTitle = 'OT / Participants List';
+        $filterSummary = $this->otParticipantsFilterSummary($request);
+        $header = $this->buildStudentListExportHeaderData($request);
+
+        if ($format === 'print') {
+            return view('admin.dashboard.export.student_list_print', array_merge([
+                'headings' => $exportData['headings'],
+                'rows' => $exportData['rows'],
+                'generatedAt' => now()->format('d-m-Y H:i'),
+                'filterSummary' => $filterSummary,
+                'reportTitle' => $reportTitle,
+            ], $header));
+        }
+
+        if ($format === 'pdf') {
+            ini_set('memory_limit', '512M');
+
+            $pdf = Pdf::loadView('admin.dashboard.export.student_list_pdf', array_merge([
+                'headings' => $exportData['headings'],
+                'rows' => $exportData['rows'],
+                'generatedAt' => now()->format('d-m-Y H:i'),
+                'filterSummary' => $filterSummary,
+                'reportTitle' => $reportTitle,
+            ], $header))
+                ->setPaper('a4', 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'isPhpEnabled' => true,
+                    'dpi' => 96,
+                ]);
+
+            return $pdf->download("{$fileBase}.pdf");
+        }
+
+        // Delivered as a branded .xlsx rather than a flat CSV — see the note on
+        // studentListExport().
+        return Excel::download(
+            new StudentListReportExport(
+                $exportData['headings'],
+                $exportData['rows'],
+                $reportTitle,
+                (string) ($header['courseName'] ?? ''),
+                (string) ($header['courseDuration'] ?? ''),
+                $filterSummary,
+                now()->format('d-m-Y H:i'),
+                count($exportData['rows']),
+            ),
+            "{$fileBase}.xlsx",
+            ExcelWriter::XLSX
+        );
+    }
+
+    /**
+     * Headings + plain-text rows for the OT participants exports, in the same
+     * order as the on-screen columns. Counts are written as the zero-padded
+     * strings the table shows, with a dash for none.
+     *
+     * @return array{headings: array<int, string>, rows: array<int, array<int, string>>}
+     */
+    private function otParticipantsExportData($rows, array $rowMeta): array
+    {
+        $headings = [
+            'S. No.',
+            'OT Code',
+            'Name',
+            'Email',
+            'Cadre',
+            'Cadre Counsellor',
+            'House Group Faculty',
+            'House Group',
+            'Total Duty (Count)',
+            'Duty Type',
+            'Total Medical Exemption Count',
+            'Total PT Exemption (Days)',
+            'Total Stationed Leave (Days)',
+            'Total Notice/Memo',
+            'Total Discipline Memo',
+        ];
+
+        $count = fn ($n) => (int) $n > 0 ? str_pad((string) (int) $n, 2, '0', STR_PAD_LEFT) : '-';
+
+        $out = [];
+        foreach (collect($rows)->values() as $index => $p) {
+            $s = $p->studentMaster;
+            if (! $s) {
+                continue;
+            }
+
+            $meta = $rowMeta[$p->student_master_pk] ?? [];
+            $name = $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''));
+
+            $out[] = [
+                $index + 1,
+                (string) ($s->generated_OT_code ?: 'N/A'),
+                (string) ($name ?: 'N/A'),
+                (string) ($s->email ?: 'N/A'),
+                (string) ($p->cadre_name ?: ($s->cadre->cadre_name ?? 'N/A')),
+                (string) ($p->counsellor_name ?: 'N/A'),
+                (string) ($p->house_faculty_name ?: 'N/A'),
+                (string) ($p->house_group ?: 'N/A'),
+                $count($meta['duty_count'] ?? 0),
+                (string) ($meta['duty_type'] ?: '-'),
+                $count($meta['medical'] ?? 0),
+                $count($meta['pt'] ?? 0),
+                $count($meta['stationed'] ?? 0),
+                $count($meta['notice_memo'] ?? 0),
+                $count($meta['discipline_memo'] ?? 0),
+            ];
+        }
+
+        return ['headings' => $headings, 'rows' => $out];
+    }
+
+    /**
+     * One-line description of the filters in force, printed under the report
+     * title so a saved file says what it was filtered by.
+     */
+    private function otParticipantsFilterSummary(Request $request): string
+    {
+        $parts = [];
+
+        if ($request->filled('course_id')) {
+            $course = CourseMaster::find($request->input('course_id'));
+            $parts[] = 'Course: ' . ($course->course_name ?? $request->input('course_id'));
+        }
+        if ($request->filled('cadre')) {
+            $parts[] = 'Cadre: ' . $request->input('cadre');
+        }
+        if ($request->filled('counsellor_faculty')) {
+            $name = DB::table('faculty_master')->where('pk', $request->input('counsellor_faculty'))->value('full_name');
+            $parts[] = 'Cadre Counsellor: ' . trim((string) ($name ?: $request->input('counsellor_faculty')));
+        }
+        if ($request->filled('house_group')) {
+            $parts[] = 'House Group: ' . $request->input('house_group');
+        }
+        if ($request->filled('house_faculty')) {
+            $name = DB::table('faculty_master')->where('pk', $request->input('house_faculty'))->value('full_name');
+            $parts[] = 'House Group Faculty: ' . trim((string) ($name ?: $request->input('house_faculty')));
+        }
+        if ($request->filled('session')) {
+            $parts[] = 'Session: ' . $request->input('session');
+        }
+        if ($request->filled('from_date') && $request->filled('to_date')) {
+            $parts[] = 'Time Period: ' . Carbon::parse($request->input('from_date'))->format('d-m-Y')
+                . ' to ' . Carbon::parse($request->input('to_date'))->format('d-m-Y');
+        }
+
+        $searchInput = $request->input('search');
+        $search = trim((string) (is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput));
+        if ($search !== '') {
+            $parts[] = 'Search: ' . $search;
+        }
+
+        $parts[] = 'Status: ' . ($request->input('status') === 'archive' ? 'Archived' : 'Active');
+
+        return implode('  |  ', $parts);
+    }
+
+    /**
+     * The DataTables search box, applied over the columns THIS page renders.
+     *
+     * Shared by the table and the exports so a downloaded file carries exactly the
+     * rows the viewer had on screen.
+     */
+    private function otParticipantsApplySearch(Request $request, $rows, array $rowMeta)
+    {
+        $searchInput = $request->input('search');
+        $search = strtolower(trim((string) (is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput)));
+        if ($search === '') {
+            return collect($rows)->values();
+        }
+
+        return collect($rows)->filter(function ($p) use ($search, $rowMeta) {
+            $s = $p->studentMaster;
+            if (! $s) {
+                return false;
+            }
+            $meta = $rowMeta[$p->student_master_pk] ?? [];
+            // Zero-padded count strings so "02" and "2" both match, alongside
+            // the raw numbers.
+            $pad = fn ($n) => str_pad((string) (int) $n, 2, '0', STR_PAD_LEFT);
+            $countFields = ['duty_count', 'medical', 'pt', 'stationed', 'notice_memo', 'discipline_memo'];
+            $counts = [];
+            foreach ($countFields as $f) {
+                $n = (int) ($meta[$f] ?? 0);
+                $counts[] = (string) $n;
+                $counts[] = $pad($n);
+            }
+            // A single haystack of every column's displayed value.
+            $haystack = strtolower(implode(' ', array_filter([
+                $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? '')),
+                $s->generated_OT_code ?? '',
+                $s->email ?? '',
+                $p->cadre_name ?? ($s->cadre->cadre_name ?? ''),
+                $p->counsellor_name ?? '',
+                $p->house_faculty_name ?? '',
+                $p->house_group ?? '',
+                $p->topic ?? '',
+                $meta['duty_type'] ?? '',
+                implode(' ', $counts),
+            ], fn ($v) => trim((string) $v) !== '')));
+
+            return str_contains($haystack, $search);
+        })->values();
+    }
+
+    /**
      * Server-side JSON for the OT / Participants List DataTable.
      */
     private function otParticipantsDataTableResponse(Request $request, $rows, array $rowMeta, int $totalParticipants, array $filterOptions = [])
     {
-        $searchInput = $request->input('search');
-        $search = strtolower(trim((string) (is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput)));
-        if ($search !== '') {
-            $rows = $rows->filter(function ($p) use ($search, $rowMeta) {
-                $s = $p->studentMaster;
-                if (! $s) {
-                    return false;
-                }
-                $meta = $rowMeta[$p->student_master_pk] ?? [];
-                // Zero-padded count strings so "02" and "2" both match, alongside
-                // the raw numbers.
-                $pad = fn ($n) => str_pad((string) (int) $n, 2, '0', STR_PAD_LEFT);
-                $countFields = ['duty_count', 'medical', 'pt', 'stationed', 'notice_memo', 'discipline_memo'];
-                $counts = [];
-                foreach ($countFields as $f) {
-                    $n = (int) ($meta[$f] ?? 0);
-                    $counts[] = (string) $n;
-                    $counts[] = $pad($n);
-                }
-                // A single haystack of every column's displayed value.
-                $haystack = strtolower(implode(' ', array_filter([
-                    $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? '')),
-                    $s->generated_OT_code ?? '',
-                    $s->email ?? '',
-                    $p->cadre_name ?? ($s->cadre->cadre_name ?? ''),
-                    $p->counsellor_name ?? '',
-                    $p->house_faculty_name ?? '',
-                    $p->house_group ?? '',
-                    $p->topic ?? '',
-                    $meta['duty_type'] ?? '',
-                    implode(' ', $counts),
-                ], fn ($v) => trim((string) $v) !== '')));
-                return str_contains($haystack, $search);
-            })->values();
-        }
+        $rows = $this->otParticipantsApplySearch($request, $rows, $rowMeta);
 
         $recordsTotal = $totalParticipants;
         $recordsFiltered = $rows->count();
