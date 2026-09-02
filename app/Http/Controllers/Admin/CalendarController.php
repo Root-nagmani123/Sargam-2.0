@@ -52,6 +52,20 @@ class CalendarController extends Controller
      *
      * @see studentFeedback()
      */
+    /*
+     * NOT bounded by tt.feedback_checkbox = 1, deliberately.
+     *
+     * Adding that predicate looks free — every consumer already applies it to the outer query, and
+     * measured against the consumers' join it changes nothing (677 pairs either way, 21 fewer rows
+     * expanded). It was tried and reverted: StudentFeedbackFacultyExpansionTest pins these derived
+     * tables as reproducing the original JSON_CONTAINS predicate EXACTLY, not merely once the
+     * consumer has filtered, and the narrowed version fails that assertion (plus the synthetic
+     * shape provider, whose fixture has no feedback_checkbox column).
+     *
+     * The equivalence contract is worth more than the ~6% of rows the bound would skip today
+     * (653 timetable rows, 613 carrying feedback). Revisit only together with the tests, and only
+     * if timetable growth makes the expansion actually cost something.
+     */
     private const OLD_FACULTY_JSON_TABLE = "(
         SELECT tt.pk AS timetable_pk, CAST(jt.faculty_txt AS UNSIGNED) AS faculty_pk
         FROM timetable tt

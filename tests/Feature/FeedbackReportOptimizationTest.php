@@ -488,14 +488,48 @@ class FeedbackReportOptimizationTest extends TestCase
         );
     }
 
-    /** A cache store failure must not take a report down. */
+    /**
+     * A cache store failure must not take a report down.
+     *
+     * Pointing cache.default at a missing store proves nothing: FeedbackReportCache resolves
+     * through RedisBackedCache::projectDefaultStoreName(), which never consults cache.default
+     * when the resolved name exists in config/cache.php. That version of this test passed on a
+     * plain cache miss and would have stayed green with the catch block deleted. Naming a store
+     * that is genuinely absent from the config makes the resolution itself throw, which is the
+     * failure the fallback exists for.
+     */
     public function test_cache_failure_falls_back_to_computing_the_value(): void
     {
         config(['cache.default' => 'no-such-store']);
+        config(['cache.redis_backed_unified_store' => 'no-such-store']);
 
         $this->assertSame(
             'computed',
-            FeedbackReportCache::remember('test:fallback', 60, fn () => 'computed')
+            FeedbackReportCache::remember('test:fallback:' . uniqid('', true), 60, fn () => 'computed'),
+            'A store that cannot be resolved must fall through to computing the value.'
+        );
+    }
+
+    /** The value callback must run exactly once, even when it throws. */
+    public function test_a_throwing_callback_is_not_executed_twice(): void
+    {
+        $calls = 0;
+
+        try {
+            FeedbackReportCache::remember('test:throwing:' . uniqid('', true), 60, function () use (&$calls) {
+                $calls++;
+                throw new \RuntimeException('simulated failure inside the value callback');
+            });
+            $this->fail('The callback exception should propagate.');
+        } catch (\RuntimeException $e) {
+            // expected
+        }
+
+        $this->assertSame(
+            1,
+            $calls,
+            'The callback ran more than once — it is inside the store try/catch, so a failing '
+            . 'report query would be re-executed at the moment the database is already struggling.'
         );
     }
 

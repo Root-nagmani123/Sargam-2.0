@@ -2019,7 +2019,13 @@ class FeedbackController extends Controller
 
         // Typeahead: fired on every keystroke, and the answer is the same for every
         // viewer, so cache it per (type filter, search term).
-        $suggestionKey = 'faculty_suggestions:' . implode(',', $validTypes) . ':' . mb_strtolower(trim((string) $searchTerm));
+        //
+        // The term is hashed rather than normalised. Normalising only the key while the LIKE
+        // above still uses the raw term would let " Ravi" and "ravi" — which produce different
+        // patterns, '% Ravi%' and '%ravi%' — share one entry, so whichever ran first would serve
+        // the other for the whole TTL. Hashing keeps one entry per distinct term and keeps the
+        // key safe for every store.
+        $suggestionKey = 'faculty_suggestions:' . implode(',', $validTypes) . ':' . sha1((string) $searchTerm);
         $faculties = FeedbackReportCache::remember(
             $suggestionKey,
             FeedbackReportCache::TTL_SUGGESTIONS,
