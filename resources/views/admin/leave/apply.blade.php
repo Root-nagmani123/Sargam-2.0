@@ -112,6 +112,16 @@
                 <div class="pt-balance-num">{{ number_format((float) ($ptBalance['remaining'] ?? 0), 1) }} Days</div>
                 <div class="pt-balance-sub">As on {{ $ptBalance['as_on'] ?? now()->format('d M Y') }}</div>
             </div>
+
+            @if(filled($activePt?->description))
+                <div class="pt-balance-box mt-3">
+                    <div class="pt-balance-head">
+                        <i class="material-icons material-symbols-rounded">info</i>
+                        <span>Description</span>
+                    </div>
+                    <div class="pt-balance-sub mt-1" style="white-space: pre-line;">{{ $activePt->description }}</div>
+                </div>
+            @endif
         </div>
         @endif
 
@@ -190,9 +200,12 @@
                             <input type="date" name="to_date" id="to_date" class="form-control @error('to_date') is-invalid @enderror" required
                                 value="{{ $toDateValue }}"
                                 @if($toDateMin) min="{{ $toDateMin }}" @endif
-                                {{ $isReadOnly ? 'readonly' : '' }}>
+                                readonly>
                             <i class="material-icons material-symbols-rounded leave-date-icon">calendar_month</i>
                         </div>
+                        @if(! $isReadOnly)
+                            <div class="form-text">Leave can only be applied for one day at a time.</div>
+                        @endif
                         @error('to_date')
                             <div class="text-danger small mt-1">{{ $message }}</div>
                         @enderror
@@ -440,10 +453,8 @@ $(function () {
             return;
         }
         $toDate.attr('min', from);
-        const to = $toDate.val();
-        if (!to || to < from) {
-            $toDate.val(from);
-        }
+        // Leave is one day at a time: Date To always mirrors Date From.
+        $toDate.val(from);
     }
 
     function updateTotalDays() {
