@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\FeedbackReportCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\{ClassSessionMaster, CourseGroupTimetableMapping, CourseMaster, FacultyMaster, VenueMaster, SubjectMaster, SubjectModuleMaster, CalendarEvent, Holiday, SectorMaster};
@@ -21,6 +22,92 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class CalendarController extends Controller
 {
+    /**
+     * (timetable_pk, faculty_pk) for legacy sessions, expanded from timetable.faculty_master.
+     *
+     * Replaces a cross join against every faculty_master row filtered by JSON_CONTAINS. That
+     * made MySQL build the full faculty x session product — 38,198 rows to keep 81 — and no
+     * amount of rewriting the join predicate fixed it: the optimiser kept faculty_master in an
+     * upstream hash join with no condition and re-evaluated the table function once per row
+     * (`loops=38198`). Expressed as a self-contained derived table it has no correlation to the
+     * outer query, so it is materialised once (~700 rows) and joined on timetable_pk.
+     * Measured on the student feedback page: 125 ms -> 13 ms.
+     *
+     * The original predicate was:
+     *     (JSON_VALID(fm) AND JSON_CONTAINS(fm, JSON_QUOTE(CAST(f.pk AS CHAR))))
+     *  OR (NOT JSON_VALID(fm) AND CAST(fm AS CHAR) = CAST(f.pk AS CHAR))
+     *
+     * Two of its behaviours are deliberately preserved rather than "fixed", because changing
+     * them would change which sessions a trainee is asked to give feedback for:
+     *
+     *  1. JSON_QUOTE means only JSON *string* elements ever matched. 47 timetable rows store
+     *     faculty_master as a bare JSON number (e.g. `3`), which IS JSON_VALID — so the first
+     *     branch applies, JSON_CONTAINS(3, '"3"') is false, and the NOT JSON_VALID fallback
+     *     never runs. Those sessions match no faculty at all today, so no feedback is ever
+     *     requested for them. The `JSON_TYPE(...) = 'STRING'` guard reproduces that exactly.
+     *     (Reported separately as a data/logic bug — fixing it here would silently start
+     *     asking trainees for feedback on 47 more sessions.)
+     *  2. The comparison was textual, so "012" would not have matched pk 12; the
+     *     round-trip CAST check keeps that. No such value exists in the data today.
+     *
+     * @see studentFeedback()
+     */
+    /*
+     * NOT bounded by tt.feedback_checkbox = 1, deliberately.
+     *
+     * Adding that predicate looks free — every consumer already applies it to the outer query, and
+     * measured against the consumers' join it changes nothing (677 pairs either way, 21 fewer rows
+     * expanded). It was tried and reverted: StudentFeedbackFacultyExpansionTest pins these derived
+     * tables as reproducing the original JSON_CONTAINS predicate EXACTLY, not merely once the
+     * consumer has filtered, and the narrowed version fails that assertion (plus the synthetic
+     * shape provider, whose fixture has no feedback_checkbox column).
+     *
+     * The equivalence contract is worth more than the ~6% of rows the bound would skip today
+     * (653 timetable rows, 613 carrying feedback). Revisit only together with the tests, and only
+     * if timetable growth makes the expansion actually cost something.
+     */
+    private const OLD_FACULTY_JSON_TABLE = "(
+        SELECT tt.pk AS timetable_pk, CAST(jt.faculty_txt AS UNSIGNED) AS faculty_pk
+        FROM timetable tt
+        CROSS JOIN JSON_TABLE(
+            CASE
+                WHEN JSON_VALID(tt.faculty_master) THEN tt.faculty_master
+                ELSE JSON_ARRAY(CAST(tt.faculty_master AS CHAR))
+            END,
+            '$[*]' COLUMNS (
+                faculty_txt VARCHAR(64) PATH '$',
+                faculty_el  JSON        PATH '$'
+            )
+        ) jt
+        WHERE JSON_TYPE(jt.faculty_el) = 'STRING'
+          AND CAST(CAST(jt.faculty_txt AS UNSIGNED) AS CHAR) = jt.faculty_txt
+    ) AS fj";
+
+    /**
+     * (timetable_pk, faculty_pk) for Teaching faculty, expanded from timetable.faculty_details.
+     *
+     * Same rewrite and the same reason as {@see self::OLD_FACULTY_JSON_TABLE}. Reading
+     * faculty_pk and role out of one JSON_TABLE row is what reproduces
+     * JSON_CONTAINS(faculty_details, JSON_OBJECT('faculty_pk', f.pk, 'role', 'Teaching')),
+     * which required both keys to sit in the SAME array element — filtering the two
+     * independently would wrongly match a session where a different faculty teaches.
+     *
+     * The CASE guard keeps JSON_TABLE from being handed invalid JSON, which raises an error
+     * rather than yielding no rows.
+     */
+    private const TEACHING_FACULTY_JSON_TABLE = "(
+        SELECT tt.pk AS timetable_pk, jt.faculty_pk
+        FROM timetable tt
+        CROSS JOIN JSON_TABLE(
+            CASE WHEN JSON_VALID(tt.faculty_details) THEN tt.faculty_details ELSE '[]' END,
+            '$[*]' COLUMNS (
+                faculty_pk BIGINT      PATH '$.faculty_pk',
+                role       VARCHAR(64) PATH '$.role'
+            )
+        ) jt
+        WHERE jt.role = 'Teaching'
+    ) AS fd";
+
     /**
      * Limit timetable rows to sessions assigned to the given faculty.
      */
@@ -2630,12 +2717,11 @@ class CalendarController extends Controller
             // OLD LOGIC: timetables from old backend — faculty in faculty_master field, no faculty_details
             $oldPendingQuery = DB::table('timetable as t')
                 ->select(array_merge($commonSelect, [DB::raw("IFNULL(v.venue_name, '') as venue_name")]))
-                ->join('faculty_master as f', function ($join) {
-                    $join->whereRaw("
-                        (JSON_VALID(t.faculty_master) AND JSON_CONTAINS(t.faculty_master, JSON_QUOTE(CAST(f.pk AS CHAR))))
-                        OR (NOT JSON_VALID(t.faculty_master) AND CAST(t.faculty_master AS CHAR) = CAST(f.pk AS CHAR))
-                    ");
-                })
+                // Join the pre-expanded (session, faculty) pairs instead of cross-joining every
+                // faculty_master row and testing JSON_CONTAINS on each — see
+                // self::OLD_FACULTY_JSON_TABLE for why this shape and what it preserves.
+                ->join(DB::raw(self::OLD_FACULTY_JSON_TABLE), 'fj.timetable_pk', '=', 't.pk')
+                ->join('faculty_master as f', 'f.pk', '=', DB::raw('fj.faculty_pk'))
                 ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
                 ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
                 ->join('student_master_course__map as smcm', function ($join) use ($student_pk) {
@@ -2662,12 +2748,10 @@ class CalendarController extends Controller
             // NEW LOGIC: timetables from new backend — faculty in faculty_details JSON with role=Teaching
             $newPendingQuery = DB::table('timetable as t')
                 ->select(array_merge($commonSelect, ['v.venue_name']))
-                ->join('faculty_master as f', function ($join) {
-                    $join->whereRaw("
-                        JSON_VALID(t.faculty_details) = 1
-                        AND JSON_CONTAINS(t.faculty_details, JSON_OBJECT('faculty_pk', f.pk, 'role', 'Teaching')) = 1
-                    ");
-                })
+                // Same rewrite as the old-logic branch — see self::TEACHING_FACULTY_JSON_TABLE,
+                // which also applies the role = 'Teaching' filter.
+                ->join(DB::raw(self::TEACHING_FACULTY_JSON_TABLE), 'fd.timetable_pk', '=', 't.pk')
+                ->join('faculty_master as f', 'f.pk', '=', DB::raw('fd.faculty_pk'))
                 ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
                 ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
                 ->join('student_master_course__map as smcm', function ($join) use ($student_pk) {
@@ -3314,6 +3398,13 @@ class CalendarController extends Controller
             ]);
 
             $inserted++;
+        }
+
+        // New feedback invalidates the cached report lookups (faculty lists, topic lists,
+        // pending counters). Bumping the generation once after the loop is enough — it
+        // retires every cached entry at a stroke.
+        if ($inserted > 0) {
+            FeedbackReportCache::bust();
         }
 
         // Summarise errors: show each distinct reason once with a count, so the
