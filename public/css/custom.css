@@ -248,7 +248,9 @@ body.custom-loaded {
 #centcomColumnToggleGrid .colvis-item,
 #issueMgmtColumnToggleGrid .colvis-item,
 #escalationColumnToggleGrid .colvis-item,
-#facultyColumnToggleGrid .colvis-item {
+#facultyColumnToggleGrid .colvis-item,
+#dirOtColumnToggleGrid .colvis-item,
+#lbsnaaColumnToggleGrid .colvis-item {
     cursor: pointer;
     transition: border-color 0.15s ease, background-color 0.15s ease;
 }
@@ -266,7 +268,9 @@ body.custom-loaded {
 #centcomColumnToggleGrid .colvis-item:hover,
 #issueMgmtColumnToggleGrid .colvis-item:hover,
 #escalationColumnToggleGrid .colvis-item:hover,
-#facultyColumnToggleGrid .colvis-item:hover {
+#facultyColumnToggleGrid .colvis-item:hover,
+#dirOtColumnToggleGrid .colvis-item:hover,
+#lbsnaaColumnToggleGrid .colvis-item:hover {
     border-color: #004a93 !important;
     background-color: rgba(0, 74, 147, 0.04);
 }
@@ -284,7 +288,9 @@ body.custom-loaded {
 #centcomColumnToggleGrid .colvis-item .form-check-input,
 #issueMgmtColumnToggleGrid .colvis-item .form-check-input,
 #escalationColumnToggleGrid .colvis-item .form-check-input,
-#facultyColumnToggleGrid .colvis-item .form-check-input {
+#facultyColumnToggleGrid .colvis-item .form-check-input,
+#dirOtColumnToggleGrid .colvis-item .form-check-input,
+#lbsnaaColumnToggleGrid .colvis-item .form-check-input {
     cursor: pointer;
     flex-shrink: 0;
 }
