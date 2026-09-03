@@ -131,7 +131,7 @@
                         <i class="material-icons material-symbols-rounded">info</i>
                         <span>Description</span>
                     </div>
-                    <div class="pt-balance-sub mt-1" style="white-space: pre-line;">{{ $activePt->description }}</div>
+                    <div class="pt-balance-sub mt-1 fw-bold" style="white-space: pre-line;">{{ $activePt->description }}</div>
                 </div>
             @endif
         </div>
