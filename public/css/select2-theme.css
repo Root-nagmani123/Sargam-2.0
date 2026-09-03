@@ -30,7 +30,7 @@
 .select2-container--default .select2-selection--single .select2-selection__rendered {
     width: 100%;
     padding-left: 0.875rem;
-    padding-right: 3.25rem;              /* room for the caret AND a possible clear (x) */
+    padding-right: 2rem;                 /* room for the caret; widened below when a clear (x) is present */
     line-height: normal;
     font-size: 0.95rem;
     color: var(--ds-ink, #1f2937);
@@ -66,13 +66,13 @@
 
 /* Clear (×) on an allowClear select.
    ---------------------------------------------------------------------
-   Select2 renders it INSIDE .select2-selection__rendered, as the FIRST child,
-   before the value, and positions it with `float: right`. That float does
-   nothing inside a box that is white-space:nowrap / overflow:hidden, so the ×
-   lands hard against the left edge of the value and sits off-centre vertically —
-   which is exactly what it looked like. Take it out of the text flow and park it
-   beside the caret instead. .select2-selection--single is position:relative
-   above, so this anchors to the control, not to the page. */
+   Select2 4.1 prepends the clear as the FIRST CHILD OF
+   .select2-selection--single (see $selection.prepend in select2.js) - a sibling
+   of __rendered, not a child of it - and styles it `float: right`. That control
+   is display:flex here, so the float is ignored and the × becomes the first flex
+   item: hard against the left edge, ahead of the value. Take it out of flow and
+   park it beside the caret. The control is position:relative above, so this
+   anchors to the control, not to the page. */
 .select2-container--default .select2-selection--single .select2-selection__clear {
     position: absolute;
     top: 50%;
@@ -91,12 +91,15 @@
     color: var(--bs-danger, #dc3545);
 }
 
-/* Where :has() is available, a control with no × gives the padding back, so a
-   long value truncates as late as it used to. Purely an enhancement: without it
-   every control simply keeps the wider gutter reserved above. */
-.select2-container--default .select2-selection--single
-    .select2-selection__rendered:not(:has(.select2-selection__clear)) {
-    padding-right: 2rem;
+/* Reserve the × gutter only on controls that actually have one. Select2 flags
+   those itself with .select2-selection--clearable, so this needs no :has() -
+   which mattered: the old rule tested __rendered for a DESCENDANT clear, but the
+   clear is its SIBLING, so it always matched and the gutter never widened. The
+   value then ran under the × - visible as the Active/Archived pill on the course
+   picker, which .pec-course-option pins to the right edge. */
+.select2-container--default .select2-selection--single.select2-selection--clearable
+    .select2-selection__rendered {
+    padding-right: 3.75rem;
 }
 
 /* Invalid state — paired with a .is-invalid <select> */
@@ -137,6 +140,41 @@ select.is-invalid + .select2-container--default .select2-selection--single {
 .select2-container--default .select2-results__option[aria-selected="true"] {
     background-color: rgba(0, 74, 147, 0.12);
     color: var(--ds-ink, #1f2937);
+}
+
+/* Optgroup headings — used by Manage Evaluation Columns to split the course
+   picker into Active / Archived.
+   ---------------------------------------------------------------------
+   Two things Select2 4.1's markup forces:
+
+   1. The group's own options sit in a SECOND .select2-results__options, so the
+      240px cap above applies to it too and every group would grow its own inner
+      scrollbar. Release the cap on the nested list; the outer one still scrolls.
+   2. The heading is a <strong> inside an <li> that also wraps its options, so
+      position:sticky pins it for exactly as long as that group is on screen —
+      the list stays labelled however far down you scroll. */
+.select2-container--default .select2-results__options--nested {
+    max-height: none;
+}
+.select2-container--default .select2-results__option--group {
+    padding: 0;
+}
+.select2-container--default .select2-results__group {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 0.375rem 0.875rem;
+    background: #f7f9fc;
+    border-top: 1px solid var(--ds-line, #d0d5dd);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #667085;
+}
+.select2-container--default .select2-results__options
+    > .select2-results__option--group:first-child .select2-results__group {
+    border-top: 0;
 }
 
 /* --- Width / height per context ------------------------------------- */

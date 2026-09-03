@@ -69,7 +69,6 @@
                                                     data-id="{{ $column->id }}"
                                                     data-column-name="{{ $column->column_name }}"
                                                     data-max-marks="{{ rtrim(rtrim(number_format((float) $column->max_marks, 2), '0'), '.') }}"
-                                                    data-has-remarks="{{ $column->has_remarks ? 1 : 0 }}"
                                                     data-evaluation-type="{{ $column->evaluation_type }}"
                                                     data-group-id="{{ $group->id }}"
                                                     data-buffer-marks="{{ $bufferMarks }}">

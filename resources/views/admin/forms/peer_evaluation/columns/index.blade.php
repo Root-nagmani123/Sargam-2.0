@@ -134,15 +134,27 @@
                 <div class="modal-body pe-modal-body">
                     {{-- This list is NOT narrowed by the Active / Archived pill on
                          the grid - a column can be added to a course that has
-                         finished - so each option carries its own status and
-                         renders a pill, otherwise the two are indistinguishable
-                         here. --}}
+                         finished - so the two statuses are split under their own
+                         headings, which stay pinned while you scroll that half.
+
+                         Each option keeps its pill as well, because the heading
+                         only exists inside the open list: once a course is picked
+                         the pill is what the closed control has to show for it. --}}
+                    @php
+                        $courseGroups = collect($modalCourses)->groupBy('status');
+                    @endphp
                     <div class="pe-field mb-3">
                         <label class="pe-form-label" for="pecAddCourseId">Course Name</label>
                         <select class="form-select pe-control js-pec-select2 js-pec-course-status" id="pecAddCourseId" name="course_id">
                             <option value="">Select Course</option>
-                            @foreach($modalCourses as $course)
-                                <option value="{{ $course['id'] }}" data-status="{{ $course['status'] }}">{{ $course['name'] }}</option>
+                            @foreach (['active' => 'Active', 'archive' => 'Archived'] as $statusKey => $statusLabel)
+                                @if ($courseGroups->has($statusKey))
+                                    <optgroup label="{{ $statusLabel }}">
+                                        @foreach ($courseGroups[$statusKey] as $course)
+                                            <option value="{{ $course['id'] }}" data-status="{{ $course['status'] }}">{{ $course['name'] }}</option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
                             @endforeach
                         </select>
                         <div class="pe-error"></div>
@@ -312,20 +324,6 @@
                         <div class="pe-error"></div>
                     </div>
 
-                    <div class="pe-field mb-3">
-                        <span class="pe-form-label d-block">Remarks<span class="pe-req">*</span></span>
-                        <div class="d-flex gap-3 pec-radio-row">
-                            <label class="d-inline-flex align-items-center gap-2 mb-0">
-                                <input class="form-check-input m-0" type="radio" name="has_remarks" value="1">
-                                <span>Yes</span>
-                            </label>
-                            <label class="d-inline-flex align-items-center gap-2 mb-0">
-                                <input class="form-check-input m-0" type="radio" name="has_remarks" value="0">
-                                <span>No</span>
-                            </label>
-                        </div>
-                        <div class="pe-error"></div>
-                    </div>
 
                     {{-- Buffer marks belong to the GROUP, so this saves separately -
                          see the submit handler. Only meaningful for Distribute
@@ -939,7 +937,6 @@
             $form.data('group-id', $btn.data('group-id'));
             $form.find('[name="column_name"]').val($btn.data('column-name'));
             $form.find('[name="max_marks"]').val($btn.data('max-marks'));
-            $form.find('[name="has_remarks"][value="' + ($btn.data('has-remarks') ? 1 : 0) + '"]').prop('checked', true);
             $form.find('[name="evaluation_type"][value="' + $btn.data('evaluation-type') + '"]').prop('checked', true);
             $form.find('[name="buffer_marks"]').val($btn.data('buffer-marks'));
             toggleBufferField($form);

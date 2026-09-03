@@ -120,27 +120,23 @@ class PeerEvaluationColumnController extends Controller
      * Every course the user may touch, each tagged active or archive.
      *
      * The modal is deliberately NOT filtered by the Active / Archived pill - a
-     * column can legitimately be added to a course that has finished - so without
-     * the tag travelling alongside the name there is nothing in the dropdown to
-     * tell the two apart.
+     * column can legitimately be added to a course that has finished - so the tag
+     * has to travel alongside the name. The view groups on it, so it also decides
+     * which heading a course lands under.
      *
-     * The CASE is CourseMaster::scopeActiveRunning() written per row: doing it in
-     * SQL keeps the two definitions identical and tags every course in one pass,
-     * where running both scopes would be two queries and could drift.
+     * Tagging in SQL handles every course in one pass; the CASE comes from
+     * PeerCourseStatusScope so it cannot disagree with the pill the grid files
+     * that same course under.
      */
     private function allCourseOptions()
     {
         $query = CourseMaster::query();
         $this->applyRoleScope($query);
 
+        [$statusCase, $bindings] = PeerCourseStatusScope::statusCase();
+
         return $query
-            ->selectRaw(
-                "course_master.pk, course_master.course_name,
-                 CASE WHEN course_master.active_inactive = 1
-                           AND course_master.end_date >= ?
-                      THEN ? ELSE ? END AS peer_status",
-                [now()->toDateString(), PeerCourseStatusScope::ACTIVE, PeerCourseStatusScope::ARCHIVE]
-            )
+            ->selectRaw("course_master.pk, course_master.course_name, {$statusCase}", $bindings)
             ->orderBy('course_name')
             ->get()
             ->map(fn ($course) => [
@@ -379,15 +375,16 @@ class PeerEvaluationColumnController extends Controller
     {
         $column = PeerColumn::findOrFail($id);
 
+        // Remarks is deliberately NOT editable here. It is set when the column is
+        // created and left alone afterwards; the Edit modal no longer offers it,
+        // so an update must not require it or every Save would 422.
         $validated = $request->validate([
             'column_name' => ['required', 'string', 'max:255'],
             'max_marks' => ['required', 'numeric', 'min:0.01', 'max:9999.99'],
-            'has_remarks' => ['required', 'boolean'],
             'evaluation_type' => ['required', Rule::in(array_keys(PeerColumn::TYPES))],
         ], [], [
             'column_name' => 'Column Name',
             'max_marks' => 'Max Marks',
-            'has_remarks' => 'Remarks',
             'evaluation_type' => 'Evaluation Type',
         ]);
 

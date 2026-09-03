@@ -144,7 +144,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body pe-modal-body">
-                    @include('admin.forms.peer_evaluation.reflection_fields._form_fields', ['prefix' => 'prfAdd', 'courses' => $modalCourses])
+                    @include('admin.forms.peer_evaluation.reflection_fields._form_fields', ['prefix' => 'prfAdd', 'courses' => $modalCourses, 'multiple' => true])
                 </div>
                 <div class="modal-footer pe-modal-footer">
                     <button type="button" class="btn pe-btn-cancel" data-bs-dismiss="modal">Cancel</button>
@@ -397,6 +397,32 @@
 
     /* ── Modal helpers ─────────────────────────────────────────────── */
 
+    // Whole state derived from the DOM after every change, never by nudging the
+    // neighbouring card - that is how a clone ends up inheriting stale state.
+    function syncFieldCards() {
+        var $cards = $('#prfFieldsContainer .prf-field-card');
+        var last = $cards.length - 1;
+
+        $cards.each(function (index) {
+            var $card = $(this);
+            $card.attr('data-index', index);
+            $card.find('.prf-label').attr('name', 'fields[' + index + '][field_label]');
+            // Plain show/hide, not .d-none: Bootstrap's display utilities are
+            // !important and would win over a class toggle here.
+            $card.find('.pec-card-btn--remove').toggle($cards.length > 1);
+            $card.find('.pec-card-btn--add').toggle(index === last);
+        });
+    }
+
+    // Back to a single empty row - used when the Add modal opens.
+    function resetFieldCards() {
+        $('#prfFieldsContainer .prf-field-card').not(':first').remove();
+        $('#prfFieldsContainer').find('.prf-label').val('');
+        $('#prfFieldsContainer').find('.pec-card-error').removeClass('is-shown').text('');
+        $('#prfFieldsError').removeClass('is-shown').text('');
+        syncFieldCards();
+    }
+
     function clearErrors($form) {
         $form.find('.pe-error').removeClass('is-shown').text('');
         $form.find('.pe-control').removeClass('is-invalid');
@@ -404,13 +430,27 @@
 
     function showErrors($form, errors) {
         $.each(errors, function (field, messages) {
+            var msg = $.isArray(messages) ? messages[0] : messages;
+
+            // fields.0.field_label -> that row's own error slot, so the message
+            // lands on the label it is about rather than on the first row.
+            var m = /^fields\.(\d+)\./.exec(field);
+            if (m) {
+                var $card = $('#prfFieldsContainer .prf-field-card').eq(parseInt(m[1], 10));
+                $card.find('.prf-label').addClass('is-invalid');
+                $card.find('.pec-card-error').addClass('is-shown').text(msg);
+                return;
+            }
+            if (field === 'fields') {
+                $('#prfFieldsError').addClass('is-shown').text(msg);
+                return;
+            }
+
             var $field = $form.find('[name="' + field + '"]');
             $field.addClass('is-invalid');
-            $field.closest('.pe-field').find('.pe-error').addClass('is-shown')
-                .text($.isArray(messages) ? messages[0] : messages);
+            $field.closest('.pe-field').find('.pe-error').addClass('is-shown').text(msg);
         });
     }
-
     function syncPlaceholderState($form) {
         $form.find('select.pe-control').each(function () {
             $(this).toggleClass('pe-placeholder', !$(this).val());
@@ -456,6 +496,10 @@
     $(function () {
         // Filter row: no dropdownParent, they are not inside a modal.
         initSelect2($('.programme-dt-toolbar'), null);
+
+        // Hides the remove button on the lone starting card; without this both
+        // buttons show until the first add/remove.
+        syncFieldCards();
 
         var attempts = 0;
         (function waitForTable() {
@@ -556,6 +600,8 @@
             var $form = $('#prfAddForm');
             $form[0].reset();
             clearErrors($form);
+            // reset() blanks the inputs but the extra rows are DOM, not values.
+            resetFieldCards();
             // Seed from whatever the grid is filtered to - almost always the scope
             // the user is adding a field for.
             var course = $('#prfCourseFilter').val();
@@ -574,6 +620,24 @@
         $('#prfAddModal, #prfEditModal').on('shown.bs.modal', function () {
             initSelect2($(this), $(this));
             refreshSelect2($(this).find('form'));
+        });
+
+        $('#prfFieldsContainer').on('click', '.pec-card-btn--add', function () {
+            var $clone = $('#prfFieldsContainer .prf-field-card').first().clone();
+            $clone.find('.prf-label').val('').removeClass('is-invalid').removeAttr('id');
+            $clone.find('.pec-card-error').removeClass('is-shown').text('');
+            // Cloned from the FIRST card, so any hidden button state it carried is
+            // re-derived by syncFieldCards() rather than inherited.
+            $clone.find('.pec-card-btn').show();
+            $('#prfFieldsContainer').append($clone);
+            syncFieldCards();
+            $clone.find('.prf-label').trigger('focus');
+        });
+
+        $('#prfFieldsContainer').on('click', '.pec-card-btn--remove', function () {
+            if ($('#prfFieldsContainer .prf-field-card').length <= 1) { return; }
+            $(this).closest('.prf-field-card').remove();
+            syncFieldCards();
         });
 
         $('#prfAddForm').on('submit', function (e) { e.preventDefault(); submitForm($(this)); });

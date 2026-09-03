@@ -16,6 +16,7 @@ use App\Support\PeerEvaluationForm;
 use App\Support\PeerGroupSource;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -178,19 +179,95 @@ class PeerReflectionFieldController extends Controller
 
     // ==================== CRUD ====================
 
+    /**
+     * Add takes a LIST of labels, Edit takes one.
+     *
+     * A form normally needs several reflection questions and they all share one
+     * Course / Event / Group, so the scope is validated once here and every label
+     * is checked against it. Scope handling is the same pipeline validated() uses:
+     * resolve the group first, blank selects become NULL, then assert the three
+     * levels agree.
+     *
+     * @return array{scope: array<string, int|null>, labels: array<int, string>}
+     */
+    private function validatedMany(Request $request): array
+    {
+        // Before the uniqueness rule, which scopes on group_id and so has to
+        // compare against the id that gets stored - not the mapping pk posted.
+        $this->resolveGroupSelection($request);
+
+        $unique = Rule::unique('peer_reflection_fields', 'field_label')
+            ->where(function ($query) use ($request) {
+                foreach (['course_id', 'event_id', 'group_id'] as $column) {
+                    $value = $request->input($column);
+                    filled($value) ? $query->where($column, $value) : $query->whereNull($column);
+                }
+
+                return $query;
+            });
+
+        $validated = $request->validate([
+            'fields' => ['required', 'array', 'min:1'],
+            // distinct catches the same label typed into two rows of ONE submit.
+            // The unique rule cannot: neither row is in the table yet, so both
+            // would pass and the second insert would be the duplicate.
+            'fields.*.field_label' => ['required', 'string', 'max:255', 'distinct:ignore_case', $unique],
+            'course_id' => ['nullable', 'integer', Rule::exists('course_master', 'pk')],
+            'event_id' => ['nullable', 'integer', Rule::exists('peer_events', 'id')],
+            // Already a peer_groups id by this point - resolveGroupSelection()
+            // swapped the posted mapping pk for it.
+            'group_id' => ['nullable', 'integer', Rule::exists('peer_groups', 'id')],
+        ], [
+            'fields.required' => 'Please add at least one reflection field.',
+            'fields.*.field_label.unique' => 'A reflection field with that label already exists for this course / event / group.',
+            'fields.*.field_label.distinct' => 'This field name is listed more than once.',
+        ], [
+            'fields.*.field_label' => 'Field Name',
+            'course_id' => 'Course Name',
+            'event_id' => 'Event Name',
+            'group_id' => 'Group Name',
+        ]);
+
+        // Blank selects arrive as '' - store NULL so "global" is a real NULL and
+        // the unique rule above lines up with what is in the table.
+        $scope = [];
+
+        foreach (['course_id', 'event_id', 'group_id'] as $column) {
+            $scope[$column] = filled($validated[$column] ?? null) ? (int) $validated[$column] : null;
+        }
+
+        $this->assertScopeIsConsistent($scope);
+
+        return [
+            'scope' => $scope,
+            'labels' => array_map(static fn ($row) => trim($row['field_label']), $validated['fields']),
+        ];
+    }
+
     public function store(Request $request)
     {
-        $data = $this->validated($request);
+        ['scope' => $scope, 'labels' => $labels] = $this->validatedMany($request);
 
         try {
-            PeerReflectionField::create($data + ['is_active' => true]);
+            // All or nothing. A partial insert would leave the admin working out
+            // which of the labels still on screen had already been saved.
+            DB::transaction(function () use ($scope, $labels) {
+                foreach ($labels as $label) {
+                    PeerReflectionField::create($scope + [
+                        'field_label' => $label,
+                        'is_active' => true,
+                    ]);
+                }
+            });
         } catch (\Throwable $e) {
             Log::error('Peer reflection field create failed', ['error' => $e->getMessage()]);
 
-            return $this->fail($request, 'Could not add the reflection field. Please try again.');
+            return $this->fail($request, 'Could not add the reflection fields. Please try again.');
         }
 
-        return $this->ok($request, 'Reflection field added successfully.');
+        return $this->ok($request, count($labels) === 1
+            ? 'Reflection field added successfully.'
+            : count($labels).' reflection fields added successfully.');
     }
 
     public function update(Request $request, $id)

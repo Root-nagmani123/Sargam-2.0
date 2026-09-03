@@ -44,9 +44,50 @@
     <div class="pe-error"></div>
 </div>
 
-<div class="pe-field mb-2">
-    <label class="pe-form-label" for="{{ $prefix }}FieldLabel">Field Name<span class="pe-req">*</span></label>
-    <input type="text" class="form-control pe-control" id="{{ $prefix }}FieldLabel" name="field_label"
-           placeholder="eg. Presentation Skills" maxlength="255" required>
-    <div class="pe-error"></div>
-</div>
+{{-- Add takes MANY fields, Edit takes one.
+
+     A form usually needs several reflection questions and they all share the same
+     Course / Event / Group, so one-at-a-time meant re-picking that scope for every
+     question. Repeating just the label - exactly what Manage Evaluation Columns
+     does with its Columns cards - keeps the scope picked once.
+
+     Card and button classes are borrowed from that repeater on purpose: the CSS
+     is already loaded on this page, so the two modals stay identical for free. --}}
+@if ($multiple ?? false)
+    <hr class="my-3">
+    <h6 class="pec-section-title mb-3">Reflection Fields</h6>
+
+    <div id="prfFieldsContainer">
+        <div class="pec-column-card prf-field-card" data-index="0">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-10">
+                    <label class="pe-form-label" for="{{ $prefix }}FieldLabel">Field Name<span class="pe-req">*</span></label>
+                    <input type="text" class="form-control pe-control prf-label" id="{{ $prefix }}FieldLabel"
+                           name="fields[0][field_label]" placeholder="eg. Presentation Skills"
+                           maxlength="255" required>
+                </div>
+                <div class="col-12 col-md-2">
+                    <div class="pec-card-actions">
+                        <button type="button" class="pec-card-btn pec-card-btn--remove" title="Remove this field"
+                                aria-label="Remove this field">
+                            <i class="bi bi-dash-lg" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" class="pec-card-btn pec-card-btn--add" title="Add another field"
+                                aria-label="Add another field">
+                            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="pe-error pec-card-error"></div>
+        </div>
+    </div>
+    <div class="pe-error" id="prfFieldsError"></div>
+@else
+    <div class="pe-field mb-2">
+        <label class="pe-form-label" for="{{ $prefix }}FieldLabel">Field Name<span class="pe-req">*</span></label>
+        <input type="text" class="form-control pe-control" id="{{ $prefix }}FieldLabel" name="field_label"
+               placeholder="eg. Presentation Skills" maxlength="255" required>
+        <div class="pe-error"></div>
+    </div>
+@endif

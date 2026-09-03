@@ -128,4 +128,32 @@ final class PeerCourseStatusScope
                 ->orWhere('course_master.end_date', '<', $today);
         });
     }
+
+    /**
+     * The same split as active()/archive(), but as a per-row CASE for pickers that
+     * must TAG every course instead of narrowing to one pill.
+     *
+     * Written here, next to the conditions it mirrors, because the two must agree:
+     * a dropdown that tags a course "Active" while the grid files it under
+     * Archived is worse than no tag at all. The earlier copy of this CASE lived in
+     * PeerEvaluationColumnController and had already drifted - it omitted the
+     * start_year checks, so an upcoming course read Active in the modal and
+     * Archived on the tabs.
+     *
+     * @return array{0: string, 1: array<int, string>} SQL fragment and its bindings
+     */
+    public static function statusCase(string $alias = 'peer_status'): array
+    {
+        $today = now()->toDateString();
+
+        return [
+            "CASE WHEN course_master.active_inactive = 1
+                       AND course_master.start_year IS NOT NULL
+                       AND course_master.start_year <= ?
+                       AND course_master.end_date IS NOT NULL
+                       AND course_master.end_date >= ?
+                  THEN ? ELSE ? END AS {$alias}",
+            [$today, $today, self::ACTIVE, self::ARCHIVE],
+        ];
+    }
 }
