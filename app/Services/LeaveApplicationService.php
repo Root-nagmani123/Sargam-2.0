@@ -311,8 +311,8 @@ class LeaveApplicationService
             ? Carbon::parse($cutoffTime)->subMinutes($freezeBeforeMinutes)->format('h:i A')
             : '';
 
-        return 'You cannot apply for ' . $leaveTypeLabel . ' starting today after '
-            . $timeDisplay . '. Please select a future start date.';
+        return 'Today\'s application freeze time (' . $timeDisplay . ') has passed. '
+            . 'You cannot apply for ' . $leaveTypeLabel . ' starting today. Please select a future start date.';
     }
 
     /**

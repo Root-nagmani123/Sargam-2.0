@@ -87,7 +87,7 @@
             </div>
         @elseif($isPt && ($ptCutoffPassedToday ?? false) && $ptCutoffTimeDisplay)
             <div class="alert alert-warning py-2 small mb-3">
-                Today's PT timing (<strong>{{ $ptCutoffTimeDisplay }}</strong>) has passed.
+                Today's application freeze time (<strong>{{ $ptCutoffTimeDisplay }}</strong>) has passed.
                 You cannot apply for PT exemption starting today. Please select a future start date.
             </div>
         @endif
@@ -104,7 +104,7 @@
             </div>
         @elseif(! $isPt && ($stationedCutoffPassedToday ?? false) && $stationedCutoffTimeDisplay)
             <div class="alert alert-warning py-2 small mb-3">
-                Today's PT timing (<strong>{{ $stationedCutoffTimeDisplay }}</strong>) has passed.
+                Today's application freeze time (<strong>{{ $stationedCutoffTimeDisplay }}</strong>) has passed.
                 You cannot apply for stationed leave starting today. Please select a future start date.
             </div>
         @endif
