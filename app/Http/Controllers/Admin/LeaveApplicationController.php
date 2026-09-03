@@ -152,7 +152,7 @@ class LeaveApplicationController extends Controller
             'leave_type' => 'required|in:PT_EXEMPTION,STATIONED_LEAVE',
             'leave_nature_master_pk' => 'required|exists:leave_nature_master,pk',
             'from_date' => 'required|date',
-            'to_date' => 'required|date|after_or_equal:from_date|same:from_date',
+            'to_date' => 'required|date|after_or_equal:from_date',
             'reason' => 'required|string|max:2000',
             'contact_number' => ['required', 'string', 'regex:/^[6-9][0-9]{9}$/'],
             'submit_action' => 'required|in:draft,submit',
@@ -163,11 +163,16 @@ class LeaveApplicationController extends Controller
             'existing_attachments.*' => 'integer',
         ], [
             'to_date.after_or_equal' => 'End date cannot be before the start date. Please update the end date.',
-            'to_date.same' => 'Leave can only be applied for one day at a time. Please submit a separate application for additional days.',
             'contact_number.regex' => 'Contact number must be a valid 10-digit mobile number starting with 6, 7, 8, or 9.',
             'attachments.*.file.max' => 'Each attachment must not exceed 5 MB.',
             'attachments.*.file.mimes' => 'Allowed file types: PDF, JPG, JPEG, PNG, DOC, DOCX.',
         ]);
+
+        if (! Carbon::parse($validated['from_date'])->isSameDay(Carbon::parse($validated['to_date']))) {
+            return back()->withInput()->withErrors([
+                'to_date' => 'Leave can only be applied for one day at a time. Please submit a separate application for additional days.',
+            ]);
+        }
 
         if ($validated['leave_type'] === LeaveApplication::TYPE_STATIONED_LEAVE
             && ! $this->leaveService->stationedLeaveConfigured($context['course_pk'], $validated['from_date'])) {

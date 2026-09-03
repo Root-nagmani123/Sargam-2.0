@@ -238,11 +238,21 @@
                         </div>
                         <div class="fla-tile">
                             <div class="fla-tile-label"><span class="material-icons material-symbols-rounded">calendar_month</span>From Date</div>
-                            <div class="fla-tile-value">{{ $application->from_date?->format('d M Y') ?? '-' }}</div>
+                            <div class="fla-tile-value">
+                                {{ $application->from_date?->format('d M Y') ?? '-' }}
+                                @if($application->leave_type === \App\Models\LeaveApplication::TYPE_STATIONED_LEAVE && $application->from_date)
+                                    <span class="text-muted">{{ $application->from_date->format('h:i A') }}</span>
+                                @endif
+                            </div>
                         </div>
                         <div class="fla-tile">
                             <div class="fla-tile-label"><span class="material-icons material-symbols-rounded">calendar_month</span>To Date</div>
-                            <div class="fla-tile-value">{{ $application->to_date?->format('d M Y') ?? '-' }}</div>
+                            <div class="fla-tile-value">
+                                {{ $application->to_date?->format('d M Y') ?? '-' }}
+                                @if($application->leave_type === \App\Models\LeaveApplication::TYPE_STATIONED_LEAVE && $application->to_date)
+                                    <span class="text-muted">{{ $application->to_date->format('h:i A') }}</span>
+                                @endif
+                            </div>
                         </div>
                         <div class="fla-tile">
                             <div class="fla-tile-label"><span class="material-icons material-symbols-rounded">call</span>Contact</div>

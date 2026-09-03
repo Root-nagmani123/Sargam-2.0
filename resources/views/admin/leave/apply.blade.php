@@ -26,8 +26,20 @@
     $activePt = $activePtExemption ?? null;
     $ptMinDate = $ptEarliestFromDate ?? ($activePt?->effective_from?->format('Y-m-d')
         ?? ($upcomingPt?->effective_from?->format('Y-m-d')));
-    $fromDateValue = old('from_date', isset($application) ? $application->from_date?->format('Y-m-d') : '');
-    $toDateValue = old('to_date', isset($application) ? $application->to_date?->format('Y-m-d') : '');
+    $oldFromDate = old('from_date');
+    $oldToDate = old('to_date');
+    $fromDateValue = $oldFromDate
+        ? \Illuminate\Support\Carbon::parse($oldFromDate)->format('Y-m-d')
+        : (isset($application) ? $application->from_date?->format('Y-m-d') : '');
+    $toDateValue = $oldToDate
+        ? \Illuminate\Support\Carbon::parse($oldToDate)->format('Y-m-d')
+        : (isset($application) ? $application->to_date?->format('Y-m-d') : '');
+    $fromTimeValue = $oldFromDate
+        ? \Illuminate\Support\Carbon::parse($oldFromDate)->format('H:i')
+        : (isset($application) ? $application->from_date?->format('H:i') : '');
+    $toTimeValue = $oldToDate
+        ? \Illuminate\Support\Carbon::parse($oldToDate)->format('H:i')
+        : (isset($application) ? $application->to_date?->format('H:i') : '');
     $toDateMin = $fromDateValue ?: ($isPt ? $ptMinDate : $stationedMinDate);
 @endphp
 
@@ -180,9 +192,9 @@
 
                     {{-- Date From --}}
                     <div class="col-12 col-md-6">
-                        <label for="from_date" class="leave-grid-label d-block">Date From <span class="text-danger">*</span></label>
+                        <label for="from_date_input" class="leave-grid-label d-block">Date From <span class="text-danger">*</span></label>
                         <div class="leave-date-wrap">
-                            <input type="date" name="from_date" id="from_date" class="form-control @error('from_date') is-invalid @enderror" required
+                            <input type="date" id="from_date_input" class="form-control @error('from_date') is-invalid @enderror" required
                                 value="{{ $fromDateValue }}"
                                 @if($isPt && $ptMinDate) min="{{ $ptMinDate }}" @elseif(! $isPt && $stationedMinDate) min="{{ $stationedMinDate }}" @endif
                                 {{ $isReadOnly ? 'readonly' : '' }}>
@@ -193,11 +205,19 @@
                         @enderror
                     </div>
 
+                    {{-- Time From (Stationed Leave only) --}}
+                    <div class="col-12 col-md-6 leave-stationed-time-field" @if($isPt) style="display:none;" @endif>
+                        <label for="from_time_input" class="leave-grid-label d-block">Time From <span class="text-danger">*</span></label>
+                        <input type="time" id="from_time_input" class="form-control"
+                            value="{{ $fromTimeValue ?: '00:00' }}"
+                            {{ $isReadOnly ? 'readonly' : '' }}>
+                    </div>
+
                     {{-- Date To --}}
                     <div class="col-12 col-md-6">
-                        <label for="to_date" class="leave-grid-label d-block">Date To <span class="text-danger">*</span></label>
+                        <label for="to_date_input" class="leave-grid-label d-block">Date To <span class="text-danger">*</span></label>
                         <div class="leave-date-wrap">
-                            <input type="date" name="to_date" id="to_date" class="form-control @error('to_date') is-invalid @enderror" required
+                            <input type="date" id="to_date_input" class="form-control @error('to_date') is-invalid @enderror" required
                                 value="{{ $toDateValue }}"
                                 @if($toDateMin) min="{{ $toDateMin }}" @endif
                                 readonly>
@@ -210,6 +230,17 @@
                             <div class="text-danger small mt-1">{{ $message }}</div>
                         @enderror
                     </div>
+
+                    {{-- Time To (Stationed Leave only) --}}
+                    <div class="col-12 col-md-6 leave-stationed-time-field" @if($isPt) style="display:none;" @endif>
+                        <label for="to_time_input" class="leave-grid-label d-block">Time To <span class="text-danger">*</span></label>
+                        <input type="time" id="to_time_input" class="form-control"
+                            value="{{ $toTimeValue ?: '00:00' }}"
+                            {{ $isReadOnly ? 'readonly' : '' }}>
+                    </div>
+
+                    <input type="hidden" name="from_date" id="from_date" value="{{ $fromDateValue }}{{ ! $isPt ? 'T' . ($fromTimeValue ?: '00:00') : '' }}">
+                    <input type="hidden" name="to_date" id="to_date" value="{{ $toDateValue }}{{ ! $isPt ? 'T' . ($toTimeValue ?: '00:00') : '' }}">
 
                     {{-- Total Days --}}
                     <div class="col-12 col-md-6">
@@ -446,9 +477,11 @@ $(function () {
     });
 
     /* ── Date sync + total days ── */
+    const isStationedLeave = {{ $isPt ? 'false' : 'true' }};
+
     function syncEndDateMin() {
-        const from = $('#from_date').val();
-        const $toDate = $('#to_date');
+        const from = $('#from_date_input').val();
+        const $toDate = $('#to_date_input');
         if (!from) {
             return;
         }
@@ -457,9 +490,19 @@ $(function () {
         $toDate.val(from);
     }
 
+    function syncHiddenFields() {
+        const fromDate = $('#from_date_input').val();
+        const toDate = $('#to_date_input').val();
+        const fromTime = isStationedLeave ? ($('#from_time_input').val() || '00:00') : '00:00';
+        const toTime = isStationedLeave ? ($('#to_time_input').val() || '00:00') : '00:00';
+
+        $('#from_date').val(fromDate ? fromDate + 'T' + fromTime : '');
+        $('#to_date').val(toDate ? toDate + 'T' + toTime : '');
+    }
+
     function updateTotalDays() {
-        const from = $('#from_date').val();
-        const to = $('#to_date').val();
+        const from = $('#from_date_input').val();
+        const to = $('#to_date_input').val();
         if (!from || !to) {
             $('#total_days_display').val('0');
             return;
@@ -474,16 +517,23 @@ $(function () {
         $('#total_days_display').val(diff);
     }
 
-    $('#from_date').on('change', function () {
+    $('#from_date_input').on('change', function () {
         syncEndDateMin();
         updateTotalDays();
+        syncHiddenFields();
     });
-    $('#to_date').on('change', updateTotalDays);
+    $('#to_date_input').on('change', function () {
+        updateTotalDays();
+        syncHiddenFields();
+    });
+    $('#from_time_input, #to_time_input').on('change', syncHiddenFields);
     syncEndDateMin();
     updateTotalDays();
+    syncHiddenFields();
 
     /* ── Block submit on invalid attachment ── */
     $('#leave-apply-form').on('submit', function (e) {
+        syncHiddenFields();
         clearAttachmentError();
         let firstError = null;
         $('.leave-attachment-file').each(function () {
