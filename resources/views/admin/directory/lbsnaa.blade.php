@@ -24,7 +24,11 @@
     {{-- ?section / ?designation / ?q / ?sort / ?dir / ?cols are stamped on every
          link by lbsUpdateExportLinks(), so a download or a printout carries the
          filters, search term, ordering and columns the grid is showing. Print is
-         a server-rendered view, not window.print() on this page. --}}
+         a server-rendered view, not window.print() on this page.
+
+         Gated to match the 'directory.export' middleware on the routes: the grid
+         is open to everyone, the bulk downloads are not. --}}
+    @if(isSidebarPrivilegedUser())
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 dir-secondary-actions">
 
         <div class="dropdown">
@@ -74,6 +78,7 @@
             <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
         </a>
     </div>
+    @endif
 
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">

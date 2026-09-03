@@ -112,6 +112,7 @@
         table.dir-print-table tr { page-break-inside: avoid; }
 
         .dir-print-empty { text-align: center; padding: 20px; color: #6b7280; }
+        .dir-print-note { text-align: center; font-size: 8px; color: #92400e; margin-bottom: 6px; }
         .dir-print-foot { margin-top: 10px; text-align: center; font-size: 8px; color: #6b7280; }
 
         @media print {
@@ -142,6 +143,9 @@
         @if(filled($filterLine)){{ $filterLine }} &nbsp;|&nbsp; @endif Generated: {{ $exportDate }}
     </div>
     <div class="dir-print-total">Total Records: {{ number_format($rows->count()) }}</div>
+    @if(filled($note ?? null))
+        <div class="dir-print-note">{{ $note }}</div>
+    @endif
 
     {{-- Columns come from the controller's <grid>ExportColumnDefs(), already
          filtered to whatever is still ticked in the grid's Columns modal, so the

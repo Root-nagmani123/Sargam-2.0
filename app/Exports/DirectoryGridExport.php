@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Support\ExportCell;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -75,7 +76,7 @@ class DirectoryGridExport implements
 
         foreach ($this->rows as $index => $row) {
             $out[] = array_values(array_map(
-                fn ($col) => $col['value']($row, $index),
+                fn ($col) => ExportCell::text($col, $row, $index),
                 $this->columns
             ));
         }

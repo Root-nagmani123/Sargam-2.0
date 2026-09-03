@@ -47,7 +47,11 @@
              link by dirUpdateExportLinks(), so a download or a printout carries
              the programme, search term, ordering and columns the grid is showing.
              Print is a server-rendered view, not window.print() on this page, so
-             it comes off the same query as the other four (§1). --}}
+             it comes off the same query as the other four (§1).
+
+             Gated to match the 'directory.export' middleware on the routes: the
+             grid is open to everyone, the bulk downloads are not. --}}
+        @if(isSidebarPrivilegedUser())
         <div class="d-flex flex-wrap justify-content-end gap-2 dir-secondary-actions">
 
             <div class="dropdown">
@@ -97,6 +101,7 @@
                 <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
             </a>
         </div>
+        @endif
     </div>
 
     <div class="card overflow-hidden rounded-3">

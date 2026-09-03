@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CourseMaster;
 use App\Models\EmployeeMaster;
 use App\Models\StudentMasterCourseMap;
+use App\Support\ExportCell;
 use App\Support\ExportCsvHeader;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
@@ -53,11 +54,16 @@ class DirectoryController extends Controller
     ];
 
     /**
-     * Rows past which the PDF is truncated. DomPDF's memory use grows steeply
-     * with row count (measured ~276MB at 1k rows), and a truncated report that
-     * says so beats a 500 halfway through a download.
+     * Rows past which a report is truncated. DomPDF's memory use grows steeply
+     * with row count (measured ~276MB at 1k rows), and PhpSpreadsheet's per-cell
+     * styling is not much kinder, so the cap applies to EVERY format rather than
+     * the PDF alone — a truncated report that says so beats a 500 halfway
+     * through a download.
      */
-    private const PDF_ROW_CAP = 1500;
+    private const EXPORT_ROW_CAP = 1500;
+
+    /** Per-request memo for the two LBSNAA option lists — see lbsnaaSectionOptions(). */
+    private array $optionCache = [];
 
     /**
      * LBSNAA Directory shell. The grid is drawn by DataTables against
@@ -151,13 +157,7 @@ class DirectoryController extends Controller
             ->orderBy('employee_master.last_name')
             ->get();
 
-        $note = null;
-        if ($format === 'pdf' && $rows->count() > self::PDF_ROW_CAP) {
-            $note = 'Showing the first ' . number_format(self::PDF_ROW_CAP)
-                . ' of ' . number_format($rows->count())
-                . ' records — download the Excel for the complete list.';
-            $rows = $rows->take(self::PDF_ROW_CAP)->values();
-        }
+        [$rows, $note] = $this->capExportRows($rows);
 
         $filterLine = implode('  |  ', array_filter([
             $filters['sectionName'] ? 'Section: ' . $filters['sectionName'] : null,
@@ -179,7 +179,9 @@ class DirectoryController extends Controller
     /** Sections that actually have an active employee — 145 rows, 54 in use. */
     private function lbsnaaSectionOptions()
     {
-        return EmployeeMaster::query()
+        // Memoised: resolveLbsnaaFilters() needs the same list the shell action
+        // does, on every DataTables draw and every export.
+        return $this->optionCache['sections'] ??= EmployeeMaster::query()
             ->join('department_master as dept', 'employee_master.department_master_pk', '=', 'dept.pk')
             ->where('employee_master.status', 1)
             ->distinct()
@@ -190,7 +192,7 @@ class DirectoryController extends Controller
     /** Designations that actually have an active employee — 227 rows, 125 in use. */
     private function lbsnaaDesignationOptions()
     {
-        return EmployeeMaster::query()
+        return $this->optionCache['designations'] ??= EmployeeMaster::query()
             ->join('designation_master as d', 'employee_master.designation_master_pk', '=', 'd.pk')
             ->where('employee_master.status', 1)
             ->distinct()
@@ -215,8 +217,8 @@ class DirectoryController extends Controller
         // default resolved to NIAR and stamped "Section: NIAR" on the header band
         // of every unfiltered export. An absent or blank param never reaches the
         // name lookup at all.
-        $sectionParam = $request->query('section');
-        $designationParam = $request->query('designation');
+        $sectionParam = $this->scalarQuery($request, 'section');
+        $designationParam = $this->scalarQuery($request, 'designation');
 
         $section = ($sectionParam === null || $sectionParam === '') ? null : (int) $sectionParam;
         $designation = ($designationParam === null || $designationParam === '') ? null : (int) $designationParam;
@@ -388,12 +390,16 @@ class DirectoryController extends Controller
         return $request->input('status') === 'archive' ? 'archive' : 'active';
     }
 
-    /** The programmes one tab offers, newest first. */
+    /** The programmes one tab offers, newest first. Memoised per request. */
     private function otCourses(string $status)
     {
+        if (isset($this->optionCache['courses'][$status])) {
+            return $this->optionCache['courses'][$status];
+        }
+
         $today = now()->toDateString();
 
-        return CourseMaster::query()
+        return $this->optionCache['courses'][$status] = CourseMaster::query()
             ->where('active_inactive', 1)
             ->when(
                 $status === 'archive',
@@ -412,7 +418,7 @@ class DirectoryController extends Controller
      */
     private function resolveOtCourseId(Request $request, $courses): int
     {
-        $courseId = (int) $request->input('course_id', 0);
+        $courseId = (int) $this->scalarQuery($request, 'course_id', '0');
 
         if ($courseId > 0 && ! $courses->contains('pk', $courseId)) {
             $courseId = 0;
@@ -423,6 +429,20 @@ class DirectoryController extends Controller
         }
 
         return $courseId;
+    }
+
+    /**
+     * One array-safe read for every scalar request parameter these grids take.
+     *
+     * `?sort[]=x` makes $request->input('sort') an array, and (string) on an
+     * array is a PHP warning that silently yields "Array" — the same class of
+     * bug NormalisesDataTablesRequest documents for DataTables' search[value].
+     */
+    private function scalarQuery(Request $request, string $key, string $default = ''): string
+    {
+        $raw = $request->input($key, $default);
+
+        return is_scalar($raw) ? (string) $raw : $default;
     }
 
     /**
@@ -448,8 +468,8 @@ class DirectoryController extends Controller
      */
     private function resolveDirectorySort(Request $request, array $map): array
     {
-        $key = (string) $request->query('sort', 'name');
-        $dir = strtolower((string) $request->query('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+        $key = $this->scalarQuery($request, 'sort', 'name');
+        $dir = strtolower($this->scalarQuery($request, 'dir', 'asc')) === 'desc' ? 'desc' : 'asc';
 
         return [
             'key' => isset($map[$key]) ? $key : 'name',
@@ -533,7 +553,7 @@ class DirectoryController extends Controller
      */
     private function resolveDirectoryExportColumns(Request $request, array $defs): array
     {
-        $wanted = array_filter(array_map('trim', explode(',', (string) $request->query('cols', ''))));
+        $wanted = array_filter(array_map('trim', explode(',', $this->scalarQuery($request, 'cols'))));
 
         if (empty($wanted)) {
             return $defs;
@@ -574,13 +594,7 @@ class DirectoryController extends Controller
                 ->get()
             : new Collection();
 
-        $note = null;
-        if ($format === 'pdf' && $rows->count() > self::PDF_ROW_CAP) {
-            $note = 'Showing the first ' . number_format(self::PDF_ROW_CAP)
-                . ' of ' . number_format($rows->count())
-                . ' records — download the Excel for the complete list.';
-            $rows = $rows->take(self::PDF_ROW_CAP)->values();
-        }
+        [$rows, $note] = $this->capExportRows($rows);
 
         $programme = $courses->firstWhere('pk', $courseId);
         $programmeName = $programme
@@ -605,6 +619,25 @@ class DirectoryController extends Controller
     }
 
     /**
+     * Truncate a report at EXPORT_ROW_CAP and say so on the header band.
+     *
+     * @param  \Illuminate\Support\Collection  $rows
+     * @return array{0: \Illuminate\Support\Collection, 1: ?string}
+     */
+    private function capExportRows($rows): array
+    {
+        if ($rows->count() <= self::EXPORT_ROW_CAP) {
+            return [$rows, null];
+        }
+
+        $note = 'Showing the first ' . number_format(self::EXPORT_ROW_CAP)
+            . ' of ' . number_format($rows->count())
+            . ' records — narrow the filters for the rest.';
+
+        return [$rows->take(self::EXPORT_ROW_CAP)->values(), $note];
+    }
+
+    /**
      * Serve one resolved report in whichever of the five formats was asked for.
      *
      * Shared by both directory grids so the formats can't drift apart per page:
@@ -626,7 +659,7 @@ class DirectoryController extends Controller
         $stamp = now()->format('YmdHis');
 
         if ($format === 'print') {
-            return view('admin.directory.partials.export_print', compact('columns', 'rows', 'title', 'filterLine', 'exportDate'));
+            return view('admin.directory.partials.export_print', compact('columns', 'rows', 'title', 'filterLine', 'exportDate', 'note'));
         }
 
         if ($format === 'excel' || $format === 'full') {
@@ -642,8 +675,9 @@ class DirectoryController extends Controller
                 ->setOptions([
                     'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    // The page-number script at the end of the view needs this.
-                    'isPhpEnabled' => true,
+                    // Never true: it turns the renderer into a PHP execution
+                    // context. Page numbers come from a CSS counter instead.
+                    'isPhpEnabled' => false,
                 ])
                 ->download($slug . $stamp . '.pdf');
         }
@@ -659,7 +693,7 @@ class DirectoryController extends Controller
             }
             fputcsv($handle, array_values(array_map(fn ($col) => $col['heading'], $columns)));
             foreach ($rows as $index => $row) {
-                fputcsv($handle, array_values(array_map(fn ($col) => $col['value']($row, $index), $columns)));
+                fputcsv($handle, array_values(array_map(fn ($col) => ExportCell::text($col, $row, $index), $columns)));
             }
             fclose($handle);
         }, $slug . $stamp . '.csv');

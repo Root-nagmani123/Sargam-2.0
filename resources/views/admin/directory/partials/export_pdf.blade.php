@@ -64,9 +64,18 @@
 
         .empty { text-align: center; padding: 16px; color: #6b7280; }
         .foot  { margin-top: 8px; text-align: center; font-size: 7px; color: #6b7280; }
+
+        /* Page number on every page, drawn by DomPDF's CSS page counter.
+           No running total: counter(pages) resolves to 0 in DomPDF, and the
+           inline-PHP alternative requires isPhpEnabled, which would make every
+           directory PDF a PHP execution context. */
+        .pageno { position: fixed; bottom: -6mm; right: 0; font-size: 7px; color: #6b7280; }
+        .pageno:after { content: counter(page); }
     </style>
 </head>
 <body>
+
+    <div class="pageno">Page </div>
 
     <table class="pdf-hdr">
         <tr>
@@ -119,18 +128,5 @@
     </table>
 
     <div class="foot">Sargam 2.0 · Directory · Lal Bahadur Shastri National Academy of Administration</div>
-    {{-- Page numbers on every page, drawn through the canvas rather than a CSS
-         counter (counter(pages) silently prints "of 0"). Must be the LAST thing in
-         <body>: DomPDF only resolves the page count once the whole document is
-         laid out, so a script placed earlier renders every page as "Page N of 1". --}}
-    <script type="text/php">
-        if (isset($pdf)) {
-            $text = "Page {PAGE_NUM} of {PAGE_COUNT}";
-            $font = $fontMetrics->getFont("DejaVu Sans", "normal");
-            $size = 7;
-            $w = $fontMetrics->getTextWidth($text, $font, $size);
-            $pdf->page_text($pdf->get_width() - $w - 28, $pdf->get_height() - 24, $text, $font, $size, [0.42, 0.45, 0.5]);
-        }
-    </script>
 </body>
 </html>
