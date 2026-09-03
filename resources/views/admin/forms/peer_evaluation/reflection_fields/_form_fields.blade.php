@@ -17,12 +17,30 @@
      All three carry js-prf-select2 so the page script skins them with Select2
      (dropdownParent = the modal, or the search box can't take focus). --}}
 
+{{-- Split into Active / Archived under their own headings, the same shape
+     Manage Events and Manage Evaluation Columns use. The list is not narrowed by
+     the grid's status pill - a field can be added to a finished course - so
+     without the split the two are indistinguishable here.
+
+     Each option keeps its own pill too: the heading only exists inside the open
+     list, so once a course is picked the pill is what the closed control shows. --}}
+@php
+    $courseGroups = collect($courses)->groupBy('status');
+@endphp
+
 <div class="pe-field mb-3">
     <label class="pe-form-label" for="{{ $prefix }}CourseId">Course Name</label>
-    <select class="form-select pe-control js-prf-select2" id="{{ $prefix }}CourseId" name="course_id">
+    <select class="form-select pe-control js-prf-select2 js-prf-course-status"
+            id="{{ $prefix }}CourseId" name="course_id">
         <option value="">Select Course</option>
-        @foreach($courses as $id => $name)
-            <option value="{{ $id }}">{{ $name }}</option>
+        @foreach (['active' => 'Active', 'archive' => 'Archived'] as $statusKey => $statusLabel)
+            @if ($courseGroups->has($statusKey))
+                <optgroup label="{{ $statusLabel }}">
+                    @foreach ($courseGroups[$statusKey] as $course)
+                        <option value="{{ $course['id'] }}" data-status="{{ $course['status'] }}">{{ $course['name'] }}</option>
+                    @endforeach
+                </optgroup>
+            @endif
         @endforeach
     </select>
     <div class="pe-error"></div>

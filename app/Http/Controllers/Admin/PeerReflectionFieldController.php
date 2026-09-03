@@ -78,14 +78,33 @@ class PeerReflectionFieldController extends Controller
     }
 
     /**
-     * Every course the user may see, for the Add / Edit modals.
+     * Every course the user may see, for the Add / Edit modals, each tagged
+     * active or archive.
+     *
+     * The modals are deliberately NOT narrowed by the Active / Archived pill on
+     * the grid - a reflection field can be added to a course that has finished -
+     * so the tag travels alongside the name and decides which heading the course
+     * lands under in the picker.
+     *
+     * The CASE comes from PeerCourseStatusScope so this cannot disagree with the
+     * pill the grid files that same course under.
      */
     private function allCourseOptions()
     {
         $query = CourseMaster::query();
         $this->applyRoleScope($query);
 
-        return $query->orderBy('course_name')->pluck('course_name', 'pk');
+        [$statusCase, $bindings] = PeerCourseStatusScope::statusCase();
+
+        return $query
+            ->selectRaw("course_master.pk, course_master.course_name, {$statusCase}", $bindings)
+            ->orderBy('course_name')
+            ->get()
+            ->map(fn ($course) => [
+                'id' => (string) $course->pk,
+                'name' => $course->course_name,
+                'status' => $course->peer_status,
+            ]);
     }
 
     /**

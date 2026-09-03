@@ -349,8 +349,36 @@
                 allowClear: !$sel.prop('required')
             };
             if ($parent && $parent.length) { opts.dropdownParent = $parent; }
+
+            // The course picker carries an Active / Archived pill on every row.
+            // The optgroup headings already split the list, but they scroll out of
+            // reach on a long one, and the closed control has no heading at all -
+            // so the pill is what says which half the picked course came from.
+            if ($sel.hasClass('js-prf-course-status')) {
+                opts.templateResult = renderCourseOption;
+                opts.templateSelection = renderCourseOption;
+                opts.escapeMarkup = function (markup) { return markup; };
+            }
+
             $sel.select2(opts);
         });
+    }
+
+    // Select2 hands the <option> over as .element; an optgroup heading and a "no
+    // results" row have none, so guard before reaching for the attribute.
+    function renderCourseOption(state) {
+        var text = $('<span>').text(state.text || '');
+        if (!state.id || !state.element) { return text; }
+
+        var status = $(state.element).data('status');
+        if (!status) { return text; }
+
+        var isActive = String(status) === 'active';
+        var $pill = $('<span>')
+            .addClass('pec-course-pill ' + (isActive ? 'pec-course-pill--active' : 'pec-course-pill--archived'))
+            .text(isActive ? 'Active' : 'Archived');
+
+        return $('<span>').addClass('pec-course-option').append(text).append($pill);
     }
 
     // Select2 renders its own box, so a programmatic value change (or a rebuilt
