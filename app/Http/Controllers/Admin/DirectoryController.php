@@ -381,16 +381,27 @@ class DirectoryController extends Controller
     }
 
     /**
-     * Active / Archived split, same rule the Course Master grid uses
-     * (CourseMasterDataTable: end_date >= today is current + upcoming,
-     * end_date < today is expired). Anything unrecognised reads as Active.
+     * Active / Archived split. Active is narrower than the Course Master grid's:
+     * that grid's "active" is end_date >= today, which is current AND upcoming,
+     * but this directory only lists the OTs of a programme that is actually in
+     * session, so a programme that has not started yet is left out of both tabs.
+     * Archived stays end_date < today (expired). Anything unrecognised is Active.
      */
     private function resolveOtStatus(Request $request): string
     {
         return $request->input('status') === 'archive' ? 'archive' : 'active';
     }
 
-    /** The programmes one tab offers, newest first. Memoised per request. */
+    /**
+     * The programmes one tab offers, newest first. Memoised per request.
+     *
+     * course_master has no start_date column — the programme start is the
+     * misnamed `start_year`, which is a real DATE. Active therefore means
+     * started AND not yet ended; a programme whose start_year is still in the
+     * future is upcoming and is deliberately not offered here. A missing
+     * start_year is treated as started rather than hidden, so a row with an
+     * unfilled start date stays reachable.
+     */
     private function otCourses(string $status)
     {
         if (isset($this->optionCache['courses'][$status])) {
@@ -405,6 +416,7 @@ class DirectoryController extends Controller
                 $status === 'archive',
                 fn ($query) => $query->where('end_date', '<', $today),
                 fn ($query) => $query->where('end_date', '>=', $today)
+                    ->where(fn ($q) => $q->whereNull('start_year')->orWhere('start_year', '<=', $today))
             )
             ->orderByDesc('end_date')
             ->orderBy('course_name')

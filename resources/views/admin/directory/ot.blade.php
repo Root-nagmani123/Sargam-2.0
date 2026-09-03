@@ -117,6 +117,14 @@
 
                     <div class="programme-dt-filter-select dir-filter-wide">
                         <select id="dirOtCourse" class="form-select" aria-label="Programme name">
+                            {{-- Active lists only programmes in session, so between one
+                                 programme ending and the next starting the list is empty.
+                                 Say so here rather than render a blank box. --}}
+                            @if($courses->isEmpty())
+                                <option value="" disabled selected>
+                                    {{ $status === 'archive' ? 'No archived programme' : 'No programme currently running' }}
+                                </option>
+                            @endif
                             @foreach($courses as $course)
                                 <option value="{{ $course->pk }}"
                                         title="{{ $course->course_name }}"
