@@ -25,7 +25,7 @@ class WhosWhoController extends Controller
      */
     public function index()
     {
-        $cacheKey = 'whos_who_courses:v1:' . Carbon::now()->format('Y-m-d');
+        $cacheKey = 'whos_who_courses:v1:active:' . Carbon::now()->format('Y-m-d');
         $courses = DataTableRedisCache::remember(
             $cacheKey,
             [
@@ -43,20 +43,23 @@ class WhosWhoController extends Controller
     }
 
     /**
-     * Get courses list (AJAX)
+     * Get courses list (AJAX). Pass status=archive to get ended courses instead of running ones.
      */
-    public function getCourses()
+    public function getCourses(Request $request)
     {
         try {
-            $cacheKey = 'whos_who_courses:v1:' . Carbon::now()->format('Y-m-d');
+            $status = $request->input('status', 'active') === 'archive' ? 'archive' : 'active';
+            $cacheKey = 'whos_who_courses:v1:' . $status . ':' . Carbon::now()->format('Y-m-d');
             $courses = DataTableRedisCache::remember(
                 $cacheKey,
                 [
                     'enabled' => 'FACULTY_WHOS_WHO_CACHE_ENABLED',
                     'seconds' => 'FACULTY_WHOS_WHO_CACHE_SECONDS',
                 ],
-                'WhosWhoController@getCourses',
-                fn () => $this->queryActiveCoursesForWhosWho()
+                'WhosWhoController@getCourses:' . $status,
+                fn () => $status === 'archive'
+                    ? $this->queryArchivedCoursesForWhosWho()
+                    : $this->queryActiveCoursesForWhosWho()
             );
 
             return response()->json([
@@ -74,6 +77,10 @@ class WhosWhoController extends Controller
     /**
      * Active courses for Who's Who (shared cache key with {@see getCourses}).
      *
+     * "Active" means genuinely ongoing: enabled, already started, and not yet
+     * ended. Without the start_year check, courses that haven't started yet
+     * (e.g. an upcoming batch) would leak into the dropdown alongside running ones.
+     *
      * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\CourseMaster>
      */
     private function queryActiveCoursesForWhosWho()
@@ -81,7 +88,23 @@ class WhosWhoController extends Controller
         $currentDate = Carbon::now()->format('Y-m-d');
 
         return CourseMaster::where('active_inactive', 1)
+            ->where('start_year', '<=', $currentDate)
             ->where('end_date', '>=', $currentDate)
+            ->orderBy('course_name')
+            ->get(['pk', 'course_name', 'couse_short_name']);
+    }
+
+    /**
+     * Archived courses for Who's Who: enabled but already ended.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\CourseMaster>
+     */
+    private function queryArchivedCoursesForWhosWho()
+    {
+        $currentDate = Carbon::now()->format('Y-m-d');
+
+        return CourseMaster::where('active_inactive', 1)
+            ->where('end_date', '<', $currentDate)
             ->orderBy('course_name')
             ->get(['pk', 'course_name', 'couse_short_name']);
     }
@@ -102,6 +125,7 @@ class WhosWhoController extends Controller
             $courseId = $request->input('course_id', '');
             $cadreId = $request->input('cadre_id', '');
             $serviceId = $request->input('service_id', '');
+            $status = $request->input('status', 'active') === 'archive' ? 'archive' : 'active';
             $page = $request->input('page', 1);
             $perPage = $request->input('per_page', 10);
             $sortBy = $request->input('sort_by', 'name_asc');
@@ -129,10 +153,18 @@ class WhosWhoController extends Controller
             }
 
             if (!empty($courseId) && $courseId > 0) {
-                if (! CourseMaster::where('pk', $courseId)
-                    ->where('active_inactive', 1)
-                    ->where('end_date', '>=', Carbon::now()->format('Y-m-d'))
-                    ->exists()) {
+                $currentDate = Carbon::now()->format('Y-m-d');
+                $courseExists = $status === 'archive'
+                    ? CourseMaster::where('pk', $courseId)
+                        ->where('active_inactive', 1)
+                        ->where('end_date', '<', $currentDate)
+                        ->exists()
+                    : CourseMaster::where('pk', $courseId)
+                        ->where('active_inactive', 1)
+                        ->where('end_date', '>=', $currentDate)
+                        ->exists();
+
+                if (! $courseExists) {
                     return response()->json([
                         'success' => false,
                         'message' => 'Selected course not found or inactive',
@@ -142,11 +174,12 @@ class WhosWhoController extends Controller
                 }
             }
 
-            $cacheKey = 'whos_who_students:v3:' . md5(json_encode([
+            $cacheKey = 'whos_who_students:v4:' . md5(json_encode([
                 'name' => $name,
                 'course_id' => $courseId,
                 'cadre_id' => $cadreId,
                 'service_id' => $serviceId,
+                'status' => $status,
                 'page' => $page,
                 'per_page' => $perPage,
                 'sort_by' => $sortBy,
@@ -183,6 +216,7 @@ class WhosWhoController extends Controller
         $courseId = $request->input('course_id', '');
         $cadreId = $request->input('cadre_id', '');
         $serviceId = $request->input('service_id', '');
+        $status = $request->input('status', 'active') === 'archive' ? 'archive' : 'active';
         $page = $request->input('page', 1);
         $perPage = $request->input('per_page', 10);
         $sortBy = $request->input('sort_by', 'name_asc');
@@ -222,9 +256,13 @@ class WhosWhoController extends Controller
             ->whereHas('studentMaster', function ($q) {
                 $q->where('status', 1); // Only active students from student_master
             })
-            ->whereHas('course', function ($q) use ($currentDate) {
-                $q->where('active_inactive', 1) // Only active courses from course_master
-                    ->where('end_date', '>=', $currentDate); // Exclude courses that have already ended
+            ->whereHas('course', function ($q) use ($currentDate, $status) {
+                $q->where('active_inactive', 1); // Only enabled courses from course_master
+                if ($status === 'archive') {
+                    $q->where('end_date', '<', $currentDate); // Only courses that have already ended
+                } else {
+                    $q->where('end_date', '>=', $currentDate); // Exclude courses that have already ended
+                }
             });
 
         /**
@@ -236,9 +274,14 @@ class WhosWhoController extends Controller
             $query->where('student_master_course__map.course_master_pk', $courseId);
         }
 
-        // Universal search across name, rank, cadre, service, contact, email, room, district/city
+        // Universal search across name, rank, cadre, service, contact, email, room, district/city, category
         if (!empty($name)) {
-            $query->whereHas('studentMaster', function ($q) use ($name) {
+            // admission_category_master has no Eloquent model (schema-only table).
+            $matchingCategoryPks = DB::table('admission_category_master')
+                ->where('Seat_name', 'like', '%' . $name . '%')
+                ->pluck('pk');
+
+            $query->whereHas('studentMaster', function ($q) use ($name, $matchingCategoryPks) {
                 $q->where('display_name', 'like', '%' . $name . '%')
                     ->orWhere('first_name', 'like', '%' . $name . '%')
                     ->orWhere('last_name', 'like', '%' . $name . '%')
@@ -253,6 +296,10 @@ class WhosWhoController extends Controller
                     ->orWhereHas('service', function ($serviceQuery) use ($name) {
                         $serviceQuery->where('service_name', 'like', '%' . $name . '%');
                     });
+
+                if ($matchingCategoryPks->isNotEmpty()) {
+                    $q->orWhereIn('admission_category_pk', $matchingCategoryPks);
+                }
             });
         }
 
@@ -458,14 +505,19 @@ class WhosWhoController extends Controller
                 continue;
             }
 
-            // If no course filter and course is missing, try to get first active course for this student
+            // If no course filter and course is missing, try to get first course for this student
+            // matching the current active/archive status
             if (!$course && empty($courseId)) {
                 $firstCourseMap = StudentMasterCourseMap::with('course')
                     ->where('student_master_pk', $student->pk)
                     ->where('active_inactive', 1)
-                    ->whereHas('course', function ($q) use ($currentDate) {
-                        $q->where('active_inactive', 1)
-                            ->where('end_date', '>=', $currentDate);
+                    ->whereHas('course', function ($q) use ($currentDate, $status) {
+                        $q->where('active_inactive', 1);
+                        if ($status === 'archive') {
+                            $q->where('end_date', '<', $currentDate);
+                        } else {
+                            $q->where('end_date', '>=', $currentDate);
+                        }
                     })
                     ->first();
                 $course = $firstCourseMap ? $firstCourseMap->course : null;
@@ -478,15 +530,20 @@ class WhosWhoController extends Controller
 
             /**
              * Get all courses this student is enrolled in from student_master_course__map
+             * matching the current active/archive status
              */
             $enrolledCourses = collect();
             if (!$forExport) {
                 $enrolledCourses = StudentMasterCourseMap::with('course')
                     ->where('student_master_pk', $student->pk)
                     ->where('active_inactive', 1)
-                    ->whereHas('course', function ($q) use ($currentDate) {
-                        $q->where('active_inactive', 1)
-                            ->where('end_date', '>=', $currentDate);
+                    ->whereHas('course', function ($q) use ($currentDate, $status) {
+                        $q->where('active_inactive', 1);
+                        if ($status === 'archive') {
+                            $q->where('end_date', '<', $currentDate);
+                        } else {
+                            $q->where('end_date', '>=', $currentDate);
+                        }
                     })
                     ->get();
             }
@@ -610,6 +667,7 @@ class WhosWhoController extends Controller
                 'name' => $name,
                 'cadre_id' => $cadreId,
                 'service_id' => $serviceId,
+                'status' => $status,
             ],
         ];
     }

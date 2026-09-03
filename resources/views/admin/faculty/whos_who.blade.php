@@ -191,6 +191,18 @@
         </div>
     </div>
 
+    <!-- Active / Archived course-status tabs -->
+    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white" role="group" aria-label="Course status">
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill active" id="whosWhoStatusActive" data-status="active" aria-pressed="true" aria-current="true">Active</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill" id="whosWhoStatusArchive" data-status="archive" aria-pressed="false">Archived</button>
+            </li>
+        </ul>
+    </div>
+
     <!-- Filter Section -->
     <div class="card shadow-sm mb-4">
         <div class="card-body p-4">
@@ -368,17 +380,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const cadreFilter = document.getElementById('cadreFilter');
     const serviceFilter = document.getElementById('serviceFilter');
     const resetFilters = document.getElementById('resetFilters');
+    const statusTabs = document.querySelectorAll('.programme-status-tabs .programme-status-pill');
 
     let currentPage = 1;
     let perPage = 10;
     let totalPages = 1;
     let totalStudents = 0;
     let allProfiles = [];
+    let currentStatus = 'active';
 
     // Function to render all students
     function renderStudents(students, pagination, customMessage = null) {
         if (!students || students.length === 0) {
-            const message = customMessage || 'Please adjust your filters to find students.';
+            const message = customMessage || 'No students match the selected filters. Try adjusting your search, course, cadre, or service filters.';
             studentsContainer.innerHTML = `
                 <div class="text-center py-5">
                     <i class="bi bi-person-x display-1 text-secondary opacity-50"></i>
@@ -562,16 +576,17 @@ document.addEventListener('DOMContentLoaded', function() {
             if (courseId) params.append('course_id', courseId);
             if (cadreId) params.append('cadre_id', cadreId);
             if (serviceId) params.append('service_id', serviceId);
+            params.append('status', currentStatus);
             params.append('page', page);
             params.append('per_page', perPage);
             params.append('sort_by', 'name_asc');
 
             const apiUrl = '{{ route("admin.faculty.whos-who.students") }}?' + params.toString();
             console.log('Fetching students from:', apiUrl);
-            
+
             const response = await fetch(apiUrl);
             const data = await response.json();
-            
+
             console.log('API Response:', data);
 
             if (data.success) {
@@ -583,8 +598,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     allProfiles = [];
                     const selectedCourse = courseFilter.options[courseFilter.selectedIndex]?.text || 'selected course';
+                    const statusLabel = currentStatus === 'archive' ? 'archived' : 'active';
                     console.log(`✗ No students found for: ${selectedCourse} (ID: ${courseId || 'All'})`);
-                    renderStudents([], null, courseId ? `No students found for "${selectedCourse}"` : 'No students found');
+                    renderStudents([], null, courseId
+                        ? `No students found for "${selectedCourse}" in ${statusLabel} courses`
+                        : `No students found in ${statusLabel} courses`);
                 }
             } else {
                 console.error('API Error:', data.message || 'Unknown error');
@@ -623,34 +641,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Function to load courses dynamically (can be replaced with API call)
-    // Function to load courses dynamically from API (only if not already loaded)
-    async function loadCourses() {
+    // Function to load courses dynamically from API for the current active/archive status
+    async function loadCourses(forceReload = false) {
         try {
             const courseSelect = document.getElementById('courseFilter');
-            
+
             // Check if courses are already loaded (more than just "All Courses")
-            if (courseSelect.options.length > 1) {
+            if (!forceReload && courseSelect.options.length > 1) {
                 console.log('Courses already loaded, skipping reload');
                 return Promise.resolve();
             }
-            
-            const response = await fetch('{{ route("admin.faculty.whos-who.courses") }}');
+
+            const response = await fetch('{{ route("admin.faculty.whos-who.courses") }}?status=' + currentStatus);
             const data = await response.json();
-            
+
             if (data.success && data.courses) {
-                // Keep "All Courses" option
-                const allCoursesOption = courseSelect.querySelector('option[value=""]');
-                const currentValue = courseSelect.value; // Save current selection
-                
                 // Clear and rebuild options
                 courseSelect.innerHTML = '';
-                
+
                 // Add "All Courses" option
                 const allOption = document.createElement('option');
                 allOption.value = '';
                 allOption.textContent = 'All Courses';
                 courseSelect.appendChild(allOption);
-                
+
                 // Add course options
                 data.courses.forEach(course => {
                     const option = document.createElement('option');
@@ -658,12 +672,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     option.textContent = course.course_name;
                     courseSelect.appendChild(option);
                 });
-                
-                // Restore previous selection if it exists
-                if (currentValue) {
-                    courseSelect.value = currentValue;
-                }
-                
+
                 console.log('Courses loaded:', data.courses.length);
             }
             return Promise.resolve();
@@ -702,6 +711,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
     resetFilters.addEventListener('click', resetAllFilters);
 
+    statusTabs.forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            const status = this.getAttribute('data-status');
+            if (status === currentStatus) {
+                return;
+            }
+
+            statusTabs.forEach(function(t) {
+                t.classList.remove('active');
+                t.setAttribute('aria-pressed', 'false');
+                t.removeAttribute('aria-current');
+            });
+            this.classList.add('active');
+            this.setAttribute('aria-pressed', 'true');
+            this.setAttribute('aria-current', 'true');
+
+            currentStatus = status;
+            currentPage = 1;
+            courseFilter.value = '';
+
+            loadCourses(true).finally(function() {
+                filterProfiles(1);
+            });
+        });
+    });
+
     document.getElementById('downloadPdfBtn').addEventListener('click', function() {
         const params = new URLSearchParams();
         const name = nameFilter.value.trim();
@@ -709,6 +744,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (courseFilter.value) params.append('course_id', courseFilter.value);
         if (cadreFilter.value) params.append('cadre_id', cadreFilter.value);
         if (serviceFilter.value) params.append('service_id', serviceFilter.value);
+        params.append('status', currentStatus);
         window.open('{{ route("admin.faculty.whos-who.download-pdf") }}?' + params.toString(), '_blank');
     });
 
@@ -719,6 +755,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (courseFilter.value) params.append('course_id', courseFilter.value);
         if (cadreFilter.value) params.append('cadre_id', cadreFilter.value);
         if (serviceFilter.value) params.append('service_id', serviceFilter.value);
+        params.append('status', currentStatus);
         window.open('{{ route("admin.faculty.whos-who.download-excel") }}?' + params.toString(), '_blank');
     });
 
@@ -729,6 +766,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (courseFilter.value) params.append('course_id', courseFilter.value);
         if (cadreFilter.value) params.append('cadre_id', cadreFilter.value);
         if (serviceFilter.value) params.append('service_id', serviceFilter.value);
+        params.append('status', currentStatus);
         window.open('{{ route("admin.faculty.whos-who.download-csv") }}?' + params.toString(), '_blank');
     });
 
