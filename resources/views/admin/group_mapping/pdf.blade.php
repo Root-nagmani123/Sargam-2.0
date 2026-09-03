@@ -1,59 +1,65 @@
 @php
     $printedOn = $generatedAt ?? now()->format('d M Y, h:i A');
 
-    $emblemSrc = $emblemSrc ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
-    foreach ([
-        public_path('admin_assets/images/logos/ashoka.png'),
-        public_path('images/ashoka.png'),
-    ] as $emblemPath) {
-        if (is_file($emblemPath) && is_readable($emblemPath)) {
-            $raw = @file_get_contents($emblemPath);
-            if ($raw !== false) {
-                $emblemSrc = 'data:image/png;base64,' . base64_encode($raw);
+    // GroupMappingController resolves both logos and drops any format DomPDF
+    // can't render without the GD extension (PNG/SVG), so only fall back here
+    // when the view is rendered outside that export flow — re-deriving them
+    // unconditionally would put the PNG back and abort the whole download.
+    if (! isset($emblemSrc)) {
+        $emblemSrc = extension_loaded('gd')
+            ? 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png'
+            : '';
+        foreach ([
+            public_path('admin_assets/images/logos/ashoka.png'),
+            public_path('images/ashoka.png'),
+        ] as $emblemPath) {
+            if (! extension_loaded('gd')) {
                 break;
+            }
+            if (is_file($emblemPath) && is_readable($emblemPath)) {
+                $raw = @file_get_contents($emblemPath);
+                if ($raw !== false) {
+                    $emblemSrc = 'data:image/png;base64,' . base64_encode($raw);
+                    break;
+                }
             }
         }
     }
 
-    $lbsnaaLogoSrc = $lbsnaaLogoSrc ?? 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
-    foreach ([
-        public_path('images/lbsnaa_logo.jpg'),
-        public_path('images/lbsnaa_logo.png'),
-        public_path('admin_assets/images/logos/logo_new.png'),
-        public_path('admin_assets/images/logos/logo.png'),
-        public_path('admin_assets/images/logos/logo.svg'),
-    ] as $logoPath) {
-        if (is_file($logoPath) && is_readable($logoPath)) {
-            $raw = @file_get_contents($logoPath);
-            if ($raw !== false) {
-                $ext = strtolower(pathinfo($logoPath, PATHINFO_EXTENSION));
-                $mime = match ($ext) {
-                    'svg' => 'image/svg+xml',
-                    'png' => 'image/png',
-                    'jpg', 'jpeg' => 'image/jpeg',
-                    default => 'image/png',
-                };
-                $lbsnaaLogoSrc = 'data:' . $mime . ';base64,' . base64_encode($raw);
-                break;
+    if (! isset($lbsnaaLogoSrc)) {
+        $lbsnaaLogoSrc = extension_loaded('gd')
+            ? 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png'
+            : '';
+        foreach ([
+            public_path('images/lbsnaa_logo.jpg'),
+            public_path('images/lbsnaa_logo.png'),
+            public_path('admin_assets/images/logos/logo_new.png'),
+            public_path('admin_assets/images/logos/logo.png'),
+            public_path('admin_assets/images/logos/logo.svg'),
+        ] as $logoPath) {
+            $ext = strtolower(pathinfo($logoPath, PATHINFO_EXTENSION));
+            if (! extension_loaded('gd') && ! in_array($ext, ['jpg', 'jpeg'], true)) {
+                continue;
+            }
+            if (is_file($logoPath) && is_readable($logoPath)) {
+                $raw = @file_get_contents($logoPath);
+                if ($raw !== false) {
+                    $mime = match ($ext) {
+                        'svg' => 'image/svg+xml',
+                        'png' => 'image/png',
+                        'jpg', 'jpeg' => 'image/jpeg',
+                        default => 'image/png',
+                    };
+                    $lbsnaaLogoSrc = 'data:' . $mime . ';base64,' . base64_encode($raw);
+                    break;
+                }
             }
         }
     }
 
-    $filters = [];
-    $filters[] = 'Status: ' . $statusLabel;
-    if (!empty($courseLabel)) {
-        $filters[] = 'Course: ' . $courseLabel;
-    }
-    if (!empty($groupTypeLabel)) {
-        $filters[] = 'Group Type: ' . $groupTypeLabel;
-    }
-    if (!empty($facultyLabel)) {
-        $filters[] = 'Faculty: ' . $facultyLabel;
-    }
-    if (!empty($searchValue)) {
-        $filters[] = 'Search: "' . $searchValue . '"';
-    }
-    $filterLine = count($filters) ? implode('  |  ', $filters) : 'No filters applied';
+    // GroupMappingController::exportFilterLine() composes this, so the PDF and the
+    // Excel sheet word the applied filters identically.
+    $filterLine = $filterLine ?? 'No filters applied';
     $rowCount = $rows->count();
 @endphp
 <!doctype html>
@@ -205,7 +211,7 @@
         <table>
             <tr>
                 <td class="hdr-left">
-                    <img src="{{ $emblemSrc }}" alt="Emblem of India">
+                    @if($emblemSrc)<img src="{{ $emblemSrc }}" alt="Emblem of India">@endif
                 </td>
                 <td class="hdr-center">
                     <div class="brand-1">Government of India</div>
@@ -213,7 +219,7 @@
                     <div class="brand-3">Lal Bahadur Shastri National Academy of Administration</div>
                 </td>
                 <td class="hdr-right">
-                    <img src="{{ $lbsnaaLogoSrc }}" alt="LBSNAA Logo">
+                    @if($lbsnaaLogoSrc)<img src="{{ $lbsnaaLogoSrc }}" alt="LBSNAA Logo">@endif
                 </td>
             </tr>
         </table>
