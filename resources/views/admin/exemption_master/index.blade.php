@@ -109,10 +109,27 @@
                     id="filterArchive" aria-pressed="false">Archive</button>
             </li>
         </ul>
-        <button type="button" id="exemptionDownload" class="btn pt-download-btn ">
-            <i class="bi bi-download" aria-hidden="true"></i>
-            <span>Download</span>
-        </button>
+        <div class="dropdown">
+            <button type="button" id="exemptionDownload" class="btn pt-download-btn dropdown-toggle"
+                data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-download" aria-hidden="true"></i>
+                <span>Download</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm py-2" aria-labelledby="exemptionDownload">
+                <li>
+                    <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="exemptionExportPdf">
+                        <i class="bi bi-file-earmark-pdf text-danger" aria-hidden="true"></i>
+                        <span>Download PDF</span>
+                    </button>
+                </li>
+                <li>
+                    <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="exemptionExportExcel">
+                        <i class="bi bi-file-earmark-excel text-success" aria-hidden="true"></i>
+                        <span>Download Excel</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
     </div>
 
     <section class="datatables" aria-labelledby="pt-exemption-heading">
@@ -321,16 +338,25 @@ $(function () {
         setStatusTab($('#filterActive'), 'active');
     });
 
-    /* ── Download: export current filters/search to CSV ── */
-    $('#exemptionDownload').on('click', function () {
+    /* ── Download: export current filters/search to PDF/Excel ── */
+    function exemptionExportUrl(format) {
         const params = $.param({
+            format: format,
             status_filter: currentStatus,
             course_filter: $('#courseFilter').val() || '',
             from_date: $period.data('from') || '',
             to_date: $period.data('to') || '',
             search: table.search() || '',
         });
-        window.location.href = exportUrl + '?' + params;
+        return exportUrl + '?' + params;
+    }
+
+    $('#exemptionExportPdf').on('click', function () {
+        window.location.href = exemptionExportUrl('pdf');
+    });
+
+    $('#exemptionExportExcel').on('click', function () {
+        window.location.href = exemptionExportUrl('excel');
     });
 
     /* ── Status toggle ── */
