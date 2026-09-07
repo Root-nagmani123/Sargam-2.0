@@ -53,6 +53,22 @@
     .ot-list-page .programme-dt-table th:nth-child(2), .ot-list-page .programme-dt-table td:nth-child(2) { min-width: 120px; }
     .ot-list-page .programme-dt-table th:nth-child(3), .ot-list-page .programme-dt-table td:nth-child(3) { min-width: 200px; }
 
+    /* Action column trigger — a link-styled button so the grid keeps its light look. */
+    .ot-list-page .ot-add-comment-btn {
+        display: inline-flex; align-items: center; gap: 0.35rem;
+        border: 0; background: none; padding: 0; color: #004a93;
+        font-size: 0.8125rem; font-weight: 600; line-height: 1.25; text-align: left;
+        white-space: normal; max-width: 8.5rem; cursor: pointer;
+    }
+    .ot-list-page .ot-add-comment-btn:hover { text-decoration: underline; }
+    .ot-list-page .ot-add-comment-btn i { font-size: 1rem; flex: 0 0 auto; }
+    .ot-list-page .ot-add-comment-btn:focus-visible { outline: 2px solid #004a93; outline-offset: 2px; }
+
+    .ot-comment-modal .form-label { font-weight: 600; font-size: 0.875rem; color: #344054; }
+    .ot-comment-modal .req { color: #d92d20; }
+    .ot-comment-modal .form-control:disabled,
+    .ot-comment-modal .form-select:disabled { background-color: #eaecf0; }
+
     .ot-list-page .sl-dt-scroll-host { overflow-x: auto; overflow-y: visible; }
     .ot-list-page .programme-dt-table { overflow: visible !important; }
     .ot-list-page .programme-dt-table { --sl-pin-left-0: 0px; --sl-pin-left-1: 70px; --sl-pin-left-2: 190px; }
@@ -229,6 +245,8 @@
                                     <th>Total Stationed Leave (Days)</th>
                                     <th>Total Notice/Memo</th>
                                     <th>Total Discipline Memo</th>
+                                    <th>Comments/ Feedbacks</th>
+                                    <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -256,6 +274,58 @@
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
+        </div>
+    </div>
+</div>
+
+{{-- Add Comment/ Feedback — opened from the Action column. --}}
+<div class="modal fade ot-comment-modal" id="otCommentModal" tabindex="-1" aria-labelledby="otCommentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom pb-3">
+                <h5 class="modal-title fw-bold" id="otCommentModalLabel">Add Comment/ Feedback</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="otCommentForm" novalidate>
+                <div class="modal-body">
+                    <input type="hidden" id="otCommentStudentPk" name="student_master_pk" value="">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="otCommentOtName">OT Name<span class="req">*</span></label>
+                            {{-- Read-only: the row decides who the feedback is about. --}}
+                            <input type="text" class="form-control" id="otCommentOtName" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="otCommentBy">Comment/ Feedback by<span class="req">*</span></label>
+                            <input type="text" class="form-control" id="otCommentBy" disabled
+                                value="{{ trim((auth()->user()->first_name ?? '') . ' ' . (auth()->user()->last_name ?? '')) ?: (auth()->user()->user_name ?? '') }}">
+                        </div>
+                        <div class="col-12">
+                            <span class="form-label d-block">Notify OT<span class="req">*</span></span>
+                            <div class="d-flex align-items-center gap-4">
+                                <div class="form-check m-0">
+                                    <input class="form-check-input" type="radio" name="notify_ot" id="otNotifyYes" value="1" checked>
+                                    <label class="form-check-label" for="otNotifyYes">Yes</label>
+                                </div>
+                                <div class="form-check m-0">
+                                    <input class="form-check-input" type="radio" name="notify_ot" id="otNotifyNo" value="0">
+                                    <label class="form-check-label" for="otNotifyNo">No</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="otCommentMessage">Message<span class="req">*</span></label>
+                            <textarea class="form-control" id="otCommentMessage" name="message" rows="4"
+                                maxlength="5000" placeholder="Lorem ipsum dolor sit amet"></textarea>
+                            <div class="invalid-feedback" id="otCommentMessageError">Please enter a message.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-danger rounded-3 px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4" id="otCommentSubmit">Add Comment/ Feedback</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -410,6 +480,8 @@
                 { data: 'stationed', name: 'stationed', orderable: false, searchable: false },
                 { data: 'notice_memo', name: 'notice_memo', orderable: false, searchable: false },
                 { data: 'discipline_memo', name: 'discipline_memo', orderable: false, searchable: false },
+                { data: 'comments', name: 'comments', orderable: false, searchable: false },
+                { data: 'action', name: 'action', orderable: false, searchable: false },
             ]
         });
 
@@ -451,17 +523,27 @@
             });
             // Keep the previous faculty only if the new parent value still has them.
             const stillValid = previous !== '' && list.some(f => String(f.pk) === previous);
-            $sel.val(stillValid ? previous : '');
+            let value = stillValid ? previous : '';
+            // With nothing carried over and exactly ONE faculty for this parent,
+            // pre-select them — picking a cadre then picking its only counsellor is
+            // two clicks for one outcome. Never guessed when the parent has more than
+            // one, and never applied while re-scoping the lists after a draw (that
+            // would make the blank "all" option impossible to keep).
+            if (value === '' && opts.autoSelectSingle && list.length === 1) {
+                value = String(list[0].pk);
+            }
+            $sel.val(value);
             $sel.prop('disabled', list.length === 0);
             $item.toggle(!!parent);
             return !stillValid && previous !== '';
         }
 
-        function refreshCounsellorOptions(keep) {
+        function refreshCounsellorOptions(keep, autoSelectSingle) {
             return refreshDependentFaculty({
                 parent: '#cadreFilter', item: '#otItemCounsellor', select: '#counsellorFacultyFilter',
                 map: COUNSELLORS_BY_CADRE, placeholder: 'Cadre Counsellor',
                 emptyText: 'No counsellor mapped', keep: keep,
+                autoSelectSingle: autoSelectSingle === true,
             });
         }
 
@@ -504,8 +586,9 @@
 
         $('#cadreFilter').on('change', function() {
             // Dropping an out-of-cadre counsellor must reach the server too, so
-            // refresh the options BEFORE reading the filter state.
-            refreshCounsellorOptions();
+            // refresh the options BEFORE reading the filter state. autoSelectSingle:
+            // picking a cadre pre-selects its counsellor when it has only one.
+            refreshCounsellorOptions('', true);
             applyFilter({ cadre: this.value });
         });
         $('#counsellorFacultyFilter').on('change', function() { applyFilter({ counsellor_faculty: this.value }); });
@@ -516,7 +599,14 @@
             applyFilter({ house_group: this.value });
         });
         $('#houseFacultyFilter').on('change', function() { applyFilter({ house_faculty: this.value }); });
-        refreshCounsellorOptions(filters.counsellor_faculty || '');
+        // First paint: restore a counsellor carried in the URL, and pre-select the
+        // cadre's only counsellor when the URL names a cadre but no counsellor
+        // (e.g. ?cadre=AGMUT). If that changes the value the server was given, push
+        // it so the table and the dropdown never disagree.
+        refreshCounsellorOptions(filters.counsellor_faculty || '', true);
+        if (($('#counsellorFacultyFilter').val() || '') !== (filters.counsellor_faculty || '')) {
+            applyFilter({});
+        }
         refreshHouseFacultyOptions(filters.house_faculty || '');
         $('#sessionFilter').on('change', function() { applyFilter({ session: this.value }); });
         $('#participantFilter').on('change', function() { applyFilter({ participant: this.value }); });
@@ -562,6 +652,8 @@
             { title: 'Total Stationed Leave (Days)', data: 'stationed', w: 7 },
             { title: 'Total Notice/Memo', data: 'notice_memo', w: 6 },
             { title: 'Total Discipline Memo', data: 'discipline_memo', w: 6 },
+            // Action is a control, not data — it is never printed or exported.
+            { title: 'Comments/ Feedbacks', data: 'comments', w: 6 },
         ];
 
         function stripHtml(html) {
@@ -710,6 +802,57 @@
                 });
         });
 
+        /* ── Add Comment/ Feedback ── */
+        // The button lives in a DataTables-rendered cell, so the handler is
+        // delegated from the table — it must keep working after every redraw.
+        const otCommentModalEl = document.getElementById('otCommentModal');
+        const otCommentModal = otCommentModalEl ? new bootstrap.Modal(otCommentModalEl) : null;
+
+        $('#otParticipantsTable').on('click', '.ot-add-comment-btn', function() {
+            if (!otCommentModal) { return; }
+            $('#otCommentStudentPk').val($(this).data('student'));
+            $('#otCommentOtName').val($(this).data('name'));
+            $('#otCommentMessage').val('').removeClass('is-invalid');
+            $('#otNotifyYes').prop('checked', true);
+            otCommentModal.show();
+        });
+
+        $('#otCommentForm').on('submit', function(e) {
+            e.preventDefault();
+            const $msg = $('#otCommentMessage');
+            const message = ($msg.val() || '').trim();
+            if (message === '') { $msg.addClass('is-invalid').focus(); return; }
+            $msg.removeClass('is-invalid');
+
+            const $btn = $('#otCommentSubmit');
+            $btn.prop('disabled', true).text('Saving…');
+
+            $.ajax({
+                url: "{{ route('admin.dashboard.ot-participants.comment.store') }}",
+                type: 'POST',
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    student_master_pk: $('#otCommentStudentPk').val(),
+                    course_master_pk: $('#courseFilter').val() || '',
+                    message: message,
+                    notify_ot: $('input[name="notify_ot"]:checked').val(),
+                },
+            }).done(function(res) {
+                otCommentModal.hide();
+                // Reload keeps the row's Comments/Feedbacks count honest without
+                // hand-patching the cell.
+                if (dt) { dt.ajax.reload(null, false); }
+                if (window.toastr && res && res.message) { toastr.success(res.message); }
+                else if (res && res.message) { alert(res.message); }
+            }).fail(function(xhr) {
+                const err = (xhr.responseJSON && (xhr.responseJSON.message || xhr.responseJSON.error))
+                    || 'Unable to save the comment. Please try again.';
+                alert(err);
+            }).always(function() {
+                $btn.prop('disabled', false).text('Add Comment/ Feedback');
+            });
+        });
+
         /* ── Download (Excel / PDF) ── */
         // The file follows the on-screen view: same filters, same Active/Archived
         // tab, same search text.
@@ -732,7 +875,7 @@
         /* ── Dynamic columns: show / hide ── */
         // Stored values are column INDEXES, so bump the version whenever the column
         // order changes — v1 entries would otherwise hide the wrong columns.
-        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v3';
+        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v4';
         function otGetHiddenCols() {
             try { const raw = localStorage.getItem(otColStorageKey); const arr = raw ? JSON.parse(raw) : []; return Array.isArray(arr) ? arr : []; }
             catch (e) { return []; }

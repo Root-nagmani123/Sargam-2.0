@@ -183,6 +183,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
     Route::get('/dashboard/ot-participants', [UserController::class, 'otParticipantsList'])->name('admin.dashboard.ot-participants');
     Route::get('/dashboard/ot-participants/export/{format}', [UserController::class, 'otParticipantsExport'])->name('admin.dashboard.ot-participants.export');
+    // Comment / Feedback on a participant: the Action column's form, and the
+    // history page behind the COMMENTS/FEEDBACKS count.
+    Route::post('/dashboard/ot-participants/comment', [UserController::class, 'otParticipantCommentStore'])
+        ->middleware('throttle:30,1')->name('admin.dashboard.ot-participants.comment.store');
+    Route::get('/dashboard/ot-participants/{id}/comments', [UserController::class, 'otParticipantComments'])->name('admin.dashboard.ot-participants.comments');
+    Route::get('/dashboard/ot-participants/{id}/comments/export/{format}', [UserController::class, 'otParticipantCommentsExport'])->name('admin.dashboard.ot-participants.comments.export');
     Route::get('/dashboard/students/export/{format}', [UserController::class, 'studentListExport'])->name('admin.dashboard.students.export');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');

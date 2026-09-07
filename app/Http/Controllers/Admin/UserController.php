@@ -55,6 +55,7 @@ use App\Models\VenueMaster;
 use App\Models\CourseCordinatorMaster;
 use App\Models\StudentMasterCourseMap;
 use App\Models\StudentMaster;
+use App\Models\OtParticipantComment;
 use App\Services\FC\RegistrationService;
 use App\Models\CourseStudentAttendance;
 use App\Models\CourseGroupTimetableMapping;
@@ -1410,6 +1411,7 @@ class UserController extends Controller
                     'cadre_name' => $m->cadre_name ?? null,
                     'counsellor_name' => $m->counsellor_name ?? null,
                     'house_group' => $m->house_group ?? null,
+                    'house_groups' => $m->house_groups ?? [],
                     'house_faculty_name' => $m->house_faculty_name ?? null,
                 ];
             }
@@ -1424,6 +1426,7 @@ class UserController extends Controller
             }
             if (empty($byStudent[$spk]->house_group) && ! empty($m->house_group)) {
                 $byStudent[$spk]->house_group = $m->house_group;
+                $byStudent[$spk]->house_groups = $m->house_groups ?? [];
             }
             if (empty($byStudent[$spk]->house_faculty_name) && ! empty($m->house_faculty_name)) {
                 $byStudent[$spk]->house_faculty_name = $m->house_faculty_name;
@@ -1499,7 +1502,9 @@ class UserController extends Controller
 
         return [
             'cadre' => $forCadre->map(fn ($m) => $m->cadre_name ?? null)->filter()->unique()->sort()->values(),
-            'houseGroup' => $forHouseGroup->map(fn ($m) => $m->house_group ?? null)->filter()->unique()->sort()->values(),
+            // Every house group in view, not just each student's first — otherwise a
+            // group whose members are all also in another group never appears.
+            'houseGroup' => $forHouseGroup->flatMap(fn ($m) => $m->house_groups ?? [])->filter()->unique()->sort()->values(),
             'counsellorsByCadre' => $this->otParticipantsCounsellorOptions(
                 $forCadre->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all(),
                 $forCadre->filter(fn ($m) => ! empty($m->student_master_pk) && ! empty($m->cadre_name))
@@ -1507,10 +1512,7 @@ class UserController extends Controller
                     ->all()
             ),
             'facultyByHouseGroup' => $this->otParticipantsHouseFacultyOptions(
-                $forHouseGroup->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all(),
-                $forHouseGroup->filter(fn ($m) => ! empty($m->student_master_pk) && ! empty($m->house_group))
-                    ->mapWithKeys(fn ($m) => [(int) $m->student_master_pk => $m->house_group])
-                    ->all()
+                $forHouseGroup->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all()
             ),
         ];
     }
@@ -1663,18 +1665,29 @@ class UserController extends Controller
     }
 
     /**
-     * group_name per student for the given course-group types, from the Course
-     * Group Mapping — keyed both per (student, course) and per student.
+     * The Course Group Mapping row that represents a student for the given group
+     * types — its group_name AND its faculty, together — keyed per (student,
+     * course) and per student.
      *
-     * The shared reader behind the Cadre and House Group resolvers: a student sits
-     * in one group per type per course, and group_name is the value that group
-     * carries ("AGMUT" for a counsellor group, "Nanda Devi" for a house group).
+     * The shared reader behind the Cadre / Cadre Counsellor and House Group /
+     * House Group Faculty pairs. Reading name and faculty from ONE row is the
+     * whole point: resolving them separately let the two disagree, so a student
+     * mapped to both "Nanda Devi" and a later "A" group rendered as
+     * House Group "A" with Nanda Devi's warden beside it.
+     *
+     * A student SHOULD sit in one group per type per course, but the data does not
+     * guarantee it (Phase-II-2024 has four real houses plus extra "A"/"B" rows, and
+     * most of its students are in two). When there are several, the winner is
+     * picked deterministically rather than left to row order:
+     *   1. a group that HAS a faculty beats one that does not — a house with no
+     *      warden is an incomplete mapping
+     *   2. then the LOWEST gmap.pk — the original mapping beats one added later
      *
      * @param  array<int, int>  $studentPks
      * @param  array<int, int|string>  $typePks  empty = every type (no restriction)
-     * @return array{byStudentCourse: array<string, string>, byStudent: array<int, string>}
+     * @return array{byStudentCourse: array<string, array{name: string, faculty: ?string}>, byStudent: array<int, array{name: string, faculty: ?string}>}
      */
-    private function resolveParticipantGroupNames(array $studentPks, array $typePks): array
+    private function resolveParticipantGroupRows(array $studentPks, array $typePks): array
     {
         $out = ['byStudentCourse' => [], 'byStudent' => []];
         if (empty($studentPks)) {
@@ -1683,14 +1696,26 @@ class UserController extends Controller
 
         $rows = DB::table('student_course_group_map as scg')
             ->join('group_type_master_course_master_map as gmap', 'scg.group_type_master_course_master_map_pk', '=', 'gmap.pk')
+            ->leftJoin('faculty_master as fm', function ($join) {
+                $join->on('gmap.facility_id', '=', 'fm.pk')->where('fm.active_inactive', '=', 1);
+            })
             ->whereIn('scg.student_master_pk', $studentPks)
             ->when(! empty($typePks), fn ($q) => $q->whereIn('gmap.type_name', $typePks))
             ->whereNotNull('gmap.group_name')
             ->where('gmap.group_name', '<>', '')
             ->where('scg.active_inactive', 1)
             ->where('gmap.active_inactive', 1)
-            ->distinct()
-            ->get(['scg.student_master_pk as spk', 'gmap.group_name', 'gmap.course_name as course_pk']);
+            // Faculty-bearing groups first, then the earliest mapping — see above.
+            ->orderByRaw('CASE WHEN fm.pk IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('gmap.pk')
+            ->get([
+                'scg.student_master_pk as spk',
+                'gmap.pk as gmap_pk',
+                'gmap.group_name',
+                'gmap.course_name as course_pk',
+                'fm.pk as faculty_pk',
+                'fm.full_name as faculty_name',
+            ]);
 
         foreach ($rows as $r) {
             $name = trim((string) $r->group_name);
@@ -1698,76 +1723,98 @@ class UserController extends Controller
                 continue;
             }
 
-            $out['byStudentCourse'][$r->spk . '_' . $r->course_pk] = $name;
-            $out['byStudent'][$r->spk] ??= $name;
-        }
-
-        return $out;
-    }
-
-    /**
-     * The FACULTY mapped to a student's course group of the given types, keyed the
-     * same way as resolveParticipantGroupNames() — the group_type_master_course_
-     * master_map.facility_id resolved to faculty_master.full_name.
-     *
-     * Backs the House Group Faculty column. Same row as the group name, so the
-     * column and the House Group column always agree.
-     *
-     * @param  array<int, int>  $studentPks
-     * @param  array<int, int|string>  $typePks  empty = every type (no restriction)
-     * @return array{byStudentCourse: array<string, string>, byStudent: array<int, string>}
-     */
-    private function resolveParticipantGroupFaculty(array $studentPks, array $typePks): array
-    {
-        $out = ['byStudentCourse' => [], 'byStudent' => []];
-        if (empty($studentPks)) {
-            return $out;
-        }
-
-        $rows = DB::table('student_course_group_map as scg')
-            ->join('group_type_master_course_master_map as gmap', 'scg.group_type_master_course_master_map_pk', '=', 'gmap.pk')
-            ->join('faculty_master as fm', 'gmap.facility_id', '=', 'fm.pk')
-            ->whereIn('scg.student_master_pk', $studentPks)
-            ->when(! empty($typePks), fn ($q) => $q->whereIn('gmap.type_name', $typePks))
-            ->where('scg.active_inactive', 1)
-            ->where('gmap.active_inactive', 1)
-            ->where('fm.active_inactive', 1)
-            ->distinct()
-            ->get(['scg.student_master_pk as spk', 'fm.pk as faculty_pk', 'fm.full_name', 'gmap.course_name as course_pk']);
-
-        foreach ($rows as $r) {
-            // Blank full_name rows still need something readable in the cell.
-            $name = trim((string) $r->full_name);
-            if ($name === '') {
-                $name = 'Faculty #' . $r->faculty_pk;
+            $faculty = null;
+            if (! empty($r->faculty_pk)) {
+                // Blank full_name rows still need something readable in the cell.
+                $faculty = trim((string) $r->faculty_name) ?: ('Faculty #' . $r->faculty_pk);
             }
 
-            $out['byStudentCourse'][$r->spk . '_' . $r->course_pk] = $name;
-            $out['byStudent'][$r->spk] ??= $name;
+            $entry = ['name' => $name, 'faculty' => $faculty];
+
+            // EVERY group is kept, best-first. A student really can belong to more
+            // than one group of a type, and the filter dropdown must be able to
+            // offer all of them — dropping the extras hid "A" / "B" / "House A"
+            // from the House Group filter entirely. Callers that need a single
+            // value take the first (see participantGroupValueFor()).
+            $out['byStudentCourse'][$r->spk . '_' . $r->course_pk][] = $entry;
+            $out['byStudent'][$r->spk][] = $entry;
         }
 
         return $out;
     }
 
     /**
-     * The value to show for one payload row out of a resolveParticipantGroupNames()
-     * map: this row's own course first, then any other course the student is in.
+     * One field ('name' or 'faculty') of the group row that represents a payload
+     * row: this row's own course first, then any other course the student is in.
      *
-     * @param  array{byStudentCourse: array<string, string>, byStudent: array<int, string>}  $map
+     * @param  array{byStudentCourse: array<string, array{name: string, faculty: ?string}>, byStudent: array<int, array{name: string, faculty: ?string}>}  $map
      */
-    private function participantGroupValueFor($studentMap, array $map): ?string
+    private function participantGroupValueFor($studentMap, array $map, string $field = 'name'): ?string
+    {
+        $values = $this->participantGroupListFor($studentMap, $map, $field);
+
+        return $values[0] ?? null;
+    }
+
+    /**
+     * EVERY value of one field for the group rows that represent a payload row,
+     * best-first and de-duplicated.
+     *
+     * Backs the House Group column and its filter: a student in both "Nanda Devi"
+     * and "A" must be findable under either, and the column says so rather than
+     * silently naming one of them.
+     *
+     * @param  array{byStudentCourse: array<string, array<int, array{name: string, faculty: ?string}>>, byStudent: array<int, array<int, array{name: string, faculty: ?string}>>}  $map
+     * @return array<int, string>
+     */
+    private function participantGroupListFor($studentMap, array $map, string $field = 'name'): array
+    {
+        $values = [];
+        foreach ($this->participantGroupEntriesFor($studentMap, $map) as $entry) {
+            $v = $entry[$field] ?? null;
+            if ($v !== null && $v !== '' && ! in_array($v, $values, true)) {
+                $values[] = $v;
+            }
+        }
+
+        return $values;
+    }
+
+    /**
+     * The group rows that represent a payload row — best-first, one per distinct
+     * group name — as ['name' => ..., 'faculty' => ...] pairs.
+     *
+     * Callers render the two columns FROM THE SAME LIST, position by position, so
+     * "House Group" and "House Group Faculty" line up: a student in Kangchendjunga
+     * and B reads "Kangchendjunga, B" / "Rajesh Meena, —", never Kangchendjunga's
+     * warden presented as B's.
+     *
+     * @param  array{byStudentCourse: array<string, array<int, array{name: string, faculty: ?string}>>, byStudent: array<int, array<int, array{name: string, faculty: ?string}>>}  $map
+     * @return array<int, array{name: string, faculty: ?string}>
+     */
+    private function participantGroupEntriesFor($studentMap, array $map): array
     {
         $spk = $studentMap->student_master_pk ?? null;
         if (! $spk) {
-            return null;
+            return [];
         }
 
         $coursePk = $studentMap->course_master_pk ?? null;
-        $own = $coursePk !== null
-            ? ($map['byStudentCourse'][$spk . '_' . $coursePk] ?? null)
-            : null;
+        $entries = ($coursePk !== null ? ($map['byStudentCourse'][$spk . '_' . $coursePk] ?? null) : null)
+            ?? ($map['byStudent'][$spk] ?? []);
 
-        return $own ?? ($map['byStudent'][$spk] ?? null);
+        $seen = [];
+        $out = [];
+        foreach ($entries as $entry) {
+            $name = $entry['name'] ?? '';
+            if ($name === '' || isset($seen[$name])) {
+                continue;
+            }
+            $seen[$name] = true;
+            $out[] = $entry;
+        }
+
+        return $out;
     }
 
     /**
@@ -1814,7 +1861,7 @@ class UserController extends Controller
             $canonical[$canonicalKey($name)] = $name;
         }
 
-        $groups = $this->resolveParticipantGroupNames($studentPks, $this->counsellorGroupTypePks());
+        $groups = $this->resolveParticipantGroupRows($studentPks, $this->counsellorGroupTypePks());
 
         // Normalise each raw counsellor group_name to its cadre_master spelling.
         $normalise = function (string $raw, $spk) use ($canonical, $canonicalKey, $studentCadre): string {
@@ -1830,16 +1877,17 @@ class UserController extends Controller
             return $own !== '' ? $own : $raw;
         };
 
-        foreach ($groups['byStudentCourse'] as $key => $raw) {
+        // A cadre is a single value, so only the best-ranked counsellor group counts.
+        foreach ($groups['byStudentCourse'] as $key => $entries) {
             $spk = (int) strtok($key, '_');
-            $cadre = $normalise($raw, $spk);
+            $cadre = $normalise($entries[0]['name'] ?? '', $spk);
             if ($cadre !== '') {
                 $out['byStudentCourse'][$key] = $cadre;
             }
         }
 
-        foreach ($groups['byStudent'] as $spk => $raw) {
-            $cadre = $normalise($raw, $spk);
+        foreach ($groups['byStudent'] as $spk => $entries) {
+            $cadre = $normalise($entries[0]['name'] ?? '', $spk);
             if ($cadre !== '') {
                 $out['byStudent'][$spk] ??= $cadre;
             }
@@ -1923,14 +1971,45 @@ class UserController extends Controller
      * @param  array<int, string>  $houseGroupByStudent  spk => resolved house group
      * @return array<string, array<int, array{pk: string, name: string}>>  house group => faculty
      */
-    private function otParticipantsHouseFacultyOptions(array $studentPks, array $houseGroupByStudent = []): array
+    private function otParticipantsHouseFacultyOptions(array $studentPks): array
     {
-        return $this->otParticipantsGroupFacultyOptions(
-            $studentPks,
-            $this->houseGroupTypePks(),
-            $houseGroupByStudent,
-            false
-        );
+        if (empty($studentPks)) {
+            return [];
+        }
+
+        // Grouped by the mapping's OWN group_name, not by whichever house the
+        // student displays under. A student in two houses would otherwise file
+        // both wardens under both houses.
+        $rows = DB::table('student_course_group_map as scg')
+            ->join('group_type_master_course_master_map as gmap', 'scg.group_type_master_course_master_map_pk', '=', 'gmap.pk')
+            ->join('faculty_master as fm', 'gmap.facility_id', '=', 'fm.pk')
+            ->whereIn('scg.student_master_pk', $studentPks)
+            ->whereIn('gmap.type_name', $this->houseGroupTypePks())
+            ->whereNotNull('gmap.group_name')
+            ->where('gmap.group_name', '<>', '')
+            ->where('scg.active_inactive', 1)
+            ->where('gmap.active_inactive', 1)
+            ->where('fm.active_inactive', 1)
+            ->distinct()
+            ->orderBy('fm.full_name')
+            ->get(['gmap.group_name', 'fm.pk as faculty_pk', 'fm.full_name as faculty_name']);
+
+        $byGroup = [];
+        foreach ($rows as $r) {
+            $group = trim((string) $r->group_name);
+            $name = trim((string) ($r->faculty_name ?? ''));
+            if ($group === '' || empty($r->faculty_pk)) {
+                continue;
+            }
+            $byGroup[$group][(string) $r->faculty_pk] = [
+                'pk' => (string) $r->faculty_pk,
+                'name' => $name !== '' ? $name : ('Faculty #' . $r->faculty_pk),
+            ];
+        }
+
+        ksort($byGroup, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return array_map('array_values', $byGroup);
     }
 
     /**
@@ -2217,6 +2296,335 @@ class UserController extends Controller
     }
 
     /**
+     * May the current user work with the OT / Participants List?
+     *
+     * The same rule the list itself uses, so the export, the comment form and the
+     * comment history never disagree with what the table already shows.
+     */
+    private function canUseOtParticipants(): bool
+    {
+        // Denied outright for a trainee, checked BEFORE the allow-list below.
+        // is_faculty_portal_user() alone is not enough: some OT logins also carry a
+        // Spatie "Faculty" role, which would otherwise let a trainee post feedback
+        // about other participants.
+        if (isOfficerTraineeUser()) {
+            return false;
+        }
+
+        $facultyPk = get_auth_faculty_master_pk();
+
+        return hasRole('Super Admin')
+            || hasRole('Training Induction Admin')
+            || hasRole('Training MCTP Admin')
+            || hasRole('Training IST')
+            || is_faculty_portal_user()
+            || ($facultyPk && ! hasRole('Student-OT'));
+    }
+
+    /**
+     * Comment / feedback counts for a page of participants, in one query.
+     *
+     * @param  array<int, int>  $studentPks
+     * @return array<int, int>  spk => count
+     */
+    private function otParticipantCommentCounts(array $studentPks): array
+    {
+        if (empty($studentPks)) {
+            return [];
+        }
+
+        return OtParticipantComment::active()
+            ->whereIn('student_master_pk', $studentPks)
+            ->selectRaw('student_master_pk, COUNT(*) as total')
+            ->groupBy('student_master_pk')
+            ->pluck('total', 'student_master_pk')
+            ->mapWithKeys(fn ($n, $spk) => [(int) $spk => (int) $n])
+            ->all();
+    }
+
+    /**
+     * Save a comment / feedback against an OT, and notify them when asked.
+     */
+    public function otParticipantCommentStore(Request $request)
+    {
+        if (! $this->canUseOtParticipants()) {
+            abort(403, 'You are not authorized to comment on participants.');
+        }
+
+        $data = $request->validate([
+            'student_master_pk' => ['required', 'integer'],
+            'course_master_pk' => ['nullable', 'integer'],
+            'message' => ['required', 'string', 'max:5000'],
+            'notify_ot' => ['required', 'in:0,1'],
+        ]);
+
+        $student = StudentMaster::find($data['student_master_pk']);
+        if (! $student) {
+            return response()->json(['success' => false, 'message' => 'Participant not found.'], 404);
+        }
+
+        $author = Auth::user();
+        $authorName = trim((string) (($author->first_name ?? '') . ' ' . ($author->last_name ?? '')));
+
+        $comment = OtParticipantComment::create([
+            'student_master_pk' => (int) $data['student_master_pk'],
+            'course_master_pk' => $data['course_master_pk'] ?? null,
+            'message' => trim($data['message']),
+            'notify_ot' => (int) $data['notify_ot'],
+            'comment_by_user_id' => $author->user_id ?? null,
+            'comment_by_name' => $authorName !== '' ? $authorName : ($author->user_name ?? null),
+            'comment_date' => now()->toDateString(),
+            'active_inactive' => 1,
+            'created_by' => $author->user_id ?? null,
+        ]);
+
+        // Notify OT = Yes. Resolved through NotificationReceiverService because
+        // student_master.user_id is a login string, not the numeric receiver id
+        // notifications are keyed by (same path MemoDisciplineController uses).
+        if ((int) $data['notify_ot'] === 1) {
+            try {
+                $receiverUserId = app(\App\Services\NotificationReceiverService::class)
+                    ->getStudentUserId((int) $data['student_master_pk']);
+
+                if ($receiverUserId) {
+                    app(\App\Services\NotificationService::class)->create(
+                        (int) $receiverUserId,
+                        'ot_comment',
+                        'OT Comment/Feedback',
+                        (int) $comment->pk,
+                        'New Comment/Feedback',
+                        'You have received a new comment/feedback'
+                            . ($authorName !== '' ? " from {$authorName}" : '') . '.'
+                    );
+                }
+            } catch (\Throwable $e) {
+                // The comment is saved either way — a failed notification must not
+                // lose the feedback that was just written.
+                \Log::error('OT comment notification failed: ' . $e->getMessage());
+            }
+        }
+
+        $spk = (int) $data['student_master_pk'];
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Comment/Feedback added successfully.',
+            // Returned so the row's count can update without a full table reload.
+            'count' => $this->otParticipantCommentCounts([$spk])[$spk] ?? 0,
+        ]);
+    }
+
+    /**
+     * One participant's comment / feedback history — the page behind the count in
+     * the COMMENTS/FEEDBACKS column.
+     */
+    public function otParticipantComments(Request $request, $id)
+    {
+        if (! $this->canUseOtParticipants()) {
+            abort(403, 'You are not authorized to view participant feedback.');
+        }
+
+        try {
+            $studentPk = (int) decrypt($id);
+        } catch (\Throwable $e) {
+            return redirect()->route('admin.dashboard.ot-participants')
+                ->with('error', 'Invalid participant ID.');
+        }
+
+        $student = StudentMaster::find($studentPk);
+        if (! $student) {
+            return redirect()->route('admin.dashboard.ot-participants')
+                ->with('error', 'Participant not found.');
+        }
+
+        $rows = $this->otParticipantCommentRows($request, $studentPk);
+
+        if ($request->ajax() && $request->has('draw')) {
+            return $this->otParticipantCommentsDataTableResponse($request, $rows);
+        }
+
+        $studentName = $student->display_name
+            ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
+
+        return view('admin.dashboard.ot_participant_comments', [
+            'student' => $student,
+            'studentName' => $studentName !== '' ? $studentName : 'Participant',
+            'studentId' => $id,
+            'filters' => [
+                'from_date' => (string) $request->input('from_date', ''),
+                'to_date' => (string) $request->input('to_date', ''),
+            ],
+        ]);
+    }
+
+    /**
+     * The comment rows for one participant, newest first, honouring the Date Range
+     * filter and the search box. Shared by the table, the exports and the print view.
+     */
+    private function otParticipantCommentRows(Request $request, int $studentPk)
+    {
+        $from = $request->input('from_date') ?: null;
+        $to = $request->input('to_date') ?: null;
+
+        $rows = OtParticipantComment::active()
+            ->where('student_master_pk', $studentPk)
+            ->when($from, fn ($q) => $q->whereDate('comment_date', '>=', $from))
+            ->when($to, fn ($q) => $q->whereDate('comment_date', '<=', $to))
+            ->orderByDesc('comment_date')
+            ->orderByDesc('pk')
+            ->get();
+
+        $searchInput = $request->input('search');
+        $search = strtolower(trim((string) (is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput)));
+        if ($search !== '') {
+            $rows = $rows->filter(function ($r) use ($search) {
+                $haystack = strtolower(implode(' ', [
+                    (string) $r->comment_by_name,
+                    (string) $r->message,
+                    ((int) $r->notify_ot === 1 ? 'yes' : 'no'),
+                    optional($r->comment_date)->format('d M Y') ?? '',
+                ]));
+
+                return str_contains($haystack, $search);
+            })->values();
+        }
+
+        return $rows->values();
+    }
+
+    /**
+     * Server-side JSON for the comment / feedback history table.
+     */
+    private function otParticipantCommentsDataTableResponse(Request $request, $rows)
+    {
+        $total = $rows->count();
+
+        $start = max(0, (int) $request->input('start', 0));
+        $length = (int) $request->input('length', 10);
+        $paged = $length < 0 ? $rows->slice($start)->values() : $rows->slice($start, $length)->values();
+
+        $data = [];
+        foreach ($paged as $idx => $r) {
+            $data[] = [
+                's_no' => $start + $idx + 1,
+                'comment_by' => e($r->comment_by_name ?: 'N/A'),
+                'message' => e($r->message),
+                'notify_ot' => (int) $r->notify_ot === 1 ? 'Yes' : 'No',
+                'date' => optional($r->comment_date)->format('d M Y') ?? '-',
+            ];
+        }
+
+        return response()->json([
+            'draw' => (int) $request->input('draw', 1),
+            'recordsTotal' => $total,
+            'recordsFiltered' => $total,
+            'data' => $data,
+        ]);
+    }
+
+    /**
+     * Export one participant's comment / feedback history.
+     */
+    public function otParticipantCommentsExport(Request $request, $id, string $format)
+    {
+        if (! in_array($format, ['csv', 'pdf', 'print'], true)) {
+            abort(404);
+        }
+
+        if (! $this->canUseOtParticipants()) {
+            abort(403, 'You are not authorized to export participant feedback.');
+        }
+
+        try {
+            $studentPk = (int) decrypt($id);
+        } catch (\Throwable $e) {
+            abort(404);
+        }
+
+        $student = StudentMaster::find($studentPk);
+        if (! $student) {
+            abort(404);
+        }
+
+        $studentName = $student->display_name
+            ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
+
+        $rows = $this->otParticipantCommentRows($request, $studentPk);
+
+        $headings = ['S.No', 'Comment/Feedback By', 'Message', 'Notify OT', 'Date'];
+        $widths = [5, 18, 55, 9, 13];
+        $body = [];
+        foreach ($rows as $idx => $r) {
+            $body[] = [
+                $idx + 1,
+                (string) ($r->comment_by_name ?: 'N/A'),
+                (string) $r->message,
+                (int) $r->notify_ot === 1 ? 'Yes' : 'No',
+                optional($r->comment_date)->format('d M Y') ?? '-',
+            ];
+        }
+
+        $reportTitle = trim($studentName . "'s Comment/ Feedback");
+        $filterSummary = '';
+        if ($request->filled('from_date') && $request->filled('to_date')) {
+            $filterSummary = 'Date Range: ' . Carbon::parse($request->input('from_date'))->format('d-m-Y')
+                . ' to ' . Carbon::parse($request->input('to_date'))->format('d-m-Y');
+        }
+
+        $header = $this->buildStudentListExportHeaderData($request);
+        $timestamp = now()->format('Ymd_His');
+        $fileBase = 'ot_comments_' . $timestamp;
+
+        if ($format === 'print') {
+            return view('admin.dashboard.export.student_list_print', array_merge([
+                'headings' => $headings,
+                'rows' => $body,
+                'generatedAt' => now()->format('d-m-Y H:i'),
+                'filterSummary' => $filterSummary,
+                'reportTitle' => $reportTitle,
+            ], $header));
+        }
+
+        if ($format === 'pdf') {
+            ini_set('memory_limit', '512M');
+
+            $pdf = Pdf::loadView('admin.dashboard.export.student_list_pdf', array_merge([
+                'headings' => $headings,
+                'rows' => $body,
+                'generatedAt' => now()->format('d-m-Y H:i'),
+                'filterSummary' => $filterSummary,
+                'reportTitle' => $reportTitle,
+                'columnWidths' => $widths,
+            ], $header))
+                ->setPaper('a4', 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'isPhpEnabled' => true,
+                    'dpi' => 96,
+                ]);
+
+            return $pdf->download("{$fileBase}.pdf");
+        }
+
+        return Excel::download(
+            new StudentListReportExport(
+                $headings,
+                $body,
+                $reportTitle,
+                (string) ($header['courseName'] ?? ''),
+                (string) ($header['courseDuration'] ?? ''),
+                $filterSummary,
+                now()->format('d-m-Y H:i'),
+                count($body),
+            ),
+            "{$fileBase}.xlsx",
+            ExcelWriter::XLSX
+        );
+    }
+
+    /**
      * Export the OT / Participants List as Excel, PDF or a printable page.
      *
      * Uses the SAME pipeline as the on-screen table — same coordinated-roster
@@ -2280,6 +2688,11 @@ class UserController extends Controller
                 'generatedAt' => now()->format('d-m-Y H:i'),
                 'filterSummary' => $filterSummary,
                 'reportTitle' => $reportTitle,
+                // 15 columns do not fit an auto-layout table: DomPDF lets it grow
+                // past the page and clips the right-hand columns. These weights
+                // switch the table to a fixed layout so every column lands on the
+                // page. They mirror the on-screen Print widths.
+                'columnWidths' => $exportData['widths'],
             ], $header))
                 ->setPaper('a4', 'landscape')
                 ->setOptions([
@@ -2316,27 +2729,37 @@ class UserController extends Controller
      * order as the on-screen columns. Counts are written as the zero-padded
      * strings the table shows, with a dash for none.
      *
-     * @return array{headings: array<int, string>, rows: array<int, array<int, string>>}
+     * @return array{headings: array<int, string>, rows: array<int, array<int, string>>, widths: array<int, int>}
      */
     private function otParticipantsExportData($rows, array $rowMeta): array
     {
-        $headings = [
-            'S. No.',
-            'OT Code',
-            'Name',
-            'Email',
-            'Cadre',
-            'Cadre Counsellor',
-            'House Group Faculty',
-            'House Group',
-            'Total Duty (Count)',
-            'Duty Type',
-            'Total Medical Exemption Count',
-            'Total PT Exemption (Days)',
-            'Total Stationed Leave (Days)',
-            'Total Notice/Memo',
-            'Total Discipline Memo',
+        // Heading, then the relative width it gets in the PDF. Text columns need
+        // the room; the count columns hold two characters and stay narrow.
+        $columns = [
+            ['S. No.', 3],
+            ['OT Code', 5],
+            ['Name', 13],
+            ['Email', 17],
+            ['Cadre', 8],
+            ['Cadre Counsellor', 10],
+            ['House Group Faculty', 11],
+            ['House Group', 9],
+            ['Total Duty (Count)', 5],
+            ['Duty Type', 7],
+            ['Total Medical Exemption Count', 6],
+            ['Total PT Exemption (Days)', 5],
+            ['Total Stationed Leave (Days)', 5],
+            ['Total Notice/Memo', 5],
+            ['Total Discipline Memo', 5],
+            ['Comments/ Feedbacks', 5],
         ];
+        $headings = array_column($columns, 0);
+        $widths = array_column($columns, 1);
+
+        // Counts for the whole exported set, in one query.
+        $commentCounts = $this->otParticipantCommentCounts(
+            collect($rows)->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all()
+        );
 
         $count = fn ($n) => (int) $n > 0 ? str_pad((string) (int) $n, 2, '0', STR_PAD_LEFT) : '-';
 
@@ -2366,10 +2789,11 @@ class UserController extends Controller
                 $count($meta['stationed'] ?? 0),
                 $count($meta['notice_memo'] ?? 0),
                 $count($meta['discipline_memo'] ?? 0),
+                $count($commentCounts[(int) $p->student_master_pk] ?? 0),
             ];
         }
 
-        return ['headings' => $headings, 'rows' => $out];
+        return ['headings' => $headings, 'rows' => $out, 'widths' => $widths];
     }
 
     /**
@@ -2513,6 +2937,12 @@ class UserController extends Controller
             $linkDateQs .= '&to_date=' . urlencode($tdParam);
         }
 
+        // Comment counts for THIS page only — one query for the ten-odd rows on
+        // screen rather than the whole filtered set.
+        $commentCounts = $this->otParticipantCommentCounts(
+            $paged->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all()
+        );
+
         $data = [];
         foreach ($paged as $idx => $p) {
             $s = $p->studentMaster;
@@ -2547,6 +2977,19 @@ class UserController extends Controller
                 'stationed' => $this->otCountCell($meta['stationed'], $detailUrl . '?section=stationedLeavesSection' . $linkDateQs),
                 'notice_memo' => $this->otCountCell($meta['notice_memo'], $detailUrl . '?section=noticesSection' . $linkDateQs),
                 'discipline_memo' => $this->otCountCell($meta['discipline_memo'], $detailUrl . '?section=memosSection' . $linkDateQs),
+                // Count links to this participant's own comment history page.
+                'comments' => $this->otCountCell(
+                    (int) ($commentCounts[(int) $p->student_master_pk] ?? 0),
+                    route('admin.dashboard.ot-participants.comments', encrypt($s->pk))
+                ),
+                // The Action column's "Add Comment/ Feedback" trigger. The name is
+                // carried on the button so the modal can pre-fill OT Name without
+                // another lookup.
+                'action' => '<button type="button" class="ot-add-comment-btn"'
+                    . ' data-student="' . e($s->pk) . '"'
+                    . ' data-name="' . e($name) . '">'
+                    . '<i class="bi bi-chat-left-text" aria-hidden="true"></i>'
+                    . '<span>Add Comment/ Feedback</span></button>',
             ];
         }
 
@@ -3003,6 +3446,18 @@ class UserController extends Controller
                         ->pluck('hostel_room_name', 'user_name')
                     : collect();
 
+                // Which rows sit on a course this viewer COORDINATES (the source-1
+                // course set, i.e. course_coordinator_master scoped to the current
+                // tab). Flagged per row rather than read off ->source, because the
+                // dedupe below keeps whichever source reached a student+course pair
+                // first: a student who is BOTH on a coordinated course and in one of
+                // this faculty's groups is stored as 'group_mapping', so counting
+                // ->source === 'cc_acc' silently dropped them from the
+                // "OT/ Participants Details" card while the OT list still showed them.
+                $coordinatedCourseKeys = collect($activeCoordinatorCourses)
+                    ->map(fn ($p) => (string) $p)
+                    ->flip();
+
                 // Cadre and House Group resolved from the Course Group Mapping, for
                 // the OT participants page only — the student list still reads
                 // student_master through the cadre relation.
@@ -3010,9 +3465,10 @@ class UserController extends Controller
                 $houseGroupTypePks = $withTotals ? [] : $this->houseGroupTypePks();
                 $counsellorTypePks = $withTotals ? [] : $this->counsellorGroupTypePks();
                 $participantCadres = $withTotals ? $emptyGroupMap : $this->resolveParticipantCadres($studentPks);
-                $participantCounsellors = $withTotals ? $emptyGroupMap : $this->resolveParticipantGroupFaculty($studentPks, $counsellorTypePks);
-                $participantHouseGroups = $withTotals ? $emptyGroupMap : $this->resolveParticipantGroupNames($studentPks, $houseGroupTypePks);
-                $participantHouseFaculty = $withTotals ? $emptyGroupMap : $this->resolveParticipantGroupFaculty($studentPks, $houseGroupTypePks);
+                // One map per group type — the name and the faculty of a pair always
+                // come from the SAME mapping row, so the two columns cannot disagree.
+                $participantCounsellorRows = $withTotals ? $emptyGroupMap : $this->resolveParticipantGroupRows($studentPks, $counsellorTypePks);
+                $participantHouseRows = $withTotals ? $emptyGroupMap : $this->resolveParticipantGroupRows($studentPks, $houseGroupTypePks);
 
                 // Every marked attendance session per student (one row per session is
                 // produced after this loop). Scoped to the Time Period filter, so a
@@ -3037,15 +3493,29 @@ class UserController extends Controller
                     $uid = $studentMap->studentMaster->user_id ?? null;
                     $studentMap->house_name = ($uid && isset($houseByUser[$uid])) ? $houseByUser[$uid] : null;
 
+                    // Backs the "OT/ Participants Details" card — see the note where
+                    // $coordinatedCourseKeys is built.
+                    $studentMap->is_coordinated = $coursePk !== null
+                        && isset($coordinatedCourseKeys[(string) $coursePk]);
+
                     if (! $withTotals) {
                         // Cadre from the Course Group Mapping (see
                         // resolveParticipantCadres()). Only the OT participants page
                         // sources it this way; the student list keeps reading
                         // student_master via the cadre relation.
                         $studentMap->cadre_name = $this->participantCadreFor($studentMap, $participantCadres);
-                        $studentMap->counsellor_name = $this->participantGroupValueFor($studentMap, $participantCounsellors);
-                        $studentMap->house_group = $this->participantGroupValueFor($studentMap, $participantHouseGroups);
-                        $studentMap->house_faculty_name = $this->participantGroupValueFor($studentMap, $participantHouseFaculty);
+                        $studentMap->counsellor_name = $this->participantGroupValueFor($studentMap, $participantCounsellorRows, 'faculty');
+                        // A student can sit in several house groups at once, so the
+                        // column names all of them and the filter matches any. The
+                        // faculty column is built from the SAME list in the SAME
+                        // order — a group with no faculty holds its place with a
+                        // dash, so the two columns always line up group-for-faculty.
+                        $houseEntries = $this->participantGroupEntriesFor($studentMap, $participantHouseRows);
+                        $studentMap->house_groups = array_column($houseEntries, 'name');
+                        $studentMap->house_group = implode(', ', $studentMap->house_groups) ?: null;
+                        $studentMap->house_faculty_name = $houseEntries
+                            ? implode(', ', array_map(fn ($e) => $e['faculty'] ?: '—', $houseEntries))
+                            : null;
                         continue; // caller computes its own counts / doesn't need group mapping
                     }
 
@@ -3826,9 +4296,17 @@ class UserController extends Controller
             }
 
             // House Group (Course Group Mapping), distinct from the House Name
-            // hostel-room filter below.
-            if ($houseGroup !== '' && (string) ($studentMap->house_group ?? '') !== $houseGroup) {
-                return false;
+            // hostel-room filter below. Matches ANY of the student's house groups —
+            // a student in both "Nanda Devi" and "A" is found under either.
+            if ($houseGroup !== '') {
+                $groups = $studentMap->house_groups ?? null;
+                if (is_array($groups)) {
+                    if (! in_array($houseGroup, $groups, true)) {
+                        return false;
+                    }
+                } elseif ((string) ($studentMap->house_group ?? '') !== $houseGroup) {
+                    return false;
+                }
             }
 
             if ($house && (string) ($studentMap->house_name ?? '') !== (string) $house) {
@@ -4041,12 +4519,12 @@ class UserController extends Controller
             ->unique()
             ->count();
 
-        // "OT/ Participants Details" counts the COORDINATED roster only — the rows
-        // sourced from course_coordinator_master (source 'cc_acc'), which is exactly
-        // what the OT participants page this card opens now lists. Group-mapped,
-        // merely-taught and memo-only rows are on the student list below but are not
-        // participants of a course this viewer coordinates, so they are not counted.
-        $coordinated = collect($students)->filter(fn ($m) => ($m->source ?? null) === 'cc_acc');
+        // "OT/ Participants Details" counts the COORDINATED roster only — rows whose
+        // course comes from course_coordinator_master, which is exactly what the OT
+        // participants page this card opens lists. Merely-taught and memo-only rows
+        // are on the student list below but are not participants of a course this
+        // viewer coordinates, so they are not counted.
+        $coordinated = collect($students)->filter(fn ($m) => ($m->is_coordinated ?? false) === true);
 
         $counts = [
             'total' => $distinct($this->applyDashboardStudentListFilters($coordinated, $request, false)),
