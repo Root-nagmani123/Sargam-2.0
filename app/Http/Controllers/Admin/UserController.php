@@ -1799,9 +1799,14 @@ class UserController extends Controller
             return [];
         }
 
+        // A group belongs to a course. When this row HAS a course, only that
+        // course's groups count — falling back to another course's group showed a
+        // Cadre / Cadre Counsellor / House Group from a list the viewer is not
+        // even looking at. byStudent is only for rows with no course context.
         $coursePk = $studentMap->course_master_pk ?? null;
-        $entries = ($coursePk !== null ? ($map['byStudentCourse'][$spk . '_' . $coursePk] ?? null) : null)
-            ?? ($map['byStudent'][$spk] ?? []);
+        $entries = $coursePk !== null
+            ? ($map['byStudentCourse'][$spk . '_' . $coursePk] ?? [])
+            : ($map['byStudent'][$spk] ?? []);
 
         $seen = [];
         $out = [];
@@ -1902,9 +1907,13 @@ class UserController extends Controller
     }
 
     /**
-     * The cadre to show for one payload row, using the map from
-     * resolveParticipantCadres(): this row's own course first, then the student's
-     * other courses, then their student_master cadre.
+     * The cadre to show for one payload row: the counsellor group this student is
+     * in FOR THIS ROW'S COURSE, else their student_master cadre.
+     *
+     * Deliberately does NOT fall back to a counsellor group from one of the
+     * student's other courses. A counsellor group belongs to a course, so reading
+     * one course's group while listing another course's roster showed a cadre that
+     * has nothing to do with the list being viewed.
      *
      * @param  array{byStudentCourse: array<string, string>, byStudent: array<int, string>}  $cadres
      */
@@ -1920,9 +1929,7 @@ class UserController extends Controller
             ? ($cadres['byStudentCourse'][$spk . '_' . $coursePk] ?? null)
             : null;
 
-        return $cadre
-            ?? $cadres['byStudent'][$spk]
-            ?? ($studentMap->studentMaster->cadre->cadre_name ?? null);
+        return $cadre ?? ($studentMap->studentMaster->cadre->cadre_name ?? null);
     }
 
     /**
@@ -3246,6 +3253,8 @@ class UserController extends Controller
 
             if ($seesAllCourses || $facultyPk) {
                 $source1Students = collect([]);
+                // "spk_coursePk" => true for every enrolment on a coordinated course.
+                $coordinatedRosterKeys = [];
 
                 // Course set feeding the primary (enrollment) student source.
                 if ($seesAllCourses) {
@@ -3279,6 +3288,10 @@ class UserController extends Controller
                         $stdObj->course = $studentMap->course;
                         $stdObj->source = 'cc_acc';
                         $source1Students->push($stdObj);
+
+                        // The exact (student, course) pairs that ARE the coordinated
+                        // roster. The card counts these — see $coordinatedRosterKeys.
+                        $coordinatedRosterKeys[$studentMap->student_master_pk . '_' . $studentMap->course_master_pk] = true;
                     }
                 }
 
@@ -3446,17 +3459,19 @@ class UserController extends Controller
                         ->pluck('hostel_room_name', 'user_name')
                     : collect();
 
-                // Which rows sit on a course this viewer COORDINATES (the source-1
-                // course set, i.e. course_coordinator_master scoped to the current
-                // tab). Flagged per row rather than read off ->source, because the
-                // dedupe below keeps whichever source reached a student+course pair
-                // first: a student who is BOTH on a coordinated course and in one of
-                // this faculty's groups is stored as 'group_mapping', so counting
-                // ->source === 'cc_acc' silently dropped them from the
-                // "OT/ Participants Details" card while the OT list still showed them.
-                $coordinatedCourseKeys = collect($activeCoordinatorCourses)
-                    ->map(fn ($p) => (string) $p)
-                    ->flip();
+                // Which rows are on the COORDINATED ROSTER — the exact (student,
+                // course) enrolments source 1 was built from. The card counts these,
+                // and the OT participants page lists exactly the same set.
+                //
+                // Matched on the pair, not on ->source and not on the course alone:
+                //   - ->source is unreliable because the dedupe below keeps whichever
+                //     source reached a pair first, so a student who is both on a
+                //     coordinated course and in one of this faculty's groups is
+                //     stored as 'group_mapping';
+                //   - the course alone is unreliable because a 'session_taught' row
+                //     carries the course whose attendance was marked, which can be a
+                //     coordinated course even when the student is not enrolled in it.
+                //     That is what made the card read 88 against a list of 85.
 
                 // Cadre and House Group resolved from the Course Group Mapping, for
                 // the OT participants page only — the student list still reads
@@ -3494,9 +3509,9 @@ class UserController extends Controller
                     $studentMap->house_name = ($uid && isset($houseByUser[$uid])) ? $houseByUser[$uid] : null;
 
                     // Backs the "OT/ Participants Details" card — see the note where
-                    // $coordinatedCourseKeys is built.
+                    // $coordinatedRosterKeys is built.
                     $studentMap->is_coordinated = $coursePk !== null
-                        && isset($coordinatedCourseKeys[(string) $coursePk]);
+                        && isset($coordinatedRosterKeys[$studentPk . '_' . $coursePk]);
 
                     if (! $withTotals) {
                         // Cadre from the Course Group Mapping (see
