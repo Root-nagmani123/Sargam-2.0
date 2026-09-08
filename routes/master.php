@@ -21,6 +21,13 @@ use App\Http\Controllers\Admin\Master\{
     HostelFloorMasterController,
     HostelRoomMasterController,
     MedicalCaseMasterController,
+    ClubSocietyMasterController,
+    ClubSocietyRoleMasterController,
+    ClubSocietyProgrammeMappingController,
+    ClubSocietyRoleProgrammeMappingController,
+    NominationDriveController,
+    ElectionDriveController,
+    OfficeBearerController,
 };
 
 Route::prefix('master')->name('master.')->middleware('auth')->group(function () {
@@ -226,6 +233,91 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
     });
 
 
+
+    // Club / Society Master (Communications -> Club/ Society -> Define Club/ Society)
+    Route::prefix('club-society')->name('club.society.')->controller(ClubSocietyMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/export', 'export')->name('export');
+        Route::get('/print', 'print')->name('print');
+        Route::delete('/destroy/{id}', 'destroy')->name('destroy');
+    });
+
+    // Club / Society Role Master (Communications -> Club/ Society -> Define Club/ Society Role)
+    Route::prefix('club-society-role')->name('club.society.role.')->controller(ClubSocietyRoleMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/export', 'export')->name('export');
+        Route::get('/print', 'print')->name('print');
+        Route::delete('/destroy/{id}', 'destroy')->name('destroy');
+    });
+
+    // Club / Society Programme Mapping (Communications -> Club/ Society)
+    Route::prefix('club-society-programme-mapping')->name('club.society.programme.mapping.')
+        ->controller(ClubSocietyProgrammeMappingController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/store', 'store')->name('store');
+            Route::get('/edit/{id}', 'edit')->name('edit');
+            Route::get('/export', 'export')->name('export');
+            Route::get('/print', 'print')->name('print');
+            Route::delete('/destroy/{id}', 'destroy')->name('destroy');
+        });
+
+    // Club / Society Role Programme Mapping (Communications -> Club/ Society)
+    Route::prefix('club-society-role-programme-mapping')->name('club.society.role.programme.mapping.')
+        ->controller(ClubSocietyRoleProgrammeMappingController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/store', 'store')->name('store');
+            Route::get('/show/{id}', 'show')->name('show');
+            Route::get('/export', 'export')->name('export');
+            Route::get('/print', 'print')->name('print');
+            Route::delete('/destroy/{id}', 'destroy')->name('destroy');
+        });
+
+    // Nomination Drive (Communications -> Club/ Society)
+    Route::prefix('nomination-drive')->name('nomination.drive.')
+        ->controller(NominationDriveController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/store', 'store')->name('store');
+            Route::get('/edit/{id}', 'edit')->name('edit');
+            Route::post('/toggle/{id}', 'toggleStatus')->name('toggle');
+            Route::get('/export', 'export')->name('export');
+            Route::get('/print', 'print')->name('print');
+            Route::delete('/destroy/{id}', 'destroy')->name('destroy');
+
+            // One drive's nominee list
+            Route::get('/view/{id}', 'show')->name('show');
+            Route::get('/view/{id}/export', 'exportNominees')->name('nominees.export');
+            Route::get('/view/{id}/print', 'printNominees')->name('nominees.print');
+            Route::post('/nomination/{id}/withdraw', 'withdrawNomination')->name('nomination.withdraw');
+        });
+
+    // Election Drive (Communications -> Club/ Society)
+    Route::prefix('election-drive')->name('election.drive.')
+        ->controller(ElectionDriveController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/store', 'store')->name('store');
+            Route::get('/edit/{id}', 'edit')->name('edit');
+            Route::get('/societies/{id}', 'societiesForNominationDrive')->name('societies');
+            Route::post('/publish/{id}', 'publish')->name('publish');
+            Route::get('/export', 'export')->name('export');
+            Route::get('/print', 'print')->name('print');
+            Route::delete('/destroy/{id}', 'destroy')->name('destroy');
+
+            // One drive's nominations and its result
+            Route::get('/nominations/{id}', 'showNominations')->name('nominations');
+            Route::get('/nominations/{id}/export', 'exportNominations')->name('nominations.export');
+            Route::get('/nominations/{id}/print', 'printNominations')->name('nominations.print');
+            Route::get('/result/{id}', 'showResult')->name('result');
+        });
+
+    // Officer Bearers (Communications -> Club/ Society) — read-only listing
+    Route::prefix('officer-bearers')->name('office.bearer.')
+        ->controller(OfficeBearerController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/export', 'export')->name('export');
+            Route::get('/print', 'print')->name('print');
+        });
 
     // Hostel Building Master
     Route::prefix('hostel-building-master')->name('hostel.building.')->controller(HostelBuildingMasterController::class)->group(function () {
