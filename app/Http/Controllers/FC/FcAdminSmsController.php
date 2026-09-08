@@ -27,10 +27,18 @@ class FcAdminSmsController extends Controller
             ->orderByRaw('LOWER(form_name)')
             ->get(['id', 'form_name']);
 
+        // The default form is resolved without the course-end scope, so it can be one the
+        // picker excludes — take it only when it is in $forms, else the first listed form.
+        // $selectedFormId must always be a member of $forms (or 0 when the list is empty),
+        // otherwise the picker, the summary card, the counts and the posted form_id disagree.
         $defaultForm = FcForm::activeRegistrationDynamicForm();
-        $selectedFormId = (int) $request->query('form_id', $defaultForm?->id ?? 0);
+        $selectedFormId = (int) $request->query('form_id', 0);
         if ($selectedFormId <= 0 || ! $forms->pluck('id')->contains($selectedFormId)) {
-            $selectedFormId = (int) ($defaultForm?->id ?? ($forms->first()->id ?? 0));
+            $selectedFormId = (int) (
+                $forms->firstWhere('id', $defaultForm?->id)?->id
+                ?? $forms->first()?->id
+                ?? 0
+            );
         }
 
         $selectedForm = $forms->firstWhere('id', $selectedFormId);
