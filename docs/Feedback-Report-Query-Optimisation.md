@@ -270,15 +270,38 @@ all of them; changing any single query corrects one.
 
 Things review raised that are **recorded rather than fixed**, each with the reason.
 
-| Limitation | Accepted by | Review by |
-| --- | --- | --- |
-| Cache staleness on the three lookup caches | _unassigned — Feedback module owner to sign_ | next change to these reports |
-| showFacultyAverage all-programs filter divergence | _unassigned — Feedback module owner to sign_ | when any course carries feedback while `active_inactive <> 1` |
-| Derived tables not bounded by `feedback_checkbox` | _unassigned — Feedback module owner to sign_ | when `timetable` grows by an order of magnitude |
+Two of the three entries below were **fixed** in response to PR #316 review rather than accepted.
+What remains is recorded with the reason and a review trigger.
 
-Each is Low or Advisory, each was measured, and each fix would change behaviour for no present
-benefit. The accepter column is deliberately blank rather than filled with a guess: an accepted
-risk with no name against it is a note, not a decision.
+| Limitation | Status | Accepted by | Review by |
+| --- | --- | --- | --- |
+| Cache staleness on the three lookup caches | **FIXED** — `Timetable` / `FacultyMaster` `saved`+`deleted` bump the generation (`AppServiceProvider::boot()`) | n/a | n/a |
+| showFacultyAverage all-programs filter divergence | **FIXED** — ids now derived from the main query's own `end_date` predicate via `facultyAverageCourseIdsForType()`, not from `$programs` | n/a | n/a |
+| Cache store resolution had no working fallback | **FIXED** — `FeedbackReportCache::store()` probes and falls back (`file`, then `cache.default`) | n/a | n/a |
+| Derived tables not bounded by `feedback_checkbox` | Accepted | _unassigned — Feedback module owner to sign_ | when `timetable` grows by an order of magnitude |
+| `TEACHING_FACULTY_JSON_TABLE` is looser than the `JSON_CONTAINS` predicate it replaced | Accepted — see below | _unassigned — Feedback module owner to sign_ | if any writer starts storing `faculty_pk` as a string or a case-variant role |
+
+### Why the JSON_TABLE widening is accepted, not fixed
+
+The rewrite reads `faculty_pk` through `BIGINT` and compares `role` with a collation-dependent
+`=`, so `{"faculty_pk":"12"}` and `"role":"teaching"` now match where `JSON_CONTAINS` with a
+`JSON_OBJECT` candidate did not. Measured directly:
+
+| Stored value | Old predicate | New derived table |
+| --- | --- | --- |
+| `{"faculty_pk":12,"role":"Teaching"}` | match | match |
+| `{"faculty_pk":"12","role":"Teaching"}` | no match | **match** |
+| `{"faculty_pk":12,"role":"teaching"}` | no match | **match** |
+
+It is accepted because nothing in the live data can reach the divergent rows: on `sargam_prod`
+every `faculty_details.faculty_pk` is JSON type `INTEGER`, and the only role spellings present are
+`Teaching`, `Sectional` and `Administration` — exact case. `buildFacultyDetails()` casts the id to
+int and writes the role verbatim, so rows this application writes cannot drift either.
+
+Tightening it would mean `JSON_TYPE($.faculty_pk) = 'INTEGER'` plus a binary role comparison on a
+hot per-trainee path, to exclude data that does not exist. `StudentFeedbackFacultyExpansionTest`
+pins the current behaviour, so a future import that introduces string ids or case-variant roles
+fails the test rather than silently changing a trainee's pending list.
 
 ### Cache staleness on the three lookup caches
 

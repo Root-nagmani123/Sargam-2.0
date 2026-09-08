@@ -50,11 +50,78 @@ final class FeedbackReportCache
 
     private const GENERATION_KEY = 'feedback_reports:generation';
 
+    /** Store name proven writable this request; skips re-probing on every call. */
+    private static ?string $resolvedStore = null;
+
+    /**
+     * The cache store these reports use, proven usable before it is returned.
+     *
+     * RedisBackedCache::projectDefaultStoreName() returns 'redis' when neither
+     * REDIS_BACKED_CACHE_STORE nor APP_REDIS_CACHE_STORE is set, and repositoryForStore()
+     * hands that back unconditionally because 'redis' is always present in config/cache.php.
+     * On a host without the phpredis/predis client the first get() then throws, so the
+     * "falls back to cache.default" promise never actually fired: every call threw, was
+     * reported, and recomputed. getPendingStats() in particular lost the working file-store
+     * cache it had before these reports moved onto this class.
+     *
+     * So probe instead of assume — write a throwaway key and keep the first store that
+     * accepts it. Mirrors ProcessMessBillsEmployeeController::processMessBillsCacheRepository().
+     */
     public static function store(): Repository
     {
-        return RedisBackedCache::repositoryForStore(
-            RedisBackedCache::projectDefaultStoreName()
-        );
+        if (self::$resolvedStore !== null) {
+            return RedisBackedCache::repositoryForStore(self::$resolvedStore);
+        }
+
+        foreach (self::candidateStoreNames() as $name) {
+            try {
+                $repository = RedisBackedCache::repositoryForStore($name);
+                $repository->put('feedback_reports:probe', 1, 10);
+                self::$resolvedStore = $name;
+
+                return $repository;
+            } catch (Throwable $e) {
+                continue;
+            }
+        }
+
+        self::$resolvedStore = (string) config('cache.default', 'file');
+
+        return RedisBackedCache::repositoryForStore(self::$resolvedStore);
+    }
+
+    /**
+     * Preferred store first, then the fallbacks worth trying.
+     *
+     * When the chain resolves to 'redis' but no client extension is loaded, try 'file' first
+     * rather than paying a connection failure on every call.
+     *
+     * @return array<int, string>
+     */
+    private static function candidateStoreNames(): array
+    {
+        $preferred = RedisBackedCache::projectDefaultStoreName();
+        $configured = config('cache.stores', []);
+        $names = [];
+
+        if ($preferred === 'redis' && ! extension_loaded('redis') && ! class_exists(\Predis\Client::class)) {
+            if (array_key_exists('file', $configured)) {
+                $names[] = 'file';
+            }
+            $names[] = $preferred;
+        } else {
+            $names[] = $preferred;
+            if ($preferred !== 'file' && array_key_exists('file', $configured)) {
+                $names[] = 'file';
+            }
+        }
+
+        $default = (string) config('cache.default', 'file');
+        if ($default !== '' && ! in_array($default, $names, true)) {
+            $names[] = $default;
+        }
+
+        return array_values(array_unique($names));
     }
 
     /**

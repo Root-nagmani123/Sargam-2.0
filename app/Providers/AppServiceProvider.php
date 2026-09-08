@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\FacultyMaster;
+use App\Models\Timetable;
+use App\Support\FeedbackReportCache;
 use App\Support\FeedbackReportRouteRegistry;
 use App\Services\FC\FcPostArrivalAccessService;
 use App\Services\NotificationService;
@@ -38,6 +41,23 @@ class AppServiceProvider extends ServiceProvider
     public function boot(MenuService $menuService)
     {
         Paginator::useBootstrap();
+
+        /*
+         * The session-feedback report lookups (topic list, faculty dropdown, typeahead) are
+         * cached under a generation counter that only submitFeedback() used to bump. Those
+         * lists derive from timetable and faculty_master, not from topic_feedback, so adding
+         * a session or renaming a faculty left the dropdowns stale until the TTL expired —
+         * before the caching went in they were always fresh.
+         *
+         * Hooked on the models rather than the write call sites: the timetable is written
+         * from more than twenty places and faculty_master from several, so a per-call-site
+         * bust would be one missed edit away from silently going stale again. Both are
+         * Eloquent models with no raw query-builder writes, so saved/deleted covers them.
+         */
+        foreach ([Timetable::class, FacultyMaster::class] as $model) {
+            $model::saved(static fn () => FeedbackReportCache::bust());
+            $model::deleted(static fn () => FeedbackReportCache::bust());
+        }
 
         // Schema introspection (Schema::hasTable/hasColumn) is cached across requests
         // by fc_schema_columns() because information_schema reads contend badly under
