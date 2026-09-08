@@ -37,15 +37,6 @@
     color: var(--ds-ink);
     line-height: 1.2;
 }
-.fc-sms-summary .fc-sms-summary-slug {
-    display: inline-block;
-    font-family: var(--bs-font-monospace, monospace);
-    font-size: 0.75rem;
-    color: var(--ds-primary);
-    background: rgba(var(--bs-primary-rgb, 0 74 147), 0.08);
-    padding: 0.1rem var(--ds-space-2);
-    border-radius: var(--ds-radius-1);
-}
 .fc-sms-summary-date {
     display: flex;
     align-items: center;
@@ -74,17 +65,6 @@
 .fc-sms-option .form-check-label { cursor: pointer; }
 .fc-sms-option-title { font-weight: 600; color: var(--ds-ink); }
 .fc-sms-option-help { font-size: 0.8125rem; color: var(--ds-ink-muted); margin-top: 2px; }
-.fc-sms-code-badge {
-    font-family: var(--bs-font-monospace, monospace);
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--ds-ink-muted);
-    background: var(--ds-surface-2);
-    border: 1px solid var(--ds-line);
-    border-radius: var(--ds-radius-1);
-    padding: 0.05rem var(--ds-space-2);
-    vertical-align: middle;
-}
 
 /* View-list toggle button footprint matches the design controls */
 .fc-sms-view-btn {

@@ -38,7 +38,7 @@ class FcAdminSmsController extends Controller
                     });
             })
             ->orderByRaw('LOWER(form_name)')
-            ->get(['id', 'form_name', 'form_slug']);
+            ->get(['id', 'form_name']);
 
         $defaultForm = FcForm::activeRegistrationDynamicForm();
         $selectedFormId = (int) $request->query('form_id', $defaultForm?->id ?? 0);
@@ -52,7 +52,6 @@ class FcAdminSmsController extends Controller
         return view('admin.fc-sms.index', [
             'preview' => [
                 'form_name' => $selectedForm?->form_name ?? $counts['programme'],
-                'form_slug' => $selectedForm?->form_slug ?? '',
                 'last_date' => $counts['last_date'],
             ],
             'forms' => $forms,
@@ -60,19 +59,16 @@ class FcAdminSmsController extends Controller
             'templates' => [
                 FcAdminSmsBulkService::TEMPLATE_B1 => [
                     'label' => 'Form step incomplete',
-                    'code' => 'B1 / FC-IFM',
                     'help' => 'Started submitting the form (at least 1 step done) but still has pending steps — SMS uses their first pending step name.',
                     'count' => $counts['b1'],
                 ],
                 FcAdminSmsBulkService::TEMPLATE_B2 => [
                     'label' => 'Registration pending',
-                    'code' => 'B2 / FC-R-P',
                     'help' => 'Registration not completed and form not started yet (or zero steps done) — overall registration deadline reminder.',
                     'count' => $counts['b2'],
                 ],
                 FcAdminSmsBulkService::TEMPLATE_B3 => [
                     'label' => 'Travel pending',
-                    'code' => 'B3 / Email only',
                     'help' => 'All registration form steps are complete but the travel plan has not been submitted yet — email reminder only (no SMS template approved yet).',
                     'count' => $counts['b3'],
                 ],
