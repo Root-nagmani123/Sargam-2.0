@@ -21,15 +21,24 @@ class FcAdminSmsController extends Controller
 {
     public function index(Request $request, FcAdminSmsBulkService $bulk): View
     {
-        $forms = FcForm::query()
-            ->where('is_active', true)
+        // Active forms whose linked course has not ended (or that have no linked course) —
+        // same scope the request validation and the send-side resolver use.
+        $forms = FcForm::selectableForBulkSend()
             ->orderByRaw('LOWER(form_name)')
-            ->get(['id', 'form_name', 'form_slug']);
+            ->get(['id', 'form_name']);
 
+        // The default form is resolved without the course-end scope, so it can be one the
+        // picker excludes — take it only when it is in $forms, else the first listed form.
+        // $selectedFormId must always be a member of $forms (or 0 when the list is empty),
+        // otherwise the picker, the summary card, the counts and the posted form_id disagree.
         $defaultForm = FcForm::activeRegistrationDynamicForm();
-        $selectedFormId = (int) $request->query('form_id', $defaultForm?->id ?? 0);
+        $selectedFormId = (int) $request->query('form_id', 0);
         if ($selectedFormId <= 0 || ! $forms->pluck('id')->contains($selectedFormId)) {
-            $selectedFormId = (int) ($defaultForm?->id ?? ($forms->first()->id ?? 0));
+            $selectedFormId = (int) (
+                $forms->firstWhere('id', $defaultForm?->id)?->id
+                ?? $forms->first()?->id
+                ?? 0
+            );
         }
 
         $selectedForm = $forms->firstWhere('id', $selectedFormId);
@@ -38,7 +47,6 @@ class FcAdminSmsController extends Controller
         return view('admin.fc-sms.index', [
             'preview' => [
                 'form_name' => $selectedForm?->form_name ?? $counts['programme'],
-                'form_slug' => $selectedForm?->form_slug ?? '',
                 'last_date' => $counts['last_date'],
             ],
             'forms' => $forms,
@@ -46,19 +54,16 @@ class FcAdminSmsController extends Controller
             'templates' => [
                 FcAdminSmsBulkService::TEMPLATE_B1 => [
                     'label' => 'Form step incomplete',
-                    'code' => 'B1 / FC-IFM',
                     'help' => 'Started submitting the form (at least 1 step done) but still has pending steps — SMS uses their first pending step name.',
                     'count' => $counts['b1'],
                 ],
                 FcAdminSmsBulkService::TEMPLATE_B2 => [
                     'label' => 'Registration pending',
-                    'code' => 'B2 / FC-R-P',
                     'help' => 'Registration not completed and form not started yet (or zero steps done) — overall registration deadline reminder.',
                     'count' => $counts['b2'],
                 ],
                 FcAdminSmsBulkService::TEMPLATE_B3 => [
                     'label' => 'Travel pending',
-                    'code' => 'B3 / Email only',
                     'help' => 'All registration form steps are complete but the travel plan has not been submitted yet — email reminder only (no SMS template approved yet).',
                     'count' => $counts['b3'],
                 ],
@@ -73,7 +78,7 @@ class FcAdminSmsController extends Controller
     {
         $validated = $request->validate([
             'template' => 'required|in:b1,b2,b3',
-            'form_id' => ['required', 'integer', Rule::exists('fc_forms', 'id')->where('is_active', true)],
+            'form_id' => ['required', 'integer', Rule::in(FcForm::selectableForBulkSend()->pluck('id')->all())],
         ]);
 
         $template = $validated['template'];
@@ -181,7 +186,7 @@ class FcAdminSmsController extends Controller
     {
         $validated = $request->validate([
             'template' => 'required|in:b1,b2,b3',
-            'form_id' => ['required', 'integer', Rule::exists('fc_forms', 'id')->where('is_active', true)],
+            'form_id' => ['required', 'integer', Rule::in(FcForm::selectableForBulkSend()->pluck('id')->all())],
             'send_mode' => 'required|in:all,selected',
             'registration_pks' => 'required_if:send_mode,selected|array|min:1',
             'registration_pks.*' => 'integer|min:1',

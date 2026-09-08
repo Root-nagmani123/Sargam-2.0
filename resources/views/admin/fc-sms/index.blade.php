@@ -37,15 +37,6 @@
     color: var(--ds-ink);
     line-height: 1.2;
 }
-.fc-sms-summary .fc-sms-summary-slug {
-    display: inline-block;
-    font-family: var(--bs-font-monospace, monospace);
-    font-size: 0.75rem;
-    color: var(--ds-primary);
-    background: rgba(var(--bs-primary-rgb, 0 74 147), 0.08);
-    padding: 0.1rem var(--ds-space-2);
-    border-radius: var(--ds-radius-1);
-}
 .fc-sms-summary-date {
     display: flex;
     align-items: center;
@@ -74,17 +65,6 @@
 .fc-sms-option .form-check-label { cursor: pointer; }
 .fc-sms-option-title { font-weight: 600; color: var(--ds-ink); }
 .fc-sms-option-help { font-size: 0.8125rem; color: var(--ds-ink-muted); margin-top: 2px; }
-.fc-sms-code-badge {
-    font-family: var(--bs-font-monospace, monospace);
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--ds-ink-muted);
-    background: var(--ds-surface-2);
-    border: 1px solid var(--ds-line);
-    border-radius: var(--ds-radius-1);
-    padding: 0.05rem var(--ds-space-2);
-    vertical-align: middle;
-}
 
 /* View-list toggle button footprint matches the design controls */
 .fc-sms-view-btn {
@@ -168,7 +148,7 @@
                         <select name="form_id" id="fcSmsFormFilter" class="form-select">
                             @foreach(($forms ?? []) as $form)
                                 <option value="{{ (int) $form->id }}" {{ (int) ($selectedFormId ?? 0) === (int) $form->id ? 'selected' : '' }}>
-                                    {{ $form->form_name }} ({{ $form->form_slug }})
+                                    {{ $form->form_name }}
                                 </option>
                             @endforeach
                         </select>
@@ -178,13 +158,10 @@
                             <div>
                                 <div class="fc-sms-field-label mb-1">Selected Template</div>
                                 <div class="fc-sms-summary-name">{{ $preview['form_name'] }}</div>
-                                @if(! empty($preview['form_slug']))
-                                    <span class="fc-sms-summary-slug mt-1">{{ $preview['form_slug'] }}</span>
-                                @endif
                             </div>
                             <div class="fc-sms-summary-date">
                                 <i class="bi bi-calendar-event text-muted" aria-hidden="true"></i>
-                                <span class="label">Registration last date (B2)</span>
+                                <span class="label">Registration last date</span>
                                 <span class="value ms-auto">{{ $preview['last_date'] }}</span>
                             </div>
                         </div>
@@ -223,7 +200,6 @@
                                            {{ old('template', 'b1') === $key ? 'checked' : '' }} required>
                                     <label class="form-check-label" for="tpl_{{ $key }}">
                                         <span class="fc-sms-option-title">{{ $tpl['label'] }}</span>
-                                        <span class="fc-sms-code-badge ms-1">{{ $tpl['code'] }}</span>
                                         <div class="fc-sms-option-help">{{ $tpl['help'] }}</div>
                                     </label>
                                 </div>

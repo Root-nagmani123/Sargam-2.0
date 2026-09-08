@@ -40,6 +40,28 @@ class FcForm extends Model
         return $this->belongsTo(CourseMaster::class, 'course_master_pk', 'pk');
     }
 
+    /**
+     * Forms that may be picked for an FC bulk SMS/Email send: active, and either not
+     * linked to a course or linked to one that has not ended yet. Same "active" scope
+     * as the Dynamic Forms admin list (Form Management), kept in one place so the
+     * picker, the request validation and the send-side resolver cannot drift apart.
+     */
+    public function scopeSelectableForBulkSend($query)
+    {
+        $currentDate = now()->format('Y-m-d');
+
+        return $query->where('is_active', true)
+            ->where(function ($q) use ($currentDate) {
+                $q->whereNull('course_master_pk')
+                    ->orWhereHas('courseMaster', function ($c) use ($currentDate) {
+                        $c->where(function ($e) use ($currentDate) {
+                            $e->whereNull('end_date')
+                                ->orWhere('end_date', '>=', $currentDate);
+                        });
+                    });
+            });
+    }
+
     public function steps(): HasMany
     {
         return $this->hasMany(FcFormStep::class, 'form_id')->orderBy('step_number');
