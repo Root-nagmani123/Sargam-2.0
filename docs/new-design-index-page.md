@@ -140,6 +140,30 @@ apart (`IssueCategoryController@export`, `categories/export_print.blade.php` —
 Carry the grid's own `q` / `sort` / `dir` into the export links so the user gets
 what they are looking at, not the unfiltered table.
 
+### Master module: don't hand-roll it, use the trait
+
+`admin/master/*` listings share one implementation — copy nothing:
+
+- `App\Http\Controllers\Concerns\ExportsMasterGrid` — `resolveExportColumns()`
+  (intersects `?cols=` against the canonical list) + `renderMasterExport()`, which
+  serves all four formats.
+- `App\Exports\MasterGridExport` — the branded `.xlsx`, parameterised by report title.
+- `admin/master/partials/export_print.blade.php` / `export_pdf.blade.php` —
+  the printout and the PDF, driven entirely by the column defs.
+
+A new master export is therefore a controller `exportColumnDefs()` + `export()`, one
+route, and the toolbar markup — no new blades, no new Export class. Each column def
+carries its own `width` and `align`; both are emitted **inline** because DomPDF ignores
+`<colgroup>` widths *and* lets its element rule beat a class selector, so a class-driven
+`text-align: center` silently comes out left. Worked examples: `AppellationMasterController`
+(Yajra, server-side — its grid search only covers the one `Column::make()`) and
+`FacultyExpertiseMasterController` / `FacultyTypeMasterController` (client-side
+DataTables — their search covers **every** searchable column, the rendered Status label
+included, so the export query has to match those labels too, substring semantics and all,
+or "Inactive" exports nothing while the screen shows rows). Read the grid's `columnDefs`
+for which columns are `searchable` and mirror exactly that set — Faculty Type has two
+text columns, so its export matches the short name as well.
+
 **Never drop an export the page already had.** All Requests already shipped Excel
 and PDF, so its Download became a dropdown (CSV · Excel · PDF) rather than a
 single button — same chrome, no lost feature. And keep the export's first column
@@ -409,7 +433,7 @@ modal-content (radius 12)
 │   └── .ic-field-card    #eef1fc, radius 10, padding 1rem   ← one per record
 │       ├── .ic-form-label + .ic-req ("*")  → .form-control.ic-control
 │       └── .ic-field-actions               → − / +   (Add only)
-└── .ic-modal-footer      centred · .ic-btn-cancel (red outline) · .ic-btn-submit (#004384)
+└── .ic-modal-footer      RIGHT-aligned · .ic-btn-cancel (red outline) · .ic-btn-submit (#004384)
 ```
 
 Tokens: card `#eef1fc`; label `.8125rem/600 #1f2937`; asterisk `#dc2626`;
