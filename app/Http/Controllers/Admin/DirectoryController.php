@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 
 class DirectoryController extends Controller
@@ -152,18 +153,19 @@ class DirectoryController extends Controller
             ? $defs
             : $this->resolveDirectoryExportColumns($request, $defs);
 
-        $rows = $this->lbsnaaEmployeesQuery($search, $filters)
-            ->orderBy(self::LBSNAA_SORTABLE_COLUMNS[$sort['key']], $sort['dir'])
-            ->orderBy('employee_master.last_name')
-            ->get();
-
-        [$rows, $note] = $this->capExportRows($rows);
+        [$rows, $note] = $this->fetchCappedExportRows(
+            $this->lbsnaaEmployeesQuery($search, $filters)
+                ->orderBy(self::LBSNAA_SORTABLE_COLUMNS[$sort['key']], $sort['dir'])
+                ->orderBy('employee_master.last_name')
+        );
 
         $filterLine = implode('  |  ', array_filter([
             $filters['sectionName'] ? 'Section: ' . $filters['sectionName'] : null,
             $filters['designationName'] ? 'Designation: ' . $filters['designationName'] : null,
             $search !== '' ? 'Search: ' . $search : null,
         ]));
+
+        $this->logDirectoryExport('lbsnaa', $format, $filterLine, $search, $rows->count(), $note !== null);
 
         return $this->renderDirectoryExport(
             $format,
@@ -205,40 +207,57 @@ class DirectoryController extends Controller
      * hand-typed pk can't widen the grid past what the dropdowns offer — and so
      * the export header band can name them.
      *
-     * @return array{section: int, designation: int, sectionName: ?string, designationName: ?string}
+     * "No filter" is null here, never 0. department_master holds a real row at
+     * pk 0 ("NIAR"), so a 0 sentinel made "filter by NIAR" and "no filter at
+     * all" the same value: the query's `> 0` guard dropped the WHERE clause
+     * while the header band still printed "Section: NIAR" — a download of every
+     * employee, labelled as one section. A null sentinel cannot collide with a
+     * pk, so the band and the rows always describe the same set.
+     *
+     * @return array{section: ?int, designation: ?int, sectionName: ?string, designationName: ?string}
      */
     private function resolveLbsnaaFilters(Request $request): array
     {
-        $sections = $this->lbsnaaSectionOptions();
-        $designations = $this->lbsnaaDesignationOptions();
-
-        // "No filter" cannot be spelled 0 here: department_master holds a real
-        // row at pk 0 ("NIAR"), so the old `(int) $request->query('section', 0)`
-        // default resolved to NIAR and stamped "Section: NIAR" on the header band
-        // of every unfiltered export. An absent or blank param never reaches the
-        // name lookup at all.
-        $sectionParam = $this->scalarQuery($request, 'section');
-        $designationParam = $this->scalarQuery($request, 'designation');
-
-        $section = ($sectionParam === null || $sectionParam === '') ? null : (int) $sectionParam;
-        $designation = ($designationParam === null || $designationParam === '') ? null : (int) $designationParam;
-
-        $sectionName = $section === null ? null : ($sections[$section] ?? null);
-        $designationName = $designation === null ? null : ($designations[$designation] ?? null);
+        [$section, $sectionName] = $this->resolveOptionFilter($request, 'section', $this->lbsnaaSectionOptions());
+        [$designation, $designationName] = $this->resolveOptionFilter($request, 'designation', $this->lbsnaaDesignationOptions());
 
         return [
-            'section' => $sectionName === null ? 0 : (int) $section,
-            'designation' => $designationName === null ? 0 : (int) $designation,
+            'section' => $section,
+            'designation' => $designation,
             'sectionName' => $sectionName,
             'designationName' => $designationName,
         ];
     }
 
     /**
+     * One filter pk resolved against the list its own dropdown offers.
+     *
+     * Absent, blank and non-numeric all mean "no filter" (null). A pk that is
+     * present is kept only when the option list actually holds that key —
+     * Collection::has(), not `[$pk] ?? null`, so an option whose name happens
+     * to be null still filters instead of silently widening to everything.
+     *
+     * @param  \Illuminate\Support\Collection  $options
+     * @return array{0: ?int, 1: ?string}
+     */
+    private function resolveOptionFilter(Request $request, string $key, $options): array
+    {
+        $raw = $this->scalarQuery($request, $key);
+
+        if ($raw === '' || ! is_numeric($raw)) {
+            return [null, null];
+        }
+
+        $pk = (int) $raw;
+
+        return $options->has($pk) ? [$pk, (string) $options[$pk]] : [null, null];
+    }
+
+    /**
      * One hydration for the grid, the count and the export, so the three can
      * never disagree about which employees belong to a filter.
      *
-     * @param  array{section: int, designation: int}  $filters
+     * @param  array{section: ?int, designation: ?int}  $filters
      */
     private function lbsnaaEmployeesQuery(string $search, array $filters): Builder
     {
@@ -246,8 +265,8 @@ class DirectoryController extends Controller
             ->leftJoin('designation_master as d', 'employee_master.designation_master_pk', '=', 'd.pk')
             ->leftJoin('department_master as dept', 'employee_master.department_master_pk', '=', 'dept.pk')
             ->where('employee_master.status', 1)
-            ->when($filters['section'] > 0, fn ($q) => $q->where('employee_master.department_master_pk', $filters['section']))
-            ->when($filters['designation'] > 0, fn ($q) => $q->where('employee_master.designation_master_pk', $filters['designation']))
+            ->when($filters['section'] !== null, fn ($q) => $q->where('employee_master.department_master_pk', $filters['section']))
+            ->when($filters['designation'] !== null, fn ($q) => $q->where('employee_master.designation_master_pk', $filters['designation']))
             ->when($search !== '', fn ($q) => $q->where(function ($inner) use ($search) {
                 $inner->where('employee_master.first_name', 'like', "%{$search}%")
                     ->orWhere('employee_master.middle_name', 'like', "%{$search}%")
@@ -600,13 +619,12 @@ class DirectoryController extends Controller
             ? $this->otExportColumnDefs()
             : $this->resolveDirectoryExportColumns($request, $this->otExportColumnDefs());
 
-        $rows = $courseId > 0
-            ? $this->otStudentsQuery($courseId, $search)
-                ->orderBy(self::OT_SORTABLE_COLUMNS[$sort['key']], $sort['dir'])
-                ->get()
-            : new Collection();
-
-        [$rows, $note] = $this->capExportRows($rows);
+        [$rows, $note] = $courseId > 0
+            ? $this->fetchCappedExportRows(
+                $this->otStudentsQuery($courseId, $search)
+                    ->orderBy(self::OT_SORTABLE_COLUMNS[$sort['key']], $sort['dir'])
+            )
+            : [new Collection(), null];
 
         $programme = $courses->firstWhere('pk', $courseId);
         $programmeName = $programme
@@ -618,6 +636,8 @@ class DirectoryController extends Controller
             $status === 'archive' ? 'Archived' : 'Active',
             $search !== '' ? 'Search: ' . $search : null,
         ]));
+
+        $this->logDirectoryExport('ot', $format, $filterLine, $search, $rows->count(), $note !== null);
 
         return $this->renderDirectoryExport(
             $format,
@@ -631,22 +651,82 @@ class DirectoryController extends Controller
     }
 
     /**
+     * Fetch at most EXPORT_ROW_CAP rows for a report, and say so when the
+     * query held more.
+     *
+     * The cap bounds the QUERY, not only the file. Hydrating the whole result
+     * set and truncating in PHP afterwards protected DomPDF and
+     * PhpSpreadsheet but left the SELECT and PHP's memory unbounded — the one
+     * thing the cap exists to prevent. CAP + 1 rows are fetched instead: the
+     * extra row is the whole truncation signal, and the exact total is only
+     * worth a second COUNT in the rare case where the note prints it.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return array{0: \Illuminate\Support\Collection, 1: ?string}
+     */
+    private function fetchCappedExportRows(Builder $query): array
+    {
+        $rows = (clone $query)->limit(self::EXPORT_ROW_CAP + 1)->get();
+
+        if ($rows->count() <= self::EXPORT_ROW_CAP) {
+            return [$rows, null];
+        }
+
+        return $this->capExportRows($rows, (int) $query->toBase()->getCountForPagination());
+    }
+
+    /**
      * Truncate a report at EXPORT_ROW_CAP and say so on the header band.
+     *
+     * $total is the row count the filters actually match, which the caller
+     * knows and $rows (capped at CAP + 1) no longer does; without it the note
+     * can only report what it was handed.
      *
      * @param  \Illuminate\Support\Collection  $rows
      * @return array{0: \Illuminate\Support\Collection, 1: ?string}
      */
-    private function capExportRows($rows): array
+    private function capExportRows($rows, ?int $total = null): array
     {
         if ($rows->count() <= self::EXPORT_ROW_CAP) {
             return [$rows, null];
         }
 
         $note = 'Showing the first ' . number_format(self::EXPORT_ROW_CAP)
-            . ' of ' . number_format($rows->count())
+            . ' of ' . number_format($total ?? $rows->count())
             . ' records — narrow the filters for the rest.';
 
         return [$rows->take(self::EXPORT_ROW_CAP)->values(), $note];
+    }
+
+    /**
+     * One structured line per served export.
+     *
+     * A directory download is a privileged read of personal data — home
+     * address, mobile, residence phone, personal email for the whole roster —
+     * so it needs an accountability trail: who asked, for which grid, in which
+     * format, under which filters, and how many rows they got. The row DATA is
+     * deliberately never logged: that would copy the PII the gate exists to
+     * protect into files with a laxer audience than the download itself.
+     */
+    private function logDirectoryExport(
+        string $grid,
+        string $format,
+        string $filterLine,
+        string $search,
+        int $rowCount,
+        bool $capped
+    ): void {
+        Log::info('directory.export', [
+            'grid' => $grid,
+            'format' => $format,
+            // user_credentials is keyed on `pk`, so auth()->id() is that pk.
+            'user_pk' => auth()->id(),
+            'ip' => request()->ip(),
+            'filters' => $filterLine !== '' ? $filterLine : null,
+            'search' => $search !== '' ? $search : null,
+            'rows' => $rowCount,
+            'capped' => $capped,
+        ]);
     }
 
     /**

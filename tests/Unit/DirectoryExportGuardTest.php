@@ -3,21 +3,30 @@
 namespace Tests\Unit;
 
 use App\Http\Controllers\Admin\DirectoryController;
+use App\Http\Middleware\EnsureDirectoryExportAccess;
 use App\Support\ExportCell;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use ReflectionClass;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 /**
- * Guards for the directory export layer (PR #317).
+ * Guards for the directory export layer (docs/new-design-index-page.md).
  *
  * Deliberately DB-free: every assertion drives a pure resolver through
- * reflection, or the route table, so the suite's shared-database constraint
- * (see phpunit.xml) never applies.
+ * reflection, the route table, or a middleware object with a stub actor, so
+ * the suite's shared-database constraint (see phpunit.xml) never applies.
+ * The DB-backed half of the same guarantees lives in
+ * tests/Feature/DirectoryExportAccessTest.php, which skips without a
+ * connection.
  */
 class DirectoryExportGuardTest extends TestCase
 {
+    /** What fetchCappedExportRows() hands the capper: EXPORT_ROW_CAP + 1. */
+    private const FETCHED_SLICE = 1501;
+
     /** @return mixed */
     private function invokePrivate(string $method, array $args = [])
     {
@@ -38,7 +47,66 @@ class DirectoryExportGuardTest extends TestCase
         return Request::create('/directory/ot/export/csv', 'GET', $query);
     }
 
-    // ── F-001: formula injection ──────────────────────────────────────────
+    /**
+     * An authenticated actor with no database behind it.
+     *
+     * hasRole() consults the session first and only then asks the user
+     * object, so a stub that answers hasRole() itself lets BOTH branches of
+     * the export gate execute without a connection — which is the point: the
+     * denied case is the one that must never regress unnoticed.
+     */
+    private function gateUser(bool $superAdmin = false): Authenticatable
+    {
+        return new class($superAdmin) implements Authenticatable
+        {
+            /** user_credentials.user_name — the auth middleware logs it when app.debug is on. */
+            public $user_name = 'directory-gate-stub';
+
+            private bool $superAdmin;
+
+            public function __construct(bool $superAdmin)
+            {
+                $this->superAdmin = $superAdmin;
+            }
+
+            public function hasRole($role): bool
+            {
+                return $this->superAdmin && in_array($role, ['Super Admin', 'SuperAdmin'], true);
+            }
+
+            public function getAuthIdentifierName()
+            {
+                return 'pk';
+            }
+
+            public function getAuthIdentifier()
+            {
+                return 4242;
+            }
+
+            public function getAuthPassword()
+            {
+                return '';
+            }
+
+            public function getRememberToken()
+            {
+                return '';
+            }
+
+            public function setRememberToken($value)
+            {
+                //
+            }
+
+            public function getRememberTokenName()
+            {
+                return '';
+            }
+        };
+    }
+
+    // ── Spreadsheet formula injection ─────────────────────────────────────
 
     /** @dataProvider formulaPrefixes */
     public function test_export_cell_neutralises_formula_prefixes(string $raw): void
@@ -71,7 +139,7 @@ class DirectoryExportGuardTest extends TestCase
         $this->assertSame('-', ExportCell::text(['value' => fn () => '-'], null, 0));
     }
 
-    // ── F-002: dompdf must not be a PHP execution context ─────────────────
+    // ── DomPDF must not be a PHP execution context ────────────────────────
 
     public function test_pdf_partial_carries_no_php_script_block(): void
     {
@@ -89,7 +157,7 @@ class DirectoryExportGuardTest extends TestCase
         $this->assertStringNotContainsString("'isPhpEnabled' => true", $source);
     }
 
-    // ── F-003: the downloads are gated, the grids are not ─────────────────
+    // ── The downloads are gated, the grids are not ────────────────────────
 
     /** @dataProvider exportRouteNames */
     public function test_export_routes_are_gated_and_throttled(string $name): void
@@ -126,6 +194,75 @@ class DirectoryExportGuardTest extends TestCase
             ['admin.directory.lbsnaa'],
             ['admin.directory.lbsnaa.data'],
         ];
+    }
+
+    /**
+     * The denied case, end to end: the request goes through the real HTTP
+     * kernel and the real middleware stack, and is refused with 403 before it
+     * reaches the controller. Asserting that the route CARRIES the alias only
+     * proves the wiring; this proves the wiring actually refuses somebody.
+     *
+     * The exception is asserted rather than the response because rendering the
+     * 403 PAGE pulls in the admin layout, which reads columns off a real user
+     * row — a database, which this suite does without.
+     *
+     * @dataProvider exportRouteNames
+     */
+    public function test_export_routes_refuse_a_non_privileged_user(string $name): void
+    {
+        $this->withoutExceptionHandling();
+        $this->actingAs($this->gateUser(false));
+
+        try {
+            $this->get(route($name, ['format' => 'csv']));
+            $this->fail("{$name} must refuse a non-privileged user");
+        } catch (HttpException $e) {
+            $this->assertSame(403, $e->getStatusCode());
+        }
+    }
+
+    /**
+     * The allowed case, at the middleware rather than the route: past the
+     * gate the controller queries the directory, and this suite is DB-free by
+     * construction. The 200 through the full stack is asserted in
+     * tests/Feature/DirectoryExportAccessTest.php.
+     */
+    public function test_export_gate_passes_a_privileged_user_through(): void
+    {
+        $this->actingAs($this->gateUser(true));
+
+        $reached = false;
+        $response = (new EnsureDirectoryExportAccess())->handle(
+            $this->request([]),
+            function () use (&$reached) {
+                $reached = true;
+
+                return response('served');
+            }
+        );
+
+        $this->assertTrue($reached, 'a Super Admin must reach the export action');
+        $this->assertSame('served', $response->getContent());
+    }
+
+    public function test_export_gate_aborts_403_for_a_non_privileged_user(): void
+    {
+        $this->actingAs($this->gateUser(false));
+
+        $reached = false;
+
+        try {
+            (new EnsureDirectoryExportAccess())->handle($this->request([]), function () use (&$reached) {
+                $reached = true;
+
+                return response('served');
+            });
+            $this->fail('the gate must abort for a non-privileged user');
+        } catch (HttpException $e) {
+            $this->assertSame(403, $e->getStatusCode());
+        }
+
+        $this->assertFalse($reached, 'the export action must never run for a refused user');
     }
 
     /** @dataProvider exportRouteNames */
@@ -178,7 +315,7 @@ class DirectoryExportGuardTest extends TestCase
         $this->assertSame(['name'], array_keys($resolved));
     }
 
-    // ── F-006: array parameters must not become the string "Array" ────────
+    // ── Array parameters must not become the string "Array" ───────────────
 
     public function test_array_cols_parameter_does_not_break_resolution(): void
     {
@@ -187,6 +324,60 @@ class DirectoryExportGuardTest extends TestCase
         ]);
 
         $this->assertSame(array_keys($this->defs()), array_keys($resolved));
+    }
+
+    // ── "No filter" must not collide with a real pk ───────────────────────
+
+    /**
+     * department_master really does hold a row at pk 0 ("NIAR"), so 0 has to
+     * survive as a FILTER. Under the old 0-as-absent sentinel the WHERE clause
+     * was dropped and the export band still printed the section name — every
+     * employee in a file labelled as one section.
+     */
+    public function test_pk_zero_filters_instead_of_meaning_no_filter(): void
+    {
+        [$pk, $name] = $this->invokePrivate('resolveOptionFilter', [
+            $this->request(['section' => '0']), 'section', collect([0 => 'NIAR', 5 => 'Estate']),
+        ]);
+
+        $this->assertSame(0, $pk, 'pk 0 must reach the query as a filter');
+        $this->assertSame('NIAR', $name, 'and the header band must name it');
+    }
+
+    /** @dataProvider absentFilterInputs */
+    public function test_no_filter_resolves_to_null($raw): void
+    {
+        [$pk, $name] = $this->invokePrivate('resolveOptionFilter', [
+            $this->request($raw === null ? [] : ['section' => $raw]), 'section', collect([0 => 'NIAR', 5 => 'Estate']),
+        ]);
+
+        $this->assertNull($pk);
+        $this->assertNull($name);
+    }
+
+    public static function absentFilterInputs(): array
+    {
+        return [
+            'absent' => [null],
+            'blank' => [''],
+            'not a number' => ['dept'],
+            'array' => [['0']],
+            'pk no option offers' => ['999'],
+        ];
+    }
+
+    /**
+     * A label that came back null must not turn a valid pk into "no filter" —
+     * the reason the lookup is has(), not `?? null`.
+     */
+    public function test_a_null_label_still_filters(): void
+    {
+        [$pk, $name] = $this->invokePrivate('resolveOptionFilter', [
+            $this->request(['section' => '7']), 'section', collect([7 => null]),
+        ]);
+
+        $this->assertSame(7, $pk);
+        $this->assertSame('', $name);
     }
 
     /** @dataProvider sortInputs */
@@ -214,7 +405,7 @@ class DirectoryExportGuardTest extends TestCase
         ];
     }
 
-    // ── F-007: the row cap covers every format ────────────────────────────
+    // ── The row cap covers every format, and bounds the query ─────────────
 
     public function test_rows_under_the_cap_are_untouched(): void
     {
@@ -231,5 +422,21 @@ class DirectoryExportGuardTest extends TestCase
         $this->assertCount(1500, $rows);
         $this->assertStringContainsString('1,500', $note);
         $this->assertStringContainsString('1,600', $note);
+    }
+
+    /**
+     * Only CAP + 1 rows are fetched now, so the note's total comes from the
+     * caller's COUNT rather than from the slice in hand — otherwise every
+     * truncated report would claim exactly 1,501 records.
+     */
+    public function test_the_cap_note_reports_the_queried_total(): void
+    {
+        [$rows, $note] = $this->invokePrivate('capExportRows', [
+            Collection::times(self::FETCHED_SLICE, fn ($n) => $n), 20482,
+        ]);
+
+        $this->assertCount(1500, $rows);
+        $this->assertStringContainsString('20,482', $note);
+        $this->assertStringNotContainsString('1,501', $note);
     }
 }
