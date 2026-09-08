@@ -1,0 +1,157 @@
+{{-- Branded PDF (DomPDF) for any admin listing.
+
+     Deliberately not sharing branded_print's CSS: DomPDF has no
+     print-color-adjust, no @media print and only partial CSS support, and it
+     needs base64 image data rather than asset() URLs. The visual language is
+     kept identical by hand — same navy, same header order, same zebra.
+
+     Props: as branded_print, plus
+       $total  the FULL match count, which may exceed count($rows) when the
+               caller capped the rows — $note then says so on the page. --}}
+@php
+    $logoFor = function (string $relative): ?string {
+        $path = public_path($relative);
+        if (! is_file($path) || ! is_readable($path)) {
+            return null;
+        }
+        $mime = str_ends_with(strtolower($relative), '.png') ? 'image/png' : 'image/jpeg';
+
+        return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($path));
+    };
+
+    $emblem = $logoFor('images/ashoka.png');
+    $logo   = $logoFor('images/lbsnaa_logo.jpg');
+
+    $filterLine   = $filterLine ?? null;
+    $columnStyles = $columnStyles ?? '';
+    $emptyText    = $emptyText ?? 'Nothing to export';
+    $note         = $note ?? null;
+    $total        = $total ?? $rows->count();
+    // 'dompdf' (default) or 'mpdf'. Same markup either way — only the
+    // page-number mechanism differs, since mPDF cannot run DomPDF's script block
+    // and sets its footer from the trait instead.
+    $engine       = $engine ?? 'dompdf';
+@endphp
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ $title }} — LBSNAA</title>
+    <style>
+@if ($engine !== 'mpdf')
+        {{-- DomPDF only. mPDF misparses this rule badly enough to collapse the
+             text column to one character per line (a 5-row report came out as
+             242 pages); it takes its page size and margins from the constructor
+             in ExportsBrandedGrid::brandedGridMpdf() instead, set to match. --}}
+        @page { size: A4 portrait; margin: 12mm 10mm; }
+@endif
+        * { font-family: 'DejaVu Sans', sans-serif; }
+        body { margin: 0; padding: 0; color: #1f2937; font-size: 9px; }
+
+        table.pdf-hdr { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+        table.pdf-hdr td { vertical-align: middle; padding: 0; }
+        table.pdf-hdr .logo { width: 120px; }
+        table.pdf-hdr .logo img { height: 44px; }
+        table.pdf-hdr .centre { text-align: center; }
+
+        .inst { font-size: 12px; font-weight: bold; color: #003366; line-height: 1.3; }
+        .sub  { font-size: 8px; color: #4b5563; margin-top: 2px; }
+        .rule { border-bottom: 2px solid #003366; margin-bottom: 6px; }
+
+        .report-title { text-align: center; font-size: 12px; font-weight: bold; color: #003366; margin: 5px 0 2px; }
+        .meta  { text-align: center; font-size: 8px; color: #6b7280; margin-bottom: 6px; }
+        .total { text-align: center; font-size: 9px; font-weight: bold; color: #003366;
+                 background: #eef2f8; padding: 3px 0; margin-bottom: 6px; }
+        .note  { text-align: center; font-size: 8px; color: #92400e; background: #fef6e7;
+                 border: 0.8px solid #f4d9a6; padding: 3px 6px; margin-bottom: 6px; }
+
+        table.data-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        table.data-table th, table.data-table td {
+            border: 0.8px solid #cccccc;
+            padding: 4px 5px;
+            text-align: left;
+            vertical-align: top;
+            word-wrap: break-word;
+        }
+        table.data-table thead th {
+            background: #003366;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 8.5px;
+            border-color: #002244;
+        }
+        table.data-table tbody tr:nth-child(even) { background: #f4f7fb; }
+
+        .empty { text-align: center; padding: 16px; color: #6b7280; }
+        .foot  { margin-top: 8px; text-align: center; font-size: 7px; color: #6b7280; }
+
+        /* DomPDF ignores <colgroup> widths — they have to sit on the cells. */
+        {!! $columnStyles !!}
+    </style>
+</head>
+<body>
+
+    <table class="pdf-hdr">
+        <tr>
+            {{-- Height is inline, not in the stylesheet: mPDF sizes an <img> from
+                 its attributes/inline style and ignores a descendant CSS rule, so
+                 lbsnaa_logo.jpg laid out at its natural 1583px and squeezed the
+                 title cell to one character per line. DomPDF computes the same
+                 44px either way. --}}
+            <td class="logo">
+                @if($emblem)<img src="{{ $emblem }}" alt="" height="44" style="height:44px;">@endif
+                @if($logo)<img src="{{ $logo }}" alt="" height="44" style="height:44px;">@endif
+            </td>
+            <td class="centre">
+                <div class="inst">LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION</div>
+                <div class="sub">Mussoorie, Uttarakhand &nbsp;|&nbsp; Sargam 2.0</div>
+            </td>
+            <td class="logo"></td>
+        </tr>
+    </table>
+
+    <div class="rule"></div>
+
+    <div class="report-title">{{ strtoupper($title) }}</div>
+    <div class="meta">
+        @if(filled($filterLine)){{ $filterLine }} &nbsp;|&nbsp; @endif Generated: {{ $exportDate }}
+    </div>
+    <div class="total">Total Records: {{ number_format($total) }}</div>
+
+    @if (filled($note))
+        <div class="note">{{ $note }}</div>
+    @endif
+
+    {{-- Same resolved $columns as the CSV, Excel and print view. Keyed by column,
+         never by position, so a hidden column drops cleanly from all four. --}}
+    <table class="data-table">
+        <thead>
+            <tr>
+                @foreach ($columns as $col)
+                    <th class="{{ $col['class'] }}">{{ $col['heading'] }}</th>
+                @endforeach
+            </tr>
+        </thead>
+        <tbody>
+            @forelse ($rows as $index => $row)
+                <tr>
+                    @foreach ($columns as $col)
+                        <td class="{{ $col['class'] }}">{{ $col['value']($row, $index) }}</td>
+                    @endforeach
+                </tr>
+            @empty
+                <tr><td colspan="{{ count($columns) }}" class="empty">{{ $emptyText }}</td></tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    <div class="foot">Sargam 2.0 · Lal Bahadur Shastri National Academy of Administration</div>
+    {{-- No page-number markup here on purpose. Neither engine takes it from the
+         view: DomPDF is stamped on the canvas after render() by
+         ExportsBrandedGrid::stampPdfPageNumbers(), mPDF by SetHTMLFooter() in
+         brandedGridMpdf(). Doing it in the view would mean a
+         <script type="text/php"> block, which needs isPhpEnabled — a
+         document-wide switch that would let any data reaching this template
+         execute server-side PHP. --}}
+</body>
+</html>

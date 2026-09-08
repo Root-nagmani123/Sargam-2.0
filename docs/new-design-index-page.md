@@ -409,7 +409,7 @@ modal-content (radius 12)
 │   └── .ic-field-card    #eef1fc, radius 10, padding 1rem   ← one per record
 │       ├── .ic-form-label + .ic-req ("*")  → .form-control.ic-control
 │       └── .ic-field-actions               → − / +   (Add only)
-└── .ic-modal-footer      centred · .ic-btn-cancel (red outline) · .ic-btn-submit (#004384)
+└── .ic-modal-footer      right-aligned · .ic-btn-cancel (red outline) · .ic-btn-submit (#004384)
 ```
 
 Tokens: card `#eef1fc`; label `.8125rem/600 #1f2937`; asterisk `#dc2626`;
