@@ -36,8 +36,12 @@ class ProcessMessBillsEmployeeController extends Controller
     /** Client type slugs used in SellingVoucherDateRangeReport */
     private const ALLOWED_CLIENT_SLUGS = ['employee', 'ot', 'course', 'other'];
 
-    /** Cache grouped bills so DataTables page/sort/search does not re-query the union on every request. */
-    private const COMBINED_BILLS_CACHE_TTL_SECONDS = 300;
+    /**
+     * Cache grouped bills so DataTables page/sort/search does not re-query the union on every request.
+     * Writes bump the cache version (see {@see bumpProcessMessBillsCombinedCache()}), so a longer TTL
+     * does not serve stale bills — it only keeps read-heavy browsing off the union query.
+     */
+    private const COMBINED_BILLS_CACHE_TTL_SECONDS = 1800;
 
     /** Redis-backed combined bills cache TTL; store is resolved via {@see RedisBackedCache}. */
 

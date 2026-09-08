@@ -1345,6 +1345,11 @@ document.addEventListener('DOMContentLoaded', function() {
     var modalBillsTo = 0;
     var modalBillsSortCol = 'buyer_name';
     var modalBillsSortDir = 'asc';
+    // True while the deferred lifetime-due request is in flight, so the Total Due cell
+    // shows a placeholder instead of the interim period-due value.
+    var modalBillsLifetimeDuePending = false;
+    // Incremented per deferred due request so out-of-order responses can be discarded.
+    var modalBillsLifetimeDueToken = 0;
     var modalAllBuyerNames = {!! json_encode(($allBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
     var paymentDetailsBillId = null;
     var paymentDetailsDateFrom = null;
@@ -1444,7 +1449,10 @@ document.addEventListener('DOMContentLoaded', function() {
     window.buildModalBillsDataUrl = buildModalBillsDataUrl;
 
     function applyModalLifetimeDuePatch(dues) {
+        modalBillsLifetimeDuePending = false;
         if (!dues || !dues.length) {
+            // Nothing came back: drop the spinners so the cells are not stuck loading.
+            renderModalTable();
             return;
         }
         var byId = {};
@@ -1476,12 +1484,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function fetchModalLifetimeDueForCurrentPage() {
         var url = buildModalBillsDataUrl({ page: modalBillsCurrentPage }) + '&lifetime_due_only=1';
+        // Stamp the request: if the user pages/filters again while this is in flight,
+        // the stale response must not patch dues onto the newer table.
+        var token = ++modalBillsLifetimeDueToken;
         return fetch(url)
             .then(function (r) { return r.json(); })
             .then(function (data) {
+                if (token !== modalBillsLifetimeDueToken) {
+                    return;
+                }
                 applyModalLifetimeDuePatch(data.dues || []);
             })
-            .catch(function () {});
+            .catch(function () {
+                if (token !== modalBillsLifetimeDueToken) {
+                    return;
+                }
+                // Keep the row usable: clear the spinners and fall back to period due.
+                modalBillsLifetimeDuePending = false;
+                renderModalTable();
+            });
     }
 
     function prefetchDefaultModalBillsCache() {
@@ -1562,9 +1583,16 @@ document.addEventListener('DOMContentLoaded', function() {
         var clientTypes = getChoicesMultiValues(ct);
         var modalSearch = (document.getElementById('modalSearch') || {}).value || '';
         var url = buildModalBillsDataUrl({ page: modalBillsCurrentPage, forPrint: !!options.forPrint });
-        // Always request lifetime due in the primary payload so the table
-        // does not flash interim period due values before async patching.
-        var deferLifetimeDue = false;
+        // Lifetime due needs every bill a buyer ever had, so computing it inline blocks the
+        // whole payload. Defer it: render the table first, then patch the due column in.
+        // Print stays synchronous because the PDF/Excel needs final values in one pass.
+        var deferLifetimeDue = !options.forPrint;
+        if (deferLifetimeDue) {
+            url += '&skip_lifetime_due=1';
+        }
+        modalBillsLifetimeDuePending = deferLifetimeDue;
+        // Invalidate any in-flight due request from a previous page/filter.
+        modalBillsLifetimeDueToken++;
         renderModalBillsSkeleton();
         fetch(url)
             .then(function(r) { return r.json(); })
@@ -1577,6 +1605,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 modalBillsCurrentPage = parseInt(pagination.page || modalBillsCurrentPage || 1, 10);
                 updateModalBillsSortHeaderIcons();
                 renderModalTable();
+
+                if (deferLifetimeDue) {
+                    fetchModalLifetimeDueForCurrentPage();
+                }
 
                 // Also refresh Buyer Name dropdown in modal based on loaded bills.
                 // IMPORTANT: Only do this when no client type is selected, otherwise it
@@ -1619,6 +1651,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 modalBillsTotal = 0;
                 modalBillsFrom = 0;
                 modalBillsTo = 0;
+                modalBillsLifetimeDuePending = false;
                 renderModalTable();
                 showToast('Failed to load bills.', 'error');
             });
@@ -1788,7 +1821,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     '<td>' + (b.invoice_no || '—') + '</td>' +
                     '<td>' + (b.payment_type || '—') + '</td>' +
                     '<td class="text-end">' + (b.total || '0') + '</td>' +
-                    '<td class="text-end fw-semibold">' + (b.total_due_amount || '0.00') + '</td>' +
+                    '<td class="text-end fw-semibold">' + (modalBillsLifetimeDuePending
+                        ? '<span class="spinner-border spinner-border-sm text-secondary" role="status" aria-label="Loading total due"></span>'
+                        : (b.total_due_amount || '0.00')) + '</td>' +
                     '<td class="text-center">' + statusCell + '</td>' +
                     '<td class="text-center"><div class="btn-group btn-group-sm">' +
                     '<button type="button" class="' + invoiceBtnClass + '" ' + invoiceBtnAttrs + '>Invoice</button>' +
