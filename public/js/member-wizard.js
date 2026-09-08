@@ -50,6 +50,25 @@
     }
 
     window.MemberWizardUI = {
+        /**
+         * Lock or release the wizard's primary button around an in-flight
+         * submit. Called by the page that owns the AJAX, because only it knows
+         * when the request has finished.
+         */
+        setBusy: function (selector, busy) {
+            var $wizard = $(selector);
+            var $primary = $wizard.data('mbrwPrimary');
+            if (!$primary || !$primary.length) {
+                return;
+            }
+            $primary.prop('disabled', !!busy).toggleClass('mbrw-btn--busy', !!busy);
+            if (busy) {
+                $primary.data('mbrwLabel', $primary.text()).text('Saving\u2026');
+            } else if ($primary.data('mbrwLabel')) {
+                $primary.text($primary.data('mbrwLabel'));
+            }
+        },
+
         attach: function (wizard) {
             var $wizard = $(wizard);
             if (!$wizard.length || $wizard.data('mbrwAttached')) {
@@ -71,7 +90,18 @@
             $bar.append($cancel).append($primary);
             $wizard.children('.actions').append($bar);
 
+            // The submit is an INSERT of an identity record, and employee_master
+            // has an index on emp_id but no unique constraint on it, so a second
+            // click while the first POST is in flight creates a duplicate member
+            // that nothing downstream will reject. The guard lives here, in the
+            // shared chrome, so create and edit both inherit it.
+            $wizard.data('mbrwPrimary', $primary);
+
             $primary.on('click', function () {
+                if ($primary.prop('disabled')) {
+                    return;
+                }
+
                 if (currentIndex($wizard) >= stepCount($wizard) - 1) {
                     $wizard.steps('finish');
                 } else {

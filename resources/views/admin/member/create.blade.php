@@ -66,6 +66,8 @@ $(document).ready(function() {
     const form = $("#member-form");
     const loadedSteps = {};
     let formIsDirty = false;
+    // True from the moment the member POST leaves until it fails; see onFinished.
+    let memberSubmitInFlight = false;
 
     const wizard = $("#wizard").steps({
         headerTag: "h3",
@@ -123,6 +125,18 @@ $(document).ready(function() {
         },
 
         onFinished: function() {
+            // The button guard in member-wizard.js stops the ordinary double
+            // click; this stops every other route to finish() (the Enter key,
+            // a programmatic call) while a POST is already in flight. Without
+            // it two requests both pass validation before either inserts, and
+            // employee_master has no unique constraint on emp_id to catch the
+            // duplicate.
+            if (memberSubmitInFlight) {
+                return;
+            }
+            memberSubmitInFlight = true;
+            window.MemberWizardUI.setBusy('#wizard', true);
+
             // All 5 steps' inputs are still in the DOM (jQuery Steps never removes
             // them), so this FormData already carries every field from every step —
             // this is the single point where the member is actually created.
@@ -140,6 +154,12 @@ $(document).ready(function() {
                     window.location.href = "/member";
                 },
                 error: function(xhr) {
+                    // Released only on failure: on success the page navigates
+                    // away, and re-enabling the button first would offer a
+                    // second submit of a member that already exists.
+                    memberSubmitInFlight = false;
+                    window.MemberWizardUI.setBusy('#wizard', false);
+
                     const status = xhr.status;
                     const errors = xhr.responseJSON?.errors || {};
                     const lastStep = $(".wizard .step-section").last();

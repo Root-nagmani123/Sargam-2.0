@@ -80,7 +80,13 @@ class BrandedGridExport implements
 
         foreach ($this->rows as $index => $row) {
             $out[] = array_values(array_map(
-                fn ($col) => $col['value']($row, $index),
+                // sanitize_export_cell(), not the raw value: PhpSpreadsheet's
+                // default binder types any leading =, +, - or @ string as a
+                // FORMULA, so a stored master name like =HYPERLINK(...) would
+                // execute in whatever spreadsheet an admin opens the file with.
+                // The helper prefixes an apostrophe, which is also how
+                // PhpSpreadsheet is told "this is literal text".
+                fn ($col) => sanitize_export_cell($col['value']($row, $index)),
                 $this->columns
             ));
         }

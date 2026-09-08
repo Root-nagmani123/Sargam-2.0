@@ -188,7 +188,9 @@ trait ExportsBrandedGrid
 
             foreach ($rows as $index => $row) {
                 fputcsv($handle, array_values(array_map(
-                    fn ($col) => $col['value']($row, $index),
+                    // Same neutralisation as the .xlsx path: a CSV opened in
+                    // Excel evaluates leading =, +, - and @ just as eagerly.
+                    fn ($col) => sanitize_export_cell($col['value']($row, $index)),
                     $columns
                 )));
             }

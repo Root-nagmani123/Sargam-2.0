@@ -149,14 +149,11 @@ class CasteCategoryMasterController extends Controller
         return view('admin.master.caste_category.create', compact('casteCategory'));
     }
 
-    public function update(Request $request, $id)
-    {
-        $data = $request->validate([
-            'group_name' => 'required|string|max:255',
-        ]);
-
-        $employeeGroup = \App\Models\EmployeeGroupMaster::findOrFail($id);
-        $employeeGroup->update($data);
-        return redirect()->route('admin.master.employee_group_master.index')->with('success', 'Employee Group updated successfully.');
-    }
+    /*
+     * The update() that stood here was unrouted dead code copied from the
+     * employee-group controller: it validated the renamed-away `group_name`
+     * and updated an EmployeeGroupMaster row from the CASTE controller, so
+     * routing it would have silently written the wrong table. store()
+     * already handles update-by-id for this screen.
+     */
 }

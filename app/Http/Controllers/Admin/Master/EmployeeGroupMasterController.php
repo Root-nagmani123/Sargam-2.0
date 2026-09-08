@@ -136,16 +136,11 @@ class EmployeeGroupMasterController extends Controller
         return view('admin.master.employee_group.create', compact('employeeGroupMaster'));
     }
 
-    public function update(Request $request, $id)
-    {
-        $data = $request->validate([
-            'group_name' => 'required|string|max:255',
-        ]);
-
-        $employeeGroup = \App\Models\EmployeeGroupMaster::findOrFail($id);
-        $employeeGroup->update($data);
-        return redirect()->route('admin.master.employee_group_master.index')->with('success', 'Employee Group updated successfully.');
-    }
+    /*
+     * The update() that stood here was unrouted dead code validating the
+     * renamed-away `group_name` field. store() already handles
+     * update-by-id for this screen.
+     */
 
 
 }

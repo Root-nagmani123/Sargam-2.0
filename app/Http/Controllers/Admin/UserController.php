@@ -4560,18 +4560,101 @@ class UserController extends Controller
         }
     }
 
+    /**
+     * Every (table => status column) pair the shared `.status-toggle` switch is
+     * allowed to write, derived from the markup that drives it.
+     *
+     * Without this list the endpoint took the table name, the column name and
+     * the value straight off the request and wrote them, which made it an
+     * arbitrary-write primitive for any authenticated session: one POST naming
+     * `user_credentials` and any column of it would have been honoured. The
+     * switches themselves are unchanged — they send exactly these pairs — so
+     * the list costs nothing at runtime and only refuses what no screen asks
+     * for.
+     *
+     * Adding a screen means adding its pair here. ToggleStatusAllowListTest
+     * scans the markup and fails if a pair is missing, so the list cannot
+     * silently fall behind the UI.
+     */
+    private const TOGGLEABLE_STATUS_COLUMNS = [
+        'appellation_master' => ['active_inactive'],
+        'building_floor_room_mapping' => ['active_inactive'],
+        'building_master' => ['active_inactive'],
+        'caste_category_master' => ['active_inactive'],
+        'city_master' => ['active_inactive'],
+        'class_session_master' => ['active_inactive'],
+        'country_master' => ['active_inactive'],
+        'course_group_type_master' => ['active_inactive'],
+        'course_master' => ['active_inactive'],
+        'course_memo_decision_mapp' => ['active_inactive'],
+        'department_master' => ['active_inactive'],
+        'designation_master' => ['active_inactive'],
+        'discipline_master' => ['active_inactive'],
+        'employee_group_master' => ['active_inactive'],
+        'employee_type_master' => ['active_inactive'],
+        'faculty_expertise_master' => ['active_inactive'],
+        'faculty_master' => ['active_inactive'],
+        'faculty_type_master' => ['active_inactive'],
+        'fc_exemption_master' => ['visible'],
+        'fc_registration_master' => ['active_inactive'],
+        'floor_master' => ['active_inactive'],
+        'group_type_master_course_master_map' => ['active_inactive'],
+        'hostel_building_floor_mapping' => ['active_inactive'],
+        'hostel_building_master' => ['active_inactive'],
+        'hostel_floor_room_mapping' => ['active_inactive'],
+        'hostel_room_master' => ['active_inactive'],
+        'issue_category_master' => ['status'],
+        'issue_priority_master' => ['status'],
+        'issue_sub_category_master' => ['status'],
+        'memo_conclusion_master' => ['active_inactive'],
+        'memo_type_master' => ['active_inactive'],
+        'news' => ['status'],
+        'notices_notification' => ['active_inactive'],
+        'ot_hostel_room_details' => ['active_inactive'],
+        'sec_id_cardno_config_map' => ['active_inactive'],
+        'sec_id_cardno_master' => ['active_inactive'],
+        'sidebar_categories' => ['is_active'],
+        'sidebar_menu_groups' => ['is_active'],
+        'state_district_mapping' => ['active_inactive'],
+        'state_master' => ['active_inactive'],
+        'states' => ['status'],
+        'stream_master' => ['status'],
+        'subject_master' => ['active_inactive'],
+        'subject_module_master' => ['active_inactive'],
+        'user_role_master' => ['active_inactive'],
+        'venue_master' => ['active_inactive'],
+    ];
+
 public function toggleStatus(Request $request)
 {
-    try {
-        $idColumn = $request->id_column ?? 'pk';
-        $table = $request->table;
-        $column = $request->column;
-        $id = $request->id;
-        $status = $request->status;
+    // Deliberately OUTSIDE the try below: that catch turns anything it sees
+    // into a logged 500, which would disguise a refused write as a server
+    // fault and hand the caller the wrong status code.
+    //
+    // Locked to the primary key: every status switch in the application
+    // identifies its row by `pk`, and letting the client pick the lookup
+    // column is the other half of the same arbitrary-write problem.
+    $idColumn = 'pk';
+    $table = (string) $request->input('table');
+    $column = (string) $request->input('column');
+    $id = $request->input('id');
+    $status = $request->input('status');
 
-        DB::table($request->table)
-            ->where($idColumn, $id)
-            ->update([$column => $status]);
+    $permittedColumns = self::TOGGLEABLE_STATUS_COLUMNS[$table] ?? null;
+
+    abort_if($permittedColumns === null, 403, 'That table cannot be toggled from here.');
+    abort_unless(in_array($column, $permittedColumns, true), 403, 'That column cannot be toggled from here.');
+    // ctype_digit alone: it already rules out negatives, signs and injection
+    // strings, and a '> 0' test would reject a legitimate row at pk 0 —
+    // department_master really holds one ('NIAR').
+    abort_unless(ctype_digit((string) $id), 422, 'A row id is required.');
+    // The shared handler sends 1 or 0 and nothing else.
+    abort_unless(in_array((string) $status, ['0', '1'], true), 422, 'Status must be 0 or 1.');
+
+    try {
+        DB::table($table)
+            ->where($idColumn, (int) $id)
+            ->update([$column => (int) $status]);
 
         if ($table === 'employee_type_master') {
             EmployeeTypeMasterDataTable::bumpListingCacheEpoch();

@@ -5,6 +5,7 @@ use App\DataTables\MemberDataTable;
 use App\Http\Controllers\Concerns\ExportsBrandedGrid;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use App\Http\Requests\Admin\Member\{
     StoreMemberStep1Request,
@@ -448,6 +449,8 @@ class MemberController extends Controller
     {
         $member = EmployeeMaster::with('appellationMaster')->findOrFail(decrypt($id));
 
+        $this->logMemberPii('print', ['member_pk' => $member->pk]);
+
         return view('admin.member.print', [
             'member' => $member,
             'sections' => $this->memberProfileSections($member),
@@ -611,6 +614,29 @@ class MemberController extends Controller
      * ?status_filter= when one is deep-linked. Print is a server-rendered
      * branded view, not window.print() over the screen.
      */
+    /**
+     * One structured line per personal-data egress from this controller.
+     *
+     * These endpoints hand out a member's home address, date of birth, personal
+     * email and mobile — the print sheet for one member, the export for every
+     * member matching the current filters. A privileged read of personal data
+     * with no record of who took it, when, or how much is not auditable after
+     * the fact, which is the whole point of having the record.
+     *
+     * The row DATA is never logged: copying the PII into log files would widen
+     * the exposure rather than account for it.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function logMemberPii(string $action, array $context = []): void
+    {
+        Log::info('member.pii.' . $action, array_merge([
+            // user_credentials is keyed on `pk`, so auth()->id() is that pk.
+            'user_pk' => auth()->id(),
+            'ip' => request()->ip(),
+        ], $context));
+    }
+
     public function export(Request $request, string $format = 'csv')
     {
         $format = strtolower($format);
@@ -640,6 +666,12 @@ class MemberController extends Controller
             $filters['group'] ? 'Group: ' . (EmployeeGroupMaster::find($filters['group'])->emp_group_name ?? $filters['group']) : null,
             $filters['department'] ? 'Department: ' . (DepartmentMaster::find($filters['department'])->department_name ?? $filters['department']) : null,
             $search !== '' ? 'Search: ' . $search : null,
+        ]);
+
+        $this->logMemberPii('export', [
+            'format' => $format,
+            'filters' => $filterParts === [] ? null : implode('  |  ', $filterParts),
+            'rows' => $rows->count(),
         ]);
 
         return $this->brandedGridResponse(
