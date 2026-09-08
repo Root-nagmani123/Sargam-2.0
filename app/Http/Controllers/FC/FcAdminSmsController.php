@@ -21,22 +21,9 @@ class FcAdminSmsController extends Controller
 {
     public function index(Request $request, FcAdminSmsBulkService $bulk): View
     {
-        $currentDate = now()->format('Y-m-d');
-
-        // Same "active" scope as the Dynamic Forms admin list (Form Management):
-        // is_active plus linked course not yet ended (or no linked course) — so a form
-        // whose course has ended can't still be picked here for a bulk SMS/Email send.
-        $forms = FcForm::query()
-            ->where('is_active', true)
-            ->where(function ($q) use ($currentDate) {
-                $q->whereNull('course_master_pk')
-                    ->orWhereHas('courseMaster', function ($c) use ($currentDate) {
-                        $c->where(function ($e) use ($currentDate) {
-                            $e->whereNull('end_date')
-                                ->orWhere('end_date', '>=', $currentDate);
-                        });
-                    });
-            })
+        // Active forms whose linked course has not ended (or that have no linked course) —
+        // same scope the request validation and the send-side resolver use.
+        $forms = FcForm::selectableForBulkSend()
             ->orderByRaw('LOWER(form_name)')
             ->get(['id', 'form_name']);
 
@@ -83,7 +70,7 @@ class FcAdminSmsController extends Controller
     {
         $validated = $request->validate([
             'template' => 'required|in:b1,b2,b3',
-            'form_id' => ['required', 'integer', Rule::exists('fc_forms', 'id')->where('is_active', true)],
+            'form_id' => ['required', 'integer', Rule::in(FcForm::selectableForBulkSend()->pluck('id')->all())],
         ]);
 
         $template = $validated['template'];
@@ -191,7 +178,7 @@ class FcAdminSmsController extends Controller
     {
         $validated = $request->validate([
             'template' => 'required|in:b1,b2,b3',
-            'form_id' => ['required', 'integer', Rule::exists('fc_forms', 'id')->where('is_active', true)],
+            'form_id' => ['required', 'integer', Rule::in(FcForm::selectableForBulkSend()->pluck('id')->all())],
             'send_mode' => 'required|in:all,selected',
             'registration_pks' => 'required_if:send_mode,selected|array|min:1',
             'registration_pks.*' => 'integer|min:1',
