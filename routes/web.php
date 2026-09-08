@@ -206,7 +206,22 @@ Route::middleware(['auth'])->group(function () {
     // Shared: attachment download, gated in-body to the admin or the issue's own reporter
     Route::get('/issue-reports/{id}/attachment', [\App\Http\Controllers\Admin\IssueReportController::class, 'attachment'])->whereNumber('id')->name('issue-reports.attachment');
     Route::get('/directory/lbsnaa', [DirectoryController::class, 'lbsnaa'])->name('admin.directory.lbsnaa');
+    Route::get('/directory/lbsnaa/data', [DirectoryController::class, 'lbsnaaData'])->name('admin.directory.lbsnaa.data');
     Route::get('/directory/ot', [DirectoryController::class, 'ot'])->name('admin.directory.ot');
+    // DataTables server-side feed for the OT grid (search / sort / paging are all SQL).
+    Route::get('/directory/ot/data', [DirectoryController::class, 'otData'])->name('admin.directory.ot.data');
+
+    // The grids are open to every authenticated user; the DOWNLOADS are not — one
+    // GET returns the whole roster's address / phone / personal email as a file.
+    Route::middleware(['directory.export', 'throttle:20,1'])->group(function () {
+        // csv | excel | pdf | print | full — one action, so the five can't drift apart.
+        Route::get('/directory/lbsnaa/export/{format}', [DirectoryController::class, 'lbsnaaExport'])
+            ->whereIn('format', ['csv', 'excel', 'pdf', 'print', 'full'])
+            ->name('admin.directory.lbsnaa.export');
+        Route::get('/directory/ot/export/{format}', [DirectoryController::class, 'otExport'])
+            ->whereIn('format', ['csv', 'excel', 'pdf', 'print', 'full'])
+            ->name('admin.directory.ot.export');
+    });
 
     // Birthday Wish Routes
     Route::get('/birthday-wishes', [BirthdayWishController::class, 'index'])->name('admin.birthday-wish.index');

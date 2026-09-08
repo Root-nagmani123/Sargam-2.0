@@ -1,0 +1,253 @@
+/* =====================================================================
+   Directory module — admin index chrome (`dir-*`)
+   ---------------------------------------------------------------------
+   Scoped under `.dir-page` so nothing can leak. Built on the shared
+   `programme-dt-*` chrome (public/css/custom.css) and the `--ds-*` token
+   layer (public/css/sargam-app.css); this file only expresses what those
+   two can't:
+
+     - the Select2 programme filter, which has to line up with the 40px
+       toolbar row rather than the theme's own 44px,
+     - the identity cell (avatar + name over OT code) and its initials
+       fallback,
+     - wrap / width classes for the long text columns (`.programme-dt-table`
+       only wraps column 2),
+     - the block DataTables writes into its empty-table cell.
+
+   Consumers: admin/directory/ot.blade.php. See docs/new-design-index-page.md.
+   ===================================================================== */
+
+.dir-page {
+    /* Match the programme-dt control palette exactly — these controls sit
+       shoulder-to-shoulder with .programme-dt-btn-columns / -btn-reset, so
+       they must share its border and radius rather than the softer --ds-line. */
+    --dir-control-border: #d0d5dd;
+    --dir-control-border-hover: #98a2b3;
+    --dir-control-radius: 8px;
+    --dir-control-h: var(--ds-control-h, 2.5rem);
+}
+
+/* ── Export row above the card (§1: no status pills → right-aligned) ── */
+.dir-page .dir-secondary-actions .dropdown-toggle::after {
+    margin-left: 0.35rem;
+}
+
+/* ── Filters ───────────────────────────────────────────────────────── */
+/* Only the OT programme slot needs the extra width — its names are long. The
+   LBSNAA toolbar carries TWO filters and stays on the shared 180px, or the row
+   wraps onto a second line. */
+.dir-page .dir-filter-wide {
+    width: 260px;
+    max-width: 100%;
+}
+
+/* Two filters don't fit the standard widths: label + two 180px slots + Reset +
+   Columns + a 300px search overflows the 964px card and Reset Filters drops onto
+   a second row. These two numbers were found by measuring, not arithmetic — the
+   row still wrapped at 165/250 and only settled at 150/240, so treat them as a
+   measured ceiling and re-check with the toolbar's own height (40 = one row)
+   after adding anything to this toolbar. */
+.dir-page .dir-toolbar--two-filters .programme-dt-filter-select {
+    width: 150px;
+}
+
+.dir-page .dir-toolbar--two-filters .programme-dt-search {
+    width: 240px;
+}
+
+/* A 150px slot is too narrow to read a long designation in, but the Select2
+   panel is a sibling of <body> and free to be wider than its control. Applied
+   through dropdownCssClass, hence no .dir-page ancestor to scope it with. */
+.dir-dropdown-wide {
+    min-width: 22rem;
+}
+
+.dir-page .programme-dt-filter-select .form-select {
+    height: var(--dir-control-h);
+    padding: 0.5rem 2rem 0.5rem 0.875rem;
+    font-size: 0.9375rem;
+    color: var(--ds-ink, #1f2937);
+    border: 1px solid var(--dir-control-border);
+    border-radius: var(--dir-control-radius);
+    box-shadow: none;
+}
+
+.dir-page .programme-dt-filter-select .form-select:focus {
+    border-color: var(--ds-primary, #004384);
+    box-shadow: var(--ds-focus-ring, 0 0 0 0.2rem rgba(0, 67, 132, 0.2));
+}
+
+/* Select2 replaces the native <select>, so the .form-select rules above no
+   longer reach the visible control. select2-theme.css sizes it at 44px for the
+   form pages it was written for; in this toolbar it has to line up with the
+   40px Reset / Columns / search row. Scoped to the directory's filter slots so
+   height stands everywhere else. */
+.dir-page .programme-dt-filter-select .select2-container {
+    width: 100% !important;              /* Select2 writes an inline px width on init */
+}
+
+.dir-page .programme-dt-filter-select .select2-container--default .select2-selection--single {
+    height: var(--dir-control-h);
+    border-color: var(--dir-control-border);
+    border-radius: var(--dir-control-radius);
+}
+
+.dir-page .programme-dt-filter-select .select2-container--default .select2-selection--single .select2-selection__rendered {
+    font-size: 0.9375rem;
+}
+
+.dir-page .programme-dt-filter-select .select2-container--default.select2-container--focus .select2-selection--single,
+.dir-page .programme-dt-filter-select .select2-container--default.select2-container--open .select2-selection--single {
+    border-color: var(--ds-primary, #004384);
+    box-shadow: var(--ds-focus-ring, 0 0 0 0.2rem rgba(0, 67, 132, 0.2));
+}
+
+/* ── Cells ─────────────────────────────────────────────────────────── */
+
+/* A grid too wide for the card scrolls INSIDE .table-responsive rather than
+   being squeezed. Without a floor the browser has to honour `w-100` on the
+   table, and with nine columns (LBSNAA: a free-text Address plus three phone
+   columns) it satisfies the min-widths by collapsing the LAST column to 0px —
+   Email ID rendered as invisible data, not even scrollable to. Measure the
+   header widths after adding a column; a 0 means this floor needs raising. */
+.dir-page .dir-grid--wide {
+    min-width: 1340px;
+}
+
+/* .programme-dt-table only wraps column 2 (Name); Email / Course / Cadre
+   would otherwise render as one unbroken line and push the grid sideways. */
+.dir-page .dir-col-wrap {
+    white-space: normal;
+    max-width: 260px;
+    word-break: break-word;
+}
+
+/* Room No. / Room Extension No. hold a placeholder, but their headings are the
+   two longest on the grid and `.programme-dt-table thead th` is nowrap — so
+   auto-layout hands them 240px of the 964 the table has, and Email gets squeezed
+   into breaking mid-address. Let those headings wrap and cap the columns. */
+.dir-page .dir-col-tight {
+    white-space: normal;
+    width: 5rem;
+}
+
+/* Course Name / Cadre Name hold short values under two-word headings. Without a
+   floor, auto-layout hands the width to the placeholder columns instead and both
+   of these wrap onto two lines. */
+.dir-page .dir-col-text {
+    min-width: 6.75rem;
+}
+
+/* Enough room for a full address before word-break has to step in. */
+.dir-page .dir-col-email {
+    min-width: 11rem;
+}
+
+/* Free-text address. Without a floor the other columns' min-widths leave it
+   around 74px, which truncates every entry to a couple of words. */
+.dir-page .dir-col-address {
+    min-width: 12rem;
+}
+
+/* ── Identity column (Photo + Name + OT Code in one cell) ──────────────
+   `.programme-dt-table tbody td:nth-child(2)` already wraps this column and
+   caps it at 420px; the rules below only lay the three parts out. */
+.dir-page .dir-col-identity {
+    min-width: 12rem;
+}
+
+.dir-page .dir-identity {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2, 0.5rem);
+}
+
+.dir-page .dir-identity__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+}
+
+.dir-page .dir-identity__name {
+    font-weight: 500;
+    color: #101828;
+    line-height: 1.35;
+}
+
+.dir-page .dir-identity__code {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--ds-ink-muted, #667085);
+    line-height: 1.2;
+}
+
+/* Avatar: initials underneath, photo (when there is one) layered over them.
+   The image starts transparent and is revealed by .is-loaded from its own onload,
+   so a slow or missing photo shows initials rather than a broken-image box. */
+.dir-page .dir-avatar {
+    position: relative;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(0, 67, 132, 0.08);
+    border: 1px solid var(--ds-line, #e5e7eb);
+}
+
+.dir-page .dir-avatar__initials {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    color: var(--ds-primary, #004384);
+    user-select: none;
+}
+
+.dir-page .dir-avatar__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.dir-page .dir-avatar__img.is-loaded {
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dir-page .dir-avatar__img {
+        transition: none;
+    }
+}
+
+/* DataTables writes its language.emptyTable / zeroRecords markup into one
+   full-width cell, so the padding has to come from the block inside it. */
+.dir-page .dir-empty {
+    padding: var(--ds-space-5, 2rem) var(--ds-space-3, 1rem);
+    color: var(--ds-ink-muted, #667085);
+    text-align: center;
+}
+
+.dir-page .dir-empty i {
+    font-size: 1.75rem;
+    opacity: 0.5;
+}
+
+.dir-page .dir-empty h6 {
+    color: var(--ds-ink, #1f2937);
+}
+
+@media (max-width: 991.98px) {
+    .dir-page .programme-dt-filter-select,
+    .dir-page .programme-dt-search {
+        width: 100%;
+    }
+}
