@@ -31,6 +31,7 @@ use App\Exports\BrandedGridExport;
 use App\Exports\StudentListReportExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Excel as ExcelWriter;
+use App\Support\PdfPageNumbers;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 use Adldap\Laravel\Facades\Adldap;
@@ -4403,15 +4404,20 @@ class UserController extends Controller
                 $reportData['totalRows'] = count($rows);
             }
 
-            return Pdf::loadView('admin.user_management.users.partials.export_pdf', $reportData)
+            $pdf = Pdf::loadView('admin.user_management.users.partials.export_pdf', $reportData)
                 ->setPaper('a4', 'landscape')
                 ->setOptions([
                     'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    // The page-number script in the view needs this.
-                    'isPhpEnabled' => true,
-                ])
-                ->download("{$fileBase}.pdf");
+                    // Never true: isPhpEnabled makes the renderer a PHP
+                    // execution context for the whole view, so any raw block
+                    // that later appears in an export blade would execute.
+                    // Page numbers are stamped on the canvas after render
+                    // instead — see PdfPageNumbers.
+                    'isPhpEnabled' => false,
+                ]);
+
+            return PdfPageNumbers::stamp($pdf, 20)->download("{$fileBase}.pdf");
         }
 
         if ($format === 'xlsx') {

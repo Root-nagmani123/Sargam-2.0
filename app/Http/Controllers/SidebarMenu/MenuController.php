@@ -17,6 +17,7 @@ use App\Services\SidebarMenu\MenuService;
 use App\Services\SidebarMenu\MenuGroupService;
 use App\Exports\BrandedGridExport;
 use App\Support\ExportCsvHeader;
+use App\Support\PdfPageNumbers;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -131,7 +132,7 @@ class MenuController extends Controller
         }
 
         if ($format === 'pdf') {
-            return Pdf::loadView('exports.branded_grid_pdf', [
+            $pdf = Pdf::loadView('exports.branded_grid_pdf', [
                 'reportTitle' => $reportTitle,
                 'columns' => $columns,
                 'rows' => $rows,
@@ -151,10 +152,15 @@ class MenuController extends Controller
                 ->setOptions([
                     'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    // The page-number script in the view needs this.
-                    'isPhpEnabled' => true,
-                ])
-                ->download($filename.'.pdf');
+                    // Never true: isPhpEnabled makes the renderer a PHP
+                    // execution context for the whole view, so any raw block
+                    // that later appears in an export blade would execute.
+                    // Page numbers are stamped on the canvas after render
+                    // instead — see PdfPageNumbers.
+                    'isPhpEnabled' => false,
+                ]);
+
+            return PdfPageNumbers::stamp($pdf)->download($filename.'.pdf');
         }
 
         // The same band the .xlsx and the print/PDF headers carry, so the CSV names
