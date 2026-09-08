@@ -672,6 +672,34 @@ class FeedbackController extends Controller
     //     return $query;
     // }
 
+    /**
+     * Course ids matching the Faculty Average course-type filter.
+     *
+     * Must stay byte-for-byte equivalent to the course-type predicate applied to the main
+     * query in showFacultyAverage() — archived: end_date < today; current/default: end_date
+     * IS NULL OR end_date >= today. It exists only so the optimiser can eliminate courses by
+     * primary key instead of evaluating a non-indexable date expression per feedback row.
+     *
+     * Deliberately does NOT filter on active_inactive: the dropdown list ($programs) does,
+     * and borrowing it here made the screen disagree with its own exports.
+     *
+     * @return array<int, int|string>
+     */
+    private function facultyAverageCourseIdsForType(string $courseType): array
+    {
+        return DB::table('course_master')
+            ->when(
+                $courseType === 'archived',
+                fn ($q) => $q->whereDate('end_date', '<', Carbon::today()),
+                fn ($q) => $q->where(function ($q2) {
+                    $q2->whereNull('end_date')
+                        ->orWhereDate('end_date', '>=', Carbon::today());
+                })
+            )
+            ->pluck('pk')
+            ->all();
+    }
+
     public function showFacultyAverage(Request $request)
     {
         // Get filter parameters with defaults
@@ -783,19 +811,26 @@ class FeedbackController extends Controller
         } else {
             /*
              * No single program selected, so the only thing narrowing courses is the
-             * course-type filter above — and that is a date expression MySQL cannot use an
+             * course-type filter below — and that is a date expression MySQL cannot use an
              * index for, so it reads every feedback row and evaluates the date per row
-             * (31,515 rows scanned to return nothing, ~119 ms).
+             * (31,515 rows scanned to return nothing, ~119 ms). Restricting on the matching
+             * course ids lets the optimiser eliminate courses through the primary key
+             * first — measured 119 ms -> 0.02 ms.
              *
-             * $programs already holds exactly the course ids that pass that filter: it is
-             * built from the same course_type test and the same role scope, immediately
-             * above. Restricting on those ids lets the optimiser eliminate courses through
-             * the primary key first — same rows, measured 119 ms -> 0.02 ms.
+             * The ids are derived from the SAME predicate the main query applies (end_date
+             * only), NOT from $programs. $programs additionally requires active_inactive = 1
+             * because it populates the dropdown; reusing it here silently added that
+             * restriction to the report, so a deactivated course carrying feedback vanished
+             * from the screen while exportExcel/exportPdf/printFacultyAverage — which have
+             * no such filter — still listed it. Screen and export must agree.
+             *
+             * Role scope is deliberately not repeated here: applyFeedbackReportCourseScope()
+             * is applied to $query immediately below and already constrains the same column.
              *
              * An empty list means no course matches the selected type, so no feedback can
              * qualify either; whereIn([]) correctly yields nothing.
              */
-            $query->whereIn('cm.pk', $programs->keys()->all());
+            $query->whereIn('cm.pk', $this->facultyAverageCourseIdsForType($courseType));
         }
 
         $this->applyFeedbackReportCourseScope($query);
