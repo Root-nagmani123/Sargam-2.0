@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\CalendarEvent;
 use App\Models\FacultyMaster;
 use App\Models\Timetable;
 use App\Support\FeedbackReportCache;
@@ -53,8 +54,17 @@ class AppServiceProvider extends ServiceProvider
          * from more than twenty places and faculty_master from several, so a per-call-site
          * bust would be one missed edit away from silently going stale again. Both are
          * Eloquent models with no raw query-builder writes, so saved/deleted covers them.
+         *
+         * CalendarEvent is listed because Eloquent events are per model CLASS, not per table,
+         * and TWO classes map to `timetable`: Timetable (app/Models/Timetable.php) and
+         * CalendarEvent (app/Models/CalendarEvent.php). Every session write goes through
+         * CalendarEvent — create/update/delete in CalendarController — while Timetable is
+         * only ever read from. Hooking Timetable alone therefore registered on a class
+         * nothing writes, and session changes left the topic dropdown stale for the full
+         * TTL. Timetable stays in the list so the coverage survives if a write path is ever
+         * added through it.
          */
-        foreach ([Timetable::class, FacultyMaster::class] as $model) {
+        foreach ([CalendarEvent::class, Timetable::class, FacultyMaster::class] as $model) {
             $model::saved(static fn () => FeedbackReportCache::bust());
             $model::deleted(static fn () => FeedbackReportCache::bust());
         }

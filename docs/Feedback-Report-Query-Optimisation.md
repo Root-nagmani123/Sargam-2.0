@@ -270,12 +270,12 @@ all of them; changing any single query corrects one.
 
 Things review raised that are **recorded rather than fixed**, each with the reason.
 
-Two of the three entries below were **fixed** in response to PR #316 review rather than accepted.
+Three of the five entries below were **fixed** in response to PR #316 review rather than accepted.
 What remains is recorded with the reason and a review trigger.
 
 | Limitation | Status | Accepted by | Review by |
 | --- | --- | --- | --- |
-| Cache staleness on the three lookup caches | **FIXED** — `Timetable` / `FacultyMaster` `saved`+`deleted` bump the generation (`AppServiceProvider::boot()`) | n/a | n/a |
+| Cache staleness on the three lookup caches | **FIXED** — `CalendarEvent` / `Timetable` / `FacultyMaster` `saved`+`deleted` bump the generation (`AppServiceProvider::boot()`) | n/a | n/a |
 | showFacultyAverage all-programs filter divergence | **FIXED** — ids now derived from the main query's own `end_date` predicate via `facultyAverageCourseIdsForType()`, not from `$programs` | n/a | n/a |
 | Cache store resolution had no working fallback | **FIXED** — `FeedbackReportCache::store()` probes and falls back (`file`, then `cache.default`) | n/a | n/a |
 | Derived tables not bounded by `feedback_checkbox` | Accepted | _unassigned — Feedback module owner to sign_ | when `timetable` grows by an order of magnitude |
@@ -303,41 +303,67 @@ hot per-trainee path, to exclude data that does not exist. `StudentFeedbackFacul
 pins the current behaviour, so a future import that introduces string ids or case-variant roles
 fails the test rather than silently changing a trainee's pending list.
 
-### Cache staleness on the three lookup caches
+### Cache staleness on the three lookup caches — FIXED
 
-`db_faculties`, `topics:course:{id}` and `faculty_suggestions` are invalidated only by
-`FeedbackReportCache::bust()`, which is called from one place — after a successful `topic_feedback`
-insert in `CalendarController::submitFeedback()`. The lookups themselves derive from `timetable`
-and `faculty_master`, and writes to those tables do **not** bust the generation.
+`db_faculties`, `topics:course:{id}` and `faculty_suggestions` were invalidated only by
+`FeedbackReportCache::bust()` after a successful `topic_feedback` insert in
+`CalendarController::submitFeedback()`. The lookups derive from `timetable` and `faculty_master`,
+so writes to those tables did not bust the generation, and a newly added session topic or a renamed
+faculty member could be missing from the report dropdowns for up to the TTL — 900 s for the two
+lookups, 600 s for the typeahead.
 
-**Consequence:** a newly added session topic, or a renamed faculty member, can be missing from the
-report dropdowns for up to the TTL — 900 s for the two lookups, 600 s for the typeahead. Before
-this change those lists were always fresh.
+**Fixed** in `AppServiceProvider::boot()`: `saved` and `deleted` on `CalendarEvent`, `Timetable`
+and `FacultyMaster` each bump the generation.
 
-**Accepted, not fixed.** Adding `bust()` to the timetable and faculty write paths means changing
-cache-invalidation behaviour in controllers outside this work. The staleness is bounded and
-self-healing, and no wrong data is served — only a briefly incomplete dropdown. Revisit if users
-report missing options rather than pre-emptively.
+The subtlety worth recording, because a first attempt at this fix got it wrong: **Eloquent events
+are registered per model CLASS, not per table**, and two classes map to `timetable` —
+`app/Models/Timetable.php:9` and `app/Models/CalendarEvent.php:12` both declare
+`protected $table = 'timetable'`. Every session write goes through `CalendarEvent` (create at
+`CalendarController::store()`, update at `update_event()`, delete at `delete_event()`), while
+`Timetable` is only ever read from — a repo-wide grep finds no write through it. Hooking
+`Timetable` alone therefore registered the listener on a class nothing writes, and the staleness
+stayed open while appearing closed. `Timetable` is kept in the list so the coverage survives if a
+write path is ever added through it.
 
-### showFacultyAverage's all-programs path is filtered slightly differently from its exports
+Verified by exercising each write path with the row rolled back afterwards:
 
-On the all-programs path (no single programme selected), `showFacultyAverage()` restricts the query
+```
+CalendarEvent  save()   generation 110 -> 111   busted
+Timetable      save()   generation 111 -> 112   busted
+FacultyMaster  save()   generation 112 -> 113   busted
+CalendarEvent  delete() generation 113 -> 114   busted
+```
+
+The hook cannot break a write: `bust()` wraps everything in `try/catch (Throwable)` and `report()`s,
+so an unreachable cache store leaves the save unaffected. None of the three write paths runs in a
+loop, so this is one cache increment per admin action, not per row.
+
+### showFacultyAverage's all-programs path vs its exports — FIXED
+
+On the all-programs path (no single programme selected), `showFacultyAverage()` restricted the query
 with `whereIn('cm.pk', $programs->keys())`. `$programs` is built from `course_master` with
 `active_inactive = 1` **plus** the course-type date test, whereas the main query's own course-type
-filter tests `cm.end_date` only. The `whereIn` therefore carries an implicit `active_inactive = 1`
+filter tests `cm.end_date` only. The `whereIn` therefore carried an implicit `active_inactive = 1`
 that the query never had — and `exportExcel()`, `exportPdf()` and `printFacultyAverage()` did not
-receive the same `whereIn`.
+receive the same `whereIn`, so a deactivated course whose `end_date` still passed the course-type
+test would have appeared in the exports but not on screen.
 
-**Consequence in principle:** a deactivated course whose `end_date` still passes the course-type
-test would appear in the exports but not on screen.
+**Fixed** by `facultyAverageCourseIdsForType()`, which derives the id list from `course_master`
+using the same `end_date` predicate the main query applies and deliberately omits
+`active_inactive`. The `whereIn` is now a pure optimiser hint that cannot change the result set,
+because the date predicate still runs on the main query. Screen and exports agree by construction.
 
-**Consequence in practice: none today.** Measured 2026-09-01 — courses with `active_inactive <> 1`
-that carry submitted feedback: **0**; submitted feedback rows on them: **0**. There is nothing for
-the filter to exclude.
+Verified — the helper's own output:
 
-**Accepted, not fixed.** Aligning it is a query-behaviour change, and a behaviour change whose only
-effect today is nil is a poor trade inside a performance PR. Fix it deliberately if inactive
-courses ever start carrying feedback — the check is the two counts above.
+```
+current   ->   2 course ids, of which 0 are inactive
+archived  -> 144 course ids, of which 2 are inactive   <- inactive courses retained
+```
+
+The two inactive courses are present in the archived id set, which is exactly what the old
+`$programs`-derived list excluded. There was also no live impact to begin with: courses with
+`active_inactive <> 1` carrying submitted feedback measured **0** rows on 2026-09-01 and again on
+2026-09-08. The divergence is now structurally absent rather than merely dormant.
 
 ### The derived tables are not bounded by feedback_checkbox
 
