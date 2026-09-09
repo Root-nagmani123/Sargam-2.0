@@ -142,7 +142,6 @@
         <h5 class="text-center fw-bold mb-3" id="tpl_course_name"></h5>
         <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
         <hr>
-        <p class="mb-1" id="tpl_type_label"></p>
         <p><strong>Date:</strong> <span id="tpl_date"></span></p>
         <div id="tpl_content" class="mb-3"></div>
         <p class="text-end">
@@ -236,7 +235,6 @@
                     var courseName = $('#courseSelect option:selected').text();
                     var today = new Date().toLocaleDateString('en-GB');
                     $('#tpl_course_name').text(courseName);
-                    $('#tpl_type_label').text('SHOW CAUSE ' + type.toUpperCase());
                     $('#tpl_date').text(today);
                     $('#tpl_content').html(tpl.content);
                     $('#tpl_director_name').text(tpl.director_name || '');

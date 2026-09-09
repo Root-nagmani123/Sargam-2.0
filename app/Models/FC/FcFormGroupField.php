@@ -11,7 +11,7 @@ class FcFormGroupField extends Model
         'group_id', 'field_name', 'label', 'field_type', 'target_column',
         'validation_rules', 'is_required', 'display_order', 'placeholder',
         'options_json', 'lookup_table', 'lookup_value_column', 'lookup_label_column',
-        'css_class', 'is_active',
+        'css_class', 'is_active', 'condition_field', 'condition_value',
     ];
 
     protected $casts = [

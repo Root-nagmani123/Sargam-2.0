@@ -446,12 +446,16 @@
                         </div>
                     </div>
 
-                    {{-- Course --}}
-                    @if(($courseOptions ?? collect())->isNotEmpty())
+                    {{-- Course. Options are role-scoped (see UserController::studentList):
+                         a faculty / CC / ACC only gets their own courses. The control stays
+                         visible even when that scope is empty, showing a "No course assigned"
+                         placeholder instead of silently disappearing from the filter bar. --}}
+                    @php $slCourseOptions = $courseOptions ?? collect(); @endphp
                     <div class="sl-filter-item" id="slItemCourse">
                         <span class="sl-filter-label-text">Course</span>
-                        <select id="courseFilter" class="form-select sl-filter-select" aria-label="Filter by course">
-                            <option value="">Course Name</option>
+                        <select id="courseFilter" class="form-select sl-filter-select" aria-label="Filter by course"
+                            {{ $slCourseOptions->isEmpty() ? 'disabled' : '' }}>
+                            <option value="">{{ $slCourseOptions->isEmpty() ? 'No course assigned' : 'Course Name' }}</option>
                             @foreach($courseOptions as $course)
                                 @php
                                     $cStart = !empty($course->start_year) ? \Carbon\Carbon::parse($course->start_year)->format('j F Y') : '';
@@ -465,7 +469,6 @@
                             @endforeach
                         </select>
                     </div>
-                    @endif
 
                     {{-- Cadre --}}
                     @if(($cadreOptions ?? collect())->isNotEmpty())

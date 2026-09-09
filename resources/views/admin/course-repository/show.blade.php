@@ -1,5 +1,49 @@
 @extends('admin.layouts.master')
 
+@php
+    // Upload limits, resolved once and reused by the form hints, the file inputs' accept
+    // filter and the client-side checks, so all three can never drift apart.
+    // PHP drops an oversized POST before Laravel ever runs, so the browser gets an HTML
+    // error page instead of our JSON and the real reason (size) is lost — the client needs
+    // the actual limits to name the problem before sending anything.
+    $iniToBytes = static function ($value) {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return 0;
+        }
+        $unit = strtolower(substr($value, -1));
+        $bytes = (int) $value;
+        if ($unit === 'g') {
+            return $bytes * 1024 * 1024 * 1024;
+        }
+        if ($unit === 'm') {
+            return $bytes * 1024 * 1024;
+        }
+        if ($unit === 'k') {
+            return $bytes * 1024;
+        }
+        return $bytes;
+    };
+    $postMaxBytes = $iniToBytes(ini_get('post_max_size'));
+    // Same limit the controller validates with on submit and update, so the hint, the
+    // client-side check and the server rule always state one number.
+    //
+    // Clamped through the SAME helper CourseRepositoryController::uploadMaxKb() uses, so
+    // the hint, the client-side check and the server `max:` rule cannot state different
+    // numbers. Announcing the configured 25 MB while php.ini only accepts ~19 MB would
+    // promise a size the server then discards silently.
+    $perFileMaxBytes = \App\Rules\SafeUploadedDocument::maxKilobytes(
+        (int) config('course_repository.max_file_kb', 25600)
+    ) * 1024;
+
+    $allowedUploadExtensions = (array) config('course_repository.allowed_extensions', ['pdf']);
+    // Feeds the file picker's own type filter, e.g. ".pdf"
+    $uploadAcceptAttr = '.' . implode(',.', $allowedUploadExtensions);
+    $uploadTypesLabel = strtoupper(implode(', ', $allowedUploadExtensions));
+    $uploadMaxSizeLabel = rtrim(rtrim(number_format($perFileMaxBytes / (1024 * 1024), 1), '0'), '.') . ' MB';
+    $uploadHint = 'Allowed file types: ' . $uploadTypesLabel . '. Maximum size: ' . $uploadMaxSizeLabel . ' per file.';
+@endphp
+
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet"
@@ -791,11 +835,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
                                 <!-- Document Upload -->
                                 <div class="mb-4">
-                                    <label class="form-label">
+                                    <label class="form-label mb-1">
                                         Document Upload <span class="text-danger">*</span>
-                                        <i class="bi bi-info-circle text-muted ms-1"
-                                            title="Max 10MB. jpg, jpeg, png, pdf, doc, docx" aria-hidden="true"></i>
+                                        <i class="bi bi-info-circle text-muted ms-1" title="{{ $uploadHint }}"
+                                            aria-hidden="true"></i>
                                     </label>
+                                    {{-- Stated in the open, not just in the icon's tooltip: uploaders were
+                                         only finding out the limits from an error after picking a file. --}}
+                                    <div class="small text-muted mb-2">{{ $uploadHint }}</div>
 
                                     <div class="table-responsive" id="course_attachments_container">
                                         <table class="table table-sm mb-0 align-middle">
@@ -816,7 +863,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                                     </td>
                                                     <td>
                                                         <input type="file" class="form-control" name="attachments[]"
-                                                            accept="*/*">
+                                                            accept="{{ $uploadAcceptAttr }}"
+                                                            title="{{ $uploadHint }}">
                                                     </td>
                                                     <td class="text-center">
                                                         <button type="button"
@@ -975,10 +1023,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
 
                                 <div class="mb-4">
-                                    <label class="form-label">
+                                    <label class="form-label mb-1">
                                         Document Upload <span class="text-danger">*</span>
-                                        <i class="bi bi-info-circle text-muted ms-1" aria-hidden="true"></i>
+                                        <i class="bi bi-info-circle text-muted ms-1" title="{{ $uploadHint }}"
+                                            aria-hidden="true"></i>
                                     </label>
+                                    <div class="small text-muted mb-2">{{ $uploadHint }}</div>
 
                                     <div class="table-responsive" id="other_attachments_container">
                                         <table class="table table-sm mb-0 align-middle">
@@ -1000,7 +1050,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                                     </td>
                                                     <td>
                                                         <input type="file" class="form-control"
-                                                            name="attachments_other[]" accept="*/*">
+                                                            name="attachments_other[]" accept="{{ $uploadAcceptAttr }}"
+                                                            title="{{ $uploadHint }}">
                                                     </td>
                                                     <td class="text-center">
                                                         <button type="button"
@@ -1062,15 +1113,17 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label d-block">
+                                    <label class="form-label d-block mb-1">
                                         Document Upload <span class="text-danger">*</span>
-                                        <i class="bi bi-info-circle text-muted ms-1" aria-hidden="true"></i>
+                                        <i class="bi bi-info-circle text-muted ms-1" title="{{ $uploadHint }}"
+                                            aria-hidden="true"></i>
                                     </label>
+                                    <div class="small text-muted mb-2">{{ $uploadHint }}</div>
                                     @include('admin.course-repository.partials.cr-design-file', [
                                     'inputId' => 'attachments_institutional',
                                     'inputName' => 'attachments_institutional[]',
                                     'inputClass' => 'file-input-institutional',
-                                    'accept' => '*/*',
+                                    'accept' => $uploadAcceptAttr,
                                     'multiple' => true,
                                     ])
                                     <div class="selected-files-institutional mt-2 text-start small text-muted"
@@ -1284,24 +1337,49 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
     e.preventDefault();
 
     var uploadFormErrorsEl = document.getElementById('uploadFormErrors');
-    var showUploadError = function(msg) {
-        var text = (typeof msg === 'string') ? msg : String(msg);
-        if (uploadFormErrorsEl) {
-            uploadFormErrorsEl.textContent = text;
-            uploadFormErrorsEl.classList.remove('d-none');
-            uploadFormErrorsEl.style.display = 'block';
-            uploadFormErrorsEl.scrollIntoView({
-                behavior: 'smooth',
-                block: 'nearest'
+    // Accepts a single message or an array, and lists every problem as its own bullet.
+    // Previously all errors were flattened into one run-on line, so a long list was
+    // unreadable and anything after the first failing check never got reported at all.
+    var showUploadError = function(msgs) {
+        var list = (Array.isArray(msgs) ? msgs : [msgs])
+            .map(function(m) {
+                return (m === null || m === undefined) ? '' : String(m).trim();
+            })
+            .filter(function(m, i, all) {
+                return m !== '' && all.indexOf(m) === i; // drop blanks + duplicates
             });
-        }
-        try {
-            alert(text);
-        } catch (a) {}
+        if (!list.length) list = ['Upload failed. Please try again.'];
+        if (!uploadFormErrorsEl) return;
+
+        uploadFormErrorsEl.innerHTML = '';
+
+        var heading = document.createElement('div');
+        heading.className = 'fw-semibold mb-1';
+        heading.textContent = list.length > 1 ?
+            ('Please fix the following ' + list.length + ' errors:') :
+            'Please fix the following error:';
+        uploadFormErrorsEl.appendChild(heading);
+
+        var ul = document.createElement('ul');
+        ul.className = 'mb-0 ps-3';
+        list.forEach(function(m) {
+            var li = document.createElement('li');
+            li.textContent = m; // textContent: server text and file names are never rendered as HTML
+            ul.appendChild(li);
+        });
+        uploadFormErrorsEl.appendChild(ul);
+
+        uploadFormErrorsEl.classList.remove('d-none');
+        uploadFormErrorsEl.style.display = 'block';
+        uploadFormErrorsEl.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest'
+        });
     };
     var hideUploadError = function() {
         if (uploadFormErrorsEl) {
             uploadFormErrorsEl.classList.add('d-none');
+            uploadFormErrorsEl.style.display = '';
             uploadFormErrorsEl.innerHTML = '';
         }
     };
@@ -1335,51 +1413,32 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             }
         }
 
+        // Every check below appends to uploadErrors instead of returning early, so one
+        // submit reports the missing fields AND the attachment problems together.
+        var uploadErrors = [];
+        var requiredMissing = function(label) {
+            uploadErrors.push(label + ' is required.');
+        };
+
         if (selectedCategory === 'Course') {
-            var course_name = formData.get('course_name');
-            var subject_name = formData.get('subject_name');
-            var timetable_name = formData.get('timetable_name');
-            var session_date = formData.get('session_date');
-            var author_name = formData.get('author_name');
             var keywordsEl = document.getElementById('keywords_course');
-            var keywords = keywordsEl ? keywordsEl.value.trim() : '';
-            var req = [];
-            if (!course_name) req.push('Course Name');
-            if (!subject_name) req.push('Major Subject Name');
-            if (!timetable_name) req.push('Topic Name');
-            if (!session_date) req.push('Session Date');
-            if (!author_name) req.push('Author Name');
-            if (!keywords) req.push('Keywords');
-            if (req.length > 0) {
-                showUploadError('Please fill required fields: ' + req.join(', '));
-                return;
-            }
+            if (!formData.get('course_name')) requiredMissing('Course Name');
+            if (!formData.get('subject_name')) requiredMissing('Major Subject Name');
+            if (!formData.get('timetable_name')) requiredMissing('Topic Name');
+            if (!formData.get('session_date')) requiredMissing('Session Date');
+            if (!formData.get('author_name')) requiredMissing('Author Name');
+            if (!(keywordsEl ? keywordsEl.value.trim() : '')) requiredMissing('Keywords');
         } else if (selectedCategory === 'Other') {
-            var course_name_other = formData.get('course_name_other');
-            var major_subject_other = formData.get('major_subject_other');
-            var topic_name_other = formData.get('topic_name_other');
-            var session_date_other = formData.get('session_date_other');
-            var author_name_other = formData.get('author_name_other');
             var keywordsOtherEl = document.getElementById('keywords_other');
-            var keywords_other = keywordsOtherEl ? keywordsOtherEl.value.trim() : '';
-            var req = [];
-            if (!course_name_other) req.push('Course Name');
-            if (!major_subject_other) req.push('Major Subject Name');
-            if (!topic_name_other) req.push('Topic Name');
-            if (!session_date_other) req.push('Session Date');
-            if (!author_name_other) req.push('Author Name');
-            if (!keywords_other) req.push('Keywords');
-            if (req.length > 0) {
-                showUploadError('Please fill required fields: ' + req.join(', '));
-                return;
-            }
+            if (!formData.get('course_name_other')) requiredMissing('Course Name');
+            if (!formData.get('major_subject_other')) requiredMissing('Major Subject Name');
+            if (!formData.get('topic_name_other')) requiredMissing('Topic Name');
+            if (!formData.get('session_date_other')) requiredMissing('Session Date');
+            if (!formData.get('author_name_other')) requiredMissing('Author Name');
+            if (!(keywordsOtherEl ? keywordsOtherEl.value.trim() : '')) requiredMissing('Keywords');
         } else if (selectedCategory === 'Institutional') {
             var keywordsInstEl = document.getElementById('Key_words_institutional');
-            var keywordsInst = keywordsInstEl ? keywordsInstEl.value.trim() : '';
-            if (!keywordsInst) {
-                showUploadError('Please fill Keywords.');
-                return;
-            }
+            if (!(keywordsInstEl ? keywordsInstEl.value.trim() : '')) requiredMissing('Keywords');
         }
 
         var attachmentFiles = [];
@@ -1399,36 +1458,78 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             attachmentTitles = [];
         }
 
+        // Mirrors the server rules from config/course_repository.php so a rejected file is
+        // named here instead of coming back as one opaque line after the whole upload — or,
+        // when PHP drops the request outright, not coming back at all.
+        var ALLOWED_EXTENSIONS = @json($allowedUploadExtensions);
+        var MAX_FILE_BYTES = @json($perFileMaxBytes);
+        var MAX_TOTAL_BYTES = @json($postMaxBytes);
+        var asMb = function(bytes) {
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        };
+        var totalUploadBytes = 0;
+        var checkFile = function(file, label) {
+            var name = file.name || 'file';
+            var ext = name.indexOf('.') > -1 ? name.split('.').pop().toLowerCase() : '';
+            totalUploadBytes += (file.size || 0);
+            if (ALLOWED_EXTENSIONS.indexOf(ext) === -1) {
+                uploadErrors.push(label + ' "' + name +
+                    '" is not an allowed file type. Allowed types: {{ $uploadTypesLabel }}.');
+            }
+            if (file.size === 0) {
+                uploadErrors.push(label + ' "' + name + '" is empty (0 KB). Please select a valid file.');
+            } else if (file.size > MAX_FILE_BYTES) {
+                uploadErrors.push(label + ' "' + name + '" is ' + asMb(file.size) +
+                    '. Maximum allowed size per file is ' + asMb(MAX_FILE_BYTES) + '.');
+            }
+        };
+
         var validAttachmentCount = 0;
-        var validationErrors = [];
+        var errorsBeforeAttachments = uploadErrors.length;
         if (selectedCategory === 'Institutional') {
             attachmentFiles.forEach(function(fileInput) {
-                if (fileInput.files && fileInput.files.length > 0) validAttachmentCount += fileInput
-                    .files.length;
+                if (!fileInput.files) return;
+                for (var i = 0; i < fileInput.files.length; i++) {
+                    checkFile(fileInput.files[i], 'File ' + (validAttachmentCount + 1));
+                    validAttachmentCount++;
+                }
             });
             if (validAttachmentCount === 0) {
-                showUploadError('Please select at least one file to upload.');
-                return;
+                uploadErrors.push('Please select at least one file to upload.');
             }
         } else {
             attachmentFiles.forEach(function(fileInput, index) {
+                var rowLabel = 'Attachment row ' + (index + 1);
                 var hasFile = fileInput.files && fileInput.files.length > 0;
                 var titleEl = attachmentTitles[index];
                 var hasTitle = titleEl && titleEl.value && titleEl.value.trim() !== '';
-                if (hasFile && !hasTitle) validationErrors.push('Row ' + (index + 1) +
-                    ': File selected but title is missing');
-                else if (hasTitle && !hasFile) validationErrors.push('Row ' + (index + 1) +
-                    ': Title provided but no file selected');
-                else if (hasFile && hasTitle) validAttachmentCount++;
+                if (hasFile && !hasTitle) {
+                    uploadErrors.push(rowLabel + ': a file is selected but its title is missing.');
+                } else if (hasTitle && !hasFile) {
+                    uploadErrors.push(rowLabel + ': a title is entered but no file is selected.');
+                } else if (hasFile && hasTitle) {
+                    validAttachmentCount++;
+                }
+                if (hasFile) checkFile(fileInput.files[0], rowLabel);
             });
-            if (validationErrors.length > 0) {
-                showUploadError(validationErrors.join(' | '));
-                return;
+            // Only ask for an attachment when nothing was attempted — otherwise the row
+            // errors above already say what is wrong with the rows that were filled in.
+            if (validAttachmentCount === 0 && uploadErrors.length === errorsBeforeAttachments) {
+                uploadErrors.push('Please add at least one attachment with both a title and a file.');
             }
-            if (validAttachmentCount === 0) {
-                showUploadError('Please add at least one attachment with both title and file.');
-                return;
-            }
+        }
+
+        // Each file can be within the per-file limit while the batch still exceeds what PHP
+        // accepts in one POST. That request never reaches Laravel, so it has to be caught here.
+        if (MAX_TOTAL_BYTES > 0 && totalUploadBytes > MAX_TOTAL_BYTES) {
+            uploadErrors.push('The selected files total ' + asMb(totalUploadBytes) +
+                ', which is more than the ' + asMb(MAX_TOTAL_BYTES) +
+                ' the server accepts in one upload. Please upload fewer files at a time.');
+        }
+
+        if (uploadErrors.length > 0) {
+            showUploadError(uploadErrors);
+            return;
         }
 
         if (submitBtn) {
@@ -1523,10 +1624,23 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
                         data: data
                     };
                 }).catch(function() {
+                    // Non-JSON body. 413 is the server refusing the size outright; 419 is
+                    // what an over-size POST looks like from Laravel's side, because PHP
+                    // discarded the fields (CSRF token included) before it ran.
+                    var msg;
+                    if (response.status === 413) {
+                        msg = 'The upload is too large for the server to accept. Please upload smaller files.';
+                    } else if (response.status === 419) {
+                        msg = 'The upload was rejected — the files may be too large for the server, or your session expired. Try fewer/smaller files, or reload the page and sign in again.';
+                    } else {
+                        msg = 'Server returned an invalid response (HTTP ' + response.status +
+                            '). Please try again.';
+                    }
                     return {
                         ok: false,
+                        status: response.status,
                         data: {
-                            error: 'Server returned an invalid response. Please try again.'
+                            error: msg
                         }
                     };
                 });
@@ -1548,16 +1662,22 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
                 if (uploadModal) try {
                     uploadModal.show();
                 } catch (s) {}
-                var errMsg = (result.data && result.data.error) || 'Upload failed';
+                // Every validation message the server returned, one bullet each — a field
+                // that failed two rules used to be flattened into a single line.
+                var serverErrors = [];
                 if (result.data && result.data.errors && typeof result.data.errors === 'object') {
-                    var parts = [];
                     Object.keys(result.data.errors).forEach(function(field) {
                         var val = result.data.errors[field];
-                        parts.push(Array.isArray(val) ? val.join(' ') : val);
+                        (Array.isArray(val) ? val : [val]).forEach(function(m) {
+                            serverErrors.push(m);
+                        });
                     });
-                    if (parts.length) errMsg = parts.join(' | ');
                 }
-                showUploadError(errMsg);
+                if (!serverErrors.length) {
+                    serverErrors.push((result.data && result.data.error) ||
+                        'Upload failed. Please try again.');
+                }
+                showUploadError(serverErrors);
             })
             .catch(function(error) {
                 if (submitBtn) {
@@ -1567,7 +1687,7 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
                 if (uploadModal) try {
                     uploadModal.show();
                 } catch (s) {}
-                showUploadError('Network error. Please try again.');
+                showUploadError('Network error: could not reach the server. Please check your connection and try again.');
             });
     } catch (err) {
         if (submitBtn) {
@@ -1976,7 +2096,7 @@ window.crDocEdit = (function() {
 
         helpers = helpers || {};
         var showError = helpers.showError || function(m) {
-            alert(m);
+            alert(Array.isArray(m) ? m.join('\n') : m);
         };
         var category = (document.querySelector('input[name="category"]:checked') || {}).value || 'Course';
 
@@ -2025,7 +2145,29 @@ window.crDocEdit = (function() {
         fd.append('file_title', fileTitle || '');
 
         if (fileInput && fileInput.files && fileInput.files.length > 0) {
-            fd.append('document_file', fileInput.files[0]);
+            // Same type/size rules as a new upload — check before sending, so an oversized
+            // replacement is named here instead of dying as an HTTP error page.
+            var replacement = fileInput.files[0];
+            var allowed = @json($allowedUploadExtensions);
+            var maxBytes = @json($perFileMaxBytes);
+            var rName = replacement.name || 'file';
+            var rExt = rName.indexOf('.') > -1 ? rName.split('.').pop().toLowerCase() : '';
+            var fileErrors = [];
+            if (allowed.indexOf(rExt) === -1) {
+                fileErrors.push('"' + rName +
+                    '" is not an allowed file type. Allowed types: {{ $uploadTypesLabel }}.');
+            }
+            if (replacement.size === 0) {
+                fileErrors.push('"' + rName + '" is empty (0 KB). Please select a valid file.');
+            } else if (replacement.size > maxBytes) {
+                fileErrors.push('"' + rName + '" is ' + (replacement.size / (1024 * 1024)).toFixed(1) +
+                    ' MB. Maximum allowed size per file is ' + (maxBytes / (1024 * 1024)).toFixed(1) + ' MB.');
+            }
+            if (fileErrors.length) {
+                showError(fileErrors);
+                return true; // handled — do not fall through to the upload flow
+            }
+            fd.append('document_file', replacement);
         }
 
         var csrfEl = document.querySelector('[name="_token"]') || document.querySelector('meta[name="csrf-token"]');
@@ -2058,6 +2200,23 @@ window.crDocEdit = (function() {
                         ok: r.ok,
                         data: data
                     };
+                }).catch(function() {
+                    // Non-JSON body: an oversized POST is discarded by PHP before Laravel
+                    // runs, so it comes back as an error page rather than a validation error.
+                    var msg;
+                    if (r.status === 413) {
+                        msg = 'The document is too large for the server to accept. Please upload a smaller file.';
+                    } else if (r.status === 419) {
+                        msg = 'The update was rejected — the document may be too large for the server, or your session expired. Try a smaller file, or reload the page and sign in again.';
+                    } else {
+                        msg = 'Server returned an invalid response (HTTP ' + r.status + '). Please try again.';
+                    }
+                    return {
+                        ok: false,
+                        data: {
+                            error: msg
+                        }
+                    };
                 });
             })
             .then(function(result) {
@@ -2083,20 +2242,25 @@ window.crDocEdit = (function() {
                     return;
                 }
                 restoreBtn();
-                var errMsg = (result.data && result.data.error) || 'Update failed';
+                // showError renders an array as one bullet per message.
+                var serverErrors = [];
                 if (result.data && result.data.errors && typeof result.data.errors === 'object') {
-                    var parts = [];
                     Object.keys(result.data.errors).forEach(function(field) {
                         var val = result.data.errors[field];
-                        parts.push(Array.isArray(val) ? val.join(' ') : val);
+                        (Array.isArray(val) ? val : [val]).forEach(function(m) {
+                            serverErrors.push(m);
+                        });
                     });
-                    if (parts.length) errMsg = parts.join(' | ');
                 }
-                showError(errMsg);
+                if (!serverErrors.length) {
+                    serverErrors.push((result.data && result.data.error) ||
+                        'Update failed. Please try again.');
+                }
+                showError(serverErrors);
             })
             .catch(function() {
                 restoreBtn();
-                showError('Network error. Please try again.');
+                showError('Network error: could not reach the server. Please check your connection and try again.');
             });
 
         return true; // handled
@@ -3751,7 +3915,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <input type="text" class="form-control" name="${titleFieldName}" placeholder="Document title">
                 </td>
                 <td>
-                    <input type="file" class="form-control" name="${filesFieldName}" accept="*/*">
+                    <input type="file" class="form-control" name="${filesFieldName}" accept="{{ $uploadAcceptAttr }}" title="{{ $uploadHint }}">
                 </td>
                 <td class="text-center">
                     <button type="button" class="btn btn-sm btn-outline-danger remove-row">
@@ -3923,7 +4087,7 @@ document.addEventListener('click', function(e) {
             </td>
             <td>
                 <input type="file" class="form-control"
-                    name="attachments[]" accept="*/*">
+                    name="attachments[]" accept="{{ $uploadAcceptAttr }}" title="{{ $uploadHint }}">
             </td>
             <td class="text-center">
                 <button type="button" class="btn cr-btn-remove-row delete-attachment" aria-label="Remove row">
@@ -3963,7 +4127,7 @@ document.addEventListener('click', function(e) {
             </td>
             <td>
                 <input type="file" class="form-control"
-                    name="attachments_other[]" accept="*/*">
+                    name="attachments_other[]" accept="{{ $uploadAcceptAttr }}" title="{{ $uploadHint }}">
             </td>
             <td class="text-center">
                 <button type="button" class="btn cr-btn-remove-row delete-attachment" aria-label="Remove row">

@@ -1111,6 +1111,15 @@ class UserController extends Controller
         $availableCourses = $payload['availableCourses'];
         $facultyPk = $payload['facultyPk'];
 
+        // Mirrors resolveDashboardStudentListPayload(): Super Admin and the training
+        // authorities oversee every course, everyone else (faculty / CC / ACC) is
+        // scoped to their own courses. The filter dropdowns below follow the same
+        // rule so they never offer a course the viewer has no students in.
+        $seesAllCourses = hasRole('Super Admin')
+            || hasRole('Training Induction Admin')
+            || hasRole('Training MCTP Admin')
+            || hasRole('Training IST');
+
         if ($request->ajax() && $request->has('draw')) {
             return $this->dashboardStudentListDataTableResponse($request, $students);
         }
@@ -1181,9 +1190,13 @@ class UserController extends Controller
             ->where('cm.end_date', $courseDateOp, now())
             ->where('fm.active_inactive', 1);
 
-        // Filter by logged-in faculty if available
+        // Filter by logged-in faculty if available. A non-admin viewer with no
+        // faculty pk has no rows of their own, so they get no options either —
+        // without this they'd see every faculty's counsellor types.
         if ($facultyPk) {
             $counsellorTypesQuery->where('gmap.facility_id', $facultyPk);
+        } elseif (! $seesAllCourses) {
+            $counsellorTypesQuery->whereRaw('1 = 0');
         }
 
         $counsellorTypes = $counsellorTypesQuery
@@ -1229,9 +1242,11 @@ class UserController extends Controller
             ->where('cm.end_date', $courseDateOp, now())
             ->where('fm.active_inactive', 1);
 
-        // Filter by logged-in faculty if available
+        // Filter by logged-in faculty if available (see the counsellor-type note above).
         if ($facultyPk) {
             $groupMapCoursesQuery->where('gmap.facility_id', $facultyPk);
+        } elseif (! $seesAllCourses) {
+            $groupMapCoursesQuery->whereRaw('1 = 0');
         }
 
         $groupMapCourses = $groupMapCoursesQuery
@@ -1254,31 +1269,40 @@ class UserController extends Controller
             ->sortBy('course_name')
             ->values();
 
-        // Course filter dropdown. A faculty can belong to several courses at once,
-        // so the list has to be selectable rather than implied by the row set: we
-        // offer every currently-running course, unioned with the courses this
-        // faculty actually has rows for (which may include one whose end_date has
-        // just passed — it would otherwise vanish from the dropdown while its
-        // students are still listed). $availableCourses entries arrive as a mix of
-        // objects (student sources) and arrays ($groupMapCourses), hence the
-        // normalisation below.
-        $courseOptions = CourseMaster::where('active_inactive', '1')
-            ->where('end_date', $courseDateOp, now())
-            ->orderBy('course_name')
-            ->get(['pk', 'course_name', 'couse_short_name', 'start_year', 'end_date'])
-            // toBase(): Eloquent\Collection::merge() keys items by getKey(), which
-            // blows up on the plain objects below. Drop to a base collection first.
-            ->toBase()
+        // Course filter dropdown — ROLE SCOPED. Only Super Admin / training
+        // authorities may pick any running course; a faculty / CC / ACC must see
+        // ONLY their own courses, otherwise the dropdown leaks the names of courses
+        // they have no students in (same rule as the OT participants page).
+        // A faculty can belong to several courses at once, so the list still has to
+        // be selectable rather than implied by the row set: use $availableCourses,
+        // which resolveDashboardStudentListPayload() already scoped to this faculty,
+        // unioned with the faculty-scoped $groupMapCourses merged in above. Entries
+        // arrive as a mix of objects (student sources) and arrays ($groupMapCourses),
+        // so normalise to pks and re-read the rows from course_master — that keeps
+        // the short name / duration the option needs, and looking them up by pk
+        // (no end_date filter) also keeps a course whose end_date has just passed
+        // visible while its students are still listed.
+        $allowedCoursePks = collect($availableCourses)
+            ->map(fn ($c) => is_array($c) ? ($c['pk'] ?? null) : ($c->pk ?? null))
+            ->filter()
+            ->unique()
+            ->values();
+
+        $courseOptions = ($seesAllCourses
+                ? CourseMaster::where('active_inactive', '1')
+                    ->where('end_date', $courseDateOp, now())
+                    ->orderBy('course_name')
+                    ->get(['pk', 'course_name', 'couse_short_name', 'start_year', 'end_date'])
+                    // toBase(): Eloquent\Collection::merge() keys items by getKey(),
+                    // which would collapse the merge below. Drop to a base collection.
+                    ->toBase()
+                : collect())
             ->merge(
-                collect($availableCourses)->map(function ($c) {
-                    return (object) [
-                        'pk' => is_array($c) ? ($c['pk'] ?? null) : ($c->pk ?? null),
-                        'course_name' => is_array($c) ? ($c['course_name'] ?? '') : ($c->course_name ?? ''),
-                        'couse_short_name' => is_array($c) ? ($c['couse_short_name'] ?? '') : ($c->couse_short_name ?? ''),
-                        'start_year' => is_array($c) ? ($c['start_year'] ?? null) : ($c->start_year ?? null),
-                        'end_date' => is_array($c) ? ($c['end_date'] ?? null) : ($c->end_date ?? null),
-                    ];
-                })
+                $allowedCoursePks->isNotEmpty()
+                    ? CourseMaster::whereIn('pk', $allowedCoursePks)
+                        ->get(['pk', 'course_name', 'couse_short_name', 'start_year', 'end_date'])
+                        ->toBase()
+                    : collect()
             )
             ->filter(fn ($c) => ! empty($c->pk))
             ->unique('pk')
@@ -1298,9 +1322,11 @@ class UserController extends Controller
             ->whereNotNull('gmap.group_name')
             ->where('gmap.group_name', '!=', '');
 
-        // Filter by logged-in faculty if available
+        // Filter by logged-in faculty if available (see the counsellor-type note above).
         if ($facultyPk) {
             $groupNamesQuery->where('gmap.facility_id', $facultyPk);
+        } elseif (! $seesAllCourses) {
+            $groupNamesQuery->whereRaw('1 = 0');
         }
 
         $groupNames = $groupNamesQuery

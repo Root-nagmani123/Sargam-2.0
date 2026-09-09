@@ -9,11 +9,10 @@
     // for non-IFoS services). Existing display/insert logic is otherwise untouched.
     $disabledFields = $disabledFields ?? [];
 
-    // Fields shown only when another field in the same row holds a given value.
-    // (Spouse Name dropdown appears only when "Is your spouse also registering?" = Yes.)
-    $conditionalOn = [
-        'spouse_name' => ['field' => 'spouse_in_cse', 'value' => 'Yes'],
-    ];
+    // Conditional display is configured per field in the Form Builder
+    // (fc_form_group_fields.condition_field / condition_value): the field is shown only
+    // while the named sibling field in the SAME row holds that value — e.g. Spouse Name
+    // appears only when "Is your spouse also registering?" = Yes. Both null = always shown.
 @endphp
 
 @once
@@ -57,9 +56,11 @@
                 $fieldDisabled = $isReadonly || in_array($gf->field_name, $disabledFields, true);
             @endphp
             <div class="{{ $gf->css_class }}"
-                @if(isset($conditionalOn[$gf->field_name]))
-                    data-fc-cond-name="{{ $groupName }}[{{ $i }}][{{ $conditionalOn[$gf->field_name]['field'] }}]"
-                    data-fc-cond-value="{{ $conditionalOn[$gf->field_name]['value'] }}"
+                @if(filled($gf->condition_field ?? null) && filled($gf->condition_value ?? null))
+                    {{-- The controlling field is matched by name SUFFIX within this row, so a
+                         cloned "Add Row" (which renumbers input names) still resolves it. --}}
+                    data-fc-cond-field="{{ $gf->condition_field }}"
+                    data-fc-cond-value="{{ $gf->condition_value }}"
                 @endif>
                 <label class="form-label small fw-semibold">
                     {{ $gf->label }}
