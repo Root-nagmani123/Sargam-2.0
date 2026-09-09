@@ -299,19 +299,18 @@ class UserController extends Controller
                  $facultyTotalFeedback = app(FacultyFeedbackReportService::class)
                      ->getTotalFeedbackCount($facultyPk);
 
-                 // "My Counsellees" — the students in this faculty's Counsellor
-                 // Groups, which is what the Course Group Mapping page lists for
-                 // them, and what the OT / Participants list shows when the card
-                 // opens it with view=counsellees.
-                 $facultyCounsellees = $this->counsellorGroupRows($facultyPk)
+                 // Both cards count students off the Course Group Mapping page, for
+                 // the groups mapped to THIS faculty, and open the OT / Participants
+                 // list on exactly that scope so the number and the rows agree.
+                 //
+                 //   My Counsellees     -> their Counsellor Groups (the cadres)
+                 //   House Wise Details -> their House Groups, i.e. how many
+                 //                         students their house holds
+                 $facultyCounsellees = $this->facultyGroupRows($facultyPk, '%counsel%', 'counsellor_group_name')
                      ->pluck('student_master_pk')->filter()->unique()->count();
 
-                 // "House Wise Details" counts the houses the faculty's participants
-                 // are spread across — the list it opens, not the counsellee scope.
-                 $facultyHouses = $this->resolveDashboardStudentListPayload($request, false)['students']
-                     ->pluck('house_name')
-                     ->map(fn ($h) => is_string($h) ? trim($h) : $h)
-                     ->filter()->unique()->count();
+                 $facultyHouses = $this->facultyGroupRows($facultyPk, '%house%', 'house_group_name')
+                     ->pluck('student_master_pk')->filter()->unique()->count();
 
                  // Check if faculty is CC or ACC
                  $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
@@ -438,7 +437,7 @@ class UserController extends Controller
             // Both open the OT / Participants list — the second ordered by House so it
             // opens house-wise, with the page's House filter to narrow to one.
             'my_counsellees'          => ['count' => $facultyCounsellees,                          'link' => route('admin.dashboard.ot-participants', ['view' => 'counsellees']), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
-            'house_wise_details'      => ['count' => $facultyHouses,                               'link' => route('admin.dashboard.ot-participants', ['sort' => 'house']), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            'house_wise_details'      => ['count' => $facultyHouses,                               'link' => route('admin.dashboard.ot-participants', ['view' => 'house']), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
             'total_students'          => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
             'student_details'         => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
             'my_course_participant'   => ['count' => StudentMasterCourseMap::query()->when(!empty($myCourseIds), fn($q) => $q->whereIn('course_master_pk', $myCourseIds))->count(), 'link' => route('my.course.participant'),                                'visible' => true],
@@ -538,40 +537,43 @@ class UserController extends Controller
     }
 
     /**
-     * A faculty's counsellees: the students in the Counsellor Groups mapped to
-     * them on the Course Group Mapping page.
+     * The students of one KIND of group mapped to a faculty on the Course Group
+     * Mapping page — group type LIKE $typeNameLike, faculty = this faculty.
      *
-     * That page is the definition — group type "Counsellor Group", faculty = this
-     * faculty — and its group names ARE the cadres, so the same rows give both the
-     * count on the My Counsellees card and the Cadre dropdown on the list the card
-     * opens. Resolved by type name, not the hard-coded pk 8, so a renamed type
-     * still counts.
+     * That page is the definition behind two dashboard cards:
+     *
+     *   My Counsellees     -> Counsellor Group, whose group names are the cadres
+     *   House Wise Details -> House Group, whose group names are the houses
+     *
+     * so the same rows give both the card's count and the dropdown on the list it
+     * opens. Matched by type name rather than the hard-coded pks (8 and 20), so a
+     * renamed type still counts.
      *
      * Deliberately NOT resolveDashboardStudentListPayload(): that pulls in
      * coordinator courses, every other group type the faculty owns and the
      * sessions they taught, and drops anything whose course has ended — which is
-     * why the card read 00 while the mapping page listed 48 students.
+     * why My Counsellees read 00 while the mapping page listed 48 students.
      *
-     * Rows carry the shape the OT / Participants list expects, plus
-     * counsellor_group_name so the Cadre column and filter can read the group
-     * rather than the student's own cadre master (70 of these students have no
-     * cadre on record, and would otherwise be unfilterable).
+     * Rows carry the shape the OT / Participants list expects, plus the group name
+     * under $labelProperty, so the column and filter for that view can read the
+     * group rather than the student's own cadre master (70 of these students have
+     * no cadre on record) or their hostel room.
      *
      * @return \Illuminate\Support\Collection<int, \stdClass>
      */
-    private function counsellorGroupRows(int $facultyPk): \Illuminate\Support\Collection
+    private function facultyGroupRows(int $facultyPk, string $typeNameLike, string $labelProperty): \Illuminate\Support\Collection
     {
-        $counsellorTypeIds = DB::table('course_group_type_master')
+        $groupTypeIds = DB::table('course_group_type_master')
             ->where('active_inactive', 1)
-            ->whereRaw('LOWER(type_name) LIKE ?', ['%counsel%'])
+            ->whereRaw('LOWER(type_name) LIKE ?', [$typeNameLike])
             ->pluck('pk');
 
-        if ($counsellorTypeIds->isEmpty()) {
+        if ($groupTypeIds->isEmpty()) {
             return collect();
         }
 
         $mappings = DB::table('group_type_master_course_master_map')
-            ->whereIn('type_name', $counsellorTypeIds)
+            ->whereIn('type_name', $groupTypeIds)
             ->where('facility_id', $facultyPk)
             ->where('active_inactive', 1)
             ->get(['pk', 'group_name', 'course_name as course_pk']);
@@ -627,10 +629,10 @@ class UserController extends Controller
             $row->studentMaster = $student;
             $row->course = $courses[$mapping->course_pk] ?? null;
             $row->groupMapping = $membership;
-            $row->counsellor_group_name = trim((string) $mapping->group_name);
+            $row->{$labelProperty} = trim((string) $mapping->group_name);
             $uid = $student->user_id ?? null;
             $row->house_name = ($uid && isset($houseByUser[$uid])) ? $houseByUser[$uid] : null;
-            $row->source = 'counsellor_group';
+            $row->source = 'faculty_group';
 
             $rows->push($row);
         }
@@ -1718,26 +1720,28 @@ class UserController extends Controller
      */
     public function otParticipantsList(Request $request)
     {
-        // ?view=counsellees — opened from the My Counsellees card. The list is then
-        // this faculty's Counsellor Group students and nothing else, so the card's
-        // number and the rows agree; the page drops the House filter and the
-        // Active/Archived tabs, neither of which means anything in that scope.
-        $counselleeFacultyPk = $request->input('view') === 'counsellees'
+        // ?view=counsellees / ?view=house — opened from the My Counsellees and House
+        // Wise Details cards. The list is then the students of that faculty's groups
+        // on the Course Group Mapping page and nothing else, so each card's number
+        // and its rows agree. Each view drops the filter the other one is about, and
+        // both drop the Active/Archived tabs: the scope spans both.
+        $requestedView = $request->input('view');
+        $scopeFacultyPk = in_array($requestedView, ['counsellees', 'house'], true)
             ? get_auth_faculty_master_pk()
             : null;
-        $isCounselleeView = $counselleeFacultyPk !== null;
+        $isCounselleeView = $scopeFacultyPk !== null && $requestedView === 'counsellees';
+        $isHouseView = $scopeFacultyPk !== null && $requestedView === 'house';
 
-        if ($isCounselleeView) {
+        if ($isCounselleeView || $isHouseView) {
+            $students = $isCounselleeView
+                ? $this->facultyGroupRows($scopeFacultyPk, '%counsel%', 'counsellor_group_name')
+                : $this->facultyGroupRows($scopeFacultyPk, '%house%', 'house_group_name');
+
             $payload = [
-                'students' => $this->counsellorGroupRows($counselleeFacultyPk),
-                'availableCourses' => collect(),
-                'facultyPk' => $counselleeFacultyPk,
+                'students' => $students,
+                'availableCourses' => $students->map(fn ($m) => $m->course)->filter()->unique('pk')->values(),
+                'facultyPk' => $scopeFacultyPk,
             ];
-            $payload['availableCourses'] = $payload['students']
-                ->map(fn ($m) => $m->course)
-                ->filter()
-                ->unique('pk')
-                ->values();
         } else {
             // Skip the payload's per-student total_* / notice-memo N+1 loop — this page
             // computes its counts separately via otParticipantsRowMeta (batched).
@@ -1763,9 +1767,10 @@ class UserController extends Controller
                     'student_master_pk' => $spk,
                     'studentMaster' => $m->studentMaster,
                     'house_name' => $m->house_name ?? null,
-                    // Kept through the collapse so the Cadre column and its sort
-                    // read the counsellor group on that view.
+                    // Kept through the collapse so the Cadre and House columns,
+                    // their sorts and the search read the group on those views.
                     'counsellor_group_name' => $m->counsellor_group_name ?? null,
+                    'house_group_name' => $m->house_group_name ?? null,
                 ];
             }
             if (empty($byStudent[$spk]->house_name) && ! empty($m->house_name)) {
@@ -1793,17 +1798,25 @@ class UserController extends Controller
         $students = $payload['students'];
         // In the counsellee view the cadres ARE the counsellor group names off the
         // Course Group Mapping page — which is where the faculty verifies this list
-        // — not the students' own cadre master, where 70 of them have nothing.
-        $cadreOptions = $students
-            ->map(fn ($m) => $isCounselleeView
-                ? ($m->counsellor_group_name ?? null)
-                : ($m->studentMaster->cadre->cadre_name ?? null))
-            ->filter()->unique()->sort()->values();
-        // No House filter on the counsellee view.
+        // — not the students' own cadre master, where 70 of them have nothing. The
+        // house view has no Cadre filter at all.
+        $cadreOptions = $isHouseView
+            ? collect()
+            : $students
+                ->map(fn ($m) => $isCounselleeView
+                    ? ($m->counsellor_group_name ?? null)
+                    : ($m->studentMaster->cadre->cadre_name ?? null))
+                ->filter()->unique()->sort()->values();
+
+        // Likewise the houses in the house view are the faculty's House Groups, not
+        // the hostel room each student happens to hold; and the counsellee view has
+        // no House filter.
         $houseOptions = $isCounselleeView
             ? collect()
             : $students
-                ->map(fn ($m) => $m->house_name ?? null)
+                ->map(fn ($m) => $isHouseView
+                    ? ($m->house_group_name ?? null)
+                    : ($m->house_name ?? null))
                 ->filter()->unique()->sort()->values();
         // Session options are independent of the Time Period — see resolveScopedSessionOptions().
         $sessionOptions = $this->resolveScopedSessionOptions(
@@ -1838,11 +1851,11 @@ class UserController extends Controller
             // Details card opens here, so the filter is now on the toolbar.
             'house' => (string) $request->input('house', ''),
             'status' => $status,
-            // ?sort=house opens the list house-wise (the House Wise Details card).
-            'sort' => $request->input('sort') === 'house' ? 'house' : '',
+            // The House Wise Details view opens the list ordered by house.
+            'sort' => ($isHouseView || $request->input('sort') === 'house') ? 'house' : '',
             // Carried on every request the grid makes, or the scope would be lost
             // on the first filter change.
-            'view' => $isCounselleeView ? 'counsellees' : '',
+            'view' => $isCounselleeView ? 'counsellees' : ($isHouseView ? 'house' : ''),
         ];
 
         // Course filter scope: Super Admin / Admin / PA can pick ANY course for the
@@ -1871,7 +1884,7 @@ class UserController extends Controller
 
         return view('admin.dashboard.ot_participants_list', compact(
             'availableCourses', 'courseOptions', 'filters', 'cadreOptions', 'houseOptions',
-            'sessionOptions', 'participantOptions', 'isCounselleeView'
+            'sessionOptions', 'participantOptions', 'isCounselleeView', 'isHouseView'
         ));
     }
 
@@ -2076,7 +2089,7 @@ class UserController extends Controller
                     $s->generated_OT_code ?? '',
                     $s->email ?? '',
                     $p->counsellor_group_name ?: ($s->cadre->cadre_name ?? ''),
-                    $p->house_name ?? '',
+                    $p->house_group_name ?: ($p->house_name ?? ''),
                     $p->topic ?? '',
                     $meta['duty_type'] ?? '',
                     implode(' ', $counts),
@@ -2101,7 +2114,7 @@ class UserController extends Controller
                     'name' => (string) ($s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''))),
                     'email' => (string) ($s->email ?? ''),
                     'cadre' => (string) ($p->counsellor_group_name ?: ($s->cadre->cadre_name ?? '')),
-                    'house' => (string) ($p->house_name ?? ''),
+                    'house' => (string) ($p->house_group_name ?: ($p->house_name ?? '')),
                     default => '',
                 };
             }, SORT_NATURAL | SORT_FLAG_CASE, $orderDir === 'desc')->values();
@@ -2143,7 +2156,7 @@ class UserController extends Controller
                 'email' => e($s->email ?? 'N/A'),
                 // Counsellee view: the row's cadre is its Counsellor Group.
                 'cadre' => e($p->counsellor_group_name ?: ($s->cadre->cadre_name ?? 'N/A')),
-                'house' => e($p->house_name ?: 'N/A'),
+                'house' => e($p->house_group_name ?: ($p->house_name ?: 'N/A')),
                 'duty_count' => $this->otCountCell($meta['duty_count'], $detailUrl . '?section=dutiesSection' . $linkDateQs),
                 'duty_type' => e($meta['duty_type'] ?: '-'),
                 'medical' => $this->otCountCell($meta['medical'], $detailUrl . '?section=medicalExceptionsSection' . $linkDateQs),
@@ -3255,8 +3268,15 @@ class UserController extends Controller
                 }
             }
 
-            if ($house && (string) ($studentMap->house_name ?? '') !== (string) $house) {
-                return false;
+            // House. On the house view the row's house is its House Group off the
+            // Course Group Mapping page (see facultyGroupRows()), which is what the
+            // dropdown offers there; everywhere else it is the hostel room.
+            if ($house) {
+                $rowHouse = $studentMap->house_group_name ?? ($studentMap->house_name ?? '');
+
+                if ((string) $rowHouse !== (string) $house) {
+                    return false;
+                }
             }
 
             if ($roleFilter === 'cc_acc') {

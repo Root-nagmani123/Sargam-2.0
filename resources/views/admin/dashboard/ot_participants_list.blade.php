@@ -86,8 +86,8 @@
          Counsellor Groups whatever state their courses are in, so the tabs would
          be a control that changes nothing — it shows a heading instead. --}}
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-        @if($isCounselleeView ?? false)
-        <h2 class="h6 fw-semibold mb-0">My Counsellees</h2>
+        @if(($isCounselleeView ?? false) || ($isHouseView ?? false))
+        <h2 class="h6 fw-semibold mb-0">{{ ($isHouseView ?? false) ? 'House Wise Details' : 'My Counsellees' }}</h2>
         @else
         <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white" role="group" aria-label="Course status">
             <li class="nav-item" role="presentation">
@@ -137,7 +137,7 @@
                     {{-- Cadre and House list only what this viewer's participants
                          actually belong to, and both default to "All" so the page
                          opens on the whole set. --}}
-                    @if(($cadreOptions ?? collect())->isNotEmpty())
+                    @if(! ($isHouseView ?? false) && ($cadreOptions ?? collect())->isNotEmpty())
                     <div class="sl-filter-item">
                         <select id="cadreFilter" class="form-select sl-filter-select" aria-label="Filter by cadre">
                             <option value="">Cadre: All</option>
