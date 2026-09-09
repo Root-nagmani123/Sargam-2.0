@@ -94,7 +94,7 @@ class TimetableReportController extends Controller
         // Same reason: the card counts Teaching-role sessions, so it links with
         // faculty_role=Teaching and the Role filter opens on that value.
         $initialRole = FacultySessionScope::normaliseRole($request->get('faculty_role'));
-        $facultyRoles = FacultySessionScope::ROLES;
+        $facultyRoles = FacultySessionScope::FILTER_ROLES;
 
         $activeCourses = CourseMaster::where('active_inactive', 1)
             ->where(function ($q) use ($currentDate) {
@@ -168,6 +168,7 @@ class TimetableReportController extends Controller
                 't.subject_topic',
                 't.faculty_master',
                 't.faculty_details',
+                't.internal_faculty',
                 't.group_name',
                 't.class_session',
                 'c.course_name',
@@ -201,7 +202,7 @@ class TimetableReportController extends Controller
 
         if ($lockedFacultyPk !== null) {
             $totalQuery = DB::table('timetable as t');
-            FacultySessionScope::applyFaculty($totalQuery, $lockedFacultyPk);
+            FacultySessionScope::applyFacultyWithSupporting($totalQuery, $lockedFacultyPk);
             $totalCount = $totalQuery->count();
         } else {
             $totalCount = DB::table('timetable')->count();
@@ -252,7 +253,7 @@ class TimetableReportController extends Controller
             ->leftJoin('subject_module_master as smm', 't.subject_module_master_pk', '=', 'smm.pk')
             ->select(
                 't.pk', 't.START_DATE', 't.END_DATE', 't.subject_topic',
-                't.faculty_master', 't.faculty_details', 't.group_name', 't.class_session',
+                't.faculty_master', 't.faculty_details', 't.internal_faculty', 't.group_name', 't.class_session',
                 'c.course_name', 'c.couse_short_name',
                 'cgtm.type_name as course_group_type',
                 'vm.venue_name', 'sm.subject_name', 'smm.module_name'
@@ -325,8 +326,14 @@ class TimetableReportController extends Controller
         $facultyPk = FacultySessionScope::lockedFacultyPk()
             ?? (($requested !== null && $requested !== '') ? (int) $requested : null);
 
+        // "Every session this faculty is on", teaching or supporting. The report
+        // is the record of what a faculty attended, so a session where they are
+        // the supporting faculty belongs here — 133 sessions are only reachable
+        // that way. Narrow it with Role: Teaching gives the sessions they hold,
+        // Supporting the ones they assist. The dashboard card is Teaching-only
+        // by specification and counts through the narrower applyFaculty().
         if ($facultyPk !== null) {
-            FacultySessionScope::applyFaculty($query, $facultyPk);
+            FacultySessionScope::applyFacultyWithSupporting($query, $facultyPk);
         }
 
         // Role: with a faculty chosen it means "sessions where THEY hold that
@@ -374,6 +381,10 @@ class TimetableReportController extends Controller
     private function applyFacultyTypeFilter($query, int $facultyType): void
     {
         $json = "COALESCE(NULLIF(t.faculty_master, ''), '[]')";
+        // Supporting faculty are on the session too, and the Faculty column lists
+        // them, so a type filter that ignored internal_faculty would hide rows the
+        // grid is showing that faculty on.
+        $internalJson = "COALESCE(NULLIF(t.internal_faculty, ''), '[]')";
 
         $query->whereRaw(
             "EXISTS (
@@ -385,6 +396,10 @@ class TimetableReportController extends Controller
                           OR JSON_CONTAINS({$json}, CAST(fm_filter.pk AS CHAR))
                       ))
                       OR (t.faculty_master REGEXP '^[0-9]+$' AND CAST(t.faculty_master AS UNSIGNED) = fm_filter.pk)
+                      OR (JSON_VALID({$internalJson}) AND (
+                          JSON_CONTAINS({$internalJson}, CONCAT('\"', fm_filter.pk, '\"'))
+                          OR JSON_CONTAINS({$internalJson}, CAST(fm_filter.pk AS CHAR))
+                      ))
                   )
             )",
             [$facultyType]
@@ -421,6 +436,21 @@ class TimetableReportController extends Controller
                 }
             }
 
+            // Supporting faculty (internal_faculty) are on the session too, and a
+            // Faculty = X filter now returns the sessions X supports — so the row
+            // has to name them, or it would look unrelated to the filter. On events
+            // written by the current form the column repeats faculty_master, hence
+            // the diff rather than a merge.
+            $supportingIds = [];
+            $ifRaw = $row->internal_faculty ?? null;
+
+            if ($ifRaw !== null && $ifRaw !== '') {
+                $decodedInternal = json_decode($ifRaw, true);
+                if (is_array($decodedInternal)) {
+                    $supportingIds = array_values(array_diff(array_map('intval', $decodedInternal), $fids));
+                }
+            }
+
             // faculty_pk => role, for the sessions that carry faculty_details.
             // Sessions predating that column have no role on record; they read as
             // Teaching, the same fallback the feedback counts make.
@@ -434,11 +464,18 @@ class TimetableReportController extends Controller
                 }
             }
 
-            if (!empty($fids)) {
+            $allIds = array_merge($fids, $supportingIds);
+
+            if (!empty($allIds)) {
                 $facultyRows = DB::table('faculty_master')
-                    ->whereIn('pk', $fids)
+                    ->whereIn('pk', $allIds)
                     ->select('pk', 'full_name', 'faculty_code', 'faculty_type')
-                    ->get();
+                    ->get()
+                    // whereIn returns table order; the session's own order is what
+                    // the Faculty and Faculty Role columns have to read across in,
+                    // holders first and supporters after.
+                    ->sortBy(fn ($f) => array_search((int) $f->pk, $allIds, true))
+                    ->values();
 
                 if ($facultyRows->isNotEmpty()) {
                     $facultyNames = $facultyRows->pluck('full_name')->implode(', ');
@@ -452,9 +489,17 @@ class TimetableReportController extends Controller
                         };
                     })->implode(', ');
                     // Same order as the names, so the two columns read across.
-                    $facultyRoles = $facultyRows->map(
-                        fn ($f) => $roleByFaculty[(int) $f->pk] ?? FacultySessionScope::ROLE_TEACHING
-                    )->implode(', ');
+                    $facultyRoles = $facultyRows->map(function ($f) use ($roleByFaculty, $fids) {
+                        $pk = (int) $f->pk;
+
+                        if (isset($roleByFaculty[$pk]) && $roleByFaculty[$pk] !== '') {
+                            return $roleByFaculty[$pk];
+                        }
+
+                        return in_array($pk, $fids, true)
+                            ? FacultySessionScope::ROLE_TEACHING
+                            : FacultySessionScope::ROLE_SUPPORTING;
+                    })->implode(', ');
                 }
             }
 

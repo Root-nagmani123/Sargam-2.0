@@ -25,10 +25,21 @@ class FacultySessionScope
 
     public const ROLE_TEACHING = 'Teaching';
 
+    /**
+     * Not a stored role: a supporting faculty is one listed in the legacy
+     * internal_faculty column while someone else holds the session in
+     * faculty_master. 133 sessions across 25 faculties are only reachable that
+     * way, so the report offers it as a fourth choice on the Role filter.
+     */
+    public const ROLE_SUPPORTING = 'Supporting';
+
+    /** What the report's Role filter offers — the stored roles plus Supporting. */
+    public const FILTER_ROLES = ['Teaching', 'Sectional', 'Administration', 'Supporting'];
+
     /** A role string the report/card may filter by, or null for "any role". */
     public static function normaliseRole(?string $role): ?string
     {
-        return in_array($role, self::ROLES, true) ? $role : null;
+        return in_array($role, self::FILTER_ROLES, true) ? $role : null;
     }
 
     /**
@@ -63,6 +74,62 @@ class FacultySessionScope
     }
 
     /**
+     * The other column a faculty can appear in: internal_faculty, the supporting
+     * faculty on an event. Always a JSON array here (832 rows) or empty (46),
+     * with elements as strings or numbers — the same two shapes faculty_master
+     * carries, so the same pair of JSON_CONTAINS checks.
+     *
+     * @return array{0: string, 1: array<int, string>} [sql, bindings]
+     */
+    public static function internalFacultyPredicate(int $facultyPk, string $alias = 't'): array
+    {
+        $column = $alias === '' ? 'internal_faculty' : $alias . '.internal_faculty';
+        $json = "COALESCE(NULLIF({$column}, ''), '[]')";
+
+        return [
+            "(JSON_VALID({$json}) AND (JSON_CONTAINS({$json}, ?) OR JSON_CONTAINS({$json}, ?)))",
+            ['"' . $facultyPk . '"', (string) $facultyPk],
+        ];
+    }
+
+    /**
+     * "This faculty is on this session in ANY capacity" — teaching it, or
+     * supporting it. What the Timetable Session Report filters a chosen faculty
+     * by, so its per-faculty count matches the sessions they actually attend.
+     *
+     * The dashboard's Total Sessions card deliberately does NOT use this: it
+     * counts sessions the faculty TEACHES, and {@see applyFaculty()} stays the
+     * narrower rule it is built on.
+     */
+    public static function applyFacultyWithSupporting($query, int $facultyPk, string $alias = 't'): void
+    {
+        [$masterSql, $masterBindings] = self::facultyMasterPredicate($facultyPk, $alias);
+        [$internalSql, $internalBindings] = self::internalFacultyPredicate($facultyPk, $alias);
+
+        $query->whereRaw("({$masterSql} OR {$internalSql})", array_merge($masterBindings, $internalBindings));
+    }
+
+    /**
+     * Supporting only: in internal_faculty and NOT in faculty_master.
+     *
+     * The "not in faculty_master" half matters — on events written by the current
+     * form the two columns hold the same people, so without it every teaching
+     * session would read as supporting too.
+     *
+     * @return array{0: string, 1: array<int, string>} [sql, bindings]
+     */
+    public static function supportingOnlyPredicate(int $facultyPk, string $alias = 't'): array
+    {
+        [$masterSql, $masterBindings] = self::facultyMasterPredicate($facultyPk, $alias);
+        [$internalSql, $internalBindings] = self::internalFacultyPredicate($facultyPk, $alias);
+
+        return [
+            "({$internalSql} AND NOT {$masterSql})",
+            array_merge($internalBindings, $masterBindings),
+        ];
+    }
+
+    /**
      * Restrict to sessions held in a given role — the report's Role filter, and
      * the Total Sessions card's "only role will be Teaching".
      *
@@ -78,6 +145,13 @@ class FacultySessionScope
      */
     public static function applyRole($query, string $role, ?int $facultyPk = null, string $alias = 't'): void
     {
+        // Supporting is not a stored role — it is the internal_faculty column.
+        if ($role === self::ROLE_SUPPORTING) {
+            self::applySupportingRole($query, $facultyPk, $alias);
+
+            return;
+        }
+
         $details = $alias === '' ? 'faculty_details' : $alias . '.faculty_details';
 
         // JSON_VALID(NULL) is NULL, not 0, so it cannot be negated directly.
@@ -102,6 +176,46 @@ class FacultySessionScope
         }
 
         $query->whereRaw("({$sql})", $bindings);
+    }
+
+    /**
+     * Role = Supporting.
+     *
+     * With a faculty chosen: the sessions THEY support but do not hold. Without
+     * one: sessions that carry a supporting faculty at all, which is an EXISTS
+     * over faculty_master rather than a JSON path, because the column stores pks
+     * and "is this pk absent from the other column" cannot be asked of a path.
+     */
+    private static function applySupportingRole($query, ?int $facultyPk, string $alias): void
+    {
+        if ($facultyPk !== null) {
+            [$sql, $bindings] = self::supportingOnlyPredicate($facultyPk, $alias);
+
+            $query->whereRaw($sql, $bindings);
+
+            return;
+        }
+
+        $internal = $alias === '' ? 'internal_faculty' : $alias . '.internal_faculty';
+        $master = $alias === '' ? 'faculty_master' : $alias . '.faculty_master';
+        $internalJson = "COALESCE(NULLIF({$internal}, ''), '[]')";
+        $masterJson = "COALESCE(NULLIF({$master}, ''), '[]')";
+
+        $query->whereRaw(
+            "EXISTS (
+                SELECT 1 FROM faculty_master fm_support
+                WHERE JSON_VALID({$internalJson})
+                  AND (JSON_CONTAINS({$internalJson}, CONCAT('\"', fm_support.pk, '\"'))
+                    OR JSON_CONTAINS({$internalJson}, CAST(fm_support.pk AS CHAR)))
+                  AND NOT (
+                      (JSON_VALID({$masterJson}) AND (
+                          JSON_CONTAINS({$masterJson}, CONCAT('\"', fm_support.pk, '\"'))
+                          OR JSON_CONTAINS({$masterJson}, CAST(fm_support.pk AS CHAR))
+                      ))
+                      OR ({$master} REGEXP '^[0-9]+$' AND CAST({$master} AS UNSIGNED) = fm_support.pk)
+                  )
+            )"
+        );
     }
 
     /**
