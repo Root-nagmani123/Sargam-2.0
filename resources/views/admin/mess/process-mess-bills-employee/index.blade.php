@@ -1663,7 +1663,8 @@ document.addEventListener('DOMContentLoaded', function() {
         var wasVisible = addModalEl.classList.contains('show');
         var addInst = bootstrap.Modal.getOrCreateInstance(addModalEl);
         addInst.show();
-        if (wasVisible) loadModalBills();
+        // Stay on the page the user was viewing; loadModalBills() with no argument resets to 1.
+        if (wasVisible) loadModalBills(modalBillsCurrentPage);
     }
 
     function getFilteredModalBills() {
@@ -2022,7 +2023,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function fillModalClientTypePk() {
             var selectedSlugs = getChoicesMultiValues(modalClientType);
-            
+
+            // Rebuilding wipes the <option> nodes, so remember what was picked and re-apply it
+            // below. Without this, anything that re-runs this fill (e.g. the Add modal firing
+            // shown.bs.modal again after a payment) silently clears the user's Client Type filter.
+            var previouslySelectedPks = getChoicesMultiValues(modalClientTypePk) || [];
+
             modalClientTypePk.innerHTML = '';
 
             var choicesPk = modalClientTypePk.choicesInstance || null;
@@ -2058,12 +2064,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
             
+            var previouslySelectedSet = {};
+            previouslySelectedPks.forEach(function (pk) {
+                previouslySelectedSet[String(pk)] = true;
+            });
+
             uniqueOptions.forEach(function (o) {
                 var opt = document.createElement('option');
                 opt.value = o.value;
                 opt.textContent = o.text;
                 if (o.dataClientName) {
                     opt.dataset.clientName = o.dataClientName;
+                }
+                // Keep a still-valid previous selection (its slug is still selected above).
+                if (previouslySelectedSet[String(o.value)]) {
+                    opt.selected = true;
                 }
                 modalClientTypePk.appendChild(opt);
             });
@@ -2081,7 +2096,11 @@ document.addEventListener('DOMContentLoaded', function() {
         function fillModalBuyerNames() {
             var selectedSlugs = getChoicesMultiValues(modalClientType);
             var selectedPks = getChoicesMultiValues(modalClientTypePk);
-            
+
+            // Same reason as in fillModalClientTypePk(): the rebuild below drops the <option>
+            // nodes, so a re-fill would otherwise clear an existing Buyer Name selection.
+            var previouslySelectedBuyers = getChoicesMultiValues(modalBuyerName) || [];
+
             modalBuyerName.innerHTML = '';
 
             var choicesBuyer = modalBuyerName.choicesInstance || null;
@@ -2099,11 +2118,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 choicesBuyer.setChoices(newChoices, 'value', 'label', true);
             }
 
+            var previouslySelectedBuyerSet = {};
+            previouslySelectedBuyers.forEach(function (name) {
+                previouslySelectedBuyerSet[String(name)] = true;
+            });
+
             function addBuyerOptions(list) {
                 (list || []).forEach(function (o) {
                     var opt = document.createElement('option');
                     opt.value = o.value;
                     opt.textContent = o.text;
+                    if (previouslySelectedBuyerSet[String(o.value)]) {
+                        opt.selected = true;
+                    }
                     modalBuyerName.appendChild(opt);
                 });
             }

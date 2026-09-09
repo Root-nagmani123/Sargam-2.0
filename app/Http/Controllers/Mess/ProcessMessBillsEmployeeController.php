@@ -19,6 +19,7 @@ use App\Support\DataTableSearchHelper;
 use App\Support\MessBuyerClientFilter;
 use App\Support\RedisBackedCache;
 use Carbon\Carbon;
+use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -46,6 +47,14 @@ class ProcessMessBillsEmployeeController extends Controller
     /** Redis-backed combined bills cache TTL; store is resolved via {@see RedisBackedCache}. */
 
     private const COMBINED_BILLS_CACHE_VERSION_KEY = 'process_mess_bills_combined_cache_version';
+
+    /**
+     * Version key for caches that depend on invoice-notification state only (not on bill/payment
+     * rows). Sending an invoice changes which line items are "notified" but never changes bills,
+     * totals or payments, so it bumps this key alone — leaving the expensive grouped-bill and modal
+     * summary caches intact instead of forcing a full union re-query on the next page load.
+     */
+    private const NOTIFICATION_CACHE_VERSION_KEY = 'process_mess_bills_notification_cache_version';
 
     /** Max rows returned for print/export (avoids multi‑MB JSON responses). */
     private const PRINT_MAX_ROWS = 500;
@@ -81,6 +90,15 @@ class ProcessMessBillsEmployeeController extends Controller
 
     /** First working store per request: redis, then file if Redis extension/server unavailable. */
     private ?string $processMessBillsResolvedCacheStore = null;
+
+    /**
+     * Cache keys of modal summary entries written this request, so a payment can patch just the
+     * paying buyer's row instead of dropping every buyer's cached summaries.
+     */
+    private const MODAL_SUMMARY_KEY_INDEX = 'process_mess_bills_bill_summary_keys';
+
+    /** Max tracked summary cache keys; entries beyond this are evicted, never silently dropped. */
+    private const MODAL_SUMMARY_KEY_INDEX_MAX = 200;
 
     public function index(Request $request)
     {
@@ -542,10 +560,25 @@ class ProcessMessBillsEmployeeController extends Controller
 
     private function processMessBillsCombinedCacheVersion(): int
     {
+        return $this->readProcessMessBillsCacheVersion(self::COMBINED_BILLS_CACHE_VERSION_KEY);
+    }
+
+    /**
+     * Version for caches keyed on invoice-notification state.
+     * Also folds in the combined version so bill/payment writes still invalidate these entries.
+     */
+    private function processMessBillsNotificationCacheVersion(): int
+    {
+        return $this->readProcessMessBillsCacheVersion(self::COMBINED_BILLS_CACHE_VERSION_KEY)
+            + $this->readProcessMessBillsCacheVersion(self::NOTIFICATION_CACHE_VERSION_KEY);
+    }
+
+    private function readProcessMessBillsCacheVersion(string $versionKey): int
+    {
         $version = 1;
         foreach ($this->processMessBillsCacheStoreNames() as $storeName) {
             try {
-                $v = (int) RedisBackedCache::repositoryForStore($storeName)->get(self::COMBINED_BILLS_CACHE_VERSION_KEY, 0);
+                $v = (int) RedisBackedCache::repositoryForStore($storeName)->get($versionKey, 0);
                 if ($v > $version) {
                     $version = $v;
                 }
@@ -559,18 +592,125 @@ class ProcessMessBillsEmployeeController extends Controller
 
     private function bumpProcessMessBillsCombinedCache(): void
     {
+        $this->bumpProcessMessBillsCacheVersion(self::COMBINED_BILLS_CACHE_VERSION_KEY);
+    }
+
+    /**
+     * Invalidate only the notification-derived caches. Used when an invoice notification is sent:
+     * bills, totals and payments are unchanged, so the grouped-bill and modal summary caches stay
+     * warm and the next modal load does not have to re-run the union query.
+     */
+    private function bumpProcessMessBillsNotificationCache(): void
+    {
+        $this->bumpProcessMessBillsCacheVersion(self::NOTIFICATION_CACHE_VERSION_KEY);
+    }
+
+    /**
+     * Remember that a modal summary entry lives under $cacheKey, so payments can forget those exact
+     * entries instead of bumping the global version (which would also throw away the grouped-bill
+     * cache for every other buyer and date range).
+     */
+    private function rememberModalSummaryCacheKey(string $cacheKey): void
+    {
+        // Read-modify-write on a shared index: without a lock two concurrent requests can lose one
+        // another's key, and a lost key means a later payment cannot forget that entry (it would
+        // serve stale totals until TTL). Serialise on the cache store's lock when it offers one.
+        $store = null;
+        try {
+            $store = $this->processMessBillsCacheRepository()->getStore();
+        } catch (\Throwable $e) {
+            $store = null;
+        }
+
+        if ($store instanceof LockProvider) {
+            $lock = $store->lock(self::MODAL_SUMMARY_KEY_INDEX . '_lock', 5);
+            try {
+                $lock->block(3, function () use ($cacheKey) {
+                    $this->writeModalSummaryCacheKey($cacheKey);
+                });
+
+                return;
+            } catch (\Throwable $e) {
+                // Lock unavailable or timed out — fall through to the unlocked write below.
+            } finally {
+                try {
+                    $lock->release();
+                } catch (\Throwable $e) {
+                    // Releasing a lock we no longer hold is not an error worth surfacing.
+                }
+            }
+        }
+
+        $this->writeModalSummaryCacheKey($cacheKey);
+    }
+
+    private function writeModalSummaryCacheKey(string $cacheKey): void
+    {
+        try {
+            $repo = $this->processMessBillsCacheRepository();
+            $keys = $repo->get(self::MODAL_SUMMARY_KEY_INDEX, []);
+            $keys = is_array($keys) ? $keys : [];
+            if (in_array($cacheKey, $keys, true)) {
+                return;
+            }
+            $keys[] = $cacheKey;
+            // Bound the index so it cannot grow without limit across many filter combinations.
+            // Dropping a key from the index would orphan its cache entry (a later payment could not
+            // forget it, so it would serve stale totals until TTL). So evict the entries we drop.
+            if (count($keys) > self::MODAL_SUMMARY_KEY_INDEX_MAX) {
+                $overflow = array_slice($keys, 0, count($keys) - self::MODAL_SUMMARY_KEY_INDEX_MAX);
+                foreach ($overflow as $staleKey) {
+                    if (is_string($staleKey) && $staleKey !== '') {
+                        $repo->forget($staleKey);
+                    }
+                }
+                $keys = array_slice($keys, -self::MODAL_SUMMARY_KEY_INDEX_MAX);
+            }
+            $repo->put(self::MODAL_SUMMARY_KEY_INDEX, $keys, self::COMBINED_BILLS_CACHE_TTL_SECONDS * 10);
+        } catch (\Throwable $e) {
+            // Index is an optimisation only; failing to record a key just means a colder cache.
+        }
+    }
+
+    /**
+     * Drop the cached bill summaries after a payment. Payments change totals/paid/due, so the
+     * affected entries must go — but this forgets only those entries and leaves the cache version
+     * (and therefore every other cached derivation) untouched.
+     */
+    private function forgetProcessMessBillsSummaryCaches(): void
+    {
+        try {
+            $repo = $this->processMessBillsCacheRepository();
+            $keys = $repo->get(self::MODAL_SUMMARY_KEY_INDEX, []);
+            foreach (is_array($keys) ? $keys : [] as $cacheKey) {
+                if (is_string($cacheKey) && $cacheKey !== '') {
+                    $repo->forget($cacheKey);
+                }
+            }
+            $repo->forget(self::MODAL_SUMMARY_KEY_INDEX);
+        } catch (\Throwable $e) {
+            Log::warning('ProcessMessBillsEmployeeController: failed to forget modal summary caches; falling back to version bump.', [
+                'message' => $e->getMessage(),
+            ]);
+            $this->bumpProcessMessBillsCombinedCache();
+        }
+    }
+
+    private function bumpProcessMessBillsCacheVersion(string $versionKey): void
+    {
         foreach ($this->processMessBillsCacheStoreNames() as $storeName) {
             try {
                 $repo = RedisBackedCache::repositoryForStore($storeName);
-                if (! $repo->has(self::COMBINED_BILLS_CACHE_VERSION_KEY)) {
-                    $repo->put(self::COMBINED_BILLS_CACHE_VERSION_KEY, 2, self::COMBINED_BILLS_CACHE_TTL_SECONDS * 10);
+                if (! $repo->has($versionKey)) {
+                    $repo->put($versionKey, 2, self::COMBINED_BILLS_CACHE_TTL_SECONDS * 10);
 
                     continue;
                 }
-                $repo->increment(self::COMBINED_BILLS_CACHE_VERSION_KEY);
+                $repo->increment($versionKey);
             } catch (\Throwable $e) {
                 Log::warning('ProcessMessBillsEmployeeController: failed to bump combined bills cache version.', [
                     'store' => $storeName,
+                    'key' => $versionKey,
                     'message' => $e->getMessage(),
                 ]);
             }
@@ -610,6 +750,7 @@ class ProcessMessBillsEmployeeController extends Controller
         array $filters
     ): array {
         $cacheKey = $this->combinedBillsCacheKey($dateFrom, $dateTo, $filters);
+        $this->rememberModalSummaryCacheKey($cacheKey);
 
         $combinedBills = $this->rememberProcessMessBillsCombined(
             $cacheKey,
@@ -674,6 +815,7 @@ class ProcessMessBillsEmployeeController extends Controller
         array $buyerNames
     ): Collection {
         $cacheKey = $this->modalBillsSummaryCacheKey($dateFrom, $dateTo, $clientTypes, $clientTypePks, $buyerNames);
+        $this->rememberModalSummaryCacheKey($cacheKey);
 
         $rows = $this->rememberProcessMessBillsCombined(
             $cacheKey,
@@ -822,6 +964,7 @@ class ProcessMessBillsEmployeeController extends Controller
             }
             $summaries = $this->modalSummariesFromCombinedBillRows($combinedBills, $dateFrom, $dateTo);
             $repo->put($cacheKey, $summaries, max(30, self::COMBINED_BILLS_CACHE_TTL_SECONDS));
+            $this->rememberModalSummaryCacheKey($cacheKey);
         } catch (\Throwable $e) {
             Log::debug('ProcessMessBillsEmployeeController: modal summary warm cache skipped.', [
                 'message' => $e->getMessage(),
@@ -1606,7 +1749,7 @@ class ProcessMessBillsEmployeeController extends Controller
             ? []
             : $this->batchLineItemKeysByProcessIndexStubKey($voucherStubs);
 
-        return [$this->groupProcessIndexVouchersByBuyer($voucherStubs, $dateTo, true, $stubLineKeysMap, $deferReceiverUserId), $voucherStubs];
+        return [$this->groupProcessIndexVouchersByBuyer($voucherStubs, $dateTo, true, $stubLineKeysMap, $deferReceiverUserId, $skipLineItemKeys), $voucherStubs];
     }
 
     /**
@@ -1920,14 +2063,15 @@ class ProcessMessBillsEmployeeController extends Controller
         ?string $dateToYmd = null,
         bool $deferLifetimeDue = false,
         array $stubLineKeysMap = [],
-        bool $deferReceiverUserId = false
+        bool $deferReceiverUserId = false,
+        bool $skipLineItemKeys = false
     ): Collection {
         $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
 
         return $vouchers->groupBy(fn ($bill) => $deferReceiverUserId
             ? $this->messBillBuyerGroupKeyFast($bill)
             : $this->messBillBuyerGroupKey($bill))
-            ->map(function ($group) use ($paymentTypeMap, $dateToYmd, $deferLifetimeDue, $stubLineKeysMap, $deferReceiverUserId) {
+            ->map(function ($group) use ($paymentTypeMap, $dateToYmd, $deferLifetimeDue, $stubLineKeysMap, $deferReceiverUserId, $skipLineItemKeys) {
             $first = $group->first();
             $buyerName = $deferReceiverUserId
                 ? $this->resolveMessBillBuyerDisplayNameFast($first, $group)
@@ -2003,9 +2147,15 @@ class ProcessMessBillsEmployeeController extends Controller
             $receiverUserId = $deferReceiverUserId
                 ? 0
                 : $this->resolveReceiverUserIdFromAnyBill($group->all());
-            $lineItemKeys = $stubLineKeysMap !== []
-                ? $this->collectMessBillLineItemKeysWithStubMap($group->all(), $stubLineKeysMap)
-                : $this->collectMessBillLineItemKeys($group->all());
+            // When the caller discards line_item_keys (modal summaries keep bill_stub_keys and
+            // re-derive keys in bulk per page), computing them here would issue one query per
+            // voucher for nothing. $stubLineKeysMap === [] is not enough to detect that: it is also
+            // the "no stubs matched" case, which is why this needs an explicit flag.
+            $lineItemKeys = $skipLineItemKeys
+                ? []
+                : ($stubLineKeysMap !== []
+                    ? $this->collectMessBillLineItemKeysWithStubMap($group->all(), $stubLineKeysMap)
+                    : $this->collectMessBillLineItemKeys($group->all()));
 
             $billStubKeys = $group->map(function ($b) {
                 return ($b->source_type ?? '') === 'date_range'
@@ -2872,7 +3022,7 @@ class ProcessMessBillsEmployeeController extends Controller
     private function getMessCombinedInvoiceNotificationEntriesCached(): array
     {
         $cacheKey = 'process_mess_bills_invoice_notification_entries_v1:'
-            . $this->processMessBillsCombinedCacheVersion();
+            . $this->processMessBillsNotificationCacheVersion();
 
         $entries = $this->rememberProcessMessBillsCombined(
             $cacheKey,
@@ -4105,7 +4255,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 ], 500);
             }
             $clientName = trim((string) ($first->client_name ?? ($first->clientTypeCategory->client_name ?? '—')));
-            $this->bumpProcessMessBillsCombinedCache();
+            $this->bumpProcessMessBillsNotificationCache();
 
             return response()->json([
                 'success' => true,
@@ -4151,7 +4301,7 @@ class ProcessMessBillsEmployeeController extends Controller
             ], 500);
         }
 
-        $this->bumpProcessMessBillsCombinedCache();
+        $this->bumpProcessMessBillsNotificationCache();
 
         return response()->json([
             'success' => true,
@@ -5216,7 +5366,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 }
             }
             $remainingDueCombined = $this->billDueAmount($actualTotalDue, $amount);
-            $this->bumpProcessMessBillsCombinedCache();
+            $this->forgetProcessMessBillsSummaryCaches();
 
             return response()->json([
                 'success' => true,
@@ -5353,7 +5503,7 @@ class ProcessMessBillsEmployeeController extends Controller
             }
         }
 
-        $this->bumpProcessMessBillsCombinedCache();
+        $this->forgetProcessMessBillsSummaryCaches();
 
         return response()->json([
             'success' => true,
