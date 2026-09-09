@@ -24,6 +24,15 @@
                     Archived Courses
                 </button>
             </li>
+            {{-- Active and archived together — the tab the dashboard's Total Sessions
+                 card lands on, since it counts both. --}}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {{ ($initialCourseMode ?? 'active') === 'all' ? 'active' : '' }}" id="all-tab-btn" type="button" role="tab"
+                        aria-selected="{{ ($initialCourseMode ?? 'active') === 'all' ? 'true' : 'false' }}" data-mode="all">
+                    <i class="material-icons me-2" aria-hidden="true" style="font-size:18px;vertical-align:middle">apps</i>
+                    All Courses
+                </button>
+            </li>
 
         </ul>
     </div>
@@ -38,9 +47,19 @@
                     <!-- Course -->
                     <div class="col-12 col-md-4 col-lg-3">
                         <label for="filter_course" class="form-label">Course</label>
+                        {{-- The list follows the tab the page opened on, not always the
+                             active one: landing on All Courses with an Active-only
+                             dropdown would offer courses the grid is not showing. --}}
+                        @php
+                            $initialCourses = match ($initialCourseMode ?? 'active') {
+                                'archive' => $archivedCourses,
+                                'all'     => $allCourses,
+                                default   => $activeCourses,
+                            };
+                        @endphp
                         <select class="form-select select2-filter" id="filter_course" name="course_pk">
                             <option value="">-- All Courses --</option>
-                            @foreach($activeCourses as $course)
+                            @foreach($initialCourses as $course)
                                 <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
                             @endforeach
                         </select>
@@ -59,6 +78,20 @@
                             @endif
                             @foreach($faculties as $faculty)
                                 <option value="{{ $faculty->pk }}" @selected(!empty($lockedFacultyPk) && (int) $faculty->pk === (int) $lockedFacultyPk)>{{ $faculty->full_name }} ({{ $faculty->faculty_code }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <!-- Faculty Role -->
+                    <div class="col-12 col-md-4 col-lg-3">
+                        <label for="filter_faculty_role" class="form-label">Faculty Role</label>
+                        {{-- Teaching / Sectional / Administration, as stored per faculty
+                             on the session. With a faculty selected it reads "sessions
+                             they hold in that role". --}}
+                        <select class="form-select select2-filter" id="filter_faculty_role" name="faculty_role">
+                            <option value="">-- All Roles --</option>
+                            @foreach($facultyRoles as $role)
+                                <option value="{{ $role }}" @selected(($initialRole ?? null) === $role)>{{ $role }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -167,6 +200,7 @@
                             <th>Start Date</th>
                             <th>End Date</th>
                             <th>Venue</th>
+                            <th>Faculty Role</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -266,8 +300,15 @@ $(document).ready(function() {
             + '<option value="{{ $course->pk }}">{{ addslashes($course->course_name) }}</option>'
         @endforeach
         ;
+    var allCourseOptions = '<option value="">-- All Courses --</option>'
+        @foreach($allCourses as $course)
+            + '<option value="{{ $course->pk }}">{{ addslashes($course->course_name) }}</option>'
+        @endforeach
+        ;
     function courseOptionsFor(mode) {
-        return mode === 'archive' ? archivedCourseOptions : activeCourseOptions;
+        if (mode === 'archive') return archivedCourseOptions;
+        if (mode === 'all') return allCourseOptions;
+        return activeCourseOptions;
     }
 
     // ── Active / Archive tab toggle ──
@@ -437,6 +478,7 @@ $(document).ready(function() {
         if ($('#filter_course').val()) filterParts.push('Course: ' + courseText);
         var facultyText = $('#filter_faculty option:selected').text().trim();
         if ($('#filter_faculty').val()) filterParts.push('Faculty: ' + facultyText);
+        if ($('#filter_faculty_role').val()) filterParts.push('Faculty Role: ' + $('#filter_faculty_role').val());
         var ftText = $('#filter_faculty_type option:selected').text().trim();
         if ($('#filter_faculty_type').val()) filterParts.push('Faculty Type: ' + ftText);
         var venueText = $('#filter_venue option:selected').text().trim();
@@ -564,7 +606,7 @@ $(document).ready(function() {
 '</div>\n' +
 '\n' +
 '<div class="report-meta">\n' +
-'    <strong>Course Mode:</strong> ' + (currentMode === 'archive' ? 'Archived' : 'Active') + ' &nbsp;&nbsp;|&nbsp;&nbsp; ' +
+'    <strong>Course Mode:</strong> ' + (currentMode === 'archive' ? 'Archived' : (currentMode === 'all' ? 'Active + Archived' : 'Active')) + ' &nbsp;&nbsp;|&nbsp;&nbsp; ' +
 '    <strong>Printed:</strong> ' + new Date().toLocaleDateString('en-IN') + ' ' + new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}) + '\n' +
 '</div>\n' +
 '\n' +
@@ -598,6 +640,7 @@ $(document).ready(function() {
                         d.course_mode   = currentMode;
                         d.faculty_pk    = $('#filter_faculty').val();
                         d.faculty_type  = $('#filter_faculty_type').val();
+                        d.faculty_role  = $('#filter_faculty_role').val();
                         d.venue_id      = $('#filter_venue').val();
                         d.subject_topic = $('#filter_subject_topic').val();
                         d.module_name   = $('#filter_module_name').val();
@@ -605,21 +648,25 @@ $(document).ready(function() {
                         d.date_to       = $('#filter_date_to').val();
                     }
                 },
+                // Faculty, Group and Role are resolved from JSON after the page is
+                // fetched, so the server has no column to sort them by — they are
+                // marked unsortable instead of taking a click that does nothing.
                 columns: [
                     { data: 'sno',              orderable: false, searchable: false },
                     { data: 'course_name' },
                     { data: 'course_group_type' },
-                    { data: 'group_name' },
+                    { data: 'group_name',       orderable: false },
                     { data: 'subject_name' },
                     { data: 'module_name' },
                     { data: 'subject_topic' },
-                    { data: 'faculty_name' },
-                    { data: 'faculty_code' },
-                    { data: 'faculty_type' },
+                    { data: 'faculty_name',     orderable: false },
+                    { data: 'faculty_code',     orderable: false },
+                    { data: 'faculty_type',     orderable: false },
                     { data: 'class_session' },
                     { data: 'start_date' },
                     { data: 'end_date' },
                     { data: 'venue_name' },
+                    { data: 'faculty_role',     orderable: false },
                 ],
                 order: [[11, 'desc']],
                 responsive: false,
@@ -711,6 +758,7 @@ $(document).ready(function() {
             course_mode:   currentMode,
             course_pk:     $('#filter_course').val()       || '',
             faculty_pk:    $('#filter_faculty').val()       || '',
+            faculty_role:  $('#filter_faculty_role').val()  || '',
             faculty_type:  $('#filter_faculty_type').val()  || '',
             venue_id:      $('#filter_venue').val()         || '',
             subject_topic: $('#filter_subject_topic').val() || '',

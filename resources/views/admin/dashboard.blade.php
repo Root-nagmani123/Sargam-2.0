@@ -203,6 +203,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                             </div>
                             <div class="flex-grow-1 min-w-0">
                                 <p class="stat-title">{{ $card['label'] }}</p>
+                                @if($card['show_count'] ?? true)
                                 @php
                                     // Counts are whole numbers and keep their 0-padding, but a
                                     // marks total can carry a half mark, and (int) would have
@@ -213,6 +214,12 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                         : rtrim(rtrim(number_format($v, 2, '.', ''), '0'), '.');
                                 @endphp
                                 <p class="stat-value">{{ $statValue }}</p>
+                                @else
+                                {{-- Cards that open a page rather than count rows (the
+                                     timetables) carry no number — an "00" would read as
+                                     "nothing there". --}}
+                                <p class="stat-value stat-value-link">Open</p>
+                                @endif
                             </div>
                         </div>
                     </div>

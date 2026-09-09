@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
  * "Which timetable sessions belong to this faculty", in one place.
  *
  * The dashboard's Total Sessions card and the Timetable Session Report have to
- * agree — a card that says 79 must open a report showing 79 — so both count
+ * agree — a card that says 27 must open a report showing 27 — so both count
  * through here rather than each writing its own predicate.
  *
  * It is also the server-side lock: a faculty user may only ever see their own
@@ -17,6 +17,20 @@ use Illuminate\Support\Facades\DB;
  */
 class FacultySessionScope
 {
+    /**
+     * The roles a faculty can hold in a session, as stored in
+     * timetable.faculty_details[*].role and offered by the Add/Edit Event form.
+     */
+    public const ROLES = ['Teaching', 'Sectional', 'Administration'];
+
+    public const ROLE_TEACHING = 'Teaching';
+
+    /** A role string the report/card may filter by, or null for "any role". */
+    public static function normaliseRole(?string $role): ?string
+    {
+        return in_array($role, self::ROLES, true) ? $role : null;
+    }
+
     /**
      * timetable.faculty_master holds a JSON array of faculty PKs as STRINGS
      * (`["84"]`, the shape the Add Event form writes), but 47 legacy rows hold a
@@ -27,22 +41,76 @@ class FacultySessionScope
      * report used to do: MariaDB has no CAST ... AS JSON, so that filter threw a
      * SQL syntax error the moment anyone picked a faculty. JSON_VALID guards the
      * JSON_CONTAINS calls, because JSON_CONTAINS on a non-JSON value errors out.
+     *
+     * @return array{0: string, 1: array<int, string>} [sql, bindings]
      */
-    public static function applyFaculty($query, int $facultyPk, string $alias = 't'): void
+    public static function facultyMasterPredicate(int $facultyPk, string $alias = 't'): array
     {
         $column = $alias === '' ? 'faculty_master' : $alias . '.faculty_master';
         $json = "COALESCE(NULLIF({$column}, ''), '[]')";
 
-        $query->whereRaw(
+        return [
             "((JSON_VALID({$json}) AND (JSON_CONTAINS({$json}, ?) OR JSON_CONTAINS({$json}, ?))) OR {$column} = ?)",
-            ['"' . $facultyPk . '"', (string) $facultyPk, (string) $facultyPk]
-        );
+            ['"' . $facultyPk . '"', (string) $facultyPk, (string) $facultyPk],
+        ];
+    }
+
+    public static function applyFaculty($query, int $facultyPk, string $alias = 't'): void
+    {
+        [$sql, $bindings] = self::facultyMasterPredicate($facultyPk, $alias);
+
+        $query->whereRaw($sql, $bindings);
+    }
+
+    /**
+     * Restrict to sessions held in a given role — the report's Role filter, and
+     * the Total Sessions card's "only role will be Teaching".
+     *
+     * With $facultyPk the role must be THAT faculty's ("sessions I teach");
+     * without it, any faculty in the session holding the role is enough, which
+     * is what an admin filtering the whole report means by "Teaching sessions".
+     *
+     * Roles live in faculty_details, and 553 of the 878 sessions predate that
+     * column. Those legacy rows count as Teaching — the same fallback
+     * {@see expected_feedback_count_sql()} and the student feedback listing
+     * already make — so a faculty whose sessions are all legacy still sees them
+     * rather than a zero.
+     */
+    public static function applyRole($query, string $role, ?int $facultyPk = null, string $alias = 't'): void
+    {
+        $details = $alias === '' ? 'faculty_details' : $alias . '.faculty_details';
+
+        // JSON_VALID(NULL) is NULL, not 0, so it cannot be negated directly.
+        $hasDetails = "COALESCE(JSON_VALID({$details}), 0) = 1";
+        $noDetails = "COALESCE(JSON_VALID({$details}), 0) = 0";
+
+        if ($facultyPk !== null) {
+            $inDetails = "JSON_CONTAINS({$details}, JSON_OBJECT('faculty_pk', ?, 'role', ?))";
+            $bindings = [$facultyPk, $role];
+            [$legacySql, $legacyBindings] = self::facultyMasterPredicate($facultyPk, $alias);
+        } else {
+            $inDetails = "JSON_SEARCH({$details}, 'one', ?, NULL, '$[*].role') IS NOT NULL";
+            $bindings = [$role];
+            [$legacySql, $legacyBindings] = ['1 = 1', []];
+        }
+
+        $sql = "({$hasDetails} AND {$inDetails})";
+
+        if ($role === self::ROLE_TEACHING) {
+            $sql .= " OR ({$noDetails} AND {$legacySql})";
+            $bindings = array_merge($bindings, $legacyBindings);
+        }
+
+        $query->whereRaw("({$sql})", $bindings);
     }
 
     /**
      * The report's Active / Archive course toggle. Lifted from the report so the
-     * card can count on the same footing the report opens with (`active`),
-     * instead of counting sessions the landing page then filters away.
+     * card can count on the same footing the report opens with, instead of
+     * counting sessions the landing page then filters away.
+     *
+     * Any other mode — 'all', the tab the Total Sessions card lands on — leaves
+     * the query unfiltered, so active and ended courses are counted together.
      */
     public static function applyCourseMode($query, ?string $mode, string $courseAlias = 'c'): void
     {
@@ -65,13 +133,17 @@ class FacultySessionScope
      * Built on the same joins and filters the report uses, so clicking the card
      * lands on a report whose row count is this number.
      */
-    public static function countFor(int $facultyPk, string $courseMode = 'active'): int
+    public static function countFor(int $facultyPk, string $courseMode = 'active', ?string $role = null): int
     {
         $query = DB::table('timetable as t')
             ->leftJoin('course_master as c', 't.course_master_pk', '=', 'c.pk');
 
         self::applyCourseMode($query, $courseMode);
         self::applyFaculty($query, $facultyPk);
+
+        if ($role !== null) {
+            self::applyRole($query, $role, $facultyPk);
+        }
 
         return $query->count();
     }

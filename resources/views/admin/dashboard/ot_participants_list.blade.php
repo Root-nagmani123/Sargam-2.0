@@ -128,12 +128,26 @@
                     </div>
                     @endif
 
+                    {{-- Cadre and House list only what this viewer's participants
+                         actually belong to, and both default to "All" so the page
+                         opens on the whole set. --}}
                     @if(($cadreOptions ?? collect())->isNotEmpty())
                     <div class="sl-filter-item">
                         <select id="cadreFilter" class="form-select sl-filter-select" aria-label="Filter by cadre">
-                            <option value="">Cadre</option>
+                            <option value="">Cadre: All</option>
                             @foreach($cadreOptions as $cadre)
                                 <option value="{{ $cadre }}" {{ (string)($filters['cadre'] ?? '') === (string)$cadre ? 'selected' : '' }}>{{ $cadre }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
+
+                    @if(($houseOptions ?? collect())->isNotEmpty())
+                    <div class="sl-filter-item">
+                        <select id="houseFilter" class="form-select sl-filter-select" aria-label="Filter by house name">
+                            <option value="">House: All</option>
+                            @foreach($houseOptions as $house)
+                                <option value="{{ $house }}" {{ (string)($filters['house'] ?? '') === (string)$house ? 'selected' : '' }}>{{ $house }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -273,6 +287,7 @@
                 status: currentStatus,
                 course_id: $('#courseFilter').val() || '',
                 cadre: $('#cadreFilter').val() || '',
+                house: $('#houseFilter').val() || '',
                 session: $('#sessionFilter').val() || '',
                 participant: $('#participantFilter').val() || '',
                 from_date: (filters.from_date || '').toString(),
@@ -321,7 +336,9 @@
             searchDelay: 400,
             pageLength: 10,
             lengthMenu: [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
-            order: [[0, 'asc']],
+            // The House Wise Details card opens this list with ?sort=house, so it
+            // lands grouped by house instead of by serial number.
+            order: (filters.sort === 'house') ? [[5, 'asc']] : [[0, 'asc']],
             language: { emptyTable: 'Data not found.' },
             responsive: false,
             autoWidth: false,
@@ -367,6 +384,7 @@
         /* ── Filters ── */
         $('#courseFilter').on('change', function() { applyFilter({ course_id: this.value }); });
         $('#cadreFilter').on('change', function() { applyFilter({ cadre: this.value }); });
+        $('#houseFilter').on('change', function() { applyFilter({ house: this.value }); });
         $('#sessionFilter').on('change', function() { applyFilter({ session: this.value }); });
         $('#participantFilter').on('change', function() { applyFilter({ participant: this.value }); });
         $('#resetFilters').on('click', function() { window.location.href = baseUrl; });

@@ -189,3 +189,12 @@
     }
     .stat-value { font-size: 1.5rem; }
 }
+/* Cards that open a page instead of counting rows (the timetables): the tile
+   still needs a second line under the title, but at label weight rather than
+   the size a figure is set in. */
+.stat-value.stat-value-link {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2f80ed;
+    letter-spacing: 0;
+}

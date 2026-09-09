@@ -285,6 +285,17 @@
 <script>
 console.log('FullCalendar loaded:', typeof FullCalendar !== 'undefined');
 
+// The Academic Timetable card opens this page with ?scope=academy: the same
+// calendar, but showing the whole Academy rather than the viewer's own sessions.
+// Every request the page makes has to carry it, or the grid would drop back to
+// the personal timetable on the first refresh.
+const CALENDAR_SCOPE = @json($calendarScope ?? "");
+const SCOPE_QS = CALENDAR_SCOPE ? ("&scope=" + encodeURIComponent(CALENDAR_SCOPE)) : "";
+function withScope(params) {
+    if (CALENDAR_SCOPE) { params.append("scope", CALENDAR_SCOPE); }
+    return params;
+}
+
 // Configuration object
 const CalendarConfig = {
     api: {
@@ -726,6 +737,7 @@ class CalendarManager {
             params.append('course_id', this.selectedCourseId);
         }
         
+        withScope(params);
         if (params.toString()) {
             url += '?' + params.toString();
         }
@@ -1073,7 +1085,7 @@ class CalendarManager {
         if (this.eventDetailsCache.has(eventId)) {
             return this.eventDetailsCache.get(eventId);
         }
-        const response = await fetch(`${CalendarConfig.api.eventDetails}?id=${eventId}`, {
+        const response = await fetch(`${CalendarConfig.api.eventDetails}?id=${eventId}${SCOPE_QS}`, {
             headers: {
                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
                 'Accept': 'application/json'
@@ -1235,7 +1247,7 @@ class CalendarManager {
 
     async loadEventDetails(eventId) {
         try {
-            const response = await fetch(`${CalendarConfig.api.eventDetails}?id=${eventId}`, {
+            const response = await fetch(`${CalendarConfig.api.eventDetails}?id=${eventId}${SCOPE_QS}`, {
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 }
@@ -2366,7 +2378,7 @@ async setInternalFaculty(internalFacultyIds) {
         if (download) {
             params.append('download', '1');
         }
-        return params;
+        return withScope(params);
     }
 
     /** Open the whole-week timetable PDF for the current week + course filter. */
@@ -2400,7 +2412,7 @@ async setInternalFaculty(internalFacultyIds) {
         }
 
         // Always open the preview page — download button is on the preview page itself.
-        window.open(`${CalendarConfig.api.timetablePreview}?${params.toString()}`, '_blank', 'noopener');
+        window.open(`${CalendarConfig.api.timetablePreview}?${withScope(params).toString()}`, '_blank', 'noopener');
     }
 
     /** Open the Course Information / Faculty-for-the-week PDF for the current week + course filter. */
@@ -2484,6 +2496,7 @@ async setInternalFaculty(internalFacultyIds) {
             if (this.selectedCourseId) {
                 params.append('course_id', this.selectedCourseId);
             }
+            withScope(params);
             if (params.toString()) {
                 url += '?' + params.toString();
             }

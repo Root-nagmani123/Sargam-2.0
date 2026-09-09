@@ -24,6 +24,28 @@ class CalendarController extends Controller
     /**
      * Limit timetable rows to sessions assigned to the given faculty.
      */
+    /**
+     * Is this the Academic Timetable view — the whole Academy's sessions rather
+     * than the viewer's own?
+     *
+     * The faculty dashboard has two timetable cards: "My Timetable" opens this
+     * page as it has always worked (the faculty's own classes, teaching or
+     * supporting), and "Academic Timetable" opens the same page unscoped, the way
+     * an admin login sees it. The second asks with ?scope=academy, carried by the
+     * page's own AJAX calls.
+     *
+     * Only a faculty-portal viewer may ask: every other role already reaches the
+     * timetable through its own course scope, and this must not widen that.
+     */
+    private function wantsAcademyScope(?Request $request = null): bool
+    {
+        $request ??= request();
+
+        return $request->input('scope') === 'academy'
+            && is_faculty_portal_user()
+            && ! hasRole('Student-OT');
+    }
+
     private function scopeTimetableForFaculty($query, int $facultyPk)
     {
         return $query->where(function ($q) use ($facultyPk) {
@@ -57,8 +79,13 @@ class CalendarController extends Controller
         // Training-admin roles manage events and must see courses by role mapping, not timetable.
         $isTrainingAdmin = hasRole('Training') || hasRole('Training-Induction') || hasRole('Training MCTP Admin') || hasRole('Training IST');
 
+        // The Academic Timetable view is the Academy's, so it keeps every active
+        // course in the picker rather than the viewer's own.
+        $academyScope = $this->wantsAcademyScope($request);
+        $calendarScope = $academyScope ? 'academy' : '';
+
         // Faculty see courses from their timetable / coordinator assignments, not role mapping.
-        if (is_faculty_portal_user() && !$isTrainingAdmin) {
+        if (!$academyScope && is_faculty_portal_user() && !$isTrainingAdmin) {
             $facultyPk = get_auth_faculty_master_pk();
             if ($facultyPk) {
                 $facultyCourseIds = app(FacultyFeedbackReportService::class)->getAccessibleCourseIds($facultyPk);
@@ -68,7 +95,7 @@ class CalendarController extends Controller
             } else {
                 $courseBase = $courseBase->whereRaw('1 = 0');
             }
-        } elseif (!hasRole('Student-OT') && !empty($data_course_id)) {
+        } elseif (!$academyScope && !hasRole('Student-OT') && !empty($data_course_id)) {
             // Students are scoped by enrolment (the join below), not by role. Skipping the
             // role-course filter for them avoids get_Role_by_course()'s [-1] (students have
             // no Spatie role), which would otherwise wipe out their course list.
@@ -143,7 +170,8 @@ class CalendarController extends Controller
             'classSessionMaster',
             'internal_faculty',
             'sectors',
-            'facultyRoles'
+            'facultyRoles',
+            'calendarScope'
         ));
     }
 
@@ -317,14 +345,16 @@ class CalendarController extends Controller
             ->leftJoin('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id');
 
         $data_course_id = get_Role_by_course();
-        if (is_faculty_portal_user()) {
+        // The Academic Timetable view (?scope=academy) is the whole Academy's, so
+        // the faculty narrowing is skipped for it.
+        if (! $this->wantsAcademyScope($request) && is_faculty_portal_user()) {
             $facultyPk = get_auth_faculty_master_pk();
             if ($facultyPk) {
                 $events = $this->scopeTimetableForFaculty($events, $facultyPk);
             } else {
                 $events = $events->whereRaw('1 = 0');
             }
-        } elseif (!hasRole('Student-OT') && !empty($data_course_id)) {
+        } elseif (! $this->wantsAcademyScope($request) && !hasRole('Student-OT') && !empty($data_course_id)) {
             $events = $events->whereIn('timetable.course_master_pk', $data_course_id);
         }
 
@@ -638,8 +668,12 @@ class CalendarController extends Controller
                 ->where('student_course_group_map.student_master_pk', $student_pk);
         }
 
-        // Scope events by user type (faculty assignments vs training-admin course alignment).
-        if (is_faculty_portal_user()) {
+        // Scope events by user type (faculty assignments vs training-admin course
+        // alignment). The Academic Timetable view (?scope=academy) takes neither —
+        // it is the whole Academy's timetable.
+        if ($this->wantsAcademyScope($request)) {
+            // no narrowing
+        } elseif (is_faculty_portal_user()) {
             $facultyPk = get_auth_faculty_master_pk();
             if ($facultyPk) {
                 $events = $this->scopeTimetableForFaculty($events, $facultyPk);
@@ -833,7 +867,10 @@ class CalendarController extends Controller
             ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
             ->where('timetable.pk', $eventId);
 
-        if (is_faculty_portal_user()) {
+        // ?scope=academy — the Academic Timetable view, unscoped (see wantsAcademyScope()).
+        if ($this->wantsAcademyScope($request)) {
+            // no narrowing
+        } elseif (is_faculty_portal_user()) {
             $facultyPk = get_auth_faculty_master_pk();
             if ($facultyPk) {
                 $eventQuery = $this->scopeTimetableForFaculty($eventQuery, $facultyPk);
@@ -1433,6 +1470,9 @@ class CalendarController extends Controller
                 ->join('course_group_timetable_mapping', 'course_group_timetable_mapping.timetable_pk', '=', 'timetable.pk')
                 ->join('student_course_group_map', 'student_course_group_map.group_type_master_course_master_map_pk', '=', 'course_group_timetable_mapping.group_pk')
                 ->where('student_course_group_map.student_master_pk', $studentPk);
+        } elseif ($this->wantsAcademyScope($request)) {
+            // Academic Timetable view — the whole Academy's sessions, so the PDF
+            // holds what the page it was exported from was showing.
         } elseif (is_faculty_portal_user()) {
             $facultyPk = get_auth_faculty_master_pk();
             if ($facultyPk) {
@@ -1657,8 +1697,8 @@ class CalendarController extends Controller
     /** Preview page: shows the timetable PDF in-browser with a Download button. */
     public function previewTimetablePdf(Request $request)
     {
-        $streamUrl   = route('calendar.timetable.pdf',   $request->only(['start', 'end', 'course_id']));
-        $downloadUrl = route('calendar.timetable.pdf',   array_merge($request->only(['start', 'end', 'course_id']), ['download' => 1]));
+        $streamUrl   = route('calendar.timetable.pdf',   $request->only(['start', 'end', 'course_id', 'scope']));
+        $downloadUrl = route('calendar.timetable.pdf',   array_merge($request->only(['start', 'end', 'course_id', 'scope']), ['download' => 1]));
         $title = 'Time Table';
         return view('admin.calendar.pdf.preview', compact('streamUrl', 'downloadUrl', 'title'));
     }

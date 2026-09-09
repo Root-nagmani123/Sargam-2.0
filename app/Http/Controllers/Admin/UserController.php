@@ -241,6 +241,8 @@ class UserController extends Controller
         $totalStudents = 0;
         $facultyTotalSessions = 0;
         $facultyTotalFeedback = 0;
+        $facultyCounsellees = 0;
+        $facultyHouses = 0;
         $isCCorACC = false;
         $userId = Auth::user()->user_id;
          if(hasRole('Student-OT')){
@@ -279,19 +281,38 @@ class UserController extends Controller
                      })
                      ->count();
 
-                 // "Total Sessions" card — this faculty's sessions on ACTIVE courses.
-                 // Counted through the same scope the Timetable Session Report filters
-                 // by, on the Active course mode the report opens in, so the card and
-                 // the page it opens hold the same rows. Archived-course sessions are
-                 // deliberately excluded: they are finished programmes, and pulling
-                 // them in made the report list courses that had already ended.
-                 $facultyTotalSessions = FacultySessionScope::countFor($facultyPk, 'active');
+                 // "Total Sessions" card — the sessions this faculty TEACHES, across
+                 // active and ended courses alike. Counted through the same scope the
+                 // Timetable Session Report filters by, and the card links to that
+                 // report's All Courses tab with the Role filter on Teaching, so the
+                 // page it opens holds exactly these rows.
+                 $facultyTotalSessions = FacultySessionScope::countFor(
+                     $facultyPk,
+                     'all',
+                     FacultySessionScope::ROLE_TEACHING
+                 );
 
-                 // "Total Feedback" card — this faculty's submitted feedback on active
-                 // courses, counted the way the /faculty_view report the card opens
-                 // counts it, so the figure is verifiable on the page it leads to.
+                 // "Total Running Courses Feedback" card — this faculty's submitted
+                 // feedback on running (active, not yet ended) courses, counted the way
+                 // the Faculty Feedback with Comments page the card opens counts it, so
+                 // the figure is verifiable on the page it leads to.
                  $facultyTotalFeedback = app(FacultyFeedbackReportService::class)
                      ->getTotalFeedbackCount($facultyPk);
+
+                 // "My Counsellees" and "House Wise Details" both open the OT /
+                 // Participants list, so both count what that page lists for this
+                 // viewer — its own payload, collapsed to one entry per participant.
+                 // Counsellees are the participants; the house card counts the houses
+                 // they are spread across, which is what it opens the list to show.
+                 $counselleeRows = $this->resolveDashboardStudentListPayload($request, false)['students'];
+
+                 $facultyCounsellees = $counselleeRows
+                     ->pluck('student_master_pk')->filter()->unique()->count();
+
+                 $facultyHouses = $counselleeRows
+                     ->pluck('house_name')
+                     ->map(fn ($h) => is_string($h) ? trim($h) : $h)
+                     ->filter()->unique()->count();
 
                  // Check if faculty is CC or ACC
                  $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
@@ -407,8 +428,18 @@ class UserController extends Controller
             'session_details'         => ['count' => $totalSessions,                               'link' => route('admin.dashboard.sessions'),                             'visible' => !$isSecurityRole && ($isFacultyRole || $isSuperAdmin)],
             // Faculty-only cards. Both open a report that scopes itself to the
             // logged-in faculty server-side, so the count and the page agree.
-            'total_sessions'          => ['count' => $facultyTotalSessions,                        'link' => route('timetable-report.index'),                               'visible' => !$isSecurityRole && $isFacultyPortalUser],
-            'total_feedback'          => ['count' => $facultyTotalFeedback,                        'link' => route('admin.feedback.faculty_view'),                     'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            'total_sessions'          => ['count' => $facultyTotalSessions,                        'link' => route('timetable-report.index', ['course_mode' => 'all', 'faculty_role' => FacultySessionScope::ROLE_TEACHING]), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            'total_feedback'          => ['count' => $facultyTotalFeedback,                        'link' => route('faculty.session_feedback.comments', ['course_type' => 'current', 'program_id' => 'all']), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            // No count on the two timetable cards: they open a calendar, not a list
+            // whose rows could be counted. Academic = the whole Academy's timetable
+            // (?scope=academy), My Timetable = the same page scoped to the viewer,
+            // which is what it already does for a faculty login.
+            'academic_timetable'      => [                                                         'link' => route('calendar.index', ['scope' => 'academy']),               'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            'my_timetable'            => [                                                         'link' => route('calendar.index'),                                       'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            // Both open the OT / Participants list — the second ordered by House so it
+            // opens house-wise, with the page's House filter to narrow to one.
+            'my_counsellees'          => ['count' => $facultyCounsellees,                          'link' => route('admin.dashboard.ot-participants'),                      'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            'house_wise_details'      => ['count' => $facultyHouses,                               'link' => route('admin.dashboard.ot-participants', ['sort' => 'house']), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
             'total_students'          => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
             'student_details'         => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
             'my_course_participant'   => ['count' => StudentMasterCourseMap::query()->when(!empty($myCourseIds), fn($q) => $q->whereIn('course_master_pk', $myCourseIds))->count(), 'link' => route('my.course.participant'),                                'visible' => true],
@@ -448,6 +479,10 @@ class UserController extends Controller
                 'color_class' => $card->color_class,
                 'link'        => $def['link'] ?? null,
                 'count'       => $def['count'] ?? ($cardCounts[$card->key] ?? 0),
+                // A definition that omits 'count' is a card that opens something
+                // rather than counting it (the timetables) — it renders as a tile
+                // with no number, not as a zero.
+                'show_count'  => $def === null || array_key_exists('count', $def),
             ];
         })->values();
 
@@ -1558,7 +1593,13 @@ class UserController extends Controller
             'participant' => (string) $request->input('participant', ''),
             'course_id' => (string) $request->input('course_id', ''),
             'cadre' => (string) $request->input('cadre', ''),
+            // House Name: applyDashboardStudentListFilters() has always honoured it,
+            // but the page had no control to set it — the dashboard's House Wise
+            // Details card opens here, so the filter is now on the toolbar.
+            'house' => (string) $request->input('house', ''),
             'status' => $status,
+            // ?sort=house opens the list house-wise (the House Wise Details card).
+            'sort' => $request->input('sort') === 'house' ? 'house' : '',
         ];
 
         // Course filter scope: Super Admin / Admin / PA can pick ANY course for the
