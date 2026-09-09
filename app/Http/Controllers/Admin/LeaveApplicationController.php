@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\MyLeaveExport;
 use App\Http\Controllers\Controller;
 use App\Models\LeaveApplication;
 use App\Models\LeaveApplicationAttachment;
@@ -9,11 +10,14 @@ use App\Models\LeaveNatureMaster;
 use App\Services\FacultyLeaveApprovalService;
 use App\Services\LeaveApplicationService;
 use App\Services\NotificationService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Excel as ExcelFormat;
+use Maatwebsite\Excel\Facades\Excel;
 use Yajra\DataTables\Facades\DataTables;
 
 class LeaveApplicationController extends Controller
@@ -164,6 +168,12 @@ class LeaveApplicationController extends Controller
             'attachments.*.file.mimes' => 'Allowed file types: PDF, JPG, JPEG, PNG, DOC, DOCX.',
         ]);
 
+        if (! Carbon::parse($validated['from_date'])->isSameDay(Carbon::parse($validated['to_date']))) {
+            return back()->withInput()->withErrors([
+                'to_date' => 'Leave can only be applied for one day at a time. Please submit a separate application for additional days.',
+            ]);
+        }
+
         if ($validated['leave_type'] === LeaveApplication::TYPE_STATIONED_LEAVE
             && ! $this->leaveService->stationedLeaveConfigured($context['course_pk'], $validated['from_date'])) {
             $courseName = $context['course']->course_name ?? 'your course';
@@ -212,12 +222,15 @@ class LeaveApplicationController extends Controller
 
             if ($ptConfig && ! $this->leaveService->isLeaveStartDateAllowedForApply(
                 $ptConfig->apply_cutoff_time,
-                $validated['from_date']
+                $validated['from_date'],
+                null,
+                (int) ($ptConfig->freeze_before_minutes ?? 0)
             )) {
                 return back()->withInput()->withErrors([
                     'from_date' => $this->leaveService->applyCutoffErrorMessage(
                         'PT exemption',
-                        $ptConfig->apply_cutoff_time
+                        $ptConfig->apply_cutoff_time,
+                        (int) ($ptConfig->freeze_before_minutes ?? 0)
                     ),
                 ]);
             }
@@ -267,6 +280,30 @@ class LeaveApplicationController extends Controller
                 return back()->withInput()->withErrors([
                     'to_date' => 'Requested days exceed your remaining PT balance (' . number_format($balance['remaining'], 1) . ' days).',
                 ]);
+            }
+
+            $ptConfig = $this->leaveService->getActivePtExemptionConfig(
+                $context['course_pk'],
+                $context['student']->gender ?? null,
+                $validated['from_date']
+            );
+            $maxPerMonth = (float) ($ptConfig->max_exemption_per_month ?? 0);
+
+            if ($maxPerMonth > 0) {
+                $monthlyUsed = $this->leaveService->getPtMonthlyUsage(
+                    $context['student_pk'],
+                    $context['course_pk'],
+                    $validated['from_date'],
+                    $application?->pk
+                );
+
+                if ($monthlyUsed + $totalDays > $maxPerMonth) {
+                    return back()->withInput()->withErrors([
+                        'to_date' => 'Requested days exceed the max PT exemption allowed per month ('
+                            . number_format($maxPerMonth, 1) . ' days). You have already used/requested '
+                            . number_format($monthlyUsed, 1) . ' day(s) this month.',
+                    ]);
+                }
             }
         }
 
@@ -471,29 +508,73 @@ class LeaveApplicationController extends Controller
 
     public function myLeaveExport(Request $request)
     {
+        $format = strtolower((string) $request->get('format', 'excel'));
+        $filename = 'My_Leave_Applications_' . now()->format('Ymd_His');
+
+        if ($format === 'pdf') {
+            @ini_set('memory_limit', '256M');
+            @set_time_limit(120);
+
+            $context = $this->leaveService->resolveStudentContext((int) Auth::user()->pk);
+            $rows = $this->baseMyLeaveQuery($request)->get();
+
+            $logoPath = public_path('images/lbsnaa_logo.jpg');
+            $logo = (is_file($logoPath) && is_readable($logoPath))
+                ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoPath))
+                : null;
+
+            $pdf = Pdf::loadView('admin.leave.export_pdf', [
+                'rows' => $rows,
+                'filterLine' => $this->buildMyLeaveExportFilterLine($request),
+                'printedOn' => now()->format('d-m-Y H:i'),
+                'reportTitle' => 'My Leave Applications',
+                'studentName' => $context['student']->display_name ?? '',
+                'logo' => $logo,
+            ])
+                ->setPaper('a4', 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'isPhpEnabled' => true,
+                    'dpi' => 96,
+                ]);
+
+            return $pdf->download($filename . '.pdf');
+        }
+
+        $context = $this->leaveService->resolveStudentContext((int) Auth::user()->pk);
         $rows = $this->baseMyLeaveQuery($request)->get();
 
-        $columns = ['S. No.', 'Leave Type', 'From Date', 'To Date', 'Total Days', 'Status'];
-        $filename = 'My_Leave_Applications_' . now()->format('Ymd_His') . '.csv';
+        return Excel::download(
+            new MyLeaveExport($rows, $context['student']->display_name ?? '', $this->buildMyLeaveExportFilterLine($request)),
+            $filename . '.xlsx',
+            ExcelFormat::XLSX
+        );
+    }
 
-        return response()->streamDownload(function () use ($rows, $columns) {
-            $out = fopen('php://output', 'w');
-            fputcsv($out, $columns);
+    private function buildMyLeaveExportFilterLine(Request $request): string
+    {
+        $parts = [];
 
-            $serial = 1;
-            foreach ($rows as $row) {
-                fputcsv($out, [
-                    $serial++,
-                    $row->leave_type_label,
-                    $row->from_date?->format('d-m-Y') ?? '-',
-                    $row->to_date?->format('d-m-Y') ?? '-',
-                    number_format((float) $row->total_days, 1),
-                    $row->status_label,
-                ]);
-            }
+        $statusMap = [
+            (string) LeaveApplication::STATUS_PENDING => 'Pending',
+            (string) LeaveApplication::STATUS_APPROVED => 'Approved',
+            (string) LeaveApplication::STATUS_REJECTED => 'Rejected',
+        ];
+        if ($request->filled('status') && isset($statusMap[(string) $request->status])) {
+            $parts[] = 'Status: ' . $statusMap[(string) $request->status];
+        }
 
-            fclose($out);
-        }, $filename, ['Content-Type' => 'text/csv']);
+        if ($request->filled('leave_type')) {
+            $parts[] = 'Leave Type: ' . ($request->leave_type === LeaveApplication::TYPE_PT_EXEMPTION ? 'PT Exemption' : 'Stationed Leave');
+        }
+
+        if ($request->filled('from_date') || $request->filled('to_date')) {
+            $parts[] = 'Period: ' . ($request->from_date ?: '…') . ' to ' . ($request->to_date ?: '…');
+        }
+
+        return implode('  |  ', $parts);
     }
 
     protected function findOwnedApplication(int $studentPk, $id): LeaveApplication
@@ -543,19 +624,25 @@ class LeaveApplicationController extends Controller
             'activePtExemption' => $activePt,
             'ptEarliestFromDate' => $this->leaveService->resolveEarliestFromDate(
                 $ptConfigMinDate,
-                $activePt?->apply_cutoff_time
+                $activePt?->apply_cutoff_time,
+                (int) ($activePt?->freeze_before_minutes ?? 0)
             ),
             'stationedEarliestFromDate' => $this->leaveService->resolveEarliestFromDate(
                 $stationedConfigMinDate,
                 $activeStationed?->apply_cutoff_time
             ),
-            'ptCutoffTimeDisplay' => $this->leaveService->formatCutoffTimeDisplay($activePt?->apply_cutoff_time),
+            'ptCutoffTimeDisplay' => $this->leaveService->formatCutoffTimeDisplay(
+                $activePt?->apply_cutoff_time,
+                (int) ($activePt?->freeze_before_minutes ?? 0)
+            ),
             'stationedCutoffTimeDisplay' => $this->leaveService->formatCutoffTimeDisplay($activeStationed?->apply_cutoff_time),
             'ptCutoffPassedToday' => $activePt
                 && $activePt->apply_cutoff_time
                 && ! $this->leaveService->isLeaveStartDateAllowedForApply(
                     $activePt->apply_cutoff_time,
-                    now()->toDateString()
+                    now()->toDateString(),
+                    null,
+                    (int) ($activePt->freeze_before_minutes ?? 0)
                 ),
             'stationedCutoffPassedToday' => $activeStationed
                 && $activeStationed->apply_cutoff_time

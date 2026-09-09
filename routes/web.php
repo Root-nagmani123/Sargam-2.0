@@ -53,6 +53,7 @@ use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
 use App\Http\Controllers\Admin\Master\AppellationMasterController;
+use App\Http\Controllers\Admin\Master\LeaveNatureMasterController;
 use App\Http\Controllers\Admin\FeedbackController;
 use App\Http\Controllers\Admin\Estate\{
     EstateCampusController,
@@ -885,6 +886,15 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         Route::delete('/delete/{id}', 'destroy')->name('destroy');
     });
 
+    // Leave Nature Master (Leave Management)
+    Route::prefix('master/leave-nature-master')->name('master.leave-nature.')->controller(LeaveNatureMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::delete('/delete/{id}', 'destroy')->name('delete');
+    });
+
     // Stationed Leave Master (Leave Management)
     Route::prefix('admin/stationed-leave-master')->name('admin.stationed-leave-master.')->controller(StationedLeaveMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
@@ -1307,6 +1317,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/faculty/whos-who/courses', [WhosWhoController::class, 'getCourses'])->name('admin.faculty.whos-who.courses');
     Route::get('/faculty/whos-who/students', [WhosWhoController::class, 'getStudents'])->name('admin.faculty.whos-who.students');
     Route::get('/faculty/whos-who/download-pdf', [WhosWhoController::class, 'downloadPdf'])->name('admin.faculty.whos-who.download-pdf');
+    Route::get('/faculty/whos-who/download-excel', [WhosWhoController::class, 'downloadExcel'])->name('admin.faculty.whos-who.download-excel');
+    Route::get('/faculty/whos-who/download-csv', [WhosWhoController::class, 'downloadCsv'])->name('admin.faculty.whos-who.download-csv');
     Route::get('/faculty/whos-who/static-info', [WhosWhoController::class, 'getStaticInfo'])->name('admin.faculty.whos-who.static-info');
     Route::get('/sessions', [DashboardController::class, 'sessions'])->name('admin.dashboard.sessions');
 

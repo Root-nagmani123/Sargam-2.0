@@ -123,10 +123,27 @@
             <button type="button" class="sl-status-tab active" data-status-filter="active" role="tab" aria-selected="true">Active: {{ (int) ($activeCount ?? 0) }}</button>
             <button type="button" class="sl-status-tab" data-status-filter="archive" role="tab" aria-selected="false">Archived: {{ (int) ($archiveCount ?? 0) }}</button>
         </div>
-        <button type="button" id="stationedDownload" class="btn sl-download-btn">
-            <i class="bi bi-download" aria-hidden="true"></i>
-            <span>Download</span>
-        </button>
+        <div class="dropdown">
+            <button type="button" id="stationedDownload" class="btn sl-download-btn dropdown-toggle"
+                data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-download" aria-hidden="true"></i>
+                <span>Download</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm py-2" aria-labelledby="stationedDownload">
+                <li>
+                    <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="stationedExportPdf">
+                        <i class="bi bi-file-earmark-pdf text-danger" aria-hidden="true"></i>
+                        <span>Download PDF</span>
+                    </button>
+                </li>
+                <li>
+                    <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="stationedExportExcel">
+                        <i class="bi bi-file-earmark-excel text-success" aria-hidden="true"></i>
+                        <span>Download Excel</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
     </div>
 
     <section class="datatables" aria-labelledby="stationed-leave-heading">
@@ -357,14 +374,23 @@ $(function () {
     });
 
     /* ── Download ── */
-    $('#stationedDownload').on('click', function () {
+    function stationedExportUrl(format) {
         const params = $.param({
+            format: format,
             course_filter: $('#courseFilter').val() || '',
             from_date: $period.data('from') || '',
             to_date: $period.data('to') || '',
             status_filter: statusFilter,
         });
-        window.location.href = exportUrl + '?' + params;
+        return exportUrl + '?' + params;
+    }
+
+    $('#stationedExportPdf').on('click', function () {
+        window.location.href = stationedExportUrl('pdf');
+    });
+
+    $('#stationedExportExcel').on('click', function () {
+        window.location.href = stationedExportUrl('excel');
     });
 
     /* ── Active / Archive tabs ── */
