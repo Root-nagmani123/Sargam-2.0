@@ -498,7 +498,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     <div class="card-header bg-white border-0">
                         <div class="d-flex align-items-center justify-content-between w-100">
                             <h5 class="dashboard-birthdays-panel__title mb-0">House wise Performance</h5>
-                            <span class="dashboard-house-panel__hint">Memo / Notice + Discipline</span>
+                            <span class="dashboard-house-panel__hint">Notice + Memo/Notice</span>
                         </div>
                         <hr class="dashboard-birthdays-divider mb-0">
                     </div>

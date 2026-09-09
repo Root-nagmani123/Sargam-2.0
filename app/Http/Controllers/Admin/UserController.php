@@ -648,12 +648,17 @@ class UserController extends Controller
      * any further wiring. Resolved by type name rather than a hard-coded pk so a
      * renamed or duplicated House type still counts.
      *
-     * The figure against each house is its students' Notice/Memo plus Discipline
-     * Memo records, counted the way the OT / Participants list counts them
-     * ({@see otParticipantsRowMeta()}): notice/memos sum memo_count, discipline
-     * memos are one per record. Students are deduplicated first — the mapping
-     * table holds repeat rows, and a student in two mappings of the same house
-     * must not pay twice.
+     * The figure against each house is what its students were issued in the
+     * Notice/Memo module: notices (student_notice_status) plus memos
+     * (student_memo_status). Memos sum memo_count, falling back to one per record
+     * for the older rows that leave it NULL — the same count the OT / Participants
+     * list prints ({@see otParticipantsRowMeta()}). Notices are one per record,
+     * and their student is resolved the way the Notice/Memo module itself resolves
+     * it: the attendance row's student, falling back to the notice's own
+     * student_pk for a direct notice, which has no attendance row.
+     *
+     * Students are deduplicated first — the mapping table holds repeat rows, and a
+     * student in two mappings of the same house must not pay twice.
      *
      * Ascending, lowest first, because the panel reads as a league table: the
      * house at the top is the one with least against it.
@@ -707,30 +712,39 @@ class UserController extends Controller
 
         $studentPks = collect($studentsByHouse)->flatMap(fn ($set) => array_keys($set))->unique()->values()->all();
 
-        $noticeMemos = collect();
-        $disciplineMemos = collect();
+        $memos = collect();
+        $notices = collect();
 
         if (! empty($studentPks)) {
             // memo_count is the number of memos the record carries; older rows leave
             // it NULL, so those fall back to one per record.
-            $noticeMemos = DB::table('student_memo_status')
+            $memos = DB::table('student_memo_status')
                 ->whereIn('student_pk', $studentPks)
                 ->selectRaw('student_pk, COALESCE(SUM(memo_count), COUNT(*)) c')
                 ->groupBy('student_pk')
                 ->pluck('c', 'student_pk');
 
-            $disciplineMemos = DB::table('discipline_memo_status')
-                ->whereIn('student_master_pk', $studentPks)
-                ->selectRaw('student_master_pk, COUNT(*) c')
-                ->groupBy('student_master_pk')
-                ->pluck('c', 'student_master_pk');
+            // A notice issued off an attendance record carries its student there; a
+            // direct notice has no attendance row (course_student_attendance_pk = 0)
+            // and carries its own student_pk. COALESCE covers both, exactly as
+            // CourseAttendanceNoticeMapController resolves it — matching on
+            // student_pk alone would miscount the moment the two ever differ.
+            $notices = DB::table('student_notice_status as sns')
+                ->leftJoin('course_student_attendance as csa', 'sns.course_student_attendance_pk', '=', 'csa.pk')
+                ->where(function ($q) use ($studentPks) {
+                    $q->whereIn('sns.student_pk', $studentPks)
+                        ->orWhereIn('csa.Student_master_pk', $studentPks);
+                })
+                ->selectRaw('COALESCE(csa.Student_master_pk, sns.student_pk) AS spk, COUNT(*) AS c')
+                ->groupBy(DB::raw('COALESCE(csa.Student_master_pk, sns.student_pk)'))
+                ->pluck('c', 'spk');
         }
 
         return collect($studentsByHouse)
-            ->map(function (array $students, string $house) use ($noticeMemos, $disciplineMemos) {
+            ->map(function (array $students, string $house) use ($memos, $notices) {
                 $total = 0;
                 foreach (array_keys($students) as $pk) {
-                    $total += (int) ($noticeMemos[$pk] ?? 0) + (int) ($disciplineMemos[$pk] ?? 0);
+                    $total += (int) ($notices[$pk] ?? 0) + (int) ($memos[$pk] ?? 0);
                 }
 
                 return ['house' => $house, 'total' => $total, 'students' => count($students)];
