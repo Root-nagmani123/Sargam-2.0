@@ -82,8 +82,13 @@
     ]" />
     <x-session_message />
 
-    {{-- Active / Archived tabs + Print --}}
+    {{-- Active / Archived tabs + Print. The counsellee view is the faculty's
+         Counsellor Groups whatever state their courses are in, so the tabs would
+         be a control that changes nothing — it shows a heading instead. --}}
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        @if($isCounselleeView ?? false)
+        <h2 class="h6 fw-semibold mb-0">My Counsellees</h2>
+        @else
         <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white" role="group" aria-label="Course status">
             <li class="nav-item" role="presentation">
                 <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $activeStatus === 'active' ? 'active' : '' }}"
@@ -94,6 +99,7 @@
                     data-status="archive">Archived</button>
             </li>
         </ul>
+        @endif
         <div class="d-flex flex-wrap align-items-center gap-2">
             <button type="button" class="btn sl-toolbar-btn border-0" id="otListPrintBtn" >
                 <i class="bi bi-printer" aria-hidden="true"></i>
@@ -142,7 +148,7 @@
                     </div>
                     @endif
 
-                    @if(($houseOptions ?? collect())->isNotEmpty())
+                    @if(! ($isCounselleeView ?? false) && ($houseOptions ?? collect())->isNotEmpty())
                     <div class="sl-filter-item">
                         <select id="houseFilter" class="form-select sl-filter-select" aria-label="Filter by house name">
                             <option value="">House: All</option>
@@ -288,6 +294,7 @@
                 course_id: $('#courseFilter').val() || '',
                 cadre: $('#cadreFilter').val() || '',
                 house: $('#houseFilter').val() || '',
+                view: (filters.view || '').toString(),
                 session: $('#sessionFilter').val() || '',
                 participant: $('#participantFilter').val() || '',
                 from_date: (filters.from_date || '').toString(),
@@ -387,7 +394,10 @@
         $('#houseFilter').on('change', function() { applyFilter({ house: this.value }); });
         $('#sessionFilter').on('change', function() { applyFilter({ session: this.value }); });
         $('#participantFilter').on('change', function() { applyFilter({ participant: this.value }); });
-        $('#resetFilters').on('click', function() { window.location.href = baseUrl; });
+        $('#resetFilters').on('click', function() {
+            // Reset clears the filters, not the scope the page was opened in.
+            window.location.href = baseUrl + (filters.view ? '?view=' + encodeURIComponent(filters.view) : '');
+        });
 
         /* ── Time Period date-range ── */
         const $period = $('#timePeriodFilter');
