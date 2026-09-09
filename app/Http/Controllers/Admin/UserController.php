@@ -468,6 +468,12 @@ class UserController extends Controller
 
         $enabledWidgetKeys = $baseCards->filter(fn($c) => str_starts_with($c->key, 'widget_'))->pluck('key')->toArray();
 
+        // House wise Performance panel. Built only when the panel is actually on
+        // this dashboard — it is four queries, and no other card needs them.
+        $housePerformance = in_array('widget_house_performance', $enabledWidgetKeys, true)
+            ? $this->houseWisePerformance()
+            : collect();
+
         $issueReportModules = \App\Http\Controllers\Admin\IssueReportController::moduleOptions();
 
         $cardsToRender = $baseCards->filter(fn($c) => !str_starts_with($c->key, 'widget_'))->map(function ($card) use ($cardDefinitions, $cardCounts) {
@@ -527,8 +533,108 @@ class UserController extends Controller
             'idCardApprovalRoute',
             'cardsToRender',
             'enabledWidgetKeys',
+            'housePerformance',
             'issueReportModules'
         ));
+    }
+
+    /**
+     * "House wise Performance" panel: every house, worst behaviour last.
+     *
+     * A house is a group on the Course Group Mapping page whose group TYPE is the
+     * House one — the page's own list, so a house added there appears here without
+     * any further wiring. Resolved by type name rather than a hard-coded pk so a
+     * renamed or duplicated House type still counts.
+     *
+     * The figure against each house is its students' Notice/Memo plus Discipline
+     * Memo records, counted the way the OT / Participants list counts them
+     * ({@see otParticipantsRowMeta()}): notice/memos sum memo_count, discipline
+     * memos are one per record. Students are deduplicated first — the mapping
+     * table holds repeat rows, and a student in two mappings of the same house
+     * must not pay twice.
+     *
+     * Ascending, lowest first, because the panel reads as a league table: the
+     * house at the top is the one with least against it.
+     *
+     * @return \Illuminate\Support\Collection<int, array{house: string, total: int, students: int}>
+     */
+    private function houseWisePerformance(): \Illuminate\Support\Collection
+    {
+        $houseTypeIds = DB::table('course_group_type_master')
+            ->where('active_inactive', 1)
+            ->whereRaw('LOWER(type_name) LIKE ?', ['%house%'])
+            ->pluck('pk');
+
+        if ($houseTypeIds->isEmpty()) {
+            return collect();
+        }
+
+        // Every mapped house, whatever course it belongs to — the panel is about
+        // the houses themselves, which outlive any one programme.
+        $mappings = DB::table('group_type_master_course_master_map')
+            ->whereIn('type_name', $houseTypeIds)
+            ->where('active_inactive', 1)
+            ->whereNotNull('group_name')
+            ->where('group_name', '<>', '')
+            ->get(['pk', 'group_name']);
+
+        if ($mappings->isEmpty()) {
+            return collect();
+        }
+
+        $houseByMapping = $mappings->pluck('group_name', 'pk');
+
+        // house name => [student_master_pk => true]
+        $studentsByHouse = [];
+        foreach ($houseByMapping as $mappingPk => $houseName) {
+            $studentsByHouse[trim((string) $houseName)] ??= [];
+        }
+
+        $memberships = DB::table('student_course_group_map')
+            ->whereIn('group_type_master_course_master_map_pk', $mappings->pluck('pk'))
+            ->where('active_inactive', 1)
+            ->get(['group_type_master_course_master_map_pk as map_pk', 'student_master_pk']);
+
+        foreach ($memberships as $row) {
+            $house = trim((string) ($houseByMapping[$row->map_pk] ?? ''));
+            if ($house === '' || empty($row->student_master_pk)) {
+                continue;
+            }
+            $studentsByHouse[$house][(int) $row->student_master_pk] = true;
+        }
+
+        $studentPks = collect($studentsByHouse)->flatMap(fn ($set) => array_keys($set))->unique()->values()->all();
+
+        $noticeMemos = collect();
+        $disciplineMemos = collect();
+
+        if (! empty($studentPks)) {
+            // memo_count is the number of memos the record carries; older rows leave
+            // it NULL, so those fall back to one per record.
+            $noticeMemos = DB::table('student_memo_status')
+                ->whereIn('student_pk', $studentPks)
+                ->selectRaw('student_pk, COALESCE(SUM(memo_count), COUNT(*)) c')
+                ->groupBy('student_pk')
+                ->pluck('c', 'student_pk');
+
+            $disciplineMemos = DB::table('discipline_memo_status')
+                ->whereIn('student_master_pk', $studentPks)
+                ->selectRaw('student_master_pk, COUNT(*) c')
+                ->groupBy('student_master_pk')
+                ->pluck('c', 'student_master_pk');
+        }
+
+        return collect($studentsByHouse)
+            ->map(function (array $students, string $house) use ($noticeMemos, $disciplineMemos) {
+                $total = 0;
+                foreach (array_keys($students) as $pk) {
+                    $total += (int) ($noticeMemos[$pk] ?? 0) + (int) ($disciplineMemos[$pk] ?? 0);
+                }
+
+                return ['house' => $house, 'total' => $total, 'students' => count($students)];
+            })
+            ->sortBy([['total', 'asc'], ['house', 'asc']])
+            ->values();
     }
 
     /**

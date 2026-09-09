@@ -488,8 +488,42 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
 
             </div>
 
-            @if(in_array('widget_todays_birthdays', $enabledWidgetKeys) || in_array('widget_calendar', $enabledWidgetKeys))
+            @if(in_array('widget_todays_birthdays', $enabledWidgetKeys) || in_array('widget_calendar', $enabledWidgetKeys) || in_array('widget_house_performance', $enabledWidgetKeys))
             <div class="col-auto" style="width: 480px; min-width: 480px;">
+                @if(in_array('widget_house_performance', $enabledWidgetKeys))
+                {{-- House wise Performance: every house on the Course Group Mapping
+                     page, least against it first. The figure is the house's students'
+                     Notice/Memo plus Discipline Memo records. --}}
+                <div class="card dashboard-panel dashboard-house-panel border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <div class="d-flex align-items-center justify-content-between w-100">
+                            <h5 class="dashboard-birthdays-panel__title mb-0">House wise Performance</h5>
+                            <span class="dashboard-house-panel__hint">Memo / Notice + Discipline</span>
+                        </div>
+                        <hr class="dashboard-birthdays-divider mb-0">
+                    </div>
+                    <div class="card-body">
+                        @if(($housePerformance ?? collect())->isEmpty())
+                        <div class="dashboard-empty-state py-4">
+                            <i class="bi bi-house text-primary opacity-50 fs-1 d-block mb-2" aria-hidden="true"></i>
+                            <p class="mb-0 small text-body-secondary">No houses mapped yet.</p>
+                        </div>
+                        @else
+                        <ul class="list-unstyled mb-0 dashboard-house-list">
+                            @foreach($housePerformance as $house)
+                            <li class="dashboard-house-item">
+                                <span class="dashboard-house-rank">{{ $loop->iteration }}</span>
+                                <span class="dashboard-house-name text-truncate" title="{{ $house['house'] }}">{{ $house['house'] }}</span>
+                                <span class="dashboard-house-students">{{ $house['students'] }} OT{{ $house['students'] == 1 ? '' : 's' }}</span>
+                                <span class="dashboard-house-total" aria-label="{{ $house['total'] }} memo and discipline records">{{ $house['total'] }}</span>
+                            </li>
+                            @endforeach
+                        </ul>
+                        @endif
+                    </div>
+                </div>
+                @endif
+
                 @if(in_array('widget_todays_birthdays', $enabledWidgetKeys))
                 <div class="card dashboard-panel dashboard-birthdays-panel border-0 mb-4">
                     <div class="card-header bg-white border-0">

@@ -198,3 +198,52 @@
     color: #2f80ed;
     letter-spacing: 0;
 }
+
+/* House wise Performance panel: a compact league table, so the rows are dense
+   and the total sits in a fixed-width column that stays aligned down the list. */
+.dashboard-house-panel__hint {
+    font-size: 0.7rem;
+    color: #9ca3af;
+    white-space: nowrap;
+}
+
+.dashboard-house-list { display: flex; flex-direction: column; gap: 0.35rem; }
+
+.dashboard-house-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #eef0f4;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.dashboard-house-rank {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(47, 128, 237, 0.12);
+    color: #2f80ed;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.dashboard-house-name { flex: 1 1 auto; min-width: 0; font-size: 0.875rem; font-weight: 600; color: #111827; }
+.dashboard-house-students { flex: 0 0 auto; font-size: 0.72rem; color: #9ca3af; }
+
+.dashboard-house-total {
+    flex: 0 0 auto;
+    min-width: 34px;
+    text-align: center;
+    padding: 0.15rem 0.45rem;
+    border-radius: 6px;
+    background: rgba(235, 87, 87, 0.12);
+    color: #eb5757;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
