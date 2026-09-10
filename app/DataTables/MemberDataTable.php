@@ -143,7 +143,7 @@ class MemberDataTable extends DataTable
     {
         return $model->newQuery()
             ->with(['appellationMaster', 'department', 'designation'])
-            ->orderBy('first_name', 'asc');
+            ->orderBy('pk', 'desc');
     }
 
     public function html(): HtmlBuilder

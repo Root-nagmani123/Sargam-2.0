@@ -31,7 +31,7 @@
     <div class="col-md-6">
         <div class="mb-3">
 
-            <x-input name="last_name" label="Last Name :" type="text" value="{{ old('last_name') }}" formLabelClass="form-label" formInputClass="form-control only-letters" labelRequired="true" />
+            <x-input name="last_name" label="Last Name :" type="text" value="{{ old('last_name') }}" formLabelClass="form-label" formInputClass="form-control only-letters" />
 
         </div>
     </div>
