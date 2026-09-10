@@ -78,6 +78,15 @@ class UserController extends Controller
     /** Notices per page on the dashboard feed. */
     private const NOTICE_FEED_PER_PAGE = 10;
 
+    /**
+     * Closed, as each module records it: End Chat sets student_memo_status.status
+     * to 2 (see CourseAttendanceNoticeMapController), and a discipline memo runs
+     * 1 Recorded -> 2 Memo Sent -> 3 Closed (see MemoDiscipline).
+     */
+    private const MEMO_STATUS_CLOSED = 2;
+
+    private const DISCIPLINE_MEMO_STATUS_CLOSED = 3;
+
     private const ADMIN_USERS_INDEX_LIST_EPOCH_KEY = 'admin_users_index_list_epoch';
 
     /**
@@ -681,14 +690,17 @@ class UserController extends Controller
      * any further wiring. Resolved by type name rather than a hard-coded pk so a
      * renamed or duplicated House type still counts.
      *
-     * The figure against each house is what its students were issued in the
-     * Notice/Memo module: notices (student_notice_status) plus memos
-     * (student_memo_status). Memos sum memo_count, falling back to one per record
-     * for the older rows that leave it NULL — the same count the OT / Participants
-     * list prints ({@see otParticipantsRowMeta()}). Notices are one per record,
-     * and their student is resolved the way the Notice/Memo module itself resolves
-     * it: the attendance row's student, falling back to the notice's own
-     * student_pk for a direct notice, which has no attendance row.
+     * The figure against each house is its students' Discipline Memos plus their
+     * Memo/Notices, and only the CLOSED ones — a case still being argued is not a
+     * result yet. Closed is each module's own end state:
+     *
+     *   discipline_memo_status.status = 3   (1 Recorded, 2 Memo Sent, 3 Closed)
+     *   student_memo_status.status    = 2   (what End Chat sets, alongside the
+     *                                        "Memo Closed" notice to the OT)
+     *
+     * Memos sum memo_count, falling back to one per record for the older rows that
+     * leave it NULL — the same count the OT / Participants list prints
+     * ({@see otParticipantsRowMeta()}); discipline memos are one per record.
      *
      * Students are deduplicated first — the mapping table holds repeat rows, and a
      * student in two mappings of the same house must not pay twice.
@@ -746,38 +758,33 @@ class UserController extends Controller
         $studentPks = collect($studentsByHouse)->flatMap(fn ($set) => array_keys($set))->unique()->values()->all();
 
         $memos = collect();
-        $notices = collect();
+        $disciplineMemos = collect();
 
         if (! empty($studentPks)) {
-            // memo_count is the number of memos the record carries; older rows leave
-            // it NULL, so those fall back to one per record.
+            // Closed memos only (status 2). memo_count is the number of memos the
+            // record carries; older rows leave it NULL, so those fall back to one
+            // per record.
             $memos = DB::table('student_memo_status')
                 ->whereIn('student_pk', $studentPks)
+                ->where('status', self::MEMO_STATUS_CLOSED)
                 ->selectRaw('student_pk, COALESCE(SUM(memo_count), COUNT(*)) c')
                 ->groupBy('student_pk')
                 ->pluck('c', 'student_pk');
 
-            // A notice issued off an attendance record carries its student there; a
-            // direct notice has no attendance row (course_student_attendance_pk = 0)
-            // and carries its own student_pk. COALESCE covers both, exactly as
-            // CourseAttendanceNoticeMapController resolves it — matching on
-            // student_pk alone would miscount the moment the two ever differ.
-            $notices = DB::table('student_notice_status as sns')
-                ->leftJoin('course_student_attendance as csa', 'sns.course_student_attendance_pk', '=', 'csa.pk')
-                ->where(function ($q) use ($studentPks) {
-                    $q->whereIn('sns.student_pk', $studentPks)
-                        ->orWhereIn('csa.Student_master_pk', $studentPks);
-                })
-                ->selectRaw('COALESCE(csa.Student_master_pk, sns.student_pk) AS spk, COUNT(*) AS c')
-                ->groupBy(DB::raw('COALESCE(csa.Student_master_pk, sns.student_pk)'))
-                ->pluck('c', 'spk');
+            // Closed discipline memos only (status 3 — see MemoDiscipline).
+            $disciplineMemos = DB::table('discipline_memo_status')
+                ->whereIn('student_master_pk', $studentPks)
+                ->where('status', self::DISCIPLINE_MEMO_STATUS_CLOSED)
+                ->selectRaw('student_master_pk, COUNT(*) c')
+                ->groupBy('student_master_pk')
+                ->pluck('c', 'student_master_pk');
         }
 
         return collect($studentsByHouse)
-            ->map(function (array $students, string $house) use ($memos, $notices) {
+            ->map(function (array $students, string $house) use ($memos, $disciplineMemos) {
                 $total = 0;
                 foreach (array_keys($students) as $pk) {
-                    $total += (int) ($notices[$pk] ?? 0) + (int) ($memos[$pk] ?? 0);
+                    $total += (int) ($disciplineMemos[$pk] ?? 0) + (int) ($memos[$pk] ?? 0);
                 }
 
                 return ['house' => $house, 'total' => $total, 'students' => count($students)];
