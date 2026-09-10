@@ -303,10 +303,12 @@ class UserController extends Controller
                  // the groups mapped to THIS faculty, and open the OT / Participants
                  // list on exactly that scope so the number and the rows agree.
                  //
-                 //   My Counsellees     -> their Counsellor Groups (the cadres)
+                 //   My Counsellees     -> their Counsellor Groups (the cadres), on
+                 //                         RUNNING courses only — the batch they are
+                 //                         counselling now
                  //   House Wise Details -> their House Groups, i.e. how many
                  //                         students their house holds
-                 $facultyCounsellees = $this->facultyGroupRows($facultyPk, '%counsel%', 'counsellor_group_name')
+                 $facultyCounsellees = $this->facultyGroupRows($facultyPk, '%counsel%', 'counsellor_group_name', true)
                      ->pluck('student_master_pk')->filter()->unique()->count();
 
                  $facultyHouses = $this->facultyGroupRows($facultyPk, '%house%', 'house_group_name')
@@ -551,17 +553,23 @@ class UserController extends Controller
      *
      * Deliberately NOT resolveDashboardStudentListPayload(): that pulls in
      * coordinator courses, every other group type the faculty owns and the
-     * sessions they taught, and drops anything whose course has ended — which is
-     * why My Counsellees read 00 while the mapping page listed 48 students.
+     * sessions they taught — which is why My Counsellees read 00 while the mapping
+     * page listed 48 students.
      *
      * Rows carry the shape the OT / Participants list expects, plus the group name
      * under $labelProperty, so the column and filter for that view can read the
      * group rather than the student's own cadre master (70 of these students have
      * no cadre on record) or their hostel room.
      *
+     * @param  bool  $activeCoursesOnly  Restrict to groups on a running course.
      * @return \Illuminate\Support\Collection<int, \stdClass>
      */
-    private function facultyGroupRows(int $facultyPk, string $typeNameLike, string $labelProperty): \Illuminate\Support\Collection
+    private function facultyGroupRows(
+        int $facultyPk,
+        string $typeNameLike,
+        string $labelProperty,
+        bool $activeCoursesOnly = false
+    ): \Illuminate\Support\Collection
     {
         $groupTypeIds = DB::table('course_group_type_master')
             ->where('active_inactive', 1)
@@ -572,11 +580,21 @@ class UserController extends Controller
             return collect();
         }
 
-        $mappings = DB::table('group_type_master_course_master_map')
-            ->whereIn('type_name', $groupTypeIds)
-            ->where('facility_id', $facultyPk)
-            ->where('active_inactive', 1)
-            ->get(['pk', 'group_name', 'course_name as course_pk']);
+        $mappings = DB::table('group_type_master_course_master_map as g')
+            ->whereIn('g.type_name', $groupTypeIds)
+            ->where('g.facility_id', $facultyPk)
+            ->where('g.active_inactive', 1)
+            // Active courses only, when the caller asks: My Counsellees is about the
+            // batches the faculty is counselling, not every group ever mapped to
+            // them. Active here is the course master's own Active flag, NOT the
+            // "has not ended yet" rule the list's Active tab uses — a batch stays a
+            // counselling assignment through the weeks after its end date, and
+            // both current counselling batches have already passed theirs.
+            ->when($activeCoursesOnly, function ($q) {
+                $q->join('course_master as cm', 'cm.pk', '=', 'g.course_name')
+                    ->where('cm.active_inactive', 1);
+            })
+            ->get(['g.pk', 'g.group_name', 'g.course_name as course_pk']);
 
         if ($mappings->isEmpty()) {
             return collect();
@@ -1748,7 +1766,8 @@ class UserController extends Controller
 
         if ($isCounselleeView || $isHouseView) {
             $students = $isCounselleeView
-                ? $this->facultyGroupRows($scopeFacultyPk, '%counsel%', 'counsellor_group_name')
+                // Running courses only, so the list holds exactly what the card counted.
+                ? $this->facultyGroupRows($scopeFacultyPk, '%counsel%', 'counsellor_group_name', true)
                 : $this->facultyGroupRows($scopeFacultyPk, '%house%', 'house_group_name');
 
             $payload = [
