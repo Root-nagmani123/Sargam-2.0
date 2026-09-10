@@ -308,10 +308,10 @@ class UserController extends Controller
                  //                         counselling now
                  //   House Wise Details -> their House Groups, i.e. how many
                  //                         students their house holds
-                 $facultyCounsellees = $this->facultyGroupRows($facultyPk, '%counsel%', 'counsellor_group_name', true)
+                 $facultyCounsellees = $this->facultyGroupRows($facultyPk, '%counsel%', 'counsellor_group_name', 'active')
                      ->pluck('student_master_pk')->filter()->unique()->count();
 
-                 $facultyHouses = $this->facultyGroupRows($facultyPk, '%house%', 'house_group_name')
+                 $facultyHouses = $this->facultyGroupRows($facultyPk, '%house%', 'house_group_name', 'current')
                      ->pluck('student_master_pk')->filter()->unique()->count();
 
                  // Check if faculty is CC or ACC
@@ -561,14 +561,17 @@ class UserController extends Controller
      * group rather than the student's own cadre master (70 of these students have
      * no cadre on record) or their hostel room.
      *
-     * @param  bool  $activeCoursesOnly  Restrict to groups on a running course.
+     * @param  string  $courseScope  Which courses the groups may sit on:
+     *                 'all'     — every course, and groups with no course at all
+     *                 'active'  — the course master's Active flag is on
+     *                 'current' — flagged active AND not past its end date
      * @return \Illuminate\Support\Collection<int, \stdClass>
      */
     private function facultyGroupRows(
         int $facultyPk,
         string $typeNameLike,
         string $labelProperty,
-        bool $activeCoursesOnly = false
+        string $courseScope = 'all'
     ): \Illuminate\Support\Collection
     {
         $groupTypeIds = DB::table('course_group_type_master')
@@ -584,15 +587,27 @@ class UserController extends Controller
             ->whereIn('g.type_name', $groupTypeIds)
             ->where('g.facility_id', $facultyPk)
             ->where('g.active_inactive', 1)
-            // Active courses only, when the caller asks: My Counsellees is about the
-            // batches the faculty is counselling, not every group ever mapped to
-            // them. Active here is the course master's own Active flag, NOT the
-            // "has not ended yet" rule the list's Active tab uses — a batch stays a
-            // counselling assignment through the weeks after its end date, and
-            // both current counselling batches have already passed theirs.
-            ->when($activeCoursesOnly, function ($q) {
+            // Course scope, per card:
+            //
+            //   My Counsellees     'active'  — the master's Active flag, end date
+            //                                 ignored: a batch stays a counselling
+            //                                 assignment through the weeks after it
+            //                                 ends.
+            //   House Wise Details 'current' — flagged active AND not past its end
+            //                                 date, so a house stops counting the
+            //                                 students of a finished batch.
+            //
+            // Either way an orphaned mapping — one whose course_name matches no
+            // course_master row — drops out: there is no course to call active.
+            ->when($courseScope !== 'all', function ($q) use ($courseScope) {
                 $q->join('course_master as cm', 'cm.pk', '=', 'g.course_name')
-                    ->where('cm.active_inactive', 1);
+                    ->where('cm.active_inactive', 1)
+                    ->when($courseScope === 'current', function ($q2) {
+                        $q2->where(function ($q3) {
+                            $q3->whereNull('cm.end_date')
+                                ->orWhereDate('cm.end_date', '>=', now()->toDateString());
+                        });
+                    });
             })
             ->get(['g.pk', 'g.group_name', 'g.course_name as course_pk']);
 
@@ -1767,8 +1782,8 @@ class UserController extends Controller
         if ($isCounselleeView || $isHouseView) {
             $students = $isCounselleeView
                 // Running courses only, so the list holds exactly what the card counted.
-                ? $this->facultyGroupRows($scopeFacultyPk, '%counsel%', 'counsellor_group_name', true)
-                : $this->facultyGroupRows($scopeFacultyPk, '%house%', 'house_group_name');
+                ? $this->facultyGroupRows($scopeFacultyPk, '%counsel%', 'counsellor_group_name', 'active')
+                : $this->facultyGroupRows($scopeFacultyPk, '%house%', 'house_group_name', 'current');
 
             $payload = [
                 'students' => $students,
