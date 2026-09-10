@@ -312,12 +312,13 @@ class UserController extends Controller
                  // the groups mapped to THIS faculty, and open the OT / Participants
                  // list on exactly that scope so the number and the rows agree.
                  //
-                 //   My Counsellees     -> their Counsellor Groups (the cadres), on
-                 //                         RUNNING courses only — the batch they are
-                 //                         counselling now
+                 //   My Counsellees     -> their Counsellor Groups (the cadres)
                  //   House Wise Details -> their House Groups, i.e. how many
                  //                         students their house holds
-                 $facultyCounsellees = $this->facultyGroupRows($facultyPk, '%counsel%', 'counsellor_group_name', 'active')
+                 //
+                 // Both on current courses only: a course switched off in the master,
+                 // or one whose end date has passed, stops counting.
+                 $facultyCounsellees = $this->facultyGroupRows($facultyPk, '%counsel%', 'counsellor_group_name', 'current')
                      ->pluck('student_master_pk')->filter()->unique()->count();
 
                  $facultyHouses = $this->facultyGroupRows($facultyPk, '%house%', 'house_group_name', 'current')
@@ -596,18 +597,13 @@ class UserController extends Controller
             ->whereIn('g.type_name', $groupTypeIds)
             ->where('g.facility_id', $facultyPk)
             ->where('g.active_inactive', 1)
-            // Course scope, per card:
+            // Course scope. Both cards ask for 'current': the course is flagged
+            // active in the master AND has not passed its end date, so neither a
+            // switched-off course nor a finished batch keeps counting. A course
+            // with no end date has not ended.
             //
-            //   My Counsellees     'active'  — the master's Active flag, end date
-            //                                 ignored: a batch stays a counselling
-            //                                 assignment through the weeks after it
-            //                                 ends.
-            //   House Wise Details 'current' — flagged active AND not past its end
-            //                                 date, so a house stops counting the
-            //                                 students of a finished batch.
-            //
-            // Either way an orphaned mapping — one whose course_name matches no
-            // course_master row — drops out: there is no course to call active.
+            // An orphaned mapping — one whose course_name matches no course_master
+            // row — drops out too: there is no course to call current.
             ->when($courseScope !== 'all', function ($q) use ($courseScope) {
                 $q->join('course_master as cm', 'cm.pk', '=', 'g.course_name')
                     ->where('cm.active_inactive', 1)
@@ -1787,9 +1783,9 @@ class UserController extends Controller
         $isHouseView = $scopeFacultyPk !== null && $requestedView === 'house';
 
         if ($isCounselleeView || $isHouseView) {
+            // Same scope the cards count on, so the list holds exactly their number.
             $students = $isCounselleeView
-                // Running courses only, so the list holds exactly what the card counted.
-                ? $this->facultyGroupRows($scopeFacultyPk, '%counsel%', 'counsellor_group_name', 'active')
+                ? $this->facultyGroupRows($scopeFacultyPk, '%counsel%', 'counsellor_group_name', 'current')
                 : $this->facultyGroupRows($scopeFacultyPk, '%house%', 'house_group_name', 'current');
 
             $payload = [
