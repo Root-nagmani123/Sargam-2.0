@@ -90,6 +90,26 @@ class UserController extends Controller
 
     private const DISCIPLINE_MEMO_STATUS_CLOSED = 3;
 
+    /**
+     * The courses that are running right now — flagged active in the master AND
+     * not past their end date. One definition for the faculty dashboard's three
+     * course-scoped features (My Counsellees, House Wise Details and the House
+     * wise Performance panel), so a batch leaves all of them on the same day.
+     *
+     * A course with no end date has not ended.
+     *
+     * @return \Illuminate\Support\Collection<int, int>
+     */
+    private function currentCourseIds(): \Illuminate\Support\Collection
+    {
+        return CourseMaster::where('active_inactive', 1)
+            ->where(function ($q) {
+                $q->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', now()->toDateString());
+            })
+            ->pluck('pk');
+    }
+
     private const ADMIN_USERS_INDEX_LIST_EPOCH_KEY = 'admin_users_index_list_epoch';
 
     /**
@@ -321,10 +341,10 @@ class UserController extends Controller
                  //
                  // Both on current courses only: a course switched off in the master,
                  // or one whose end date has passed, stops counting.
-                 $facultyCounsellees = $this->facultyGroupRows($facultyPk, '%counsel%', 'counsellor_group_name', 'current')
+                 $facultyCounsellees = $this->facultyGroupRows($facultyPk, '%counsel%', 'counsellor_group_name', true)
                      ->pluck('student_master_pk')->filter()->unique()->count();
 
-                 $facultyHouses = $this->facultyGroupRows($facultyPk, '%house%', 'house_group_name', 'current')
+                 $facultyHouses = $this->facultyGroupRows($facultyPk, '%house%', 'house_group_name', true)
                      ->pluck('student_master_pk')->filter()->unique()->count();
 
                  // Check if faculty is CC or ACC
@@ -574,17 +594,15 @@ class UserController extends Controller
      * group rather than the student's own cadre master (70 of these students have
      * no cadre on record) or their hostel room.
      *
-     * @param  string  $courseScope  Which courses the groups may sit on:
-     *                 'all'     — every course, and groups with no course at all
-     *                 'active'  — the course master's Active flag is on
-     *                 'current' — flagged active AND not past its end date
+     * @param  bool  $currentCoursesOnly  Only groups on a running course
+     *                                    ({@see currentCourseIds()}).
      * @return \Illuminate\Support\Collection<int, \stdClass>
      */
     private function facultyGroupRows(
         int $facultyPk,
         string $typeNameLike,
         string $labelProperty,
-        string $courseScope = 'all'
+        bool $currentCoursesOnly = false
     ): \Illuminate\Support\Collection
     {
         $groupTypeIds = DB::table('course_group_type_master')
@@ -600,23 +618,11 @@ class UserController extends Controller
             ->whereIn('g.type_name', $groupTypeIds)
             ->where('g.facility_id', $facultyPk)
             ->where('g.active_inactive', 1)
-            // Course scope. Both cards ask for 'current': the course is flagged
-            // active in the master AND has not passed its end date, so neither a
-            // switched-off course nor a finished batch keeps counting. A course
-            // with no end date has not ended.
-            //
-            // An orphaned mapping — one whose course_name matches no course_master
-            // row — drops out too: there is no course to call current.
-            ->when($courseScope !== 'all', function ($q) use ($courseScope) {
-                $q->join('course_master as cm', 'cm.pk', '=', 'g.course_name')
-                    ->where('cm.active_inactive', 1)
-                    ->when($courseScope === 'current', function ($q2) {
-                        $q2->where(function ($q3) {
-                            $q3->whereNull('cm.end_date')
-                                ->orWhereDate('cm.end_date', '>=', now()->toDateString());
-                        });
-                    });
-            })
+            // Running courses only, when the caller asks: neither a switched-off
+            // course nor a finished batch keeps counting. An orphaned mapping —
+            // one whose course_name matches no course_master row — drops out with
+            // them, there being no course to call current.
+            ->when($currentCoursesOnly, fn ($q) => $q->whereIn('g.course_name', $this->currentCourseIds()))
             ->get(['g.pk', 'g.group_name', 'g.course_name as course_pk']);
 
         if ($mappings->isEmpty()) {
@@ -685,9 +691,10 @@ class UserController extends Controller
      * "House wise Performance" panel: every house, worst behaviour last.
      *
      * A house is a group on the Course Group Mapping page whose group TYPE is the
-     * House one — the page's own list, so a house added there appears here without
-     * any further wiring. Resolved by type name rather than a hard-coded pk so a
-     * renamed or duplicated House type still counts.
+     * House one, on a course that is still running — the page's own Active list,
+     * so a house added there appears here without any further wiring, and one
+     * whose batch has finished leaves. Resolved by type name rather than a
+     * hard-coded pk so a renamed or duplicated House type still counts.
      *
      * The figure against each house is its students' Discipline Memos plus their
      * Memo/Notices — memos AND notices together — counting only the CLOSED ones,
@@ -733,8 +740,15 @@ class UserController extends Controller
 
         // Every mapped house, whatever course it belongs to — the panel is about
         // the houses themselves, which outlive any one programme.
+        // Every house on a RUNNING course. A house whose batch has finished, or
+        // whose course was switched off in the master, leaves the panel with it —
+        // otherwise the list grows a row per past programme and the panel stops
+        // being this term's table.
+        $currentCourseIds = $this->currentCourseIds();
+
         $mappings = DB::table('group_type_master_course_master_map')
             ->whereIn('type_name', $houseTypeIds)
+            ->whereIn('course_name', $currentCourseIds)
             ->where('active_inactive', 1)
             ->whereNotNull('group_name')
             ->where('group_name', '<>', '')
@@ -772,17 +786,9 @@ class UserController extends Controller
         $disciplineMemos = collect();
 
         if (! empty($studentPks)) {
-            // Records raised on a course that is still running: flagged active in
-            // the master and not past its end date. Nothing from a finished or
-            // switched-off batch counts. An empty list means nothing counts, which
-            // whereIn handles on its own.
-            $currentCourseIds = CourseMaster::where('active_inactive', 1)
-                ->where(function ($q) {
-                    $q->whereNull('end_date')
-                        ->orWhereDate('end_date', '>=', now()->toDateString());
-                })
-                ->pluck('pk');
-
+            // The records are scoped the same way the houses above are: nothing
+            // raised on a finished or switched-off batch counts.
+            //
             // Closed memos only (status 2). memo_count is the number of memos the
             // record carries; older rows leave it NULL, so those fall back to one
             // per record.
@@ -1835,8 +1841,8 @@ class UserController extends Controller
         if ($isCounselleeView || $isHouseView) {
             // Same scope the cards count on, so the list holds exactly their number.
             $students = $isCounselleeView
-                ? $this->facultyGroupRows($scopeFacultyPk, '%counsel%', 'counsellor_group_name', 'current')
-                : $this->facultyGroupRows($scopeFacultyPk, '%house%', 'house_group_name', 'current');
+                ? $this->facultyGroupRows($scopeFacultyPk, '%counsel%', 'counsellor_group_name', true)
+                : $this->facultyGroupRows($scopeFacultyPk, '%house%', 'house_group_name', true);
 
             $payload = [
                 'students' => $students,
