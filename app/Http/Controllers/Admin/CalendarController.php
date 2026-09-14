@@ -42,8 +42,7 @@ class CalendarController extends Controller
         $request ??= request();
 
         return $request->input('scope') === 'academy'
-            && is_faculty_portal_user()
-            && ! hasRole('Student-OT');
+            && (is_faculty_portal_user() || hasRole('Student-OT') || isOfficerTraineeUser());
     }
 
     private function scopeTimetableForFaculty($query, int $facultyPk)
@@ -59,8 +58,10 @@ class CalendarController extends Controller
 
     public function index(Request $request)
     {
-        // OT (Officer Trainee) users get their own dedicated calendar page.
-        if (hasRole('Student-OT')) {
+        // OT (Officer Trainee) users get their own dedicated calendar page — unless
+        // they asked for the Academic Timetable, which is this page showing the
+        // whole Academy rather than the sessions of the groups they belong to.
+        if (hasRole('Student-OT') && ! $this->wantsAcademyScope($request)) {
             return redirect()->route('calendar.ot.index');
         }
 
@@ -102,7 +103,7 @@ class CalendarController extends Controller
             $courseBase = $courseBase->whereIn('course_master.pk', $data_course_id);
         }
 
-        if (hasRole('Student-OT')) {
+        if (hasRole('Student-OT') && ! $academyScope) {
             $courseBase = $courseBase->leftJoin(
                 'student_master_course__map',
                 'student_master_course__map.course_master_pk',
@@ -657,8 +658,9 @@ class CalendarController extends Controller
         $events = DB::table('timetable')
             ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id');
 
-        // Student-OT Role
-        if (hasRole('Student-OT')) {
+        // Student-OT Role — narrowed to the groups they belong to, except on the
+        // Academic Timetable view, which is the whole Academy.
+        if (hasRole('Student-OT') && ! $this->wantsAcademyScope($request)) {
 
             $student_pk = auth()->user()->user_id;
 
@@ -1464,7 +1466,7 @@ class CalendarController extends Controller
             ->leftJoin('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id');
 
         // Scope events by user type — mirror fullCalendarDetails().
-        if (hasRole('Student-OT')) {
+        if (hasRole('Student-OT') && ! $this->wantsAcademyScope($request)) {
             $studentPk = auth()->user()->user_id;
             $events = $events
                 ->join('course_group_timetable_mapping', 'course_group_timetable_mapping.timetable_pk', '=', 'timetable.pk')

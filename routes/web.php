@@ -1043,6 +1043,9 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
         Route::get('/', [MemoDisciplineController::class, 'index'])->name('index');
         // Officer Trainee: dedicated, read-only "my discipline memos" page (view own records + chat).
         Route::get('/my-memos', [MemoDisciplineController::class, 'otIndex'])->name('ot_index');
+        // Officer Trainee: every mark deducted from them, discipline memos and
+        // memo/notices together — what the dashboard card opens.
+        Route::get('/my-marks', [MemoDisciplineController::class, 'otMarksDeducted'])->name('ot_marks');
         Route::delete('/delete/{id}', [MemoDisciplineController::class, 'destroy'])->name('destroy');
         Route::get('/export-csv', [MemoDisciplineController::class, 'exportCsv'])->name('export_csv');
         Route::get('/export-pdf', [MemoDisciplineController::class, 'exportPdf'])->name('export_pdf');

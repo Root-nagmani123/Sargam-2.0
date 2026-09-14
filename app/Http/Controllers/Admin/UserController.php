@@ -56,6 +56,7 @@ use App\Models\CourseCordinatorMaster;
 use App\Models\StudentMasterCourseMap;
 use App\Models\StudentMaster;
 use App\Services\Attendance\OtExemptionResolver;
+use App\Services\Discipline\OtMarksDeductedService;
 use App\Services\FacultyFeedbackReportService;
 use App\Services\Timetable\FacultySessionScope;
 use App\Services\FC\RegistrationService;
@@ -290,15 +291,17 @@ class UserController extends Controller
             $todayTimetable = $this->getTodayTimetableForStudent($userId);
          }
 
-         // "Total Marks Deducted in Discipline" — this OT's concluded discipline
-         // memos only, which is what the Discipline module treats as deducted.
+         // "Total Marks Deducted in Discipline" — every concluded deduction against
+         // this OT, from BOTH registers: Discipline Memos and Memo/Notices. Counted
+         // through the service the page behind the card lists from, so the tile and
+         // the rows agree.
          //
          // Gated on isOfficerTraineeUser(), not hasRole('Student-OT') like the block
          // above: Student-OT is a session pseudo-role set at login, so an OT who
          // arrives holding only the Spatie "Officer Trainee" role would have been
          // shown a card reading zero over real deductions.
          if (isOfficerTraineeUser()) {
-             $disciplineMarksDeducted = MemoDiscipline::totalMarksDeductedFor((int) $userId);
+             $disciplineMarksDeducted = app(OtMarksDeductedService::class)->totalFor((int) $userId);
          }
 
          // Calculate total sessions for faculty portal users (Faculty / Internal / Guest)
@@ -429,6 +432,11 @@ class UserController extends Controller
         $isSecurityRole = hasRole('Security Card') || hasRole('Admin Security');
         $isSuperAdmin   = hasRole('Super Admin');
         $isStudentOT    = hasRole('Student-OT');
+        // Student-OT is a pseudo-role set at login; an OT who arrives holding only
+        // the Spatie "Officer Trainee" role does not have it. The OT cards below
+        // key off this instead, or their links would resolve to the staff pages —
+        // the same trap the discipline card documents.
+        $isOtUser       = $isStudentOT || isOfficerTraineeUser();
         $isFacultyRole  = hasRole('Internal Faculty') || hasRole('Guest Faculty');
         // The two faculty cards below key off portal membership, not those two role
         // names — the only faculty role actually present is "Faculty", which
@@ -454,9 +462,13 @@ class UserController extends Controller
             'pending_id_approval1'    => ['count' => $todayApproval1IdCardRequests ?? 0,           'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => !$isSecurityRole && ($todayApproval1IdCardRequests ?? 0) > 0],
             'pending_dup_id_approval1'=> ['count' => $todayApproval1DuplicateIdCardRequests ?? 0,  'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => !$isSecurityRole && ($todayApproval1DuplicateIdCardRequests ?? 0) > 0],
             'ot_mdo_escort'           => ['count' => $MDO_count ?? 0,                              'link' => route('ot.mdo.escrot.exemption.view'),                         'visible' => !$isSecurityRole && $isStudentOT],
-            // Opens the OT's own read-only discipline memo list, which is where the
-            // memos behind this figure are itemised.
-            'discipline_marks_deducted' => ['count' => $disciplineMarksDeducted,                   'link' => route('memo.discipline.ot_index'),                             'visible' => !$isSecurityRole && $isStudentOT],
+            // Opens the page that itemises this figure — both registers on one
+            // table, read from the same service the count comes from.
+            'discipline_marks_deducted' => ['count' => $disciplineMarksDeducted,                   'link' => route('memo.discipline.ot_marks'),                             'visible' => !$isSecurityRole && $isOtUser],
+            // OT cards. Neither timetable carries a count — they open a calendar,
+            // not a list whose rows could be counted — and Pending Feedback opens
+            // the OT's own session feedback page, where the pending tab is first.
+            'pending_feedback'        => [                                                         'link' => route('feedback.get.studentFeedback'),                          'visible' => !$isSecurityRole && $isOtUser],
             'total_inhouse_faculty'   => ['count' => $total_internal_faculty,                      'link' => route('admin.dashboard.inhouse_faculty'),                      'visible' => !$isSecurityRole && !$isStudentOT],
             'session_details'         => ['count' => $totalSessions,                               'link' => route('admin.dashboard.sessions'),                             'visible' => !$isSecurityRole && ($isFacultyRole || $isSuperAdmin)],
             // Faculty-only cards. Both open a report that scopes itself to the
@@ -467,8 +479,11 @@ class UserController extends Controller
             // whose rows could be counted. Academic = the whole Academy's timetable
             // (?scope=academy), My Timetable = the same page scoped to the viewer,
             // which is what it already does for a faculty login.
-            'academic_timetable'      => [                                                         'link' => route('calendar.index', ['scope' => 'academy']),               'visible' => !$isSecurityRole && $isFacultyPortalUser],
-            'my_timetable'            => [                                                         'link' => route('calendar.index'),                                       'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            'academic_timetable'      => [                                                         'link' => route('calendar.index', ['scope' => 'academy']),               'visible' => !$isSecurityRole && ($isFacultyPortalUser || $isOtUser)],
+            // An OT's own timetable is their dedicated calendar — the sessions of
+            // the groups they are enrolled in. A faculty's is the same page scoped
+            // to their classes, which is what it already does for them.
+            'my_timetable'            => ['link' => $isOtUser ? route('calendar.ot.index') : route('calendar.index'),                            'visible' => !$isSecurityRole && ($isFacultyPortalUser || $isOtUser)],
             // Both open the OT / Participants list — the second ordered by House so it
             // opens house-wise, with the page's House filter to narrow to one.
             'my_counsellees'          => ['count' => $facultyCounsellees,                          'link' => route('admin.dashboard.ot-participants', ['view' => 'counsellees']), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
