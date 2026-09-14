@@ -1368,6 +1368,11 @@ Route::middleware(['auth'])->group(function () {
 
     // User view routes
     Route::get('/course-repository-user', [CourseRepositoryController::class, 'userIndex'])->name('admin.course-repository.user.index');
+
+    // Universal search (user end). MUST stay above the {pk} route below, which
+    // would otherwise swallow /course-repository-user/search as a repository id.
+    Route::get('/course-repository-user/search', [CourseRepositoryController::class, 'userSearch'])->name('admin.course-repository.user.search');
+    Route::get('/course-repository-user/search/suggest', [CourseRepositoryController::class, 'userSearchSuggest'])->name('admin.course-repository.user.search.suggest');
     Route::get('/course-repository-user/foundation-course', [CourseRepositoryController::class, 'foundationCourse'])->name('admin.course-repository.user.foundation-course');
     Route::get('/course-repository-user/foundation-course/{courseCode}', [CourseRepositoryController::class, 'foundationCourseDetail'])->name('admin.course-repository.user.foundation-course.detail');
     Route::get('/course-repository-user/foundation-course/{courseCode}/class-material-subject-wise', [CourseRepositoryController::class, 'classMaterialSubjectWise'])->name('admin.course-repository.user.class-material-subject-wise');
