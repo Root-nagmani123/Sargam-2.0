@@ -184,6 +184,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/ot-participants', [UserController::class, 'otParticipantsList'])->name('admin.dashboard.ot-participants');
     Route::get('/dashboard/students/export/{format}', [UserController::class, 'studentListExport'])->name('admin.dashboard.students.export');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
+    Route::get('/dashboard/my-groups', [UserController::class, 'myGroups'])->name('admin.dashboard.my-groups');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
     Route::post('/dashboard/report-issue', [\App\Http\Controllers\Admin\IssueReportController::class, 'store'])->middleware('throttle:10,1')->name('admin.dashboard.report-issue');
     // Admin console for issues submitted via the dashboard "Report Issue" launcher
