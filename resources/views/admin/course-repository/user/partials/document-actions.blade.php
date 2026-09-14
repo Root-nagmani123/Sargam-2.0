@@ -4,6 +4,10 @@
     $fileDoc = $fileDoc ?? ($doc ?? null);
     $videoLink = trim((string) ($detail->videolink ?? ''));
     $hasVideo = $videoLink !== '';
+    // Admin decides per video whether it may be taken away; watching is never
+    // gated by it. Absent detail (older callers) reads as allowed, which is the
+    // column's own default.
+    $videoDownloadAllowed = ! $detail || (bool) ($detail->video_download_enabled ?? true);
     $hasPdfView = $detailPk || ($fileDoc?->public_file_url ?? null);
     $hasFileDownload = $fileDoc && ($fileDoc->pk ?? null);
     $isDirectVideoFile = $hasVideo && preg_match('/\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i', $videoLink);
@@ -38,6 +42,7 @@
            aria-label="View video">
             <i class="bi bi-play-btn fs-5" aria-hidden="true"></i>
         </a>
+        @if($videoDownloadAllowed)
         <a href="{{ $videoLink }}"
            class="btn btn-link btn-sm text-danger p-0 cru-btn-video-download"
            @if($isDirectVideoFile) download @endif
@@ -47,7 +52,9 @@
            aria-label="{{ $isDirectVideoFile ? 'Download video' : 'Open video link' }}">
             <i class="bi bi-download fs-5" aria-hidden="true"></i>
         </a>
+        @endif
         @else
+        @if($videoDownloadAllowed)
         <a href="{{ $videoLink }}"
            class="btn btn-link btn-sm text-danger p-0 cru-btn-video-download"
            @if($isDirectVideoFile) download @endif
@@ -57,6 +64,7 @@
            aria-label="{{ $isDirectVideoFile ? 'Download video' : 'Open video link' }}">
             <i class="bi bi-download fs-5" aria-hidden="true"></i>
         </a>
+        @endif
         @endif
     @endif
 

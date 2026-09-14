@@ -831,6 +831,16 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <small class="text-muted d-block mt-1">
                                         <i class="bi bi-info-circle me-1"></i> Enter video URL (YouTube, Vimeo, etc.)
                                     </small>
+                                    <div class="form-check form-switch mt-2">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                            id="video_download_enabled_course" name="video_download_enabled_course" value="1">
+                                        <label class="form-check-label small" for="video_download_enabled_course">
+                                            Allow users to download this video
+                                        </label>
+                                        <small class="text-muted d-block">
+                                            Off: users can still watch it, but the download option is hidden.
+                                        </small>
+                                    </div>
                                 </div>
 
                                 <!-- Document Upload -->
@@ -1020,6 +1030,16 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <label for="video_link_other" class="form-label">Video Link</label>
                                     <input type="url" class="form-control" id="video_link_other" name="video_link_other"
                                         placeholder="https://www.youtube.com/watch?v=...">
+                                    <div class="form-check form-switch mt-2">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                            id="video_download_enabled_other" name="video_download_enabled_other" value="1">
+                                        <label class="form-check-label small" for="video_download_enabled_other">
+                                            Allow users to download this video
+                                        </label>
+                                        <small class="text-muted d-block">
+                                            Off: users can still watch it, but the download option is hidden.
+                                        </small>
+                                    </div>
                                 </div>
 
                                 <div class="mb-4">
@@ -1595,11 +1615,17 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             uploadData.append('keywords', kw ? kw.value : '');
             var vc = document.getElementById('video_link_course');
             uploadData.append('video_link', vc ? vc.value : '');
+            // Whether the user side may download that video. Sent only when
+            // ticked, which is how the server reads "off".
+            var dc = document.getElementById('video_download_enabled_course');
+            if (dc && dc.checked) { uploadData.append('video_download_enabled', '1'); }
         } else if (selectedCategory === 'Other') {
             var ko = document.getElementById('keywords_other');
             uploadData.append('keywords', ko ? ko.value : '');
             var vo = document.getElementById('video_link_other');
             uploadData.append('video_link', vo ? vo.value : '');
+            var doEl = document.getElementById('video_download_enabled_other');
+            if (doEl && doEl.checked) { uploadData.append('video_download_enabled', '1'); }
         } else {
             var ki = document.getElementById('Key_words_institutional');
             uploadData.append('keywords', ki ? ki.value : '');
@@ -1906,8 +1932,15 @@ window.crDocEdit = (function() {
                 // keywords + video LAST — cascade change handlers overwrite keywords
                 setVal('keywords_course', d.keyword);
                 setVal('video_link_course', d.videolink);
+                setChecked('video_download_enabled_course', d.video_download_enabled);
                 setVal('session_date', d.session_date); // reaffirm in case a reset cleared it
             });
+    }
+
+    // Tick state for a checkbox, tolerant of the element being absent.
+    function setChecked(id, on) {
+        var el = document.getElementById(id);
+        if (el) { el.checked = !!on; }
     }
 
     // Pre-fill the Other-category section (mostly free-text inputs).
@@ -1923,6 +1956,7 @@ window.crDocEdit = (function() {
             .then(function() {
                 setVal('keywords_other', d.keyword);
                 setVal('video_link_other', d.videolink);
+                setChecked('video_download_enabled_other', d.video_download_enabled);
             });
     }
 
@@ -2116,6 +2150,8 @@ window.crDocEdit = (function() {
             fd.append('ministry_master', (($id('ministry_master') || {}).value) || '');
             fd.append('keywords', (($id('keywords_course') || {}).value) || '');
             fd.append('video_link', (($id('video_link_course') || {}).value) || '');
+            // Sent only when ticked — absent is how the server reads "off".
+            if (($id('video_download_enabled_course') || {}).checked) { fd.append('video_download_enabled', '1'); }
             var t1 = document.querySelector('#uploadForm input[name="attachment_titles[]"]');
             fileTitle = t1 ? t1.value : '';
             fileInput = findFileInput('attachments[]');
@@ -2128,6 +2164,7 @@ window.crDocEdit = (function() {
             fd.append('sector_master', (($id('sector_master_other') || {}).value) || '');
             fd.append('ministry_master', (($id('ministry_master_other') || {}).value) || '');
             fd.append('keywords', (($id('keywords_other') || {}).value) || '');
+            if (($id('video_download_enabled_other') || {}).checked) { fd.append('video_download_enabled', '1'); }
             fd.append('video_link', (($id('video_link_other') || {}).value) || '');
             var t2 = document.querySelector('#uploadForm input[name="attachment_titles_other[]"]');
             fileTitle = t2 ? t2.value : '';

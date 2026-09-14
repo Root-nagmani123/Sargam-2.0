@@ -508,6 +508,8 @@ class CourseRepositoryController extends Controller
                 'attachment_titles.*' => 'nullable|string|max:5000',
                 'keywords' => 'nullable|string|max:4000',
                 'video_link' => 'nullable|string|max:2000',
+                // Unchecked checkboxes are simply absent, so absent means off.
+                'video_download_enabled' => 'nullable|boolean',
             ], [
                 // Default messages name the raw input ("attachments.0"), which tells the
                 // uploader nothing. :position is 1-based and matches the row they filled in.
@@ -545,6 +547,9 @@ class CourseRepositoryController extends Controller
                 'ministry_master_pk' => $validated['ministry_master'] ?? null,
                 'keyword' => $validated['keywords'] ?? null,
                 'videolink' => $validated['video_link'] ?? null,
+                // Whether the user side may download that video. An unchecked box
+                // is simply absent from the request, so absent means off.
+                'video_download_enabled' => $request->boolean('video_download_enabled'),
                 'created_date' => now(),
                 'created_by' => auth()->id(),
                 'status' => 1,
@@ -723,6 +728,7 @@ class CourseRepositoryController extends Controller
                         'ministry_resolved' => $ministryResolved,
                         'keyword' => $detail->keyword,
                         'videolink' => $detail->videolink,
+                        'video_download_enabled' => (bool) $detail->video_download_enabled,
                     ] : null,
                 ],
             ]);
@@ -760,6 +766,8 @@ class CourseRepositoryController extends Controller
                 'ministry_master' => 'nullable|numeric',
                 'keywords' => 'nullable|string|max:4000',
                 'video_link' => 'nullable|string|max:2000',
+                // Unchecked checkboxes are simply absent, so absent means off.
+                'video_download_enabled' => 'nullable|boolean',
             ], [
                 'category.in' => 'Please select a valid category (Course, Other or Institutional).',
                 'document_file.file' => 'The document could not be read. Please select the file again.',
@@ -827,6 +835,7 @@ class CourseRepositoryController extends Controller
                     : $detail->ministry_master_pk;
                 $detail->keyword = $validated['keywords'] ?? $detail->keyword;
                 $detail->videolink = $validated['video_link'] ?? $detail->videolink;
+                $detail->video_download_enabled = $request->boolean('video_download_enabled');
                 if ($category && isset($typeMap[$category])) {
                     $detail->type = $typeMap[$category];
                 }
