@@ -1500,10 +1500,11 @@ class UserController extends Controller
     private function getOtPendingFeedbackCount(int $studentPk): int
     {
         try {
-            // Simpler query - just count pending feedback sessions for this student
-            $count = DB::table('timetable as t')
-                ->distinct()
-                ->select('t.pk', 'f.pk as faculty_pk')
+            // Match EXACT logic from studentFeedback_url() in CalendarController
+            // Single query with leftJoin - NEW backend format only
+            
+            $pendingQuery = DB::table('timetable as t')
+                ->select(['t.pk as timetable_pk', 'f.pk as faculty_pk'])
                 ->leftJoin('faculty_master as f', function ($join) {
                     $join->whereRaw("
                     (
@@ -1521,25 +1522,18 @@ class UserController extends Controller
                 ");
                 })
                 ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+                ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
                 ->join('student_master_course__map as smcm', function ($join) use ($studentPk) {
                     $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
-                        ->where('smcm.student_master_pk', $studentPk)
-                        ->where('smcm.active_inactive', 1);
-                })
-                ->join('course_student_attendance as csa', function ($join) use ($studentPk) {
-                    $join->on('csa.timetable_pk', '=', 't.pk')
-                        ->where('csa.Student_master_pk', $studentPk)
-                        ->where('csa.status', '1');
+                        ->where('smcm.student_master_pk', '=', $studentPk)
+                        ->where('smcm.active_inactive', '=', 1);
                 })
                 ->where('t.feedback_checkbox', 1)
-                ->where('t.active_inactive', 1)
-                ->whereRaw("
-                    JSON_VALID(t.faculty_details) = 1
-                    AND JSON_CONTAINS(
-                        t.faculty_details,
-                        JSON_OBJECT('faculty_pk', f.pk, 'role', 'Teaching')
-                    ) = 1
-                ")
+                ->join('course_student_attendance as csa', function ($join) use ($studentPk) {
+                    $join->on('csa.timetable_pk', '=', 't.pk')
+                        ->where('csa.Student_master_pk', '=', $studentPk)
+                        ->where('csa.status', '1');
+                })
                 ->whereNotExists(function ($sub) use ($studentPk) {
                     $sub->select(DB::raw(1))
                         ->from('topic_feedback as tf')
@@ -1549,11 +1543,39 @@ class UserController extends Controller
                         ->where('tf.is_submitted', 1);
                 })
                 ->whereRaw("
-                    DATE_FORMAT(CONCAT(t.END_DATE, ' ', TRIM(SUBSTRING_INDEX(t.class_session, '-', -1))), '%Y-%m-%d %h:%i %p') < NOW()
+                    JSON_VALID(t.faculty_details) = 1
+                    AND JSON_CONTAINS(
+                        t.faculty_details,
+                        JSON_OBJECT('faculty_pk', f.pk, 'role', 'Teaching')
+                    ) = 1
                 ")
+                ->whereRaw("
+                    TIMESTAMP(
+                        t.END_DATE,
+                        CASE
+                            WHEN t.class_session LIKE '% - %' THEN
+                                STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' - ', -1)), '%h:%i %p')
+                            WHEN t.class_session LIKE '% to %' THEN
+                                STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' to ', -1)), '%H:%i')
+                            ELSE NULL
+                        END
+                    ) <= NOW()
+                ");
+
+            if (hasRole('Student-OT')) {
+                $pendingQuery
+                    ->join('course_group_timetable_mapping as cgtm', 'cgtm.timetable_pk', '=', 't.pk')
+                    ->join('student_course_group_map as scgm', 'scgm.group_type_master_course_master_map_pk', '=', 'cgtm.group_pk')
+                    ->where('scgm.student_master_pk', $studentPk);
+            }
+
+            $pending = $pendingQuery
+                ->orderBy('t.START_DATE', 'asc')
+                ->get()
+                ->unique(fn($item) => $item->timetable_pk . '_' . $item->faculty_pk)
                 ->count();
 
-            return (int) $count;
+            return (int) $pending;
         } catch (\Throwable $e) {
             \Log::error('Error counting OT pending feedback: ' . $e->getMessage(), [
                 'student_pk' => $studentPk,
