@@ -66,7 +66,7 @@ class UsefulLinksSetupController extends Controller
 
             foreach ($rows as $index => $row) {
                 fputcsv($handle, array_map(
-                    fn (array $col) => (string) $col['value']($row, $index),
+                    fn (array $col) => sanitize_export_cell($col['value']($row, $index)),
                     $columns
                 ));
             }

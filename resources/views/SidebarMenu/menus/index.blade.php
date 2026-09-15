@@ -257,6 +257,27 @@
                                    autocomplete="off" maxlength="255">
                         </div>
 
+                        {{-- A parent menu that only opens a sub-list has no
+                             destination of its own. MenuRequest requires a Url OR an
+                             Attachment UNLESS this is ticked, and the back-fill
+                             migration set it on every existing parent — so without
+                             this control those rows could not be saved at all, and a
+                             new parent-only menu could not be created. The JS below
+                             (sbmSyncContainerFields) clears and locks Url and
+                             Attachment while it is ticked. --}}
+                        <div class="form-group sbm-form-grid--full">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       name="is_container" id="is_container" value="1">
+                                <label class="form-check-label" for="is_container">
+                                    This menu only holds sub-menus
+                                </label>
+                            </div>
+                            <p class="sbm-form-help">
+                                Tick for a parent that just opens a sub-list. It then has no Url and no Attachment.
+                            </p>
+                        </div>
+
                         {{-- Attachment: same types and 10 MB ceiling as Useful Links,
                              so the two upload fields behave identically.
                              ⚠️ Stored only — the sidebar's links are hand-written in

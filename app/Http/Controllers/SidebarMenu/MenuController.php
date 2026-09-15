@@ -184,7 +184,7 @@ class MenuController extends Controller
 
             foreach ($rows as $index => $row) {
                 fputcsv($handle, array_map(
-                    fn (array $col) => (string) $col['value']($row, $index),
+                    fn (array $col) => sanitize_export_cell($col['value']($row, $index)),
                     $columns
                 ));
             }
@@ -286,6 +286,24 @@ class MenuController extends Controller
      */
     private function storeAttachment($file): string
     {
+        // ACCEPTED RISK, recorded deliberately (review finding PR311 F-009).
+        //
+        // The public disk means the file is served by the web server without
+        // passing through the application, so anyone holding the URL can read it
+        // even though the menu it hangs off may be visible to one role. The URL
+        // is not guessable in practice - the stored name is a slug of the
+        // original filename plus six random characters - but that is obscurity,
+        // not access control.
+        //
+        // Accepted because a menu attachment is a PUBLISHED document: it is the
+        // thing the menu item exists to hand out, the same contract as Useful
+        // Links, which this mirrors. Do NOT attach anything here that is not
+        // publishable to anyone with the link.
+        //
+        // If that ever stops being true, the fix is a signed download route on
+        // the private disk (the shape PR #306 uses), not a rename - the three
+        // link sites are MenuRouteMatcher, MenuService::attachmentLink() and the
+        // sidebar component. Tracked as PR311-L-4 with the Security owner.
         $extension = strtolower((string) $file->guessExtension() ?: 'dat');
         $base = pathinfo((string) $file->getClientOriginalName(), PATHINFO_FILENAME);
         $slug = \Illuminate\Support\Str::slug($base) ?: 'attachment';

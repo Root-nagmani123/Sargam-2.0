@@ -100,21 +100,15 @@ class ExportPdfPhpDisabledTest extends TestCase
         return $sets;
     }
 
-    /**
-     * The security fix must not have cost the feature.
-     *
-     * With the in-view script gone and PHP disabled, the canvas stamp is the
-     * only thing that can produce this text — and the count has to be the real
-     * one, which is what dompdf's CSS counter route gets wrong ("of 0").
-     */
-    public function test_a_rendered_export_still_numbers_every_page(): void
+    /** The multi-page fixture both halves of the page-number test render. */
+    private function pageNumberFixture()
     {
         $rows = [];
         for ($i = 1; $i <= 140; $i++) {
             $rows[] = ['name' => 'Fixture Row '.$i];
         }
 
-        $pdf = Pdf::loadView('exports.branded_grid_pdf', [
+        return Pdf::loadView('exports.branded_grid_pdf', [
             'reportTitle' => 'Page Numbering Fixture',
             'columns' => [
                 ['key' => 'sno', 'heading' => 'S.No.', 'value' => fn ($row, $i) => $i + 1],
@@ -131,15 +125,75 @@ class ExportPdfPhpDisabledTest extends TestCase
                 'isHtml5ParserEnabled' => true,
                 'isPhpEnabled' => false,
             ]);
+    }
 
-        $output = PdfPageNumbers::stamp($pdf)->output();
+    /**
+     * Count text-drawing blocks in a PDF's content streams.
+     *
+     * Every piece of text dompdf draws is one BT ... ET block, and the content
+     * streams are Flate-compressed, so they have to be inflated first — which is
+     * exactly why a naive assertStringContainsString() on the finished file can
+     * never see any of this.
+     */
+    private function textBlocksIn(string $pdf): int
+    {
+        $plainText = '';
 
-        $pageCount = $pdf->getDomPDF()->getCanvas()->get_page_count();
+        if (preg_match_all('/stream\r?\n(.*?)\r?\nendstream/s', $pdf, $matches)) {
+            foreach ($matches[1] as $chunk) {
+                $inflated = @gzuncompress($chunk);
+
+                if ($inflated === false) {
+                    $inflated = @gzinflate($chunk);
+                }
+
+                if ($inflated !== false) {
+                    $plainText .= $inflated;
+                }
+            }
+        }
+
+        return preg_match_all('/\bBT\b/', $plainText);
+    }
+
+    /**
+     * The security fix must not have cost the feature.
+     *
+     * With the in-view script gone and PHP disabled, the canvas stamp is the
+     * only thing that can produce the page number — and the count has to be the
+     * real one, which is what dompdf's CSS counter route gets wrong ("of 0").
+     *
+     * This asserts the stamp DIFFERENTIALLY: the same fixture is rendered with
+     * and without stamp(), and the stamped file must carry exactly one extra
+     * text block per page.
+     *
+     * The two string assertions this replaces could not fail. dompdf Flate-
+     * compresses its content streams, so no text in the document is ever a
+     * literal substring of the file — "{PAGE_NUM}" and "of 0" were absent from
+     * an UNSTAMPED render too, and the test passed whether or not the stamp
+     * ran. Nor can the text be recovered by inflating: the embedded DejaVu Sans
+     * subset encodes glyph ids, not characters, so "Page 1 of 4" does not appear
+     * even in the decompressed stream. Counting the blocks is what is actually
+     * observable, and it is enough: remove the stamp and the count drops by one
+     * per page.
+     */
+    public function test_a_rendered_export_still_numbers_every_page(): void
+    {
+        $stampedPdf = $this->pageNumberFixture();
+        $stamped    = PdfPageNumbers::stamp($stampedPdf)->output();
+
+        $pageCount = $stampedPdf->getDomPDF()->getCanvas()->get_page_count();
         $this->assertGreaterThan(1, $pageCount, 'the fixture must span several pages for the count to mean anything');
 
-        // page_text() substitutes the placeholders per page as the document is
-        // written out, so the finished file carries the resolved text.
-        $this->assertStringNotContainsString('{PAGE_NUM}', $output, 'the placeholders must be resolved, not literal');
-        $this->assertStringNotContainsString('of 0', $output, 'the page count must be real');
+        // The same document, rendered without the stamp.
+        $unstampedPdf = $this->pageNumberFixture();
+        $unstampedPdf->render();
+        $unstamped = $unstampedPdf->output();
+
+        $this->assertSame(
+            $pageCount,
+            $this->textBlocksIn($stamped) - $this->textBlocksIn($unstamped),
+            'stamp() must add exactly one piece of text to every page'
+        );
     }
 }

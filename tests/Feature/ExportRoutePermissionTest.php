@@ -160,11 +160,12 @@ class ExportRoutePermissionTest extends TestCase
      */
     public function test_super_admin_passes_every_gate_without_holding_the_permission(): void
     {
-        $role = Role::query()->where('name', 'Super Admin')->first();
-
-        if (! $role) {
-            $this->markTestSkipped('No Super Admin role in this database.');
-        }
+        // Created when absent rather than skipped: a database without the role
+        // is an unseeded fixture, not a reason to stop checking that the
+        // privileged bypass exists. DatabaseTransactions rolls this back, so a
+        // database that already has the role is untouched.
+        $role = Role::query()->where('name', 'Super Admin')->first()
+            ?: Role::create(['name' => 'Super Admin', 'guard_name' => 'web']);
 
         $user = $this->nobody();
         $user->assignRole($role);

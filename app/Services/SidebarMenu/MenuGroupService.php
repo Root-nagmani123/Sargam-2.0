@@ -133,9 +133,15 @@ class MenuGroupService
             // editColumn (not addColumn) on the real DB columns: Yajra then still
             // treats them as sortable/searchable SQL columns and only swaps the
             // rendered value.
-            ->addColumn('category_name', fn ($e) =>
-                optional($e->category)->name ?: '<span class="sbm-muted">—</span>'
-            )
+            // e() on the stored name: this column is raw (see rawColumns below)
+            // so that an empty category can render a muted em-dash, and raw
+            // turns off Yajra's escaping for the real value too. Category names
+            // carry no character restriction.
+            ->addColumn('category_name', function ($e) {
+                $name = optional($e->category)->name;
+
+                return filled($name) ? e($name) : '<span class="sbm-muted">—</span>';
+            })
             ->editColumn('created_at', fn ($e) =>
                 optional($e)->created_at ? optional($e)->created_at->format('d-m-Y') : '-'
             )

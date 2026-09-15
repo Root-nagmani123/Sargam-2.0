@@ -160,7 +160,7 @@ class RoleController extends Controller
             $index = 0;
             foreach ($rows as $row) {
                 fputcsv($handle, array_map(
-                    fn (array $col) => (string) $col['value']($row, $index),
+                    fn (array $col) => sanitize_export_cell($col['value']($row, $index)),
                     $columns
                 ));
                 $index++;

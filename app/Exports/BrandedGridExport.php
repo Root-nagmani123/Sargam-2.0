@@ -2,12 +2,15 @@
 
 namespace App\Exports;
 
+use App\Support\Concerns\BindsExportCellsAsText;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithCustomStartCell;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
+use Maatwebsite\Excel\DefaultValueBinder;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -32,14 +35,17 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
  * Styled to match the print/PDF header: logo, navy institution band, report
  * title, generated stamp, record count, then a navy table header over zebra rows.
  */
-class BrandedGridExport implements
+class BrandedGridExport extends DefaultValueBinder implements
     FromArray,
     WithHeadings,
     ShouldAutoSize,
     WithEvents,
     WithTitle,
-    WithCustomStartCell
+    WithCustomStartCell,
+    WithCustomValueBinder
 {
+    use BindsExportCellsAsText;
+
     /** Rows the branded header occupies before the data table starts. */
     private const HEADER_ROWS = 5;
 
@@ -66,6 +72,13 @@ class BrandedGridExport implements
         $this->data = [];
         $index = 0;
         foreach ($rows as $row) {
+            // Cast to string, but do NOT prefix an apostrophe: formula
+            // neutralisation on this path is done by CELL TYPE. The trait binds
+            // every non-numeric string as TYPE_STRING, so a stored name of
+            // =HYPERLINK(...) is written as the characters someone typed rather
+            // than as a live formula cell, a "+91 ..." value keeps no stray
+            // apostrophe, and a long digit-only identifier keeps every digit
+            // instead of being rounded to Excel's 15 significant digits.
             $this->data[] = array_values(array_map(
                 fn (array $col) => (string) $col['value']($row, $index),
                 $this->columns

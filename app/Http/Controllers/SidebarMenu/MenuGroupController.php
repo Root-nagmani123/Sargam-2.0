@@ -142,7 +142,7 @@ class MenuGroupController extends Controller
 
             foreach ($rows as $index => $row) {
                 fputcsv($handle, array_map(
-                    fn (array $col) => (string) $col['value']($row, $index),
+                    fn (array $col) => sanitize_export_cell($col['value']($row, $index)),
                     $columns
                 ));
             }
@@ -190,7 +190,11 @@ class MenuGroupController extends Controller
     {
         $this->service->status($id, $request->is_active);
         $this->flushSidebarCaches();
-        $status = $request->is_active == 1 ? 'Deactivated' : 'Activated';
+        // is_active carries the NEW state (the grid's switch sends 1 when it has
+        // just been turned on), so 1 means Activated. The two sibling screens,
+        // Menus and Categories, read it that way; this one was inverted and told
+        // the user the opposite of what it had just written.
+        $status = $request->is_active == 1 ? 'Activated' : 'Deactivated';
         return response()->json([
             'success' => true,
             'message' => 'Menu Group '.$status.' Successfully'

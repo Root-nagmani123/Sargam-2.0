@@ -285,12 +285,23 @@ class MenuService
     {
         return DataTables::of($this->baseQuery($request)->withCount('children'))
             ->addColumn('category_name', fn ($e) => e($this->resolveMenuCategoryName($e)))
-            ->addColumn('group_name', fn ($e) =>
-                optional($e->group)->name ?: '<span class="sbm-muted">&mdash;</span>'
-            )
-            ->addColumn('parent_menu', fn ($e) =>
-                optional($e->parent)->name ?: '<span class="sbm-muted">&mdash;</span>'
-            )
+            // e() on the stored name. These two columns are in rawColumns()
+            // below so the muted em-dash can be rendered for an empty relation,
+            // and being raw switches OFF Yajra's own escaping for the whole
+            // column - including the real value. A group or parent menu named
+            // <img src=x onerror=...> would then execute in the browser of every
+            // administrator who opens this grid. Compare category_name above,
+            // which was written the same way but kept its e().
+            ->addColumn('group_name', function ($e) {
+                $name = optional($e->group)->name;
+
+                return filled($name) ? e($name) : '<span class="sbm-muted">&mdash;</span>';
+            })
+            ->addColumn('parent_menu', function ($e) {
+                $name = optional($e->parent)->name;
+
+                return filled($name) ? e($name) : '<span class="sbm-muted">&mdash;</span>';
+            })
             // editColumn (not addColumn) on the real DB columns: Yajra then still
             // treats them as sortable/searchable SQL columns and only swaps the
             // rendered value.
