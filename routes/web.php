@@ -45,6 +45,7 @@ use App\Http\Controllers\Admin\{
     QuickLinkController,
     TimetableReportController,
     ExemptionMasterController,
+    HolidayMasterController,
     StationedLeaveMasterController,
     LeaveApplicationController,
     FacultyLeaveApprovalController,
@@ -892,6 +893,18 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/faculties', 'faculties')->name('faculties');
+        Route::post('/status/{id}', 'status')->name('status');
+        Route::delete('/delete/{id}', 'destroy')->name('destroy');
+    });
+
+    // Holiday Master — feeds the dashboard + course calendars (menu route: admin/holiday-master)
+    Route::prefix('admin/holiday-master')->name('admin.holiday-master.')->controller(HolidayMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/export', 'export')->name('export');
+        // Add / Edit are modals on the index page (docs/new-design-index-page.md §3c),
+        // so there are no create/edit GET screens — only the save endpoints.
+        Route::post('/store', 'store')->name('store');
+        Route::post('/update/{id}', 'update')->name('update');
         Route::post('/status/{id}', 'status')->name('status');
         Route::delete('/delete/{id}', 'destroy')->name('destroy');
     });

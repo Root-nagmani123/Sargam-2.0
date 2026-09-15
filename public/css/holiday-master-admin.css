@@ -1,0 +1,367 @@
+/* ==========================================================================
+   Holiday Master — module stylesheet (admin)
+
+   Shared by resources/views/admin/holiday_master/{index,create}.blade.php.
+   Scoped under .hm-page so nothing leaks into the other ~400 admin views.
+
+   Values come from the --ds-* tokens in sargam-app.css (see docs/design.md);
+   raw hex/px only where a token does not exist for that role.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Toolbar — date-range filter
+   The Year / Holiday Type selects use the shared .programme-dt-filter-select
+   wrapper from custom.css and need nothing here. Only the daterangepicker
+   input is bespoke: it carries a leading glyph and a wider value.
+   -------------------------------------------------------------------------- */
+.hm-page .hm-daterange {
+    position: relative;
+}
+
+.hm-page .hm-daterange__input {
+    width: 215px;
+    min-height: var(--ds-control-h);
+    height: var(--ds-control-h);
+    padding: var(--ds-space-2) var(--ds-space-3) var(--ds-space-2) 2.25rem;
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-2);
+    font-size: 0.9375rem;
+    color: var(--ds-ink);
+    background-image: none;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hm-page .hm-daterange__input::placeholder {
+    color: var(--ds-ink);
+    opacity: 1;
+}
+
+.hm-page .hm-daterange__input:focus {
+    border-color: var(--ds-primary);
+    box-shadow: var(--ds-focus-ring);
+    outline: 0;
+}
+
+.hm-page .hm-daterange__icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ds-ink-muted);
+    font-size: 0.95rem;
+    pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   Download (single export — CSV)
+   -------------------------------------------------------------------------- */
+.hm-page .hm-download-btn {
+    height: var(--ds-control-h);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    padding: 0 1.1rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--ds-primary);
+    background: var(--ds-surface);
+    border-radius: var(--ds-radius-2);
+}
+
+.hm-page .hm-download-btn:hover,
+.hm-page .hm-download-btn:focus {
+    background: var(--ds-surface);
+    color: var(--ds-primary);
+}
+
+.hm-page .hm-download-btn i {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Status badge
+   The theme ships the *-subtle backgrounds but not the text-*-emphasis
+   colours, so the label would render black. Tint it here. (docs §3b)
+   -------------------------------------------------------------------------- */
+.hm-page .hm-status-pill {
+    font-weight: 500;
+}
+
+.hm-page .hm-status-pill.bg-success-subtle {
+    color: #146c43;
+}
+
+.hm-page .hm-status-pill.bg-danger-subtle {
+    color: #b02a37;
+}
+
+/* --------------------------------------------------------------------------
+   Holiday type chip.
+
+   The bg/text pairs are copied from the dashboard calendar's own holiday chip
+   (.calendar-holiday-date--<type>, admin_assets/css/dashboard-calendar.css:10-15)
+   so a "Gazetted Holiday" reads identically on the grid and on the calendar.
+   They are copied, not referenced: those --cal-* custom properties are declared
+   on #dashboard-calendar-container and are out of scope on this page.
+   Keep the two in sync if the calendar palette changes.
+   -------------------------------------------------------------------------- */
+.hm-page .hm-type {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.2rem 0.625rem;
+    border-radius: var(--ds-radius-1);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.hm-page .hm-type::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: 0 0 auto;
+}
+
+.hm-page .hm-type--gazetted {
+    color: #d63384;
+    background: #ffe4e8;
+}
+
+.hm-page .hm-type--restricted {
+    color: #856404;
+    background: #fff3cd;
+}
+
+.hm-page .hm-type--optional {
+    color: #0d9488;
+    background: #e6fffa;
+}
+
+/* --------------------------------------------------------------------------
+   Row actions — Edit · switch · Delete, each an icon over a caption.
+   Every stack is the same width so the glyphs share one baseline. (docs §3b)
+   NOTE: the switch must NOT be wrapped in .form-check.form-switch here —
+   custom.css:108 pulls .form-check-input left by -2.375rem inside that
+   wrapper, which collapses the icon strip to 0px in this layout.
+   -------------------------------------------------------------------------- */
+.hm-page .hm-act-group {
+    display: inline-flex;
+    align-items: stretch;
+    gap: var(--ds-space-1);
+}
+
+.hm-page .hm-act {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--ds-space-1);
+    min-width: 62px;               /* ≈ the widest caption ("Deactivate") */
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.hm-page .hm-act__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+}
+
+.hm-page .hm-act__icon > i {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.hm-page .hm-act__icon .form-check-input {
+    margin: 0;
+    float: none;
+}
+
+.hm-page .hm-act__label {
+    white-space: nowrap;
+}
+
+.hm-page .hm-act--edit {
+    color: #2563eb;
+}
+
+.hm-page .hm-act--toggle {
+    color: #475467;
+}
+
+.hm-page .hm-act--del {
+    color: var(--bs-danger);
+}
+
+/* Delete is refused server-side while the row is still Active, so that state
+   renders as a muted, non-interactive stack rather than a red icon that fails. */
+.hm-page .hm-act--del.is-disabled {
+    color: #98a2b3;
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Add / Edit modals (docs/new-design-index-page.md §3c)
+
+   Both modals share this one layer, so they cannot drift apart: same header,
+   same tinted field card, same controls, same footer pair. Only the contents
+   and the submit caption differ.
+
+   Scoped to .hm-modal (put on .modal-content) rather than .hm-page, because a
+   Bootstrap modal is portalled to <body> and is NOT inside the page root.
+   The .hm-control rules are two classes deep so they beat .form-control
+   without !important.
+   ========================================================================== */
+.hm-modal {
+    border-radius: 12px;
+}
+
+.hm-modal .hm-modal-header {
+    border-bottom: 1px solid #eaecf0;
+    padding: var(--ds-space-3) 1.25rem;
+}
+
+.hm-modal .hm-modal-header .modal-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #101828;
+    margin: 0;
+}
+
+.hm-modal .hm-modal-body {
+    padding: 1.25rem;
+}
+
+/* The tinted card the fields live in. */
+.hm-modal .hm-field-card {
+    position: relative;
+    background: #eef1fc;
+    border-radius: 10px;
+    padding: var(--ds-space-3);
+}
+
+.hm-modal .hm-form-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ds-ink);
+}
+
+.hm-modal .hm-req {
+    color: #dc2626;
+    margin-left: 1px;
+}
+
+.hm-modal .hm-control {
+    background-color: var(--ds-surface);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-2);
+    padding: var(--ds-space-2) 0.75rem;
+    font-size: 0.875rem;
+    color: #101828;
+    box-shadow: none;
+}
+
+.hm-modal .hm-control::placeholder {
+    color: #9ca3af;
+}
+
+.hm-modal .hm-control:focus {
+    border-color: var(--ds-primary);
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
+}
+
+.hm-modal textarea.hm-control {
+    resize: vertical;
+    min-height: 78px;
+}
+
+/* Inline validation echoed from the controller's 422 payload. */
+.hm-modal .hm-control.is-invalid {
+    border-color: #dc2626;
+}
+
+.hm-modal .hm-field-error {
+    display: none;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: #dc2626;
+}
+
+.hm-modal .hm-field-error.is-shown {
+    display: block;
+}
+
+/* Derived, read-only: which weekday the chosen date falls on. */
+.hm-modal .hm-form-hint {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--ds-ink-muted);
+}
+
+.hm-modal .hm-modal-footer {
+    border-top: 0;
+    justify-content: end;
+    gap: 0.75rem;
+    padding: 0.25rem 1.25rem 1.25rem;
+}
+
+.hm-modal .hm-btn-cancel {
+    min-width: 108px;
+    border: 1px solid #fca5a5;
+    border-radius: var(--ds-radius-2);
+    background: var(--ds-surface);
+    color: #dc2626;
+    font-weight: 500;
+}
+
+.hm-modal .hm-btn-cancel:hover {
+    background: #fef2f2;
+    border-color: #f87171;
+}
+
+.hm-modal .hm-btn-submit {
+    min-width: 140px;
+    border: 1px solid #004384;
+    border-radius: var(--ds-radius-2);
+    background: #004384;
+    color: #fff;
+    font-weight: 600;
+}
+
+.hm-modal .hm-btn-submit:hover {
+    background: #00356a;
+    border-color: #00356a;
+}
+
+.hm-modal .hm-btn-submit:disabled {
+    opacity: 0.65;
+}
+
+/* --------------------------------------------------------------------------
+   Narrow screens
+   -------------------------------------------------------------------------- */
+@media (max-width: 767.98px) {
+    .hm-page .hm-daterange,
+    .hm-page .hm-daterange__input {
+        width: 100%;
+    }
+}
