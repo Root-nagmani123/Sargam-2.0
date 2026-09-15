@@ -372,7 +372,14 @@ class MemberController extends Controller
 
     public function show($id)
     {
-        $member = EmployeeMaster::with('appellationMaster')->findOrFail(decrypt($id));
+        // Same reason as printMember(): a tampered id is a 404, not a 500.
+        try {
+            $memberPk = decrypt($id);
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            abort(404);
+        }
+
+        $member = EmployeeMaster::with('appellationMaster')->findOrFail($memberPk);
 
         return view('admin.member.show', [
             'member' => $member,
@@ -447,7 +454,16 @@ class MemberController extends Controller
      */
     public function printMember($id)
     {
-        $member = EmployeeMaster::with('appellationMaster')->findOrFail(decrypt($id));
+        // decrypt() throws DecryptException, which is not an HTTP exception, so
+        // an edited or truncated link reached the handler as a 500 and was
+        // logged as a server fault. A tampered id is a missing page.
+        try {
+            $memberPk = decrypt($id);
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            abort(404);
+        }
+
+        $member = EmployeeMaster::with('appellationMaster')->findOrFail($memberPk);
 
         $this->logMemberPii('print', ['member_pk' => $member->pk]);
 
@@ -630,11 +646,16 @@ class MemberController extends Controller
      */
     private function logMemberPii(string $action, array $context = []): void
     {
-        Log::info('member.pii.' . $action, array_merge([
+        // LogSafe::context() first: `filters` carries the user's own ?q= text,
+        // and the default LineFormatter keeps inline line breaks, so a %0A in
+        // the search box used to close this record and open a second, forged
+        // one naming any actor, format and row count. An audit line that the
+        // audited person can write is worse than none, because it is believed.
+        Log::info('member.pii.' . $action, \App\Support\LogSafe::context(array_merge([
             // user_credentials is keyed on `pk`, so auth()->id() is that pk.
             'user_pk' => auth()->id(),
             'ip' => request()->ip(),
-        ], $context));
+        ], $context)));
     }
 
     public function export(Request $request, string $format = 'csv')
@@ -662,9 +683,12 @@ class MemberController extends Controller
         // omits 1,700 rows is indistinguishable from a broken one.
         $filterParts = array_filter([
             $filters['status'] !== '' ? 'Status: ' . ucfirst($filters['status']) : null,
-            $filters['type'] ? 'Type: ' . (EmployeeTypeMaster::find($filters['type'])->category_type_name ?? $filters['type']) : null,
-            $filters['group'] ? 'Group: ' . (EmployeeGroupMaster::find($filters['group'])->emp_group_name ?? $filters['group']) : null,
-            $filters['department'] ? 'Department: ' . (DepartmentMaster::find($filters['department'])->department_name ?? $filters['department']) : null,
+            // `!== null`, not truthiness: a filter on pk 0 is applied to the
+            // rows, so it has to be named on the sheet too, or the export claims
+            // to be unfiltered while showing a subset.
+            $filters['type'] !== null ? 'Type: ' . (optional(EmployeeTypeMaster::find($filters['type']))->category_type_name ?? $filters['type']) : null,
+            $filters['group'] !== null ? 'Group: ' . (optional(EmployeeGroupMaster::find($filters['group']))->emp_group_name ?? $filters['group']) : null,
+            $filters['department'] !== null ? 'Department: ' . (optional(DepartmentMaster::find($filters['department']))->department_name ?? $filters['department']) : null,
             $search !== '' ? 'Search: ' . $search : null,
         ]);
 

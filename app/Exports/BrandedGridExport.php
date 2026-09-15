@@ -2,13 +2,16 @@
 
 namespace App\Exports;
 
+use App\Support\Concerns\BindsExportCellsAsText;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithCustomStartCell;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\DefaultValueBinder;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -27,14 +30,17 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
  * Styled to match the print/PDF header: logo, navy institution band, report
  * title, generated stamp, record count, then a navy table header over zebra rows.
  */
-class BrandedGridExport implements
+class BrandedGridExport extends DefaultValueBinder implements
     FromArray,
     WithHeadings,
     ShouldAutoSize,
     WithEvents,
     WithTitle,
-    WithCustomStartCell
+    WithCustomStartCell,
+    WithCustomValueBinder
 {
+    use BindsExportCellsAsText;
+
     /** Rows the branded header occupies before the data table starts. */
     private const HEADER_ROWS = 5;
 
@@ -80,13 +86,17 @@ class BrandedGridExport implements
 
         foreach ($this->rows as $index => $row) {
             $out[] = array_values(array_map(
-                // sanitize_export_cell(), not the raw value: PhpSpreadsheet's
-                // default binder types any leading =, +, - or @ string as a
-                // FORMULA, so a stored master name like =HYPERLINK(...) would
-                // execute in whatever spreadsheet an admin opens the file with.
-                // The helper prefixes an apostrophe, which is also how
-                // PhpSpreadsheet is told "this is literal text".
-                fn ($col) => sanitize_export_cell($col['value']($row, $index)),
+                // Raw value: formula neutralisation on this path is done by CELL
+                // TYPE (BindsExportCellsAsText), not by an apostrophe prefix.
+                // PhpSpreadsheet stores a leading apostrophe as DATA, so the
+                // helper used here put a visible ' in front of every "+91 ..."
+                // mobile; and it left digit-only strings numeric, so a long
+                // employee id was rounded to 15 significant digits. Binding the
+                // string as TYPE_STRING fixes both at once, and still means a
+                // stored =HYPERLINK(...) is text rather than a live formula.
+                // sanitize_export_cell() stays on the CSV path, which has no
+                // cell types and where the apostrophe is the only mitigation.
+                fn ($col) => $col['value']($row, $index),
                 $this->columns
             ));
         }

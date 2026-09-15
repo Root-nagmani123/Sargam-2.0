@@ -23,15 +23,21 @@ use Tests\TestCase;
  */
 class ToggleStatusAllowListTest extends TestCase
 {
-    /** @return array<string, string[]> */
+    /** @return array<string, array{id_column: string, columns: string[]}> */
     private function allowList(): array
     {
         $const = (new ReflectionClass(UserController::class))
-            ->getConstant('TOGGLEABLE_STATUS_COLUMNS');
+            ->getConstant('TOGGLE_STATUS_ALLOWED');
 
         $this->assertIsArray($const, 'the endpoint must carry an allow-list');
 
         return $const;
+    }
+
+    /** @return string[] the status columns permitted for $table */
+    private function columnsFor(string $table): array
+    {
+        return $this->allowList()[$table]['columns'] ?? [];
     }
 
     /**
@@ -45,18 +51,28 @@ class ToggleStatusAllowListTest extends TestCase
         $allowed = $this->allowList();
         $missing = [];
 
-        foreach ($this->toggleMarkupPairs() as $pair => $where) {
-            [$table, $column] = explode('|', $pair);
+        foreach ($this->toggleMarkupPairs() as $triple => $where) {
+            [$table, $column, $idColumn] = explode('|', $triple);
 
-            if (! in_array($column, $allowed[$table] ?? [], true)) {
+            if (! in_array($column, $allowed[$table]['columns'] ?? [], true)) {
                 $missing[] = "{$table}.{$column} ({$where})";
+                continue;
+            }
+
+            // The third parameter the UI sends. Reading only table and column is
+            // how a screen keyed by something other than pk stayed green while
+            // its toggle was writing WHERE pk = <that other key>.
+            $expected = $allowed[$table]['id_column'];
+
+            if ($idColumn !== $expected) {
+                $missing[] = "{$table} is keyed by {$idColumn} in the markup but {$expected} in the allow-list ({$where})";
             }
         }
 
         $this->assertSame([], $missing, "status toggles the endpoint would refuse:\n".implode("\n", $missing));
     }
 
-    /** @return array<string, string> "table|column" => the file it was found in */
+    /** @return array<string, string> "table|column|id_column" => the file it was found in */
     private function toggleMarkupPairs(): array
     {
         $roots = [app_path(), resource_path('views'), public_path('js'), public_path('admin_assets/js')];
@@ -76,7 +92,7 @@ class ToggleStatusAllowListTest extends TestCase
 
                 $source = file_get_contents($file->getPathname());
 
-                if (! str_contains($source, 'status-toggle')) {
+                if (! preg_match(self::SHARED_TOGGLE_CLASS, $source)) {
                     continue;
                 }
 
@@ -91,21 +107,42 @@ class ToggleStatusAllowListTest extends TestCase
         return $pairs;
     }
 
+    /**
+     * The SHARED toggle class, and only that one.
+     *
+     * A plain substring search for "status-toggle" also matches
+     * `plain-status-toggle` and `sidebar-category-status-toggle`, which are
+     * different controls with their own handlers posting to their own routes.
+     * Matching those dragged three tables into the allow-list that this endpoint
+     * never writes - including one, sidebar_menu_groups, that is not a table in
+     * the database at all. Requiring a word boundary keeps the allow-list to
+     * what custom.js actually posts here.
+     */
+    private const SHARED_TOGGLE_CLASS = '/(?<![-\w])status-toggle(?![-\w])/';
+
     /** @return string[] */
     private function pairsIn(string $source): array
     {
         $found = [];
-        $offset = 0;
 
-        while (($at = strpos($source, 'status-toggle', $offset)) !== false) {
-            $offset = $at + 1;
+        if (! preg_match_all(self::SHARED_TOGGLE_CLASS, $source, $m, PREG_OFFSET_CAPTURE)) {
+            return $found;
+        }
+
+        foreach ($m[0] as $hit) {
+            $at = $hit[1];
             // The attributes sit on the same element, so a window around the
             // class is enough and avoids pairing across unrelated elements.
             $window = substr($source, max(0, $at - 600), 1200);
 
             if (preg_match('/data-table=["\']([A-Za-z0-9_]+)["\']/', $window, $t)
                 && preg_match('/data-column=["\']([A-Za-z0-9_]+)["\']/', $window, $c)) {
-                $found[] = $t[1].'|'.$c[1];
+                // Absent means the handler will send the default, `pk`.
+                $idColumn = preg_match('/data-id_column=["\']([A-Za-z0-9_]+)["\']/', $window, $k)
+                    ? $k[1]
+                    : 'pk';
+
+                $found[] = $t[1].'|'.$c[1].'|'.$idColumn;
             }
         }
 
@@ -115,12 +152,16 @@ class ToggleStatusAllowListTest extends TestCase
     /** The allow-list must not have grown a table that is not a status switch. */
     public function test_the_allow_list_permits_only_status_columns(): void
     {
-        $permitted = ['active_inactive', 'status', 'is_active', 'visible'];
+        // active_room is hostel_building_master's status column - an odd name for
+        // one, but it is what the table has, and the alternative spelling does
+        // not exist there at all.
+        $permitted = ['active_inactive', 'status', 'is_active', 'visible', 'active_room'];
 
-        foreach ($this->allowList() as $table => $columns) {
-            $this->assertNotEmpty($columns, "{$table} must name at least one column");
+        foreach ($this->allowList() as $table => $rule) {
+            $this->assertNotEmpty($rule['columns'], "{$table} must name at least one column");
+            $this->assertNotEmpty($rule['id_column'], "{$table} must name its key column");
 
-            foreach ($columns as $column) {
+            foreach ($rule['columns'] as $column) {
                 $this->assertContains(
                     $column,
                     $permitted,

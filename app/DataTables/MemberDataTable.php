@@ -52,7 +52,13 @@ class MemberDataTable extends DataTable
         $id = function (string $key): ?int {
             $raw = trim((string) request($key, ''));
 
-            return ($raw !== '' && ctype_digit($raw) && (int) $raw > 0) ? (int) $raw : null;
+            // "No filter" is spelt as an ABSENT value, not as zero. pk 0 is a
+            // real, selectable row here - department_master holds one - so
+            // rejecting it made the dropdown offer an option that rendered as
+            // chosen, applied no WHERE clause, and left no trace on the export
+            // band or the audit line. An export of one department and an export
+            // of every member would have looked identical.
+            return ($raw !== '' && ctype_digit($raw)) ? (int) $raw : null;
         };
 
         return [
@@ -86,8 +92,11 @@ class MemberDataTable extends DataTable
         }
 
         // employee_type_master.pk, employee_group_master.pk, department_master.pk.
+        // `!== null` rather than `! empty()`: pk 0 is a real row and empty(0) is
+        // true, so the emptiness test silently dropped that filter even once
+        // resolveFilters() started accepting it.
         foreach (['type' => 'emp_type', 'group' => 'emp_group_pk', 'department' => 'department_master_pk'] as $key => $column) {
-            if (! empty($filters[$key])) {
+            if (($filters[$key] ?? null) !== null) {
                 $query->where($column, $filters[$key]);
             }
         }

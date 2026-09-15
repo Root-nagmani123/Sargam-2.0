@@ -14,6 +14,6 @@ class HostelBuildingMaster extends Model
 
     public function scopeActive()
     {
-        return $this->where('active_inactive', 1);
+        return $this->where('active_room', 1);
     }
 }
