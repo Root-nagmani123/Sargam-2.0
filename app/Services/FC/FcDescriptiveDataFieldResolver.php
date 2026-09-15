@@ -199,6 +199,9 @@ class FcDescriptiveDataFieldResolver
             'spouse_in_cse'     => ['label' => 'Spouse Also in Civil Service', 'group' => 'Spouse in Civil Service', 'type' => 'child', 'child' => ['table' => 'student_master_spouse_masters', 'column' => 'spouse_in_cse']],
             'spouse_name'       => ['label' => 'Spouse Name',                 'group' => 'Spouse in Civil Service', 'type' => 'child', 'child' => ['table' => 'student_master_spouse_masters', 'column' => 'spouse_name']],
 
+            'upsc_mains_appearing' => ['label' => 'Appearing in UPSC CSE-2026 (Mains)', 'group' => 'UPSC CSE-2026 (Mains)', 'type' => 'child', 'child' => ['table' => 'fc_upsc_mains_details', 'column' => 'appearing_upsc_cse_2026']],
+            'upsc_mains_roll_no'   => ['label' => 'UPSC CSE-2026 (Mains) Roll No',      'group' => 'UPSC CSE-2026 (Mains)', 'type' => 'child', 'child' => ['table' => 'fc_upsc_mains_details', 'column' => 'mains_roll_no']],
+
             // Pre-Medical History (fc_pre_history) is deliberately NOT here — excluded by
             // request, and it is course-scoped health data that does not belong in a bulk
             // roster export.

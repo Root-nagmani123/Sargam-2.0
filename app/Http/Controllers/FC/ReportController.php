@@ -1947,6 +1947,15 @@ class ReportController extends Controller
         $query = $dataTable->query();
         $this->fcApplyFormOverviewFilters($query, $request, $form, $steps);
 
+        // rank / exam year for the shared archive naming rule; they live on the roster, which
+        // the overview query only joins when the tracker keys on user_id.
+        if ($userKey === 'user_id' && fc_schema_has_table('fc_registration_master')) {
+            $query->addSelect([
+                DB::raw("NULLIF(TRIM(`frm`.`rank`), '') as reg_rank"),
+                DB::raw("NULLIF(TRIM(`frm`.`exam_year`), '') as exam_year"),
+            ]);
+        }
+
         $rows = $query->orderBy('s1.full_name')->get();
 
         if ($rows->isEmpty()) {
@@ -1976,17 +1985,15 @@ class ReportController extends Controller
                 continue;
             }
 
-            $label = $this->safeZipName(trim(((string) ($r->login_username ?? $uid)) . '_' . ((string) ($r->full_name ?? ''))));
-            if ($label === '') {
-                $label = 'user_' . $uid;
-            }
-
-            $name = $label . '.pdf';
-            $n    = 1;
-            while (isset($usedNames[$name])) {
-                $name = $label . '_' . (++$n) . '.pdf';
-            }
-            $usedNames[$name] = true;
+            // <username>_<rank>_<exam year> — the one archive naming rule, shared with every
+            // other FC download so the same trainee is named identically in all of them.
+            $name = fc_archive_entry_stem(
+                $r->login_username ?? (string) $uid,
+                $r->reg_rank ?? null,
+                $r->exam_year ?? null,
+                (string) ($r->full_name ?? ''),
+                $usedNames
+            ) . '.pdf';
 
             $zip->addFromString($folder . '/' . $name, $bytes);
             $added++;
@@ -2300,6 +2307,15 @@ class ReportController extends Controller
 
         $query = $dataTable->query();
         $this->fcApplyFormOverviewFilters($query, $request, $form, $steps);
+        // rank / exam year for the shared archive naming rule; they live on the roster, which
+        // the overview query only joins when the tracker keys on user_id.
+        if ($userKey === 'user_id' && fc_schema_has_table('fc_registration_master')) {
+            $query->addSelect([
+                DB::raw("NULLIF(TRIM(`frm`.`rank`), '') as reg_rank"),
+                DB::raw("NULLIF(TRIM(`frm`.`exam_year`), '') as exam_year"),
+            ]);
+        }
+
         $rows = $query->orderBy('s1.full_name')->get();
 
         if ($rows->isEmpty()) {
@@ -2321,17 +2337,14 @@ class ReportController extends Controller
             }
             $seen[(string) $uid] = true;
 
-            // Name each PDF after the student (name first, then login as fallback/suffix).
-            $label = $this->safeZipName(trim(((string) ($r->full_name ?? '')) . '_' . ((string) ($r->login_username ?? $uid))));
-            if ($label === '') {
-                $label = 'user_' . $uid;
-            }
-            $name = $label . '.pdf';
-            $n    = 1;
-            while (isset($usedNames[$name])) {
-                $name = $label . '_' . (++$n) . '.pdf';
-            }
-            $usedNames[$name] = true;
+            // <username>_<rank>_<exam year> — same rule as every other FC archive.
+            $name = fc_archive_entry_stem(
+                $r->login_username ?? (string) $uid,
+                $r->reg_rank ?? null,
+                $r->exam_year ?? null,
+                (string) ($r->full_name ?? ''),
+                $usedNames
+            ) . '.pdf';
 
             $students[] = ['uid' => (string) $uid, 'entry' => $folder . '/' . $name];
         }
@@ -2966,7 +2979,12 @@ class ReportController extends Controller
         // Stream the roster in batches so a large course doesn't load every student and
         // every upload row into memory at once. Archive contents are identical — ZipArchive
         // only reads each file at close(), so adding paths across chunks is transparent.
-        $studentsQuery->orderBy('sm.user_id')->chunk(500, function ($students) use ($zip, $docFields, &$totalFiles) {
+        // The collision ledger must outlive the chunk closure: two trainees whose folder name
+        // collides can land in different chunks, and a per-chunk ledger would silently merge
+        // them into one folder instead of suffixing the second.
+        $usedFolders = [];
+
+        $studentsQuery->orderBy('sm.user_id')->chunk(500, function ($students) use ($zip, $docFields, &$totalFiles, &$usedFolders) {
             $uploadRows = DB::table('fc_joining_documents_user_uploads')
                 ->whereIn('user_id', $students->pluck('user_id')->all())
                 ->get()
@@ -2978,18 +2996,14 @@ class ReportController extends Controller
                     continue;
                 }
 
-                // Folder name format: username_rank_year (empty rank/year segments are dropped)
-                $folder = $this->safeZipName(implode('_', array_filter([
-                    $student->login_username,
+                // <username>_<rank>_<exam year>, shared with every other FC archive.
+                $folder = fc_archive_entry_stem(
+                    $student->login_username ?? null,
                     $student->reg_rank ?? null,
                     $student->exam_year ?? null,
-                ], fn ($v) => $v !== null && trim((string) $v) !== '')));
-
-                // Fall back to a per-student folder so files never land at the archive root
-                // when username, rank and exam year are all blank.
-                if ($folder === '') {
-                    $folder = 'student_' . ($student->user_id ?? $totalFiles);
-                }
+                    'student_' . ($student->user_id ?? $totalFiles),
+                    $usedFolders
+                );
 
                 foreach ($docFields as $field) {
                     $col      = $field->target_column ?: $field->field_name;
