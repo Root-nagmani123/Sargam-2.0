@@ -2812,28 +2812,30 @@ class CalendarController extends Controller
     public function studentFacultyFeedback(Request $request)
     {
         try {
-            if (!$request->has('token')) {
-                abort(403, 'Missing token');
+            // Allow authenticated users (from dashboard) OR token-based access (from external links)
+            if ($request->has('token')) {
+                // ================= TOKEN AUTH =================
+                $key = config('services.moodle.key');
+                $iv  = config('services.moodle.iv');
+
+                $username = openssl_decrypt(
+                    base64_decode($request->token),
+                    'AES-128-CBC',
+                    $key,
+                    0,
+                    $iv
+                );
+
+                if (!$username) {
+                    abort(403, 'Invalid token');
+                }
+
+                $user = User::where('user_name', trim($username))->firstOrFail();
+                Auth::login($user);
+            } elseif (!Auth::check()) {
+                abort(403, 'Missing token or authentication');
             }
-
-            // ================= TOKEN AUTH =================
-            $key = config('services.moodle.key');
-            $iv  = config('services.moodle.iv');
-
-            $username = openssl_decrypt(
-                base64_decode($request->token),
-                'AES-128-CBC',
-                $key,
-                0,
-                $iv
-            );
-
-            if (!$username) {
-                abort(403, 'Invalid token');
-            }
-
-            $user = User::where('user_name', trim($username))->firstOrFail();
-            Auth::login($user);
+            // If no token but already authenticated, continue with current user
 
             $student_pk = auth()->user()->user_id;
 

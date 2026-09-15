@@ -306,8 +306,10 @@ class UserController extends Controller
          // arrives holding only the Spatie "Officer Trainee" role would have been
          // shown a card reading zero over real deductions.
          $disciplineMarksDeducted = 0;
+         $pendingFeedbackCount = 0;
          if (isOfficerTraineeUser()) {
              $disciplineMarksDeducted = app(OtMarksDeductedService::class)->totalFor((int) $userId);
+             $pendingFeedbackCount = $this->getOtPendingFeedbackCount($userId);
          }
 
          // Calculate total sessions for faculty portal users (Faculty / Internal / Guest)
@@ -491,6 +493,8 @@ class UserController extends Controller
             'total_students'          => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
             'student_details'         => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
             'my_course_participant'   => ['count' => StudentMasterCourseMap::query()->when(!empty($myCourseIds), fn($q) => $q->whereIn('course_master_pk', $myCourseIds))->count(), 'link' => route('my.course.participant'),                                'visible' => true],
+            'discipline_marks_deducted' => ['count' => $disciplineMarksDeducted,                   'link' => route('memo.discipline.ot_marks'),                              'visible' => !$isSecurityRole && $isOtUser],
+            'pending_feedback'        => ['count' => $pendingFeedbackCount,                        'link' => route('feedback.get.studentFacultyFeedback'),                   'visible' => !$isSecurityRole && $isOtUser],
         ];
 
         // Count map for custom cards added via UI.
@@ -1491,6 +1495,86 @@ class UserController extends Controller
         }
 
         return (int) $base->count();
+    }
+
+    private function getOtPendingFeedbackCount(int $studentPk): int
+    {
+        try {
+            $pendingQuery = DB::table('timetable as t')
+                ->select([
+                    't.pk as timetable_pk',
+                    'f.pk as faculty_pk',
+                ])
+                ->leftJoin('faculty_master as f', function ($join) {
+                    $join->whereRaw("
+                    (
+                        JSON_VALID(t.faculty_master)
+                        AND JSON_CONTAINS(
+                            t.faculty_master,
+                            JSON_QUOTE(CAST(f.pk AS CHAR))
+                        )
+                    )
+                    OR
+                    (
+                        NOT JSON_VALID(t.faculty_master)
+                        AND CAST(t.faculty_master AS CHAR) = CAST(f.pk AS CHAR)
+                    )
+                ");
+                })
+                ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+                ->join('student_master_course__map as smcm', function ($join) use ($studentPk) {
+                    $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
+                        ->where('smcm.student_master_pk', $studentPk)
+                        ->where('smcm.active_inactive', 1);
+                })
+                ->join('course_student_attendance as csa', function ($join) use ($studentPk) {
+                    $join->on('csa.timetable_pk', '=', 't.pk')
+                        ->where('csa.Student_master_pk', $studentPk)
+                        ->where('csa.status', '1');
+                })
+                ->where('t.feedback_checkbox', 1)
+                ->where('t.active_inactive', 1)
+                ->whereRaw("
+                    JSON_VALID(t.faculty_details) = 1
+                    AND JSON_CONTAINS(
+                        t.faculty_details,
+                        JSON_OBJECT('faculty_pk', f.pk, 'role', 'Teaching')
+                    ) = 1
+                ")
+                ->whereNotExists(function ($sub) use ($studentPk) {
+                    $sub->select(DB::raw(1))
+                        ->from('topic_feedback as tf')
+                        ->whereColumn('tf.timetable_pk', 't.pk')
+                        ->where('tf.student_master_pk', $studentPk)
+                        ->where('tf.faculty_pk', DB::raw('f.pk'))
+                        ->where('tf.is_submitted', 1);
+                })
+                ->whereRaw("
+                    TIMESTAMP(
+                        t.END_DATE,
+                        STR_TO_DATE(
+                            TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+                            '%h:%i %p'
+                        )
+                    ) <= NOW()
+                ");
+
+            if (hasRole('Student-OT')) {
+                $pendingQuery
+                    ->join('course_group_timetable_mapping as cgtm', 'cgtm.timetable_pk', '=', 't.pk')
+                    ->join('student_course_group_map as scgm', 'scgm.group_type_master_course_master_map_pk', '=', 'cgtm.group_pk')
+                    ->where('scgm.student_master_pk', $studentPk);
+            }
+
+            return $pendingQuery
+                ->orderBy('t.START_DATE', 'asc')
+                ->get()
+                ->unique(fn($item) => $item->timetable_pk . '_' . $item->faculty_pk)
+                ->count();
+        } catch (\Throwable $e) {
+            \Log::error('Error counting OT pending feedback: ' . $e->getMessage());
+            return 0;
+        }
     }
 
     /**
