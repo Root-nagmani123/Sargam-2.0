@@ -494,7 +494,7 @@ class UserController extends Controller
             'student_details'         => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
             'my_course_participant'   => ['count' => StudentMasterCourseMap::query()->when(!empty($myCourseIds), fn($q) => $q->whereIn('course_master_pk', $myCourseIds))->count(), 'link' => route('my.course.participant'),                                'visible' => true],
             'discipline_marks_deducted' => ['count' => $disciplineMarksDeducted,                   'link' => route('memo.discipline.ot_marks'),                              'visible' => !$isSecurityRole && $isOtUser],
-            'pending_feedback'        => ['count' => $pendingFeedbackCount,                        'link' => route('feedback.get.studentFacultyFeedback'),                   'visible' => !$isSecurityRole && $isOtUser],
+            'pending_feedback'        => ['count' => $pendingFeedbackCount,                        'link' => route('feedback.get.studentFeedbackUrl'),                      'visible' => !$isSecurityRole && $isOtUser],
         ];
 
         // Count map for custom cards added via UI.
