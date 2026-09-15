@@ -280,6 +280,7 @@ class CalendarController extends Controller
             ->where('student_master_course__map.active_inactive', 1);
 
         $courseMaster = $courseMaster->select('course_master.pk', 'course_name', 'couse_short_name', 'course_year')
+            ->orderBy('course_master.pk', 'asc')
             ->get();
 
         $facultyMaster = FacultyMaster::where('active_inactive', 1)
