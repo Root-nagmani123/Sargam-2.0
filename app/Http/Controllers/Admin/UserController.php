@@ -4586,18 +4586,113 @@ class UserController extends Controller
         }
     }
 
+    /**
+     * Every (table => status column) pair the shared `.status-toggle` switch is
+     * allowed to write, derived from the markup that drives it.
+     *
+     * Without this list the endpoint took the table name, the column name and
+     * the value straight off the request and wrote them, which made it an
+     * arbitrary-write primitive for any authenticated session: one POST naming
+     * `user_credentials` and any column of it would have been honoured. The
+     * switches themselves are unchanged — they send exactly these pairs — so
+     * the list costs nothing at runtime and only refuses what no screen asks
+     * for.
+     *
+     * Each row carries the KEY COLUMN as well as the status columns, because
+     * the screens do not agree on one: venue_master is keyed by venue_id and
+     * has no pk column at all, so a hard-coded pk made that toggle a dead
+     * button. Confirmed against the schema, not assumed.
+     *
+     * Adding a screen means adding its row here. ToggleStatusAllowListTest
+     * scans the markup and fails if a pair is missing, so the list cannot
+     * silently fall behind the UI.
+     */
+    private const TOGGLE_STATUS_ALLOWED = [
+        'appellation_master'                 => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'building_floor_room_mapping'        => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'building_master'                    => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'caste_category_master'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'city_master'                        => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'class_session_master'               => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'country_master'                     => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'course_master'                      => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'course_memo_decision_mapp'          => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'department_master'                  => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'designation_master'                 => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'discipline_master'                  => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'employee_group_master'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'employee_type_master'               => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'faculty_expertise_master'           => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'faculty_master'                     => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'faculty_type_master'                => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'fc_exemption_master'                => ['id_column' => 'pk', 'columns' => ['visible']],
+        'fc_registration_master'             => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'floor_master'                       => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'group_type_master_course_master_map'=> ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'hostel_building_floor_mapping'      => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'hostel_building_master'             => ['id_column' => 'pk', 'columns' => ['active_room']],
+        'hostel_floor_room_mapping'          => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'hostel_room_master'                 => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'issue_category_master'              => ['id_column' => 'pk', 'columns' => ['status']],
+        'issue_priority_master'              => ['id_column' => 'pk', 'columns' => ['status']],
+        'issue_sub_category_master'          => ['id_column' => 'pk', 'columns' => ['status']],
+        'memo_conclusion_master'             => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'memo_type_master'                   => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'news'                               => ['id_column' => 'pk', 'columns' => ['status']],
+        'notices_notification'               => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'ot_hostel_room_details'             => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'sec_id_cardno_config_map'           => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'sec_id_cardno_master'               => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'state_district_mapping'             => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'state_master'                       => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'states'                             => ['id_column' => 'pk', 'columns' => ['status']],
+        'stream_master'                      => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'subject_master'                     => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'subject_module_master'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'user_role_master'                   => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'venue_master'                       => ['id_column' => 'venue_id', 'columns' => ['active_inactive']],
+    ];
+
 public function toggleStatus(Request $request)
 {
-    try {
-        $idColumn = $request->id_column ?? 'pk';
-        $table = $request->table;
-        $column = $request->column;
-        $id = $request->id;
-        $status = $request->status;
+    // Deliberately OUTSIDE the try below: that catch turns anything it sees
+    // into a logged 500, which would disguise a refused write as a server
+    // fault and hand the caller the wrong status code.
+    //
+    // The key column is taken from the allow-list, not from the request and
+    // not hard-coded: most screens are keyed by `pk`, but venue_master is
+    // keyed by venue_id and has no pk column at all. What the client posts
+    // must MATCH the allow-list entry, which keeps the client from choosing
+    // the lookup column without pretending every table looks the same.
+    $table    = (string) $request->input('table');
+    $column   = (string) $request->input('column');
+    $idColumn = (string) ($request->input('id_column') ?: 'pk');
+    $id       = $request->input('id');
+    $status   = $request->input('status');
 
-        DB::table($request->table)
-            ->where($idColumn, $id)
-            ->update([$column => $status]);
+    $allowed = self::TOGGLE_STATUS_ALLOWED[$table] ?? null;
+
+    abort_if($allowed === null, 403, 'That table cannot be toggled from here.');
+    abort_unless(in_array($column, $allowed['columns'], true), 403, 'That column cannot be toggled from here.');
+    // The key column comes from the allow-list, and what the client posted must
+    // match it. Letting the client choose is the other half of the arbitrary
+    // write; ignoring the client entirely broke every screen not keyed by pk.
+    abort_unless($idColumn === $allowed['id_column'], 403, 'That row key cannot be used from here.');
+    // ctype_digit alone: it already rules out negatives, signs and injection
+    // strings, and a '> 0' test would reject a legitimate row at pk 0 —
+    // department_master really holds one ('NIAR').
+    abort_unless(ctype_digit((string) $id), 422, 'A row id is required.');
+    // The shared handler sends 1 or 0 and nothing else.
+    abort_unless(in_array((string) $status, ['0', '1'], true), 422, 'Status must be 0 or 1.');
+
+    // Keyed to the allow-list from here on, so the write below can never name a
+    // column or key the UI did not ask for.
+    $idColumn = $allowed['id_column'];
+
+    try {
+        DB::table($table)
+            ->where($idColumn, (int) $id)
+            ->update([$column => (int) $status]);
 
         if ($table === 'employee_type_master') {
             EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
