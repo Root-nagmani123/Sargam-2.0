@@ -33,6 +33,13 @@ use Illuminate\Http\Request;
  *
  * Both branches are executed by DirectoryExportGuardTest: a non-privileged
  * user gets 403 through the real router, a privileged one is passed through.
+ *
+ * KNOWN WINDOW — isSidebarPrivilegedUser() resolves through hasRole(), which
+ * reads the session's user_roles before it asks the role tables. So a Super
+ * Admin whose role is revoked mid-session keeps these downloads until they log
+ * out. That is every hasRole() caller's behaviour, not this gate's, and it is
+ * tracked repository-wide as PR311-L-2; it is recorded here because this gate
+ * guards bulk PII, where the window costs more than it does elsewhere.
  */
 class EnsureDirectoryExportAccess
 {

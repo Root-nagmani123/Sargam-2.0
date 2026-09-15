@@ -7,11 +7,15 @@ use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithCustomStartCell;
+use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Cell\Cell as SpreadsheetCell;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Cell\DefaultValueBinder;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -32,13 +36,14 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
  * hard-codes its own title and centred columns, so this one parameterises both
  * rather than reaching into a Centcom export from the directory module.
  */
-class DirectoryGridExport implements
+class DirectoryGridExport extends DefaultValueBinder implements
     FromArray,
     WithHeadings,
     ShouldAutoSize,
     WithEvents,
     WithTitle,
-    WithCustomStartCell
+    WithCustomStartCell,
+    WithCustomValueBinder
 {
     /** Rows the branded header occupies before the data table starts. */
     private const HEADER_ROWS = 5;
@@ -76,12 +81,37 @@ class DirectoryGridExport implements
 
         foreach ($this->rows as $index => $row) {
             $out[] = array_values(array_map(
-                fn ($col) => ExportCell::text($col, $row, $index),
+                fn ($col) => ExportCell::raw($col, $row, $index),
                 $this->columns
             ));
         }
 
         return $out;
+    }
+
+    /**
+     * Every string is written as an explicit text cell.
+     *
+     * The default binder infers a type from the value, which is wrong twice
+     * over for a directory: "9000000000" and "0245" become NUMBERS (the
+     * extension loses its leading zero, the mobile can render in scientific
+     * notation), and a leading "=" would become a formula. Declaring the type
+     * fixes both AND makes the apostrophe sanitize_export_cell() adds for CSV
+     * unnecessary here — on .xlsx that apostrophe is not a type marker, it is
+     * stored as the first character of the value and printed to the reader.
+     * Hence ExportCell::raw() above.
+     *
+     * @param  mixed  $value
+     */
+    public function bindValue(SpreadsheetCell $cell, $value)
+    {
+        if (is_string($value)) {
+            $cell->setValueExplicit($value, DataType::TYPE_STRING);
+
+            return true;
+        }
+
+        return parent::bindValue($cell, $value);
     }
 
     private function lastColLetter(): string
@@ -194,6 +224,12 @@ class DirectoryGridExport implements
 
                 // Keep the branded header and the column titles on screen while scrolling.
                 $sheet->freezePane('A' . ($dataHeaderRow + 1));
+
+                // PhpSpreadsheet's value binder is global and Maatwebsite never
+                // puts it back, so without this every later export in the same
+                // process would inherit this class's text typing. Safe here:
+                // all cell writing for this sheet is done by AfterSheet.
+                SpreadsheetCell::setValueBinder(new DefaultValueBinder());
             },
         ];
     }

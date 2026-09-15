@@ -4,10 +4,20 @@ namespace Tests\Unit;
 
 use App\Http\Controllers\Admin\DirectoryController;
 use App\Http\Middleware\EnsureDirectoryExportAccess;
+use App\Exports\DirectoryGridExport;
 use App\Support\ExportCell;
+use App\Support\LogText;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Cell\Cell as SpreadsheetCell;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Cell\DefaultValueBinder;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use ReflectionClass;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
@@ -438,5 +448,298 @@ class DirectoryExportGuardTest extends TestCase
         $this->assertCount(1500, $rows);
         $this->assertStringContainsString('20,482', $note);
         $this->assertStringNotContainsString('1,501', $note);
+    }
+
+    // ── Audit line: one record per download, whatever was submitted ────────
+
+    /**
+     * Write one record through a real single-file channel and return its lines.
+     *
+     * Not a Log fake: the defect lives in the FORMATTER (LineFormatter is built
+     * with allowInlineLineBreaks = true), so a fake that captured the context
+     * array would report success on exactly the input that breaks the file.
+     *
+     * @return array<int, string>
+     */
+    private function writtenLines(string $search): array
+    {
+        $path = tempnam(sys_get_temp_dir(), 'pr317log');
+
+        try {
+            Log::build(['driver' => 'single', 'path' => $path, 'level' => 'debug'])
+                ->info('directory.export', ['grid' => 'lbsnaa', 'user_pk' => 7, 'search' => $search]);
+
+            return array_values(array_filter(
+                explode(chr(10), (string) file_get_contents($path)),
+                static fn (string $line): bool => trim($line) !== ''
+            ));
+        } finally {
+            @unlink($path);
+        }
+    }
+
+    public function test_a_line_feed_in_the_search_term_cannot_append_a_record(): void
+    {
+        $forgery = 'x' . chr(10) . '[2026-09-15 10:00:00] production.INFO: directory.export {"user_pk":1}';
+
+        $lines = $this->writtenLines(LogText::inline($forgery));
+
+        $this->assertCount(1, $lines, 'one download must leave exactly one record');
+        $this->assertStringContainsString('\\n', $lines[0], 'the submitted break is still visible, escaped');
+    }
+
+    /**
+     * Negative control for the test above.
+     *
+     * Without LogText::inline() the same value writes more than one record,
+     * one of them a well-formed directory.export line that no download made.
+     * Asserting the defect keeps the passing test honest: if the escaping is
+     * ever removed, one of these two cases fails.
+     */
+    public function test_the_unescaped_value_is_what_forges_records(): void
+    {
+        $forgery = 'x' . chr(10) . '[2026-09-15 10:00:00] production.INFO: directory.export {"user_pk":1}';
+
+        $lines = $this->writtenLines($forgery);
+
+        $this->assertGreaterThan(1, count($lines), 'the premise of the fix');
+    }
+
+    /** @dataProvider controlCharacters */
+    public function test_log_text_escapes_control_characters(string $raw, string $expected): void
+    {
+        $this->assertSame($expected, LogText::inline($raw));
+    }
+
+    public static function controlCharacters(): array
+    {
+        return [
+            'line feed' => ['a' . chr(10) . 'b', 'a\\nb'],
+            'carriage return' => ['a' . chr(13) . 'b', 'a\\rb'],
+            'tab' => ['a' . chr(9) . 'b', 'a\\tb'],
+            'null byte' => ['a' . chr(0) . 'b', 'a\\x00b'],
+            'escape' => ['a' . chr(27) . '[31m', 'a\\x1B[31m'],
+            'ordinary text' => ['Ravi Patel', 'Ravi Patel'],
+            'a literal backslash-n is not a break' => ['a\\nb', 'a\\nb'],
+        ];
+    }
+
+    /** Multi-byte text must survive: the escape pass is byte-wise by design. */
+    public function test_log_text_leaves_utf8_intact(): void
+    {
+        $this->assertSame('अन्य पिछड़ा वर्ग', LogText::inline('अन्य पिछड़ा वर्ग'));
+    }
+
+    // ── .xlsx cell typing ──────────────────────────────────────────────────
+
+    /**
+     * Drive one value through the export's own binder, the way the writer does.
+     *
+     * @return array{0: mixed, 1: string}
+     */
+    private function boundCell(string $value, bool $useExportBinder): array
+    {
+        $previous = SpreadsheetCell::getValueBinder();
+
+        try {
+            SpreadsheetCell::setValueBinder($useExportBinder
+                ? new DirectoryGridExport(new Collection(), [], '15-09-2026 10:00 AM')
+                : new DefaultValueBinder());
+
+            $sheet = (new Spreadsheet())->getActiveSheet();
+            $sheet->setCellValue('A1', $value);
+            $cell = $sheet->getCell('A1');
+
+            return [$cell->getValue(), $cell->getDataType()];
+        } finally {
+            SpreadsheetCell::setValueBinder($previous);
+        }
+    }
+
+    /** @dataProvider spreadsheetValues */
+    public function test_the_xlsx_writer_types_every_string_as_text(string $raw): void
+    {
+        [$value, $type] = $this->boundCell($raw, true);
+
+        $this->assertSame($raw, $value, 'the cell holds what the column resolved, byte for byte');
+        $this->assertSame(DataType::TYPE_STRING, $type);
+    }
+
+    public static function spreadsheetValues(): array
+    {
+        return [
+            'international mobile' => ['+91 9876543210'],
+            'mobile, no spaces' => ['+919876543210'],
+            'bare digits' => ['9000000000'],
+            'extension with a leading zero' => ['0245'],
+            'landline' => ['0135-2222'],
+            'formula attempt' => ['=HYPERLINK("http://evil","x")'],
+            'at formula' => ['@SUM(A1)'],
+            'empty placeholder' => ['-'],
+        ];
+    }
+
+    /**
+     * A typed text cell is not a formula, so the .xlsx path needs no apostrophe.
+     *
+     * This is the whole argument for ExportCell::raw() on this writer: the
+     * neutralisation survives, the apostrophe does not reach the reader.
+     */
+    public function test_a_formula_is_inert_on_the_xlsx_path_without_an_apostrophe(): void
+    {
+        [$value, $type] = $this->boundCell('=1+1', true);
+
+        $this->assertSame(DataType::TYPE_STRING, $type, 'never TYPE_FORMULA');
+        $this->assertSame('=1+1', $value);
+        $this->assertStringStartsNotWith("'", (string) $value, 'the apostrophe belongs to CSV, not to .xlsx');
+    }
+
+    /**
+     * Negative control: what the default binder does with the same values.
+     *
+     * Pins the two behaviours the fix exists to replace - a formula is built
+     * from "=1+1", and a bare digit string becomes a NUMBER - so the test
+     * above cannot quietly start passing for the wrong reason.
+     */
+    public function test_the_default_binder_is_what_the_fix_replaces(): void
+    {
+        $this->assertSame(DataType::TYPE_FORMULA, $this->boundCell('=1+1', false)[1]);
+        $this->assertSame(DataType::TYPE_NUMERIC, $this->boundCell('9000000000', false)[1]);
+    }
+
+    /** raw() is text() without the CSV apostrophe, and nothing else. */
+    public function test_export_cell_raw_adds_nothing(): void
+    {
+        $col = ['value' => fn () => '=1+1'];
+
+        $this->assertSame('=1+1', ExportCell::raw($col, null, 0));
+        $this->assertSame("'=1+1", ExportCell::text($col, null, 0));
+    }
+
+    /**
+     * The CONTROLLER's audit line, not just the escaper it calls.
+     *
+     * The two tests above prove LogText::inline() works and that the raw value
+     * forges records; neither notices if logDirectoryExport() stops calling it.
+     * This drives the real method, through the real default channel, with the
+     * value arriving the way a request delivers it.
+     */
+    public function test_the_controllers_audit_line_is_one_record_per_download(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'pr317audit');
+        $forgery = 'x' . chr(10) . '[2026-09-15 10:00:00] production.INFO: directory.export {"user_pk":1}';
+
+        try {
+            config([
+                'logging.default' => 'pr317probe',
+                'logging.channels.pr317probe' => ['driver' => 'single', 'path' => $path, 'level' => 'debug'],
+            ]);
+            Log::forgetChannel();
+
+            $this->invokePrivate('logDirectoryExport', [
+                'lbsnaa', 'csv', 'Search: ' . $forgery, $forgery, 3, false,
+            ]);
+
+            $lines = array_values(array_filter(
+                explode(chr(10), (string) file_get_contents($path)),
+                static fn (string $line): bool => trim($line) !== ''
+            ));
+
+            $this->assertCount(1, $lines, 'a download must be one auditable record');
+            $this->assertStringContainsString('directory.export', $lines[0]);
+
+            // The forged text is still THERE - escaped, inside the record's own
+            // context, where a reader can see what was submitted. What it is
+            // not is a second line. That distinction is the whole fix, so
+            // assert the escape rather than the absence of the payload.
+            $this->assertStringContainsString('\n', $lines[0], 'the submitted break survives as an escape');
+            $this->assertStringNotContainsString(chr(10), rtrim($lines[0], chr(10) . chr(13)));
+        } finally {
+            Log::forgetChannel();
+            @unlink($path);
+        }
+    }
+
+    /**
+     * The WRITER feeds raw values to its typed cells.
+     *
+     * Guards the other half of the .xlsx fix: the binder can type every cell
+     * as text and the sheet would still show an apostrophe if array() went
+     * back to ExportCell::text().
+     */
+    public function test_the_xlsx_rows_carry_no_csv_apostrophe(): void
+    {
+        $columns = [
+            'mobile' => ['heading' => 'Mobile', 'width' => '', 'align' => 'left', 'value' => fn () => '+91 9876543210'],
+            'formula' => ['heading' => 'Note', 'width' => '', 'align' => 'left', 'value' => fn () => '=1+1'],
+        ];
+
+        $export = new DirectoryGridExport(
+            new Collection([(object) ['pk' => 1]]),
+            $columns,
+            '15-09-2026 10:00 AM'
+        );
+
+        $this->assertSame([['+91 9876543210', '=1+1']], $export->array());
+    }
+
+    /**
+     * The whole writer, end to end: build a real .xlsx and read the cells back.
+     *
+     * The binder tests above call bindValue() directly, so they keep passing
+     * even if the class stops DECLARING WithCustomValueBinder - in which case
+     * Maatwebsite never installs it and the shipped file silently reverts to
+     * default typing. Only a round-trip catches that, so this case is the one
+     * that actually pins the fix.
+     */
+    public function test_a_written_xlsx_holds_phone_numbers_as_text(): void
+    {
+        $samples = ['+91 9876543210', '9000000000', '0245', '=1+1'];
+
+        $columns = [];
+        foreach ($samples as $i => $value) {
+            $columns['c' . $i] = [
+                'heading' => 'C' . $i,
+                'width' => '',
+                'align' => 'left',
+                'value' => fn () => $value,
+            ];
+        }
+
+        $previous = SpreadsheetCell::getValueBinder();
+        $path = tempnam(sys_get_temp_dir(), 'pr317xlsx');
+
+        try {
+            SpreadsheetCell::setValueBinder(new DefaultValueBinder());
+
+            file_put_contents($path, Excel::raw(
+                new DirectoryGridExport(
+                    new Collection([(object) ['pk' => 1]]),
+                    $columns,
+                    '15-09-2026 10:00 AM'
+                ),
+                \Maatwebsite\Excel\Excel::XLSX
+            ));
+
+            $sheet = IOFactory::load($path)->getActiveSheet();
+
+            // 5 branded header rows, then the column headings, then the data.
+            $dataRow = 7;
+
+            foreach ($samples as $i => $value) {
+                $cell = $sheet->getCell(Coordinate::stringFromColumnIndex($i + 1) . $dataRow);
+
+                $this->assertSame(DataType::TYPE_STRING, $cell->getDataType(), "[$value] must be a text cell");
+                $this->assertSame($value, $cell->getValue(), "[$value] must reach the sheet unchanged");
+            }
+
+            $this->assertFalse(
+                SpreadsheetCell::getValueBinder() instanceof DirectoryGridExport,
+                'the export must put the global value binder back, or it leaks into the next export'
+            );
+        } finally {
+            SpreadsheetCell::setValueBinder($previous);
+            @unlink($path);
+        }
     }
 }

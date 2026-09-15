@@ -106,19 +106,44 @@ class DirectoryExportAccessTest extends TestCase
      * The grid narrows to the pk-0 section instead of ignoring the filter.
      *
      * Under the 0-as-"absent" sentinel this returned every active employee.
+     *
+     * Asserted as a DIFFERENCE and as a property of every row, never as an
+     * absolute count: this suite runs against the shared development database,
+     * where NIAR may already hold employees this test did not insert. An
+     * assertSame(1, ...) here would pass only on an empty section and the
+     * reflex repair — loosening the guard — would cost the test its meaning.
      */
     public function test_filtering_on_the_pk_zero_section_narrows_the_grid(): void
     {
         $this->actAsSuperAdmin();
+
+        $route = route('admin.directory.lbsnaa.data', ['section' => self::NIAR_SECTION_PK]);
+        $before = (int) $this->getJson($route)->json('recordsFiltered');
+
         $surname = $this->employeeInNiar();
 
-        $unfiltered = $this->getJson(route('admin.directory.lbsnaa.data'))->json('recordsFiltered');
-        $filtered = $this->getJson(route('admin.directory.lbsnaa.data', ['section' => self::NIAR_SECTION_PK]));
+        $unfiltered = (int) $this->getJson(route('admin.directory.lbsnaa.data'))->json('recordsFiltered');
+        $filtered = $this->getJson($route);
 
         $filtered->assertOk();
-        $this->assertSame(1, $filtered->json('recordsFiltered'), 'only the NIAR employee belongs to section 0');
-        $this->assertGreaterThan(1, $unfiltered, 'the unfiltered grid must be the wider set');
+        $this->assertSame(
+            $before + 1,
+            (int) $filtered->json('recordsFiltered'),
+            'the filter must account for exactly the employee this test added to section 0'
+        );
+        $this->assertLessThan(
+            $unfiltered,
+            (int) $filtered->json('recordsFiltered'),
+            'the unfiltered grid must be the wider set — equality is the defect this test exists for'
+        );
         $this->assertStringContainsString($surname, json_encode($filtered->json('data')));
+
+        // Every row the filter returned belongs to the section that was asked
+        // for. True whatever NIAR happens to contain, and false the moment the
+        // sentinel starts ignoring the filter again.
+        foreach ($filtered->json('data') as $row) {
+            $this->assertSame('NIAR', $row['section'], 'a filtered row from another section');
+        }
     }
 
     /**
@@ -136,18 +161,29 @@ class DirectoryExportAccessTest extends TestCase
         $csv = $response->streamedContent();
 
         $this->assertStringContainsString('Section: NIAR', $csv, 'the band names the filter');
-        $this->assertSame(1, substr_count($csv, $surname), 'the file holds that section, once');
+
+        // The marker carries a uniqid(), so "once" is a fact about THIS row
+        // rather than about how many employees NIAR holds.
+        $this->assertSame(1, substr_count($csv, $surname), 'the employee under test appears once');
 
         // chr(10), not PHP_EOL: fputcsv writes LF, and on Windows PHP_EOL is
         // CRLF — counting that would score every file as one line and pass
         // whatever the export contained.
-        $lines = substr_count(trim($csv), chr(10)) + 1;
+        $lines = static fn (string $body): int => substr_count(trim($body), chr(10)) + 1;
 
-        $this->assertGreaterThan(1, $lines, 'sanity: the CSV is more than one line');
+        $unfiltered = $this->get(route('admin.directory.lbsnaa.export', ['format' => 'csv']));
+        $unfiltered->assertOk();
+
+        $this->assertGreaterThan(1, $lines($csv), 'sanity: the CSV is more than one line');
+
+        // Relative, not a magic ceiling: the NIAR file is a strict subset of
+        // the whole directory. The defect this guards — a band reading "NIAR"
+        // over a dump of every employee — makes the two files the same size,
+        // and this assertion fails on a database of any population.
         $this->assertLessThan(
-            20,
-            $lines,
-            'a header band plus one employee — not the whole directory under a NIAR label'
+            $lines($unfiltered->streamedContent()),
+            $lines($csv),
+            'the NIAR export must be narrower than the unfiltered one, not the whole directory under a NIAR label'
         );
     }
 

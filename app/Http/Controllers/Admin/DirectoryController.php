@@ -9,6 +9,7 @@ use App\Models\CourseMaster;
 use App\Models\EmployeeMaster;
 use App\Models\StudentMasterCourseMap;
 use App\Support\ExportCell;
+use App\Support\LogText;
 use App\Support\ExportCsvHeader;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
@@ -722,8 +723,12 @@ class DirectoryController extends Controller
             // user_credentials is keyed on `pk`, so auth()->id() is that pk.
             'user_pk' => auth()->id(),
             'ip' => request()->ip(),
-            'filters' => $filterLine !== '' ? $filterLine : null,
-            'search' => $search !== '' ? $search : null,
+            // Both are request-derived: $search is the submitted term and
+            // $filterLine embeds it again. A raw line feed here would append
+            // forged records to the very trail that makes this download
+            // attributable, so neither reaches the formatter unescaped.
+            'filters' => $filterLine !== '' ? LogText::inline($filterLine) : null,
+            'search' => $search !== '' ? LogText::inline($search) : null,
             'rows' => $rowCount,
             'capped' => $capped,
         ]);
