@@ -19,6 +19,16 @@ class SidebarNavResolver
     private static array $structureMemo = [];
 
     /**
+     * Memo for routeExistsFor(), keyed by trimmed path. Per instance rather than a
+     * function static so it cannot survive into the next request on a persistent
+     * worker, where a stale "this path resolves" answer would outlive the route
+     * table it was computed from.
+     *
+     * @var array<string,bool>
+     */
+    private array $routeExistsMemo = [];
+
+    /**
      * Id-keyed maps of the three tiny structural tables (menus 223 rows,
      * menu_groups 23, sidebar_categories 5).
      *
@@ -190,9 +200,18 @@ class SidebarNavResolver
         // falsely match the shorter menu via the suffix check in entryMatches,
         // opening under the wrong tab. For these routes, resolve nav as if visiting
         // the parent list page so the correct sidebar item stays highlighted.
+        //
+        // The Roles screen is reachable under TWO route names — `roles.*` (the
+        // Route::resource at /roles) and `admin.roles.*` (/admin/roles) — but only
+        // /admin/roles is stored on a menu row. Left alone, arriving at /roles
+        // matches no menu at all and the trail collapses to "Home / Setup", while
+        // the sidebar link gives the full trail: the same page, two different
+        // breadcrumbs. Map the whole /roles family onto the menu that exists.
         $parentRouteMap = [
-            'roles.dashboard'       => ['path' => 'roles',       'route' => 'roles.index'],
-            'assign.roles.dashboard'=> ['path' => 'roles',       'route' => 'roles.index'],
+            'roles.index'           => ['path' => 'admin/roles', 'route' => 'admin.roles.index'],
+            'roles.show'            => ['path' => 'admin/roles', 'route' => 'admin.roles.index'],
+            'roles.dashboard'       => ['path' => 'admin/roles', 'route' => 'admin.roles.index'],
+            'assign.roles.dashboard'=> ['path' => 'admin/roles', 'route' => 'admin.roles.index'],
         ];
         if (isset($parentRouteMap[$routeName])) {
             $p = $parentRouteMap[$routeName];
@@ -714,7 +733,48 @@ class SidebarNavResolver
             return $this->safeRoute($route);
         }
 
-        return url($route);
+        // A container menu ("Role & Permission", "Estate Master", ~36 rows) stores a
+        // slug in `route` purely as an id for its children — there is no page behind
+        // it. Linking one produced a breadcrumb crumb that 404s, so only link a path
+        // that actually resolves to a GET route; the rest render as plain text.
+        return $this->routeExistsFor($route) ? url($route) : null;
+    }
+
+    /**
+     * Does this relative path match a registered GET route?
+     *
+     * Memoised because the breadcrumb resolves the same ancestor chain more than
+     * once per page (layout + component), and comparing against every route is a
+     * regex sweep. The memo is a per-instance property rather than a `static` so it
+     * cannot leak between requests on a persistent worker.
+     *
+     * Deliberately NOT RouteCollection::match(). That method does not merely test —
+     * it calls $route->bind($request), which overwrites the parameters on the shared
+     * Route instance. When a menu row stores a literal parameterised path (two rows
+     * store `admin/fc/joining-documents/30`), matching it here rebinds the very route
+     * the user is on, and the live request's parameters silently become the menu
+     * row's. Route::matches() runs the same URI comparison and binds nothing.
+     */
+    protected function routeExistsFor(string $path): bool
+    {
+        $key = trim($path, '/');
+        if (isset($this->routeExistsMemo[$key])) {
+            return $this->routeExistsMemo[$key];
+        }
+
+        try {
+            $request = \Illuminate\Http\Request::create('/'.$key, 'GET');
+
+            foreach (app('router')->getRoutes()->getRoutesByMethod()['GET'] ?? [] as $route) {
+                if ($route->matches($request)) {
+                    return $this->routeExistsMemo[$key] = true;
+                }
+            }
+
+            return $this->routeExistsMemo[$key] = false;
+        } catch (\Throwable $e) {
+            return $this->routeExistsMemo[$key] = false;
+        }
     }
 
     /**

@@ -78,6 +78,7 @@ class Kernel extends HttpKernel
         'fc.builder.delete' => \App\Http\Middleware\BlockFcFormBuilderDelete::class,
         'issue.reports.admin' => \App\Http\Middleware\EnsureIssueReportsAdmin::class,
         'memo.notice.manager' => \App\Http\Middleware\EnsureMemoNoticeManager::class,
+        'menu.permission' => \App\Http\Middleware\EnsureMenuPermission::class,
         'fc.builder.action' => \App\Http\Middleware\BlockFcFormBuilderAction::class,
     ];
 }

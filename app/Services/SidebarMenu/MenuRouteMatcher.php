@@ -138,11 +138,24 @@ class MenuRouteMatcher
     }
 
     /**
-     * Resolve href for a menu route; invalid routes point to navigation error page.
+     * Resolve href for a menu; invalid routes point to the navigation error page.
+     *
+     * A menu can point at an uploaded document instead of a route (menus.attachment).
+     * That is a real destination, so it is checked BEFORE falling through to the
+     * error page — without this, clicking an attachment-only menu landed on
+     * "navigation error / missing_path" even though the file was there.
+     *
+     * @param  string|null  $attachment  path on the `public` disk, e.g. "menu-attachments/x.pdf"
      */
-    public function resolveHref(?string $menuRoute, ?int $menuId = null): string
+    public function resolveHref(?string $menuRoute, ?int $menuId = null, ?string $attachment = null): string
     {
         if (!$menuRoute || $menuRoute === '#' || trim($menuRoute) === '') {
+            if ($attachment !== null && trim($attachment) !== '') {
+                // Not withMenuParam()'d: this is a file URL, and a ?menu= query on
+                // it would just be dead weight the storage route has to ignore.
+                return asset('storage/'.ltrim(trim($attachment), '/'));
+            }
+
             return route('admin.navigation.error', [
                 'reason' => 'missing_path',
                 'menu_id' => $menuId,
