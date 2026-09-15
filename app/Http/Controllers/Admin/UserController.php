@@ -305,6 +305,7 @@ class UserController extends Controller
          // above: Student-OT is a session pseudo-role set at login, so an OT who
          // arrives holding only the Spatie "Officer Trainee" role would have been
          // shown a card reading zero over real deductions.
+         $disciplineMarksDeducted = 0;
          if (isOfficerTraineeUser()) {
              $disciplineMarksDeducted = app(OtMarksDeductedService::class)->totalFor((int) $userId);
          }
