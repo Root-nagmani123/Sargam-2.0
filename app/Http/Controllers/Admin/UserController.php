@@ -268,7 +268,7 @@ class UserController extends Controller
 //   print_r($emp_data);exit;
         $exemptionCount = 0;
         $MDO_count = 0;
-        $disciplineMarksDeducted = 0;
+        $myGroupsCount = 0;
         $todayTimetable = collect([]);
         $totalSessions = 0;
         $totalStudents = 0;
@@ -286,6 +286,11 @@ class UserController extends Controller
               $MDO_count = MDOEscotDutyMap::where('selected_student_list', $userId)
             ->with(['courseMaster', 'mdoDutyTypeMaster', 'facultyMaster'])
             ->count();
+
+            // "My Groups" card: how many Course Group Mapping groups this OT is in.
+            $myGroupsCount = $this->myGroupsQuery($userId)
+                ->distinct()
+                ->count('gmap.pk');
 
             // Fetch today's timetable for the logged-in student
             $todayTimetable = $this->getTodayTimetableForStudent($userId);
@@ -462,13 +467,7 @@ class UserController extends Controller
             'pending_id_approval1'    => ['count' => $todayApproval1IdCardRequests ?? 0,           'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => !$isSecurityRole && ($todayApproval1IdCardRequests ?? 0) > 0],
             'pending_dup_id_approval1'=> ['count' => $todayApproval1DuplicateIdCardRequests ?? 0,  'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => !$isSecurityRole && ($todayApproval1DuplicateIdCardRequests ?? 0) > 0],
             'ot_mdo_escort'           => ['count' => $MDO_count ?? 0,                              'link' => route('ot.mdo.escrot.exemption.view'),                         'visible' => !$isSecurityRole && $isStudentOT],
-            // Opens the page that itemises this figure — both registers on one
-            // table, read from the same service the count comes from.
-            'discipline_marks_deducted' => ['count' => $disciplineMarksDeducted,                   'link' => route('memo.discipline.ot_marks'),                             'visible' => !$isSecurityRole && $isOtUser],
-            // OT cards. Neither timetable carries a count — they open a calendar,
-            // not a list whose rows could be counted — and Pending Feedback opens
-            // the OT's own session feedback page, where the pending tab is first.
-            'pending_feedback'        => [                                                         'link' => route('feedback.get.studentFeedback'),                          'visible' => !$isSecurityRole && $isOtUser],
+            'my_groups'               => ['count' => $myGroupsCount ?? 0,                          'link' => route('admin.dashboard.my-groups'),                            'visible' => !$isSecurityRole && $isStudentOT],
             'total_inhouse_faculty'   => ['count' => $total_internal_faculty,                      'link' => route('admin.dashboard.inhouse_faculty'),                      'visible' => !$isSecurityRole && !$isStudentOT],
             'session_details'         => ['count' => $totalSessions,                               'link' => route('admin.dashboard.sessions'),                             'visible' => !$isSecurityRole && ($isFacultyRole || $isSuperAdmin)],
             // Faculty-only cards. Both open a report that scopes itself to the
@@ -4451,6 +4450,72 @@ class UserController extends Controller
         usort($counselees, fn ($a, $b) => strcmp((string) $a['name'], (string) $b['name']));
 
         return view('admin.dashboard.my_counselee', compact('counselees'));
+    }
+
+    /**
+     * Base query for the groups an OT belongs to, per the Course Group Mapping module.
+     *
+     * One row of group_type_master_course_master_map IS one group — a named group of a
+     * given type within a given course, exactly as the Course Group Mapping listing
+     * shows it. The count is therefore DISTINCT on gmap.pk, not on group_name: a name
+     * like "Group 2" or "A" is reused across group types, so deduplicating by name
+     * would merge, say, "Group 2" of the DM Conference with "Group 2" of the Election
+     * Management Session, which are different groups with different members.
+     *
+     * Deliberately NOT filtered by course active/end date (unlike myCounselee(), which
+     * is about a faculty's CURRENT counselees): this card answers "all the groups I am
+     * mapped to". Every course in the data has already ended, so an end-date filter
+     * would show 0 to every OT.
+     *
+     * @param  int|string  $studentPk  student_master.pk — for a Student-OT this is
+     *                                 auth()->user()->user_id, as used across the
+     *                                 attendance, calendar and exemption screens.
+     */
+    private function myGroupsQuery($studentPk)
+    {
+        return DB::table('student_course_group_map as scgm')
+            ->join('group_type_master_course_master_map as gmap', 'gmap.pk', '=', 'scgm.group_type_master_course_master_map_pk')
+            ->where('scgm.student_master_pk', $studentPk)
+            ->where('scgm.active_inactive', 1)
+            ->where('gmap.active_inactive', 1);
+    }
+
+    /**
+     * "My Groups" — the groups the logged-in OT is mapped to.
+     *
+     * Target of the My Groups dashboard card.
+     */
+    public function myGroups()
+    {
+        if (! hasRole('Student-OT')) {
+            return redirect()->route('admin.dashboard');
+        }
+
+        $studentPk = Auth::user()->user_id;
+
+        $groups = $this->myGroupsQuery($studentPk)
+            // gmap.type_name and gmap.course_name are varchar columns holding the pk of
+            // the type / course, not their names — see CourseGroupTypeMaster and the
+            // Course Group Mapping grid, which resolve them the same way.
+            ->leftJoin('course_group_type_master as gtype', 'gtype.pk', '=', 'gmap.type_name')
+            ->leftJoin('course_master as cm', 'cm.pk', '=', 'gmap.course_name')
+            ->leftJoin('faculty_master as fm', 'fm.pk', '=', 'gmap.facility_id')
+            ->select([
+                'gmap.pk',
+                'gmap.group_name',
+                'gtype.type_name as group_type',
+                'cm.course_name',
+                'fm.full_name as faculty_name',
+            ])
+            // A handful of students have a duplicate student_course_group_map row for
+            // the same group; without this the group would be listed twice.
+            ->distinct()
+            ->orderBy('cm.course_name')
+            ->orderBy('gtype.type_name')
+            ->orderBy('gmap.group_name')
+            ->get();
+
+        return view('admin.dashboard.my_groups', compact('groups'));
     }
 
     /**

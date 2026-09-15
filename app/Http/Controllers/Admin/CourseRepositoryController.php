@@ -14,9 +14,13 @@ use App\Models\SectorMaster;
 use App\Models\MinistryMaster;
 use App\Models\Timetable;
 use App\Rules\SafeUploadedDocument;
+use App\Support\CourseRepositorySearch;
+use App\Support\DataTableSearchHelper;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Exception;
 
  
@@ -2171,6 +2175,174 @@ class CourseRepositoryController extends Controller
                         $a->where('full_name', 'like', $term);
                     });
             });
+        }
+    }
+
+    /**
+     * Universal search across the whole Course Repository (user end).
+     *
+     * One page that answers "find me anything in here": documents, video sessions and
+     * category folders, from a single box, with optional refinements. Everything the
+     * query needs lives in App\Support\CourseRepositorySearch — including why it reads
+     * the raw text columns instead of the model relations.
+     *
+     * GET /course-repository-user/search
+     */
+    public function userSearch(Request $request)
+    {
+        try {
+            $criteria = CourseRepositorySearch::criteria($request);
+            $hasQuery = CourseRepositorySearch::hasQuery($criteria);
+
+            $documents = null;
+            $documentTotal = 0;
+            $categories = null;
+            $categoryPreview = collect();
+            $categoryCounts = [];
+            $categoryTotal = 0;
+
+            if ($hasQuery) {
+                if ($criteria['type'] !== CourseRepositorySearch::TYPE_CATEGORIES) {
+                    $documents = CourseRepositorySearch::documentQuery($criteria)
+                        ->paginate($criteria['per_page'])
+                        ->withQueryString();
+
+                    CourseRepositorySearch::decorate($documents);
+                    $documentTotal = $documents->total();
+                }
+
+                if ($criteria['type'] === CourseRepositorySearch::TYPE_CATEGORIES) {
+                    $matches = CourseRepositorySearch::categoryMatches($criteria);
+                    $categoryTotal = $matches->count();
+                    $categories = CourseRepositorySearch::paginateCollection($matches, $criteria['per_page'])
+                        ->withQueryString();
+                    $categoryCounts = CourseRepositorySearch::documentCounts(
+                        collect($categories->items())->pluck('pk')->all()
+                    );
+                } elseif ($criteria['type'] === CourseRepositorySearch::TYPE_ALL) {
+                    // A preview strip only. Document hits are the answer most of the
+                    // time; the Categories tab shows the full list.
+                    $matches = CourseRepositorySearch::categoryMatches($criteria);
+                    $categoryTotal = $matches->count();
+                    $categoryPreview = $matches->take(CourseRepositorySearch::CATEGORY_PREVIEW_LIMIT);
+                    $categoryCounts = CourseRepositorySearch::documentCounts(
+                        $categoryPreview->pluck('pk')->all()
+                    );
+                }
+            }
+
+            return view('admin.course-repository.user.search', [
+                'criteria' => $criteria,
+                'tokens' => $criteria['tokens'],
+                'hasQuery' => $hasQuery,
+                'documents' => $documents,
+                'documentTotal' => $documentTotal,
+                'categories' => $categories,
+                'categoryPreview' => $categoryPreview,
+                'categoryCounts' => $categoryCounts,
+                'categoryTotal' => $categoryTotal,
+                'chips' => CourseRepositorySearch::activeChips($criteria),
+                'facets' => CourseRepositorySearch::facets(),
+                'folderTrail' => $criteria['folder'] !== null
+                    ? CourseRepositorySearch::folderPath($criteria['folder'])
+                    : [],
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error in course repository universal search: ' . $e->getMessage());
+
+            return redirect()
+                ->route('admin.course-repository.user.index')
+                ->with('error', 'Search is unavailable right now. Please try again.');
+        }
+    }
+
+    /**
+     * Type-ahead suggestions for the universal search box.
+     *
+     * Suggests the values people actually search by — topic, subject, author, batch,
+     * document title — rather than whole result rows, so picking one narrows the
+     * search instead of jumping straight to a single file.
+     *
+     * GET /course-repository-user/search/suggest
+     */
+    public function userSearchSuggest(Request $request)
+    {
+        // ?q[] would make the cast below a PHP error, so anything that is not a
+        // plain scalar is treated as no term at all.
+        $raw = $request->query('q', '');
+        $term = is_scalar($raw) ? DataTableSearchHelper::normalizeRaw((string) $raw) : '';
+
+        if (mb_strlen($term) < 2) {
+            return response()->json(['suggestions' => []]);
+        }
+
+        $like = DataTableSearchHelper::likePattern($term);
+        $suggestions = [];
+        $seen = [];
+
+        $push = function ($value, string $type) use (&$suggestions, &$seen) {
+            $value = trim((string) $value);
+
+            // Bare numbers are legacy ids from the imported system; they mean nothing
+            // to a reader and would never be typed as a search.
+            if ($value === '' || ctype_digit($value)) {
+                return;
+            }
+
+            $key = mb_strtolower($type . '|' . $value);
+            if (isset($seen[$key])) {
+                return;
+            }
+            $seen[$key] = true;
+
+            $suggestions[] = [
+                'label' => Str::limit($value, 90),
+                'value' => $value,
+                'type' => $type,
+            ];
+        };
+
+        try {
+            $columns = [
+                ['topic_pk', 'Topic', 5],
+                ['subject_pk', 'Subject', 4],
+                ['author_name', 'Author', 4],
+                ['course_master_pk', 'Course', 3],
+            ];
+
+            foreach ($columns as [$column, $label, $limit]) {
+                DB::table('course_repository_details')
+                    ->where($column, 'like', $like)
+                    ->whereRaw("{$column} not regexp '^[0-9]+$'")
+                    ->distinct()
+                    ->orderBy($column)
+                    ->limit($limit)
+                    ->pluck($column)
+                    ->each(fn ($value) => $push($value, $label));
+            }
+
+            CourseRepositoryDocument::where('del_type', 1)
+                ->where('file_title', 'like', $like)
+                ->distinct()
+                ->orderBy('file_title')
+                ->limit(5)
+                ->pluck('file_title')
+                ->each(fn ($value) => $push($value, 'Document'));
+
+            foreach (CourseRepositorySearch::folderTree() as $pk => $node) {
+                if (count($suggestions) >= 40) {
+                    break;
+                }
+                if (stripos($node['name'], $term) !== false) {
+                    $push($node['name'], 'Category');
+                }
+            }
+
+            return response()->json(['suggestions' => array_slice($suggestions, 0, 12)]);
+        } catch (Exception $e) {
+            Log::error('Error in course repository search suggest: ' . $e->getMessage());
+
+            return response()->json(['suggestions' => []]);
         }
     }
 }
