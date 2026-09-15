@@ -2,7 +2,7 @@
 namespace App\Exports;
 
 use App\Models\FacultyMaster;
-use App\Support\ExportCellValue;
+use App\Support\Concerns\BindsExportCellsAsText;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithCustomStartCell;
@@ -10,7 +10,9 @@ use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\DefaultValueBinder;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
@@ -31,15 +33,18 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
  * views, so a downloaded workbook states which institution and report it is
  * from instead of opening on a bare heading row.
  */
-class FacultyExport implements
+class FacultyExport extends DefaultValueBinder implements
     FromCollection,
     WithHeadings,
     WithMapping,
     ShouldAutoSize,
     WithEvents,
     WithTitle,
-    WithCustomStartCell
+    WithCustomStartCell,
+    WithCustomValueBinder
 {
+    use BindsExportCellsAsText;
+
     /** Rows the branded header occupies before the data table starts. */
     private const HEADER_ROWS = 5;
 
@@ -253,12 +258,13 @@ class FacultyExport implements
         $sectorName  = $this->sectorMap[$faculty->faculty_sector] ?? '-';
         $serviceName = $this->serviceMap[$faculty->service_master_pk] ?? '-';
 
-        // The full-detail workbook is the only export that carried raw strings
-        // into PhpSpreadsheet, whose default binder stores a leading "=" as a
-        // real formula cell. Route every value through the same neutraliser the
-        // grid exports use, so no download from this module can contain a live
-        // formula. Non-strings (the S. No. counter) are returned untouched.
-        return array_map([ExportCellValue::class, 'safe'], [
+        // Formula neutralisation on this path is done by CELL TYPE, not by an
+        // apostrophe: BindsExportCellsAsText binds every non-numeric string as
+        // TYPE_STRING. That stores "=1+1" as text, and — the reason it matters
+        // on this workbook specifically — keeps Account_No exact. Account numbers
+        // here reach 16 digits, one digit past what Excel holds precisely, so the
+        // default numeric binding silently rounded them.
+        return ([
             ++$this->index,
             $faculty->faculty_code ?? '',
             optional($faculty->facultyTypeMaster)->faculty_type_name ?? '',

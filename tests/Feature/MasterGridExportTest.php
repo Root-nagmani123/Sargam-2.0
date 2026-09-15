@@ -37,6 +37,89 @@ class MasterGridExportTest extends TestCase
         return $user;
     }
 
+    /**
+     * A throw-away expertise row carrying $name.
+     *
+     * Renaming an existing row (what this file used to do) meant the only thing
+     * standing between the suite and a real row named after a formula was the
+     * transaction; a connection drop mid-test left the damage behind. Creating a
+     * row instead makes the rollback a tidy-up rather than a safety barrier.
+     */
+    private function probeExpertise(string $name): FacultyExpertiseMaster
+    {
+        $row = new FacultyExpertiseMaster();
+        $row->expertise_name = $name;
+        $row->save();
+
+        return $row;
+    }
+
+    /** A throw-away faculty row; only the columns the workbook reads are set. */
+    private function probeFaculty(array $attributes = []): FacultyMaster
+    {
+        $row = new FacultyMaster();
+        $row->faculty_type              = 'Probe';
+        $row->first_name                = 'ExportProbe';
+        $row->country_master_pk         = 0;
+        $row->state_master_pk           = 0;
+        $row->state_district_mapping_pk = 0;
+        $row->city_master_pk            = 0;
+
+        foreach ($attributes as $column => $value) {
+            $row->{$column} = $value;
+        }
+
+        $row->save();
+
+        return $row;
+    }
+
+    /** The cell whose value is exactly $text, or null. */
+    private function findCell(string $path, string $text)
+    {
+        $sheet = IOFactory::load($path)->getActiveSheet();
+
+        foreach ($sheet->getRowIterator() as $sheetRow) {
+            foreach ($sheetRow->getCellIterator() as $cell) {
+                if ((string) $cell->getValue() === $text) {
+                    return $cell;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /** Count live formula cells in a workbook. */
+    private function formulaCellsIn(string $path): int
+    {
+        $sheet = IOFactory::load($path)->getActiveSheet();
+
+        $formulas = 0;
+        foreach ($sheet->getRowIterator() as $sheetRow) {
+            foreach ($sheetRow->getCellIterator() as $cell) {
+                if ($cell->getDataType() === DataType::TYPE_FORMULA) {
+                    $formulas++;
+                }
+            }
+        }
+
+        return $formulas;
+    }
+
+    /** Write a response body to a temp .xlsx and hand the path to $assert. */
+    private function withWorkbook(string $body, callable $assert): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'mge') . '.xlsx';
+        file_put_contents($path, $body);
+
+        try {
+            $assert($path);
+        } finally {
+            @unlink($path);
+        }
+    }
+
     /** Drain a streamed/attachment response into a string. */
     private function bodyOf($response): string
     {
@@ -236,15 +319,11 @@ class MasterGridExportTest extends TestCase
 
     public function test_the_csv_neutralises_a_value_that_a_spreadsheet_would_run_as_a_formula(): void
     {
-        $row = FacultyExpertiseMaster::query()->first();
-
-        if (! $row) {
-            $this->markTestSkipped('No faculty expertise rows to rename.');
-        }
-
-        // DatabaseTransactions rolls this back.
-        $row->expertise_name = '=HYPERLINK("http://x","c")';
-        $row->save();
+        // The apostrophe is the correct mitigation HERE and only here: a CSV
+        // has no cell types, so a leading quote is the only way to tell Excel
+        // the rest of the field is literal text. The .xlsx path uses the cell
+        // TYPE instead - see the workbook tests below.
+        $this->probeExpertise('=HYPERLINK("http://x","c")');
 
         $body = $this->bodyOf(
             $this->actingAs($this->admin())->get('/master/faculty-expertise/export/csv')->assertOk()
@@ -254,40 +333,57 @@ class MasterGridExportTest extends TestCase
         $this->assertStringNotContainsString(',=HYPERLINK', $body);
     }
 
-    public function test_the_workbook_contains_no_formula_cells(): void
+    public function test_the_workbook_stores_a_formula_like_value_as_plain_text_without_an_apostrophe(): void
     {
-        $row = FacultyExpertiseMaster::query()->first();
-
-        if (! $row) {
-            $this->markTestSkipped('No faculty expertise rows to rename.');
-        }
-
-        $row->expertise_name = '=1+1';
-        $row->save();
+        $this->probeExpertise('=1+1');
 
         $body = $this->bodyOf(
             $this->actingAs($this->admin())->get('/master/faculty-expertise/export/excel')->assertOk()
         );
 
-        $path = tempnam(sys_get_temp_dir(), 'mge') . '.xlsx';
-        file_put_contents($path, $body);
+        $this->withWorkbook($body, function (string $path) {
+            $this->assertSame(0, $this->formulaCellsIn($path), 'An exported workbook must never contain a live formula.');
 
-        try {
-            $sheet = IOFactory::load($path)->getActiveSheet();
+            // The value must be the four characters someone typed - not a formula,
+            // and not '=1+1 either. PhpSpreadsheet stores a leading apostrophe as
+            // DATA, so the CSV mitigation applied here would reach the reader as
+            // visible corruption of the cell.
+            $cell = $this->findCell($path, '=1+1');
 
-            $formulas = 0;
-            foreach ($sheet->getRowIterator() as $sheetRow) {
-                foreach ($sheetRow->getCellIterator() as $cell) {
-                    if ($cell->getDataType() === DataType::TYPE_FORMULA) {
-                        $formulas++;
-                    }
-                }
-            }
+            $this->assertNotNull($cell, 'The exported value should appear verbatim in the workbook.');
+            $this->assertSame(DataType::TYPE_STRING, $cell->getDataType(), 'A formula-like value must be typed as text.');
+        });
+    }
 
-            $this->assertSame(0, $formulas, 'An exported workbook must never contain a live formula.');
-        } finally {
-            @unlink($path);
-        }
+    /**
+     * Identifiers must survive the round trip digit for digit.
+     *
+     * Excel holds 15 significant digits, and the default value binder types a
+     * digit-only string as a NUMBER - so a 16-digit account number came back
+     * rounded. That is silent corruption of exactly the field a reader would
+     * copy into a payment form. faculty_master.Account_No reaches 16 digits in
+     * this database, so this is a real row shape, not a hypothetical one.
+     */
+    public function test_a_long_numeric_identifier_keeps_every_digit_in_the_workbook(): void
+    {
+        $this->probeFaculty([
+            'Account_No' => '7755000100020824',
+            'mobile_no'  => '+91 9876543210',
+        ]);
+
+        $body = $this->bodyOf(
+            $this->actingAs($this->admin())->get('/faculty/excel-export')->assertOk()
+        );
+
+        $this->withWorkbook($body, function (string $path) {
+            $account = $this->findCell($path, '7755000100020824');
+            $this->assertNotNull($account, 'A 16-digit account number must appear unrounded.');
+            $this->assertSame(DataType::TYPE_STRING, $account->getDataType());
+
+            $mobile = $this->findCell($path, '+91 9876543210');
+            $this->assertNotNull($mobile, 'A +91 mobile must appear without a leading apostrophe.');
+            $this->assertSame(DataType::TYPE_STRING, $mobile->getDataType());
+        });
     }
 
     /**
@@ -301,39 +397,19 @@ class MasterGridExportTest extends TestCase
      */
     public function test_the_full_detail_faculty_workbook_contains_no_formula_cells(): void
     {
-        $faculty = FacultyMaster::query()->orderBy('pk')->first();
-
-        if (! $faculty) {
-            $this->markTestSkipped('No faculty rows to rename.');
-        }
-
-        // DatabaseTransactions rolls this back.
-        $faculty->first_name = '=HYPERLINK("http://x","c")';
-        $faculty->save();
+        $this->probeFaculty(['first_name' => '=HYPERLINK("http://x","c")']);
 
         $body = $this->bodyOf(
             $this->actingAs($this->admin())->get('/faculty/excel-export')->assertOk()
         );
 
-        $path = tempnam(sys_get_temp_dir(), 'fac') . '.xlsx';
-        file_put_contents($path, $body);
+        $this->withWorkbook($body, function (string $path) {
+            $this->assertSame(0, $this->formulaCellsIn($path), 'The full-detail workbook must never contain a live formula.');
 
-        try {
-            $sheet = IOFactory::load($path)->getActiveSheet();
-
-            $formulas = 0;
-            foreach ($sheet->getRowIterator() as $sheetRow) {
-                foreach ($sheetRow->getCellIterator() as $cell) {
-                    if ($cell->getDataType() === DataType::TYPE_FORMULA) {
-                        $formulas++;
-                    }
-                }
-            }
-
-            $this->assertSame(0, $formulas, 'The full-detail workbook must never contain a live formula.');
-        } finally {
-            @unlink($path);
-        }
+            $cell = $this->findCell($path, '=HYPERLINK("http://x","c")');
+            $this->assertNotNull($cell);
+            $this->assertSame(DataType::TYPE_STRING, $cell->getDataType());
+        });
     }
 
     /**
@@ -445,6 +521,60 @@ class MasterGridExportTest extends TestCase
                     && array_key_exists('rows', $context);
             })
             ->once();
+    }
+
+    /**
+     * The audit record must survive a hostile search term.
+     *
+     * This goes through the REAL Monolog stack rather than a spy, because the
+     * defect lives in the formatter: LineFormatter writes one record per line
+     * but keeps inline line breaks, so ?q=x%0A<a plausible record> used to end
+     * the genuine line and open a forged one naming any actor and row count.
+     * Counting records in an actual log file is the only assertion that can see
+     * that; a spy sees one call either way.
+     */
+    public function test_a_search_term_with_a_line_break_cannot_forge_a_second_audit_record(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'auditprobe') . '.log';
+
+        config()->set('logging.channels.audit_probe', [
+            'driver' => 'single',
+            'path'   => $path,
+            'level'  => 'debug',
+        ]);
+        config()->set('logging.default', 'audit_probe');
+        Log::forgetChannel();
+
+        $forged = "x\n[2026-09-15 10:00:00] production.INFO: Master grid export "
+            . '{"actor":42,"slug":"Faculty","format":"excel","rows":668}';
+
+        try {
+            $this->actingAs($this->admin())
+                ->get('/master/faculty-expertise/export/csv?q=' . rawurlencode($forged))
+                ->assertOk();
+
+            $written = trim(file_get_contents($path));
+            $lines   = preg_split('/\R/', $written) ?: [];
+
+            // A log RECORD is a line beginning with a timestamp; an export audit
+            // record is one whose MESSAGE is "Master grid export". The forged
+            // payload survives as text inside the filter value - LogSafe
+            // neutralises, it does not censor - but it can no longer open a
+            // record of its own, which is the whole of the attack.
+            $auditRecords = preg_grep('/^\[\d{4}-\d{2}-\d{2}[^\]]*\] \w+\.INFO: Master grid export /', $lines);
+
+            $this->assertCount(
+                1,
+                $auditRecords,
+                'One export call must leave exactly one audit record, not a second forged one.'
+            );
+
+            // The surviving record carries the search term, on that same line.
+            $this->assertStringContainsString('"filter":"Search: x ', implode('', $auditRecords));
+        } finally {
+            Log::forgetChannel();
+            @unlink($path);
+        }
     }
 
     /**

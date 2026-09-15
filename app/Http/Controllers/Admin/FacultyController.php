@@ -902,12 +902,12 @@ class FacultyController extends Controller
         // bank account, IFSC and PAN. Audited for the same reason the grid
         // exports are (see ExportsMasterGrid), and deliberately not left as
         // the one unaudited way out of the module.
-        Log::info('Faculty full-detail workbook export', [
+        Log::info('Faculty full-detail workbook export', \App\Support\LogSafe::context([
             'actor'  => optional(auth()->user())->getKey(),
             'slug'   => 'faculty_full_details',
             'format' => 'excel',
             'ip'     => request()->ip(),
-        ]);
+        ]));
 
         return Excel::download(new \App\Exports\FacultyExport(), 'Faculty_FullDetails_' . date('YmdHis') . '.xlsx');
     }
@@ -969,8 +969,12 @@ class FacultyController extends Controller
                     ? \Carbon\Carbon::parse($row->last_update)->format('d-m-Y H:i')
                     : 'N/A',
             ],
-            'modified_by' => [
-                'heading' => 'Modified By',
+            // Heading says what the value IS. The relation is createdByUser on
+            // faculty_master.created_by; the table records no last-modifier, so
+            // labelling this "Modified By" put the creator's name under a claim
+            // the data does not make — on a branded, official-looking export.
+            'created_by' => [
+                'heading' => 'Created By',
                 'width'   => '10%',
                 'align'   => 'left',
                 'value'   => fn ($row) => $row->createdByUser?->name ?: 'N/A',

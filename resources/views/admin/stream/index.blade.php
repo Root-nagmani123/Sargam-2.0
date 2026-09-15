@@ -72,7 +72,7 @@
                                             </a>
 
                                             <!-- Delete -->
-                                            @if($stream->status == 1)
+                                            @if($stream->active_inactive == 1)
                                             <button type="button"
                                                 class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
                                                 disabled aria-disabled="true" title="Cannot delete active stream">

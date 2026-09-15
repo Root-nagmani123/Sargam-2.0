@@ -60,7 +60,28 @@
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
 
-            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4 programme-dt-toolbar">
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                {{-- Status pills. These drive ?status_filter=, which
+                     AppellationMasterDataTable::query() reads server-side and
+                     applUpdateExportLinks() stamps onto all four export links, so
+                     the grid and every download agree on what is being shown. --}}
+                <ul id="applStatusTabs"
+                    class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0"
+                    role="group" aria-label="Filter appellations by status">
+                    <li class="nav-item" role="presentation">
+                        <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill active"
+                                data-appl-status="" aria-pressed="true" aria-current="true">All</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill"
+                                data-appl-status="1" aria-pressed="false">Active</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill"
+                                data-appl-status="0" aria-pressed="false">Inactive</button>
+                    </li>
+                </ul>
+
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
                     <button type="button" class="btn programme-dt-btn-columns" id="applBtnColumns"
                             data-bs-toggle="modal" data-bs-target="#applColumnVisibilityModal"

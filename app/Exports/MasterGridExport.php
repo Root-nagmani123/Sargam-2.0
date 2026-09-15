@@ -2,14 +2,16 @@
 
 namespace App\Exports;
 
-use App\Support\ExportCellValue;
+use App\Support\Concerns\BindsExportCellsAsText;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromArray;
+use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithCustomStartCell;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\DefaultValueBinder;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -30,14 +32,17 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
  * title, generated stamp, record count, then a navy table header over zebra
  * rows. Same recipe as IssueCategoryExport, the approved Centcom reference.
  */
-class MasterGridExport implements
+class MasterGridExport extends DefaultValueBinder implements
     FromArray,
     WithHeadings,
     ShouldAutoSize,
     WithEvents,
     WithTitle,
-    WithCustomStartCell
+    WithCustomStartCell,
+    WithCustomValueBinder
 {
+    use BindsExportCellsAsText;
+
     /** Rows the branded header occupies before the data table starts. */
     private const HEADER_ROWS = 5;
 
@@ -72,10 +77,12 @@ class MasterGridExport implements
         $out = [];
 
         foreach ($this->rows as $index => $row) {
-            // PhpSpreadsheet's default binder stores a leading `=` string as a real
-            // formula cell, so neutralise before it ever reaches the sheet.
+            // No apostrophe prefix here: this class binds every non-numeric string
+            // as TYPE_STRING (BindsExportCellsAsText), so `=1+1` is stored as the
+            // four characters it is and a 16-digit account number keeps its digits.
+            // The apostrophe stays on the CSV path, where it is the correct fix.
             $out[] = array_values(array_map(
-                fn ($col) => ExportCellValue::safe($col['value']($row, $index)),
+                fn ($col) => $col['value']($row, $index),
                 $this->columns
             ));
         }

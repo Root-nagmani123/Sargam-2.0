@@ -171,7 +171,7 @@ class FacultyDataTable extends DataTable
      */
     public function query(FacultyMaster $model): QueryBuilder
     {
-        // `createdByUser` is eager-loaded because the Modified By column calls
+        // `createdByUser` is eager-loaded because the Created By column calls
         // $row->createdByUser?->name for every row — without this that is one
         // query per row on every page of the grid.
         //
@@ -280,7 +280,7 @@ class FacultyDataTable extends DataTable
                 ->searchable(false)
                 ->orderable(false),
             Column::make('created_by')
-                ->title('Modified By')
+                ->title('Created By')
                 ->addClass('text-center')
                 ->searchable(true)
                 ->orderable(false),

@@ -35,6 +35,28 @@ use Tests\TestCase;
 class ToggleStatusSchemaTest extends TestCase
 {
     /**
+     * A connection refusal is NOT the same as an absent table.
+     *
+     * columnsOf() returns null for both, so on a box with no database at all
+     * every table looked "absent", nothing was checked, and the file reported
+     * OK - a green test that had verified zero tables. Skip explicitly instead,
+     * so a run without a database is visibly a non-result.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        try {
+            DB::connection()->getPdo();
+        } catch (\Throwable $e) {
+            $this->markTestSkipped(
+                'No database connection, so the allow-list cannot be checked against a schema: '
+                . $e->getMessage()
+            );
+        }
+    }
+
+    /**
      * @return array<string, array{id_column: string, columns: array<int, string>}>
      */
     private function allowList(): array
@@ -91,6 +113,14 @@ class ToggleStatusSchemaTest extends TestCase
             fwrite(STDERR, PHP_EOL . '  [toggle-status schema] not present on this connection, unverified: '
                 . implode(', ', $absent) . PHP_EOL);
         }
+
+        // Guard against the vacuous pass: if EVERY table were absent the loop
+        // above would have checked nothing and still asserted an empty array.
+        $this->assertNotCount(
+            count($this->allowList()),
+            $absent,
+            'Every allow-listed table was absent from this connection, so this test verified nothing.'
+        );
 
         $this->assertSame(
             [],

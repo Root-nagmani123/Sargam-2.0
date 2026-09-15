@@ -4669,13 +4669,17 @@ public function toggleStatus(Request $request)
             || ! is_numeric($id)
             || ! in_array((int) $status, [0, 1], true)) {
 
-            \Log::warning('Rejected a toggle-status request outside the allow-list', [
+            // Every value below is request text. Without LogSafe::context() a
+            // `table` containing %0A would close this record and open a forged
+            // one, so the log that exists to show refusals could be used to
+            // manufacture them.
+            \Log::warning('Rejected a toggle-status request outside the allow-list', \App\Support\LogSafe::context([
                 'user'      => optional(auth()->user())->getKey(),
                 'table'     => $table,
                 'column'    => $column,
                 'id_column' => $idColumn,
                 'status'    => $status,
-            ]);
+            ]));
 
             return response()->json([
                 'message' => 'This status change is not permitted.',

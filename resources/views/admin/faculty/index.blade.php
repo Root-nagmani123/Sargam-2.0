@@ -154,7 +154,7 @@ $(function () {
      * ⚠️ Adding a column to the table means adding an entry here too. */
     var FACULTY_EXPORT_COLUMN_KEYS = [
         'sno', 'faculty_code', 'faculty_name', 'faculty_email',
-        'mobile_number', 'modified_date', 'modified_by', 'status', ''
+        'mobile_number', 'modified_date', 'created_by', 'status', ''
     ];
     var FACULTY_EXPORT_COL_COUNT = FACULTY_EXPORT_COLUMN_KEYS.filter(Boolean).length;
     var FACULTY_EXPORT_LINK_IDS = ['facultyCsvLink', 'facultyExcelLink', 'facultyPdfLink', 'facultyPrintLink'];

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Concerns;
 
 use App\Exports\MasterGridExport;
 use App\Support\ExportCellValue;
+use App\Support\LogSafe;
 use App\Support\ExportCsvHeader;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -154,14 +155,18 @@ trait ExportsMasterGrid
         // has longer retention and a wider read audience than the database.
         // Weighed and accepted; if log retention policy changes, this is the
         // line to revisit - hash the filter, or reduce it to a boolean.
-        Log::info('Master grid export', [
+        // LogSafe::context() strips control characters from every value first.
+        // `filter` is built from the user's ?q=, and Laravel's default
+        // LineFormatter keeps inline line breaks, so an unfiltered %0A would end
+        // this record and start a forged one naming any actor and row count.
+        Log::info('Master grid export', LogSafe::context([
             'actor'  => optional(auth()->user())->getKey(),
             'slug'   => $slug,
             'format' => $format,
             'rows'   => $rows->count(),
             'filter' => $filterLine,
             'ip'     => request()->ip(),
-        ]);
+        ]));
 
         $payload = [
             'reportTitle' => $reportTitle,
