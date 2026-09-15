@@ -12,8 +12,14 @@ class HostelBuildingMaster extends Model
 
     public $guarded = [];
 
-    public function scopeActive()
+    /**
+     * hostel_building_master stores its status in `active_room`; it has no
+     * `active_inactive` column, so the previous scope threw "Unknown column"
+     * on every caller. Column list confirmed against the schema, and it is the
+     * same column the status switch and the toggle allow-list use.
+     */
+    public function scopeActive($query)
     {
-        return $this->where('active_room', 1);
+        return $query->where('active_room', 1);
     }
 }
