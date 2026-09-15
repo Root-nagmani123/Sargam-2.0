@@ -1500,11 +1500,10 @@ class UserController extends Controller
     private function getOtPendingFeedbackCount(int $studentPk): int
     {
         try {
-            $pendingQuery = DB::table('timetable as t')
-                ->select([
-                    't.pk as timetable_pk',
-                    'f.pk as faculty_pk',
-                ])
+            // Simpler query - just count pending feedback sessions for this student
+            $count = DB::table('timetable as t')
+                ->distinct()
+                ->select('t.pk', 'f.pk as faculty_pk')
                 ->leftJoin('faculty_master as f', function ($join) {
                     $join->whereRaw("
                     (
@@ -1550,29 +1549,16 @@ class UserController extends Controller
                         ->where('tf.is_submitted', 1);
                 })
                 ->whereRaw("
-                    TIMESTAMP(
-                        t.END_DATE,
-                        STR_TO_DATE(
-                            TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
-                            '%h:%i %p'
-                        )
-                    ) <= NOW()
-                ");
-
-            if (hasRole('Student-OT')) {
-                $pendingQuery
-                    ->join('course_group_timetable_mapping as cgtm', 'cgtm.timetable_pk', '=', 't.pk')
-                    ->join('student_course_group_map as scgm', 'scgm.group_type_master_course_master_map_pk', '=', 'cgtm.group_pk')
-                    ->where('scgm.student_master_pk', $studentPk);
-            }
-
-            return $pendingQuery
-                ->orderBy('t.START_DATE', 'asc')
-                ->get()
-                ->unique(fn($item) => $item->timetable_pk . '_' . $item->faculty_pk)
+                    DATE_FORMAT(CONCAT(t.END_DATE, ' ', TRIM(SUBSTRING_INDEX(t.class_session, '-', -1))), '%Y-%m-%d %h:%i %p') < NOW()
+                ")
                 ->count();
+
+            return (int) $count;
         } catch (\Throwable $e) {
-            \Log::error('Error counting OT pending feedback: ' . $e->getMessage());
+            \Log::error('Error counting OT pending feedback: ' . $e->getMessage(), [
+                'student_pk' => $studentPk,
+                'trace' => $e->getTraceAsString()
+            ]);
             return 0;
         }
     }
