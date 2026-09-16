@@ -55,10 +55,31 @@ is where they should have been all along.
 
 One migration: a UNIQUE index on `faculty_expertise_master.expertise_name`.
 
-It is guarded, idempotent and reversible, and it **refuses rather than
-half-applies** if the table holds duplicates. Confirm the count is zero before
-you run it — the migration runs this query itself, so a non-zero result stops
-the deploy with an exception rather than corrupting anything:
+It is guarded, idempotent and reversible, and **it will not stop your deploy**.
+
+If the table holds duplicate names the index cannot be created — but choosing
+which of two expertise rows survives is a data decision, and not one to take
+under pressure with a release half out of the door. So the migration skips the
+index, writes a warning naming the offending values to the application log and
+to STDERR, and **returns normally**. Nothing is half-applied: the index is
+either created or it is not.
+
+The uniqueness users experience is unaffected meanwhile — the store path
+validates with `Rule::unique()->ignore()` and still catches MySQL 1062 — so the
+index is defence in depth rather than the only guard. Merge or rename the rows
+and re-run `php artisan migrate` to add it.
+
+The message looks like this:
+
+```
+[migration] fem_expertise_name_unique NOT created: 1 duplicate expertise_name
+value(s) in faculty_expertise_master ("Public Administration" x2). Merge or
+rename them and re-run this migration; application-level uniqueness is
+unaffected in the meantime.
+```
+
+To know in advance, run the query the migration runs — a zero result means the
+index will be created on this host:
 
 ```sql
 SELECT expertise_name, COUNT(*)
@@ -68,8 +89,10 @@ GROUP BY expertise_name
 HAVING COUNT(*) > 1;
 ```
 
-Verified 2026-09-15 on `testsargam6`: **0 duplicate groups over 10 rows**, and
-the index `fem_expertise_name_unique` applied cleanly.
+Executed 2026-09-16 on `testsargam6`, a **development** database and not
+production: **0 duplicate groups over 10 rows**, with `fem_expertise_name_unique`
+present. Run it on the production host too if you want to know beforehand whether
+the index will land — but the deploy no longer depends on the answer.
 
 ```bash
 php artisan migrate

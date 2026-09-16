@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -40,16 +41,16 @@ return new class extends Migration
             ->exists();
     }
 
-    private function duplicateCount(): int
+    /** @return \Illuminate\Support\Collection<int, object> the duplicated values and their counts */
+    private function duplicates()
     {
         return DB::table(self::TABLE)
-            ->select(self::COLUMN)
+            ->selectRaw(sprintf('`%s` AS value, COUNT(*) AS occurrences', self::COLUMN))
             ->whereNotNull(self::COLUMN)
             ->where(self::COLUMN, '<>', '')
             ->groupBy(self::COLUMN)
             ->havingRaw('COUNT(*) > 1')
-            ->get()
-            ->count();
+            ->get();
     }
 
     public function up(): void
@@ -62,18 +63,46 @@ return new class extends Migration
             return;
         }
 
-        // Refuse rather than fail half-way: adding the index over duplicates
-        // aborts with a driver error that reads as a broken deploy. Say what is
-        // wrong and let a human merge the rows first.
-        if (($duplicates = $this->duplicateCount()) > 0) {
-            throw new RuntimeException(sprintf(
-                'Cannot add %s: %d duplicate %s value(s) exist in %s. '
-                . 'Merge or rename them, then re-run this migration.',
+        // Duplicates mean the index cannot be added. It must not mean the
+        // release stops.
+        //
+        // Throwing here was the safer-looking choice - it refuses rather than
+        // half-applying - but the thing it refuses is `php artisan migrate`, in
+        // the middle of a deploy, over a condition nobody can see until the
+        // deploy is already running. Merging two expertise rows is a data
+        // decision someone has to take deliberately; it is not something to
+        // take under pressure with a release half out of the door.
+        //
+        // So: skip the index, say so loudly, and name the offending values.
+        // Nothing is half-applied - the index is either created or it is not -
+        // and re-running the migration after the rows are merged adds it. The
+        // uniqueness users actually experience is unaffected meanwhile: the
+        // store path validates with Rule::unique()->ignore() and still catches
+        // 1062, so the index is defence in depth rather than the only guard.
+        $duplicates = $this->duplicates();
+
+        if ($duplicates->isNotEmpty()) {
+            $message = sprintf(
+                '%s NOT created: %d duplicate %s value(s) in %s (%s). '
+                . 'Merge or rename them and re-run this migration; '
+                . 'application-level uniqueness is unaffected in the meantime.',
                 self::INDEX,
-                $duplicates,
+                $duplicates->count(),
                 self::COLUMN,
-                self::TABLE
-            ));
+                self::TABLE,
+                $duplicates->take(10)->map(
+                    fn ($row) => sprintf('"%s" x%d', $row->value, $row->occurrences)
+                )->implode(', ')
+            );
+
+            Log::warning($message);
+
+            // Visible in the deploy log as well as the application log.
+            if (PHP_SAPI === 'cli') {
+                fwrite(STDERR, '[migration] ' . $message . PHP_EOL);
+            }
+
+            return;
         }
 
         DB::statement(sprintf(
