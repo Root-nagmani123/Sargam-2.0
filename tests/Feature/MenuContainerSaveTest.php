@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\SidebarMenu\Menu;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -27,8 +26,16 @@ use Tests\TestCase;
  */
 class MenuContainerSaveTest extends TestCase
 {
-    use DatabaseTransactions;
+    private bool $inTransaction = false;
 
+    /**
+     * The transaction is opened by hand rather than by DatabaseTransactions.
+     *
+     * That trait is booted from parent::setUp(), so it opens the connection and
+     * throws before the guard below can run: with the trait in place this file
+     * reported 4 errors on a host with no database instead of skipping, and the
+     * markTestSkipped() call was dead code.
+     */
     protected function setUp(): void
     {
         parent::setUp();
@@ -38,6 +45,19 @@ class MenuContainerSaveTest extends TestCase
         } catch (\Throwable $e) {
             $this->markTestSkipped('No database connection: ' . $e->getMessage());
         }
+
+        DB::beginTransaction();
+        $this->inTransaction = true;
+    }
+
+    protected function tearDown(): void
+    {
+        if ($this->inTransaction) {
+            DB::rollBack();
+            $this->inTransaction = false;
+        }
+
+        parent::tearDown();
     }
 
     /**
