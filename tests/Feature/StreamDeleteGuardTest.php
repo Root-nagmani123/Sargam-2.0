@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Stream;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -24,11 +23,20 @@ use Tests\TestCase;
  */
 class StreamDeleteGuardTest extends TestCase
 {
-    use DatabaseTransactions;
-
     /** Output-buffer nesting level on entry, so tearDown can unwind to it. */
     private int $obLevel = 0;
 
+    private bool $inTransaction = false;
+
+    /**
+     * The transaction is opened by hand rather than by DatabaseTransactions.
+     *
+     * That trait is booted from parent::setUp(), so it opens the connection —
+     * and throws — BEFORE any guard placed after that call can run. With the
+     * trait in place the markTestSkipped() below was unreachable and this file
+     * reported errors, not skips, on a host with no database. Same shape as
+     * ToggleStatusEndpointTest, which is why that file skips cleanly.
+     */
     protected function setUp(): void
     {
         parent::setUp();
@@ -40,6 +48,9 @@ class StreamDeleteGuardTest extends TestCase
         } catch (\Throwable $e) {
             $this->markTestSkipped('No database connection: ' . $e->getMessage());
         }
+
+        DB::beginTransaction();
+        $this->inTransaction = true;
     }
 
     /**
@@ -52,6 +63,11 @@ class StreamDeleteGuardTest extends TestCase
     {
         while (ob_get_level() > $this->obLevel) {
             ob_end_clean();
+        }
+
+        if ($this->inTransaction) {
+            DB::rollBack();
+            $this->inTransaction = false;
         }
 
         parent::tearDown();

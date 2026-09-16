@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\FacultyExpertiseMaster;
 use App\Models\FacultyMaster;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -19,12 +19,45 @@ use Tests\TestCase;
  * relationship between the grid's rows and the export's rows, not on cosmetics.
  *
  * Runs against the database .env points at (see phpunit.xml): read-only except
- * where DatabaseTransactions covers a write, and skips rather than fails when
- * the fixture data a case needs is not present.
+ * where the transaction opened in setUp() covers a write, and skips rather than
+ * fails when the fixture data a case needs is not present - or when there is no
+ * database at all.
  */
 class MasterGridExportTest extends TestCase
 {
-    use DatabaseTransactions;
+    private bool $inTransaction = false;
+
+    /**
+     * The transaction is opened by hand rather than by DatabaseTransactions.
+     *
+     * That trait is booted from parent::setUp() and opens the connection there,
+     * so a guard placed after that call can never run: on a host with no
+     * database this file reported 23 errors while its own docblock claimed it
+     * skipped. Same shape as ToggleStatusEndpointTest and StreamDeleteGuardTest.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        try {
+            DB::connection()->getPdo();
+        } catch (\Throwable $e) {
+            $this->markTestSkipped('the master grid export tests need the application database');
+        }
+
+        DB::beginTransaction();
+        $this->inTransaction = true;
+    }
+
+    protected function tearDown(): void
+    {
+        if ($this->inTransaction) {
+            DB::rollBack();
+            $this->inTransaction = false;
+        }
+
+        parent::tearDown();
+    }
 
     private function admin(): User
     {
