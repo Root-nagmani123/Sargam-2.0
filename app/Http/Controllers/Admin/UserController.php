@@ -1513,19 +1513,104 @@ class UserController extends Controller
         // House Group and its faculty share a scope for the same reason.
         $forHouseGroup = $this->otParticipantsRowsFor($without(['house_group', 'house_faculty']), $students);
 
+        // Which of the two pairs this viewer gets at all — see the helper. An
+        // out-of-scope pair is returned empty, which is what hides it in the blade.
+        $typeScope = $this->otParticipantsGroupTypeScope(
+            $this->participantCourseScope($this->participantCoursePks($forCadre->concat($forHouseGroup)))
+        );
+
         return [
-            'cadre' => $forCadre->map(fn ($m) => $m->cadre_name ?? null)->filter()->unique()->sort()->values(),
+            'cadre' => $typeScope['cadre']
+                ? $forCadre->map(fn ($m) => $m->cadre_name ?? null)->filter()->unique()->sort()->values()
+                : collect([]),
             // Every house group in view, not just each student's first — otherwise a
             // group whose members are all also in another group never appears.
-            'houseGroup' => $forHouseGroup->flatMap(fn ($m) => $m->house_groups ?? [])->filter()->unique()->sort()->values(),
-            'counsellorsByCadre' => $this->otParticipantsCounsellorOptions(
-                $forCadre->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all(),
-                $this->participantCoursePks($forCadre)
-            ),
-            'facultyByHouseGroup' => $this->otParticipantsHouseFacultyOptions(
-                $forHouseGroup->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all(),
-                $this->participantCoursePks($forHouseGroup)
-            ),
+            'houseGroup' => $typeScope['house']
+                ? $forHouseGroup->flatMap(fn ($m) => $m->house_groups ?? [])->filter()->unique()->sort()->values()
+                : collect([]),
+            'counsellorsByCadre' => $typeScope['cadre']
+                ? $this->otParticipantsCounsellorOptions(
+                    $forCadre->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all(),
+                    $this->participantCoursePks($forCadre)
+                )
+                : [],
+            'facultyByHouseGroup' => $typeScope['house']
+                ? $this->otParticipantsHouseFacultyOptions(
+                    $forHouseGroup->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all(),
+                    $this->participantCoursePks($forHouseGroup)
+                )
+                : [],
+        ];
+    }
+
+    /**
+     * Which filter pairs this viewer gets: Cadre / Cadre Counsellor, and
+     * House Group / House Group Faculty.
+     *
+     * The filters follow the COURSE GROUP MAPPING, exactly as Training Setup
+     * shows it. A group faculty reaches this page through the groups they own, so
+     * a Counsellor Group faculty gets the Cadre pair and a House Group faculty
+     * gets the House Group pair. Offering a House Group filter to a cadre
+     * counsellor slices their list by somebody else's mapping — Ganesh Shankar
+     * Mishra, whose only mapping on a course is the "Maharastra" counsellor
+     * group, was being offered a House Group filter because his 43 OTs happen to
+     * sit in another faculty's house.
+     *
+     * A viewer who is NOT scoped by their own groups — Super Admin / training
+     * admin, or the coordinator of a course in view — oversees the whole roster,
+     * so they get every pair the course's mapping supports (both, on a course
+     * mapped with counsellor AND house groups).
+     *
+     * @param  array<int, string>  $inViewCoursePks  the courses the rows come from
+     * @return array{cadre: bool, house: bool}
+     */
+    private function otParticipantsGroupTypeScope(array $inViewCoursePks): array
+    {
+        $both = ['cadre' => true, 'house' => true];
+
+        $facultyPk = get_auth_faculty_master_pk();
+        if (! $facultyPk
+            || hasRole('Super Admin') || hasRole('Admin') || hasRole('PA')
+            || hasRole('Training Induction Admin')
+            || hasRole('Training MCTP Admin')
+            || hasRole('Training IST')) {
+            return $both;
+        }
+
+        // Coordinator of a course in view: the whole course's mapping is theirs.
+        $coordinated = $this->getCoordinatorCourseIds((int) $facultyPk)
+            ->map(fn ($v) => (string) $v)->all();
+        foreach ($inViewCoursePks as $pk) {
+            if (in_array((string) $pk, $coordinated, true)) {
+                return $both;
+            }
+        }
+
+        // Otherwise the rows are here because of THIS faculty's own group
+        // mappings, so only those group types get a filter.
+        $ownTypes = DB::table('group_type_master_course_master_map')
+            ->where('facility_id', $facultyPk)
+            ->where('active_inactive', 1)
+            ->when(! empty($inViewCoursePks), fn ($q) => $q->whereIn('course_name', $inViewCoursePks))
+            ->pluck('type_name')
+            ->map(fn ($v) => (string) $v)
+            ->unique()
+            ->all();
+
+        if (empty($ownTypes)) {
+            // Nothing to narrow by (no rows, or a scope this rule does not cover) —
+            // leave the filters alone rather than stripping them.
+            return $both;
+        }
+
+        $owns = fn (array $typePks) => ! empty(array_intersect(
+            $ownTypes,
+            array_map(fn ($v) => (string) $v, $typePks)
+        ));
+
+        return [
+            'cadre' => $owns($this->counsellorGroupTypePks()),
+            'house' => $owns($this->houseGroupTypePks()),
         ];
     }
 
@@ -2871,6 +2956,8 @@ class UserController extends Controller
             ['OT Code', 5],
             ['Name', 13],
             ['Email', 17],
+            ['Mobile No', 8],
+            ['User Name', 10],
             ['Cadre', 8],
             ['Cadre Counsellor', 10],
             ['House Group Faculty', 11],
@@ -2909,6 +2996,8 @@ class UserController extends Controller
                 (string) ($s->generated_OT_code ?: 'N/A'),
                 (string) ($name ?: 'N/A'),
                 (string) ($s->email ?: 'N/A'),
+                (string) ($s->contact_no ?: 'N/A'),
+                (string) ($s->user_id ?: 'N/A'),
                 (string) ($p->cadre_name ?: ($s->cadre->cadre_name ?? 'N/A')),
                 (string) ($p->counsellor_name ?: 'N/A'),
                 (string) ($p->house_faculty_name ?: 'N/A'),
@@ -3007,6 +3096,10 @@ class UserController extends Controller
                 $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? '')),
                 $s->generated_OT_code ?? '',
                 $s->email ?? '',
+                $s->contact_no ?? '',
+                // student_master.user_id IS the login name (it matches
+                // user_credentials.user_name) — no extra lookup needed.
+                $s->user_id ?? '',
                 $p->cadre_name ?? ($s->cadre->cadre_name ?? ''),
                 $p->counsellor_name ?? '',
                 $p->house_faculty_name ?? '',
@@ -3032,7 +3125,10 @@ class UserController extends Controller
 
         // Sorting (S.No / OT Code / Name / Email / Cadre / House).
         // Column indexes must track the <thead> order in ot_participants_list.blade.php.
-        $columnMap = [1 => 'ot_code', 2 => 'name', 3 => 'email', 4 => 'cadre', 5 => 'counsellor', 6 => 'house_faculty', 7 => 'house'];
+        $columnMap = [
+            1 => 'ot_code', 2 => 'name', 3 => 'email', 4 => 'mobile', 5 => 'user_name',
+            6 => 'cadre', 7 => 'counsellor', 8 => 'house_faculty', 9 => 'house',
+        ];
         $orderCol = (int) $request->input('order.0.column', 0);
         $orderDir = strtolower((string) $request->input('order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
         $sortKey = $columnMap[$orderCol] ?? null;
@@ -3043,6 +3139,8 @@ class UserController extends Controller
                     'ot_code' => (string) ($s->generated_OT_code ?? ''),
                     'name' => (string) ($s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''))),
                     'email' => (string) ($s->email ?? ''),
+                    'mobile' => (string) ($s->contact_no ?? ''),
+                    'user_name' => (string) ($s->user_id ?? ''),
                     'cadre' => (string) ($p->cadre_name ?? ($s->cadre->cadre_name ?? '')),
                     'counsellor' => (string) ($p->counsellor_name ?? ''),
                     'house_faculty' => (string) ($p->house_faculty_name ?? ''),
@@ -3092,6 +3190,10 @@ class UserController extends Controller
                 'ot_code' => e($s->generated_OT_code ?? 'N/A'),
                 'name' => '<a href="' . e($detailUrl) . '" class="sl-count">' . e($name) . '</a>',
                 'email' => e($s->email ?? 'N/A'),
+                'mobile' => e($s->contact_no ?: 'N/A'),
+                // The OT's login name: student_master.user_id holds the user_name,
+                // not a numeric id (see NotificationReceiverService).
+                'user_name' => e($s->user_id ?: 'N/A'),
                 'cadre' => e($p->cadre_name ?: ($s->cadre->cadre_name ?? 'N/A')),
                 // The faculty on the same Course Group Mapping row as the cadre
                 // (counsellor group) — i.e. this participant's cadre counsellor.

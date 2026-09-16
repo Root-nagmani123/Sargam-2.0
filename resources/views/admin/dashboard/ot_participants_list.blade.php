@@ -234,6 +234,8 @@
                                     <th>OT Code</th>
                                     <th>Name</th>
                                     <th>Email</th>
+                                    <th>Mobile No</th>
+                                    <th>User Name</th>
                                     <th>Cadre</th>
                                     <th>Cadre Counsellor</th>
                                     <th>House Group Faculty</th>
@@ -368,7 +370,7 @@
         let FACULTY_BY_HOUSE_GROUP = @json($facultyByHouseGroup ?? new stdClass);
         const LOCKED_COLUMNS = [0, 1, 2]; // S.No, OT Code, Name — frozen & always visible
         // Index tracks the <thead> order above — bump it when a column is inserted before it.
-        const DUTY_TYPE_COL = 9; // "Duty Type" — only meaningful for a single-day filter
+        const DUTY_TYPE_COL = 11; // "Duty Type" — only meaningful for a single-day filter
         let dt = null;
 
         // Duty Type is per-day, so it only makes sense when the Time Period is a single
@@ -469,6 +471,8 @@
                 { data: 'ot_code', name: 'ot_code' },
                 { data: 'name', name: 'name' },
                 { data: 'email', name: 'email' },
+                { data: 'mobile', name: 'mobile' },
+                { data: 'user_name', name: 'user_name' },
                 { data: 'cadre', name: 'cadre' },
                 { data: 'counsellor', name: 'counsellor' },
                 { data: 'house_faculty', name: 'house_faculty' },
@@ -501,7 +505,19 @@
         });
 
         /* ── Filters ── */
-        $('#courseFilter').on('change', function() { applyFilter({ course_id: this.value }); });
+        // Course change is a STRUCTURAL change, not just a narrower row set: which
+        // filters exist at all follows the course's Course Group Mapping (a
+        // counsellor-group course offers Cadre / Cadre Counsellor, a house-group one
+        // offers House Group / House Group Faculty), and that markup is rendered
+        // server-side. So reload the page, exactly as the Active/Archived tabs do.
+        // The group selections belong to the previous course, so they are dropped.
+        $('#courseFilter').on('change', function() {
+            const p = new URLSearchParams(window.location.search);
+            p.set('status', currentStatus);
+            if (this.value) { p.set('course_id', this.value); } else { p.delete('course_id'); }
+            ['cadre', 'counsellor_faculty', 'house_group', 'house_faculty'].forEach(k => p.delete(k));
+            window.location.href = baseUrl + (p.toString() ? '?' + p.toString() : '');
+        });
         // Cadre Counsellor cascades off Cadre: no cadre → hidden and cleared; a cadre
         // → VISIBLE, listing that cadre's counsellors. When the cadre has none
         // mapped the control still shows, disabled, reading "No counsellor mapped"
@@ -549,11 +565,12 @@
 
         // House Group Faculty cascades off House Group, exactly as Cadre Counsellor
         // cascades off Cadre.
-        function refreshHouseFacultyOptions(keep) {
+        function refreshHouseFacultyOptions(keep, autoSelectSingle) {
             return refreshDependentFaculty({
                 parent: '#houseGroupFilter', item: '#otItemHouseFaculty', select: '#houseFacultyFilter',
                 map: FACULTY_BY_HOUSE_GROUP, placeholder: 'House Group Faculty',
                 emptyText: 'No faculty mapped', keep: keep,
+                autoSelectSingle: autoSelectSingle === true,
             });
         }
 
@@ -594,20 +611,23 @@
         $('#counsellorFacultyFilter').on('change', function() { applyFilter({ counsellor_faculty: this.value }); });
         $('#houseGroupFilter').on('change', function() {
             // Dropping an out-of-house faculty must reach the server too, so refresh
-            // the options BEFORE reading the filter state.
-            refreshHouseFacultyOptions();
+            // the options BEFORE reading the filter state. autoSelectSingle: picking
+            // a house group pre-selects its faculty when it has only one.
+            refreshHouseFacultyOptions('', true);
             applyFilter({ house_group: this.value });
         });
         $('#houseFacultyFilter').on('change', function() { applyFilter({ house_faculty: this.value }); });
-        // First paint: restore a counsellor carried in the URL, and pre-select the
-        // cadre's only counsellor when the URL names a cadre but no counsellor
-        // (e.g. ?cadre=AGMUT). If that changes the value the server was given, push
-        // it so the table and the dropdown never disagree.
+        // First paint: restore the faculty carried in the URL, and pre-select the
+        // parent's only faculty when the URL names a parent but no faculty —
+        // ?cadre=AGMUT picks that cadre's lone counsellor, ?house_group=Kangchendjunga
+        // picks that house's lone warden. If either changed what the server was
+        // given, push it ONCE so the table and the dropdowns never disagree.
         refreshCounsellorOptions(filters.counsellor_faculty || '', true);
-        if (($('#counsellorFacultyFilter').val() || '') !== (filters.counsellor_faculty || '')) {
+        refreshHouseFacultyOptions(filters.house_faculty || '', true);
+        if ((($('#counsellorFacultyFilter').val() || '') !== (filters.counsellor_faculty || ''))
+            || (($('#houseFacultyFilter').val() || '') !== (filters.house_faculty || ''))) {
             applyFilter({});
         }
-        refreshHouseFacultyOptions(filters.house_faculty || '');
         $('#sessionFilter').on('change', function() { applyFilter({ session: this.value }); });
         $('#participantFilter').on('change', function() { applyFilter({ participant: this.value }); });
         $('#resetFilters').on('click', function() { window.location.href = baseUrl; });
@@ -641,6 +661,8 @@
             { title: 'OT Code', data: 'ot_code', w: 6 },
             { title: 'Name', data: 'name', w: 12 },
             { title: 'Email', data: 'email', w: 14 },
+            { title: 'Mobile No', data: 'mobile', w: 8 },
+            { title: 'User Name', data: 'user_name', w: 10 },
             { title: 'Cadre', data: 'cadre', w: 8 },
             { title: 'Cadre Counsellor', data: 'counsellor', w: 10 },
             { title: 'House Group Faculty', data: 'house_faculty', w: 10 },
@@ -875,7 +897,9 @@
         /* ── Dynamic columns: show / hide ── */
         // Stored values are column INDEXES, so bump the version whenever the column
         // order changes — v1 entries would otherwise hide the wrong columns.
-        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v4';
+        // v5: Mobile No / User Name inserted after Email, so every stored index
+        // past it shifted — a v4 list would hide the wrong columns.
+        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v5';
         function otGetHiddenCols() {
             try { const raw = localStorage.getItem(otColStorageKey); const arr = raw ? JSON.parse(raw) : []; return Array.isArray(arr) ? arr : []; }
             catch (e) { return []; }
