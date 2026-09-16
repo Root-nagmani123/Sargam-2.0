@@ -6,6 +6,7 @@ use App\Exports\PtExemptionMasterExport;
 use App\Http\Controllers\Controller;
 use App\Models\CourseMaster;
 use App\Models\ExemptionMaster;
+use App\Traits\StampsPdfPageNumbers;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,6 +17,8 @@ use Yajra\DataTables\Facades\DataTables;
 
 class ExemptionMasterController extends Controller
 {
+    use StampsPdfPageNumbers;
+
     public function __construct()
     {
         $this->middleware(function ($request, $next) {
@@ -467,10 +470,16 @@ class ExemptionMasterController extends Controller
                 ->setOptions([
                     'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled' => true,
-                    'isPhpEnabled' => true,
+                    // Both off deliberately. A report has no reason to execute PHP, and
+                    // isPhpEnabled turns any raw block that later appears in the view into
+                    // server-side code execution on stored data. The only image is $logo,
+                    // a base64 data URI or null, so nothing needs fetching over the network.
+                    'isRemoteEnabled' => false,
+                    'isPhpEnabled' => false,
                     'dpi' => 96,
                 ]);
+
+            $this->stampPageNumbers($pdf);
 
             return $pdf->download($filename . '.pdf');
         }

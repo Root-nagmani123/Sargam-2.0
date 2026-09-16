@@ -10,6 +10,7 @@ use App\Models\LeaveNatureMaster;
 use App\Services\FacultyLeaveApprovalService;
 use App\Services\LeaveApplicationService;
 use App\Services\NotificationService;
+use App\Traits\StampsPdfPageNumbers;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -22,6 +23,8 @@ use Yajra\DataTables\Facades\DataTables;
 
 class LeaveApplicationController extends Controller
 {
+    use StampsPdfPageNumbers;
+
     public function __construct(protected LeaveApplicationService $leaveService)
     {
         $this->middleware(function ($request, $next) {
@@ -535,10 +538,16 @@ class LeaveApplicationController extends Controller
                 ->setOptions([
                     'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled' => true,
-                    'isPhpEnabled' => true,
+                    // Both off deliberately. A report has no reason to execute PHP, and
+                    // isPhpEnabled turns any raw block that later appears in the view into
+                    // server-side code execution on stored data. The only image is $logo,
+                    // a base64 data URI or null, so nothing needs fetching over the network.
+                    'isRemoteEnabled' => false,
+                    'isPhpEnabled' => false,
                     'dpi' => 96,
                 ]);
+
+            $this->stampPageNumbers($pdf);
 
             return $pdf->download($filename . '.pdf');
         }
