@@ -68,6 +68,23 @@
             print-color-adjust: exact;
         }
 
+        .up-total-shown { font-weight: normal; color: #6b7280; }
+
+        /* Same amber the PDF sheet uses for the truncation note, so a reader who
+           has seen one recognises the other. */
+        .up-note {
+            text-align: center;
+            font-size: 9px;
+            color: #92400e;
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            border-radius: 4px;
+            padding: 5px 10px;
+            margin-bottom: 8px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
         .up-total {
             text-align: center;
             font-size: 10px;
@@ -144,7 +161,17 @@
         <div class="up-filters">{!! $filterHtml !!}</div>
     @endif
 
-    <div class="up-total">Total Records: {{ number_format(count($rows)) }}</div>
+    {{-- The true total when the sheet has been truncated, so "Total Records"
+         never reports the cap as if it were the whole result. --}}
+    <div class="up-total">Total Records:
+        {{ number_format($totalRows ?? count($rows)) }}@if (!empty($totalRows))
+            <span class="up-total-shown">(showing {{ number_format(count($rows)) }})</span>
+        @endif
+    </div>
+
+    @if (!empty($note))
+        <div class="up-note">{{ $note }}</div>
+    @endif
 
     {{-- $columns is already filtered to whatever is still ticked in the grid's
          Columns modal, and the rows were built from the same list, so a hidden

@@ -43,6 +43,15 @@ class SidebarMenuAttachmentSecurityTest extends TestCase
         parent::tearDown();
     }
 
+    /**
+     * A user entitled to administer the sidebar.
+     *
+     * The upload reaches the public disk through sidebar.menus.store, which is
+     * now gated on menu.permission:menus - WHO may upload is proved in
+     * ExportRoutePermissionTest, including the refusal. This file is about WHAT
+     * is written once the upload is allowed, so the actor is given the privilege
+     * rather than the test being weakened to accept a 403.
+     */
     private function admin(): User
     {
         $user = User::query()->first();
@@ -50,6 +59,8 @@ class SidebarMenuAttachmentSecurityTest extends TestCase
         if (! $user) {
             $this->markTestSkipped('No user_credentials row to authenticate as.');
         }
+
+        session(['user_roles' => ['Super Admin']]);
 
         return $user;
     }

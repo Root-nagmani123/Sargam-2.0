@@ -284,14 +284,22 @@ class MenuService
     public function getDatatable(Request $request)
     {
         return DataTables::of($this->baseQuery($request)->withCount('children'))
-            ->addColumn('category_name', fn ($e) => e($this->resolveMenuCategoryName($e)))
+            // NOT e(): category_name is not in rawColumns() below, so Yajra
+            // escapes it already - DataProcessor::escapeRow() applies e() to
+            // every column outside rawColumns, and the package config sets
+            // `escape` to '*'. Escaping here as well rendered a category named
+            // R&D as R&amp;amp;D on the screen. The instinct was right and the
+            // placement was wrong: the columns that need their own e() are the
+            // raw ones below, where Yajra's escaping is switched off.
+            ->addColumn('category_name', fn ($e) => $this->resolveMenuCategoryName($e))
             // e() on the stored name. These two columns are in rawColumns()
             // below so the muted em-dash can be rendered for an empty relation,
             // and being raw switches OFF Yajra's own escaping for the whole
             // column - including the real value. A group or parent menu named
             // <img src=x onerror=...> would then execute in the browser of every
-            // administrator who opens this grid. Compare category_name above,
-            // which was written the same way but kept its e().
+            // administrator who opens this grid. Contrast category_name above,
+            // which is NOT raw and so must not escape here - whether a column is
+            // in rawColumns() is the whole question.
             ->addColumn('group_name', function ($e) {
                 $name = optional($e->group)->name;
 

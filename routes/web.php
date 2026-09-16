@@ -139,18 +139,32 @@ Route::post('/login', [LoginController::class, 'authenticate'])->middleware('thr
 
 
 
-Route::middleware(['auth'])->group(function () {
+// Role and permission administration.
+//
+// The WHOLE group is gated, not only the exports. assignPermission() calls
+// Permission::firstOrCreate() and then givePermissionTo() on a role taken
+// straight from the URL, so while this route carried `auth` alone any
+// authenticated account could grant itself any permission - including the ones
+// the export gates in this same group read. A gate on the read path is worth
+// nothing while the write path that fills the permission table is open to
+// everyone that gate excludes.
+//
+// `menu.permission:roles` is the permission the Roles screen itself uses
+// (menus row 157), so whoever can see the screen can work it - and Super Admin
+// passes without holding the row, so this cannot lock out the person who would
+// have to undo it.
+Route::middleware(['auth', 'menu.permission:roles'])->group(function () {
     Route::post('roles/permissions/{id}', [RoleController::class, 'assignPermission'])->name('assign.roles.permissions');
-    Route::get('roles/{id}/permissions/export', [RoleController::class, 'exportPermissions'])->middleware('menu.permission:roles')->name('roles.permissions.export');
+    Route::get('roles/{id}/permissions/export', [RoleController::class, 'exportPermissions'])->name('roles.permissions.export');
     Route::get('roles/{id}/dashboard', [RoleController::class, 'showDashboard'])->name('roles.dashboard');
-    Route::get('roles/{id}/dashboard/export', [RoleController::class, 'exportDashboardCards'])->middleware('menu.permission:roles')->name('roles.dashboard.export');
+    Route::get('roles/{id}/dashboard/export', [RoleController::class, 'exportDashboardCards'])->name('roles.dashboard.export');
     Route::post('roles/{id}/dashboard', [RoleController::class, 'assignDashboardCard'])->name('assign.roles.dashboard');
     Route::post('dashboard-cards', [RoleController::class, 'storeDashboardCard'])->name('dashboard.cards.store');
     Route::put('dashboard-cards/{id}', [RoleController::class, 'updateDashboardCard'])->name('dashboard.cards.update');
     Route::delete('dashboard-cards/{id}', [RoleController::class, 'destroyDashboardCard'])->name('dashboard.cards.destroy');
     // Must stay ABOVE the resource: `roles/{role}` would otherwise swallow
     // /roles/export and hand "export" to show().
-    Route::get('roles/export', [RoleController::class, 'export'])->middleware('menu.permission:roles')->name('roles.export');
+    Route::get('roles/export', [RoleController::class, 'export'])->name('roles.export');
     Route::resource('roles', RoleController::class);
 });
 
@@ -160,15 +174,25 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('users/get-roles', [UserController::class, 'getAllRoles'])
             ->name('users.getRoles');
-        Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
-        Route::get('roles/create', [RoleController::class, 'create'])->name('roles.create');
-        Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
-        Route::get('roles/{id}/edit', [RoleController::class, 'edit'])->name('roles.edit');
-        Route::put('roles/{id}', [RoleController::class, 'update'])->name('roles.update');
-        Route::delete('roles/{id}', [RoleController::class, 'destroy'])->name('roles.destroy');
+        // The same RoleController actions are reachable under /admin as well as
+        // at the un-prefixed names above, and both sets serve the one live Roles
+        // screen. Gating only one set would leave every write on this module
+        // reachable through the other.
+        Route::middleware('menu.permission:roles')->group(function () {
+            Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
+            Route::get('roles/create', [RoleController::class, 'create'])->name('roles.create');
+            Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
+            Route::get('roles/{id}/edit', [RoleController::class, 'edit'])->name('roles.edit');
+            Route::put('roles/{id}', [RoleController::class, 'update'])->name('roles.update');
+            Route::delete('roles/{id}', [RoleController::class, 'destroy'])->name('roles.destroy');
+        });
 
         // Route::resource('permissions', PermissionController::class);
+        // The whole user_credentials directory - user name, name, email, contact
+        // number, type and role - in one request, for 15,108 rows. `users` is the
+        // permission the User Management screen itself uses (menus row 158).
         Route::get('users/export/{format}', [UserController::class, 'export'])
+            ->middleware('menu.permission:users')
             ->whereIn('format', ['csv', 'xlsx', 'pdf', 'print'])
             ->name('users.export');
         Route::resource('users', UserController::class);
@@ -1855,22 +1879,38 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
 });
 Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index']);
 
+// Sidebar administration.
+//
+// Each screen's export, status toggle and write verbs now share the one
+// permission that screen is listed under. Gating only the read path left
+// store / update / destroy on the global navigation - and, as of this change, a
+// file upload onto the public disk - open to every authenticated account: a
+// menu every user sees could be created, renamed, re-pointed at an arbitrary
+// URL or deleted by any of them.
 Route::middleware(['auth'])->prefix('sidebar')->name('sidebar.')->group(function () {
-    Route::get('categories/status/{id}', [SidebarCategoryController::class, 'status'])->name('categories.status');
-    // Must stay ABOVE the resource: `categories/{category}` would otherwise
-    // swallow /categories/export and hand "export" to show().
-    Route::get('categories/export', [SidebarCategoryController::class, 'export'])->middleware('menu.permission:topbar_category')->name('categories.export');
-    Route::resource('categories', SidebarCategoryController::class);
-    Route::get('menu-groups/status/{id}', [MenuGroupController::class, 'status'])->name('menu-groups.status');
-    // Must stay ABOVE the resource: `menu-groups/{menu_group}` would otherwise
-    // swallow /menu-groups/export and hand "export" to show().
-    Route::get('menu-groups/export', [MenuGroupController::class, 'export'])->middleware('menu.permission:sidemenu_groups')->name('menu-groups.export');
-    Route::resource('menu-groups', MenuGroupController::class);
-    Route::get('menus/status/{id}', [MenuController::class, 'status'])->name('menus.status');
-    // Must stay ABOVE the resource: `menus/{menu}` would otherwise swallow
-    // /menus/export and hand "export" to show().
-    Route::get('menus/export', [MenuController::class, 'export'])->middleware('menu.permission:menus')->name('menus.export');
-    Route::resource('menus', MenuController::class);
+    Route::middleware('menu.permission:topbar_category')->group(function () {
+        Route::get('categories/status/{id}', [SidebarCategoryController::class, 'status'])->name('categories.status');
+        // Must stay ABOVE the resource: `categories/{category}` would otherwise
+        // swallow /categories/export and hand "export" to show().
+        Route::get('categories/export', [SidebarCategoryController::class, 'export'])->name('categories.export');
+        Route::resource('categories', SidebarCategoryController::class);
+    });
+
+    Route::middleware('menu.permission:sidemenu_groups')->group(function () {
+        Route::get('menu-groups/status/{id}', [MenuGroupController::class, 'status'])->name('menu-groups.status');
+        // Must stay ABOVE the resource: `menu-groups/{menu_group}` would otherwise
+        // swallow /menu-groups/export and hand "export" to show().
+        Route::get('menu-groups/export', [MenuGroupController::class, 'export'])->name('menu-groups.export');
+        Route::resource('menu-groups', MenuGroupController::class);
+    });
+
+    Route::middleware('menu.permission:menus')->group(function () {
+        Route::get('menus/status/{id}', [MenuController::class, 'status'])->name('menus.status');
+        // Must stay ABOVE the resource: `menus/{menu}` would otherwise swallow
+        // /menus/export and hand "export" to show().
+        Route::get('menus/export', [MenuController::class, 'export'])->name('menus.export');
+        Route::resource('menus', MenuController::class);
+    });
     Route::get('groups', [SidebarController::class, 'getGroups'])->name('groups');
     Route::get('menu', [SidebarController::class, 'sidebarMenus'])->name('menu');
     Route::get('getGroups/{category_id}', [SidebarController::class, 'getCategoryGroups'])->name('getGroups');

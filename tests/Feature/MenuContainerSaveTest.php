@@ -80,6 +80,19 @@ class MenuContainerSaveTest extends TestCase
             : [];
     }
 
+    /**
+     * A user entitled to administer the sidebar.
+     *
+     * The sidebar write verbs are gated on menu.permission:menus, so being
+     * signed in is no longer enough to reach them - that gate and its refusal
+     * are proved in ExportRoutePermissionTest. This file is about what the save
+     * DOES once it is allowed through, so the actor is given the privilege
+     * rather than the test being weakened to accept a 403.
+     *
+     * hasRole() reads the session's user_roles before the role tables, and login
+     * writes them there, so a session role is the production shape of "this
+     * account holds this role".
+     */
     private function admin(): User
     {
         $user = User::query()->orderBy('pk')->first();
@@ -87,6 +100,8 @@ class MenuContainerSaveTest extends TestCase
         if (! $user) {
             $this->markTestSkipped('No user rows in this database to act as.');
         }
+
+        session(['user_roles' => ['Super Admin']]);
 
         return $user;
     }

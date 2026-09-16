@@ -93,4 +93,58 @@ class SidebarGridEscapingTest extends TestCase
 
         $this->assertStringContainsString('<img src=x onerror=alert(1)>', $data[0]['related_name']);
     }
+
+    /**
+     * The other half of the same rule, and the one that bit category_name.
+     *
+     * Whether a column needs its own e() is decided entirely by whether it is in
+     * rawColumns(). For a column that is NOT, Yajra escapes it already, so an
+     * e() in the closure escapes it twice and a category named R&D reaches the
+     * screen as R&amp;amp;D. Rendered through the real pipeline, because that is
+     * the only place the package's own escaping happens.
+     */
+    private function renderNonRaw(bool $handEscaped): array
+    {
+        $rows = new Collection([
+            (object) ['id' => 1, 'related' => (object) ['name' => 'R&D']],
+        ]);
+
+        // Deliberately no rawColumns(): this is the shape category_name has.
+        $table = (new CollectionDataTable($rows))
+            ->addColumn('category_name', function ($e) use ($handEscaped) {
+                $name = (string) optional($e->related)->name;
+
+                return $handEscaped ? e($name) : $name;
+            });
+
+        return json_decode($table->make(true)->getContent(), true);
+    }
+
+    public function test_a_non_raw_column_is_escaped_exactly_once(): void
+    {
+        $data = $this->renderNonRaw(false)['data'];
+
+        $this->assertSame('R&amp;D', $data[0]['category_name'],
+            'Yajra escapes a column outside rawColumns() itself; the closure must not escape it again');
+    }
+
+    /** The defect pinned: hand-escaping a non-raw column double-escapes it. */
+    public function test_hand_escaping_a_non_raw_column_double_escapes_it(): void
+    {
+        $data = $this->renderNonRaw(true)['data'];
+
+        $this->assertSame('R&amp;amp;D', $data[0]['category_name']);
+    }
+
+    /** And the shipped service really has dropped the second escape. */
+    public function test_the_menus_grid_no_longer_hand_escapes_category_name(): void
+    {
+        $source = file_get_contents(app_path('Services/SidebarMenu/MenuService.php'));
+
+        $this->assertStringContainsString(
+            "addColumn('category_name', fn (\$e) => \$this->resolveMenuCategoryName(\$e))",
+            $source,
+            'category_name is not a raw column, so it must be returned unescaped and left to Yajra'
+        );
+    }
 }

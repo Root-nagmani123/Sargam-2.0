@@ -90,6 +90,16 @@ class UserController extends Controller
     private const ADMIN_USERS_PDF_ROW_CAP = 750;
 
     /**
+     * Row ceiling for the printable HTML sheet.
+     *
+     * Higher than the PDF's because the browser does the layout rather than
+     * DomPDF, but not absent: uncapped, one request built a 9.6 MB document out
+     * of all ~15k rows, server-side, for any user who asked and as often as they
+     * asked. That is a cost the application pays, not the browser.
+     */
+    private const ADMIN_USERS_PRINT_ROW_CAP = 5000;
+
+    /**
      * Human-readable labels for the user_category code stored on user_credentials.
      * Extend this map as new user types are introduced.
      */
@@ -4351,6 +4361,36 @@ class UserController extends Controller
      * Print and Download used to scrape the rendered <table>, which is one page
      * of 10 rows, so every export silently truncated to whatever was on screen.
      */
+    /**
+     * Truncate a rendered export to $cap rows and say so on the sheet.
+     *
+     * One helper for both single-request renderers, so the PDF and the print
+     * sheet cannot end up with different truncation behaviour or a different
+     * wording for it - and so that a format which truncates can never do it
+     * silently. The streaming formats (CSV / XLSX) are deliberately uncapped:
+     * they are the complete list this note points the reader at.
+     *
+     * @param  array<string, mixed>  $reportData
+     * @return array<string, mixed>
+     */
+    private function capUserExportRows(array $reportData, int $cap): array
+    {
+        $total = count($reportData['rows']);
+
+        if ($total <= $cap) {
+            return $reportData;
+        }
+
+        $reportData['note'] = 'Showing the first '
+            . number_format($cap) . ' of '
+            . number_format($total)
+            . ' matching users. Narrow the filters, or use the Excel / CSV download for the complete list.';
+        $reportData['rows'] = array_slice($reportData['rows'], 0, $cap);
+        $reportData['totalRows'] = $total;
+
+        return $reportData;
+    }
+
     public function export(Request $request, string $format)
     {
         $search = trim((string) ($request->input('search') ?? ''));
@@ -4415,20 +4455,21 @@ class UserController extends Controller
         ];
 
         if ($format === 'print') {
-            // No cap: the browser lays this out itself, so a full 15k-row sheet is
-            // just a large HTML document rather than a PHP memory problem.
+            // Capped, where it used to say "no cap because the browser lays this
+            // out itself". That was true of the BROWSER and missed the server: an
+            // uncapped print of the whole directory is a 9.6 MB HTML document
+            // built, held and written in one request, by any user who asks, as
+            // often as they ask. The cap is higher than the PDF's because a
+            // browser really does handle more layout than DomPDF, and the sheet
+            // says plainly when it has been truncated rather than silently
+            // dropping rows.
+            $reportData = $this->capUserExportRows($reportData, self::ADMIN_USERS_PRINT_ROW_CAP);
+
             return view('admin.user_management.users.partials.export_print', $reportData);
         }
 
         if ($format === 'pdf') {
-            if (count($rows) > self::ADMIN_USERS_PDF_ROW_CAP) {
-                $reportData['note'] = 'Showing the first '
-                    . number_format(self::ADMIN_USERS_PDF_ROW_CAP) . ' of '
-                    . number_format(count($rows))
-                    . ' matching users. Narrow the filters, or use the Excel / CSV download for the complete list.';
-                $reportData['rows'] = array_slice($rows, 0, self::ADMIN_USERS_PDF_ROW_CAP);
-                $reportData['totalRows'] = count($rows);
-            }
+            $reportData = $this->capUserExportRows($reportData, self::ADMIN_USERS_PDF_ROW_CAP);
 
             $pdf = Pdf::loadView('admin.user_management.users.partials.export_pdf', $reportData)
                 ->setPaper('a4', 'landscape')
