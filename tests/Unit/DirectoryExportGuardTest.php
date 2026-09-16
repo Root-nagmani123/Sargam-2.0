@@ -346,9 +346,7 @@ class DirectoryExportGuardTest extends TestCase
      */
     public function test_pk_zero_filters_instead_of_meaning_no_filter(): void
     {
-        [$pk, $name] = $this->invokePrivate('resolveOptionFilter', [
-            $this->request(['section' => '0']), 'section', collect([0 => 'NIAR', 5 => 'Estate']),
-        ]);
+        [$pk, $name] = $this->resolveSection('0', [0 => 'NIAR', 5 => 'Estate']);
 
         $this->assertSame(0, $pk, 'pk 0 must reach the query as a filter');
         $this->assertSame('NIAR', $name, 'and the header band must name it');
@@ -357,9 +355,7 @@ class DirectoryExportGuardTest extends TestCase
     /** @dataProvider absentFilterInputs */
     public function test_no_filter_resolves_to_null($raw): void
     {
-        [$pk, $name] = $this->invokePrivate('resolveOptionFilter', [
-            $this->request($raw === null ? [] : ['section' => $raw]), 'section', collect([0 => 'NIAR', 5 => 'Estate']),
-        ]);
+        [$pk, $name] = $this->resolveSection($raw, [0 => 'NIAR', 5 => 'Estate']);
 
         $this->assertNull($pk);
         $this->assertNull($name);
@@ -372,8 +368,54 @@ class DirectoryExportGuardTest extends TestCase
             'blank' => [''],
             'not a number' => ['dept'],
             'array' => [['0']],
-            'pk no option offers' => ['999'],
         ];
+    }
+
+    // ── An unknown pk must NARROW, never widen ────────────────────────────
+
+    /**
+     * The dropdown offers only the sections that currently have an active
+     * employee, so a pk can be perfectly real and still be absent from the
+     * list: deactivate a one-person section and its own pk stops being offered.
+     * Dropping the filter there is fail-open — it turns "the OTs of section X"
+     * into a download of every employee in the institute. Executed against the
+     * application database, ?section=999999 returned all 444 active employees
+     * before this guard and 0 after it.
+     */
+    public function test_a_pk_the_list_does_not_offer_still_filters(): void
+    {
+        [$pk, $name] = $this->resolveSection('999', [0 => 'NIAR', 5 => 'Estate'], ['999' => 'Dormant Section']);
+
+        $this->assertSame(999, $pk, 'an unfamiliar pk must reach the query, not vanish from it');
+        $this->assertSame('Dormant Section', $name, 'named from the master row so the band matches the rows');
+    }
+
+    /** A pk no master row holds still filters — to nothing — and the band says so. */
+    public function test_a_pk_no_master_row_holds_filters_to_nothing(): void
+    {
+        [$pk, $name] = $this->resolveSection('424242', [0 => 'NIAR']);
+
+        $this->assertSame(424242, $pk);
+        $this->assertSame('#424242', $name);
+    }
+
+    /** Negative pks narrow like any other unknown value; they never widen. */
+    public function test_a_negative_pk_filters_rather_than_widening(): void
+    {
+        [$pk] = $this->resolveSection('-1', [0 => 'NIAR']);
+
+        $this->assertSame(-1, $pk);
+    }
+
+    /** The option list answers first, so the common path costs no extra query. */
+    public function test_an_offered_pk_costs_no_master_lookup(): void
+    {
+        $looked = 0;
+        [$pk, $name] = $this->resolveSection('5', [5 => 'Estate'], [], $looked);
+
+        $this->assertSame(5, $pk);
+        $this->assertSame('Estate', $name);
+        $this->assertSame(0, $looked, 'an offered pk must not hit the master table');
     }
 
     /**
@@ -382,12 +424,34 @@ class DirectoryExportGuardTest extends TestCase
      */
     public function test_a_null_label_still_filters(): void
     {
-        [$pk, $name] = $this->invokePrivate('resolveOptionFilter', [
-            $this->request(['section' => '7']), 'section', collect([7 => null]),
-        ]);
+        [$pk, $name] = $this->resolveSection('7', [7 => null]);
 
         $this->assertSame(7, $pk);
         $this->assertSame('', $name);
+    }
+
+    /**
+     * resolveOptionFilter() with a stubbed master lookup, so these stay DB-free.
+     *
+     * @param  mixed  $raw
+     * @param  array<int|string, ?string>  $options
+     * @param  array<int|string, ?string>  $masterRows  what the master table would answer
+     * @return array{0: ?int, 1: ?string}
+     */
+    private function resolveSection($raw, array $options, array $masterRows = [], int &$looked = null): array
+    {
+        $looked = 0;
+
+        return $this->invokePrivate('resolveOptionFilter', [
+            $this->request($raw === null ? [] : ['section' => $raw]),
+            'section',
+            collect($options),
+            function (int $pk) use ($masterRows, &$looked) {
+                $looked++;
+
+                return $masterRows[$pk] ?? null;
+            },
+        ]);
     }
 
     /** @dataProvider sortInputs */

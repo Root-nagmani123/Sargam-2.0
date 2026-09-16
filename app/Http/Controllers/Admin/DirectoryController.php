@@ -9,13 +9,14 @@ use App\Models\CourseMaster;
 use App\Models\EmployeeMaster;
 use App\Models\StudentMasterCourseMap;
 use App\Support\ExportCell;
-use App\Support\LogText;
 use App\Support\ExportCsvHeader;
+use App\Support\LogText;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -219,8 +220,18 @@ class DirectoryController extends Controller
      */
     private function resolveLbsnaaFilters(Request $request): array
     {
-        [$section, $sectionName] = $this->resolveOptionFilter($request, 'section', $this->lbsnaaSectionOptions());
-        [$designation, $designationName] = $this->resolveOptionFilter($request, 'designation', $this->lbsnaaDesignationOptions());
+        [$section, $sectionName] = $this->resolveOptionFilter(
+            $request,
+            'section',
+            $this->lbsnaaSectionOptions(),
+            fn (int $pk) => DB::table('department_master')->where('pk', $pk)->value('department_name')
+        );
+        [$designation, $designationName] = $this->resolveOptionFilter(
+            $request,
+            'designation',
+            $this->lbsnaaDesignationOptions(),
+            fn (int $pk) => DB::table('designation_master')->where('pk', $pk)->value('designation_name')
+        );
 
         return [
             'section' => $section,
@@ -231,17 +242,28 @@ class DirectoryController extends Controller
     }
 
     /**
-     * One filter pk resolved against the list its own dropdown offers.
+     * One filter pk, and the label the header band prints for it.
      *
-     * Absent, blank and non-numeric all mean "no filter" (null). A pk that is
-     * present is kept only when the option list actually holds that key —
-     * Collection::has(), not `[$pk] ?? null`, so an option whose name happens
-     * to be null still filters instead of silently widening to everything.
+     * Absent, blank and non-numeric all mean "no filter" (null) — those are the
+     * only inputs that may widen the grid.
+     *
+     * A pk that IS present always filters, whether or not the dropdown is
+     * currently offering it. Resolving it against the option list and dropping
+     * it when absent is fail-OPEN: the dropdown lists only the sections that
+     * have an active employee, so `?section=<pk whose last employee was just
+     * deactivated>` — or a stale export link, or a hand-typed number — took the
+     * WHERE clause away and downloaded every employee in the institute instead
+     * of the none that section holds. An unknown pk must narrow to nothing.
+     *
+     * The label is the option list's when it has one (no query), then the
+     * master row's name, then the pk itself, so the band and the rows always
+     * describe the same set — the invariant the pk-0 fix was written for.
      *
      * @param  \Illuminate\Support\Collection  $options
+     * @param  callable(int): ?string  $nameForPk  master-table lookup, only for a pk the list does not offer
      * @return array{0: ?int, 1: ?string}
      */
-    private function resolveOptionFilter(Request $request, string $key, $options): array
+    private function resolveOptionFilter(Request $request, string $key, $options, callable $nameForPk): array
     {
         $raw = $this->scalarQuery($request, $key);
 
@@ -251,7 +273,15 @@ class DirectoryController extends Controller
 
         $pk = (int) $raw;
 
-        return $options->has($pk) ? [$pk, (string) $options[$pk]] : [null, null];
+        // has(), not `[$pk] ?? null`: an option whose name happens to be null
+        // still filters, and still costs no lookup.
+        if ($options->has($pk)) {
+            return [$pk, (string) $options[$pk]];
+        }
+
+        $name = $nameForPk($pk);
+
+        return [$pk, $name !== null && $name !== '' ? (string) $name : '#' . $pk];
     }
 
     /**
