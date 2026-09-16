@@ -668,14 +668,23 @@ class ProcessMessBillsEmployeeController extends Controller
             }
             $repo->put(self::MODAL_SUMMARY_KEY_INDEX, $keys, self::COMBINED_BILLS_CACHE_TTL_SECONDS * 10);
         } catch (\Throwable $e) {
-            // Index is an optimisation only; failing to record a key just means a colder cache.
+            // The index is an optimisation: a key it fails to record is not forgotten by name
+            // on the next payment. That entry is stale rather than merely cold, which is why
+            // forgetProcessMessBillsSummaryCaches() bumps the version unconditionally.
         }
     }
 
     /**
-     * Drop the cached bill summaries after a payment. Payments change totals/paid/due, so the
-     * affected entries must go — but this forgets only those entries and leaves the cache version
-     * (and therefore every other cached derivation) untouched.
+     * Drop the cached bill summaries after a payment.
+     *
+     * Forgetting the indexed entries is the cheap path: it spares the grouped-bill cache for
+     * every other buyer and date range. It is not sufficient on its own, though — a key that
+     * never reached the index (a swallowed index write, a lock timeout falling through to the
+     * unlocked write, or an entry written to a different store) would keep serving the pre-payment
+     * paid/due figures until the TTL expires, which is half an hour. On the money path that is a
+     * wrong total, not a cold cache, so the combined version is bumped as well: one increment
+     * that makes every version-keyed entry unreachable regardless of what the index recorded.
+     * The notification caches key on their own version and are deliberately left warm.
      */
     private function forgetProcessMessBillsSummaryCaches(): void
     {
@@ -689,11 +698,15 @@ class ProcessMessBillsEmployeeController extends Controller
             }
             $repo->forget(self::MODAL_SUMMARY_KEY_INDEX);
         } catch (\Throwable $e) {
-            Log::warning('ProcessMessBillsEmployeeController: failed to forget modal summary caches; falling back to version bump.', [
+            Log::warning('ProcessMessBillsEmployeeController: failed to forget modal summary caches.', [
                 'message' => $e->getMessage(),
             ]);
-            $this->bumpProcessMessBillsCombinedCache();
         }
+
+        // Unconditional: the forget above covers only what the index happens to hold, and the
+        // index is best-effort by construction. The bump is what actually guarantees the next
+        // read sees the post-payment totals.
+        $this->bumpProcessMessBillsCombinedCache();
     }
 
     private function bumpProcessMessBillsCacheVersion(string $versionKey): void
