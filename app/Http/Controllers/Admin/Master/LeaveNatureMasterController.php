@@ -6,6 +6,7 @@ use App\DataTables\LeaveNatureMasterDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\LeaveApplication;
 use App\Models\LeaveNatureMaster;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -23,14 +24,14 @@ class LeaveNatureMasterController extends Controller
 
     public function edit($id)
     {
-        $leaveNature = LeaveNatureMaster::findOrFail(decrypt($id));
+        $leaveNature = LeaveNatureMaster::findOrFail($this->decryptId($id));
 
         return view('admin.master.leave_nature.create_edit', compact('leaveNature'));
     }
 
     public function store(Request $request)
     {
-        $pk = $request->id ? decrypt($request->id) : null;
+        $pk = $request->id ? $this->decryptId($request->id) : null;
 
         $request->validate([
             'leave_type' => ['required', Rule::in([
@@ -69,6 +70,20 @@ class LeaveNatureMasterController extends Controller
     }
 
     /**
+     * Decrypt a route id, answering 404 rather than 500 for a tampered or
+     * stale link (an edited bookmark, or an id encrypted under a rotated
+     * APP_KEY).
+     */
+    private function decryptId($id): int
+    {
+        try {
+            return (int) decrypt($id);
+        } catch (DecryptException $e) {
+            abort(404);
+        }
+    }
+
+    /**
      * Flip this master's status on its own guarded route.
      *
      * The generic admin/toggle-status endpoint takes the table, column, id
@@ -95,7 +110,7 @@ class LeaveNatureMasterController extends Controller
     public function destroy($id)
     {
         try {
-            $leaveNature = LeaveNatureMaster::where('pk', decrypt($id))->firstOrFail();
+            $leaveNature = LeaveNatureMaster::where('pk', $this->decryptId($id))->firstOrFail();
 
             if ($leaveNature->active_inactive == 1) {
                 return redirect()->back()->with('error', 'Active records cannot be deleted. Please deactivate it first.');
