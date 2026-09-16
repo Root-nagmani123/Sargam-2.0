@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
@@ -165,6 +166,98 @@ class ToggleStatusEndpointTest extends TestCase
             $before,
             (int) DB::table('department_master')->where('pk', $row->pk)->value('active_inactive'),
             'a refused key column must not be written'
+        );
+    }
+
+    /**
+     * The five tables whose status decides who can do what, or what the
+     * institute publishes, are refused to a signed-in non-administrator.
+     *
+     * This is the escalation path Trap 29 describes: before the gate, any
+     * authenticated account of any role could POST user_role_master and
+     * deactivate a role. The ordinary reference masters are deliberately NOT
+     * gated - see the comment on the check in UserController.
+     *
+     * @dataProvider privilegedTables
+     */
+    public function test_a_privileged_table_is_refused_to_a_non_administrator(string $table, string $column): void
+    {
+        $actor = $this->toggleUser();
+
+        // Asserted, not assumed: the guard would pass vacuously if the fixture
+        // user happened to be an administrator.
+        $this->actingAs($actor);
+        $this->assertFalse(
+            hasRole('Admin') || hasRole('Super Admin'),
+            'this test needs a NON-administrator actor; the fixture user has changed'
+        );
+
+        // The allow-list names tables that are not present on every database
+        // (this one has no `news`), so an absent table is a skip, not an error.
+        if (! Schema::hasTable($table)) {
+            $this->markTestSkipped("{$table} is not present on this connection");
+        }
+
+        $row = DB::table($table)->first();
+
+        if (! $row) {
+            $this->markTestSkipped("no {$table} row to target");
+        }
+
+        $before = DB::table($table)->where('pk', $row->pk)->value($column);
+
+        $this->actingAs($actor)
+            ->post('/admin/toggle-status', [
+                'table'  => $table,
+                'column' => $column,
+                'id'     => $row->pk,
+                'status' => (int) $before === 1 ? 0 : 1,
+            ])
+            ->assertForbidden();
+
+        $this->assertSame(
+            $before,
+            DB::table($table)->where('pk', $row->pk)->value($column),
+            'a refused privileged toggle must not reach the row'
+        );
+    }
+
+    public static function privilegedTables(): array
+    {
+        return [
+            'roles'        => ['user_role_master', 'active_inactive'],
+            'FC register'  => ['fc_registration_master', 'active_inactive'],
+            'FC exemption' => ['fc_exemption_master', 'visible'],
+            'news'         => ['news', 'status'],
+            'notices'      => ['notices_notification', 'active_inactive'],
+        ];
+    }
+
+    /** An administrator is still allowed through - the gate narrows, it does not close. */
+    public function test_a_privileged_table_is_permitted_to_an_administrator(): void
+    {
+        $row = DB::table('user_role_master')->first();
+
+        if (! $row) {
+            $this->markTestSkipped('no user_role_master row to toggle');
+        }
+
+        $target = (int) $row->active_inactive === 1 ? 0 : 1;
+
+        $this->withSession(['user_roles' => ['Admin']])
+            ->actingAs($this->toggleUser())
+            ->post('/admin/toggle-status', [
+                'table'  => 'user_role_master',
+                'column' => 'active_inactive',
+                'id'     => $row->pk,
+                'status' => $target,
+            ])
+            ->assertOk();
+
+        $this->assertSame(
+            $target,
+            (int) DB::table('user_role_master')->where('pk', $row->pk)->value('active_inactive'),
+            'an administrator must still be able to toggle a privileged table'
         );
     }
 
