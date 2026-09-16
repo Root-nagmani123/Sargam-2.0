@@ -40,15 +40,47 @@ use Illuminate\Http\Request;
  * out. That is every hasRole() caller's behaviour, not this gate's, and it is
  * tracked repository-wide as PR311-L-2; it is recorded here because this gate
  * guards bulk PII, where the window costs more than it does elsewhere.
+ *
+ * REVERSIBLE WITHOUT A DEPLOY - the narrowing removes a capability every
+ * authenticated user had, and the honest risk is that some office was using the
+ * roster CSV and nobody knew. If that turns out to be so, the remedy must not be
+ * to widen the role check in code, which is what the decision above argues
+ * against. So the gate also admits the holder of a named permission: grant
+ * EXPORT_PERMISSION to a role and that role has directory downloads back, with
+ * no code change and an audit trail in the permission tables.
+ *
+ * Nothing holds this permission today - it does not have to exist for the gate
+ * to work - so behaviour is exactly "Super Admin only" until someone decides
+ * otherwise. The lookup is wrapped because Spatie raises rather than returning
+ * false when a permission name has never been defined.
  */
 class EnsureDirectoryExportAccess
 {
+    /** Grant this to a role to restore directory downloads for it. */
+    public const EXPORT_PERMISSION = 'directory.export';
+
     public function handle(Request $request, Closure $next)
     {
-        if (! isSidebarPrivilegedUser()) {
-            abort(403, 'You do not have access to directory downloads.');
+        if (isSidebarPrivilegedUser() || $this->holdsExportPermission()) {
+            return $next($request);
         }
 
-        return $next($request);
+        abort(403, 'You do not have access to directory downloads.');
+    }
+
+    private function holdsExportPermission(): bool
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        try {
+            return (bool) $user->can(self::EXPORT_PERMISSION);
+        } catch (\Throwable $e) {
+            // The permission has not been created yet: not held, not an error.
+            return false;
+        }
     }
 }

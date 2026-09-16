@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\Admin\DirectoryController;
+use App\Http\Middleware\EnsureDirectoryExportAccess;
 use App\Models\EmployeeMaster;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -61,6 +62,51 @@ class DirectoryExportAccessTest extends TestCase
      * production path (login writes user_roles into the session), so the actor
      * needs no particular role row to stand for a privileged user.
      */
+    /**
+     * The narrowing is reversible by granting a permission, not by editing code.
+     *
+     * The decision this gate records removes directory downloads from every
+     * non-Super-Admin role, and the risk the reviewer named is that some office
+     * was quietly relying on the roster CSV. The remedy must not be to widen the
+     * role check - the ACCESS DECISION docblock argues against exactly that - so
+     * the gate admits the holder of a named permission as well. Nothing holds it
+     * today, which is why every other case in this file still sees 403.
+     */
+    public function test_granting_the_named_permission_restores_access_without_a_code_change(): void
+    {
+        $user = User::query()->first();
+
+        if (! $user) {
+            $this->markTestSkipped('no user_credentials row to act as');
+        }
+
+        if (! method_exists($user, 'givePermissionTo')) {
+            $this->markTestSkipped('the user model does not carry Spatie permissions on this head');
+        }
+
+        $this->actingAs($user);
+        session(['user_roles' => ['Faculty']]);
+
+        // Premise: not privileged, and refused before the grant.
+        $this->assertFalse(isSidebarPrivilegedUser(), 'this case needs a NON-Super-Admin actor');
+        $this->getJson(route('admin.directory.lbsnaa.export', ['format' => 'csv']))->assertForbidden();
+
+        $permission = \Spatie\Permission\Models\Permission::findOrCreate(
+            EnsureDirectoryExportAccess::EXPORT_PERMISSION,
+            'web'
+        );
+        $user->givePermissionTo($permission);
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $this->actingAs($user->fresh());
+        session(['user_roles' => ['Faculty']]);
+
+        $this->get(route('admin.directory.lbsnaa.export', ['format' => 'csv']))
+            ->assertOk();
+
+        // The transaction in tearDown rolls the grant and the permission row back.
+    }
+
     private function actAsSuperAdmin(): void
     {
         $user = User::query()->first();
