@@ -1407,6 +1407,11 @@ class UserController extends Controller
                 $byStudent[$spk] = (object) [
                     'student_master_pk' => $spk,
                     'studentMaster' => $m->studentMaster,
+                    // The courses this student is in VIEW for. The row collapses
+                    // many (student, course) rows into one, but the group mappings
+                    // behind Cadre Counsellor / House Group Faculty belong to a
+                    // course — keeping the set lets those stay course-scoped.
+                    'course_pks' => [],
                     'house_name' => $m->house_name ?? null,
                     'cadre_name' => $m->cadre_name ?? null,
                     'counsellor_name' => $m->counsellor_name ?? null,
@@ -1414,6 +1419,9 @@ class UserController extends Controller
                     'house_groups' => $m->house_groups ?? [],
                     'house_faculty_name' => $m->house_faculty_name ?? null,
                 ];
+            }
+            if (! empty($m->course_master_pk)) {
+                $byStudent[$spk]->course_pks[(string) $m->course_master_pk] = true;
             }
             if (empty($byStudent[$spk]->house_name) && ! empty($m->house_name)) {
                 $byStudent[$spk]->house_name = $m->house_name;
@@ -1432,6 +1440,9 @@ class UserController extends Controller
                 $byStudent[$spk]->house_faculty_name = $m->house_faculty_name;
             }
         }
+        foreach ($byStudent as $row) {
+            $row->course_pks = array_keys($row->course_pks);
+        }
         $participants = collect(array_values($byStudent));
 
         // Cadre Counsellor filter (the dependent dropdown beside Cadre). Resolved
@@ -1441,7 +1452,8 @@ class UserController extends Controller
         if ($counsellorFaculty !== '') {
             $counselled = $this->studentPksForCounsellorFaculty(
                 $counsellorFaculty,
-                $participants->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all()
+                $participants->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all(),
+                $this->participantCoursePks($participants)
             );
             $participants = $participants
                 ->filter(fn ($p) => isset($counselled[(int) $p->student_master_pk]))
@@ -1454,7 +1466,8 @@ class UserController extends Controller
         if ($houseFaculty !== '') {
             $housed = $this->studentPksForHouseFaculty(
                 $houseFaculty,
-                $participants->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all()
+                $participants->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all(),
+                $this->participantCoursePks($participants)
             );
             $participants = $participants
                 ->filter(fn ($p) => isset($housed[(int) $p->student_master_pk]))
@@ -1507,12 +1520,11 @@ class UserController extends Controller
             'houseGroup' => $forHouseGroup->flatMap(fn ($m) => $m->house_groups ?? [])->filter()->unique()->sort()->values(),
             'counsellorsByCadre' => $this->otParticipantsCounsellorOptions(
                 $forCadre->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all(),
-                $forCadre->filter(fn ($m) => ! empty($m->student_master_pk) && ! empty($m->cadre_name))
-                    ->mapWithKeys(fn ($m) => [(int) $m->student_master_pk => $m->cadre_name])
-                    ->all()
+                $this->participantCoursePks($forCadre)
             ),
             'facultyByHouseGroup' => $this->otParticipantsHouseFacultyOptions(
-                $forHouseGroup->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all()
+                $forHouseGroup->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all(),
+                $this->participantCoursePks($forHouseGroup)
             ),
         ];
     }
@@ -1823,6 +1835,43 @@ class UserController extends Controller
     }
 
     /**
+     * A closure that snaps a raw counsellor group_name to the cadre spelling the
+     * rows use: fn (string $rawGroupName, int $studentPk): string.
+     *
+     * Shared by the Cadre column (resolveParticipantCadres()) and the Cadre
+     * Counsellor dropdown, so a counsellor is always filed under a cadre value
+     * the Cadre filter can actually be set to.
+     *
+     * @param  array<int, int>  $studentPks
+     */
+    private function cadreNameNormaliser(array $studentPks): callable
+    {
+        $studentCadre = DB::table('student_master as sm')
+            ->join('cadre_master as cad', 'sm.cadre_master_pk', '=', 'cad.pk')
+            ->whereIn('sm.pk', $studentPks)
+            ->pluck('cad.cadre_name', 'sm.pk');
+
+        $canonicalKey = fn ($v) => preg_replace('/[^a-z0-9]/', '', strtolower(trim((string) $v)));
+        $canonical = [];
+        foreach (DB::table('cadre_master')->pluck('cadre_name') as $name) {
+            $canonical[$canonicalKey($name)] = $name;
+        }
+
+        return function (string $raw, $spk) use ($canonical, $canonicalKey, $studentCadre): string {
+            $cadre = $canonical[$canonicalKey($raw)] ?? null;
+            if ($cadre !== null) {
+                return $cadre;
+            }
+
+            // Free-text group_name with no cadre_master counterpart: prefer the
+            // student's own normalised cadre, else show the mapping verbatim.
+            $own = trim((string) ($studentCadre[$spk] ?? ''));
+
+            return $own !== '' ? $own : $raw;
+        };
+    }
+
+    /**
      * A participant's CADRE, resolved from the Course Group Mapping first.
      *
      * The counsellor group a student sits in IS their cadre for that course —
@@ -1860,27 +1909,10 @@ class UserController extends Controller
             ->whereIn('sm.pk', $studentPks)
             ->pluck('cad.cadre_name', 'sm.pk');
 
-        $canonicalKey = fn ($v) => preg_replace('/[^a-z0-9]/', '', strtolower(trim((string) $v)));
-        $canonical = [];
-        foreach (DB::table('cadre_master')->pluck('cadre_name') as $name) {
-            $canonical[$canonicalKey($name)] = $name;
-        }
-
         $groups = $this->resolveParticipantGroupRows($studentPks, $this->counsellorGroupTypePks());
 
         // Normalise each raw counsellor group_name to its cadre_master spelling.
-        $normalise = function (string $raw, $spk) use ($canonical, $canonicalKey, $studentCadre): string {
-            $cadre = $canonical[$canonicalKey($raw)] ?? null;
-            if ($cadre !== null) {
-                return $cadre;
-            }
-
-            // Free-text group_name with no cadre_master counterpart: prefer the
-            // student's own normalised cadre, else show the mapping verbatim.
-            $own = trim((string) ($studentCadre[$spk] ?? ''));
-
-            return $own !== '' ? $own : $raw;
-        };
+        $normalise = $this->cadreNameNormaliser($studentPks);
 
         // A cadre is a single value, so only the best-ranked counsellor group counts.
         foreach ($groups['byStudentCourse'] as $key => $entries) {
@@ -1938,60 +1970,89 @@ class UserController extends Controller
      * A participant's counsellor is the faculty mapped to the COUNSELLOR course
      * group they belong to (student_course_group_map →
      * group_type_master_course_master_map.facility_id → faculty_master).
-     * Grouping that by the student's cadre gives the dependent dropdown that
+     * Grouping that by the group's own name gives the dependent dropdown that
      * opens beside Cadre: pick "Bihar" and you get the faculty who actually
      * counsel Bihar participants, not every faculty on record.
      *
      * The group-type restriction matters: without it the dropdown also listed
      * every student's House Group warden (and seminar/tutor faculty) as if they
-     * were cadre counsellors — for the AGMUT participants that meant 3 names
-     * where only 1 is really their counsellor.
+     * were cadre counsellors.
      *
      * Scoped to the students already in view, so the options can never offer a
      * counsellor whose participants this viewer cannot see.
      *
-     * Keyed by $cadreByStudent — the cadre the ROWS carry (Course Group Mapping
-     * first, see resolveParticipantCadres()) — so a cadre picked in the dropdown
-     * always finds its counsellors. Keying off student_master here instead would
-     * file a counsellor under a cadre no row filters on.
-     *
      * @param  array<int, int>  $studentPks
-     * @param  array<int, string>  $cadreByStudent  spk => resolved cadre
+     * @param  array<int, array<int, string>>  $coursePksByStudent  spk => in-view course pks
      * @return array<string, array<int, array{pk: string, name: string}>>  cadre => counsellors
      */
-    private function otParticipantsCounsellorOptions(array $studentPks, array $cadreByStudent = []): array
+    private function otParticipantsCounsellorOptions(array $studentPks, array $coursePksByStudent = []): array
     {
         return $this->otParticipantsGroupFacultyOptions(
             $studentPks,
             $this->counsellorGroupTypePks(),
-            $cadreByStudent,
-            true
+            $coursePksByStudent,
+            // Cadre keys are the cadre_master spelling of the group name — the same
+            // normalisation the Cadre column and filter use.
+            $this->cadreNameNormaliser($studentPks)
         );
     }
 
     /**
      * House Group → House Group Faculty options, the dependent dropdown beside
      * House Group. Same shape and rules as the Cadre Counsellor list, keyed by the
-     * house group the rows carry rather than by cadre.
+     * house group's own name (no cadre normalisation).
      *
      * @param  array<int, int>  $studentPks
-     * @param  array<int, string>  $houseGroupByStudent  spk => resolved house group
+     * @param  array<int, array<int, string>>  $coursePksByStudent  spk => in-view course pks
      * @return array<string, array<int, array{pk: string, name: string}>>  house group => faculty
      */
-    private function otParticipantsHouseFacultyOptions(array $studentPks): array
+    private function otParticipantsHouseFacultyOptions(array $studentPks, array $coursePksByStudent = []): array
+    {
+        return $this->otParticipantsGroupFacultyOptions(
+            $studentPks,
+            $this->houseGroupTypePks(),
+            $coursePksByStudent
+        );
+    }
+
+    /**
+     * The shared builder behind both faculty dropdowns: the faculty mapped to a
+     * course group of the given types, grouped by THAT MAPPING'S OWN group name.
+     *
+     * Two rules keep the list honest, and both were learned from real data:
+     *
+     *  - Group by the mapping's own group_name, never by whichever cadre / house
+     *    the student happens to display under. Keying off the student filed every
+     *    counsellor group they sit in under one cadre — so Cadre "Maharastra",
+     *    whose only mapping is Ganesh Shankar Mishra, also offered the counsellors
+     *    of the Andhra Pradesh and Uttar Pradesh groups those same students are in.
+     *
+     *  - Only count mappings from a course the student is IN VIEW for. A group
+     *    belongs to a course; reading another course's mapping listed a faculty
+     *    who counsels nobody on the list being looked at. Matches
+     *    participantGroupEntriesFor(), which renders the columns the same way.
+     *
+     * @param  array<int, int>  $studentPks
+     * @param  array<int, int|string>  $typePks
+     * @param  array<int, array<int, string>>  $coursePksByStudent  spk => in-view course pks
+     *                                                             (empty = don't course-scope)
+     * @param  callable|null  $keyNormaliser  fn (string $groupName, int $spk): string
+     * @return array<string, array<int, array{pk: string, name: string}>>
+     */
+    private function otParticipantsGroupFacultyOptions(array $studentPks, array $typePks, array $coursePksByStudent = [], ?callable $keyNormaliser = null): array
     {
         if (empty($studentPks)) {
             return [];
         }
 
-        // Grouped by the mapping's OWN group_name, not by whichever house the
-        // student displays under. A student in two houses would otherwise file
-        // both wardens under both houses.
+        $courseScope = $this->participantCourseScope($coursePksByStudent);
+
         $rows = DB::table('student_course_group_map as scg')
             ->join('group_type_master_course_master_map as gmap', 'scg.group_type_master_course_master_map_pk', '=', 'gmap.pk')
             ->join('faculty_master as fm', 'gmap.facility_id', '=', 'fm.pk')
             ->whereIn('scg.student_master_pk', $studentPks)
-            ->whereIn('gmap.type_name', $this->houseGroupTypePks())
+            ->when(! empty($typePks), fn ($q) => $q->whereIn('gmap.type_name', $typePks))
+            ->when(! empty($courseScope), fn ($q) => $q->whereIn('gmap.course_name', $courseScope))
             ->whereNotNull('gmap.group_name')
             ->where('gmap.group_name', '<>', '')
             ->where('scg.active_inactive', 1)
@@ -1999,79 +2060,118 @@ class UserController extends Controller
             ->where('fm.active_inactive', 1)
             ->distinct()
             ->orderBy('fm.full_name')
-            ->get(['gmap.group_name', 'fm.pk as faculty_pk', 'fm.full_name as faculty_name']);
+            ->get([
+                'scg.student_master_pk as spk',
+                'gmap.course_name as course_pk',
+                'gmap.group_name',
+                'fm.pk as faculty_pk',
+                'fm.full_name as faculty_name',
+            ]);
 
         $byGroup = [];
         foreach ($rows as $r) {
+            $spk = (int) $r->spk;
+            // whereIn above narrows to the courses in view as a set; this drops the
+            // rows where the course belongs to a DIFFERENT student's view.
+            if (! $this->participantCourseInView($spk, $r->course_pk, $coursePksByStudent)) {
+                continue;
+            }
+
             $group = trim((string) $r->group_name);
-            $name = trim((string) ($r->faculty_name ?? ''));
             if ($group === '' || empty($r->faculty_pk)) {
                 continue;
             }
-            $byGroup[$group][(string) $r->faculty_pk] = [
-                'pk' => (string) $r->faculty_pk,
-                'name' => $name !== '' ? $name : ('Faculty #' . $r->faculty_pk),
-            ];
-        }
-
-        ksort($byGroup, SORT_NATURAL | SORT_FLAG_CASE);
-
-        return array_map('array_values', $byGroup);
-    }
-
-    /**
-     * The shared builder behind both faculty dropdowns: the faculty mapped to a
-     * course group of the given types, grouped by the key the ROWS carry.
-     *
-     * @param  array<int, int>  $studentPks
-     * @param  array<int, int|string>  $typePks
-     * @param  array<int, string>  $keyByStudent  spk => grouping key (cadre / house group)
-     * @param  bool  $cadreFallback  fall back to student_master's cadre for a student
-     *                               the caller had no key for (counsellor list only)
-     * @return array<string, array<int, array{pk: string, name: string}>>
-     */
-    private function otParticipantsGroupFacultyOptions(array $studentPks, array $typePks, array $keyByStudent, bool $cadreFallback): array
-    {
-        if (empty($studentPks)) {
-            return [];
-        }
-
-        $rows = DB::table('student_course_group_map as scg')
-            ->join('group_type_master_course_master_map as gmap', 'scg.group_type_master_course_master_map_pk', '=', 'gmap.pk')
-            ->join('faculty_master as fm', 'gmap.facility_id', '=', 'fm.pk')
-            ->leftJoin('student_master as sm', 'scg.student_master_pk', '=', 'sm.pk')
-            ->leftJoin('cadre_master as cad', 'sm.cadre_master_pk', '=', 'cad.pk')
-            ->whereIn('scg.student_master_pk', $studentPks)
-            ->when(! empty($typePks), fn ($q) => $q->whereIn('gmap.type_name', $typePks))
-            ->where('scg.active_inactive', 1)
-            ->where('gmap.active_inactive', 1)
-            ->where('fm.active_inactive', 1)
-            ->distinct()
-            ->orderBy('fm.full_name')
-            ->get(['scg.student_master_pk as spk', 'cad.cadre_name', 'fm.pk as faculty_pk', 'fm.full_name as faculty_name']);
-
-        $byCadre = [];
-        foreach ($rows as $r) {
-            // The row's own resolved key wins; student_master's cadre is the
-            // fallback for a student the caller had no key for.
-            $cadre = (string) ($keyByStudent[(int) $r->spk] ?? ($cadreFallback ? ($r->cadre_name ?? '') : ''));
-            $name = trim((string) ($r->faculty_name ?? ''));
-            if ($cadre === '' || empty($r->faculty_pk)) {
-                continue;
+            if ($keyNormaliser !== null) {
+                $group = trim((string) $keyNormaliser($group, $spk));
+                if ($group === '') {
+                    continue;
+                }
             }
-            $byCadre[$cadre][(string) $r->faculty_pk] = [
+
+            $name = trim((string) ($r->faculty_name ?? ''));
+            $byGroup[$group][(string) $r->faculty_pk] = [
                 'pk' => (string) $r->faculty_pk,
                 // Blank full_name rows still need a label to be selectable.
                 'name' => $name !== '' ? $name : ('Faculty #' . $r->faculty_pk),
             ];
         }
 
-        // Cadre order is no longer carried by the query's ORDER BY (the key now
-        // comes from the resolved cadre, not the joined column), so sort here.
-        ksort($byCadre, SORT_NATURAL | SORT_FLAG_CASE);
+        ksort($byGroup, SORT_NATURAL | SORT_FLAG_CASE);
 
         // Drop the faculty-pk keys — the front-end just iterates the list.
-        return array_map('array_values', $byCadre);
+        return array_map('array_values', $byGroup);
+    }
+
+    /**
+     * spk => the course pks that student is in view for, from the collapsed
+     * participant rows. Backs the course scoping of both faculty dropdowns and
+     * their filters.
+     *
+     * @return array<int, array<int, string>>
+     */
+    private function participantCoursePks($participants): array
+    {
+        $out = [];
+        foreach ($participants as $p) {
+            $spk = (int) ($p->student_master_pk ?? 0);
+            if (! $spk) {
+                continue;
+            }
+            foreach ((array) ($p->course_pks ?? []) as $cpk) {
+                if ((string) $cpk !== '') {
+                    $out[$spk][(string) $cpk] = true;
+                }
+            }
+        }
+
+        return array_map(fn ($c) => array_keys($c), $out);
+    }
+
+    /**
+     * Every course pk any in-view student belongs to — the SQL-side narrowing for
+     * the per-student check below. Empty = the caller had no course context, so
+     * nothing is scoped away.
+     *
+     * @param  array<int, array<int, string>>  $coursePksByStudent
+     * @return array<int, string>
+     */
+    private function participantCourseScope(array $coursePksByStudent): array
+    {
+        if (empty($coursePksByStudent)) {
+            return [];
+        }
+
+        $all = [];
+        foreach ($coursePksByStudent as $pks) {
+            foreach ($pks as $pk) {
+                $all[(string) $pk] = true;
+            }
+        }
+
+        return array_keys($all);
+    }
+
+    /**
+     * Is this group mapping's course one the student is in view for?
+     *
+     * @param  array<int, array<int, string>>  $coursePksByStudent
+     */
+    private function participantCourseInView(int $spk, $coursePk, array $coursePksByStudent): bool
+    {
+        if (empty($coursePksByStudent)) {
+            return true;
+        }
+
+        // Course pks are compared as strings on both sides: array keys collapse a
+        // numeric pk back to an int, so a strict in_array() against the raw column
+        // value never matched and scoped every option away.
+        foreach ($coursePksByStudent[$spk] ?? [] as $pk) {
+            if ((string) $pk === (string) $coursePk) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -2085,12 +2185,13 @@ class UserController extends Controller
      * @param  array<int, int>  $studentPks
      * @return array<int, true>
      */
-    private function studentPksForCounsellorFaculty($facultyPk, array $studentPks): array
+    private function studentPksForCounsellorFaculty($facultyPk, array $studentPks, array $coursePksByStudent = []): array
     {
-        // Same group-type restriction as otParticipantsCounsellorOptions(), so the
-        // filter selects on the counsellor mapping the dropdown was built from —
-        // not on the student's House Group / seminar faculty.
-        return $this->studentPksForGroupFaculty($facultyPk, $studentPks, $this->counsellorGroupTypePks());
+        // Same group-type AND course restriction as otParticipantsCounsellorOptions(),
+        // so the filter selects on exactly the counsellor mapping the dropdown was
+        // built from — not on the student's House Group / seminar faculty, and not
+        // on a counsellor group from a course that is not on screen.
+        return $this->studentPksForGroupFaculty($facultyPk, $studentPks, $this->counsellorGroupTypePks(), $coursePksByStudent);
     }
 
     /**
@@ -2099,9 +2200,9 @@ class UserController extends Controller
      * @param  array<int, int>  $studentPks
      * @return array<int, true>
      */
-    private function studentPksForHouseFaculty($facultyPk, array $studentPks): array
+    private function studentPksForHouseFaculty($facultyPk, array $studentPks, array $coursePksByStudent = []): array
     {
-        return $this->studentPksForGroupFaculty($facultyPk, $studentPks, $this->houseGroupTypePks());
+        return $this->studentPksForGroupFaculty($facultyPk, $studentPks, $this->houseGroupTypePks(), $coursePksByStudent);
     }
 
     /**
@@ -2112,23 +2213,34 @@ class UserController extends Controller
      * @param  array<int, int|string>  $typePks
      * @return array<int, true>
      */
-    private function studentPksForGroupFaculty($facultyPk, array $studentPks, array $typePks): array
+    private function studentPksForGroupFaculty($facultyPk, array $studentPks, array $typePks, array $coursePksByStudent = []): array
     {
         if (empty($studentPks) || (string) $facultyPk === '') {
             return [];
         }
 
-        return DB::table('student_course_group_map as scg')
+        $courseScope = $this->participantCourseScope($coursePksByStudent);
+
+        $rows = DB::table('student_course_group_map as scg')
             ->join('group_type_master_course_master_map as gmap', 'scg.group_type_master_course_master_map_pk', '=', 'gmap.pk')
             ->whereIn('scg.student_master_pk', $studentPks)
             ->where('gmap.facility_id', $facultyPk)
             ->when(! empty($typePks), fn ($q) => $q->whereIn('gmap.type_name', $typePks))
+            ->when(! empty($courseScope), fn ($q) => $q->whereIn('gmap.course_name', $courseScope))
             ->where('scg.active_inactive', 1)
             ->where('gmap.active_inactive', 1)
             ->distinct()
-            ->pluck('scg.student_master_pk')
-            ->mapWithKeys(fn ($v) => [(int) $v => true])
-            ->all();
+            ->get(['scg.student_master_pk as spk', 'gmap.course_name as course_pk']);
+
+        $out = [];
+        foreach ($rows as $r) {
+            $spk = (int) $r->spk;
+            if ($this->participantCourseInView($spk, $r->course_pk, $coursePksByStudent)) {
+                $out[$spk] = true;
+            }
+        }
+
+        return $out;
     }
 
     /**
@@ -2373,10 +2485,12 @@ class UserController extends Controller
         $author = Auth::user();
         $authorName = trim((string) (($author->first_name ?? '') . ' ' . ($author->last_name ?? '')));
 
+        $message = trim($data['message']);
+
         $comment = OtParticipantComment::create([
             'student_master_pk' => (int) $data['student_master_pk'],
             'course_master_pk' => $data['course_master_pk'] ?? null,
-            'message' => trim($data['message']),
+            'message' => $message,
             'notify_ot' => (int) $data['notify_ot'],
             'comment_by_user_id' => $author->user_id ?? null,
             'comment_by_name' => $authorName !== '' ? $authorName : ($author->user_name ?? null),
@@ -2394,14 +2508,23 @@ class UserController extends Controller
                     ->getStudentUserId((int) $data['student_master_pk']);
 
                 if ($receiverUserId) {
+                    // The feedback itself goes INTO the notification — an OT who
+                    // only sees "you have received a comment" has to hunt for it.
+                    // Newlines are flattened because the bell list renders the
+                    // message as one truncated line.
+                    $preview = trim(preg_replace('/\s+/u', ' ', $message));
+
                     app(\App\Services\NotificationService::class)->create(
                         (int) $receiverUserId,
                         'ot_comment',
                         'OT Comment/Feedback',
                         (int) $comment->pk,
                         'New Comment/Feedback',
-                        'You have received a new comment/feedback'
-                            . ($authorName !== '' ? " from {$authorName}" : '') . '.'
+                        // The title already says what this is, so the body leads
+                        // with the author and the feedback — the bell list cuts the
+                        // message at 120 chars and boilerplate would eat that budget.
+                        ($authorName !== '' ? "From {$authorName}: " : '')
+                            . ($preview !== '' ? '"' . $preview . '"' : 'You have received a new comment/feedback.')
                     );
                 }
             } catch (\Throwable $e) {
