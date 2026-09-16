@@ -1,0 +1,9 @@
+{
+    "$comment": "Isolated analyser toolchain. Kept OUT of the app's root composer.json on purpose: the app's composer.lock pins maennchen/zipstream-php 3.2.0 (requires PHP 8.3) while vendor/ actually holds 3.1.1, so any root-level `composer require` forces an unsatisfiable re-resolve on PHP 8.2. phpstan/phpstan has zero dependencies, so installing it here cannot affect the application's dependency tree.",
+    "require-dev": {
+        "phpstan/phpstan": "^1.12"
+    },
+    "config": {
+        "preferred-install": "dist"
+    }
+}
