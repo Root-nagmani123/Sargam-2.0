@@ -206,6 +206,20 @@ class WhosWhoController extends Controller
     }
 
     /**
+     * Build the LIKE operand for a user-supplied search term.
+     *
+     * % and _ are wildcards to MySQL, not literals: a term of "%" would otherwise match
+     * every row and "a_c" would match "abc". The term is already bound as a parameter,
+     * so this is about matching what the user typed, not about injection.
+     */
+    private function likeTerm(string $term): string
+    {
+        $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $term);
+
+        return '%' . $escaped . '%';
+    }
+
+    /**
      * Heavy Who's Who student grid payload (cached JSON shape).
      *
      * @return array<string, mixed>
@@ -278,23 +292,23 @@ class WhosWhoController extends Controller
         if (!empty($name)) {
             // admission_category_master has no Eloquent model (schema-only table).
             $matchingCategoryPks = DB::table('admission_category_master')
-                ->where('Seat_name', 'like', '%' . $name . '%')
+                ->where('Seat_name', 'like', $this->likeTerm($name))
                 ->pluck('pk');
 
             $query->whereHas('studentMaster', function ($q) use ($name, $matchingCategoryPks) {
-                $q->where('display_name', 'like', '%' . $name . '%')
-                    ->orWhere('first_name', 'like', '%' . $name . '%')
-                    ->orWhere('last_name', 'like', '%' . $name . '%')
-                    ->orWhere('generated_OT_code', 'like', '%' . $name . '%')
-                    ->orWhere('rank', 'like', '%' . $name . '%')
-                    ->orWhere('contact_no', 'like', '%' . $name . '%')
-                    ->orWhere('email', 'like', '%' . $name . '%')
-                    ->orWhere('city', 'like', '%' . $name . '%')
+                $q->where('display_name', 'like', $this->likeTerm($name))
+                    ->orWhere('first_name', 'like', $this->likeTerm($name))
+                    ->orWhere('last_name', 'like', $this->likeTerm($name))
+                    ->orWhere('generated_OT_code', 'like', $this->likeTerm($name))
+                    ->orWhere('rank', 'like', $this->likeTerm($name))
+                    ->orWhere('contact_no', 'like', $this->likeTerm($name))
+                    ->orWhere('email', 'like', $this->likeTerm($name))
+                    ->orWhere('city', 'like', $this->likeTerm($name))
                     ->orWhereHas('cadre', function ($cadreQuery) use ($name) {
-                        $cadreQuery->where('cadre_name', 'like', '%' . $name . '%');
+                        $cadreQuery->where('cadre_name', 'like', $this->likeTerm($name));
                     })
                     ->orWhereHas('service', function ($serviceQuery) use ($name) {
-                        $serviceQuery->where('service_name', 'like', '%' . $name . '%');
+                        $serviceQuery->where('service_name', 'like', $this->likeTerm($name));
                     });
 
                 if ($matchingCategoryPks->isNotEmpty()) {
