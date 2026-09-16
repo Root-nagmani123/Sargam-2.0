@@ -49,6 +49,8 @@
                         </div>
                     </div>
                 </div>
+
+                @include('admin.venueMaster._exam_fields')
                 <hr>
                  <div class="mb-3 text-end gap-3">
                     <button type="submit" class="btn btn-primary">Update</button>

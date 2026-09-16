@@ -40,6 +40,8 @@
                                     <th class="col">Venue Name</th>
                                     <th class="col">Short Name</th>
                                     <th class="col">Description</th>
+                                    <th class="col">Capacity</th>
+                                    <th class="col">Laptop Capacity</th>
                                     <th class="col">Action</th>
                                     <th class="col">Status</th>
 
@@ -58,6 +60,12 @@
                                     </td>
                                     <td>
                                         {{ $venue->description   }}
+                                    </td>
+                                    <td>
+                                        {{ $venue->capacity ?? '-' }}
+                                    </td>
+                                    <td>
+                                        {{ $venue->laptop_capacity ?? '-' }}
                                     </td>
                                     <td>
                                         <div class="form-check form-switch">
