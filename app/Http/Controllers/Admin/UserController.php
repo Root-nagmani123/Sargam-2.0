@@ -1534,9 +1534,10 @@ class UserController extends Controller
         // Skip the payload's per-student total_* / notice-memo N+1 loop — this page
         // computes its counts separately via otParticipantsRowMeta (batched).
         //
-        // $coordinatedOnly: participants are the roster of the courses this viewer
-        // coordinates (course_coordinator_master), and nothing else — no group-mapped
-        // or merely-taught courses, no memo-only students. The "OT/ Participants
+        // $coordinatedOnly: participants are this viewer's own roster — the courses
+        // they coordinate (course_coordinator_master) plus the students of the course
+        // groups they own (House / Counsellor group faculty) — and nothing else: no
+        // merely-taught courses, no memo-only students. The "OT/ Participants
         // Details" card on the student list counts the same set, so the two agree.
         $payload = $this->resolveDashboardStudentListPayload($request, false, true);
         $availableCourses = $payload['availableCourses'];
@@ -3376,8 +3377,10 @@ class UserController extends Controller
 
             if ($seesAllCourses || $facultyPk) {
                 $source1Students = collect([]);
-                // "spk_coursePk" => true for every enrolment on a coordinated course.
-                $coordinatedRosterKeys = [];
+                // "spk_coursePk" => true for every (student, course) pair that is
+                // this viewer's PARTICIPANT roster: coordinated-course enrolments
+                // plus the students of the course groups they own.
+                $participantRosterKeys = [];
 
                 // Course set feeding the primary (enrollment) student source.
                 if ($seesAllCourses) {
@@ -3413,18 +3416,23 @@ class UserController extends Controller
                         $source1Students->push($stdObj);
 
                         // The exact (student, course) pairs that ARE the coordinated
-                        // roster. The card counts these — see $coordinatedRosterKeys.
-                        $coordinatedRosterKeys[$studentMap->student_master_pk . '_' . $studentMap->course_master_pk] = true;
+                        // roster. The card counts these — see $participantRosterKeys.
+                        $participantRosterKeys[$studentMap->student_master_pk . '_' . $studentMap->course_master_pk] = true;
                     }
                 }
 
                 $source2Students = collect([]);
                 // Group-mapping source is faculty-specific; Super Admin already has
                 // every student via source1, so skip it when there's no faculty pk.
+                //
                 // $coordinatedOnly callers (the OT participants page and the card that
-                // opens it) want the course_coordinator_master roster and nothing
-                // else, so sources 2 and 3 are skipped for them entirely.
-                $groupMappings = ($facultyPk && ! $coordinatedOnly)
+                // opens it) DO want these: the students of a House / Counsellor group
+                // this faculty owns are that faculty's own OTs, exactly as much as a
+                // coordinated course's roster is. Leaving them out is what showed a
+                // House Group warden 0 participants while Course Group Mapping
+                // credited them with 43. Sources 3 (merely taught) and 4 (memo-only)
+                // stay out — those students are not on any roster of theirs.
+                $groupMappings = $facultyPk
                     ? DB::table('group_type_master_course_master_map')
                         ->where('facility_id', $facultyPk)
                         ->where('active_inactive', 1)
@@ -3471,6 +3479,11 @@ class UserController extends Controller
                                         $studentMap->groupMapping = $groupMap;
                                         $studentMap->source = 'group_mapping';
                                         $source2Students->push($studentMap);
+
+                                        // On the roster the "OT/ Participants Details"
+                                        // card counts — the page it opens lists this
+                                        // student now, so the two must agree.
+                                        $participantRosterKeys[$studentPk . '_' . $coursePk] = true;
                                     }
                                 }
                             }
@@ -3582,9 +3595,9 @@ class UserController extends Controller
                         ->pluck('hostel_room_name', 'user_name')
                     : collect();
 
-                // Which rows are on the COORDINATED ROSTER — the exact (student,
-                // course) enrolments source 1 was built from. The card counts these,
-                // and the OT participants page lists exactly the same set.
+                // Which rows are on the PARTICIPANT ROSTER — the exact (student,
+                // course) pairs sources 1 and 2 were built from. The card counts
+                // these, and the OT participants page lists exactly the same set.
                 //
                 // Matched on the pair, not on ->source and not on the course alone:
                 //   - ->source is unreliable because the dedupe below keeps whichever
@@ -3632,9 +3645,9 @@ class UserController extends Controller
                     $studentMap->house_name = ($uid && isset($houseByUser[$uid])) ? $houseByUser[$uid] : null;
 
                     // Backs the "OT/ Participants Details" card — see the note where
-                    // $coordinatedRosterKeys is built.
-                    $studentMap->is_coordinated = $coursePk !== null
-                        && isset($coordinatedRosterKeys[$studentPk . '_' . $coursePk]);
+                    // $participantRosterKeys is built.
+                    $studentMap->is_participant = $coursePk !== null
+                        && isset($participantRosterKeys[$studentPk . '_' . $coursePk]);
 
                     if (! $withTotals) {
                         // Cadre from the Course Group Mapping (see
@@ -4657,12 +4670,12 @@ class UserController extends Controller
             ->unique()
             ->count();
 
-        // "OT/ Participants Details" counts the COORDINATED roster only — rows whose
-        // course comes from course_coordinator_master, which is exactly what the OT
-        // participants page this card opens lists. Merely-taught and memo-only rows
-        // are on the student list below but are not participants of a course this
-        // viewer coordinates, so they are not counted.
-        $coordinated = collect($students)->filter(fn ($m) => ($m->is_coordinated ?? false) === true);
+        // "OT/ Participants Details" counts the PARTICIPANT roster only — rows whose
+        // course comes from course_coordinator_master or from a course group this
+        // faculty owns, which is exactly what the OT participants page this card
+        // opens lists. Merely-taught and memo-only rows are on the student list below
+        // but are nobody's participants, so they are not counted.
+        $coordinated = collect($students)->filter(fn ($m) => ($m->is_participant ?? false) === true);
 
         $counts = [
             'total' => $distinct($this->applyDashboardStudentListFilters($coordinated, $request, false)),
