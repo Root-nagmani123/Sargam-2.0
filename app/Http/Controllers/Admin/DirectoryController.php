@@ -790,8 +790,13 @@ class DirectoryController extends Controller
         }
 
         if ($format === 'excel' || $format === 'full') {
+            // $note goes to the workbook as well. It is the same value the print
+            // view, the PDF and the CSV band already receive, and the .xlsx was
+            // the one format that dropped it - which made "Full Details (Excel)",
+            // the menu item whose whole purpose is the complete dump, the one
+            // that truncated without saying so.
             return Excel::download(
-                new DirectoryGridExport($rows, $columns, $exportDate, $filterLine, $title),
+                new DirectoryGridExport($rows, $columns, $exportDate, $filterLine, $title, $note),
                 $slug . $stamp . '.xlsx'
             );
         }

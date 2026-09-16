@@ -21,8 +21,21 @@ use Illuminate\Http\Request;
  * Why the split: the PAGES are a directory and are meant to be readable by
  * everyone. The EXPORTS are a different exposure — one GET returns the whole
  * staff roster's home address, residence phone, mobile and personal email as
- * a file that leaves the application entirely. Bulk extraction of personal
- * data is the privileged act, not looking someone up.
+ * a file that leaves the application entirely. This gate removes the convenient
+ * download, and that is all it claims to do.
+ *
+ * WHAT THIS GATE IS NOT. It does not stop bulk extraction, and the sentence it
+ * used to carry — "bulk extraction of personal data is the privileged act, not
+ * looking someone up" — read as a security property when it is only a design
+ * intent. /directory/lbsnaa/data stays open to every authenticated user by
+ * design; it is a JSON feed returning address, mobile, residence number and
+ * email per row, and `start` has no upper bound, so three scripted requests at
+ * length=200 reconstruct the roster this gate refuses as a file — and without
+ * the audit line the gated path writes. The change is still an improvement in
+ * both directions (the base rendered all 443 rows into the page markup on every
+ * load, with no paging at all, and wrote no audit line). But if bulk extraction
+ * genuinely needs gating, that is a change to the FEED routes with its own
+ * decision record, not something to read into this one.
  *
  * Why a role and not a permission: this mirrors EnsureIssueReportsAdmin,
  * which gates the equally PII-bearing Reported Issues downloads with the same

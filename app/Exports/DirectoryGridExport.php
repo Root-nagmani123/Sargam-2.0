@@ -31,7 +31,8 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
  * "Full Details (Excel)" is the same class fed the unfiltered def list.
  *
  * Styled to match the print/PDF header: logo, navy institution band, report
- * title, generated stamp, record count, then a navy table header over zebra rows.
+ * title, generated stamp, record count, the row-cap note when the query was
+ * truncated, then a navy table header over zebra rows.
  * Mirrors IssueCategoryExport deliberately — same visual language, but that class
  * hard-codes its own title and centred columns, so this one parameterises both
  * rather than reaching into a Centcom export from the directory module.
@@ -50,13 +51,15 @@ class DirectoryGridExport extends DefaultValueBinder implements
 
     /**
      * @param  array<string, array{heading:string, width:string, align:string, value:callable}>  $columns
+     * @param  string|null  $note  the row-cap warning, when the query was truncated
      */
     public function __construct(
         private Collection $rows,
         private array $columns,
         private string $exportDate,
         private string $filterLine = '',
-        private string $sheetTitle = 'OT Directory'
+        private string $sheetTitle = 'OT Directory',
+        private ?string $note = null
     ) {
     }
 
@@ -168,7 +171,31 @@ class DirectoryGridExport extends DefaultValueBinder implements
                     'borders' => ['outline' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '003366']]],
                 ]);
 
-                $sheet->getRowDimension(5)->setRowHeight(6);
+                // ── Row-cap note ──
+                // Row 5 is the spacer under the header band, and it doubles as
+                // the truncation notice so the sheet layout below is unchanged
+                // (HEADER_ROWS, and therefore startCell(), stay put).
+                //
+                // Without this the .xlsx was the one format of the four that
+                // truncated SILENTLY: 1,500 rows under a header reading "Total
+                // Records: 1,500", where the CSV, PDF and print sheet all said
+                // plainly that the rest had been dropped. A personal-data
+                // extract that is incomplete and does not say so is worse than
+                // one that fails, because it gets reconciled against.
+                if (filled($this->note)) {
+                    $sheet->mergeCells("A5:{$last}5");
+                    $sheet->setCellValue('A5', $this->note);
+                    $sheet->getStyle('A5')->applyFromArray([
+                        // Same amber the print and PDF sheets use for this note.
+                        'font' => ['bold' => true, 'size' => 9, 'color' => ['rgb' => '92400E']],
+                        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+                        'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
+                        'borders' => ['outline' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'FCD34D']]],
+                    ]);
+                    $sheet->getRowDimension(5)->setRowHeight(20);
+                } else {
+                    $sheet->getRowDimension(5)->setRowHeight(6);
+                }
 
                 // ── Data table ──
                 $sheet->getStyle("A{$dataHeaderRow}:{$last}{$dataHeaderRow}")->applyFromArray([

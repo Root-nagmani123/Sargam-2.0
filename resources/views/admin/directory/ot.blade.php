@@ -9,8 +9,8 @@
 <link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
 <link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
 
-{{-- Directory module chrome. Shared with the LBSNAA directory when that page is
-     migrated, so it lives in a file rather than an inline <style>. --}}
+{{-- Directory module chrome — the same file the LBSNAA Directory uses, so the
+     two pages cannot drift apart. --}}
 <link rel="stylesheet"
       href="{{ asset('css/directory-admin.css') }}?v={{ @filemtime(public_path('css/directory-admin.css')) ?: time() }}">
 @endpush

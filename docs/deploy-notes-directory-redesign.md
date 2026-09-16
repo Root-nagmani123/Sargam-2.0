@@ -5,6 +5,27 @@ five-format export layer, the Super-Admin export gate and the download audit lin
 
 No migration. No dependency change. `composer.lock` is byte-identical to `main`.
 
+## 0. What this release changes beyond the redesign
+
+The branch is named for a visual redesign, and three of the things in it are not
+visual. They are listed here so the release record carries them, rather than
+leaving them to be discovered from the diff:
+
+1. **A capability is withdrawn.** Before this release, `?export=csv|excel` sat on
+   the directory *page* routes, so any authenticated user could download either
+   roster's home address, mobile, residence phone and personal email. The
+   downloads now require a Super Admin, or a role holding the grantable
+   `directory.export` permission. Everyone else keeps both grids and loses the
+   file. **Reversible without a deploy** — grant `directory.export` to a role.
+   If an office turns out to have been relying on the roster CSV, that is the
+   remedy; do not widen the role check in code.
+2. **Every served download writes an audit line** (`directory.export`) carrying
+   the grid, format, actor, IP, filters, row count and capped flag — and no row
+   data.
+3. **Two tracked files stop being tracked** (`bootstrap/cache/packages.php`,
+   `services.php`), which is why §1 below is a mandatory manual step on every
+   host and why the rollback in §3 has a step of its own.
+
 ## 1. Before pulling, on every host
 
 This release **untracks** `bootstrap/cache/packages.php` and

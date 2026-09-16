@@ -806,4 +806,114 @@ class DirectoryExportGuardTest extends TestCase
             @unlink($path);
         }
     }
+
+    /** Write a one-row workbook and hand back its sheet. */
+    private function writtenSheet(?string $note)
+    {
+        $columns = [
+            'name' => ['heading' => 'Name', 'width' => '', 'align' => 'left', 'value' => fn () => 'A Person'],
+        ];
+
+        $previous = SpreadsheetCell::getValueBinder();
+        $path = tempnam(sys_get_temp_dir(), 'pr317note');
+
+        try {
+            SpreadsheetCell::setValueBinder(new DefaultValueBinder());
+
+            file_put_contents($path, Excel::raw(
+                new DirectoryGridExport(
+                    new Collection([(object) ['pk' => 1]]),
+                    $columns,
+                    '15-09-2026 10:00 AM',
+                    '',
+                    'LBSNAA Directory',
+                    $note
+                ),
+                \Maatwebsite\Excel\Excel::XLSX
+            ));
+
+            return IOFactory::load($path)->getActiveSheet();
+        } finally {
+            SpreadsheetCell::setValueBinder($previous);
+            @unlink($path);
+        }
+    }
+
+    /**
+     * A truncated .xlsx must say that it is truncated.
+     *
+     * This was the one format of the four that did not. The CSV band, the PDF
+     * and the print sheet all received the row-cap note; the .xlsx class had no
+     * note parameter at all, so "Full Details (Excel)" - the menu item whose
+     * stated purpose is the everything dump - arrived with 1,500 rows under a
+     * header reading "Total Records: 1,500" and nothing to say the rest had been
+     * dropped. An incomplete personal-data extract presented as complete is
+     * worse than one that fails, because it gets reconciled against.
+     */
+    public function test_a_capped_xlsx_states_the_truncation_on_the_sheet(): void
+    {
+        $note = 'Showing the first 1,500 of 12,345 records — narrow the filters for the rest.';
+
+        $sheet = $this->writtenSheet($note);
+
+        $this->assertSame($note, $sheet->getCell('A5')->getValue(),
+            'the row-cap note must reach the workbook');
+    }
+
+    /** And an uncapped one carries no note row, so the band means something. */
+    public function test_an_uncapped_xlsx_carries_no_note(): void
+    {
+        $sheet = $this->writtenSheet(null);
+
+        $this->assertSame('', (string) $sheet->getCell('A5')->getValue(),
+            'an uncapped export must not claim to be truncated');
+    }
+
+    /** The note row must not shift the table: the headings stay on row 6. */
+    public function test_the_note_does_not_move_the_data_table(): void
+    {
+        foreach ([null, 'Showing the first 1,500 of 12,345 records.'] as $note) {
+            $sheet = $this->writtenSheet($note);
+
+            $this->assertSame('Name', $sheet->getCell('A6')->getValue(),
+                'the column headings must stay on row 6 whether or not a note is present');
+            $this->assertSame('A Person', $sheet->getCell('A7')->getValue());
+        }
+    }
+
+    /**
+     * Every format branch must be handed the note.
+     *
+     * The defect was not that the .xlsx rendered the note badly - it was that
+     * the value was destructured from the capping helper and then forwarded to
+     * three of the four branches. Read mechanically from the method's source,
+     * because "does this branch receive $note" is a property of the dispatch and
+     * not of any one renderer.
+     */
+    public function test_every_format_branch_receives_the_row_cap_note(): void
+    {
+        $source = file_get_contents(app_path('Http/Controllers/Admin/DirectoryController.php'));
+
+        $start = strpos($source, 'private function renderDirectoryExport(');
+        $this->assertNotFalse($start, 'renderDirectoryExport should exist');
+
+        // To the end of the method: it is the last thing in the CSV branch.
+        $body = substr($source, $start, 3000);
+
+        foreach ([
+            'print' => "compact('columns', 'rows', 'title', 'filterLine', 'exportDate', 'note')",
+            'xlsx' => '$filterLine, $title, $note)',
+            'csv' => '$rows->count(), $note)',
+        ] as $format => $needle) {
+            $this->assertStringContainsString($needle, $body,
+                "the {$format} branch must be handed the row-cap note - three of four was the defect");
+        }
+
+        // print and pdf share the compact() shape, so it must appear twice.
+        $this->assertSame(
+            2,
+            substr_count($body, "compact('columns', 'rows', 'title', 'filterLine', 'exportDate', 'note')"),
+            'both the print view and the PDF view must receive the note'
+        );
+    }
 }
