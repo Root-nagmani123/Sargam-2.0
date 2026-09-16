@@ -4621,8 +4621,8 @@ class UserController extends Controller
         'faculty_expertise_master'            => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'faculty_master'                      => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'faculty_type_master'                 => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'fc_exemption_master'                 => ['id_column' => 'pk', 'columns' => ['visible']],
-        'fc_registration_master'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'fc_exemption_master'                 => ['id_column' => 'pk', 'columns' => ['visible'], 'admin_only' => true],
+        'fc_registration_master'              => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'admin_only' => true],
         'floor_master'                        => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'group_type_master_course_master_map' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'hostel_building_floor_mapping'       => ['id_column' => 'pk', 'columns' => ['active_inactive']],
@@ -4634,8 +4634,8 @@ class UserController extends Controller
         'issue_sub_category_master'           => ['id_column' => 'pk', 'columns' => ['status']],
         'memo_conclusion_master'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'memo_type_master'                    => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'news'                                => ['id_column' => 'pk', 'columns' => ['status']],
-        'notices_notification'                => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'news'                                => ['id_column' => 'pk', 'columns' => ['status'], 'admin_only' => true],
+        'notices_notification'                => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'admin_only' => true],
         'ot_hostel_room_details'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'sec_id_cardno_config_map'            => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'sec_id_cardno_master'                => ['id_column' => 'pk', 'columns' => ['active_inactive']],
@@ -4645,7 +4645,7 @@ class UserController extends Controller
         'stream_master'                       => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'subject_master'                      => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'subject_module_master'               => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'user_role_master'                    => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'user_role_master'                    => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'admin_only' => true],
         'venue_master'                        => ['id_column' => 'venue_id', 'columns' => ['active_inactive']],
     ];
 
@@ -4684,6 +4684,31 @@ public function toggleStatus(Request $request)
             return response()->json([
                 'message' => 'This status change is not permitted.',
             ], 422);
+        }
+
+        // Most rows in this list are reference masters whose own screens are
+        // reachable by any signed-in user, so gating them here would only make
+        // the switch 403 on a page the user can still open. Five are different:
+        // flipping user_role_master or fc_registration_master changes who can do
+        // what, and news / notices_notification decide what the institute
+        // publishes. Those carry admin_only and are refused to everyone but the
+        // two roles the application already treats as administrators
+        // (authorizeAdmin() in the Setup controllers uses the same pair).
+        //
+        // This closes the escalation path, not the whole of Trap 29: the
+        // remaining tables stay behind `auth` alone until the sidebar permission
+        // model covers their screens, and that is still the Engineering lead's
+        // call to make rather than this endpoint's.
+        if (($allowed['admin_only'] ?? false) && ! (hasRole('Admin') || hasRole('Super Admin'))) {
+            \Log::warning('Refused a toggle-status request on a privileged table', \App\Support\LogSafe::context([
+                'user'   => optional(auth()->user())->getKey(),
+                'table'  => $table,
+                'column' => $column,
+            ]));
+
+            return response()->json([
+                'message' => 'You do not have permission to change this record.',
+            ], 403);
         }
 
         $status = (int) $status;
