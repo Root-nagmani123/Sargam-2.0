@@ -68,6 +68,30 @@ class LeaveNatureMasterController extends Controller
             ->with('success', 'Leave nature saved successfully.');
     }
 
+    /**
+     * Flip this master's status on its own guarded route.
+     *
+     * The generic admin/toggle-status endpoint takes the table, column, id
+     * column and value straight from the request and is behind auth only, so
+     * any signed-in user can write any column of any table through it. This
+     * screen uses its own route instead, matching ExemptionMasterController.
+     */
+    public function status(Request $request, $id)
+    {
+        $request->validate([
+            'active_inactive' => 'required|in:1,2',
+        ]);
+
+        LeaveNatureMaster::findOrFail($id)->update([
+            'active_inactive' => (int) $request->active_inactive,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Status updated successfully.',
+        ]);
+    }
+
     public function destroy($id)
     {
         try {

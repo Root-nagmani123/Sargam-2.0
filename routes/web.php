@@ -892,6 +892,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/status/{id}', 'status')->name('status');
         Route::delete('/delete/{id}', 'destroy')->name('delete');
     });
 

@@ -2,9 +2,11 @@
 
 namespace App\Exports;
 
+use App\Exports\Concerns\TextValueBinder;
 use App\Services\FacultyLeaveApprovalService;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -12,7 +14,7 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 
-class LeaveApprovalExport implements FromCollection, WithEvents
+class LeaveApprovalExport implements FromCollection, WithEvents, WithCustomValueBinder
 {
     protected const HEADINGS = ['S. No.', 'OT Code', 'OT Name', 'Leave Type', 'Date From', 'Date To', 'Total Days', 'Reason', 'Status', 'Approved/Rejected By'];
 
@@ -172,5 +174,10 @@ class LeaveApprovalExport implements FromCollection, WithEvents
                 }
             },
         ];
+    }
+
+    public function bindValue(\PhpOffice\PhpSpreadsheet\Cell\Cell $cell, $value): bool
+    {
+        return (new TextValueBinder)->bindValue($cell, $value);
     }
 }

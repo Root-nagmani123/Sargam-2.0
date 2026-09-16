@@ -2,9 +2,11 @@
 
 namespace App\Exports;
 
+use App\Exports\Concerns\TextValueBinder;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithCustomStartCell;
+use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
@@ -31,7 +33,8 @@ class WhosWhoExport implements
     WithStyles,
     WithEvents,
     WithTitle,
-    WithCustomStartCell
+    WithCustomStartCell,
+    WithCustomValueBinder
 {
     protected array $bannerLines;
 
@@ -207,5 +210,10 @@ class WhosWhoExport implements
         $drawing->setOffsetX($offsetX);
         $drawing->setOffsetY($offsetY);
         $drawing->setWorksheet($sheet);
+    }
+
+    public function bindValue(\PhpOffice\PhpSpreadsheet\Cell\Cell $cell, $value): bool
+    {
+        return (new TextValueBinder)->bindValue($cell, $value);
     }
 }

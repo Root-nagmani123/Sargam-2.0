@@ -789,7 +789,9 @@ class WhosWhoController extends Controller
                 fwrite($handle, "\xEF\xBB\xBF");
                 fputcsv($handle, $export['headings']);
                 foreach ($export['rows'] as $row) {
-                    fputcsv($handle, $row);
+                    // Neutralise leading =, +, - and @ so a stored reason or name
+                    // does not open as a live formula in Excel (CWE-1236).
+                    fputcsv($handle, array_map('sanitize_export_cell', $row));
                 }
                 fclose($handle);
             }, $filename, [

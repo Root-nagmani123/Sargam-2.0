@@ -26,8 +26,8 @@ class LeaveNatureMasterDataTable extends DataTable
 
             ->addColumn('status', function ($row) {
                 return '<div class="form-check form-switch d-inline-block">
-                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                data-table="leave_nature_master" data-column="active_inactive" data-id="'.$row->pk.'" '.($row->active_inactive == 1 ? 'checked' : '').'>
+                            <input class="form-check-input status-toggle status-toggle-own-route" type="checkbox" role="switch"
+                                data-url="'.route('master.leave-nature.status', $row->pk).'" data-id="'.$row->pk.'" '.($row->active_inactive == 1 ? 'checked' : '').'>
                         </div>';
             })
 
