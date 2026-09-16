@@ -5,6 +5,7 @@ use App\DataTables\MemberDataTable;
 use App\Http\Controllers\Concerns\ExportsBrandedGrid;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use App\Http\Requests\Admin\Member\{
@@ -271,32 +272,66 @@ class MemberController extends Controller
             $additional_doc_upload = $request->file('additionaldocument')->store('members', 'public');
         }
 
-        $employee = EmployeeMaster::create(array_merge(
-            $this->mapStep1Data($request),
-            $this->mapStep2Data($request),
-            $this->mapStep4Data($request),
-            $this->mapStep5Data($request, $profile_picture, $additional_doc_upload)
-        ));
+        // The unique rules above run in a separate statement from the insert, so
+        // two submits that arrive together can both pass them and both create a
+        // member: a re-POST after a refresh, a second tab, a replayed request, or
+        // any client where the page's double-submit guard never loaded. The
+        // re-check below runs inside the transaction and takes a row lock, which
+        // on InnoDB also gap-locks the indexed emp_id range, so the second submit
+        // waits for the first and then sees the row it would have duplicated.
+        //
+        // This is a guard, not a guarantee - only a unique constraint is that,
+        // and employee_master.emp_id cannot carry one until the duplicate groups
+        // already in the table are cleaned up and emp_id is confirmed to be the
+        // intended business key. Both are open human actions.
+        $duplicate = null;
 
-        $userCredential = UserCredential::create([
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'email_id' => $request->personalemail,
-            'mobile_no' => $request->mnumber,
-            'reg_date' => now(),
-            'user_id' => $employee->pk,
-            'user_name' => $request->userid,
-            'user_category' => 'E'
-        ]);
+        DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload, &$duplicate) {
+            if (EmployeeMaster::where('emp_id', $request->id)->lockForUpdate()->exists()) {
+                $duplicate = ['id' => ['This employee ID already exists']];
 
-        if ($userCredential) {
-            $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
-            foreach ($roles as $role) {
-                EmployeeRoleMapping::create([
-                    'user_credentials_pk' => $userCredential->pk,
-                    'user_role_master_pk' => $role,
-                ]);
+                return;
             }
+
+            if (UserCredential::where('user_name', $request->userid)->lockForUpdate()->exists()) {
+                $duplicate = ['userid' => ['This user ID already exists']];
+
+                return;
+            }
+
+            $employee = EmployeeMaster::create(array_merge(
+                $this->mapStep1Data($request),
+                $this->mapStep2Data($request),
+                $this->mapStep4Data($request),
+                $this->mapStep5Data($request, $profile_picture, $additional_doc_upload)
+            ));
+
+            $userCredential = UserCredential::create([
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
+                'email_id' => $request->personalemail,
+                'mobile_no' => $request->mnumber,
+                'reg_date' => now(),
+                'user_id' => $employee->pk,
+                'user_name' => $request->userid,
+                'user_category' => 'E'
+            ]);
+
+            if ($userCredential) {
+                $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
+                foreach ($roles as $role) {
+                    EmployeeRoleMapping::create([
+                        'user_credentials_pk' => $userCredential->pk,
+                        'user_role_master_pk' => $role,
+                    ]);
+                }
+            }
+        });
+
+        // Same shape the validator returns, so the wizard renders it in the same
+        // place as any other field error rather than as an unexplained failure.
+        if ($duplicate !== null) {
+            return response()->json(['errors' => $duplicate], 422);
         }
 
         MemberDataTable::bumpListingCacheEpoch();
@@ -666,15 +701,14 @@ class MemberController extends Controller
         $filters = MemberDataTable::resolveFilters();
         $search = trim((string) $request->query('q', ''));
 
-        // Same relations MemberDataTable::query() loads - the Type / Group /
-        // Department columns read them, and this query is not paginated, so
-        // lazy-loading them would be three round trips per exported row.
-        $query = EmployeeMaster::query()->with([
-            'appellationMaster',
-            'employeeType',
-            'employeeGroup',
-            'department',
-        ]);
+        // Same columns and same relations MemberDataTable::query() reads, from
+        // the same two constants - an export that selected a different set could
+        // put columns in the file that the screen it was started from never
+        // showed. Explicit, not SELECT *: this query is not paginated, so the
+        // default pulled all 73 employee_master columns for every matching row.
+        $query = EmployeeMaster::query()
+            ->select(MemberDataTable::LISTING_COLUMNS)
+            ->with(MemberDataTable::LISTING_RELATIONS);
         MemberDataTable::applyListingFilters($query, $filters, $search);
         $rows = $query->orderBy('pk', 'desc')->get();
 

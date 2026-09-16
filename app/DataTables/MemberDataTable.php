@@ -19,6 +19,54 @@ class MemberDataTable extends DataTable
     private const LISTING_CACHE_EPOCH_KEY = 'member_dt_list_epoch';
 
     /**
+     * The employee_master columns this listing actually reads.
+     *
+     * pk keys the row actions; appellation + the three name parts build the
+     * displayed name; emp_id, mobile, email and status are columns of the grid;
+     * emp_type, emp_group_pk and department_master_pk are both toolbar filters
+     * and the foreign keys the three eager loads resolve through. Nothing else
+     * is displayed, exported or filtered on, so nothing else is fetched.
+     *
+     * Shared with MemberController::export() so the download and the screen
+     * cannot read different columns.
+     *
+     * @var string[]
+     */
+    public const LISTING_COLUMNS = [
+        'pk',
+        'appellation',
+        'first_name',
+        'middle_name',
+        'last_name',
+        'emp_id',
+        'emp_type',
+        'emp_group_pk',
+        'department_master_pk',
+        'mobile',
+        'email',
+        'status',
+    ];
+
+    /**
+     * The four relations the Name / Type / Group / Department columns read,
+     * each constrained to its key and its one label column.
+     *
+     * Eager-loaded because resolving them per row costs four queries x page
+     * length; constrained because an unconstrained load hydrates every column
+     * of four master tables into a payload that shows one string from each.
+     * The key column has to stay in each list or Eloquent cannot match the
+     * loaded rows back to their parents.
+     *
+     * @var string[]
+     */
+    public const LISTING_RELATIONS = [
+        'appellationMaster:pk,appettation_name',
+        'employeeType:pk,category_type_name',
+        'employeeGroup:pk,emp_group_name',
+        'department:pk,department_name',
+    ];
+
+    /**
      * Bump after any change that should refresh the /member listing (create, edit steps, update, delete).
      */
     public static function bumpListingCacheEpoch(): void
@@ -149,6 +197,13 @@ class MemberDataTable extends DataTable
      */
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
+        // Resolved once per request, not once per row: the listing is open to
+        // every authenticated user but View and Print are not, and a link the
+        // gate will refuse is a button that reports a permission error instead
+        // of doing anything. Same decision the middleware makes, from the same
+        // method, so the screen and the gate cannot drift apart.
+        $mayReadPii = \App\Http\Middleware\EnsureMemberPiiAccess::grantsAccess();
+
         return (new EloquentDataTable($query))
             ->addIndexColumn()
             ->addColumn('employee_name', function ($row) {
@@ -174,7 +229,7 @@ class MemberDataTable extends DataTable
             ->addColumn('department', fn ($row) => (string) optional($row->department)->department_name)
             ->addColumn('mobile_no', fn ($row) => (string) $row->mobile)
             ->addColumn('email', fn ($row) => (string) $row->email)
-            ->addColumn('actions', function ($row) {
+            ->addColumn('actions', function ($row) use ($mayReadPii) {
                 $isActive = (int) $row->status === 1;
                 $editUrl = route('member.edit', $row->pk);
                 $viewUrl = route('member.show', encrypt($row->pk));
@@ -197,12 +252,10 @@ class MemberDataTable extends DataTable
                             <span class="mbr-act__label">Delete</span>
                        </button>';
 
-                return '<div class="mbr-act-group" role="group" aria-label="Row actions">
-                    <a href="' . e($editUrl) . '" class="mbr-act mbr-act--edit" title="Edit member">
-                        <span class="mbr-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
-                        <span class="mbr-act__label">Edit</span>
-                    </a>
-                    <a href="' . e($viewUrl) . '" class="mbr-act mbr-act--view" title="View member">
+                // Personal-data reads: rendered only for an account the gate
+                // admits. See App\Http\Middleware\EnsureMemberPiiAccess.
+                $piiActions = $mayReadPii
+                    ? '<a href="' . e($viewUrl) . '" class="mbr-act mbr-act--view" title="View member">
                         <span class="mbr-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span>
                         <span class="mbr-act__label">View</span>
                     </a>
@@ -210,7 +263,15 @@ class MemberDataTable extends DataTable
                         title="Print this member\'s details">
                         <span class="mbr-act__icon"><i class="bi bi-printer" aria-hidden="true"></i></span>
                         <span class="mbr-act__label">Print</span>
+                    </a>'
+                    : '';
+
+                return '<div class="mbr-act-group" role="group" aria-label="Row actions">
+                    <a href="' . e($editUrl) . '" class="mbr-act mbr-act--edit" title="Edit member">
+                        <span class="mbr-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
+                        <span class="mbr-act__label">Edit</span>
                     </a>
+                    ' . $piiActions . '
                     <label class="mbr-act mbr-act--toggle" title="' . $toggleLabel . ' member">
                         <span class="mbr-act__icon">
                             <input class="form-check-input plain-status-toggle member-status-toggle" type="checkbox"
@@ -259,14 +320,14 @@ class MemberDataTable extends DataTable
 
     public function query(EmployeeMaster $model): QueryBuilder
     {
-        // employeeType / employeeGroup / department feed the columns of the same
-        // name; without them the grid costs three queries per row.
-        $query = $model->newQuery()->with([
-            'appellationMaster',
-            'employeeType',
-            'employeeGroup',
-            'department',
-        ]);
+        // Explicit column list, not SELECT *: employee_master is 73 columns wide
+        // and this grid renders ten of them, so the default shipped pan_no, dob,
+        // father_name and both addresses to the browser on every draw - into
+        // devtools, any client-side cache and anything that proxies or logs the
+        // response - for a grid that displays none of them.
+        $query = $model->newQuery()
+            ->select(self::LISTING_COLUMNS)
+            ->with(self::LISTING_RELATIONS);
 
         // Search is left to Yajra here (it owns the DataTables request); only the
         // toolbar filters are applied, through the same helper the exports use.

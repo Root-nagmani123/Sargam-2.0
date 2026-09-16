@@ -393,10 +393,6 @@ Route::middleware(['auth'])->group(function () {
             return redirect()->route('member.profile.edit', Auth::user()->user_id);
         })->name('profile.edit.self');
         Route::get('profile/edit/{id}', 'editProfile')->name('profile.edit');
-        Route::get('show/{id}', 'show')->name('show');
-        // Row-level Print: one member's profile, as opposed to export/print which
-        // prints the whole filtered listing.
-        Route::get('print/{id}', 'printMember')->name('print');
         Route::get('/step/{step}', 'loadStep')->name('load-step');
         Route::get('/edit-step/{step}/{id}', 'editStep')->name('edit-step');
         Route::post('/validate-step/{step}', 'validateStep');
@@ -404,10 +400,22 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/store', 'store')->name('store');
         Route::post('update', 'update')->name('update');
         Route::post('{id}/toggle-status', 'toggleStatus')->name('toggle-status');
-        Route::get('excel-export', 'excelExport')->name('excel.export');
-        // Grid exports: one query, one column list, four formats.
-        Route::get('export/{format}', 'export')->name('export')
-            ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
+        // Personal-data egress. These four hand out a member's full profile or
+        // the whole filtered roster as a document that leaves the application,
+        // so they are gated where the rest of the module is not. `show` and
+        // `excel-export` pre-date this change and carry the same rows as the two
+        // added with it - gating only the new pair would be a gate in name only.
+        // See App\Http\Middleware\EnsureMemberPiiAccess for the access decision.
+        Route::middleware(['member.pii'])->group(function () {
+            Route::get('show/{id}', 'show')->name('show');
+            // Row-level Print: one member's profile, as opposed to export/print
+            // which prints the whole filtered listing.
+            Route::get('print/{id}', 'printMember')->name('print');
+            Route::get('excel-export', 'excelExport')->name('excel.export');
+            // Grid exports: one query, one column list, four formats.
+            Route::get('export/{format}', 'export')->name('export')
+                ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
+        });
         Route::delete('delete/{id}', 'destroy')->name('destroy');
     });
 

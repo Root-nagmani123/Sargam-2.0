@@ -22,9 +22,29 @@ class MemberExportFormatsTest extends TestCase
         return $user;
     }
 
+    /**
+     * The exports are gated by EnsureMemberPiiAccess, so being signed in is no
+     * longer enough to reach them. This file is about what the four formats
+     * CONTAIN; whether the gate admits the right people is proved separately in
+     * MemberPiiAccessTest, including the refusal.
+     *
+     * hasRole() reads the session's user_roles before the role tables, and login
+     * writes them there, so a session role is the production shape of "this
+     * account holds this role".
+     */
     private function fetch(string $url)
     {
-        return $this->actingAs($this->actor())->get($url);
+        $response = $this->actingAs($this->actor())
+            ->withSession(['user_roles' => ['Super Admin']])
+            ->get($url);
+
+        $this->assertNotSame(
+            403,
+            $response->getStatusCode(),
+            'the export gate refused this test actor - MemberPiiAccessTest owns the gate, this file owns the contents'
+        );
+
+        return $response;
     }
 
     /**

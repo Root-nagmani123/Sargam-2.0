@@ -75,8 +75,29 @@ class ToggleStatusAllowListTest extends TestCase
     /** @return array<string, string> "table|column|id_column" => the file it was found in */
     private function toggleMarkupPairs(): array
     {
-        $roots = [app_path(), resource_path('views'), public_path('js'), public_path('admin_assets/js')];
         $pairs = [];
+
+        foreach ($this->sourcesCarryingTheSharedClass() as $relativePath => $source) {
+            foreach ($this->pairsIn($source) as $pair) {
+                $pairs[$pair] = basename($relativePath);
+            }
+        }
+
+        $this->assertNotEmpty($pairs, 'the scan must find the toggles it is guarding');
+
+        return $pairs;
+    }
+
+    /**
+     * Every scanned file that mentions the shared class, keyed by its path
+     * relative to the repository root.
+     *
+     * @return array<string, string> relative path => file contents
+     */
+    private function sourcesCarryingTheSharedClass(): array
+    {
+        $roots = [app_path(), resource_path('views'), public_path('js'), public_path('admin_assets/js')];
+        $sources = [];
 
         foreach ($roots as $root) {
             if (! is_dir($root)) {
@@ -96,15 +117,19 @@ class ToggleStatusAllowListTest extends TestCase
                     continue;
                 }
 
-                foreach ($this->pairsIn($source) as $pair) {
-                    $pairs[$pair] = basename($file->getPathname());
-                }
+                $sources[$this->relativePath($file->getPathname())] = $source;
             }
         }
 
-        $this->assertNotEmpty($pairs, 'the scan must find the toggles it is guarding');
+        return $sources;
+    }
 
-        return $pairs;
+    /** Repository-relative, forward slashes, so the expectations below are readable and stable. */
+    private function relativePath(string $absolute): string
+    {
+        $normalise = fn (string $path) => str_replace(chr(92), '/', $path);
+
+        return str_replace($normalise(base_path()).'/', '', $normalise($absolute));
     }
 
     /**
@@ -135,10 +160,10 @@ class ToggleStatusAllowListTest extends TestCase
             // class is enough and avoids pairing across unrelated elements.
             $window = substr($source, max(0, $at - 600), 1200);
 
-            if (preg_match('/data-table=["\']([A-Za-z0-9_]+)["\']/', $window, $t)
-                && preg_match('/data-column=["\']([A-Za-z0-9_]+)["\']/', $window, $c)) {
+            if (preg_match('/data-table=\\\\?["\']([A-Za-z0-9_]+)\\\\?["\']/', $window, $t)
+                && preg_match('/data-column=\\\\?["\']([A-Za-z0-9_]+)\\\\?["\']/', $window, $c)) {
                 // Absent means the handler will send the default, `pk`.
-                $idColumn = preg_match('/data-id_column=["\']([A-Za-z0-9_]+)["\']/', $window, $k)
+                $idColumn = preg_match('/data-id_column=\\\\?["\']([A-Za-z0-9_]+)\\\\?["\']/', $window, $k)
                     ? $k[1]
                     : 'pk';
 
@@ -147,6 +172,188 @@ class ToggleStatusAllowListTest extends TestCase
         }
 
         return $found;
+    }
+
+    /**
+     * Controls that carry the shared class but deliberately register no
+     * (table, column) pair with this endpoint.
+     *
+     * Each one is named with its reason. A blanket "skip what you cannot read"
+     * is what the check below exists to remove; an exception that nobody wrote
+     * down is the same hole with a nicer name.
+     *
+     * @var array<string, string> repository-relative path => why it is exempt
+     */
+    private const NOT_REGISTERED_BY_DESIGN = [
+        'resources/views/admin/security/vehicle_pass_config/index.blade.php' =>
+            'carries data-url and its own in-page handler, and posts to '
+            .'admin.security.vehicle_pass_config.toggle.status, not to this endpoint',
+        'resources/views/admin/security/vehicle_type/index.blade.php' =>
+            'carries data-url and its own in-page handler, and posts to '
+            .'admin.security.vehicle_type.toggle.status, not to this endpoint',
+    ];
+
+    /**
+     * Nothing carrying the shared class may be invisible to the pair scan.
+     *
+     * The guard above is worth exactly one claim - "the allow-list cannot
+     * silently fall behind the UI" - and that claim only holds for toggles
+     * whose data-table and data-column are literal strings. A screen written as
+     * data-table="{{ $table }}", or with the attributes further from the class
+     * than the scan's window, or assembled in JS, used to be SKIPPED: the test
+     * stayed green, the allow-list never gained the row, and the switch became a
+     * dead button answering "That table cannot be toggled from here."
+     *
+     * So an element the scan cannot read is reported here instead of ignored.
+     * The only way past it is to name the control and say why.
+     */
+    public function test_no_shared_toggle_element_is_skipped_by_the_scan(): void
+    {
+        $unreadable = [];
+        $elements = 0;
+
+        foreach ($this->sourcesCarryingTheSharedClass() as $relativePath => $source) {
+            foreach ($this->sharedToggleTags($source) as $tag) {
+                $elements++;
+
+                if ($this->registersALiteralPair($tag)) {
+                    continue;
+                }
+
+                if (array_key_exists($relativePath, self::NOT_REGISTERED_BY_DESIGN)) {
+                    continue;
+                }
+
+                $unreadable[] = $relativePath.'  ->  '.$this->summarise($tag);
+            }
+        }
+
+        // If this ever reaches zero the scan has stopped finding elements at all,
+        // which would make an empty $unreadable meaningless.
+        $this->assertGreaterThan(30, $elements, 'the element scan must find the toggles it is guarding');
+
+        $this->assertSame(
+            [],
+            $unreadable,
+            "shared-class toggles the allow-list scan cannot read - register them, or add them to "
+            ."NOT_REGISTERED_BY_DESIGN with the reason:
+".implode("
+", $unreadable)
+        );
+    }
+
+    /** Every named exception must still exist, or the list is quietly excusing nothing. */
+    public function test_each_named_exception_still_carries_the_shared_class(): void
+    {
+        $scanned = $this->sourcesCarryingTheSharedClass();
+
+        foreach (self::NOT_REGISTERED_BY_DESIGN as $path => $reason) {
+            $this->assertArrayHasKey(
+                $path,
+                $scanned,
+                "{$path} is excused from the toggle scan but no longer carries the shared class - drop the exception"
+            );
+            $this->assertNotEmpty($reason, "{$path} must say why it is exempt");
+        }
+    }
+
+    /**
+     * Does this element name its table and column as literal strings?
+     *
+     * The optional backslash is not decoration: five of these screens insert
+     * new rows from a JS template literal, where the same markup is written
+     * class=\"...status-toggle\". Those toggles are as real as the server-rendered
+     * ones and register the same pair; reading only unescaped quotes reported
+     * all five as unreadable when they are merely quoted differently.
+     */
+    private function registersALiteralPair(string $tag): bool
+    {
+        return (bool) preg_match('/data-table=\\\\?["\']([A-Za-z0-9_]+)\\\\?["\']/', $tag)
+            && (bool) preg_match('/data-column=\\\\?["\']([A-Za-z0-9_]+)\\\\?["\']/', $tag);
+    }
+
+    /**
+     * The check above is only worth what its parser is worth, so the parser is
+     * exercised directly - once on each shape it must accept, and once on the
+     * shape it must reject.
+     *
+     * @dataProvider elementShapes
+     */
+    public function test_the_scan_can_tell_a_literal_pair_from_one_it_cannot_read(string $markup, bool $readable, string $why): void
+    {
+        $tags = $this->sharedToggleTags($markup);
+
+        $this->assertCount(1, $tags, "the tag scan must find exactly one element: {$why}");
+        $this->assertSame($readable, $this->registersALiteralPair($tags[0]), $why);
+    }
+
+    /** @return array<string, array{0: string, 1: bool, 2: string}> */
+    public static function elementShapes(): array
+    {
+        return [
+            'a plain server-rendered toggle' => [
+                '<input class="form-check-input status-toggle" type="checkbox" '
+                .'data-table="department_master" data-column="active_inactive" data-id="7">',
+                true,
+                'the ordinary shape must still be read',
+            ],
+            'a row inserted from a JS template literal' => [
+                '<input class=\\"form-check-input status-toggle\\" type=\\"checkbox\\" '
+                .'data-table=\\"department_master\\" data-column=\\"active_inactive\\" data-id=\\"7\\">',
+                true,
+                'escaped quotes are a quoting difference, not an unreadable toggle',
+            ],
+            'an attribute value containing a Blade arrow' => [
+                '<input class="form-check-input status-toggle" type="checkbox" '
+                .'data-table="venue_master" data-column="active_inactive" '
+                .'data-id_column="{{ $venue->venue_id }}" data-id="{{ $venue->venue_id }}">',
+                true,
+                'a > inside an attribute value must not truncate the tag and lose its attributes',
+            ],
+            'a table name supplied by a Blade expression' => [
+                '<input class="form-check-input status-toggle" type="checkbox" '
+                .'data-table="{{ $table }}" data-column="active_inactive" data-id="7">',
+                false,
+                'THIS is the case that used to be skipped silently - it must now be reported',
+            ],
+        ];
+    }
+
+    /**
+     * The HTML tags in $source that carry the shared class.
+     *
+     * Quote-aware on purpose. A naive /<input[^>]*>/ stops at the first `>`, and
+     * in this codebase that `>` is often INSIDE an attribute value - Blade
+     * expressions such as data-id_column="{{ $venue->venue_id }}" contain one.
+     * A tag truncated there loses exactly the attributes being looked for, and
+     * the element is then reported as unreadable when it is merely mis-parsed.
+     *
+     * Matching tags rather than raw occurrences is also what keeps handler code
+     * out of the result: $('.status-toggle') in a script is a reference to these
+     * controls, not one of them.
+     *
+     * @return string[]
+     */
+    private function sharedToggleTags(string $source): array
+    {
+        $pattern = "/<[a-zA-Z][^>\"']*(?:(?:\"[^\"]*\"|'[^']*')[^>\"']*)*>/s";
+
+        if (! preg_match_all($pattern, $source, $matches)) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $matches[0],
+            fn (string $tag) => (bool) preg_match(self::SHARED_TOGGLE_CLASS, $tag)
+        ));
+    }
+
+    /** A tag short enough to read in a failure message. */
+    private function summarise(string $tag): string
+    {
+        $flat = trim(preg_replace('/\s+/', ' ', $tag));
+
+        return strlen($flat) > 160 ? substr($flat, 0, 157).'...' : $flat;
     }
 
     /** The allow-list must not have grown a table that is not a status switch. */

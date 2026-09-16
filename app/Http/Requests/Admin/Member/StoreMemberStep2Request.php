@@ -25,10 +25,27 @@ class StoreMemberStep2Request extends FormRequest
     public function rules()
     {
         $empID = request()->emp_id ?? '';
-        
+
+        // employee_master.emp_id is indexed but NOT unique, so the database
+        // accepts a duplicate silently. The browser-side double-submit guard
+        // cannot see a re-POST after a refresh, a second tab, a replayed
+        // request, or a client where the JS never loaded, so the check has to
+        // live here. Existing duplicates in the table are left alone - this
+        // refuses NEW ones; the unique constraint is blocked on a data cleanup
+        // and on confirming emp_id is the intended business key.
+        $uniqueEmpId = Rule::unique('employee_master', 'emp_id');
+
+        // On update the row being edited is itself a match and must not count.
+        // On create there is no such row, and `ignore('')` would compare an
+        // integer key against an empty string, so the clause is added only when
+        // there is a key to ignore.
+        if ($empID !== '') {
+            $uniqueEmpId->ignore($empID, 'pk');
+        }
+
         return [
             'type' => 'required|exists:employee_type_master,pk',
-            'id' => 'required|string|max:50', //|unique:employees,employee_id
+            'id' => ['required', 'string', 'max:50', $uniqueEmpId],
             'group' => 'required', // |exists:employee_groups,id
             'designation' => 'required', // |exists:designations,id
             'userid'     => [
