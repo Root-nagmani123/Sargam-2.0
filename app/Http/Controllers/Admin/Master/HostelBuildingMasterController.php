@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin\Master;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-// use App\DataTables\Master\HostelBuildingMasterDataTable;
 use App\DataTables\Master\BuildingMasterDataTable;
 // use App\Models\HostelBuildingMaster;
 use App\Models\BuildingMaster;
@@ -17,7 +16,6 @@ class HostelBuildingMasterController extends Controller
     public function __construct(){
         $this->buildingType = BuildingMaster::$buildingType;
     }
-    // public function index(HostelBuildingMasterDataTable $dataTable){
     public function index(BuildingMasterDataTable $dataTable){
         return $dataTable->render('admin.master.hostel_building.index', ['buildingType' => $this->buildingType]);
     }

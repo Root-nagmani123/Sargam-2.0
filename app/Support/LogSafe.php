@@ -37,9 +37,16 @@ class LogSafe
             $value = (string) $value;
         }
 
-        // \p{C} covers CR, LF, TAB, NUL, DEL and the C1 range in one pass, plus
-        // the invisible formatting characters that can hide text in a viewer.
-        $clean = preg_replace('/\p{C}+/u', ' ', $value);
+        // Cc (C0, DEL and the C1 range) is what can end a Monolog record, so
+        // that is what gets replaced.
+        //
+        // NOT \p{C}: that also covers Cf, the invisible FORMAT characters, and
+        // Cf contains U+200C/U+200D. Devanagari writes conjuncts with those
+        // joiners, so stripping them rewrites a legitimate Hindi search term
+        // inside the very audit line that exists to record what was searched
+        // for. This is a neutraliser, not a censor: only the characters that
+        // can break a record out of its line are touched.
+        $clean = preg_replace('/\p{Cc}+/u', ' ', $value);
 
         // preg_replace returns null on invalid UTF-8; fall back to a byte filter
         // rather than logging nothing at all.

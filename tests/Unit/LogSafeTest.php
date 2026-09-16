@@ -87,6 +87,37 @@ class LogSafeTest extends TestCase
         $this->assertLessThanOrEqual(LogSafe::MAX_LENGTH + 1, mb_strlen($clean));
     }
 
+    /**
+     * A neutraliser, not a censor.
+     *
+     * Devanagari writes conjuncts with U+200D (ZWJ) and separates them with
+     * U+200C (ZWNJ). Those are Cf - FORMAT characters - not Cc, and they cannot
+     * end a Monolog record, so removing them only rewrites the term an
+     * administrator actually searched for inside the audit line that exists to
+     * record it. The earlier \p{C} pattern replaced them with a space.
+     *
+     * @dataProvider formatCharacterProvider
+     */
+    public function test_it_keeps_the_joiners_indic_scripts_need(string $term): void
+    {
+        $this->assertSame($term, LogSafe::text($term), 'a format character was stripped from a legitimate term');
+    }
+
+    public static function formatCharacterProvider(): array
+    {
+        return [
+            'ZWJ conjunct'   => ["\u{0915}\u{094D}\u{200D}\u{0937}"],
+            'ZWNJ'           => ["\u{0915}\u{094D}\u{200C}\u{0937}"],
+            'plain Hindi'    => ["\u{0939}\u{093F}\u{0928}\u{094D}\u{0926}\u{0940}"],
+        ];
+    }
+
+    /** The C1 range still goes: it is Cc, and a viewer can act on it. */
+    public function test_it_still_removes_the_c1_range(): void
+    {
+        $this->assertStringNotContainsString("\u{0085}", LogSafe::text("a\u{0085}b"));
+    }
+
     public function test_context_sanitises_every_value_including_nested_arrays(): void
     {
         $context = LogSafe::context([
