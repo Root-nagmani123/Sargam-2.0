@@ -28,11 +28,11 @@ class VenueMaster extends Model
 
     public function building()
     {
-        return $this->belongsTo(BuildingMaster::class, 'building_master_pk', 'pk');
+        return $this->belongsTo(ExamBuildingMaster::class, 'building_master_pk', 'pk');
     }
 
     public function floor()
     {
-        return $this->belongsTo(FloorMaster::class, 'floor_master_pk', 'pk');
+        return $this->belongsTo(ExamFloorMaster::class, 'floor_master_pk', 'pk');
     }
 }

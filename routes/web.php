@@ -51,6 +51,8 @@ use App\Http\Controllers\Admin\{
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
+use App\Http\Controllers\Admin\Master\ExamBuildingMasterController;
+use App\Http\Controllers\Admin\Master\ExamFloorMasterController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
 use App\Http\Controllers\Admin\Master\AppellationMasterController;
 use App\Http\Controllers\Admin\FeedbackController;
@@ -1031,6 +1033,22 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
     Route::post('store', [AppellationMasterController::class, 'store'])->name('store');
     Route::delete('delete/{id}', [AppellationMasterController::class, 'destroy'])->name('delete');
 });
+
+    Route::prefix('admin/exam-building')->name('master.exam_building.')->group(function () {
+        Route::get('/', [ExamBuildingMasterController::class, 'index'])->name('index');
+        Route::get('create', [ExamBuildingMasterController::class, 'create'])->name('create');
+        Route::get('edit/{id}', [ExamBuildingMasterController::class, 'edit'])->name('edit');
+        Route::post('store', [ExamBuildingMasterController::class, 'store'])->name('store');
+        Route::delete('delete/{id}', [ExamBuildingMasterController::class, 'destroy'])->name('delete');
+    });
+
+    Route::prefix('admin/exam-floor')->name('master.exam_floor.')->group(function () {
+        Route::get('/', [ExamFloorMasterController::class, 'index'])->name('index');
+        Route::get('create', [ExamFloorMasterController::class, 'create'])->name('create');
+        Route::get('edit/{id}', [ExamFloorMasterController::class, 'edit'])->name('edit');
+        Route::post('store', [ExamFloorMasterController::class, 'store'])->name('store');
+        Route::delete('delete/{id}', [ExamFloorMasterController::class, 'destroy'])->name('delete');
+    });
 
     Route::prefix('admin/discipline')->name('master.discipline.')->group(function () {
         Route::get('/', [DisciplineMasterController::class, 'index'])->name('index');

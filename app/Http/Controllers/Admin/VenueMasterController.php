@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\{VenueMaster, BuildingMaster, FloorMaster};
+use App\Models\{VenueMaster, ExamBuildingMaster, ExamFloorMaster};
 use App\Support\DataTableRedisCache;
 
 class VenueMasterController extends Controller
@@ -76,8 +76,8 @@ class VenueMasterController extends Controller
             "venue_name" => "required|string|max:255",
             "venue_short_name" => "required|string|max:100",
             "description" => "nullable|string",
-            "building_master_pk" => "nullable|exists:building_master,pk",
-            "floor_master_pk" => "nullable|exists:floor_master,pk",
+            "building_master_pk" => "nullable|exists:exam_building_master,pk",
+            "floor_master_pk" => "nullable|exists:exam_floor_master,pk",
             "room_number" => "nullable|string|max:50",
             "capacity" => "nullable|integer|min:0|max:100000",
             "laptop_capacity" => "nullable|integer|min:0|max:100000|lte:capacity",
@@ -124,10 +124,10 @@ class VenueMasterController extends Controller
     private function venueFormLookups(): array
     {
         return [
-            "buildings" => BuildingMaster::where("active_inactive", 1)
+            "buildings" => ExamBuildingMaster::where("active_inactive", 1)
                 ->orderBy("building_name")->get(),
-            "floors" => FloorMaster::where("active_inactive", 1)
-                ->orderBy("floor_name")->get(),
+            "floors" => ExamFloorMaster::where("active_inactive", 1)
+                ->orderBy("display_order")->orderBy("floor_name")->get(),
         ];
     }
 
