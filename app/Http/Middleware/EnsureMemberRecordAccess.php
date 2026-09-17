@@ -50,10 +50,12 @@ use Illuminate\Http\Request;
  *          (user_credentials pks 1778, 1800, 1382, 1633, 1748, 2102, 1871,
  *           1397, 2528)
  *
- * Looser rules give 349 under an exact first-plus-last comparison and 575 under
- * normalised tokens including the employee's middle_name; both are dominated by
- * spelling noise, which is why they are not the numbers to act on. Whichever
- * count is quoted, quote the rule with it.
+ * Looser rules give 349 under an exact first-plus-last comparison that is
+ * case-insensitive and trimmed - the other readings of "exact" give 356, 364 or
+ * 371, so the rule is not optional - and 575 under normalised tokens including
+ * the employee's middle_name. Both are dominated by spelling noise, which is
+ * why they are not the numbers to act on. Whichever count is quoted, quote the
+ * rule with it.
  *
  * For those accounts "their own record" is somebody else's, for reading here and
  * for writing through MemberController::authorizeMemberRecord().
@@ -63,11 +65,14 @@ use Illuminate\Http\Request;
  * values that fall inside employee_master's pk range, and nothing below checks
  * that the credential is an employee credential - but narrowing the rule to
  * user_category = 'E' does NOT fix this. That closes the 317 blank-category
- * cases and leaves the nine listed above open. Those nine rotate through the
- * block (ANJALI CHAUHAN -> Brijesh Patel -> AZAD SINGH -> ESWARA RAO -> SONALI
- * RAWAT), which reads as a block of user_id values written misaligned rather
- * than as a category being conflated. Any fix needs a name- or ownership-based
- * check on top of the category, and a test whose actor is one of those nine.
+ * cases and leaves the nine listed above open. Six of those nine land on an
+ * employee_master row whose name belongs to ANOTHER credential in the same set,
+ * and the set closes on itself - which reads as a block of user_id values
+ * written misaligned rather than as a category being conflated. The other three
+ * match nothing inside the set. Deliberately stated by pk and never by name:
+ * this is a public repository - see PR #309 F-031. Any fix needs a name- or
+ * ownership-based check on top of the category, and a test whose actor is one
+ * of those nine.
  *
  * Whether that is data to repair or a column being read for a purpose it does
  * not serve is a domain question this code cannot settle. It is open as PR #309
