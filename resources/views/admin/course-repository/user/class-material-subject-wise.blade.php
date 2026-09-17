@@ -7,7 +7,6 @@
     <div class="container-fluid px-3 px-md-4 pt-3 pb-0">
         <x-breadcrum title="Class Material (Subject Wise)"></x-breadcrum>
     </div>
-@section('content')
 <div class="d-flex">
 
     <!-- Main Content -->
