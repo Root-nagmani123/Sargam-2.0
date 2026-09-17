@@ -240,13 +240,13 @@
                                     <th>Cadre Counsellor</th>
                                     <th>House Group Faculty</th>
                                     <th>House Group</th>
-                                    <th>Total Duty (Count)</th>
+                                    <th>MDO Duty</th>
                                     <th>Duty Type</th>
-                                    <th>Total Medical Exemption Count</th>
-                                    <th>Total PT Exemption (Days)</th>
-                                    <th>Total Stationed Leave (Days)</th>
-                                    <th>Total Notice/Memo</th>
-                                    <th>Total Discipline Memo</th>
+                                    <th>Medical Exemption</th>
+                                    <th>PT Exemption</th>
+                                    <th>Stationed Leave</th>
+                                    <th>Notice/Memo</th>
+                                    <th>Discipline Memo</th>
                                     <th>Comments/ Feedbacks</th>
                                     <th>Action</th>
                                 </tr>
@@ -667,13 +667,13 @@
             { title: 'Cadre Counsellor', data: 'counsellor', w: 10 },
             { title: 'House Group Faculty', data: 'house_faculty', w: 10 },
             { title: 'House Group', data: 'house', w: 8 },
-            { title: 'Total Duty (Count)', data: 'duty_count', w: 6 },
+            { title: 'MDO Duty', data: 'duty_count', w: 6 },
             { title: 'Duty Type', data: 'duty_type', w: 8 },
-            { title: 'Total Medical Exemption Count', data: 'medical', w: 7 },
-            { title: 'Total PT Exemption (Days)', data: 'pt', w: 7 },
-            { title: 'Total Stationed Leave (Days)', data: 'stationed', w: 7 },
-            { title: 'Total Notice/Memo', data: 'notice_memo', w: 6 },
-            { title: 'Total Discipline Memo', data: 'discipline_memo', w: 6 },
+            { title: 'Medical Exemption', data: 'medical', w: 7 },
+            { title: 'PT Exemption', data: 'pt', w: 7 },
+            { title: 'Stationed Leave', data: 'stationed', w: 7 },
+            { title: 'Notice/Memo', data: 'notice_memo', w: 6 },
+            { title: 'Discipline Memo', data: 'discipline_memo', w: 6 },
             // Action is a control, not data — it is never printed or exported.
             { title: 'Comments/ Feedbacks', data: 'comments', w: 6 },
         ];
@@ -899,10 +899,26 @@
         // order changes — v1 entries would otherwise hide the wrong columns.
         // v5: Mobile No / User Name inserted after Email, so every stored index
         // past it shifted — a v4 list would hide the wrong columns.
-        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v5';
+        // v6: the default set below was introduced, so v5 entries (which meant
+        // "everything visible") must not survive as a saved preference.
+        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v6';
+        // What the page opens with: the frozen identity columns plus the counts
+        // the list exists for. The contact / mapping columns are one click away in
+        // Column Visibility, so a viewer who wants them turns them on — and that
+        // choice is then saved and wins over this default for good.
+        //   3 Email · 4 Mobile No · 5 User Name · 6 Cadre
+        //   7 Cadre Counsellor · 8 House Group Faculty · 9 House Group
+        const DEFAULT_HIDDEN_COLUMNS = [3, 4, 5, 6, 7, 8, 9];
         function otGetHiddenCols() {
-            try { const raw = localStorage.getItem(otColStorageKey); const arr = raw ? JSON.parse(raw) : []; return Array.isArray(arr) ? arr : []; }
-            catch (e) { return []; }
+            try {
+                const raw = localStorage.getItem(otColStorageKey);
+                // No saved preference yet (null) → the default set. An empty ARRAY is
+                // a real choice ("show everything") and must be honoured as one.
+                if (raw === null) { return DEFAULT_HIDDEN_COLUMNS.slice(); }
+                const arr = JSON.parse(raw);
+                return Array.isArray(arr) ? arr : DEFAULT_HIDDEN_COLUMNS.slice();
+            }
+            catch (e) { return DEFAULT_HIDDEN_COLUMNS.slice(); }
         }
         function otPersistHiddenCols(arr) { try { localStorage.setItem(otColStorageKey, JSON.stringify(arr)); } catch (e) {} }
         function setupOtColumns() {
