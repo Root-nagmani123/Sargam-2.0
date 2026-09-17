@@ -827,6 +827,14 @@ class MemberController extends Controller
             // Update the status
             $member->update(['status' => $newStatus]);
 
+            // Same audit line the gated reads leave. This endpoint is now behind
+            // member.pii, and a privileged mutation with no trail is what let the
+            // ungated version of it go unnoticed.
+            $this->logMemberPii('toggle_status', [
+                'member_pk' => (int) $member->pk,
+                'new_status' => $newStatus,
+            ]);
+
             // Bump cache epoch to refresh datatable
             MemberDataTable::bumpListingCacheEpoch();
 
@@ -885,6 +893,13 @@ class MemberController extends Controller
 
             // Delete the member
             $member->delete();
+
+            // Audit AFTER the deletes succeed: this removes an employee row, a
+            // user_credentials row and every role mapping attached to it, which
+            // is the most destructive act in the module.
+            $this->logMemberPii('destroy', [
+                'member_pk' => (int) $memberId,
+            ]);
 
             MemberDataTable::bumpListingCacheEpoch();
 

@@ -6,6 +6,7 @@ use App\DataTables\MemberDataTable;
 use App\Http\Middleware\EnsureMemberPiiAccess;
 use App\Models\EmployeeMaster;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -283,15 +284,50 @@ class MemberPiiAccessTest extends TestCase
      */
     public function test_the_action_column_offers_edit_only_where_member_record_admits_it(): void
     {
+        // The refusal side of this rule is easy to exercise and the GRANT side is
+        // not: the actor's own record has to be on the page under test, and page
+        // one is ordered by pk descending. The first version of this test guarded
+        // only $rowsNotOwn, so when the default actor's record was not on the page
+        // every $isOwn was false, the loop asserted false === false ten times, and
+        // a regression that withheld Edit from the owner left it green.
+        //
+        // So the actor is chosen FROM the page rather than hoped onto it, and both
+        // counters are asserted at the end.
         $this->actAsNonEntitled();
 
-        $own = optional(auth()->user())->user_id;
+        $pagePks = array_values(array_filter(
+            array_map(fn ($row) => $row['pk'] ?? null, $this->listingFeedRows()),
+            fn ($pk) => $pk !== null
+        ));
+
+        if (! $pagePks) {
+            $this->markTestSkipped('no member rows in the listing');
+        }
+
+        $owner = User::query()->whereIn('user_id', $pagePks)->orderBy('pk')->first();
+
+        if (! $owner) {
+            $this->markTestSkipped(
+                'no user_credentials row whose user_id is on page one of the listing, '
+                .'so the own-record branch cannot be exercised against this data'
+            );
+        }
+
+        $this->actingAs($owner);
+        session(['user_roles' => ['FC-Sec-Audit']]);
+        $this->assertFalse(
+            isSidebarPrivilegedUser(),
+            'this case is meaningless unless the actor is genuinely non-privileged'
+        );
+
+        $own = $owner->user_id;
         $rows = $this->listingFeedRows();
 
         if (! $rows) {
             $this->markTestSkipped('no member rows in the listing');
         }
 
+        $rowsOwn = 0;
         $rowsNotOwn = 0;
 
         foreach ($rows as $row) {
@@ -313,6 +349,7 @@ class MemberPiiAccessTest extends TestCase
                     : "member {$row['pk']} is not this account's record, and the Action column still offers an Edit link that member.record answers with 403"
             );
 
+            $rowsOwn += $isOwn ? 1 : 0;
             $rowsNotOwn += $isOwn ? 0 : 1;
         }
 
@@ -321,6 +358,203 @@ class MemberPiiAccessTest extends TestCase
             $rowsNotOwn,
             'every row on this page was the actor own record, so the refusal side was never exercised'
         );
+
+        // The guard the first version of this test was missing.
+        $this->assertGreaterThan(
+            0,
+            $rowsOwn,
+            'the actor own record was not on the page under test, so the GRANT side of the '
+            .'rule was never exercised and this test could not have failed if it broke'
+        );
+    }
+
+    /**
+     * R11-001, the denied case: the two destructive mutations refuse a
+     * non-entitled account, and refuse it WITHOUT writing.
+     *
+     * These carried `auth` and nothing else until the gate was added, so any
+     * authenticated account could deactivate any member and then delete them,
+     * taking the member's user_credentials row and every role mapping with it.
+     * The row is read either side of the calls, because a 403 that still wrote
+     * would be the same defect with a tidier response.
+     */
+    public function test_the_member_mutations_refuse_a_non_entitled_account(): void
+    {
+        $this->actAsNonEntitled();
+
+        $pk = $this->anyMemberPk();
+        $before = EmployeeMaster::query()->where('pk', $pk)->first();
+
+        if (! $before) {
+            $this->markTestSkipped('no member row to act on');
+        }
+
+        // This class carries no DatabaseTransactions trait and the configured
+        // database is a real one, so these calls wrap their own transaction.
+        // That is defensive, not cosmetic: if the gate ever regressed, the
+        // DELETE below would remove a live member, their user_credentials row
+        // and every role mapping BEFORE the assertion could fail.
+        DB::beginTransaction();
+
+        try {
+            $this->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
+                ->post(route('member.toggle-status', $pk))
+                ->assertForbidden();
+
+            $this->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
+                ->delete(route('member.destroy', encrypt($pk)))
+                ->assertForbidden();
+
+            $after = EmployeeMaster::query()->where('pk', $pk)->first();
+
+            $this->assertNotNull($after, "member {$pk} was deleted by an account the gate refuses");
+            $this->assertSame(
+                (string) $before->status,
+                (string) $after->status,
+                "member {$pk} had its status rewritten by an account the gate refuses"
+            );
+        } finally {
+            DB::rollBack();
+        }
+    }
+
+    /** The grant side of the same pair: the gate admits an entitled account. */
+    public function test_the_member_mutations_admit_an_entitled_account(): void
+    {
+        $this->actAsSuperAdmin();
+
+        $pk = $this->anyMemberPk();
+
+        // Asserting the GATE, not the write: the response is whatever the
+        // controller makes of it. What must not happen is 403.
+        //
+        // This case DOES reach the controller and flip a real member's status,
+        // and the class has no DatabaseTransactions trait, so it rolls its own
+        // write back rather than leaving it in the database.
+        DB::beginTransaction();
+
+        try {
+            $response = $this->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
+                ->post(route('member.toggle-status', $pk));
+
+            $this->assertNotSame(
+                403,
+                $response->getStatusCode(),
+                'the gate refused an entitled account on member.toggle-status'
+            );
+        } finally {
+            DB::rollBack();
+        }
+    }
+
+    /**
+     * R11-002: the listing cache must not serve one actor's Action column to
+     * another.
+     *
+     * The payload is cached, and the Action column is rendered per actor - View
+     * and Print only for an entitled account, Edit only on the row it owns. The
+     * cache fingerprint did not include the actor, so whoever warmed an entry
+     * decided what everybody else with the same filters saw until it expired
+     * (default TTL 86400s).
+     *
+     * THE VACUITY TRAP THIS TEST HAS TO AVOID: the configured store is redis,
+     * it is not reachable from the test runner, and
+     * DataTableRedisCache::remember() CATCHES that and serves uncached. A
+     * cross-actor test written without forcing a working store therefore passes
+     * while proving nothing. So this one points the resolver at the array store
+     * and then asserts the store was actually written before trusting the result.
+     */
+    public function test_the_listing_cache_is_not_shared_across_actors(): void
+    {
+        config(['cache.redis_backed_unified_store' => 'array']);
+        $store = Cache::store('array');
+        $store->clear();
+
+        // 1. A non-entitled account warms the cache.
+        $this->actAsNonEntitled();
+        $coldRows = $this->listingFeedRows();
+
+        if (! $coldRows) {
+            $this->markTestSkipped('no member rows in the listing');
+        }
+
+        // The guard that makes the rest of this test mean anything: if the store
+        // is empty, nothing was cached and the assertions below would hold even
+        // with the actor left out of the key.
+        $this->assertNotSame(
+            [],
+            $this->arrayStoreContents($store),
+            'nothing reached the cache store, so this test cannot demonstrate anything '
+            .'about cache sharing - check that remember() is not falling through'
+        );
+
+        foreach ($coldRows as $row) {
+            $this->assertStringNotContainsString(
+                'mbr-act--view',
+                (string) $row['actions'],
+                'a non-entitled account was served a View control'
+            );
+        }
+
+        // 2. An entitled account asks for the SAME page, length, ordering,
+        //    search and filters. Before the actor was part of the key this got
+        //    the payload rendered above, stripped of every control it is
+        //    entitled to.
+        $this->actAsSuperAdmin();
+        $warmRows = $this->listingFeedRows();
+
+        $this->assertNotEmpty($warmRows, 'the entitled account got an empty feed');
+
+        $withView = 0;
+        foreach ($warmRows as $row) {
+            $withView += str_contains((string) $row['actions'], 'mbr-act--view') ? 1 : 0;
+        }
+
+        $this->assertSame(
+            count($warmRows),
+            $withView,
+            'the entitled account was served the non-entitled account cached payload: '
+            .'View is missing from '.(count($warmRows) - $withView).' of '.count($warmRows).' rows'
+        );
+    }
+
+    /**
+     * The mechanism R11-002 turns on, asserted directly: two accounts that must
+     * render differently must not compute the same cache identity.
+     */
+    public function test_the_cache_identity_separates_actors_that_render_differently(): void
+    {
+        $this->actAsNonEntitled();
+        $nonEntitled = MemberDataTable::actionColumnCacheIdentity();
+
+        $this->actAsSuperAdmin();
+        $entitled = MemberDataTable::actionColumnCacheIdentity();
+
+        $this->assertNotSame(
+            $nonEntitled,
+            $entitled,
+            'an entitled and a non-entitled account share a cache identity, so they share a payload'
+        );
+
+        // And the converse, which is why this is not simply auth()->id():
+        // entitled accounts all render identically, so they SHOULD share.
+        $this->assertSame('entitled', $entitled);
+    }
+
+    /** ArrayStore keeps its entries in a protected property; a test may look. */
+    private function arrayStoreContents($store): array
+    {
+        $inner = $store->getStore();
+        $ref = new \ReflectionClass($inner);
+
+        if (! $ref->hasProperty('storage')) {
+            return [];
+        }
+
+        $prop = $ref->getProperty('storage');
+        $prop->setAccessible(true);
+
+        return (array) $prop->getValue($inner);
     }
 
     /** The other side of the same column: an entitled account keeps Edit on every row. */

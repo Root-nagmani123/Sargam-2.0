@@ -410,12 +410,21 @@ Route::middleware(['auth'])->group(function () {
         });
         Route::post('/store', 'store')->name('store');
         Route::post('update', 'update')->name('update');
-        Route::post('{id}/toggle-status', 'toggleStatus')->name('toggle-status');
-        // Personal-data egress. These four hand out a member's full profile or
-        // the whole filtered roster as a document that leaves the application,
-        // so they are gated where the rest of the module is not. `show` and
-        // `excel-export` pre-date this change and carry the same rows as the two
-        // added with it - gating only the new pair would be a gate in name only.
+        // Personal-data egress AND the two destructive mutations. The reads hand
+        // out a member's full profile or the whole filtered roster as a document
+        // that leaves the application; the writes deactivate or delete a member
+        // outright. `show` and `excel-export` pre-date this change and carry the
+        // same rows as the two reads added with it - gating only the new pair
+        // would be a gate in name only.
+        //
+        // toggle-status and destroy sat OUTSIDE both gates until this change, so
+        // any authenticated account could deactivate any member and then delete
+        // them. They are gated on `member.pii` rather than on `member.record`
+        // deliberately: `member.record` admits an ordinary account to its OWN
+        // record, and destroy() deletes that account's user_credentials row and
+        // every role mapping with it, so the own-record branch would hand every
+        // user a working self-delete. Deactivating and deleting an employee are
+        // administrative acts, so they take the administrative entitlement.
         // See App\Http\Middleware\EnsureMemberPiiAccess for the access decision.
         Route::middleware(['member.pii'])->group(function () {
             Route::get('show/{id}', 'show')->name('show');
@@ -426,8 +435,9 @@ Route::middleware(['auth'])->group(function () {
             // Grid exports: one query, one column list, four formats.
             Route::get('export/{format}', 'export')->name('export')
                 ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
+            Route::post('{id}/toggle-status', 'toggleStatus')->name('toggle-status');
+            Route::delete('delete/{id}', 'destroy')->name('destroy');
         });
-        Route::delete('delete/{id}', 'destroy')->name('destroy');
     });
 
     // Faculty Routes
