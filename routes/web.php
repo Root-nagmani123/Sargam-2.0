@@ -172,8 +172,19 @@ Route::middleware(['auth', 'menu.permission:roles'])->group(function () {
 Route::middleware(['auth'])->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
-        Route::get('users/get-roles', [UserController::class, 'getAllRoles'])
-            ->name('users.getRoles');
+        // User Management. The WHOLE module, not one route of it.
+        //
+        // The previous round gated `users/export/{format}` and left everything
+        // beside it on `auth`. That closed the convenient download and nothing
+        // else: `admin/users` itself accepted an unbounded ?per_page and
+        // returned MORE of the same directory than the export did, and
+        // `users/assign-role-save` let any of 11,213 role-less accounts post one
+        // form to give itself the Super Admin role - which does not merely open
+        // one gate, it bypasses every menu.permission gate in the application,
+        // because Super Admin is admitted before the permission is ever read.
+        //
+        // `users` is the permission the User Management screen itself uses
+        // (menus row 158); Super Admin passes it without holding it.
         // The same RoleController actions are reachable under /admin as well as
         // at the un-prefixed names above, and both sets serve the one live Roles
         // screen. Gating only one set would leave every write on this module
@@ -187,18 +198,27 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('roles/{id}', [RoleController::class, 'destroy'])->name('roles.destroy');
         });
 
+        Route::middleware('menu.permission:users')->group(function () {
+            Route::get('users/get-roles', [UserController::class, 'getAllRoles'])
+                ->name('users.getRoles');
+
+            // The whole user_credentials directory - user name, name, email,
+            // contact number, type and role - in one request, for 15,108 rows.
+            // Must stay ABOVE the resource: `users/{user}` would otherwise
+            // swallow /users/export and hand "export" to show().
+            Route::get('users/export/{format}', [UserController::class, 'export'])
+                ->whereIn('format', ['csv', 'xlsx', 'pdf', 'print'])
+                ->name('users.export');
+            Route::resource('users', UserController::class);
+            Route::get('users/assign-role/{id}', [UserController::class, 'assignRole'])->name('users.assignRole');
+            // Writes a ROLE to a USER. Strictly more powerful than the route
+            // that writes a permission to a role, which the previous round
+            // closed - this one can hand out Super Admin.
+            Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
+                ->name('users.assignRoleSave');
+        });
+
         // Route::resource('permissions', PermissionController::class);
-        // The whole user_credentials directory - user name, name, email, contact
-        // number, type and role - in one request, for 15,108 rows. `users` is the
-        // permission the User Management screen itself uses (menus row 158).
-        Route::get('users/export/{format}', [UserController::class, 'export'])
-            ->middleware('menu.permission:users')
-            ->whereIn('format', ['csv', 'xlsx', 'pdf', 'print'])
-            ->name('users.export');
-        Route::resource('users', UserController::class);
-        Route::get('users/assign-role/{id}', [UserController::class, 'assignRole'])->name('users.assignRole');
-        Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
-            ->name('users.assignRoleSave');
 
         Route::post('quick-links', [QuickLinkController::class, 'store'])->name('quick-links.store');
         Route::delete('quick-links/{id}', [QuickLinkController::class, 'destroy'])->name('quick-links.destroy');

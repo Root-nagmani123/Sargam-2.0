@@ -78,6 +78,35 @@ class ExportRoutePermissionTest extends TestCase
         'sidebar.menus.update'          => ['put',    'menus'],
         'sidebar.menus.destroy'         => ['delete', 'menus'],
         'sidebar.menus.status'          => ['get',    'menus'],
+        // User Management. assign-role-save is the sharpest of these: it writes
+        // a ROLE to a USER, so an ungated version let any role-less account hand
+        // itself Super Admin - which does not merely open one gate but bypasses
+        // every menu.permission gate in the application, because Super Admin is
+        // admitted before the permission is read. The previous round closed the
+        // route that writes a permission to a role and left this one open.
+        'admin.users.assignRoleSave'    => ['post',   'users'],
+        'admin.users.store'             => ['post',   'users'],
+        'admin.users.update'            => ['put',    'users'],
+        'admin.users.destroy'           => ['delete', 'users'],
+    ];
+
+    /**
+     * Read routes that expose the same rows as a gated export.
+     *
+     * admin.users.index returned MORE of the user_credentials directory than
+     * admin.users.export did - the export was capped and gated, the index was
+     * neither - so gating only the export left the finding's stated impact
+     * reproducible one route to the left.
+     *
+     * @var array<string, string>
+     */
+    private const GATED_READS = [
+        'admin.users.index'     => 'users',
+        'admin.users.show'      => 'users',
+        'admin.users.edit'      => 'users',
+        'admin.users.create'    => 'users',
+        'admin.users.getRoles'  => 'users',
+        'admin.users.assignRole' => 'users',
     ];
 
     private function url(string $name): string
@@ -251,6 +280,102 @@ class ExportRoutePermissionTest extends TestCase
         $this->actingAs($user->fresh())
             ->get(route('roles.export'))
             ->assertForbidden();
+    }
+
+    /** The module's read routes carry the same gate as its export. */
+    public function test_every_user_management_read_route_is_gated(): void
+    {
+        foreach (self::GATED_READS as $name => $permission) {
+            $route = Route::getRoutes()->getByName($name);
+            $this->assertNotNull($route, "Route {$name} should exist.");
+
+            $this->assertStringContainsString(
+                'menu.permission:'.$permission,
+                implode(' ', $route->gatherMiddleware()),
+                "Route {$name} serves the same rows as the gated export and must be gated too."
+            );
+        }
+    }
+
+    /** And refuses, executed through the real router. */
+    public function test_user_without_the_permission_is_denied_every_user_management_read(): void
+    {
+        $user = $this->nobody();
+
+        foreach (array_keys(self::GATED_READS) as $name) {
+            $response = $this->actingAs($user)->get($this->writeUrl($name));
+
+            $this->assertSame(403, $response->getStatusCode(),
+                "{$name} must refuse a user holding no permission, and returned {$response->getStatusCode()}.");
+        }
+    }
+
+    /**
+     * The escalation the blocker described, driven end to end: a role-less
+     * account posts one form to give itself Super Admin, and then walks through
+     * every gate this PR added.
+     *
+     * Asserted as a refusal AND as an absence of roles afterwards, because a 403
+     * on its own would not prove the write did not happen.
+     */
+    public function test_an_unprivileged_user_cannot_assign_itself_a_role(): void
+    {
+        $user = $this->nobody();
+
+        $superAdmin = Role::query()->where('name', 'Super Admin')->first()
+            ?: Role::create(['name' => 'Super Admin', 'guard_name' => 'web']);
+
+        $this->assertEmpty($user->getRoleNames()->all(), 'premise: the actor holds no role');
+
+        $this->actingAs($user)
+            ->post(route('admin.users.assignRoleSave'), [
+                'user_id' => $user->getKey(),
+                'roles' => [$superAdmin->id],
+            ])
+            ->assertForbidden();
+
+        $this->forgetPermissionCache();
+
+        $this->assertEmpty(
+            $user->fresh()->getRoleNames()->all(),
+            'the account escalated itself: assign-role-save granted a role to a caller who may not administer users'
+        );
+
+        // And the gates it would have opened are still shut.
+        foreach (['roles.export', 'admin.users.export'] as $name) {
+            $this->actingAs($user->fresh())->get($this->url($name))->assertForbidden();
+        }
+    }
+
+    /**
+     * F-016's other half: the listing's page size is an allow-list, not a
+     * request parameter. `?per_page=20000` returned all 15,108 rows in one
+     * 16.4 MB response and minted its own cache entry for them.
+     *
+     * @dataProvider pageSizes
+     */
+    public function test_the_user_listing_page_size_is_clamped_to_the_offered_options($requested, int $expected): void
+    {
+        $method = new \ReflectionMethod(\App\Http\Controllers\Admin\UserController::class, 'resolveAdminUsersPerPage');
+        $method->setAccessible(true);
+
+        $this->assertSame($expected, $method->invoke(null, $requested));
+    }
+
+    /** @return array<string, array{0: mixed, 1: int}> */
+    public static function pageSizes(): array
+    {
+        return [
+            'an offered size' => [50, 50],
+            'an offered size as a string' => ['200', 200],
+            'the directory in one request' => [20000, 10],
+            'a negative size' => [-1, 10],
+            'zero' => [0, 10],
+            'not a number' => ['all', 10],
+            'an array' => [['200'], 10],
+            'absent' => [null, 10],
+            'one more than the largest option' => [201, 10],
+        ];
     }
 
     /**

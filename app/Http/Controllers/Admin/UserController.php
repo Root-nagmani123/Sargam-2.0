@@ -4171,9 +4171,39 @@ class UserController extends Controller
         ));
     }
 
+    /**
+     * The page sizes the User Management grid offers, and the only ones it will
+     * serve.
+     *
+     * `(int) $request->input('per_page', 10)` passed straight to paginate() had
+     * no ceiling and no allow-list, so `?per_page=20000` returned all 15,108
+     * rows - 16.4 MB and 2.9 s in one request, carrying 13,625 email addresses
+     * and 11,272 mobile numbers, and more of the directory than the capped
+     * export next to it. That made the export's row cap decorative: the same
+     * actor could ask the index for the rest.
+     *
+     * An allow-list rather than a max(): anything outside the dropdown is a
+     * value the screen never offers, so it falls back to the default instead of
+     * being silently rounded down to a number the user did not choose. The cache
+     * key is built from the resolved value, so an out-of-range request can no
+     * longer mint its own cache entry either.
+     *
+     * @var int[]
+     */
+    private const ADMIN_USERS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 200];
+
+    private static function resolveAdminUsersPerPage($raw): int
+    {
+        $value = is_scalar($raw) ? (int) $raw : 0;
+
+        return in_array($value, self::ADMIN_USERS_PER_PAGE_OPTIONS, true)
+            ? $value
+            : self::ADMIN_USERS_PER_PAGE_OPTIONS[0];
+    }
+
     public function index(Request $request)
     {
-        $perPage = (int) $request->input('per_page', 10);
+        $perPage = self::resolveAdminUsersPerPage($request->input('per_page'));
         $search = trim((string) ($request->input('search') ?? ''));
         $user_type = trim((string) $request->input('User_type', ''));
 
