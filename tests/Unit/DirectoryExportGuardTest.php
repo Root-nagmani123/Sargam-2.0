@@ -978,6 +978,56 @@ class DirectoryExportGuardTest extends TestCase
     }
 
     /**
+     * F-010: a migration named in these documents must exist in this tree.
+     *
+     * Three rounds running, the docblock written to close one finding introduced
+     * the next, and both times the defect was the same shape: a confident claim
+     * about code somewhere else. Here it was "ship a guarded migration, as
+     * 2026_09_16_090000_add_member_pii_read_permission does for the member
+     * module" - a migration that lives only on an unmerged branch, so the only
+     * worked example of the recommended pattern could not be opened from this
+     * tree at all.
+     *
+     * Reading more carefully is not the fix for that; resolving the name is. A
+     * migration filename is mechanically recognisable (four date-ish segments
+     * then a snake_case tail), so any that these two documents name is required
+     * to resolve against database/migrations. Prose that only DESCRIBES a
+     * pattern names no file and is unaffected.
+     */
+    public function test_every_migration_named_in_the_export_docs_exists(): void
+    {
+        $sources = [
+            'the middleware' => file_get_contents(app_path('Http/Middleware/EnsureDirectoryExportAccess.php')),
+            'the deploy notes' => file_get_contents(base_path('docs/deploy-notes-directory-redesign.md')),
+        ];
+
+        $pattern = '/\b\d{4}_\d{2}_\d{2}_\d{6}_[a-z0-9_]+/i';
+
+        // Prove the detector fires before trusting it to find nothing. Without
+        // this, a regex that silently stopped matching would leave the loop
+        // below checking zero strings and passing for the wrong reason - which
+        // is the "green proves self-consistency, not correctness" trap.
+        $this->assertSame(
+            1,
+            preg_match($pattern, 'as 2026_09_16_090000_add_member_pii_read_permission does for'),
+            'the migration-name detector no longer matches a known migration filename'
+        );
+
+        foreach ($sources as $label => $source) {
+            preg_match_all($pattern, $source, $hits);
+
+            foreach (array_unique($hits[0]) as $name) {
+                $this->assertFileExists(
+                    database_path('migrations/' . $name . '.php'),
+                    "{$label} names the migration {$name} as though it were in this tree, but no such file "
+                    . 'exists under database/migrations. Either ship it, or describe the pattern without '
+                    . 'naming a file (PR #317 F-010).'
+                );
+            }
+        }
+    }
+
+    /**
      * The note must wrap rather than clip.
      *
      * A5 is merged across the exported columns, and a merged cell cannot

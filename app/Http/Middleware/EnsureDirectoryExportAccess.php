@@ -114,11 +114,18 @@ use Illuminate\Http\Request;
  * codebase (PR #309 F-025).
  *
  * If this capability turns out to be wanted often enough to deserve a toggle,
- * the shape is on record: rename the permission to a slug (`directory_export`)
- * and ship a guarded migration adding both the permissions row and a menus
- * capability row, as 2026_09_16_090000_add_member_pii_read_permission does for
- * the member module. That is a code change with its own review, not a remedy to
+ * the durable shape is: rename the permission to a slug (`directory_export`),
+ * because the roles screen can only ever offer slug-shaped names, and ship a
+ * guarded migration that adds BOTH the permissions row and the matching menus
+ * capability row, flushing Spatie's cache in up() AND down() for the reason
+ * given just above. That is a code change with its own review, not a remedy to
  * reach for mid-incident - which is why the SQL above is here.
+ *
+ * Deliberately NOT cited here by file name: a migration of that shape is
+ * PROPOSED for the member module in PR #309, which is not merged. It is a
+ * pattern to follow, not a file to open - do not go looking for it in this
+ * tree. An earlier version of this paragraph named it as though it were already
+ * here, which is PR #317 F-010.
  */
 class EnsureDirectoryExportAccess
 {

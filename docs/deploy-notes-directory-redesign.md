@@ -58,8 +58,13 @@ the cached collection has never seen. That has already bitten this codebase once
 
 If the capability turns out to be wanted often, the durable fix is a slug-shaped
 name (`directory_export`) plus a guarded migration that ships both the
-permissions row and a `menus` capability row, as the member module now does. That
-is a code change with its own review — not a step to improvise mid-incident.
+permissions row and a `menus` capability row, flushing Spatie's cache in `up()`
+and `down()`. That is a code change with its own review — not a step to improvise
+mid-incident.
+
+A migration of that shape is **proposed** for the member module in PR #309, which
+is **not merged**. Treat it as a pattern to follow, not a file to copy from this
+tree — it is not in this release.
 
 ### 0.2 What the permission is not
 
