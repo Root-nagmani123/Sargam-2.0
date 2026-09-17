@@ -75,6 +75,18 @@
     font-weight: 600;
 }
 
+/* Time sits beside its date, quieter than it, so the date still reads first. */
+.me-text-time {
+    margin-left: .35rem;
+    padding: .05rem .35rem;
+    border-radius: .25rem;
+    background: #f1f3f5;
+    color: #495057;
+    font-size: .8em;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
 .detail-value {
     font-size: .9rem;
     font-weight: 500;
@@ -167,9 +179,15 @@
             <div class="section-divider"></div>
 
             @php
+                // array_key_exists, not isset: isset() is false for a NULL value, so
+                // an OT whose generated_OT_code is NULL used to fall through to the
+                // admin branch below — which iterates $studentData as a list of
+                // students and fatals on this associative array. The admin payload is
+                // numerically keyed, so the key test still tells the two shapes apart.
                 $isStudentView = isset($studentData)
-                    && isset($studentData['student_name'])
-                    && isset($studentData['ot_code']);
+                    && is_array($studentData)
+                    && array_key_exists('student_name', $studentData)
+                    && array_key_exists('ot_code', $studentData);
             @endphp
 
             {{-- ============================
@@ -214,19 +232,57 @@
                                 {{ $exemption['course_name'] }}
                             </h6>
 
+                            {{-- from_date / to_date are datetime columns, so the date
+                                 and the time are two views of one value. Time shows
+                                 only where one was actually recorded — older rows
+                                 were saved at midnight with no time entered. --}}
+                            @php
+                                $fromDate = $exemption['from_date'] ? \Carbon\Carbon::parse($exemption['from_date']) : null;
+                                $toDate = $exemption['to_date'] ? \Carbon\Carbon::parse($exemption['to_date']) : null;
+                            @endphp
+
                             <div class="exemption-details">
                                 <div>
-                                    <div class="detail-label">From Date</div>
+                                    <div class="detail-label">Doctor Name</div>
+                                    <div class="detail-value">{{ $exemption['doctor_name'] ?: 'N/A' }}</div>
+                                </div>
+
+                                <div>
+                                    <div class="detail-label">Date &amp; Time From</div>
                                     <div class="detail-value">
-                                        {{ $exemption['from_date'] ? \Carbon\Carbon::parse($exemption['from_date'])->format('d/m/Y') : 'N/A' }}
+                                        @if($fromDate)
+                                            {{ $fromDate->format('d/m/Y') }}
+                                            @if($fromDate->format('H:i') !== '00:00')
+                                                <span class="me-text-time">{{ $fromDate->format('h:i A') }}</span>
+                                            @endif
+                                        @else
+                                            N/A
+                                        @endif
                                     </div>
                                 </div>
 
                                 <div>
-                                    <div class="detail-label">To Date</div>
+                                    <div class="detail-label">Date &amp; Time To</div>
                                     <div class="detail-value">
-                                        {{ $exemption['to_date'] ? \Carbon\Carbon::parse($exemption['to_date'])->format('d/m/Y') : 'Ongoing' }}
+                                        @if($toDate)
+                                            {{ $toDate->format('d/m/Y') }}
+                                            @if($toDate->format('H:i') !== '00:00')
+                                                <span class="me-text-time">{{ $toDate->format('h:i A') }}</span>
+                                            @endif
+                                        @else
+                                            Ongoing
+                                        @endif
                                     </div>
+                                </div>
+
+                                <div>
+                                    <div class="detail-label">Exemption Category</div>
+                                    <div class="detail-value">{{ $exemption['exemption_category'] ?: 'N/A' }}</div>
+                                </div>
+
+                                <div>
+                                    <div class="detail-label">Medical Speciality</div>
+                                    <div class="detail-value">{{ $exemption['medical_speciality'] ?: 'N/A' }}</div>
                                 </div>
 
                                 <div>
@@ -245,12 +301,10 @@
                                 </div>
                                 @endif
 
-                                @if($exemption['description'])
                                 <div style="grid-column: 1 / -1;">
-                                    <div class="detail-label">Description</div>
-                                    <div class="detail-value">{{ $exemption['description'] }}</div>
+                                    <div class="detail-label">Diagnosis / Remarks</div>
+                                    <div class="detail-value">{{ $exemption['description'] ?: 'N/A' }}</div>
                                 </div>
-                                @endif
                             </div>
                         </div>
                     @endforeach

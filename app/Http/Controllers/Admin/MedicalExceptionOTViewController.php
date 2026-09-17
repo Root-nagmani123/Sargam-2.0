@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\StudentMaster;
 use App\Models\StudentMedicalExemption;
-use App\Models\CourseMaster;
 
 class MedicalExceptionOTViewController extends Controller
 {
@@ -57,35 +56,35 @@ class MedicalExceptionOTViewController extends Controller
         $exemptionCount = StudentMedicalExemption::where('student_master_pk', $studentMasterPk)
             ->count();
         
-        // Get all medical exemptions for this student
-        $exemptions = StudentMedicalExemption::where('student_master_pk', $studentMasterPk)
-            ->get();
-        
-        // Filter exemptions by course_master conditions
-        $validExemptions = [];
-        
-        foreach ($exemptions as $exemption) {
-            $courseMasterPk = $exemption->course_master_pk;
-            
-            // Check course_master conditions
-            $course = CourseMaster::where('pk', $courseMasterPk)
-                ->where('active_inactive', 1)
-                ->where('end_date', '>=', $currentDate)
-                ->first();
-            
-            if ($course) {
-                // Fetch required data
-                $validExemptions[] = [
-                    'from_date' => $exemption->from_date,
-                    'to_date' => $exemption->to_date,
-                    'opd_category' => $exemption->opd_category,
-                    'description' => $exemption->Description,
-                    'doc_upload' => $exemption->Doc_upload,
-                    'course_name' => $course->course_name,
-                ];
-            }
-        }
-        
+        // Exemptions on a running course, newest first.
+        //
+        // The course filter is a join rather than a per-row CourseMaster::find, and
+        // the doctor / category / speciality names come through eager-loaded
+        // relations — this used to be one query per exemption plus three lookups
+        // the view never had.
+        $exemptions = StudentMedicalExemption::query()
+            ->with(['employee', 'category', 'speciality'])
+            ->join('course_master as cm', 'cm.pk', '=', 'student_medical_exemption.course_master_pk')
+            ->where('student_medical_exemption.student_master_pk', $studentMasterPk)
+            ->where('cm.active_inactive', 1)
+            ->where('cm.end_date', '>=', $currentDate)
+            ->orderByDesc('student_medical_exemption.from_date')
+            ->get(['student_medical_exemption.*', 'cm.course_name']);
+
+        // from_date / to_date are datetime columns, so the date and the time asked
+        // for are two views of one value, not two fields.
+        $validExemptions = $exemptions->map(fn ($exemption) => [
+            'course_name' => $exemption->course_name,
+            'doctor_name' => $this->doctorName($exemption->employee),
+            'from_date' => $exemption->from_date,
+            'to_date' => $exemption->to_date,
+            'exemption_category' => $exemption->category->exemp_category_name ?? null,
+            'medical_speciality' => $exemption->speciality->speciality_name ?? null,
+            'opd_category' => $exemption->opd_category,
+            'description' => $exemption->Description,
+            'doc_upload' => $exemption->Doc_upload,
+        ])->all();
+
         // Prepare data for view
         $studentData = [
             'student_name' => $student->display_name ?? ($student->first_name . ' ' . $student->last_name),
@@ -99,6 +98,22 @@ class MedicalExceptionOTViewController extends Controller
         return view('admin.medical_exception.ot_view', compact('studentData'));
     }
     
+    /**
+     * Treating doctor's display name — employee_master keeps it as first/last,
+     * unlike faculty_master which has a full_name.
+     */
+    private function doctorName($employee): ?string
+    {
+        if (! $employee) {
+            return null;
+        }
+
+        return trim(implode(' ', array_filter([
+            $employee->first_name ?? '',
+            $employee->last_name ?? '',
+        ]))) ?: null;
+    }
+
     /**
      * Admin view for non-student users (original functionality)
      */
