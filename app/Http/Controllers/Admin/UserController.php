@@ -490,6 +490,9 @@ class UserController extends Controller
             // opens house-wise, with the page's House filter to narrow to one.
             'my_counsellees'          => ['count' => $facultyCounsellees,                          'link' => route('admin.dashboard.ot-participants', ['view' => 'counsellees']), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
             'house_wise_details'      => ['count' => $facultyHouses,                               'link' => route('admin.dashboard.ot-participants', ['view' => 'house']), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            // No count: Who's Who opens on a course picker, so there is no single
+            // number the tile could honestly show — same as the timetable cards.
+            'whos_who'                => [                                                         'link' => route('admin.faculty.whos-who'),                               'visible' => !$isSecurityRole && $isFacultyPortalUser],
             'total_students'          => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
             'student_details'         => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
             'my_course_participant'   => ['count' => StudentMasterCourseMap::query()->when(!empty($myCourseIds), fn($q) => $q->whereIn('course_master_pk', $myCourseIds))->count(), 'link' => route('my.course.participant'),                                'visible' => true],
