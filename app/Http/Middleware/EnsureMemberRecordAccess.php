@@ -38,14 +38,36 @@ use Illuminate\Http\Request;
  * one member.profile.edit.self already relies on.
  *
  * THAT MAPPING IS NOT PROVEN, and this block is the place it would be believed,
- * so it says so instead. On testsargam6, of the 1,547 credentials whose user_id
- * matches an employee_master.pk, 332 name a row whose FIRST AND LAST NAME DO NOT
- * MATCH the credential's own - so for those accounts "their own record" is
- * somebody else's, for reading here and for writing through
- * MemberController::authorizeMemberRecord(). The column is not namespaced by
- * account category: credentials with user_category 'S' or blank carry user_id
+ * so it says so instead. On testsargam6 (census run 2026-09-17), 1,547
+ * credentials have a user_id matching an employee_master.pk. How many of those
+ * name a DIFFERENT PERSON depends on how two names are compared, so the figures
+ * quoted here are the ones stable under every rule tried - pairs sharing NO NAME
+ * TOKEN AT ALL, which spelling variants, initials and a missing middle_name
+ * cannot explain:
+ *
+ *     317  credentials with a BLANK user_category
+ *       9  credentials with user_category = 'E'
+ *          (user_credentials pks 1778, 1800, 1382, 1633, 1748, 2102, 1871,
+ *           1397, 2528)
+ *
+ * Looser rules give 349 under an exact first-plus-last comparison and 575 under
+ * normalised tokens including the employee's middle_name; both are dominated by
+ * spelling noise, which is why they are not the numbers to act on. Whichever
+ * count is quoted, quote the rule with it.
+ *
+ * For those accounts "their own record" is somebody else's, for reading here and
+ * for writing through MemberController::authorizeMemberRecord().
+ *
+ * USER_CATEGORY IS NECESSARY BUT NOT SUFFICIENT. The column is not namespaced by
+ * account category - credentials with user_category 'S' or blank carry user_id
  * values that fall inside employee_master's pk range, and nothing below checks
- * that the credential is an employee credential.
+ * that the credential is an employee credential - but narrowing the rule to
+ * user_category = 'E' does NOT fix this. That closes the 317 blank-category
+ * cases and leaves the nine listed above open. Those nine rotate through the
+ * block (REDACTED-NAME -> REDACTED-NAME -> REDACTED-NAME -> REDACTED-NAME -> SONALI
+ * RAWAT), which reads as a block of user_id values written misaligned rather
+ * than as a category being conflated. Any fix needs a name- or ownership-based
+ * check on top of the category, and a test whose actor is one of those nine.
  *
  * Whether that is data to repair or a column being read for a purpose it does
  * not serve is a domain question this code cannot settle. It is open as PR #309
