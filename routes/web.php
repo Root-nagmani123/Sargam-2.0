@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\{RoleController,SidebarController};
-use App\Models\User;
 use Spatie\Permission\Models\Role;
 use App\Http\Controllers\Admin\{
     PermissionController,
@@ -79,21 +78,20 @@ use App\Http\Controllers\SidebarMenu\{
     SidebarCategoryController,MenuGroupController,MenuController
 };
 
-Route::get('assign-role', function () {
-    $user = User::find(2);
-    $permissions = $user->getAllPermissions();
-    foreach ($permissions as $permission) {
-        echo $permission->name . "<br>";
+// Removed: an unauthenticated `assign-role` route that echoed every permission
+// name held by user 2 to any visitor, and a `test-menus` route that dd()'d the
+// whole resolved sidebar. Both were debug scaffolding outside every auth group,
+// both disclosed the authorisation model to anonymous callers, and nothing in
+// the application referenced either one.
+
+// Clearing every cache is a write, and an anonymous one was a free denial-of-
+// service lever: repeated hits discard the config, route, view and application
+// caches and force a cold rebuild on the next request. Gated like its siblings
+// below, which exist for the same reason - a server with no shell access.
+Route::middleware(['auth'])->get('clear-cache', function () {
+    if (!hasRole('Super Admin')) {
+        abort(403);
     }
-})->name('admin.assign-role');
-
-Route::get('test-menus', function () {
-    
-    $menus = app()->make(\App\Services\SidebarMenu\MenuService::class)->getMenus();
-    dd($menus);
-});
-
-Route::get('clear-cache', function () {
     Artisan::call('cache:clear');
     Artisan::call('config:clear');
     Artisan::call('view:clear');

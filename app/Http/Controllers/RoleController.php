@@ -541,6 +541,31 @@ class RoleController extends Controller
             ]);
         }
 
+        // Only a name this application actually has a screen for, or one that is
+        // already a permission. firstOrCreate() on its own accepted ANY string and
+        // minted a permission row for it, so a single request could invent a
+        // permission and attach it to any role by id - and the typos already in the
+        // table ('dashbaord', 'faculty_test', and 46 more with no menus row behind
+        // them) are what that looks like after a few years.
+        //
+        // Existing names stay writable, including the orphans: this endpoint is the
+        // only way to revoke them, and refusing those would strand them granted.
+        // What is refused is INVENTING a name that no menus row defines.
+        $existing = Permission::where('name', $permission)->where('guard_name', 'web')->first();
+
+        if (! $existing) {
+            $definedByAScreen = \Illuminate\Support\Facades\DB::table('menus')
+                ->where('permission_name', $permission)
+                ->exists();
+
+            if (! $definedByAScreen) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unknown permission.',
+                ], 422);
+            }
+        }
+
         Permission::firstOrCreate([
             'name' => $permission,
             'guard_name' => 'web'

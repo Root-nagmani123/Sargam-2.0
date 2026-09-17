@@ -4804,18 +4804,118 @@ class UserController extends Controller
         }
     }
 
+    /**
+     * The tables this endpoint may toggle, and the ONE column it may write on each.
+     *
+     * Without this map the endpoint took the table, the column, the id column and the
+     * value straight from the request and handed all four to the query builder, on a
+     * route carrying only `web,auth`. That is an arbitrary-write primitive: any one of
+     * the authenticated accounts could UPDATE any column of any row of any table -
+     * set a password hash, flip a flag on `model_has_roles`, blank a report. The
+     * builder quotes identifiers, so this was never classic SQL injection, which is
+     * probably why it read as harmless; the damage needs no injection.
+     *
+     * Derived by enumerating every caller rather than by judgement: each data-table /
+     * data-column pair rendered anywhere in resources/views or app/ (47 tables, one
+     * status column each), plus `employee_master`, which has no renderer left but is
+     * named in the cache-bump branch below and is kept so an unfound caller cannot be
+     * broken by this change.
+     *
+     * Adding a screen means adding its row here. That is the point: the set of
+     * toggleable state is a decision, not something a request should get to make.
+     */
+    private const TOGGLEABLE = [
+        'appellation_master'                  => 'active_inactive',
+        'building_floor_room_mapping'         => 'active_inactive',
+        'building_master'                     => 'active_inactive',
+        'caste_category_master'               => 'active_inactive',
+        'city_master'                         => 'active_inactive',
+        'class_session_master'                => 'active_inactive',
+        'country_master'                      => 'active_inactive',
+        'course_group_type_master'            => 'active_inactive',
+        'course_master'                       => 'active_inactive',
+        'course_memo_decision_mapp'           => 'active_inactive',
+        'department_master'                   => 'active_inactive',
+        'designation_master'                  => 'active_inactive',
+        'discipline_master'                   => 'active_inactive',
+        'employee_group_master'               => 'active_inactive',
+        'employee_master'                     => 'active_inactive',
+        'employee_type_master'                => 'active_inactive',
+        'faculty_expertise_master'            => 'active_inactive',
+        'faculty_master'                      => 'active_inactive',
+        'faculty_type_master'                 => 'active_inactive',
+        'fc_exemption_master'                 => 'visible',
+        'fc_registration_master'              => 'active_inactive',
+        'floor_master'                        => 'active_inactive',
+        'group_type_master_course_master_map' => 'active_inactive',
+        'hostel_building_floor_mapping'       => 'active_inactive',
+        'hostel_building_master'              => 'active_inactive',
+        'hostel_floor_room_mapping'           => 'active_inactive',
+        'hostel_room_master'                  => 'active_inactive',
+        'issue_category_master'               => 'status',
+        'issue_priority_master'               => 'status',
+        'issue_sub_category_master'           => 'status',
+        'memo_conclusion_master'              => 'active_inactive',
+        'memo_type_master'                    => 'active_inactive',
+        'menu_groups'                         => 'is_active',
+        'menus'                               => 'is_active',
+        'news'                                => 'status',
+        'notices_notification'                => 'active_inactive',
+        'ot_hostel_room_details'              => 'active_inactive',
+        'sec_id_cardno_config_map'            => 'active_inactive',
+        'sec_id_cardno_master'                => 'active_inactive',
+        'sidebar_categories'                  => 'is_active',
+        'state_district_mapping'              => 'active_inactive',
+        'state_master'                        => 'active_inactive',
+        'states'                              => 'status',
+        'stream_master'                       => 'status',
+        'subject_master'                      => 'active_inactive',
+        'subject_module_master'               => 'active_inactive',
+        'user_role_master'                    => 'active_inactive',
+        'venue_master'                        => 'active_inactive',
+    ];
+
+    /** Tables whose primary key is not `pk`. */
+    private const TOGGLE_ID_COLUMN = [
+        'venue_master' => 'venue_id',
+    ];
+
 public function toggleStatus(Request $request)
 {
     try {
-        $idColumn = $request->id_column ?? 'pk';
-        $table = $request->table;
-        $column = $request->column;
-        $id = $request->id;
-        $status = $request->status;
+        $table = (string) $request->input('table');
+        $column = (string) $request->input('column');
+        $idColumn = (string) ($request->input('id_column') ?: 'pk');
+        $id = $request->input('id');
+        $status = $request->input('status');
 
-        DB::table($request->table)
-            ->where($idColumn, $id)
-            ->update([$column => $status]);
+        $allowedColumn = self::TOGGLEABLE[$table] ?? null;
+        $allowedIdColumn = self::TOGGLE_ID_COLUMN[$table] ?? 'pk';
+
+        // Fails closed, and refuses the near-misses too: the right table with the
+        // wrong column, or the right table keyed on a column of the caller's
+        // choosing, are both how this would be turned back into a general write.
+        if ($allowedColumn === null || $column !== $allowedColumn || $idColumn !== $allowedIdColumn) {
+            \Log::warning('Toggle status refused', [
+                'table' => $table,
+                'column' => $column,
+                'id_column' => $idColumn,
+                'user' => optional($request->user())->pk,
+            ]);
+
+            return response()->json(['message' => 'This record cannot be toggled here.'], 422);
+        }
+
+        // A status toggle writes 0 or 1. Anything else is someone else's payload.
+        if (! in_array((string) $status, ['0', '1'], true) || ! is_scalar($id) || (string) $id === '') {
+            return response()->json(['message' => 'Invalid status update.'], 422);
+        }
+
+        // The allow-listed identifiers are written, not the request's - so a
+        // future edit to the checks above cannot leak a raw value into the query.
+        DB::table($table)
+            ->where($allowedIdColumn, $id)
+            ->update([$allowedColumn => (int) $status]);
 
         if ($table === 'employee_type_master') {
             EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
