@@ -105,6 +105,42 @@ class MemberPiiAccessTest extends TestCase
         return (int) $pk;
     }
 
+    /**
+     * The grid's own JSON feed, fetched the way the page fetches it.
+     *
+     * Shared by the two tests that read it - the column-leak check and the
+     * Action-column check - so both see exactly the payload the browser gets,
+     * rendered cells included.
+     */
+    private function listingFeedRows(): array
+    {
+        $columns = [];
+        foreach ([
+            'DT_RowIndex', 'employee_name', 'employee_id', 'employee_type',
+            'employee_group', 'department', 'mobile_no', 'email', 'status', 'actions',
+        ] as $i => $name) {
+            $columns[$i] = [
+                'data' => $name,
+                'name' => $name,
+                'searchable' => 'false',
+                'orderable' => 'false',
+                'search' => ['value' => '', 'regex' => 'false'],
+            ];
+        }
+
+        return $this->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
+            ->getJson('/member?'.http_build_query([
+                'draw' => 1,
+                'start' => 0,
+                'length' => 10,
+                'search' => ['value' => '', 'regex' => 'false'],
+                'columns' => $columns,
+                'order' => [],
+            ]))
+            ->assertOk()
+            ->json('data') ?? [];
+    }
+
     /** The routes that hand out member personal data, as the report named them. */
     public static function piiRoutes(): array
     {
@@ -208,33 +244,7 @@ class MemberPiiAccessTest extends TestCase
     {
         $this->actAsNonEntitled();
 
-        $columns = [];
-        foreach ([
-            'DT_RowIndex', 'employee_name', 'employee_id', 'employee_type',
-            'employee_group', 'department', 'mobile_no', 'email', 'status', 'actions',
-        ] as $i => $name) {
-            $columns[$i] = [
-                'data' => $name,
-                'name' => $name,
-                'searchable' => 'false',
-                'orderable' => 'false',
-                'search' => ['value' => '', 'regex' => 'false'],
-            ];
-        }
-
-        $json = $this->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
-            ->getJson('/member?'.http_build_query([
-                'draw' => 1,
-                'start' => 0,
-                'length' => 10,
-                'search' => ['value' => '', 'regex' => 'false'],
-                'columns' => $columns,
-                'order' => [],
-            ]))
-            ->assertOk()
-            ->json();
-
-        $row = $json['data'][0] ?? null;
+        $row = $this->listingFeedRows()[0] ?? null;
 
         if (! $row) {
             $this->markTestSkipped('no member rows in the listing');
@@ -259,6 +269,78 @@ class MemberPiiAccessTest extends TestCase
         );
 
         fwrite(STDERR, "\nmember feed keys: ".count($row)."\n");
+    }
+
+    /**
+     * F-037: the Action column must not offer a link the gate will refuse.
+     *
+     * Edit is gated by member.record, whose rule is one step wider than
+     * member.pii - an entitled account reaches every record, everyone else
+     * reaches exactly its own - so the column is read row by row against that
+     * rule rather than once for the page. Before this fix the link was rendered
+     * on every row and 403'd on all but the actor's own, which is the dead
+     * button the same screen already avoids for View, Print and the toolbar.
+     */
+    public function test_the_action_column_offers_edit_only_where_member_record_admits_it(): void
+    {
+        $this->actAsNonEntitled();
+
+        $own = optional(auth()->user())->user_id;
+        $rows = $this->listingFeedRows();
+
+        if (! $rows) {
+            $this->markTestSkipped('no member rows in the listing');
+        }
+
+        $rowsNotOwn = 0;
+
+        foreach ($rows as $row) {
+            $this->assertArrayHasKey(
+                'pk',
+                $row,
+                'the feed no longer carries pk, so this test cannot tell the rows apart'
+            );
+
+            // The same comparison EnsureMemberRecordAccess::handle() makes.
+            $isOwn = $own !== null && $row['pk'] !== null && (string) $own === (string) $row['pk'];
+            $hasEdit = str_contains((string) $row['actions'], 'mbr-act--edit');
+
+            $this->assertSame(
+                $isOwn,
+                $hasEdit,
+                $isOwn
+                    ? "member {$row['pk']} is this account's own record and the Action column withheld Edit"
+                    : "member {$row['pk']} is not this account's record, and the Action column still offers an Edit link that member.record answers with 403"
+            );
+
+            $rowsNotOwn += $isOwn ? 0 : 1;
+        }
+
+        $this->assertGreaterThan(
+            0,
+            $rowsNotOwn,
+            'every row on this page was the actor own record, so the refusal side was never exercised'
+        );
+    }
+
+    /** The other side of the same column: an entitled account keeps Edit on every row. */
+    public function test_the_action_column_keeps_edit_on_every_row_for_an_entitled_account(): void
+    {
+        $this->actAsSuperAdmin();
+
+        $rows = $this->listingFeedRows();
+
+        if (! $rows) {
+            $this->markTestSkipped('no member rows in the listing');
+        }
+
+        foreach ($rows as $row) {
+            $this->assertStringContainsString(
+                'mbr-act--edit',
+                (string) $row['actions'],
+                "member {$row['pk']} lost its Edit link for an account the gate admits"
+            );
+        }
     }
 
     /** The eager loads are constrained too: a relation is one label, not a whole master row. */

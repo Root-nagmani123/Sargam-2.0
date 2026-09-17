@@ -204,6 +204,16 @@ class MemberDataTable extends DataTable
         // method, so the screen and the gate cannot drift apart.
         $mayReadPii = \App\Http\Middleware\EnsureMemberPiiAccess::grantsAccess();
 
+        // Edit is gated by member.record, not by member.pii, and its rule is
+        // one step wider: an entitled account reaches every record, everyone
+        // else reaches exactly their own. Resolved here for the same reason as
+        // above - without it the Action column offered an Edit link on every
+        // row and 403'd on all but one, which is the dead button this screen
+        // was built to avoid. Mirrors EnsureMemberRecordAccess::handle():
+        // `!== null` on both sides, then a string compare, because user_id is
+        // nullable and null == null must NOT read as "this is my record".
+        $ownPk = optional(auth()->user())->user_id;
+
         return (new EloquentDataTable($query))
             ->addIndexColumn()
             ->addColumn('employee_name', function ($row) {
@@ -229,8 +239,10 @@ class MemberDataTable extends DataTable
             ->addColumn('department', fn ($row) => (string) optional($row->department)->department_name)
             ->addColumn('mobile_no', fn ($row) => (string) $row->mobile)
             ->addColumn('email', fn ($row) => (string) $row->email)
-            ->addColumn('actions', function ($row) use ($mayReadPii) {
+            ->addColumn('actions', function ($row) use ($mayReadPii, $ownPk) {
                 $isActive = (int) $row->status === 1;
+                $mayEdit = $mayReadPii
+                    || ($ownPk !== null && $row->pk !== null && (string) $ownPk === (string) $row->pk);
                 $editUrl = route('member.edit', $row->pk);
                 $viewUrl = route('member.show', encrypt($row->pk));
                 $printUrl = route('member.print', encrypt($row->pk));
@@ -266,11 +278,17 @@ class MemberDataTable extends DataTable
                     </a>'
                     : '';
 
-                return '<div class="mbr-act-group" role="group" aria-label="Row actions">
-                    <a href="' . e($editUrl) . '" class="mbr-act mbr-act--edit" title="Edit member">
+                // Same treatment as View and Print: rendered only for an
+                // account member.record will admit to THIS row.
+                $edit = $mayEdit
+                    ? '<a href="' . e($editUrl) . '" class="mbr-act mbr-act--edit" title="Edit member">
                         <span class="mbr-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
                         <span class="mbr-act__label">Edit</span>
-                    </a>
+                    </a>'
+                    : '';
+
+                return '<div class="mbr-act-group" role="group" aria-label="Row actions">
+                    ' . $edit . '
                     ' . $piiActions . '
                     <label class="mbr-act mbr-act--toggle" title="' . $toggleLabel . ' member">
                         <span class="mbr-act__icon">
