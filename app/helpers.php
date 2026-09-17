@@ -846,6 +846,21 @@ function isOfficerTraineeUser(): bool
 }
 
 /**
+ * Training Section operator. Narrower than isTrainingOrEstateAuthority(): the estate
+ * roles are deliberately excluded, because the screens gated on this (applying leave
+ * on behalf of an officer trainee) belong to the training section only. Super Admin
+ * is included so the module stays reachable for support.
+ */
+function isTrainingSectionUser(): bool
+{
+    return hasRole('Super Admin')
+        || hasRole('Training Induction Admin') || hasRole('Training-Induction')
+        || hasRole('Training MCTP Admin') || hasRole('Training-MCTP')
+        || hasRole('Training IST') || hasRole('IST')
+        || hasRole('Training');
+}
+
+/**
  * Whether the user has at least one Spatie role (user management → assign role).
  */
 function userHasAssignedRoles(): bool

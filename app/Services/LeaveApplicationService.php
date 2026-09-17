@@ -195,6 +195,44 @@ class LeaveApplicationService
             ->first();
     }
 
+    /**
+     * Earliest date any active stationed-leave configuration covers for a course.
+     *
+     * getActiveStationedLeaveConfig() answers "which config applies on date X" and so
+     * returns the latest row effective on or before X. Back-entry needs the opposite:
+     * the floor of the whole configured window, so a training-section operator can
+     * record leave that started under an earlier (since superseded) configuration.
+     */
+    public function earliestStationedLeaveDate(int $coursePk): ?string
+    {
+        $earliest = StationedLeaveMaster::query()
+            ->where('course_master_pk', $coursePk)
+            ->where('active_inactive', 1)
+            ->min('effective_from');
+
+        return $earliest ? Carbon::parse($earliest)->toDateString() : null;
+    }
+
+    /**
+     * Earliest date any active PT exemption configuration covers for a course/gender.
+     * See earliestStationedLeaveDate() for why this differs from the "active" lookup.
+     */
+    public function earliestPtExemptionDate(int $coursePk, ?string $gender): ?string
+    {
+        $genderLabel = $this->normalizeGender($gender);
+        if (! $genderLabel) {
+            return null;
+        }
+
+        $earliest = ExemptionMaster::query()
+            ->where('course_master_pk', $coursePk)
+            ->where('gender', $genderLabel)
+            ->where('active_inactive', 1)
+            ->min('effective_from');
+
+        return $earliest ? Carbon::parse($earliest)->toDateString() : null;
+    }
+
     public function findOverlappingApplication(
         int $studentPk,
         string $fromDate,

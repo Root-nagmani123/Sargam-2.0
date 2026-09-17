@@ -198,6 +198,34 @@
                         @enderror
                     </div>
 
+                    {{-- Time From / Time To — stationed leave only. PT exemption
+                         runs for whole PT sessions, so it carries no time. --}}
+                    @if(! $isPt)
+                    <div class="col-12 col-md-6">
+                        <label for="time_from" class="leave-grid-label d-block">Time From <span class="text-danger">*</span></label>
+                        <input type="time" name="time_from" id="time_from"
+                            class="form-control @error('time_from') is-invalid @enderror" required
+                            value="{{ old('time_from', isset($application) && $application->time_from ? \Carbon\Carbon::parse($application->time_from)->format('H:i') : '') }}"
+                            {{ $isReadOnly ? 'readonly' : '' }}>
+                        @error('time_from')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
+                        @enderror
+                        <div class="form-text">Time you leave the station.</div>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label for="time_to" class="leave-grid-label d-block">Time To <span class="text-danger">*</span></label>
+                        <input type="time" name="time_to" id="time_to"
+                            class="form-control @error('time_to') is-invalid @enderror" required
+                            value="{{ old('time_to', isset($application) && $application->time_to ? \Carbon\Carbon::parse($application->time_to)->format('H:i') : '') }}"
+                            {{ $isReadOnly ? 'readonly' : '' }}>
+                        @error('time_to')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
+                        @enderror
+                        <div class="form-text">Time you report back.</div>
+                    </div>
+                    @endif
+
                     {{-- Total Days --}}
                     <div class="col-12 col-md-6">
                         <label for="total_days_display" class="leave-grid-label d-block">Total Days <span class="text-danger">*</span></label>

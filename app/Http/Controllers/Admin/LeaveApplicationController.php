@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\LeaveReportExport;
 use App\Http\Controllers\Controller;
 use App\Models\LeaveApplication;
 use App\Models\LeaveApplicationAttachment;
@@ -9,11 +10,13 @@ use App\Models\LeaveNatureMaster;
 use App\Services\FacultyLeaveApprovalService;
 use App\Services\LeaveApplicationService;
 use App\Services\NotificationService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
 use Yajra\DataTables\Facades\DataTables;
 
 class LeaveApplicationController extends Controller
@@ -143,12 +146,17 @@ class LeaveApplicationController extends Controller
     protected function saveApplication(Request $request, ?LeaveApplication $application = null)
     {
         $context = $this->leaveService->resolveStudentContext((int) Auth::user()->pk);
+        $isStationed = $request->input('leave_type') === LeaveApplication::TYPE_STATIONED_LEAVE;
 
         $validated = $request->validate([
             'leave_type' => 'required|in:PT_EXEMPTION,STATIONED_LEAVE',
             'leave_nature_master_pk' => 'required|exists:leave_nature_master,pk',
             'from_date' => 'required|date',
             'to_date' => 'required|date|after_or_equal:from_date',
+            // Stationed leave records when the trainee leaves the station and
+            // reports back; PT exemption runs for whole PT sessions and has none.
+            'time_from' => [$isStationed ? 'required' : 'nullable', 'regex:/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/'],
+            'time_to' => [$isStationed ? 'required' : 'nullable', 'regex:/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/'],
             'reason' => 'required|string|max:2000',
             'contact_number' => ['required', 'string', 'regex:/^[6-9][0-9]{9}$/'],
             'submit_action' => 'required|in:draft,submit',
@@ -159,10 +167,25 @@ class LeaveApplicationController extends Controller
             'existing_attachments.*' => 'integer',
         ], [
             'to_date.after_or_equal' => 'End date cannot be before the start date. Please update the end date.',
+            'time_from.required' => 'Please enter the time you leave the station.',
+            'time_to.required' => 'Please enter the time you report back.',
+            'time_from.regex' => 'Enter a valid time from.',
+            'time_to.regex' => 'Enter a valid time to.',
             'contact_number.regex' => 'Contact number must be a valid 10-digit mobile number starting with 6, 7, 8, or 9.',
             'attachments.*.file.max' => 'Each attachment must not exceed 5 MB.',
             'attachments.*.file.mimes' => 'Allowed file types: PDF, JPG, JPEG, PNG, DOC, DOCX.',
         ]);
+
+        // Only meaningful on a single-day leave — across days the return time is
+        // naturally earlier in the day than the departure time.
+        if ($isStationed
+            && $validated['from_date'] === $validated['to_date']
+            && ! empty($validated['time_from']) && ! empty($validated['time_to'])
+            && $validated['time_to'] <= $validated['time_from']) {
+            return back()->withInput()->withErrors([
+                'time_to' => 'On a single-day leave, time to must be later than time from.',
+            ]);
+        }
 
         if ($validated['leave_type'] === LeaveApplication::TYPE_STATIONED_LEAVE
             && ! $this->leaveService->stationedLeaveConfigured($context['course_pk'], $validated['from_date'])) {
@@ -291,7 +314,7 @@ class LeaveApplicationController extends Controller
         $now = now();
         $isNew = $application === null;
 
-        $application = DB::transaction(function () use ($validated, $context, $application, $totalDays, $status, $now, $request, $isSubmit, $autoApprove) {
+        $application = DB::transaction(function () use ($validated, $context, $application, $totalDays, $status, $now, $request, $isSubmit, $autoApprove, $isStationed) {
             $data = [
                 'course_master_pk' => $context['course_pk'],
                 'student_master_pk' => $context['student_pk'],
@@ -299,6 +322,10 @@ class LeaveApplicationController extends Controller
                 'leave_nature_master_pk' => $validated['leave_nature_master_pk'],
                 'from_date' => $validated['from_date'],
                 'to_date' => $validated['to_date'],
+                // Cleared on PT exemption so switching an application's type never
+                // leaves a stale departure/return time behind.
+                'time_from' => $isStationed ? ($validated['time_from'] ?? null) : null,
+                'time_to' => $isStationed ? ($validated['time_to'] ?? null) : null,
                 'total_days' => $totalDays,
                 'reason' => $validated['reason'],
                 'contact_number' => $validated['contact_number'] ?? null,
@@ -439,6 +466,8 @@ class LeaveApplicationController extends Controller
             ->addColumn('leave_type_label', fn ($row) => $row->leave_type_label)
             ->addColumn('from_date_display', fn ($row) => $row->from_date?->format('d-m-Y') ?? '-')
             ->addColumn('to_date_display', fn ($row) => $row->to_date?->format('d-m-Y') ?? '-')
+            ->addColumn('time_from_display', fn ($row) => e($row->time_from_display))
+            ->addColumn('time_to_display', fn ($row) => e($row->time_to_display))
             ->addColumn('total_days_display', fn ($row) => number_format((float) $row->total_days, 1))
             ->addColumn('status_badge', function ($row) {
                 $map = [
@@ -469,31 +498,84 @@ class LeaveApplicationController extends Controller
             ->make(true);
     }
 
+    /**
+     * Excel (.xlsx) or PDF of the officer trainee's own leave, honouring the same
+     * filters. Both formats render the identical heading/row arrays, so the two
+     * downloads can never disagree about what the list contained.
+     */
     public function myLeaveExport(Request $request)
     {
-        $rows = $this->baseMyLeaveQuery($request)->get();
+        $rows = $this->baseMyLeaveQuery($request)->with('course')->get();
 
-        $columns = ['S. No.', 'Leave Type', 'From Date', 'To Date', 'Total Days', 'Status'];
-        $filename = 'My_Leave_Applications_' . now()->format('Ymd_His') . '.csv';
+        $headings = ['S. No.', 'Course Name', 'Leave Type', 'Nature', 'From Date', 'To Date', 'Time From', 'Time To', 'Total Days', 'Status'];
 
-        return response()->streamDownload(function () use ($rows, $columns) {
-            $out = fopen('php://output', 'w');
-            fputcsv($out, $columns);
+        $serial = 1;
+        $data = $rows->map(fn ($row) => [
+            $serial++,
+            $row->course->course_name ?? '-',
+            $row->leave_type_label,
+            $row->nature->nature_name ?? '-',
+            $row->from_date?->format('d-m-Y') ?? '-',
+            $row->to_date?->format('d-m-Y') ?? '-',
+            $row->time_from_display,
+            $row->time_to_display,
+            number_format((float) $row->total_days, 1),
+            $row->status_label,
+        ])->values();
 
-            $serial = 1;
-            foreach ($rows as $row) {
-                fputcsv($out, [
-                    $serial++,
-                    $row->leave_type_label,
-                    $row->from_date?->format('d-m-Y') ?? '-',
-                    $row->to_date?->format('d-m-Y') ?? '-',
-                    number_format((float) $row->total_days, 1),
-                    $row->status_label,
-                ]);
-            }
+        $baseName = 'My_Leave_Applications_' . now()->format('Ymd_His');
 
-            fclose($out);
-        }, $filename, ['Content-Type' => 'text/csv']);
+        if (strtolower((string) $request->get('format')) === 'pdf') {
+            @ini_set('memory_limit', '256M');
+            @set_time_limit(120);
+
+            $pdf = Pdf::loadView('admin.leave.export.leave_pdf', [
+                'headings' => $headings,
+                'rows' => $data,
+                'reportTitle' => 'My Leave Applications',
+                'filterLine' => $this->myLeaveFilterLine($request),
+            ])->setPaper('a4', 'landscape');
+
+            return $pdf->download($baseName . '.pdf');
+        }
+
+        return Excel::download(
+            new LeaveReportExport($data, $headings, 'My Leave'),
+            $baseName . '.xlsx'
+        );
+    }
+
+    /**
+     * Human-readable summary of the filters in force, printed on the PDF so a
+     * shared copy says what it is a report of.
+     */
+    protected function myLeaveFilterLine(Request $request): string
+    {
+        $parts = [];
+
+        if ($request->filled('leave_type')) {
+            $parts[] = 'Leave Type: ' . match ($request->input('leave_type')) {
+                LeaveApplication::TYPE_PT_EXEMPTION => 'PT Exemption',
+                LeaveApplication::TYPE_STATIONED_LEAVE => 'Stationed Leave',
+                default => $request->input('leave_type'),
+            };
+        }
+
+        if ($request->filled('status') && $request->input('status') !== '') {
+            $labels = [
+                LeaveApplication::STATUS_DRAFT => 'Draft',
+                LeaveApplication::STATUS_PENDING => 'Pending',
+                LeaveApplication::STATUS_APPROVED => 'Approved',
+                LeaveApplication::STATUS_REJECTED => 'Rejected',
+            ];
+            $parts[] = 'Status: ' . ($labels[(int) $request->input('status')] ?? 'All');
+        }
+
+        if ($request->filled('from_date') || $request->filled('to_date')) {
+            $parts[] = 'Period: ' . ($request->input('from_date') ?: '…') . ' to ' . ($request->input('to_date') ?: '…');
+        }
+
+        return implode(' | ', $parts);
     }
 
     protected function findOwnedApplication(int $studentPk, $id): LeaveApplication

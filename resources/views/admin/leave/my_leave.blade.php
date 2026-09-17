@@ -41,10 +41,21 @@
                     data-status="3" aria-pressed="false">Rejected</button>
             </li>
         </ul>
-        <button type="button" id="myLeaveDownload" class="btn fl-download-btn">
-            <i class="bi bi-download" aria-hidden="true"></i>
-            <span>Download</span>
-        </button>
+        <div class="dropdown">
+            <button type="button" id="myLeaveDownload" class="btn fl-download-btn dropdown-toggle"
+                data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-download" aria-hidden="true"></i>
+                <span>Download</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="myLeaveDownload">
+                <li><button type="button" class="dropdown-item my-leave-export-option" data-format="excel">
+                    <i class="bi bi-file-earmark-excel me-2" aria-hidden="true"></i>Excel (.xlsx)
+                </button></li>
+                <li><button type="button" class="dropdown-item my-leave-export-option" data-format="pdf">
+                    <i class="bi bi-file-earmark-pdf me-2" aria-hidden="true"></i>PDF
+                </button></li>
+            </ul>
+        </div>
     </div>
 
     <div class="card border-0 shadow-sm overflow-hidden rounded-3">
@@ -95,6 +106,8 @@
                                 <th>Leave Type</th>
                                 <th>From Date</th>
                                 <th>To Date</th>
+                                <th>Time From</th>
+                                <th>Time To</th>
                                 <th>Total Days</th>
                                 <th>Status</th>
                                 <th>Action</th>
@@ -159,6 +172,8 @@ $(function () {
             { data: 'leave_type_label', name: 'leave_type' },
             { data: 'from_date_display', name: 'from_date' },
             { data: 'to_date_display', name: 'to_date' },
+            { data: 'time_from_display', name: 'time_from' },
+            { data: 'time_to_display', name: 'time_to' },
             { data: 'total_days_display', name: 'total_days' },
             { data: 'status_badge', name: 'status', orderable: false, searchable: false },
             { data: 'action', orderable: false, searchable: false },
@@ -226,12 +241,13 @@ $(function () {
     });
 
     /* ── Download ── */
-    $('#myLeaveDownload').on('click', function () {
+    $(document).on('click', '.my-leave-export-option', function () {
         const params = $.param({
             leave_type: $('#filter_leave_type').val() || '',
             status: currentStatus,
             from_date: $period.data('from') || '',
             to_date: $period.data('to') || '',
+            format: $(this).data('format'),
         });
         window.location.href = exportUrl + '?' + params;
     });
@@ -264,7 +280,10 @@ $(function () {
     });
 
     /* ---------------- Column show / hide ---------------- */
-    const leaveColStorageKey = 'myLeaveGrid:hiddenColumns:v1';
+    // Hidden columns are stored by index, so inserting a column would shift a
+    // returning user's saved set onto the wrong columns. Bumped with the Time
+    // From / Time To columns; bump again whenever the column order changes.
+    const leaveColStorageKey = 'myLeaveGrid:hiddenColumns:v2';
 
     function leaveGetHiddenCols() {
         try {

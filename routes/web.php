@@ -47,6 +47,7 @@ use App\Http\Controllers\Admin\{
     ExemptionMasterController,
     StationedLeaveMasterController,
     LeaveApplicationController,
+    LeaveOnBehalfController,
     FacultyLeaveApprovalController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
@@ -895,6 +896,14 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         Route::get('/faculties', 'faculties')->name('faculties');
         Route::post('/status/{id}', 'status')->name('status');
         Route::delete('/delete/{id}', 'destroy')->name('destroy');
+    });
+
+    // Training Section — Apply Leave on Behalf of OT (menu route: admin/leave-on-behalf)
+    Route::prefix('admin/leave-on-behalf')->name('admin.leave-on-behalf.')->controller(LeaveOnBehalfController::class)->group(function () {
+        Route::get('/', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/students', 'students')->name('students');
+        Route::get('/context', 'context')->name('context');
     });
 
     // Faculty — Leave Approval (menu route: faculty-leave-approval)

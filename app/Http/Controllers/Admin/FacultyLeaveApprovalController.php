@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\LeaveReportExport;
 use App\Http\Controllers\Controller;
 use App\Models\CourseMaster;
 use App\Models\LeaveApplication;
 use App\Services\FacultyLeaveApprovalService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 use Yajra\DataTables\Facades\DataTables;
 
 class FacultyLeaveApprovalController extends Controller
@@ -98,7 +101,7 @@ class FacultyLeaveApprovalController extends Controller
     {
         $coursePks = $this->approvalService->getAccessibleCourseIds();
 
-        $query = LeaveApplication::with(['student', 'nature'])
+        $query = LeaveApplication::with(['student', 'nature', 'course'])
             ->where('leave_type', LeaveApplication::TYPE_STATIONED_LEAVE)
             ->whereIn('status', [
                 LeaveApplication::STATUS_PENDING,
@@ -147,15 +150,20 @@ class FacultyLeaveApprovalController extends Controller
                                 ->orWhere('display_name', 'like', "%{$search}%")
                                 ->orWhere('first_name', 'like', "%{$search}%")
                                 ->orWhere('last_name', 'like', "%{$search}%");
+                        })->orWhereHas('course', function ($qc) use ($search) {
+                            $qc->where('course_name', 'like', "%{$search}%");
                         })->orWhere('reason', 'like', "%{$search}%");
                     });
                 }
             })
             ->addColumn('ot_code', fn ($row) => e($row->student->generated_OT_code ?? '-'))
             ->addColumn('ot_name', fn ($row) => e($this->approvalService->studentDisplayName($row->student)))
+            ->addColumn('course_name', fn ($row) => e($row->course->course_name ?? '-'))
             ->addColumn('leave_type_label', fn ($row) => e($row->leave_type_label))
             ->addColumn('from_date_display', fn ($row) => $row->from_date?->format('d-m-Y') ?? '-')
             ->addColumn('to_date_display', fn ($row) => $row->to_date?->format('d-m-Y') ?? '-')
+            ->addColumn('time_from_display', fn ($row) => e($row->time_from_display))
+            ->addColumn('time_to_display', fn ($row) => e($row->time_to_display))
             ->addColumn('total_days_display', fn ($row) => number_format((float) $row->total_days, 0))
             ->addColumn('reason_text', fn ($row) => e(\Illuminate\Support\Str::limit($row->reason ?? '-', 80)))
             ->addColumn('status_label', function ($row) {
@@ -186,34 +194,83 @@ class FacultyLeaveApprovalController extends Controller
             ->make(true);
     }
 
+    /**
+     * Excel (.xlsx) or PDF of the current listing, honouring the same filters.
+     * Both formats render the identical heading/row arrays, so the two downloads
+     * can never disagree about what the list contained.
+     */
     public function export(Request $request)
     {
         $rows = $this->baseQuery($request)->get();
 
-        $columns = ['S. No.', 'OT Code', 'OT Name', 'Leave Type', 'Date From', 'Date To', 'Total Days', 'Reason', 'Status'];
-        $filename = 'Leave_Approval_' . now()->format('Ymd_His') . '.csv';
+        $headings = ['S. No.', 'OT Code', 'OT Name', 'Course Name', 'Leave Type', 'Date From', 'Date To', 'Time From', 'Time To', 'Total Days', 'Reason', 'Status'];
 
-        return response()->streamDownload(function () use ($rows, $columns) {
-            $out = fopen('php://output', 'w');
-            fputcsv($out, $columns);
+        $serial = 1;
+        $data = $rows->map(fn ($row) => [
+            $serial++,
+            $row->student->generated_OT_code ?? '-',
+            $this->approvalService->studentDisplayName($row->student),
+            $row->course->course_name ?? '-',
+            $row->leave_type_label,
+            $row->from_date?->format('d-m-Y') ?? '-',
+            $row->to_date?->format('d-m-Y') ?? '-',
+            $row->time_from_display,
+            $row->time_to_display,
+            number_format((float) $row->total_days, 0),
+            $row->reason ?? '-',
+            $row->status_label,
+        ])->values();
 
-            $serial = 1;
-            foreach ($rows as $row) {
-                fputcsv($out, [
-                    $serial++,
-                    $row->student->generated_OT_code ?? '-',
-                    $this->approvalService->studentDisplayName($row->student),
-                    $row->leave_type_label,
-                    $row->from_date?->format('d-m-Y') ?? '-',
-                    $row->to_date?->format('d-m-Y') ?? '-',
-                    number_format((float) $row->total_days, 0),
-                    $row->reason ?? '-',
-                    $row->status_label,
-                ]);
+        $baseName = 'Leave_Approval_' . now()->format('Ymd_His');
+
+        if (strtolower((string) $request->get('format')) === 'pdf') {
+            @ini_set('memory_limit', '256M');
+            @set_time_limit(120);
+
+            $pdf = Pdf::loadView('admin.leave.export.leave_pdf', [
+                'headings' => $headings,
+                'rows' => $data,
+                'reportTitle' => 'Leave Approval',
+                'filterLine' => $this->exportFilterLine($request),
+            ])->setPaper('a4', 'landscape');
+
+            return $pdf->download($baseName . '.pdf');
+        }
+
+        return Excel::download(
+            new LeaveReportExport($data, $headings, 'Leave Approval'),
+            $baseName . '.xlsx'
+        );
+    }
+
+    /**
+     * Human-readable summary of the filters in force, printed on the PDF so a
+     * shared copy says what it is a report of.
+     */
+    protected function exportFilterLine(Request $request): string
+    {
+        $parts = [];
+
+        $statusLabels = [
+            LeaveApplication::STATUS_PENDING => 'Pending',
+            LeaveApplication::STATUS_APPROVED => 'Approved',
+            LeaveApplication::STATUS_REJECTED => 'Rejected',
+        ];
+        $status = $request->filled('status') ? (int) $request->input('status') : LeaveApplication::STATUS_PENDING;
+        $parts[] = 'Status: ' . ($statusLabels[$status] ?? 'All');
+
+        if ($request->filled('course_filter')) {
+            $courseName = CourseMaster::where('pk', (int) $request->input('course_filter'))->value('course_name');
+            if ($courseName) {
+                $parts[] = 'Course: ' . $courseName;
             }
+        }
 
-            fclose($out);
-        }, $filename, ['Content-Type' => 'text/csv']);
+        if ($request->filled('from_date') || $request->filled('to_date')) {
+            $parts[] = 'Period: ' . ($request->input('from_date') ?: '…') . ' to ' . ($request->input('to_date') ?: '…');
+        }
+
+        return implode(' | ', $parts);
     }
 
     /**
