@@ -362,6 +362,55 @@ class ExportRoutePermissionTest extends TestCase
         $this->assertSame($expected, $method->invoke(null, $requested));
     }
 
+    /**
+     * F-019: the same clamp, proved where it has to hold - on the response.
+     *
+     * The data-provider cases above exercise resolveAdminUsersPerPage() through
+     * reflection. They would all still pass if index() went back to
+     * `(int) $request->input('per_page', 10)`, because nothing in them dispatches
+     * a request - so the regression the clamp exists to prevent is not the one
+     * they detect. This one asks the router for the page and counts the rows it
+     * actually renders.
+     *
+     * Row counts are compared against the page's OWN default rather than against
+     * a literal, so the assertion does not encode how many rows this database
+     * happens to hold.
+     */
+    public function test_the_rendered_listing_is_clamped_for_a_permitted_actor(): void
+    {
+        $user = $this->nobody();
+        Permission::findOrCreate('users', 'web');
+        $user->givePermissionTo('users');
+        $this->forgetPermissionCache();
+        $user = $user->fresh();
+
+        $rows = function (array $query) use ($user): int {
+            $response = $this->actingAs($user)->get(route('admin.users.index', $query));
+            $response->assertOk();
+
+            return substr_count($response->getContent(), '<tr');
+        };
+
+        $default = $rows([]);
+        $offered = $rows(['per_page' => 200]);
+
+        if ($offered <= $default) {
+            $this->markTestSkipped('too few user_credentials rows to tell one page size from another');
+        }
+
+        $this->assertSame(
+            $default,
+            $rows(['per_page' => 20000]),
+            'per_page=20000 rendered more than the default page: the listing is serving the whole directory in one response again'
+        );
+
+        $this->assertSame(
+            $default,
+            $rows(['per_page' => 201]),
+            'a size outside the offered list must fall back to the default, not be honoured'
+        );
+    }
+
     /** @return array<string, array{0: mixed, 1: int}> */
     public static function pageSizes(): array
     {

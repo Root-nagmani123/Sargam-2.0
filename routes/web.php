@@ -204,8 +204,15 @@ Route::middleware(['auth'])->group(function () {
 
             // The whole user_credentials directory - user name, name, email,
             // contact number, type and role - in one request, for 15,108 rows.
-            // Must stay ABOVE the resource: `users/{user}` would otherwise
-            // swallow /users/export and hand "export" to show().
+            //
+            // It sits above the resource for consistency with users/get-roles,
+            // which genuinely NEEDS to: that one is a single segment, so
+            // `users/{user}` would swallow it and hand "get-roles" to show().
+            // This route is two segments after `users` and cannot be swallowed
+            // at any position - the earlier comment here claimed otherwise. The
+            // real hazard is the route that is NOT declared: /admin/users/export
+            // with no format falls through to show('export'), which is what the
+            // whereIn below bounds.
             Route::get('users/export/{format}', [UserController::class, 'export'])
                 ->whereIn('format', ['csv', 'xlsx', 'pdf', 'print'])
                 ->name('users.export');
