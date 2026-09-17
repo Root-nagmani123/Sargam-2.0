@@ -22,8 +22,9 @@ use Illuminate\Http\Request;
  *   After:  the four endpoints that hand out that data — show, print,
  *           export/{format} and the legacy excel-export — require a Super
  *           Admin or the holder of a grantable permission. Every other role
- *           keeps the listing grid, the create/edit wizard and its own
- *           profile, and loses the bulk and row-level personal-data reads.
+ *           keeps the listing grid and the create wizard, reaches the EDIT
+ *           wizard for its own record only (see EnsureMemberRecordAccess),
+ *           and loses the bulk and row-level personal-data reads.
  *
  * Why the split: the LISTING is an operational screen and stays open, exactly
  * as it was. The four gated endpoints are a different exposure — one GET
@@ -80,9 +81,18 @@ use Illuminate\Http\Request;
  * download. It does not withstand a deliberate authenticated actor until L-8 is
  * closed.
  *
- * The lookup below is still wrapped, because Spatie raises rather than returning
- * false on a name it has never seen, and this gate must keep working on a host
- * where the migration has not yet run.
+ * WHY THE LOOKUP BELOW IS WRAPPED - and it is not the reason this comment used
+ * to give. A permission name that does not exist does NOT raise: Spatie's
+ * PermissionRegistrar registers a Gate::before hook that calls
+ * checkPermissionTo(), which is documented in its own source as "an alias to
+ * hasPermissionTo(), but avoids throwing an exception" and catches
+ * PermissionDoesNotExist to return false. So on a host where this release's
+ * migration has not yet run, $user->can() is simply false and this gate closes
+ * - no exception is ever raised for that cause. The catch is belt-and-braces
+ * for the cases that DO throw: an unreachable cache backend, a database error,
+ * or a host carrying no Spatie permission tables at all, where the query
+ * raises something that is not PermissionDoesNotExist. Do not read the catch
+ * as the thing that closes the gate on a missing permission; Spatie is.
  *
  * KNOWN WINDOW — isSidebarPrivilegedUser() resolves through hasRole(), which
  * reads the session's user_roles before it asks the role tables. A Super Admin

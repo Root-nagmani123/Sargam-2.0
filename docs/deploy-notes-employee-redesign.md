@@ -250,8 +250,11 @@ downloads:
 - refused `POST member/update` when the posted `emp_id` is someone else's. This
   one lands on a **save**, so a wizard already open on another member's record
   cannot be written back;
-- served a listing whose Action column no longer offers View or Print, and whose
-  Download and Print toolbar is gone.
+- served a listing whose Action column no longer offers View or Print, offers
+  **Edit on that operator's own row only** — the same own-record rule as the
+  second bullet, resolved in `MemberDataTable` so the column does not show a
+  link `member.record` would refuse — and whose Download and Print toolbar is
+  gone.
 
 One rule in five places: `EnsureMemberPiiAccess::grantsAccess()` is the
 entitlement flag for the whole module, not only for the exports. The `member.pii`
