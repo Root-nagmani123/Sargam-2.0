@@ -31,6 +31,19 @@ use Illuminate\Support\Facades\Schema;
  * drifted from its migrations before: every step checks the table and the row
  * before touching anything, and the parent menu is looked up by its permission
  * name rather than by a hard-coded id, which differs between environments.
+ *
+ * AND IT FLUSHES SPATIE'S PERMISSION CACHE, in both directions. That is not
+ * housekeeping - without it this migration BREAKS the very grant it exists to
+ * enable. Spatie caches the permission collection in the application cache (on
+ * this deployment the file driver, 24-hour TTL) and invalidates it only when a
+ * permission is saved through its own model. Writing the row with the query
+ * builder - which the guard above requires - leaves the cache serving a
+ * collection that does not contain the new name. RoleController::assignPermission()
+ * then calls firstOrCreate(), which FINDS the row and so creates nothing and
+ * flushes nothing, and the hasPermissionTo() on the next line raises
+ * PermissionDoesNotExist. The toggle 500s for as long as the cache entry lives.
+ * Reviewed as PR #309 F-025, where the counterfactual is the sharp part: with
+ * this migration NOT run, the same grant succeeds.
  */
 return new class extends Migration
 {
@@ -52,6 +65,10 @@ return new class extends Migration
                 'updated_at' => now(),
             ]);
         }
+
+        // Before any early return below: the permission row is the half the
+        // grant path resolves through the cache, so it must be visible now.
+        $this->flushPermissionCache();
 
         if (! Schema::hasTable('menus')) {
             return;
@@ -128,5 +145,28 @@ return new class extends Migration
         }
 
         DB::table('permissions')->where('id', $row->id)->delete();
+
+        // Same reason as up(): the pivots and the permission were removed with
+        // the query builder, so nothing has told Spatie. A rollback that leaves
+        // a deleted permission in the cache is the same failure in reverse.
+        $this->flushPermissionCache();
+    }
+
+    /**
+     * Invalidate Spatie's cached permission collection.
+     *
+     * Deliberately tolerant. The database work is already committed by the time
+     * this runs, and a cache backend that is unreachable at deploy time must not
+     * fail the migration - the deploy notes carry
+     * `php artisan permission:cache-reset` as the manual equivalent, and it is
+     * listed as a numbered release step for exactly this case.
+     */
+    private function flushPermissionCache(): void
+    {
+        try {
+            app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        } catch (\Throwable $e) {
+            // No cache to reach, or the package is not booted: nothing to do.
+        }
     }
 };

@@ -61,10 +61,28 @@ use Illuminate\Http\Request;
  * exclude_from_admin = 1, so it changes no administrator's sidebar — it exists
  * to make the capability grantable and auditable, not to add a screen.
  *
- * Nothing holds this permission today, so behaviour is exactly "Super Admin
- * only" until somebody grants it. The lookup below is still wrapped, because
- * Spatie raises rather than returning false on a name it has never seen, and
- * this gate must keep working on a host where the migration has not yet run.
+ * WHAT THIS PERMISSION IS NOT - it is not, today, a boundary, and the sentence
+ * that used to stand here ("nothing holds this permission, so behaviour is
+ * exactly Super Admin only until somebody grants it") described the contents of
+ * a table rather than a control. Who may grant it is the missing half: POST
+ * roles/permissions/{id} carries `auth` and nothing else, and
+ * RoleController::assignPermission() firstOrCreate()s whatever permission name
+ * it is handed and gives it to the role named in the URL, with no check on the
+ * caller. So an account this gate refuses can grant itself the permission this
+ * gate honours and come back through the front door - executed end to end and
+ * recorded as PR #309 F-027, with the ungated endpoint itself as the root cause
+ * (PR #317 L-8), owner Engineering lead. Fixing that endpoint is a separate
+ * change: it defeats every permission-based gate in this application, not only
+ * this one, and it must not be smuggled into a redesign branch.
+ *
+ * Read this gate, then, as what it demonstrably is: it removes a bulk personal
+ * data egress from casual reach and puts an audit line on every served
+ * download. It does not withstand a deliberate authenticated actor until L-8 is
+ * closed.
+ *
+ * The lookup below is still wrapped, because Spatie raises rather than returning
+ * false on a name it has never seen, and this gate must keep working on a host
+ * where the migration has not yet run.
  *
  * KNOWN WINDOW — isSidebarPrivilegedUser() resolves through hasRole(), which
  * reads the session's user_roles before it asks the role tables. A Super Admin

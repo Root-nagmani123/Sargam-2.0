@@ -370,6 +370,84 @@ class MemberRecordAccessTest extends TestCase
         $this->assertSame(0, DB::table('menus')->where('permission_name', $permission)->count());
     }
 
+    /**
+     * F-025: the migration must leave the grant PERFORMABLE, not merely present.
+     *
+     * The previous version of this migration wrote the permissions row with the
+     * query builder and flushed nothing. Spatie keeps the permission collection
+     * in the application cache - the file driver here, with a 24-hour TTL - and
+     * invalidates it only for writes made through its own model, so the row
+     * existed and the cached collection did not know it. Pressing the toggle
+     * then went: firstOrCreate() FINDS the row, so it creates nothing and
+     * flushes nothing; hasPermissionTo() on the next line resolves the name
+     * through the same stale collection and raises PermissionDoesNotExist. A
+     * 500 on the roles screen, for up to a day, on the one capability the
+     * migration exists to add - and the identical request SUCCEEDED with the
+     * migration not run at all.
+     *
+     * So this presses the real toggle, through the real route, and the cache is
+     * deliberately WARMED first: on a cold cache the old code passes too, which
+     * is the way this test could have been written and proved nothing.
+     */
+    public function test_the_permission_can_be_granted_once_the_migration_has_run(): void
+    {
+        $permission = EnsureMemberPiiAccess::PII_PERMISSION;
+        $registrar = app(\Spatie\Permission\PermissionRegistrar::class);
+
+        $this->actAsSuperAdmin();
+
+        DB::table('menus')->where('permission_name', $permission)->delete();
+        DB::table('permissions')->where('name', $permission)->delete();
+
+        $role = \Spatie\Permission\Models\Role::query()->orderBy('id')->first();
+
+        if (! $role) {
+            $this->markTestSkipped('no role to grant the permission to');
+        }
+
+        try {
+            // The state a deployed host is in: a populated, and now stale, cache.
+            $registrar->forgetCachedPermissions();
+            $this->assertGreaterThan(
+                0,
+                $registrar->getPermissions()->count(),
+                'the cached collection must be warm, or this test cannot detect the defect'
+            );
+            $this->assertCount(
+                0,
+                $registrar->getPermissions()->where('name', $permission),
+                'the permission must be absent before the migration, or the run proves nothing'
+            );
+
+            $migration = require database_path(
+                'migrations/2026_09_16_090000_add_member_pii_read_permission.php'
+            );
+            $migration->up();
+
+            $this->assertCount(
+                1,
+                $registrar->getPermissions()->where('name', $permission),
+                'the migration must invalidate the permission cache, not only write the row'
+            );
+
+            // The screen's own request. A 500 here is the finding, reproduced.
+            $this->post(route('assign.roles.permissions', ['id' => $role->id]), [
+                'permission' => $permission,
+                'status' => 1,
+            ])->assertOk()->assertJson(['success' => true]);
+
+            $this->assertTrue(
+                $role->fresh()->hasPermissionTo($permission),
+                'the grant returned success without granting anything'
+            );
+
+            $migration->down();
+        } finally {
+            // The cache is a FILE, so it outlives this test's transaction.
+            $registrar->forgetCachedPermissions();
+        }
+    }
+
     /** Walks the exact relation RoleController::show() hands the matrix blade. */
     private function permissionAppearsOnTheRoleScreen(string $permission): bool
     {

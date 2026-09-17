@@ -33,17 +33,34 @@ use Illuminate\Http\Request;
  *     member.pii permission) may open ANY member's record;
  *     everybody else may open EXACTLY their own, and nobody else's.
  *
- * The caller's own record is user_credentials.user_id, which holds the
- * employee_master.pk of the member that account belongs to - the same mapping
+ * The caller's own record is user_credentials.user_id - the same mapping
  * MemberController::store() writes when it creates the credential, and the same
  * one member.profile.edit.self already relies on.
+ *
+ * THAT MAPPING IS NOT PROVEN, and this block is the place it would be believed,
+ * so it says so instead. On testsargam6, of the 1,547 credentials whose user_id
+ * matches an employee_master.pk, 332 name a row whose FIRST AND LAST NAME DO NOT
+ * MATCH the credential's own - so for those accounts "their own record" is
+ * somebody else's, for reading here and for writing through
+ * MemberController::authorizeMemberRecord(). The column is not namespaced by
+ * account category: credentials with user_category 'S' or blank carry user_id
+ * values that fall inside employee_master's pk range, and nothing below checks
+ * that the credential is an employee credential.
+ *
+ * Whether that is data to repair or a column being read for a purpose it does
+ * not serve is a domain question this code cannot settle. It is open as PR #309
+ * F-024, owner Engineering lead with the DBA. Until it is answered, read the
+ * rule below as "the account whose user_id names this pk", NOT as "this person".
+ * What is proven is the narrowing: before this middleware existed, every
+ * authenticated account could open and rewrite EVERY member record.
  *
  * The comparison is deliberately string-wise on the ROUTE parameter rather than
  * on a looked-up model: the parameter is what the controller will use, so this
  * refuses before anything is loaded, and a mismatch cannot be laundered through
  * a cast.
  *
- * Both branches are executed by MemberPiiAccessTest.
+ * Both branches are executed by MemberRecordAccessTest - the entitled branch
+ * and the own-record branch, each with its refusal.
  */
 class EnsureMemberRecordAccess
 {
