@@ -11,8 +11,6 @@
       $cardClass    - card wrapper modifier class
       $pageTitle    - breadcrumb / heading title
       $exportTitle  - title used for export + print output
-      $badgeClass   - faculty-type badge modifier class
-      $badgeLabel   - faculty-type badge text
       $emptyMessage - message shown when there are no rows
 --}}
 <link rel="stylesheet" href="{{ asset($cssFile) }}?v={{ @filemtime(public_path($cssFile)) ?: time() }}">
@@ -155,17 +153,18 @@
                          fight this page's own toolbar layout (search/length relocation, etc.). --}}
                     <table class="table table-hover align-middle text-nowrap mb-0" id="{{ $tableId }}"
                         data-sargam-dt-ui="false">
+                        {{-- Four data columns only. Faculty Type, Current Sector,
+                             Session Count and Feedback Average were dropped: the
+                             page is a contact list, and the exports below carry
+                             whatever is listed here, so list and download agree. --}}
                         <thead class="table-light">
                             <tr>
                                 <th scope="col">S. No.</th>
-                                <th scope="col">Faculty Type</th>
                                 <th scope="col">Faculty Name</th>
                                 <th scope="col">Email</th>
                                 <th scope="col">Mobile Number</th>
-                                <th scope="col">Current Sector</th>
-                                <th scope="col">Session Count</th>
-                                <th scope="col">Feedback Average</th>
                                 @if(hasRole('Admin'))
+                                {{-- dt-no-export: a control, never part of a download. --}}
                                 <th scope="col" class="dt-no-export">Action</th>
                                 @endif
                             </tr>
@@ -174,9 +173,6 @@
                             @forelse($faculties as $index => $faculty)
                             <tr>
                                 <td class="text-body-secondary fw-medium">{{ $index + 1 }}</td>
-                                <td>
-                                    <span class="badge rounded-1 {{ $badgeClass }} bg-success-subtle text-success border border-success-subtle">{{ $badgeLabel }}</span>
-                                </td>
                                 <td>
                                     <span class="faculty-name">{{ $faculty->full_name }}</span>
                                 </td>
@@ -191,52 +187,6 @@
                                     @endif
                                 </td>
                                 <td class="fw-medium">{{ $faculty->mobile_no ?? 'N/A' }}</td>
-                                <td>
-                                    @if($faculty->faculty_sector == 1)
-                                        <span class="badge rounded-1 badge-sector-gov border border-primary-subtle">Government</span>
-                                    @elseif($faculty->faculty_sector == 2)
-                                        <span class="badge rounded-1 badge-sector-private border border-warning-subtle">Private</span>
-                                    @else
-                                        <span class="badge rounded-1 badge-sector-other border border-secondary-subtle">Other</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <span class="session-count-badge d-inline-flex align-items-center gap-1">
-                                        <span class="material-symbols-rounded align-text-bottom" style="font-size: 1rem;">event</span>
-                                        {{ $faculty->session_count ?? 0 }}
-                                    </span>
-                                </td>
-                                <td>
-                                    @php
-                                        $avgContent = data_get($faculty, 'feedback_summary.avg_content', 0);
-                                        $avgPresentation = data_get($faculty, 'feedback_summary.avg_presentation', 0);
-                                        $totalFeedback = (int) data_get($faculty, 'feedback_summary.total_feedback', 0);
-                                        $getScoreClass = function($score) {
-                                            if ($score >= 80) return 'excellent';
-                                            if ($score >= 60) return 'good';
-                                            if ($score >= 40) return 'average';
-                                            return 'poor';
-                                        };
-                                    @endphp
-                                    @if($totalFeedback > 0)
-                                        <div class="feedback-average">
-                                            <div class="feedback-score">
-                                                <span class="feedback-label">Content:</span>
-                                                <span class="feedback-value {{ $getScoreClass($avgContent) }}">
-                                                    {{ number_format($avgContent, 1) }}%
-                                                </span>
-                                            </div>
-                                            <div class="feedback-score">
-                                                <span class="feedback-label">Presentation:</span>
-                                                <span class="feedback-value {{ $getScoreClass($avgPresentation) }}">
-                                                    {{ number_format($avgPresentation, 1) }}%
-                                                </span>
-                                            </div>
-                                        </div>
-                                    @else
-                                        <span class="text-muted small">No feedback yet</span>
-                                    @endif
-                                </td>
                                 @if(hasRole('Admin'))
                                 <td class="dt-no-export">
                                     <a href="{{ route('feedback.average', ['faculty_name' => $faculty->full_name]) }}"
@@ -249,7 +199,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="9" class="no-data text-center py-5 text-body-secondary fst-italic">
+                                <td colspan="{{ hasRole('Admin') ? 5 : 4 }}" class="no-data text-center py-5 text-body-secondary fst-italic">
                                     <span class="material-symbols-rounded fs-1 d-block mb-2 opacity-50">person_off</span>
                                     {{ $emptyMessage }}
                                 </td>

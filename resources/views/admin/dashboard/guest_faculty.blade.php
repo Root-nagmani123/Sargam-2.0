@@ -10,8 +10,6 @@
     'cardClass'    => 'guest-faculty-card',
     'pageTitle'    => 'Guest Faculty',
     'exportTitle'  => 'Guest Faculty',
-    'badgeClass'   => 'badge-guest',
-    'badgeLabel'   => 'Guest',
     'emptyMessage' => 'No guest faculty found',
 ])
 @endsection
