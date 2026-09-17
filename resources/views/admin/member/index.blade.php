@@ -155,6 +155,14 @@
          saving a file. Both are server-side exports off the same query, and the
          JS below keeps every href carrying the search box and the Columns modal,
          so what you get always matches what is on screen. --}}
+    {{-- Rendered only for an account the export gate admits. The row-level View
+         and Print links in the grid are gated on the same decision, from the
+         same method; leaving these five toolbar controls out of that check gave
+         every non-entitled user a Download menu and a Print button whose only
+         outcome was a 403 error page - a dead button that reports a permission
+         failure, which is the thing the gate was built to avoid.
+         See App\Http\Middleware\EnsureMemberPiiAccess::grantsAccess(). --}}
+    @if (\App\Http\Middleware\EnsureMemberPiiAccess::grantsAccess())
     <div class="d-flex flex-wrap align-items-center justify-content-end gap-3 mb-3">
         <div class="d-flex flex-wrap align-items-center gap-2">
         <div class="dropdown">
@@ -209,6 +217,7 @@
         </a>
         </div>
     </div>
+    @endif
 
     <div class="card border-0 shadow-sm rounded-1 overflow-hidden">
         <div class="card-body p-3 p-md-4">

@@ -7,12 +7,26 @@ use Tests\TestCase;
 
 class MemberIndexSmokeTest extends TestCase
 {
+    /**
+     * An actor entitled to the listing's export controls.
+     *
+     * The Download menu and the Print button are now rendered only for an
+     * account EnsureMemberPiiAccess admits, so this file - which is about the
+     * page's CHROME, not about who may reach it - has to act as one or its
+     * assertions would be asserting the gate by accident. Who the gate admits,
+     * and who it refuses, is proved in MemberRecordAccessTest.
+     *
+     * hasRole() reads the session's user_roles before the role tables, and login
+     * writes them there, so a session role is the production shape.
+     */
     private function actor(): User
     {
         $user = User::query()->orderBy('pk')->first();
         if (! $user) {
             $this->markTestSkipped('no user available to authenticate as');
         }
+
+        session(['user_roles' => ['Super Admin']]);
 
         return $user;
     }

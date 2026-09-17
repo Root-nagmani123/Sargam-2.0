@@ -49,10 +49,22 @@ use Illuminate\Http\Request;
  * endpoints back, with no code change and an audit trail in the permission
  * tables.
  *
- * Nothing holds this permission today — it does not have to exist for the gate
- * to work — so behaviour is exactly "Super Admin only" until someone decides
- * otherwise. The lookup is wrapped because Spatie raises rather than returning
- * false when a permission name has never been defined.
+ * THAT REMEDY IS ONLY REAL IF IT CAN BE PERFORMED, and the first version of
+ * this gate named a permission no screen in this application could produce. The
+ * role-assignment screen enumerates menus.permission_name, and a menu's
+ * permission name is Str::slug($name, '_') — which strips dots, so the original
+ * 'member.pii.read' came out as 'memberpiiread' and was grantable from nowhere.
+ * The name is therefore slug-shaped now, and the migration
+ * 2026_09_16_090000_add_member_pii_read_permission ships both halves the grant
+ * needs: the Spatie permissions row, and a menus row under Employee that puts a
+ * toggle for it on the role-assignment screen. That menus row carries
+ * exclude_from_admin = 1, so it changes no administrator's sidebar — it exists
+ * to make the capability grantable and auditable, not to add a screen.
+ *
+ * Nothing holds this permission today, so behaviour is exactly "Super Admin
+ * only" until somebody grants it. The lookup below is still wrapped, because
+ * Spatie raises rather than returning false on a name it has never seen, and
+ * this gate must keep working on a host where the migration has not yet run.
  *
  * KNOWN WINDOW — isSidebarPrivilegedUser() resolves through hasRole(), which
  * reads the session's user_roles before it asks the role tables. A Super Admin
@@ -66,8 +78,14 @@ use Illuminate\Http\Request;
  */
 class EnsureMemberPiiAccess
 {
-    /** Grant this to a role to restore member personal-data reads for it. */
-    public const PII_PERMISSION = 'member.pii.read';
+    /**
+     * Grant this to a role to restore member personal-data reads for it.
+     *
+     * Slug-shaped on purpose: menu permission names are produced by
+     * Str::slug($name, '_'), which strips dots, so a dotted name can never
+     * appear on the role-assignment screen and can never be granted there.
+     */
+    public const PII_PERMISSION = 'member_pii_read';
 
     public function handle(Request $request, Closure $next)
     {

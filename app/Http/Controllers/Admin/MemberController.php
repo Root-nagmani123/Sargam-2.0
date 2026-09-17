@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use App\Http\Requests\Admin\Member\{
     StoreMemberStep1Request,
@@ -232,6 +233,28 @@ class MemberController extends Controller
      * Merge rules()/messages() from all 5 step requests into one combined validator,
      * since the final submit carries every step's fields at once.
      */
+    /**
+     * The same object-level decision EnsureMemberRecordAccess makes, for the
+     * routes that carry the member's key in the request body instead of the URL.
+     *
+     * One rule, resolved through one method, so the middleware and the
+     * controller cannot come to different answers about who may touch a record.
+     */
+    private function authorizeMemberRecord($memberPk): void
+    {
+        if (\App\Http\Middleware\EnsureMemberPiiAccess::grantsAccess()) {
+            return;
+        }
+
+        $own = optional(auth()->user())->user_id;
+
+        abort_unless(
+            $memberPk !== null && $own !== null && (string) $own === (string) $memberPk,
+            403,
+            'You do not have access to this member record.'
+        );
+    }
+
     private function combinedMemberRules(): array
     {
         $requestClasses = [
@@ -331,6 +354,15 @@ class MemberController extends Controller
         // Same shape the validator returns, so the wizard renders it in the same
         // place as any other field error rather than as an unexplained failure.
         if ($duplicate !== null) {
+            // The uploads were written before the transaction opened, and this
+            // early return is new: before the duplicate guard existed, every
+            // create that reached this point inserted a row, so every stored
+            // file was referenced by one. A refused duplicate would otherwise
+            // leave a profile picture and an identity document on the PUBLIC
+            // disk with nothing pointing at them - unreferenced personal
+            // documents, accumulating one pair per refused re-submit.
+            Storage::disk('public')->delete(array_filter([$profile_picture, $additional_doc_upload]));
+
             return response()->json(['errors' => $duplicate], 422);
         }
 
@@ -340,6 +372,13 @@ class MemberController extends Controller
     }
 
     public function update(Request $request) {
+
+        // The write twin of the edit wizard. `member.update` takes the member's
+        // pk from the BODY rather than the route, so the member.record
+        // middleware cannot see it - without this check, gating the read path
+        // while leaving this open would let any authenticated account rewrite
+        // any member's record, which is the larger half of the same hole.
+        $this->authorizeMemberRecord($request->emp_id);
 
         [$rules, $messages] = $this->combinedMemberRules();
 

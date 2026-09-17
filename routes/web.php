@@ -388,15 +388,26 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('member')->name('member.')->controller(MemberController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('create', 'create')->name('create');
-        Route::get('edit/{id}', 'edit')->name('edit');
         Route::get('profile/edit', function () {
             return redirect()->route('member.profile.edit', Auth::user()->user_id);
         })->name('profile.edit.self');
-        Route::get('profile/edit/{id}', 'editProfile')->name('profile.edit');
         Route::get('/step/{step}', 'loadStep')->name('load-step');
-        Route::get('/edit-step/{step}/{id}', 'editStep')->name('edit-step');
         Route::post('/validate-step/{step}', 'validateStep');
-        Route::post('/update-validate-step/{step}/{id}', 'updateValidateStep');
+        // The edit wizard returns the SAME personal data as the gated documents
+        // below - permanent address, current address, father's name, personal
+        // email - one member per request, addressed by a raw integer pk. Gating
+        // only the document routes left that open, so the wizard is gated too.
+        //
+        // NOT on `member.pii`, because profile/edit is self-service: the
+        // redirect above sends every user to their own record. `member.record`
+        // admits an entitled account to any member and everybody else to
+        // exactly their own. See App\Http\Middleware\EnsureMemberRecordAccess.
+        Route::middleware(['member.record'])->group(function () {
+            Route::get('edit/{id}', 'edit')->name('edit');
+            Route::get('profile/edit/{id}', 'editProfile')->name('profile.edit');
+            Route::get('/edit-step/{step}/{id}', 'editStep')->name('edit-step');
+            Route::post('/update-validate-step/{step}/{id}', 'updateValidateStep');
+        });
         Route::post('/store', 'store')->name('store');
         Route::post('update', 'update')->name('update');
         Route::post('{id}/toggle-status', 'toggleStatus')->name('toggle-status');

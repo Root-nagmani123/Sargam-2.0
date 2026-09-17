@@ -78,6 +78,7 @@ class Kernel extends HttpKernel
         'fc.builder.delete' => \App\Http\Middleware\BlockFcFormBuilderDelete::class,
         'issue.reports.admin' => \App\Http\Middleware\EnsureIssueReportsAdmin::class,
         'member.pii' => \App\Http\Middleware\EnsureMemberPiiAccess::class,
+        'member.record' => \App\Http\Middleware\EnsureMemberRecordAccess::class,
         'fc.builder.action' => \App\Http\Middleware\BlockFcFormBuilderAction::class,
     ];
 }
