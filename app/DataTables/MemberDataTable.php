@@ -75,6 +75,30 @@ class MemberDataTable extends DataTable
     }
 
     /**
+     * What the rendered Action column depends on, and nothing else.
+     *
+     * The column varies on exactly two things: whether the actor is entitled
+     * (View / Print / Delete / the status toggle) and which row the actor owns
+     * (Edit). For an ENTITLED account the owned pk cannot change the output -
+     * every row gets every control - so all entitled accounts legitimately share
+     * one cache entry. For everyone else the output turns on their own pk, so
+     * that is the key.
+     *
+     * Deliberately not `auth()->id()` for both branches: that would give every
+     * administrator a private copy of an identical payload.
+     */
+    public static function actionColumnCacheIdentity(): string
+    {
+        if (\App\Http\Middleware\EnsureMemberPiiAccess::grantsAccess()) {
+            return 'entitled';
+        }
+
+        $own = optional(auth()->user())->user_id;
+
+        return 'own:' . ($own === null ? 'none' : (string) $own);
+    }
+
+    /**
      * Status pill above the grid (All / Active / Inactive). Whitelisted here so an
      * arbitrary ?status_filter= can neither reach the query nor fragment the cache.
      */
@@ -185,6 +209,13 @@ class MemberDataTable extends DataTable
                 // every filter combination would share one cached payload, and the
                 // grid would answer a Department pick with the previous rows.
                 'listing_filters' => self::resolveFilters(),
+                // Nor is the ACTOR, and the Action column is rendered per actor:
+                // View and Print appear only for an entitled account, and Edit
+                // only on the row that account owns. Without this, two accounts
+                // with the same filters share one cached payload, so whoever
+                // warms the cache decides which controls everybody else sees for
+                // the rest of the TTL (default 86400s).
+                'actor' => self::actionColumnCacheIdentity(),
             ]
         );
     }
@@ -250,19 +281,42 @@ class MemberDataTable extends DataTable
                 $checked = $isActive ? 'checked' : '';
                 $toggleLabel = $isActive ? 'Deactivate' : 'Activate';
 
-                // MemberController@destroy refuses an active member, so the delete
-                // action is rendered disabled rather than red-and-always-failing.
-                $delete = $isActive
-                    ? '<span class="mbr-act mbr-act--del is-disabled" aria-disabled="true"
-                            title="Set this member to inactive before deleting">
-                            <span class="mbr-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>
-                            <span class="mbr-act__label">Delete</span>
-                       </span>'
-                    : '<button type="button" class="mbr-act mbr-act--del member-delete-btn"
-                            data-delete-url="' . e($deleteUrl) . '" title="Delete member">
-                            <span class="mbr-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>
-                            <span class="mbr-act__label">Delete</span>
-                       </button>';
+                // Deactivate and Delete are gated on member.pii now, so they are
+                // rendered only for an account that gate admits - the same rule as
+                // View and Print. Rendering them to everyone is what made the
+                // ungated endpoints reachable from the screen itself: the Delete
+                // button carried the encrypted id its route needed, so nothing had
+                // to be forged.
+                //
+                // MemberController@destroy refuses an active member, so for an
+                // entitled account the delete action is rendered disabled rather
+                // than red-and-always-failing.
+                $delete = '';
+                if ($mayReadPii) {
+                    $delete = $isActive
+                        ? '<span class="mbr-act mbr-act--del is-disabled" aria-disabled="true"
+                                title="Set this member to inactive before deleting">
+                                <span class="mbr-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>
+                                <span class="mbr-act__label">Delete</span>
+                           </span>'
+                        : '<button type="button" class="mbr-act mbr-act--del member-delete-btn"
+                                data-delete-url="' . e($deleteUrl) . '" title="Delete member">
+                                <span class="mbr-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>
+                                <span class="mbr-act__label">Delete</span>
+                           </button>';
+                }
+
+                // Same gate as Delete: the status switch POSTs to
+                // member.toggle-status, which member.pii now refuses.
+                $toggle = $mayReadPii
+                    ? '<label class="mbr-act mbr-act--toggle" title="' . $toggleLabel . ' member">
+                        <span class="mbr-act__icon">
+                            <input class="form-check-input plain-status-toggle member-status-toggle" type="checkbox"
+                                role="switch" data-id="' . (int) $row->pk . '" ' . $checked . '>
+                        </span>
+                        <span class="mbr-act__label">' . $toggleLabel . '</span>
+                    </label>'
+                    : '';
 
                 // Personal-data reads: rendered only for an account the gate
                 // admits. See App\Http\Middleware\EnsureMemberPiiAccess.
@@ -290,13 +344,7 @@ class MemberDataTable extends DataTable
                 return '<div class="mbr-act-group" role="group" aria-label="Row actions">
                     ' . $edit . '
                     ' . $piiActions . '
-                    <label class="mbr-act mbr-act--toggle" title="' . $toggleLabel . ' member">
-                        <span class="mbr-act__icon">
-                            <input class="form-check-input plain-status-toggle member-status-toggle" type="checkbox"
-                                role="switch" data-id="' . (int) $row->pk . '" ' . $checked . '>
-                        </span>
-                        <span class="mbr-act__label">' . $toggleLabel . '</span>
-                    </label>
+                    ' . $toggle . '
                     ' . $delete . '
                 </div>';
             })
