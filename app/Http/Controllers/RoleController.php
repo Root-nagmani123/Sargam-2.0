@@ -388,16 +388,49 @@ class RoleController extends Controller
         ]);
 
         $baseKey = trim(preg_replace('/[^a-z0-9]+/', '_', strtolower($request->label)), '_');
-        $key = $baseKey;
-        $i = 1;
-        while (DashboardCard::where('key', $key)->exists()) {
-            $key = $baseKey . '_' . $i++;
+
+        // A label of nothing but punctuation slugs to the empty string, and `key`
+        // is NOT NULL with a '' default - so the first such card would take '' and
+        // every later one would collide with it.
+        if ($baseKey === '') {
+            $baseKey = 'card';
         }
 
-        $card = DashboardCard::create(array_merge(
-            $request->only('label', 'icon', 'color_class', 'sort_order'),
-            ['key' => $key]
-        ));
+        // `dashboard_cards.key` carries a unique index, so the exists() probe below
+        // is a convenience for picking a readable suffix, not the thing that makes
+        // the key unique. Two requests with the same label can both pass the probe
+        // and the loser's INSERT then raises SQLSTATE 23000 - which reached the
+        // user as a 500 carrying a raw SQL error. Recompute and retry instead: the
+        // database stays the authority and the caller gets a card.
+        $card = null;
+
+        for ($attempt = 0; $attempt < 5 && $card === null; $attempt++) {
+            $key = $baseKey;
+            $i = 1;
+            while (DashboardCard::where('key', $key)->exists()) {
+                $key = $baseKey . '_' . $i++;
+            }
+
+            try {
+                $card = DashboardCard::create(array_merge(
+                    $request->only('label', 'icon', 'color_class', 'sort_order'),
+                    ['key' => $key]
+                ));
+            } catch (\Illuminate\Database\QueryException $e) {
+                // Only a uniqueness collision is worth retrying; anything else is a
+                // real failure and must not be swallowed.
+                if ((string) $e->getCode() !== '23000') {
+                    throw $e;
+                }
+            }
+        }
+
+        if ($card === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Could not allocate a unique key for this card. Please try again.',
+            ], 409);
+        }
 
         return response()->json([
             'success' => true,
