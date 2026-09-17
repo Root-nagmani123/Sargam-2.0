@@ -222,6 +222,17 @@ release's migration. Roll that back too — with the same `--path` scope — or 
 permission survives with nothing reading it. See §0.2. No member data is written
 or rewritten by this release, so there is nothing else in the database to undo.
 
+**What this order costs, so it is not a surprise mid-rollback.** Between the
+rollback and the *deployed* revert, the new code is still live with the
+permission gone, so any role that had been **granted** `member_pii_read` — the
+§0.1 remedy — is refused `show`, `print`, `excel-export` and `export/{format}`
+for that window. The loss is immediate, not delayed: `down()` flushes Spatie's
+cache after deleting the row, and `EnsureMemberPiiAccess::holdsPiiPermission()`
+catches the now-unknown name and returns false. **Super Admin is unaffected**,
+and the revert restores access for everyone once it lands — the reverted code has
+no gate at all. Do not reorder to avoid this; the other order does not work at
+all, as above.
+
 The rollback is scoped for the same reason the migrate step is, and **the claim
 that rolling back is sound covers this release's own migration and nothing
 else.** A bare `php artisan migrate:rollback` rolls back the whole last batch; if
