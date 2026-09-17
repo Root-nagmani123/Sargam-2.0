@@ -18,6 +18,7 @@ use App\Services\NotificationService;
 use App\Services\NotificationReceiverService;
 use App\Exports\MemoNoticeExport;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Support\PdfPageNumbers;
  
 class CourseAttendanceNoticeMapController extends Controller
 {
@@ -434,7 +435,7 @@ $noticeCount = $memos->groupBy(function($item) {
             ]);
 
         $fileName = 'send-memo-notice-' . now()->format('Y-m-d_His') . '.pdf';
-        return $pdf->download($fileName);
+        return PdfPageNumbers::stamp($pdf, 18, 20, [0.4, 0.4, 0.4])->download($fileName);
     }
 
     /**

@@ -24,6 +24,7 @@ use Yajra\DataTables\Facades\DataTables;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use App\Support\PdfPageNumbers;
 
 
 class StudentMedicalExemptionController extends Controller
@@ -948,11 +949,16 @@ class StudentMedicalExemptionController extends Controller
                     'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
                     'isRemoteEnabled' => true,
-                    'isPhpEnabled' => true,
+                    // Never true: isPhpEnabled makes the renderer a PHP
+                    // execution context for the whole view, so any raw
+                    // block that later appears in an export blade would
+                    // execute. Page numbers are stamped on the canvas
+                    // after render instead - see PdfPageNumbers.
+                    'isPhpEnabled' => false,
                     'dpi' => 96,
                 ]);
 
-            return $pdf->download($fileName . '.pdf');
+            return PdfPageNumbers::stamp($pdf, 18, 20, [0.4, 0.4, 0.4])->download($fileName . '.pdf');
         }
 
         // Styled workbook (logos, blue header band, bordered zebra rows) so the

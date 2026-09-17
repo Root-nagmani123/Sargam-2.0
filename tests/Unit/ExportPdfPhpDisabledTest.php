@@ -196,4 +196,107 @@ class ExportPdfPhpDisabledTest extends TestCase
             'stamp() must add exactly one piece of text to every page'
         );
     }
+    /**
+     * Repo-wide, because the per-export assertions above only cover the five
+     * exports this module owns.
+     *
+     * The review recorded two other live exports still running dompdf as a PHP
+     * execution context. A repo-wide scan found seventeen, across thirteen
+     * controllers - the earlier count was scoped to the files that review had
+     * reason to open. All seventeen are now off, and this is the assertion that
+     * keeps them off.
+     */
+    public function test_no_controller_anywhere_enables_php_in_the_pdf_renderer(): void
+    {
+        $offenders = [];
+
+        foreach ($this->phpFilesUnder(app_path()) as $file) {
+            $source = (string) file_get_contents($file);
+
+            if (preg_match("/'isPhpEnabled'\s*=>\s*true/", $source)) {
+                $offenders[] = str_replace(base_path().DIRECTORY_SEPARATOR, '', $file);
+            }
+        }
+
+        $this->assertSame([], $offenders,
+            "isPhpEnabled => true makes dompdf a server-side PHP execution context for the whole
+"
+            ."view. Page numbers do not need it - use PdfPageNumbers::stamp(). Offenders:
+"
+            .implode("
+", $offenders));
+    }
+
+    /**
+     * And the construct that made it look necessary, wherever it lives.
+     *
+     * A leftover block is not inert: it is a standing invitation to switch the
+     * option back on, and two of these were already dead - sitting in views whose
+     * controller had correctly disabled PHP, so the page numbers they were
+     * written for had silently stopped rendering.
+     */
+    public function test_no_blade_anywhere_uses_the_in_view_php_script(): void
+    {
+        $offenders = [];
+
+        foreach ($this->phpFilesUnder(resource_path('views')) as $file) {
+            if (str_contains((string) file_get_contents($file), 'text/php')) {
+                $offenders[] = str_replace(base_path().DIRECTORY_SEPARATOR, '', $file);
+            }
+        }
+
+        $this->assertSame([], $offenders,
+            "These blades still carry a dompdf in-view PHP block:
+".implode("
+", $offenders));
+    }
+
+    /**
+     * The converted exports were written at three different footer geometries,
+     * and a security fix should not quietly move the page number on a dozen
+     * reports - so stamp() takes the inset and colour.
+     *
+     * Asserted differentially, like the page-count test above: a custom geometry
+     * must still add exactly one text block per page, and must produce a
+     * different document from the default one. Without the second half the
+     * parameters could be ignored entirely and this would still pass.
+     */
+    public function test_stamp_honours_a_custom_inset_and_colour(): void
+    {
+        $default = PdfPageNumbers::stamp($this->pageNumberFixture());
+        $pages = $default->getDomPDF()->getCanvas()->get_page_count();
+        $defaultOut = $default->output();
+
+        $customPdf = $this->pageNumberFixture();
+        $custom = PdfPageNumbers::stamp($customPdf, 18, 20, [0.4, 0.4, 0.4])->output();
+
+        $bare = $this->pageNumberFixture();
+        $bare->render();
+
+        $this->assertSame($pages, $this->textBlocksIn($custom) - $this->textBlocksIn($bare->output()),
+            'a custom geometry must still stamp every page');
+
+        $this->assertNotSame($defaultOut, $custom,
+            'the inset and colour must reach the canvas, not be silently ignored');
+    }
+
+    /** @return list<string> */
+    private function phpFilesUnder(string $root): array
+    {
+        $files = [];
+
+        $walker = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS)
+        );
+
+        foreach ($walker as $file) {
+            if ($file->isFile() && str_ends_with($file->getFilename(), '.php')) {
+                $files[] = $file->getPathname();
+            }
+        }
+
+        sort($files);
+
+        return $files;
+    }
 }

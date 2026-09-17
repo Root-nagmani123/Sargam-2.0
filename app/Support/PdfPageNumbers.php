@@ -37,9 +37,20 @@ class PdfPageNumbers
      *
      * @param  int  $bottomInset  Points above the foot of the page. 24 matches the
      *                            shared branded grid; the users export sits at 20.
+     * @param  int  $rightInset   Points in from the right edge.
+     * @param  array<int, float>|null  $colour  RGB 0..1, or null for the branded grey.
+     *
+     * The last two exist so the exports converted off dompdf's in-view page-number
+     * script keep the exact position and grey their own blade used. They were
+     * written at three different geometries, and a security fix should not quietly
+     * move the footer on a dozen reports.
      */
-    public static function stamp(PDF $pdf, int $bottomInset = 24): PDF
-    {
+    public static function stamp(
+        PDF $pdf,
+        int $bottomInset = 24,
+        int $rightInset = self::RIGHT_INSET,
+        ?array $colour = null
+    ): PDF {
         // Must run before the stamp: page_text() resolves {PAGE_COUNT} only once
         // every page exists. render() also marks the document rendered, so the
         // caller's download()/output() will not re-render and discard this.
@@ -55,12 +66,12 @@ class PdfPageNumbers
         $width = $fontMetrics->getTextWidth($text, $font, $size);
 
         $canvas->page_text(
-            $canvas->get_width() - $width - self::RIGHT_INSET,
+            $canvas->get_width() - $width - $rightInset,
             $canvas->get_height() - $bottomInset,
             $text,
             $font,
             $size,
-            self::COLOUR
+            $colour ?? self::COLOUR
         );
 
         return $pdf;

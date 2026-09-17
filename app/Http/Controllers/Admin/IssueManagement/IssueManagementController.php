@@ -30,6 +30,7 @@ use Illuminate\Support\Facades\{DB, Auth, Storage, Schema, Log};
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Support\PdfPageNumbers;
 
 class IssueManagementController extends Controller
 {
@@ -724,14 +725,20 @@ class IssueManagementController extends Controller
         }
 
         if ($format === 'pdf') {
-            return Pdf::loadView('admin.issue_management.export_pdf', $payload)
+            $pdf = Pdf::loadView('admin.issue_management.export_pdf', $payload)
                 ->setPaper('a4', 'landscape')
                 ->setOptions([
                     'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    'isPhpEnabled' => true,
-                ])
-                ->download($stem . '_' . $stamp . '.pdf');
+                    // Never true: isPhpEnabled makes the renderer a PHP
+                    // execution context for the whole view, so any raw
+                    // block that later appears in an export blade would
+                    // execute. Page numbers are stamped on the canvas
+                    // after render instead - see PdfPageNumbers.
+                    'isPhpEnabled' => false,
+                ]);
+
+            return PdfPageNumbers::stamp($pdf)->download($stem . '_' . $stamp . '.pdf');
         }
 
         // Same band the .xlsx and the print/PDF headers carry, so the CSV names
