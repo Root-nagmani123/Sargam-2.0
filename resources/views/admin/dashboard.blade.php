@@ -514,7 +514,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                 <span class="dashboard-house-rank">{{ $loop->iteration }}</span>
                                 <span class="dashboard-house-name text-truncate" title="{{ $house['house'] }}">{{ $house['house'] }}</span>
                                 <span class="dashboard-house-students">{{ $house['students'] }} OT{{ $house['students'] == 1 ? '' : 's' }}</span>
-                                <span class="dashboard-house-total" aria-label="{{ $house['total'] }} memo and discipline records">{{ $house['total'] }}</span>
+                                {{-- Marks deducted, not a record count (UAT 15-09-2026) --}}
+                                <span class="dashboard-house-total" aria-label="{{ $house['total'] }} marks deducted">{{ $house['total'] + 0 }}</span>
                             </li>
                             @endforeach
                         </ul>

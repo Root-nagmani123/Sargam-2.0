@@ -47,6 +47,28 @@
     color: var(--ds-ink-muted);
 }
 
+/* Total Members — centred and narrow, the way the Course Group Mapping grid
+   sets its own student-count column. */
+.mg-table th.mg-col-members,
+.mg-table td.mg-col-members {
+    width: 9rem;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.mg-members {
+    display: inline-block;
+    min-width: 2.25rem;
+    padding: var(--ds-space-1) var(--ds-space-2);
+    border-radius: var(--ds-radius-1);
+    background: var(--ds-surface-2);
+    color: var(--ds-ink);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    line-height: 1.25;
+}
+
 /* Keeps the empty-state sentence to a readable measure instead of one long
    line spanning the full page width. */
 .mg-empty-text {
@@ -125,18 +147,23 @@
                 <div class="table-responsive">
                     <table class="table align-middle mb-0 mg-table">
                         <thead>
+                            {{-- Column set and order mirror the admin Course Group
+                                 Mapping grid, minus Status / Action — an OT may look
+                                 at their groups but not edit or delete them. Course
+                                 Name is the card heading above rather than a column,
+                                 since these tables are already grouped by course. --}}
                             <tr>
                                 <th scope="col" class="mg-col-no">S. No.</th>
-                                <th scope="col">Group Name</th>
                                 <th scope="col">Group Type</th>
+                                <th scope="col">Group Name</th>
                                 <th scope="col">Faculty</th>
+                                <th scope="col" class="mg-col-members">Total Members</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach($courseGroups as $group)
                                 <tr>
                                     <td class="mg-col-no">{{ $loop->iteration }}</td>
-                                    <td class="fw-semibold">{{ $group->group_name ?: '—' }}</td>
                                     <td>
                                         @if($group->group_type)
                                             <span class="mg-type">{{ $group->group_type }}</span>
@@ -144,12 +171,16 @@
                                             <span class="mg-muted">—</span>
                                         @endif
                                     </td>
+                                    <td class="fw-semibold">{{ $group->group_name ?: '—' }}</td>
                                     <td>
                                         @if($group->faculty_name)
                                             {{ $group->faculty_name }}
                                         @else
                                             <span class="mg-muted">—</span>
                                         @endif
+                                    </td>
+                                    <td class="mg-col-members">
+                                        <span class="mg-members">{{ $group->total_members ?? 0 }}</span>
                                     </td>
                                 </tr>
                             @endforeach

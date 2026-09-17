@@ -80,18 +80,6 @@ class UserController extends Controller
     private const NOTICE_FEED_PER_PAGE = 10;
 
     /**
-     * Closed, as each module records it: End Chat sets student_memo_status.status
-     * to 2 (see CourseAttendanceNoticeMapController), and a discipline memo runs
-     * 1 Recorded -> 2 Memo Sent -> 3 Closed (see MemoDiscipline).
-     */
-    private const MEMO_STATUS_CLOSED = 2;
-
-    /** A notice reaches 2 whether it was closed as a notice or turned into a memo. */
-    private const NOTICE_STATUS_CLOSED = 2;
-
-    private const DISCIPLINE_MEMO_STATUS_CLOSED = 3;
-
-    /**
      * The courses that are running right now — flagged active in the master AND
      * not past their end date. One definition for the faculty dashboard's three
      * course-scoped features (My Counsellees, House Wise Details and the House
@@ -803,65 +791,31 @@ class UserController extends Controller
 
         $studentPks = collect($studentsByHouse)->flatMap(fn ($set) => array_keys($set))->unique()->values()->all();
 
-        $memos = collect();
-        $notices = collect();
-        $disciplineMemos = collect();
-
-        if (! empty($studentPks)) {
-            // The records are scoped the same way the houses above are: nothing
-            // raised on a finished or switched-off batch counts.
-            //
-            // Closed memos only (status 2). memo_count is the number of memos the
-            // record carries; older rows leave it NULL, so those fall back to one
-            // per record.
-            $memos = DB::table('student_memo_status')
-                ->whereIn('student_pk', $studentPks)
-                ->whereIn('course_master_pk', $currentCourseIds)
-                ->where('status', self::MEMO_STATUS_CLOSED)
-                ->selectRaw('student_pk, COALESCE(SUM(memo_count), COUNT(*)) c')
-                ->groupBy('student_pk')
-                ->pluck('c', 'student_pk');
-
-            // Closed notices that were NOT converted into a memo — the memo above
-            // already counts those. A notice raised off an attendance record carries
-            // its student there, a direct notice carries its own student_pk.
-            $notices = DB::table('student_notice_status as sns')
-                ->leftJoin('course_student_attendance as csa', 'sns.course_student_attendance_pk', '=', 'csa.pk')
-                ->where(function ($q) use ($studentPks) {
-                    $q->whereIn('sns.student_pk', $studentPks)
-                        ->orWhereIn('csa.Student_master_pk', $studentPks);
-                })
-                ->whereIn('sns.course_master_pk', $currentCourseIds)
-                ->where('sns.status', self::NOTICE_STATUS_CLOSED)
-                ->whereNotExists(function ($q) {
-                    $q->select(DB::raw(1))
-                        ->from('student_memo_status as sms')
-                        ->whereColumn('sms.student_notice_status_pk', 'sns.pk');
-                })
-                ->selectRaw('COALESCE(csa.Student_master_pk, sns.student_pk) AS spk, COUNT(*) AS c')
-                ->groupBy(DB::raw('COALESCE(csa.Student_master_pk, sns.student_pk)'))
-                ->pluck('c', 'spk');
-
-            // Closed discipline memos only (status 3 — see MemoDiscipline).
-            $disciplineMemos = DB::table('discipline_memo_status')
-                ->whereIn('student_master_pk', $studentPks)
-                ->whereIn('course_master_pk', $currentCourseIds)
-                ->where('status', self::DISCIPLINE_MEMO_STATUS_CLOSED)
-                ->selectRaw('student_master_pk, COUNT(*) c')
-                ->groupBy('student_master_pk')
-                ->pluck('c', 'student_master_pk');
-        }
+        // Marks, not record counts (UAT 15-09-2026). A house's figure is the sum of
+        // every closed deduction against its OTs — final_mark_deduction on discipline
+        // memos plus mark_of_deduction on memos/notices. Counting records made two
+        // houses look equal when one had lost 2 marks and the other 20.
+        //
+        // OtMarksDeductedService owns those rules, and the OT's own card and page
+        // already read it, so a house total and the OTs' own totals cannot disagree.
+        // Scoped to running courses, the same way the houses above are.
+        $marksByStudent = app(OtMarksDeductedService::class)
+            ->totalsForStudents($studentPks, $currentCourseIds instanceof \Illuminate\Support\Collection
+                ? $currentCourseIds->all()
+                : (array) $currentCourseIds);
 
         return collect($studentsByHouse)
-            ->map(function (array $students, string $house) use ($memos, $notices, $disciplineMemos) {
-                $total = 0;
+            ->map(function (array $students, string $house) use ($marksByStudent) {
+                $total = 0.0;
                 foreach (array_keys($students) as $pk) {
-                    $total += (int) ($disciplineMemos[$pk] ?? 0)
-                        + (int) ($memos[$pk] ?? 0)
-                        + (int) ($notices[$pk] ?? 0);
+                    $total += (float) ($marksByStudent[(int) $pk] ?? 0);
                 }
 
-                return ['house' => $house, 'total' => $total, 'students' => count($students)];
+                return [
+                    'house' => $house,
+                    'total' => round($total, 2),
+                    'students' => count($students),
+                ];
             })
             ->sortBy([['total', 'asc'], ['house', 'asc']])
             ->values();
@@ -4610,6 +4564,25 @@ class UserController extends Controller
             ->orderBy('gtype.type_name')
             ->orderBy('gmap.group_name')
             ->get();
+
+        // Total members per group, in one query rather than one per row.
+        //
+        // COUNT(DISTINCT student_master_pk), not COUNT(*): the same duplicate rows
+        // the ->distinct() above guards against would otherwise count a student
+        // twice. (The admin Course Group Mapping grid uses a plain withCount, so on
+        // the two affected groups its figure reads one higher than this one.)
+        $memberCounts = $groups->isEmpty()
+            ? collect()
+            : DB::table('student_course_group_map')
+                ->whereIn('group_type_master_course_master_map_pk', $groups->pluck('pk'))
+                ->where('active_inactive', 1)
+                ->selectRaw('group_type_master_course_master_map_pk AS map_pk, COUNT(DISTINCT student_master_pk) AS members')
+                ->groupBy('group_type_master_course_master_map_pk')
+                ->pluck('members', 'map_pk');
+
+        foreach ($groups as $group) {
+            $group->total_members = (int) ($memberCounts[$group->pk] ?? 0);
+        }
 
         return view('admin.dashboard.my_groups', compact('groups'));
     }

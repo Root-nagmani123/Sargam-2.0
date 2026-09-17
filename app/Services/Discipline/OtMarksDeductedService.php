@@ -40,6 +40,96 @@ class OtMarksDeductedService
     }
 
     /**
+     * The same total as {@see totalFor()}, for many OTs at once and optionally
+     * scoped to a set of courses — what the House Wise Performance panel adds up.
+     *
+     * rowsFor() per student would be two queries each, so a house of 400 would cost
+     * 800. This runs three, and deliberately reuses the rules above rather than
+     * restating them: closed only, and a memo supersedes the notice it came from
+     * except where the memo recorded no figure.
+     *
+     * @param  list<int>  $studentPks
+     * @param  list<int>|null  $courseIds  null = every course
+     * @return Collection<int, float>  student_master_pk => marks deducted
+     */
+    public function totalsForStudents(array $studentPks, ?array $courseIds = null): Collection
+    {
+        if ($studentPks === []) {
+            return collect();
+        }
+
+        $scope = fn ($query, string $column) => $courseIds === null
+            ? $query
+            : $query->whereIn($column, $courseIds ?: [-1]);
+
+        $totals = [];
+        $add = function ($studentPk, $marks) use (&$totals) {
+            $pk = (int) $studentPk;
+            if ($pk > 0) {
+                $totals[$pk] = ($totals[$pk] ?? 0.0) + (float) $marks;
+            }
+        };
+
+        // Discipline memos — final_mark_deduction on closed records.
+        $discipline = $scope(
+            DB::table('discipline_memo_status')
+                ->whereIn('student_master_pk', $studentPks)
+                ->where('status', MemoDiscipline::STATUS_CLOSED),
+            'course_master_pk'
+        )->selectRaw('student_master_pk, SUM(COALESCE(final_mark_deduction, 0)) AS marks')
+            ->groupBy('student_master_pk')
+            ->get();
+
+        foreach ($discipline as $row) {
+            $add($row->student_master_pk, $row->marks);
+        }
+
+        // Closed memos — their own figure, falling back to the notice they came from.
+        $memos = $scope(
+            DB::table('student_memo_status as m')
+                ->leftJoin('student_notice_status as n', 'n.pk', '=', 'm.student_notice_status_pk')
+                ->whereIn('m.student_pk', $studentPks)
+                ->where('m.status', self::MEMO_NOTICE_CLOSED),
+            'm.course_master_pk'
+        )->get(['m.student_pk', 'm.mark_of_deduction', 'n.mark_of_deduction as notice_mark']);
+
+        foreach ($memos as $row) {
+            $add($row->student_pk, $row->mark_of_deduction !== null && $row->mark_of_deduction !== ''
+                ? $row->mark_of_deduction
+                : ($row->notice_mark ?: 0));
+        }
+
+        // Closed notices no closed memo has already accounted for. A notice carries
+        // its student directly or through the attendance record it was raised off.
+        $notices = $scope(
+            DB::table('student_notice_status as n')
+                ->leftJoin('course_student_attendance as csa', 'csa.pk', '=', 'n.course_student_attendance_pk')
+                ->where(function ($q) use ($studentPks) {
+                    $q->whereIn('n.student_pk', $studentPks)
+                        ->orWhereIn('csa.Student_master_pk', $studentPks);
+                })
+                ->where('n.status', self::MEMO_NOTICE_CLOSED)
+                ->whereNotExists(function ($q) {
+                    $q->select(DB::raw(1))
+                        ->from('student_memo_status as sms')
+                        ->whereColumn('sms.student_notice_status_pk', 'n.pk')
+                        ->where('sms.status', self::MEMO_NOTICE_CLOSED);
+                }),
+            'n.course_master_pk'
+        )->selectRaw('COALESCE(csa.Student_master_pk, n.student_pk) AS spk, SUM(COALESCE(n.mark_of_deduction, 0)) AS marks')
+            ->groupBy(DB::raw('COALESCE(csa.Student_master_pk, n.student_pk)'))
+            ->get();
+
+        foreach ($notices as $row) {
+            $add($row->spk, $row->marks);
+        }
+
+        // A student with no deduction still belongs in the result, at zero.
+        return collect($studentPks)
+            ->mapWithKeys(fn ($pk) => [(int) $pk => (float) ($totals[(int) $pk] ?? 0.0)]);
+    }
+
+    /**
      * One row per deduction, newest first — what the page lists.
      *
      * @return Collection<int, array{date: ?string, type: string, course: string, detail: string, status: string, marks: float}>
