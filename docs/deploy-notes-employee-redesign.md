@@ -35,14 +35,32 @@ user to their own record and still works for everybody.
 One qualification on the two "plus any user for their own record" rows, because
 the table would otherwise be read as stronger than it is. "Their own record" is
 `user_credentials.user_id`, and that column is not namespaced by account type.
-On testsargam6, 332 of the 1,547 credentials that point at an `employee_master`
-row name a row whose name does not match the credential's own — so those accounts
-reach one other person's record, and can save it. Every other member is refused.
-Whether those 332 rows are data to repair or a column being read for a purpose it
-does not serve is open as PR #309 F-024 — owner **Engineering lead** with the
-**DBA** — and the last two checks in §5 below are the ones that surface it. The
-narrowing itself is not in question: before this release every authenticated
-account could open and rewrite every member record.
+On testsargam6, 1,547 credentials point at an `employee_master` row (census run
+2026-09-17). How many of those name a *different person* depends on how two names
+are compared, so the figures below are the ones that are stable under every rule
+tried — pairs whose credential name and employee name share **no name token at
+all**, which spelling variants, initials and a missing middle name cannot
+explain:
+
+| Count | `user_category` | Which credentials |
+| --- | --- | --- |
+| **317** | blank | no `user_category` recorded on the credential |
+| **9** | `E` | `user_credentials` pks 1778, 1800, 1382, 1633, 1748, 2102, 1871, 1397, 2528 |
+
+For reference, and so the two figures above can be told apart from any others in
+circulation: the looser rules give **349** pairs under an exact first-plus-last
+comparison and **575** under normalised tokens including the employee's
+`middle_name`. Both of those are dominated by spelling noise — initials, missing
+middle names, case — which is why this note quotes the 317 + 9 figure instead.
+Whichever count you quote, quote the rule with it.
+
+Those 326 accounts reach one other person's record, and can save it. Every other
+member is refused. Whether those rows are data to repair or a column being read
+for a purpose it does not serve is open as PR #309 F-024 — owner **Engineering
+lead** with the **DBA** — and the last two checks in §5 below are the ones that
+surface it. Note that `user_category` is necessary but **not sufficient** to
+identify them: see §5. The narrowing itself is not in question: before this
+release every authenticated account could open and rewrite every member record.
 
 ### 0.1 Restoring access to a role, without a deploy
 
@@ -75,10 +93,12 @@ audit line naming the actor, the IP and the row count.
 
 ### 0.2 Rolling the migration back
 
-`php artisan migrate:rollback` on this batch removes the menus row, revokes the
-permission from every role that holds it, and deletes the permission row. Any
-role that had been granted the download loses it, which is the same state as
-before the release.
+Rolling back **this release's own migration** — scope it with `--path`, as §3
+does — removes the menus row, revokes the permission from every role that holds
+it, and deletes the permission row. Any role that had been granted the download
+loses it, which is the same state as before the release. That statement is about
+this one migration; a bare `migrate:rollback` is a different and unvouched-for
+operation, see §2.1 and §3.
 
 ---
 
@@ -115,15 +135,16 @@ git checkout -- bootstrap/cache/packages.php bootstrap/cache/services.php
 ```bash
 composer install
 php artisan package:discover
-php artisan migrate
+php artisan migrate --path=database/migrations/2026_09_16_090000_add_member_pii_read_permission.php
 php artisan permission:cache-reset
 ```
 
 Both cache files are regenerated on the host and are now ignored by git, which
 is where generated files belong.
 
-`php artisan migrate` is **not optional in this release** — it is the first
-migration this branch has ever carried, and it is what makes §0.1 possible.
+The migrate step is **not optional in this release** — it is the first migration
+this branch has ever carried, and it is what makes §0.1 possible. It is **scoped
+with `--path` deliberately, and it must stay scoped.**
 
 `php artisan permission:cache-reset` is belt and braces. Spatie keeps the
 permission collection in the application cache (the file driver here, 24-hour
@@ -137,17 +158,58 @@ until the entry expires: `firstOrCreate()` finds the row the migration wrote, so
 it creates nothing and flushes nothing, and `hasPermissionTo()` then raises on a
 name the cached collection has never seen.
 
+### 2.1 Why the migrate step is scoped
+
+`php artisan migrate` with no `--path` does not run "this branch's migration". It
+runs every pending migration in `database/migrations/`. On the review database
+(testsargam6, `migrate:status` run 2026-09-17) that is **76 pending files**, of
+which this release contributes exactly one. Four of the other 75 drop columns
+from live tables in their `up()`:
+
+```text
+2026_04_28_154500_drop_legacy_columns_from_student_travel_plan_masters
+2026_05_02_100000_fc_activity_department_user_use_credentials_pk
+2026_06_02_210000_drop_course_string_from_fc_medical_tables
+2026_06_10_000002_drop_title_column_from_employee_master
+```
+
+The last one is on this release's own table. Its `up()` drops
+`employee_master.title`; its `down()` re-adds `title` as an **empty** nullable
+column, so rolling it back restores the column definition and none of the data.
+On testsargam6 that column is non-empty in **1,665 of 1,833 rows**. An unscoped
+`migrate` run on the strength of this note would therefore destroy live data that
+has nothing to do with this release, irreversibly.
+
+The `--path` form above was verified with `--pretend`: it reports that one
+migration file and nothing else.
+
+**An unscoped `php artisan migrate` on this repository needs DBA sign-off
+first** — on the four column drops listed above, and on whatever else is pending
+on the target host, which has not been measured anywhere but testsargam6.
+Production may be further ahead or further behind. Running the full pending set
+is a separate and much larger release decision than the one this release is
+making, and it is not this note's to authorise. Do not substitute it for the
+scoped command.
+
 ## 3. Rollback
 
 ```bash
 git revert <merge commit>
+php artisan migrate:rollback --path=database/migrations/2026_09_16_090000_add_member_pii_read_permission.php
 ```
 
 The code revert leaves one thing behind: the `member_pii_read` permission row and
 its capability menu row, added by this release's migration. Roll that back too —
-`php artisan migrate:rollback` on this batch — or the permission survives with
-nothing reading it. See §0.2. No member data is written or rewritten by this
-release, so there is nothing else in the database to undo.
+with the same `--path` scope, as above — or the permission survives with nothing
+reading it. See §0.2. No member data is written or rewritten by this release, so
+there is nothing else in the database to undo.
+
+The rollback is scoped for the same reason the migrate step is, and **the claim
+that rolling back is sound covers this release's own migration and nothing
+else.** A bare `php artisan migrate:rollback` rolls back the whole last batch; if
+anyone has run an unscoped `migrate` on the host, that batch is the full pending
+set, and those `down()` bodies restore column *definitions*, not the rows that
+were dropped — see §2.1. Nothing in this note vouches for rolling those back.
 
 Reverting re-tracks the two cache files, so hosts that have regenerated them need
 the same `git checkout -- bootstrap/cache` step again first.
@@ -180,10 +242,28 @@ button (it raises "Unknown column 'pk'" and the switch reverts).
   without the permission cache being flushed — run
   `php artisan permission:cache-reset` and try again, and report it, because the
   migration is supposed to do that itself.
-- **Open your own profile as an account that is not an employee** — an officer
-  trainee, or any account whose `user_category` is not `E` — from the sidebar,
+- **Open your own profile as an account whose `user_category` is blank** — an
+  officer trainee, or any account that is not an employee — from the sidebar,
   and confirm the record shown is **yours**. If it is somebody else's, that is
   PR #309 F-024 in the wild: stop and tell the Engineering lead, because the same
   account can also save that record.
+- **Then run that same check again as one of these nine accounts, whose
+  `user_category` *is* `E`** — `user_credentials` pks **1778, 1800, 1382, 1633,
+  1748, 2102, 1871, 1397, 2528** on testsargam6 (re-identify them on the target
+  host with the no-shared-token rule in §0 before trusting these pks). Each
+  one's `user_id` names a different *named* employee, so each of the nine must
+  show somebody else's record. Report it the same way.
+
+  This second check is not a duplicate of the first. **`user_category` is
+  necessary but not sufficient.** Narrowing the rule to `user_category = 'E'` —
+  the obvious reading of F-024, and the one the first check on its own would
+  encourage — closes the 317 blank-category cases and leaves these nine open,
+  and the first check *cannot* detect them, because it uses an account whose
+  category is not `E`. A fix for F-024 that filters on category alone is not a
+  fix; a name- or ownership-based check is required on top of it. Worth telling
+  the DBA when you report it: the nine names rotate through the block (ANJALI
+  CHAUHAN → Brijesh Patel → AZAD SINGH → ESWARA RAO → SONALI RAWAT), which
+  reads as a block of `user_id` values written misaligned rather than as a
+  category being conflated.
 - Confirm two `member.pii.*` lines in `storage/logs/laravel.log`, each on a
   single line.
