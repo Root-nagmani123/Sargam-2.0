@@ -144,7 +144,17 @@ class MenuService
 
     public function store(array $data)
     {
-        $permission = Str::slug($data['name'], '_');
+        // Honour what was typed in the Create modal's Permission Name field;
+        // only fall back to slug(name) when it was left blank (the field is
+        // nullable in MenuRequest). Overwriting it unconditionally - as this
+        // used to - threw away the submitted value *after* the uniqueness rule
+        // had validated it, so the row was created carrying a permission the
+        // creator never asked for. update() was fixed for exactly this; store()
+        // was not, which is why a menu created with a custom permission name
+        // only got one once it was edited and saved a second time.
+        $permission = filled($data['permission_name'] ?? null)
+            ? $data['permission_name']
+            : Str::slug($data['name'], '_');
         $data['permission_name'] = $permission;
         $data['order'] = $data['order'] ?? self::nextOrderIn($data['group_id'] ?? null, $data['parent_id'] ?? null);
         $menu = Menu::create($data);

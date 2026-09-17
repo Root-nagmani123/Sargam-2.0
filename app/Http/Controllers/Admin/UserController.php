@@ -4193,9 +4193,15 @@ class UserController extends Controller
      * key is built from the resolved value, so an out-of-range request can no
      * longer mint its own cache entry either.
      *
+     * The footer's <select> is rendered FROM this list (index() passes it to the
+     * view) rather than hard-coding its own options. When the two were written
+     * out separately they drifted: the select offered 20, which is not on this
+     * list, so choosing it silently served 10 - while 25 and 200 were accepted
+     * here but never offered on screen.
+     *
      * @var int[]
      */
-    private const ADMIN_USERS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 200];
+    public const ADMIN_USERS_PER_PAGE_OPTIONS = [10, 20, 25, 50, 100, 200];
 
     private static function resolveAdminUsersPerPage($raw): int
     {
@@ -4241,10 +4247,14 @@ class UserController extends Controller
 
         // Live search / pagination: return only the table partial (no full reload).
         if ($request->ajax()) {
-            return view('admin.user_management.users._table', compact('users', 'perPage', 'search', 'user_type'));
+            return view('admin.user_management.users._table', compact('users', 'perPage', 'search', 'user_type') + [
+                'perPageOptions' => self::ADMIN_USERS_PER_PAGE_OPTIONS,
+            ]);
         }
 
-        return view('admin.user_management.users.index', compact('users', 'perPage', 'search', 'user_type'));
+        return view('admin.user_management.users.index', compact('users', 'perPage', 'search', 'user_type') + [
+            'perPageOptions' => self::ADMIN_USERS_PER_PAGE_OPTIONS,
+        ]);
     }
 
     /**

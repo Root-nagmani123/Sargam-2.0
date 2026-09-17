@@ -61,10 +61,13 @@
         <span>Showing</span>
         <select class="form-select form-select-sm users-per-page-select select2"
                 id="usersPerPageFooter" data-placeholder="Rows…" aria-label="Items per page">
-            <option value="10" {{ $perPage == 10 ? 'selected' : '' }}>10</option>
-            <option value="20" {{ $perPage == 20 ? 'selected' : '' }}>20</option>
-            <option value="50" {{ $perPage == 50 ? 'selected' : '' }}>50</option>
-            <option value="100" {{ $perPage == 100 ? 'selected' : '' }}>100</option>
+            {{-- Rendered from the controller's allow-list, never written out by
+                 hand: a size offered here that the controller does not accept is
+                 served as the default instead, with nothing on screen saying so.
+                 See UserController::ADMIN_USERS_PER_PAGE_OPTIONS. --}}
+            @foreach(($perPageOptions ?? \App\Http\Controllers\Admin\UserController::ADMIN_USERS_PER_PAGE_OPTIONS) as $option)
+                <option value="{{ $option }}" {{ $perPage == $option ? 'selected' : '' }}>{{ $option }}</option>
+            @endforeach
         </select>
         <span>of <strong class="text-dark">{{ $users->total() }}</strong> items</span>
     </div>

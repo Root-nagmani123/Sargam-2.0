@@ -13,7 +13,8 @@
      kept identical by hand — same navy, same header order, same zebra.
 
      Expects: $reportTitle, $columns, $rows, $exportDate, $filterLine (plain
-     text or null), $widths (column key => CSS width, optional). --}}
+     text or null), $widths (column key => CSS width, optional),
+     $orientation ('portrait' | 'landscape', optional, default portrait). --}}
 @php
     $logoFor = function (string $relative): ?string {
         $path = public_path($relative);
@@ -29,6 +30,12 @@
     $logo   = $logoFor('images/lbsnaa_logo.jpg');
 
     $widths = $widths ?? [];
+
+    // Must match the setPaper() the calling controller used. DomPDF re-reads
+    // @page during render() and that wins over setPaper(), so a blade that
+    // hard-codes `portrait` silently flips a landscape export back - which is
+    // what happened to the 13-column Menus PDF.
+    $orientation = ($orientation ?? 'portrait') === 'landscape' ? 'landscape' : 'portrait';
     // Keys the grid centres; the same list the .xlsx export centres.
     $centreKeys = ['sno', 'permissions_count', 'created_at', 'status', 'sort_order', 'order'];
     $total = is_countable($rows) ? count($rows) : iterator_count($rows);
@@ -39,7 +46,7 @@
     <meta charset="utf-8">
     <title>{{ $reportTitle }} — LBSNAA</title>
     <style>
-        @page { size: A4 portrait; margin: 12mm 10mm; }
+        @page { size: A4 {{ $orientation }}; margin: 12mm 10mm; }
         * { font-family: 'DejaVu Sans', sans-serif; }
         body { margin: 0; padding: 0; color: #1f2937; font-size: 9px; }
 

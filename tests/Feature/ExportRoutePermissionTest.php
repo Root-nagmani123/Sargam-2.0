@@ -482,6 +482,44 @@ class ExportRoutePermissionTest extends TestCase
     }
 
     /** @return array<string, array{0: mixed, 1: int}> */
+    /**
+     * The clamp's other half: the sizes the screen OFFERS must be the sizes it
+     * ACCEPTS.
+     *
+     * These were written out twice - an allow-list in the controller and a
+     * hand-maintained <select> in the footer - and drifted. The select offered
+     * 20, which was not on the allow-list, so choosing it served 10 with nothing
+     * on screen saying so; 25 and 200 were accepted but never offered. The fix
+     * renders the options from the constant, and this pins that they cannot be
+     * written out separately again.
+     */
+    public function test_the_page_size_dropdown_offers_exactly_what_the_controller_accepts(): void
+    {
+        $allowed = \App\Http\Controllers\Admin\UserController::ADMIN_USERS_PER_PAGE_OPTIONS;
+
+        $blade = file_get_contents(resource_path('views/admin/user_management/users/_table.blade.php'));
+
+        preg_match_all('/<option value="(\d+)"/', $blade, $literal);
+        $this->assertSame(
+            [],
+            $literal[1],
+            'The per-page <select> writes its options out by hand again ('.implode(', ', $literal[1]).'). '
+            .'Render them from UserController::ADMIN_USERS_PER_PAGE_OPTIONS instead, or the two drift.'
+        );
+
+        // Every offered option has to survive the clamp unchanged - so no size on
+        // the dropdown can silently serve a different one.
+        $method = new \ReflectionMethod(\App\Http\Controllers\Admin\UserController::class, 'resolveAdminUsersPerPage');
+        $method->setAccessible(true);
+
+        foreach ($allowed as $option) {
+            $this->assertSame($option, $method->invoke(null, $option),
+                "the dropdown offers {$option} but the controller does not serve it");
+            $this->assertSame($option, $method->invoke(null, (string) $option),
+                "the dropdown offers {$option} but the controller does not serve it as a query string");
+        }
+    }
+
     public static function pageSizes(): array
     {
         return [

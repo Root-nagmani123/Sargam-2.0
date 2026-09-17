@@ -147,6 +147,10 @@ class MenuController extends Controller
                     'permission_name' => '11%', 'icon' => '8%',
                     'order' => '4%', 'target' => '5%', 'created_at' => '7%', 'status' => '5%',
                 ],
+                // Has to be handed to the blade as well: DomPDF re-reads @page
+                // during render(), after setPaper(), so the two must agree or
+                // the 13 columns come out on portrait A4 regardless.
+                'orientation' => 'landscape',
             ])
                 ->setPaper('a4', 'landscape')
                 ->setOptions([
@@ -190,7 +194,7 @@ class MenuController extends Controller
             }
 
             fclose($handle);
-        }, $filename, [
+        }, $filename.'.csv', [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }

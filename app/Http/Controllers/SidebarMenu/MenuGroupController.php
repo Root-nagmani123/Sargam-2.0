@@ -148,7 +148,7 @@ class MenuGroupController extends Controller
             }
 
             fclose($handle);
-        }, $filename, [
+        }, $filename.'.csv', [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
