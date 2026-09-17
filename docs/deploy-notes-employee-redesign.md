@@ -81,6 +81,19 @@ If an office reports losing the roster download after this release, that grant i
 the remedy. Owner: **Engineering lead**, with the Release / deploy owner once
 that row in `owners.md` is filled.
 
+**Know what the grant restores, because the screen label says less than it
+does.** The row reads *Employee Downloads*, but `member_pii_read` is the
+entitlement flag for the whole member module, checked in five places through
+`EnsureMemberPiiAccess::grantsAccess()`. Granting it hands the role the four
+document routes **and** cross-member access to the edit wizard — `edit/{id}`,
+`profile/edit/{id}`, the edit-step routes and `POST member/update` — which
+without it reach the holder's own record only. Grant it to restore a download
+and you have also granted the ability to open and save *any* member's record.
+If that is not what you want, the answer is not a narrower grant — there is no
+narrower grant — it is to leave the permission ungranted and have someone who
+**already** holds Super Admin run the export on the office's behalf. Do not
+issue a Super Admin account to solve a download request.
+
 **Do not read this permission as a boundary.** Granting it is not restricted to
 an administrator: `POST roles/permissions/{id}` carries `auth` and nothing else,
 and the controller behind it creates whatever permission name it is posted and
@@ -224,14 +237,37 @@ or rewritten by this release, so there is nothing else in the database to undo.
 
 **What this order costs, so it is not a surprise mid-rollback.** Between the
 rollback and the *deployed* revert, the new code is still live with the
-permission gone, so any role that had been **granted** `member_pii_read` — the
-§0.1 remedy — is refused `show`, `print`, `excel-export` and `export/{format}`
-for that window. The loss is immediate, not delayed: `down()` flushes Spatie's
-cache after deleting the row, and `EnsureMemberPiiAccess::holdsPiiPermission()`
-catches the now-unknown name and returns false. **Super Admin is unaffected**,
-and the revert restores access for everyone once it lands — the reverted code has
-no gate at all. Do not reorder to avoid this; the other order does not work at
-all, as above.
+permission gone. For that window a role that had been **granted**
+`member_pii_read` — the §0.1 remedy — is treated exactly as an account that was
+never granted it, on **every** surface the grant unlocks, not only the
+downloads:
+
+- refused `show`, `print`, `excel-export` and `export/{format}`;
+- refused `edit/{id}`, `profile/edit/{id}`, `edit-step/{step}/{id}` and
+  `update-validate-step/{step}/{id}` for **any member but themselves** — their
+  own record still opens, because `member.record` falls through to an
+  own-record comparison;
+- refused `POST member/update` when the posted `emp_id` is someone else's. This
+  one lands on a **save**, so a wizard already open on another member's record
+  cannot be written back;
+- served a listing whose Action column no longer offers View or Print, and whose
+  Download and Print toolbar is gone.
+
+One rule in five places: `EnsureMemberPiiAccess::grantsAccess()` is the
+entitlement flag for the whole module, not only for the exports. The `member.pii`
+gate itself, `member.record`, `MemberController::update()`, `MemberDataTable` and
+the listing view all ask it the same question. Expect all four bullets, not just
+the first.
+
+The loss is immediate, not delayed: `down()` flushes Spatie's cache after
+deleting the row, so the next request re-reads the permission tables and
+`$user->can('member_pii_read')` comes back false — Spatie's
+`checkPermissionTo()` returns false for a permission that no longer exists
+rather than throwing. **Super Admin is unaffected**: `grantsAccess()`
+short-circuits on the role, and the rollback deletes a permission, not a role.
+The revert restores access for everyone once it lands — the reverted code has no
+gate at all. Do not reorder to avoid this; the other order does not work at all,
+as above.
 
 The rollback is scoped for the same reason the migrate step is, and **the claim
 that rolling back is sound covers this release's own migration and nothing
