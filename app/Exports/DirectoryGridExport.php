@@ -188,11 +188,26 @@ class DirectoryGridExport extends DefaultValueBinder implements
                     $sheet->getStyle('A5')->applyFromArray([
                         // Same amber the print and PDF sheets use for this note.
                         'font' => ['bold' => true, 'size' => 9, 'color' => ['rgb' => '92400E']],
-                        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+                        'alignment' => [
+                            'horizontal' => Alignment::HORIZONTAL_CENTER,
+                            'vertical' => Alignment::VERTICAL_CENTER,
+                            // A merged cell cannot overflow into its neighbours -
+                            // they are part of the merge - so without wrapping the
+                            // note renders on one line and is cut off at the merge
+                            // width. That is wide enough at the default column set
+                            // (151-178 character-widths at 8-9 columns) and at a
+                            // single column, but not in between: a Columns-modal
+                            // selection of 2, 3 or 4 columns gives 36.4, 55.1 or
+                            // 72.7 against a ~76-character sentence. Truncating the
+                            // truncation warning is the F-001 defect one layer down.
+                            'wrapText' => true,
+                        ],
                         'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
                         'borders' => ['outline' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'FCD34D']]],
                     ]);
-                    $sheet->getRowDimension(5)->setRowHeight(20);
+                    // -1 is PhpSpreadsheet's "size to the content": pinning 20pt
+                    // would hide the second line that wrapping just created.
+                    $sheet->getRowDimension(5)->setRowHeight(-1);
                 } else {
                     $sheet->getRowDimension(5)->setRowHeight(6);
                 }

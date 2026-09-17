@@ -869,6 +869,64 @@ class DirectoryExportGuardTest extends TestCase
             'an uncapped export must not claim to be truncated');
     }
 
+    /**
+     * The gate's ACCESS DECISION block must not state the outcome as an
+     * absolute that handle() contradicts.
+     *
+     * The block opened with "only a Super Admin may download" while handle()
+     * admits `isSidebarPrivilegedUser() || $this->holdsExportPermission()`, and
+     * the same docblock described the permission path forty lines further down.
+     * Someone auditing who may extract this PII reads the headed block, not the
+     * whole file.
+     */
+    public function test_the_access_decision_block_names_the_permission_path(): void
+    {
+        $source = file_get_contents(app_path('Http/Middleware/EnsureDirectoryExportAccess.php'));
+
+        $start = strpos($source, 'ACCESS DECISION');
+        $this->assertNotFalse($start, 'the ACCESS DECISION block should exist');
+
+        // To the end of the "After:" paragraph - the part an auditor reads.
+        $block = substr($source, $start, 1200);
+
+        $this->assertStringNotContainsString(
+            'only a Super Admin may download',
+            $block,
+            'the ACCESS DECISION block states an outcome that handle() does not enforce'
+        );
+        $this->assertStringContainsString(
+            \App\Http\Middleware\EnsureDirectoryExportAccess::EXPORT_PERMISSION,
+            $block,
+            'the block must name the grantable permission it shares the decision with'
+        );
+    }
+
+    /**
+     * The note must wrap rather than clip.
+     *
+     * A5 is merged across the exported columns, and a merged cell cannot
+     * overflow into its neighbours because they are inside the merge. At the
+     * default column set the width carries the sentence, but a narrowed Columns
+     * selection (2-4 columns) gives 36-73 character-widths against a
+     * ~76-character note - so without wrapping the truncation warning is itself
+     * truncated, which is the finding this note exists to answer, one layer down.
+     */
+    public function test_the_row_cap_note_wraps_instead_of_clipping(): void
+    {
+        $sheet = $this->writtenSheet('Showing the first 1,500 of 12,345 records — narrow the filters for the rest.');
+
+        $this->assertTrue(
+            $sheet->getStyle('A5')->getAlignment()->getWrapText(),
+            'the merged note cell must wrap, or it is cut off at the merge width'
+        );
+
+        $this->assertSame(
+            -1.0,
+            (float) $sheet->getRowDimension(5)->getRowHeight(),
+            'row 5 must size to its content, or wrapping only hides the second line'
+        );
+    }
+
     /** The note row must not shift the table: the headings stay on row 6. */
     public function test_the_note_does_not_move_the_data_table(): void
     {

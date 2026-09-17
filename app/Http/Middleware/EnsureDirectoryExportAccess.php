@@ -14,9 +14,13 @@ use Illuminate\Http\Request;
  *   Before: the directory exports were `?export=csv|excel` on the page routes
  *           themselves, so ANY authenticated user could download either
  *           roster. There was no check beyond `auth`.
- *   After:  only a Super Admin may download. Every other role keeps the
- *           grids — search, sort, paging, the on-screen contact details —
- *           and loses the file.
+ *   After:  a Super Admin may download, and so may the holder of the grantable
+ *           `directory.export` permission — see REVERSIBLE WITHOUT A DEPLOY
+ *           below, which is the other half of this decision and not an
+ *           afterthought. Nothing holds that permission today, so in practice
+ *           this reads "Super Admin only" until somebody grants it. Every other
+ *           role keeps the grids — search, sort, paging, the on-screen contact
+ *           details — and loses the file.
  *
  * Why the split: the PAGES are a directory and are meant to be readable by
  * everyone. The EXPORTS are a different exposure — one GET returns the whole
@@ -37,12 +41,12 @@ use Illuminate\Http\Request;
  * genuinely needs gating, that is a change to the FEED routes with its own
  * decision record, not something to read into this one.
  *
- * Why a role and not a permission: this mirrors EnsureIssueReportsAdmin,
- * which gates the equally PII-bearing Reported Issues downloads with the same
- * privilege check, so the two PII download paths stay one rule. If a
- * non-Super-Admin office is later found to need the roster file, swap this
- * for a named permission (the EnsureFcRegAdmin shape) rather than widening
- * the role — and record that as its own decision.
+ * Why a role FIRST: the role check mirrors EnsureIssueReportsAdmin, which gates
+ * the equally PII-bearing Reported Issues downloads with the same privilege
+ * check, so the two PII download paths stay one rule. The named permission
+ * beside it (the EnsureFcRegAdmin shape) is the widening path for a
+ * non-Super-Admin office that turns out to need the roster file — it is already
+ * wired, so widening never means editing this class.
  *
  * Both branches are executed by DirectoryExportGuardTest: a non-privileged
  * user gets 403 through the real router, a privileged one is passed through.
