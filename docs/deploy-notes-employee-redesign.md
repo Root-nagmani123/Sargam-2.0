@@ -49,7 +49,9 @@ explain:
 
 For reference, and so the two figures above can be told apart from any others in
 circulation: the looser rules give **349** pairs under an exact first-plus-last
-comparison and **575** under normalised tokens including the employee's
+comparison that is **case-insensitive and trimmed** — the other readings of
+"exact" give 356, 364 or 371, so quoting this figure without its rule says
+nothing — and **575** under normalised tokens including the employee's
 `middle_name`. Both of those are dominated by spelling noise — initials, missing
 middle names, case — which is why this note quotes the 317 + 9 figure instead.
 Whichever count you quote, quote the rule with it.
@@ -193,16 +195,32 @@ scoped command.
 
 ## 3. Rollback
 
+**Roll the migration back first, then revert the code — in that order.** This
+release *adds* the migration file, so `git revert <merge commit>` deletes it, and
+`migrate:rollback --path=` does not skip a path that has gone missing: it throws
+`Illuminate\Contracts\Filesystem\FileNotFoundException` and rolls back nothing.
+Reverting first therefore leaves you on reverted code with the permission row
+still in the database — the exact state this section exists to prevent.
+
 ```bash
-git revert <merge commit>
+php artisan migrate:status   # this release's migration must still be the last batch
 php artisan migrate:rollback --path=database/migrations/2026_09_16_090000_add_member_pii_read_permission.php
+git revert <merge commit>
 ```
 
-The code revert leaves one thing behind: the `member_pii_read` permission row and
-its capability menu row, added by this release's migration. Roll that back too —
-with the same `--path` scope, as above — or the permission survives with nothing
-reading it. See §0.2. No member data is written or rewritten by this release, so
-there is nothing else in the database to undo.
+**Do not skip the `migrate:status` line.** `migrate:rollback` takes its candidate
+list from the **last batch** and only then filters it by `--path`, so the scoped
+command undoes this release's migration *only while that migration is still the
+last batch*. If anything else has migrated on the host since, it prints
+`Migration not found`, exits **0** and rolls back nothing — no error, so it is
+easy to believe it worked. In that case remove the `member_pii_read` permission
+row and its menus row by hand per §0.1 instead.
+
+The order matters because the code revert on its own leaves one thing behind: the
+`member_pii_read` permission row and its capability menu row, added by this
+release's migration. Roll that back too — with the same `--path` scope — or the
+permission survives with nothing reading it. See §0.2. No member data is written
+or rewritten by this release, so there is nothing else in the database to undo.
 
 The rollback is scoped for the same reason the migrate step is, and **the claim
 that rolling back is sound covers this release's own migration and nothing
@@ -261,9 +279,11 @@ button (it raises "Unknown column 'pk'" and the switch reverts).
   and the first check *cannot* detect them, because it uses an account whose
   category is not `E`. A fix for F-024 that filters on category alone is not a
   fix; a name- or ownership-based check is required on top of it. Worth telling
-  the DBA when you report it: the nine names rotate through the block (ANJALI
-  CHAUHAN → REDACTED-NAME → REDACTED-NAME → REDACTED-NAME → REDACTED-NAME), which
-  reads as a block of `user_id` values written misaligned rather than as a
-  category being conflated.
+  the DBA when you report it: six of the nine land on an `employee_master` row
+  whose name belongs to *another* credential in the same set, and the set closes
+  on itself — which reads as a block of `user_id` values written misaligned
+  rather than as a category being conflated. The other three match nothing
+  inside the set. Stated by pk and never by name on purpose: this repository is
+  public, see PR #309 F-031.
 - Confirm two `member.pii.*` lines in `storage/logs/laravel.log`, each on a
   single line.
