@@ -26,6 +26,59 @@ leaving them to be discovered from the diff:
    `services.php`), which is why §1 below is a mandatory manual step on every
    host and why the rollback in §3 has a step of its own.
 
+### 0.1 How the grant in (1) is actually performed
+
+"Grant `directory.export` to a role" is a real remedy, but it is **not something
+an administrator can do from a screen**, and that is worth knowing before the
+incident rather than during it. The Roles → Assign permissions matrix offers
+exactly the permission names that `menus` rows carry, and a menu's
+`permission_name` is `Str::slug($name, '_')` — which cannot produce a dot — so
+`directory.export` never appears on it. The permissions CRUD route is commented
+out. The grant is a database action, performed by the **DBA** at the request of
+the **Engineering lead**:
+
+```sql
+INSERT INTO permissions (name, guard_name, created_at, updated_at)
+VALUES ('directory.export', 'web', NOW(), NOW());
+
+INSERT INTO role_has_permissions (permission_id, role_id)
+VALUES (<the id that insert produced>, <the role's id>);
+```
+
+```bash
+php artisan permission:cache-reset
+```
+
+The cache reset is **not optional**. Spatie serves the permission collection
+from the application cache — the file driver here, with a 24-hour TTL — and
+invalidates it only for writes made through its own model. A hand-written row is
+invisible to it, and worse than invisible: the permission check raises on a name
+the cached collection has never seen. That has already bitten this codebase once
+(PR #309 F-025).
+
+If the capability turns out to be wanted often, the durable fix is a slug-shaped
+name (`directory_export`) plus a guarded migration that ships both the
+permissions row and a `menus` capability row, as the member module now does. That
+is a code change with its own review — not a step to improvise mid-incident.
+
+### 0.2 What the permission is not
+
+It is not a boundary, and the release record should not be read as claiming one.
+`POST roles/permissions/{id}` carries `auth` and nothing else, and the controller
+behind it creates whatever permission name it is posted and grants it to the role
+in the URL without checking the caller — so any authenticated account can hand
+itself `directory.export` in a single request. That endpoint is **pre-existing
+and untouched by this release**; it defeats every permission-based gate in the
+application and is tracked as its own change (PR #317 F-007 / L-8), owner
+**Security owner**, escalating to the **Engineering lead**.
+
+What this release does achieve is still worth having, and is what the post-deploy
+checks verify: the roster file is out of casual reach, and every download that is
+served writes an audit line naming the actor, the IP, the filters and the row
+count. The same fields remain readable by any authenticated user through the
+ungated grid feed — that was true before this release too, and narrowing it is a
+change to the feed routes with its own decision record.
+
 ## 1. Before pulling, on every host
 
 This release **untracks** `bootstrap/cache/packages.php` and

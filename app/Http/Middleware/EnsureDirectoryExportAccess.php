@@ -17,10 +17,29 @@ use Illuminate\Http\Request;
  *   After:  a Super Admin may download, and so may the holder of the grantable
  *           `directory.export` permission — see REVERSIBLE WITHOUT A DEPLOY
  *           below, which is the other half of this decision and not an
- *           afterthought. Nothing holds that permission today, so in practice
- *           this reads "Super Admin only" until somebody grants it. Every other
- *           role keeps the grids — search, sort, paging, the on-screen contact
+ *           afterthought. No role holds that permission today. Every other role
+ *           keeps the grids — search, sort, paging, the on-screen contact
  *           details — and loses the file.
+ *
+ *   BUT READ THE PERMISSION BRANCH AS A CONVENIENCE, NOT A BOUNDARY. An earlier
+ *           version of this block added "so in practice this reads Super Admin
+ *           only until somebody grants it", which describes the contents of a
+ *           table as though it described a control. "Somebody" is not restricted
+ *           to an administrator: POST roles/permissions/{id} carries `web` and
+ *           Authenticate and nothing else, and the controller behind it
+ *           firstOrCreate()s whatever permission NAME it is posted and grants it
+ *           to the role in the URL, with no check on the caller. So any
+ *           authenticated account can hand itself `directory.export` in one
+ *           request — executed against a live database and recorded as PR #317
+ *           F-007, with the ungated endpoint itself as L-8, owner Security owner
+ *           escalating to Engineering lead. That endpoint defeats every
+ *           permission-based gate in this application, not only this one, and
+ *           fixing it is its own change; it must not ride along in a redesign
+ *           branch. Until it is fixed, an access audit of these downloads should
+ *           read this gate as: it takes the roster file out of casual reach and
+ *           puts an audit line on every one that is served. It does not withstand
+ *           a deliberate authenticated actor, and the same rows remain readable
+ *           through the ungated feed in any case — see WHAT THIS GATE IS NOT.
  *
  * Why the split: the PAGES are a directory and are meant to be readable by
  * everyone. The EXPORTS are a different exposure — one GET returns the whole
@@ -66,10 +85,40 @@ use Illuminate\Http\Request;
  * EXPORT_PERMISSION to a role and that role has directory downloads back, with
  * no code change and an audit trail in the permission tables.
  *
- * Nothing holds this permission today - it does not have to exist for the gate
- * to work - so behaviour is exactly "Super Admin only" until someone decides
- * otherwise. The lookup is wrapped because Spatie raises rather than returning
- * false when a permission name has never been defined.
+ * No role holds this permission today, and it does not have to exist for the
+ * gate to work: the lookup is wrapped because Spatie raises rather than
+ * returning false when a permission name has never been defined.
+ *
+ * HOW THE GRANT IS ACTUALLY PERFORMED - written down because "grant a
+ * permission" is not, here, a thing an administrator can do from a screen, and
+ * a remedy nobody can find during the incident it was written for is not a
+ * remedy. The roles screen offers exactly the names carried by menus rows, and
+ * a menu's permission_name is Str::slug($name, '_'), which cannot produce a dot
+ * - so `directory.export` can never appear on it - and the permissions CRUD
+ * route is commented out. The grant is therefore a database action, by the DBA,
+ * on request from the Engineering lead:
+ *
+ *     INSERT INTO permissions (name, guard_name, created_at, updated_at)
+ *     VALUES ('directory.export', 'web', NOW(), NOW());
+ *
+ *     INSERT INTO role_has_permissions (permission_id, role_id)
+ *     VALUES (<the id that insert produced>, <the role's id>);
+ *
+ *     php artisan permission:cache-reset
+ *
+ * The cache reset is not optional: Spatie serves the permission collection from
+ * the application cache (file driver, 24-hour TTL) and invalidates it only for
+ * writes made through its own model, so a hand-written row is invisible - and
+ * worse than invisible, because hasPermissionTo() RAISES on a name the cached
+ * collection has never seen. That failure has already been observed on this
+ * codebase (PR #309 F-025).
+ *
+ * If this capability turns out to be wanted often enough to deserve a toggle,
+ * the shape is on record: rename the permission to a slug (`directory_export`)
+ * and ship a guarded migration adding both the permissions row and a menus
+ * capability row, as 2026_09_16_090000_add_member_pii_read_permission does for
+ * the member module. That is a code change with its own review, not a remedy to
+ * reach for mid-incident - which is why the SQL above is here.
  */
 class EnsureDirectoryExportAccess
 {

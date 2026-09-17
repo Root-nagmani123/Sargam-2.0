@@ -20,6 +20,7 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 /**
  * OT Directory → .xlsx
@@ -205,9 +206,12 @@ class DirectoryGridExport extends DefaultValueBinder implements
                         'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
                         'borders' => ['outline' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'FCD34D']]],
                     ]);
-                    // -1 is PhpSpreadsheet's "size to the content": pinning 20pt
-                    // would hide the second line that wrapping just created.
-                    $sheet->getRowDimension(5)->setRowHeight(-1);
+                    // Not -1. "Size to the content" is a request to the reader,
+                    // and Excel does not honour it for a MERGED cell - it keeps
+                    // the default height and shows the first line, which would
+                    // turn a sentence clipped at the right edge into one clipped
+                    // at the bottom. See noteRowHeight().
+                    $sheet->getRowDimension(5)->setRowHeight($this->noteRowHeight($sheet, $last));
                 } else {
                     $sheet->getRowDimension(5)->setRowHeight(6);
                 }
@@ -274,5 +278,48 @@ class DirectoryGridExport extends DefaultValueBinder implements
                 SpreadsheetCell::setValueBinder(new DefaultValueBinder());
             },
         ];
+    }
+
+    /** One wrapped line of the 9pt note, in points. */
+    private const NOTE_LINE_HEIGHT = 13.5;
+
+    /** Stand-in for a column whose width cannot be read. */
+    private const FALLBACK_COLUMN_WIDTH = 10.0;
+
+    /** Past this the band is a paragraph and only pushes the table off screen. */
+    private const NOTE_MAX_LINES = 6;
+
+    /**
+     * The height row 5 needs to show the whole note.
+     *
+     * Excel auto-fits row height for wrapped text, but NOT when the text is in a
+     * merged cell: there it keeps the default height and shows the first line.
+     * A5 is merged across the exported columns on exactly the branch where the
+     * note exists, so leaving the height at -1 would answer the horizontal
+     * clipping this note was widened to fix with vertical clipping at the same
+     * column counts. The wrapped line count is therefore computed and pinned.
+     *
+     * The width is measured, not guessed. AfterSheet runs after
+     * Maatwebsite\Excel\Sheet::autoSize() has flagged the auto-size columns and
+     * before the writer measures them, and calculateColumnWidths() is the same
+     * call the writer makes - merged cells are excluded from it, so asking for
+     * the numbers here cannot let this note widen column A.
+     */
+    private function noteRowHeight(Worksheet $sheet, string $lastColumn): float
+    {
+        $sheet->calculateColumnWidths();
+
+        $width = 0.0;
+
+        for ($i = 1, $last = Coordinate::columnIndexFromString($lastColumn); $i <= $last; $i++) {
+            $column = $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i))->getWidth();
+            $width += $column > 0 ? $column : self::FALLBACK_COLUMN_WIDTH;
+        }
+
+        // Two character-widths for the cell's own padding and border.
+        $perLine = max(8.0, $width - 2);
+        $lines = max(1, (int) ceil(mb_strlen((string) $this->note) / $perLine));
+
+        return min(self::NOTE_MAX_LINES, $lines) * self::NOTE_LINE_HEIGHT + 6;
     }
 }

@@ -808,11 +808,24 @@ class DirectoryExportGuardTest extends TestCase
     }
 
     /** Write a one-row workbook and hand back its sheet. */
-    private function writtenSheet(?string $note)
+    private function writtenSheet(?string $note, int $columnCount = 1)
     {
-        $columns = [
-            'name' => ['heading' => 'Name', 'width' => '', 'align' => 'left', 'value' => fn () => 'A Person'],
-        ];
+        // The Columns modal lets a user export any non-empty subset, and the
+        // note is merged across whatever that subset is - so the width it has
+        // to live in is a variable, and the tests below need to vary it.
+        $headings = ['Name', 'Designation', 'Department', 'Mobile', 'Email',
+            'Residence', 'Office', 'Address', 'Course'];
+
+        $columns = [];
+
+        foreach (array_slice($headings, 0, max(1, $columnCount)) as $i => $heading) {
+            $columns['col' . $i] = [
+                'heading' => $heading,
+                'width' => '',
+                'align' => 'left',
+                'value' => fn () => 'A Person',
+            ];
+        }
 
         $previous = SpreadsheetCell::getValueBinder();
         $path = tempnam(sys_get_temp_dir(), 'pr317note');
@@ -902,6 +915,69 @@ class DirectoryExportGuardTest extends TestCase
     }
 
     /**
+     * F-007: the block must not present an empty permissions table as a control.
+     *
+     * It used to end "nothing holds that permission today, so in practice this
+     * reads Super Admin only until somebody grants it" - a statement about data,
+     * written where a boundary is read. Granting is not an administrative act
+     * here: POST roles/permissions/{id} carries auth alone and creates whatever
+     * name it is posted, so the account this gate refuses can grant itself the
+     * permission this gate honours. An auditor reads this block; it has to say
+     * so until that endpoint is fixed.
+     */
+    public function test_the_access_decision_block_names_the_ungated_grant_endpoint(): void
+    {
+        $source = file_get_contents(app_path('Http/Middleware/EnsureDirectoryExportAccess.php'));
+
+        $start = strpos($source, 'ACCESS DECISION');
+        $this->assertNotFalse($start, 'the ACCESS DECISION block should exist');
+
+        $block = substr($source, $start, 2600);
+
+        $this->assertStringContainsString(
+            'roles/permissions/{id}',
+            $block,
+            'the block presents the permission as a control without saying who may grant it'
+        );
+        $this->assertStringContainsString(
+            'NOT A BOUNDARY',
+            $block,
+            'the permission branch must be described as a convenience while the grant endpoint is ungated'
+        );
+    }
+
+    /**
+     * F-008: "reversible without a deploy" needs a procedure somebody can follow.
+     *
+     * The roles screen offers only the names menus rows carry, and a menu's
+     * permission_name is Str::slug($name, '_'), which cannot contain a dot - so
+     * `directory.export` can never appear on it, and the permissions CRUD route
+     * is commented out. The remedy is real but it is a database action, and a
+     * release manager reading "grant the permission" during an incident has to
+     * find the how somewhere.
+     */
+    public function test_the_grant_procedure_is_written_down(): void
+    {
+        $sources = [
+            'the middleware' => file_get_contents(app_path('Http/Middleware/EnsureDirectoryExportAccess.php')),
+            'the deploy notes' => file_get_contents(base_path('docs/deploy-notes-directory-redesign.md')),
+        ];
+
+        foreach ($sources as $label => $source) {
+            $this->assertStringContainsString(
+                'role_has_permissions',
+                $source,
+                "{$label} promises the grant is reversible without a deploy but does not say how it is performed"
+            );
+            $this->assertStringContainsString(
+                'permission:cache-reset',
+                $source,
+                "{$label} documents a hand-written permission row without the cache reset that makes it visible"
+            );
+        }
+    }
+
+    /**
      * The note must wrap rather than clip.
      *
      * A5 is merged across the exported columns, and a merged cell cannot
@@ -920,11 +996,58 @@ class DirectoryExportGuardTest extends TestCase
             'the merged note cell must wrap, or it is cut off at the merge width'
         );
 
-        $this->assertSame(
-            -1.0,
-            (float) $sheet->getRowDimension(5)->getRowHeight(),
-            'row 5 must size to its content, or wrapping only hides the second line'
+        // NOT -1. "Size to content" is a request to the reader, and Excel does
+        // not honour it for a merged cell: it keeps the default height and shows
+        // the first line, which is the same sentence lost to a different edge.
+        $height = (float) $sheet->getRowDimension(5)->getRowHeight();
+
+        $this->assertGreaterThan(
+            0.0,
+            $height,
+            'row 5 must carry an EXPLICIT height: Excel does not auto-fit a merged cell'
         );
+    }
+
+    /**
+     * And the height must follow the note, not a constant.
+     *
+     * Two columns is the case that fails silently: the merged width falls to
+     * around 23 character-widths against a ~76-character sentence, so the note
+     * needs three or four lines where the full column set needs one.
+     */
+    public function test_a_narrowed_column_selection_gets_a_taller_note_row(): void
+    {
+        $note = 'Showing the first 1,500 of 12,345 records - narrow the filters for the rest.';
+
+        $wide = $this->writtenSheet($note, 9);
+        $narrow = $this->writtenSheet($note, 2);
+
+        $this->assertGreaterThan(
+            (float) $wide->getRowDimension(5)->getRowHeight(),
+            (float) $narrow->getRowDimension(5)->getRowHeight(),
+            'a selection too narrow to carry the note on one line must get a taller row, not a clipped one'
+        );
+
+        // And tall enough for every line, measured at the width the WRITTEN
+        // file carries rather than recomputed from the production constants.
+        foreach (['wide' => [$wide, 9], 'narrow' => [$narrow, 2]] as $label => [$sheet, $count]) {
+            $width = 0.0;
+
+            for ($i = 1; $i <= $count; $i++) {
+                $column = $sheet->getColumnDimension(
+                    \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($i)
+                )->getWidth();
+                $width += $column > 0 ? $column : 10.0;
+            }
+
+            $lines = (int) ceil(mb_strlen($note) / max(8.0, $width - 2));
+
+            $this->assertGreaterThanOrEqual(
+                $lines * 13.0,
+                (float) $sheet->getRowDimension(5)->getRowHeight(),
+                "the {$label} sheet's note row is shorter than the text it has to show"
+            );
+        }
     }
 
     /** The note row must not shift the table: the headings stay on row 6. */
