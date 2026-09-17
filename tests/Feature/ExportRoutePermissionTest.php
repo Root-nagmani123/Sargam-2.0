@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -384,8 +385,22 @@ class ExportRoutePermissionTest extends TestCase
         $this->forgetPermissionCache();
         $user = $user->fresh();
 
-        $rows = function (array $query) use ($user): int {
+        // Every rendered admin page leaves one output-buffer level open holding
+        // stray whitespace - an application-wide condition that CompressResponse
+        // absorbs in production, unrelated to anything asserted here. Left alone
+        // it makes PHPUnit report this test as RISKY rather than passed, so the
+        // result is weaker evidence than it should be and would fail outright
+        // under --fail-on-risky. Unwind to the level we started at after each
+        // request; the leak itself is a separate finding against the views.
+        $baseline = ob_get_level();
+
+        $rows = function (array $query) use ($user, $baseline): int {
             $response = $this->actingAs($user)->get(route('admin.users.index', $query));
+
+            while (ob_get_level() > $baseline) {
+                ob_end_clean();
+            }
+
             $response->assertOk();
 
             return substr_count($response->getContent(), '<tr');
@@ -409,6 +424,61 @@ class ExportRoutePermissionTest extends TestCase
             $rows(['per_page' => 201]),
             'a size outside the offered list must fall back to the default, not be honoured'
         );
+    }
+
+    /**
+     * F-020: pin how the router actually resolves the three URLs the comment
+     * above users/export/{format} talks about, so the next editor who moves
+     * that route gets a failing test instead of a comment to re-read. Two
+     * successive comments there were wrong about the router; this is the same
+     * claim expressed as something that can fail.
+     *
+     * The point being pinned: it is the whereIn on {format} - not the route's
+     * segment count - that keeps the resource from taking these. The resource
+     * publishes a two-segment GET route of its own, users/{user}/edit, and it
+     * does match /admin/users/export/edit.
+     */
+    public function test_the_export_route_resolves_only_for_a_declared_format(): void
+    {
+        $resolve = fn (string $uri): ?string => Route::getRoutes()
+            ->match(Request::create($uri, 'GET'))
+            ->getName();
+
+        $this->assertSame('admin.users.export', $resolve('/admin/users/export/csv'));
+
+        // Undeclared: no {format} segment, so the resource's show() takes it.
+        // If this ever names admin.users.export, the exporter is reachable
+        // without a format and the whereIn is no longer deciding anything.
+        $this->assertSame('admin.users.show', $resolve('/admin/users/export'));
+
+        // `edit` is not an accepted format, so users/{user}/edit keeps this one.
+        // Were `edit` ever added to the whereIn, this route would shadow the
+        // resource's edit screen for every user - which is what the ordering
+        // comment exists to warn about.
+        $this->assertSame('admin.users.edit', $resolve('/admin/users/export/edit'));
+
+        // And neither one reaches the exporter at runtime: 'export' is not a
+        // user_credentials key, so the binding fails before any controller
+        // body runs. Asserted for a PERMITTED actor, so a 404 here is the
+        // binding refusing, not the gate.
+        $user = $this->nobody();
+        Permission::findOrCreate('users', 'web');
+        $user->givePermissionTo('users');
+        $this->forgetPermissionCache();
+        $user = $user->fresh();
+
+        $baseline = ob_get_level();
+
+        foreach (['/admin/users/export', '/admin/users/export/edit'] as $uri) {
+            $response = $this->actingAs($user)->get($uri);
+
+            while (ob_get_level() > $baseline) {
+                ob_end_clean();
+            }
+
+            $this->assertSame(404, $response->getStatusCode(),
+                "{$uri} must not resolve to a served page; it returned {$response->getStatusCode()}.");
+        }
     }
 
     /** @return array<string, array{0: mixed, 1: int}> */

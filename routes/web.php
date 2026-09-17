@@ -208,11 +208,24 @@ Route::middleware(['auth'])->group(function () {
             // It sits above the resource for consistency with users/get-roles,
             // which genuinely NEEDS to: that one is a single segment, so
             // `users/{user}` would swallow it and hand "get-roles" to show().
-            // This route is two segments after `users` and cannot be swallowed
-            // at any position - the earlier comment here claimed otherwise. The
-            // real hazard is the route that is NOT declared: /admin/users/export
-            // with no format falls through to show('export'), which is what the
-            // whereIn below bounds.
+            //
+            // This route does not need the position, but what makes it safe is
+            // the whereIn below, NOT its segment count. The resource publishes a
+            // two-segment GET route of its own - `users/{user}/edit` - and
+            // /admin/users/export/edit does match it, resolving to
+            // edit('export'). No declared format collides with the resource,
+            // but only because `edit` is not one of them. Widen the whereIn and
+            // that stops being true.
+            //
+            // The whereIn does not bound /admin/users/export with no format
+            // either: that URL is undeclared, so it falls through to
+            // show('export') and 404s on the model binding. The constraint
+            // applies to {format} on THIS route; it cannot bound a URL that
+            // never reaches this route.
+            //
+            // Both resolutions are pinned by ExportRoutePermissionTest rather
+            // than described here, because the two comments this one replaces
+            // were each wrong about the router.
             Route::get('users/export/{format}', [UserController::class, 'export'])
                 ->whereIn('format', ['csv', 'xlsx', 'pdf', 'print'])
                 ->name('users.export');
