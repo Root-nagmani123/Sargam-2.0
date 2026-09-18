@@ -109,7 +109,10 @@
     @include('admin.layouts.pre_header')
     <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }} - Sargam 2.0 | Lal Bahadur Shastri National Academy of
         Administration</title>
-    @section('css')
+    {{-- Deliberately NOT a @section: nothing yields 'css', and the directive opened an
+     output buffer that was never closed, so every page built on this layout leaked
+     one buffer level. The styles below are emitted inline, which is where they
+     already ended up. --}}
     <style>
         .nav-item .tab-item .active {
             background-color: #bbd9f7;
