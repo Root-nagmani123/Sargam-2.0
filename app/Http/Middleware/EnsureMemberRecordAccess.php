@@ -205,10 +205,26 @@ class EnsureMemberRecordAccess
         // wizard methods. Same actor, same pk, same answer - so ask the database
         // once. PR #309 F-047.
         //
-        // The memo lives in the container rather than in a static, deliberately:
-        // a static would survive between tests in the same process, and Laravel
-        // rebuilds the container per request and per test, so this resets itself
-        // without anything having to remember to flush it.
+        // The memo lives in the container rather than in a static because the
+        // container IS rebuilt per test - Foundation\Testing\TestCase::setUp()
+        // calls refreshApplication() - so nothing leaks from one test method into
+        // the next the way a static would.
+        //
+        // IT IS NOT REBUILT PER REQUEST EVERYWHERE, and the difference is the
+        // whole reason this paragraph is long. Under php-fpm the container dies
+        // with the request, so the memo dies with it; laravel/octane is not
+        // installed, and if it ever is, this needs revisiting. Inside the TEST
+        // harness it does not die: MakesHttpRequests::call() resolves the kernel
+        // from $this->app and handles the request against it, and
+        // refreshApplication() runs only from setUp() - so two $this->get() calls
+        // in ONE test method share this memo.
+        //
+        // What that costs a future test: change the contact data behind an
+        // ownership verdict between two requests and the second request reads the
+        // FIRST verdict, so the test passes while asserting the opposite of what
+        // the code does - green, on an authorisation path. If you write that
+        // test, drop the entry between the requests with
+        // app()->forgetInstance(<the key built on the next line>). PR #309 F-048.
         $memo = 'member.ownership.' . $user->pk . ':' . $requestedPk;
 
         if (app()->bound($memo)) {
