@@ -79,6 +79,7 @@ class Kernel extends HttpKernel
         'issue.reports.admin' => \App\Http\Middleware\EnsureIssueReportsAdmin::class,
         'member.pii' => \App\Http\Middleware\EnsureMemberPiiAccess::class,
         'member.record' => \App\Http\Middleware\EnsureMemberRecordAccess::class,
+        'memo.notice.manager' => \App\Http\Middleware\EnsureMemoNoticeManager::class,
         'fc.builder.action' => \App\Http\Middleware\BlockFcFormBuilderAction::class,
     ];
 }
