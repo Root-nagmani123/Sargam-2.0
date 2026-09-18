@@ -6,6 +6,26 @@
     $courseName     = $courseName ?? '';
     $courseDuration = $courseDuration ?? '';
     $filterSummary  = $filterSummary ?? '';
+
+    // Optional per-column weights. When supplied the table switches to a FIXED
+    // layout with explicit widths, which is what stops a wide report (the OT /
+    // Participants List has 15 columns) from pushing its last columns off the
+    // right edge of the page — DomPDF will not shrink an auto-layout table below
+    // its content's natural width, so it simply overflows and clips.
+    $columnWidths = $columnWidths ?? null;
+    if (is_array($columnWidths) && count($columnWidths) === count($headings ?? []) && array_sum($columnWidths) > 0) {
+        $weightTotal = array_sum($columnWidths);
+        $columnPercents = array_map(fn ($w) => round(($w / $weightTotal) * 100, 4), $columnWidths);
+    } else {
+        $columnPercents = null;
+    }
+
+    // Wide reports need smaller type to stay readable inside the fixed widths.
+    // Only reports that supply widths are re-styled — every existing caller keeps
+    // the original 8pt / 4px look.
+    $columnCount = count($headings ?? []);
+    $tableFont = ($columnPercents && $columnCount >= 13) ? '6.2pt' : '8pt';
+    $cellPad   = ($columnPercents && $columnCount >= 13) ? '2px 3px' : '4px';
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -41,19 +61,26 @@
 
         .meta { font-size: 8pt; color: #444; margin: 0 0 8px; text-align: center; }
 
-        table.data-table { width: 100%; border-collapse: collapse; font-size: 8pt; }
+        table.data-table { width: 100%; border-collapse: collapse; font-size: {{ $tableFont }}; }
+        @if($columnPercents)
+        /* Fixed layout keeps every column inside the page width. */
+        table.data-table { table-layout: fixed; }
+        @endif
         table.data-table thead th {
             background: #004a93;
             color: #fff;
             border: 1px solid #003a75;
-            padding: 5px 4px;
+            padding: {{ $cellPad }};
             text-align: left;
             font-weight: bold;
+            word-wrap: break-word;
         }
         table.data-table tbody td {
             border: 1px solid #e5e7eb;
-            padding: 4px;
+            padding: {{ $cellPad }};
             vertical-align: top;
+            /* Long emails and joined names must wrap, never widen the column. */
+            word-wrap: break-word;
         }
         table.data-table tbody tr:nth-child(even) td { background: #fafafa; }
         .empty { text-align: center; padding: 18px; color: #6b7280; }
@@ -87,6 +114,13 @@
     </div>
 
     <table class="data-table">
+        @if($columnPercents)
+        <colgroup>
+            @foreach($columnPercents as $pct)
+            <col style="width: {{ $pct }}%">
+            @endforeach
+        </colgroup>
+        @endif
         <thead>
             <tr>
                 @foreach($headings as $heading)
