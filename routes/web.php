@@ -188,6 +188,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/house-wise-performance', [UserController::class, 'houseWisePerformanceDetail'])->name('admin.dashboard.house-wise-performance');
     Route::get('/dashboard/my-groups', [UserController::class, 'myGroups'])->name('admin.dashboard.my-groups');
     Route::get('/dashboard/my-groups/{mapPk}/students', [UserController::class, 'myGroupStudents'])->name('admin.dashboard.my-groups.students');
+    Route::get('/dashboard/my-groups/{mapPk}/students/export', [UserController::class, 'myGroupStudentsExport'])->name('admin.dashboard.my-groups.students.export');
+    Route::post('/dashboard/my-groups/{mapPk}/students/message', [UserController::class, 'myGroupSendMessage'])->name('admin.dashboard.my-groups.students.message');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
     Route::post('/dashboard/report-issue', [\App\Http\Controllers\Admin\IssueReportController::class, 'store'])->middleware('throttle:10,1')->name('admin.dashboard.report-issue');
     // Admin console for issues submitted via the dashboard "Report Issue" launcher

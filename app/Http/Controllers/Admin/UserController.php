@@ -26,6 +26,7 @@ use App\Models\CourseMaster;
 use App\Models\FacultyMaster;
 use App\Models\Holiday;
 use App\Services\NotificationService;
+use App\Exports\LbsnaaTableExport;
 use App\Exports\UsersExport;
 use App\Exports\StudentListReportExport;
 use Maatwebsite\Excel\Facades\Excel;
@@ -57,6 +58,8 @@ use App\Models\StudentMasterCourseMap;
 use App\Models\StudentMaster;
 use App\Services\Attendance\OtExemptionResolver;
 use App\Services\Discipline\OtMarksDeductedService;
+use App\Services\Messaging\EmailService;
+use App\Services\Messaging\SmsService;
 use App\Services\FacultyFeedbackReportService;
 use App\Services\Timetable\FacultySessionScope;
 use App\Services\FC\RegistrationService;
@@ -845,7 +848,32 @@ class UserController extends Controller
      *
      * The page the dashboard panel links to.
      */
-    public function houseWisePerformanceDetail()
+    public function houseWisePerformanceDetail(Request $request)
+    {
+        $houses = $this->houseWisePerformanceRows();
+
+        $format = strtolower((string) $request->get('format'));
+        if ($format === 'excel' || $format === 'pdf') {
+            return $this->exportHouseWisePerformance($houses, $format);
+        }
+
+        return view('admin.dashboard.house_wise_performance', [
+            'houses' => $houses,
+            'generatedOn' => now(),
+        ]);
+    }
+
+    /**
+     * House wise Performance rows: every house, the officer trainees who have
+     * actually lost marks, and each closed deduction behind that.
+     *
+     * Only OTs carrying a penalty are listed (UAT): a house roster of 80 where
+     * 3 have deductions was 77 rows of "no deduction on record", which buried
+     * the 3 rows the page exists to show. Deductions are closed-only already —
+     * OtMarksDeductedService never counts an open case, because a mark is only
+     * written at conclusion.
+     */
+    private function houseWisePerformanceRows(): \Illuminate\Support\Collection
     {
         ['houses' => $studentsByHouse, 'course_ids' => $currentCourseIds] = $this->houseMemberships();
 
@@ -864,9 +892,9 @@ class UserController extends Controller
                 ->get(['pk', 'display_name', 'first_name', 'last_name', 'generated_OT_code'])
                 ->keyBy('pk');
 
-        // One entry per house: its OTs (each with their deduction rows) and the
-        // house total, which is the sum of those rows.
-        $houses = collect($studentsByHouse)
+        // One entry per house: its penalised OTs (each with their deduction rows)
+        // and the house total, which is the sum of those rows.
+        return collect($studentsByHouse)
             ->map(function (array $memberSet, string $house) use ($rowsByStudent, $students) {
                 $members = collect(array_keys($memberSet))
                     ->map(function (int $pk) use ($rowsByStudent, $students) {
@@ -880,6 +908,8 @@ class UserController extends Controller
                             'total' => round((float) $rows->sum('marks'), 2),
                         ];
                     })
+                    // Only those carrying a final mark against them.
+                    ->filter(fn (array $member) => $member['total'] > 0)
                     // Heaviest penalty first, then alphabetical — the reason
                     // someone opens this page is to see who is carrying marks.
                     ->sortBy([['total', 'desc'], ['name', 'asc']])
@@ -892,13 +922,56 @@ class UserController extends Controller
                     'total' => round((float) $members->sum('total'), 2),
                 ];
             })
+            // A house with nobody penalised has nothing to report.
+            ->filter(fn (array $house) => $house['members']->isNotEmpty())
             ->sortBy('house')
             ->values();
+    }
 
-        return view('admin.dashboard.house_wise_performance', [
-            'houses' => $houses,
-            'generatedOn' => now(),
-        ]);
+    /**
+     * Excel or PDF of House wise Performance — one flat table, each house's rows
+     * followed by its Final Marks line, so the file reads like the page.
+     */
+    private function exportHouseWisePerformance(\Illuminate\Support\Collection $houses, string $format)
+    {
+        $headings = ['House', 'Student Name', 'OT Code', 'Discipline Category', 'Marks'];
+        $centreColumns = [2, 4];
+
+        $data = collect();
+        foreach ($houses as $house) {
+            foreach ($house['members'] as $member) {
+                foreach ($member['rows'] as $i => $row) {
+                    $data->push([
+                        $i === 0 ? $house['house'] : '',
+                        $i === 0 ? $member['name'] : '',
+                        $i === 0 ? $member['ot_code'] : '',
+                        trim($row['category'] . (empty($row['severity']) ? '' : ' (' . $row['severity'] . ')')),
+                        $row['marks'] + 0,
+                    ]);
+                }
+            }
+            $data->push(['', '', '', 'Final Marks — ' . $house['house'], $house['total'] + 0]);
+        }
+
+        $baseName = 'House_Wise_Performance_' . now()->format('Ymd_His');
+        $title = 'House wise Performance';
+
+        if ($format === 'pdf') {
+            @ini_set('memory_limit', '256M');
+            @set_time_limit(120);
+
+            return Pdf::loadView('admin.exports.table_pdf', [
+                'headings' => $headings,
+                'rows' => $data,
+                'reportTitle' => $title,
+                'centreColumns' => $centreColumns,
+            ])->setPaper('a4', 'portrait')->download($baseName . '.pdf');
+        }
+
+        return Excel::download(
+            new LbsnaaTableExport($data, $headings, $title, '', $centreColumns),
+            $baseName . '.xlsx'
+        );
     }
 
     /** Display name for a student_master row, falling back to first + last. */
@@ -4695,43 +4768,11 @@ class UserController extends Controller
      */
     public function myGroupStudents($mapPk)
     {
-        if (! hasRole('Student-OT')) {
-            return response()->json(['message' => 'Not authorised.'], 403);
-        }
+        $group = $this->assertOwnGroup($mapPk);
 
-        $studentPk = Auth::user()->user_id;
-        $mapPk = (int) $mapPk;
-
-        $isMember = $this->myGroupsQuery($studentPk)
-            ->where('gmap.pk', $mapPk)
-            ->exists();
-
-        if (! $isMember) {
+        if (! $group) {
             return response()->json(['message' => 'You are not a member of this group.'], 403);
         }
-
-        $group = DB::table('group_type_master_course_master_map as gmap')
-            ->leftJoin('course_group_type_master as gtype', 'gtype.pk', '=', 'gmap.type_name')
-            ->leftJoin('course_master as cm', 'cm.pk', '=', 'gmap.course_name')
-            ->where('gmap.pk', $mapPk)
-            ->first(['gmap.group_name', 'gtype.type_name as group_type', 'cm.course_name']);
-
-        $students = DB::table('student_course_group_map as scgm')
-            ->join('student_master as sm', 'sm.pk', '=', 'scgm.student_master_pk')
-            ->where('scgm.group_type_master_course_master_map_pk', $mapPk)
-            ->where('scgm.active_inactive', 1)
-            ->select('sm.pk', 'sm.display_name', 'sm.first_name', 'sm.last_name', 'sm.generated_OT_code')
-            // Same duplicate rows the count guards against.
-            ->distinct()
-            ->orderBy('sm.display_name')
-            ->get()
-            ->map(fn ($row) => [
-                'ot_code' => $row->generated_OT_code ?: '-',
-                'name' => trim((string) $row->display_name) ?: (trim(implode(' ', array_filter([
-                    $row->first_name ?? '', $row->last_name ?? '',
-                ]))) ?: 'Officer Trainee'),
-            ])
-            ->values();
 
         return response()->json([
             'group' => [
@@ -4739,8 +4780,183 @@ class UserController extends Controller
                 'type' => $group->group_type ?? '—',
                 'course' => $group->course_name ?? '—',
             ],
-            'students' => $students,
+            'students' => $this->myGroupRoster((int) $mapPk)->map(fn ($s) => [
+                'pk' => $s['pk'],
+                'name' => $s['name'],
+                'ot_code' => $s['ot_code'],
+                'email' => $s['email'],
+                'mobile' => $s['mobile'],
+            ])->values(),
         ]);
+    }
+
+    /**
+     * Excel or PDF of one of the viewer's own group rosters.
+     */
+    public function myGroupStudentsExport(Request $request, $mapPk)
+    {
+        $group = $this->assertOwnGroup($mapPk);
+
+        if (! $group) {
+            abort(403, 'You are not a member of this group.');
+        }
+
+        $roster = $this->myGroupRoster((int) $mapPk);
+
+        $headings = ['S. No.', 'Student Name', 'OT Code', 'Email', 'Mobile Number'];
+        $centreColumns = [0, 2, 4];
+
+        $serial = 1;
+        $rows = $roster->map(fn ($s) => [
+            $serial++, $s['name'], $s['ot_code'], $s['email'], $s['mobile'],
+        ])->values();
+
+        $filterLine = 'Course: ' . ($group->course_name ?? '—')
+            . '  |  Group: ' . ($group->group_name ?? '—')
+            . '  |  Type: ' . ($group->group_type ?? '—');
+        $title = 'Group Members — ' . ($group->group_name ?? 'Group');
+        $baseName = 'Group_Members_' . preg_replace('/[^A-Za-z0-9]+/', '_', (string) ($group->group_name ?? 'group'))
+            . '_' . now()->format('Ymd_His');
+
+        if (strtolower((string) $request->get('format')) === 'pdf') {
+            @ini_set('memory_limit', '256M');
+            @set_time_limit(120);
+
+            return Pdf::loadView('admin.exports.table_pdf', [
+                'headings' => $headings,
+                'rows' => $rows,
+                'reportTitle' => $title,
+                'filterLine' => $filterLine,
+                'centreColumns' => $centreColumns,
+            ])->setPaper('a4', 'portrait')->download($baseName . '.pdf');
+        }
+
+        return Excel::download(
+            new LbsnaaTableExport($rows, $headings, $title, $filterLine, $centreColumns, 'Group Members'),
+            $baseName . '.xlsx'
+        );
+    }
+
+    /**
+     * SMS or email the selected members of one of the viewer's own groups.
+     *
+     * Both the group and every recipient are re-checked against the viewer's own
+     * membership: this endpoint sends real messages, so an OT must not be able to
+     * reach anyone outside a group they are themselves in by editing the request.
+     */
+    public function myGroupSendMessage(Request $request, $mapPk)
+    {
+        $group = $this->assertOwnGroup($mapPk);
+
+        if (! $group) {
+            return response()->json(['status' => 'error', 'message' => 'You are not a member of this group.'], 403);
+        }
+
+        $validated = $request->validate([
+            'channel' => 'required|in:sms,email',
+            'message' => 'required|string|max:1000',
+            'student_ids' => 'required|array|min:1',
+            'student_ids.*' => 'integer',
+        ]);
+
+        $roster = $this->myGroupRoster((int) $mapPk)->keyBy('pk');
+        $selected = collect($validated['student_ids'])->map(fn ($id) => (int) $id)->unique();
+
+        if ($selected->diff($roster->keys())->isNotEmpty()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Some selected officer trainees are not part of this group.',
+            ], 422);
+        }
+
+        $recipients = $roster->only($selected->all());
+
+        if ($validated['channel'] === 'email') {
+            $emails = $recipients->pluck('email')->filter(fn ($e) => filled($e) && $e !== '-');
+
+            if ($emails->isEmpty()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'None of the selected officer trainees have an email address on record.',
+                ], 422);
+            }
+
+            $failed = app(EmailService::class)->sendBulk($emails->values(), $validated['message']);
+            $sent = $emails->count() - count($failed);
+
+            return response()->json([
+                'status' => $sent > 0 ? 'success' : 'error',
+                'message' => $sent > 0 ? "Email sent to {$sent} OT(s)." : 'Unable to send email to the selected OTs.',
+            ], $sent > 0 ? 200 : 500);
+        }
+
+        $numbers = $recipients->pluck('mobile')->filter(fn ($n) => filled($n) && $n !== '-');
+
+        if ($numbers->isEmpty()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'None of the selected officer trainees have a contact number on record.',
+            ], 422);
+        }
+
+        $failed = app(SmsService::class)->sendBulk($numbers->values(), $validated['message']);
+        $sent = $numbers->count() - count($failed);
+
+        return response()->json([
+            'status' => $sent > 0 ? 'success' : 'error',
+            'message' => $sent > 0 ? "SMS sent to {$sent} OT(s)." : 'Unable to send SMS to the selected OTs.',
+        ], $sent > 0 ? 200 : 500);
+    }
+
+    /**
+     * The group row, but only if the logged-in officer trainee belongs to it.
+     * Returns null otherwise — the group pk travels in the URL, so every entry
+     * point has to re-check rather than trust it.
+     */
+    private function assertOwnGroup($mapPk)
+    {
+        if (! hasRole('Student-OT')) {
+            return null;
+        }
+
+        $isMember = $this->myGroupsQuery(Auth::user()->user_id)
+            ->where('gmap.pk', (int) $mapPk)
+            ->exists();
+
+        if (! $isMember) {
+            return null;
+        }
+
+        return DB::table('group_type_master_course_master_map as gmap')
+            ->leftJoin('course_group_type_master as gtype', 'gtype.pk', '=', 'gmap.type_name')
+            ->leftJoin('course_master as cm', 'cm.pk', '=', 'gmap.course_name')
+            ->where('gmap.pk', (int) $mapPk)
+            ->first(['gmap.group_name', 'gtype.type_name as group_type', 'cm.course_name']);
+    }
+
+    /** Officer trainees mapped to a group, with the contact details the roster lists. */
+    private function myGroupRoster(int $mapPk): \Illuminate\Support\Collection
+    {
+        return DB::table('student_course_group_map as scgm')
+            ->join('student_master as sm', 'sm.pk', '=', 'scgm.student_master_pk')
+            ->where('scgm.group_type_master_course_master_map_pk', $mapPk)
+            ->where('scgm.active_inactive', 1)
+            ->select('sm.pk', 'sm.display_name', 'sm.first_name', 'sm.last_name',
+                'sm.generated_OT_code', 'sm.email', 'sm.contact_no')
+            // Same duplicate rows the member count guards against.
+            ->distinct()
+            ->orderBy('sm.display_name')
+            ->get()
+            ->map(fn ($row) => [
+                'pk' => (int) $row->pk,
+                'name' => trim((string) $row->display_name) ?: (trim(implode(' ', array_filter([
+                    $row->first_name ?? '', $row->last_name ?? '',
+                ]))) ?: 'Officer Trainee'),
+                'ot_code' => $row->generated_OT_code ?: '-',
+                'email' => $row->email ?: '-',
+                'mobile' => $row->contact_no ?: '-',
+            ])
+            ->values();
     }
 
     /**

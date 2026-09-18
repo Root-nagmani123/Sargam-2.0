@@ -99,6 +99,26 @@
 /* The letterhead belongs to the printed sheet only. */
 .me-print-head { display: none; }
 
+/* Course, stated once above the entries. */
+.me-course-banner {
+    display: flex;
+    align-items: baseline;
+    gap: .6rem;
+    padding: .6rem .9rem;
+    border: 1px solid #cbd6e6;
+    border-left: 4px solid #004a93;
+    border-radius: .5rem;
+    background: #f0f4fa;
+}
+.me-course-label {
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    font-weight: 700;
+    color: #667085;
+}
+.me-course-value { font-size: 1rem; font-weight: 600; color: #003366; }
+
 @media print {
     @page { size: A4 portrait; margin: 12mm 10mm; }
 
@@ -237,7 +257,29 @@
             ============================ --}}
             @if($isStudentView)
 
-                <div class="card info-card mb-4">
+                @php
+                    // The courses these exemptions belong to. Normally one, so the
+                    // course is stated once at the top instead of heading every
+                    // entry. If an OT somehow has exemptions on two running
+                    // courses, the per-entry heading comes back so the rows can
+                    // still be told apart.
+                    $exemptionCourses = collect($studentData['exemptions'] ?? [])
+                        ->pluck('course_name')->filter()->unique()->values();
+                    $showCoursePerEntry = $exemptionCourses->count() > 1;
+                @endphp
+
+                {{-- Course at the top. On paper this is the only place it appears. --}}
+                @if($exemptionCourses->isNotEmpty())
+                    <div class="me-course-banner mb-3">
+                        <span class="me-course-label">Course</span>
+                        <span class="me-course-value">{{ $exemptionCourses->implode(', ') }}</span>
+                    </div>
+                @endif
+
+                {{-- Identity block: screen only. The printed letterhead already
+                     carries the name and OT code, and repeating them here was
+                     showing each of them twice on the page. --}}
+                <div class="card info-card mb-4 d-print-none">
                     <div class="card-body">
                         <div class="row g-4">
                             <div class="col-md-3">
@@ -269,10 +311,12 @@
                 @if(isset($studentData['has_exemptions']) && $studentData['has_exemptions'] && count($studentData['exemptions']) > 0)
                     @foreach($studentData['exemptions'] as $exemption)
                         <div class="exemption-item">
-                            <h6 class="fw-semibold text-primary mb-3 d-flex align-items-center gap-2">
-                                <i class="material-icons material-symbols-rounded fs-6">school</i>
-                                {{ $exemption['course_name'] }}
-                            </h6>
+                            @if($showCoursePerEntry)
+                                <h6 class="fw-semibold text-primary mb-3 d-flex align-items-center gap-2">
+                                    <i class="material-icons material-symbols-rounded fs-6">school</i>
+                                    {{ $exemption['course_name'] }}
+                                </h6>
+                            @endif
 
                             {{-- from_date / to_date are datetime columns, so the date
                                  and the time are two views of one value. Time shows

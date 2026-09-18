@@ -234,9 +234,46 @@
                 <div id="mgMembersBody">
                     <p class="text-center text-muted my-4 mb-0">Loading…</p>
                 </div>
+
+                {{-- Compose panel, hidden until Send SMS / Email is chosen. --}}
+                <div id="mgMessageBox" class="mt-3 d-none">
+                    <div class="border rounded-3 p-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="fw-semibold mb-0">Send Message</h6>
+                                <p class="mg-modal-meta mb-0">Goes to the officer trainees ticked above.</p>
+                            </div>
+                            <button type="button" class="btn-close btn-close-sm" id="mgCloseMessage" aria-label="Close"></button>
+                        </div>
+                        <div id="mgMessageAlert" class="alert d-none py-2 small mb-2" role="alert"></div>
+                        <textarea id="mgMessageText" rows="3" maxlength="1000" class="form-control rounded-3"
+                            placeholder="Type your message here…"></textarea>
+                        <div class="form-text text-end"><span id="mgMessageCount">0</span>/1000</div>
+                        <div class="d-flex justify-content-end gap-2 flex-wrap">
+                            <button type="button" class="btn btn-outline-success rounded-3 mg-send" data-channel="sms">
+                                <i class="bi bi-chat-text me-1" aria-hidden="true"></i> Send SMS
+                            </button>
+                            <button type="button" class="btn btn-primary rounded-3 mg-send" data-channel="email">
+                                <i class="bi bi-envelope me-1" aria-hidden="true"></i> Send Email
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+            <div class="modal-footer border-0 justify-content-between">
+                <div class="mg-modal-meta" id="mgSelectedCount">0 OT(s) selected</div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="#" class="btn btn-outline-success rounded-3" id="mgExportExcel">
+                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Excel
+                    </a>
+                    <a href="#" class="btn btn-outline-danger rounded-3" id="mgExportPdf">
+                        <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF
+                    </a>
+                    <button type="button" class="btn btn-outline-primary rounded-3" id="mgToggleMessage">
+                        <i class="bi bi-send-check me-1" aria-hidden="true"></i> Send SMS / Email
+                    </button>
+                    <button type="button" class="btn btn-secondary rounded-3" data-bs-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
     </div>
@@ -249,6 +286,8 @@ $(function () {
     // {mapPk} is substituted client-side; the server re-checks that the viewer
     // is actually a member of the group before returning its roster.
     const studentsUrlTemplate = @json(route('admin.dashboard.my-groups.students', ['mapPk' => '__PK__']));
+    const exportUrlTemplate = @json(route('admin.dashboard.my-groups.students.export', ['mapPk' => '__PK__']));
+    const messageUrlTemplate = @json(route('admin.dashboard.my-groups.students.message', ['mapPk' => '__PK__']));
     const modalEl = document.getElementById('mgMembersModal');
 
     function showModal() {
@@ -270,29 +309,99 @@ $(function () {
 
         let html = '<div class="table-responsive"><table class="table align-middle mb-0 mg-table">'
             + '<thead><tr>'
+            + '<th scope="col" style="width:2.5rem;">'
+            + '<input type="checkbox" class="form-check-input" id="mgCheckAll" aria-label="Select all"></th>'
             + '<th scope="col" class="mg-col-no">S. No.</th>'
-            + '<th scope="col">OT Code</th>'
             + '<th scope="col">Student Name</th>'
+            + '<th scope="col">OT Code</th>'
+            + '<th scope="col">Email</th>'
+            + '<th scope="col">Mobile No</th>'
             + '</tr></thead><tbody>';
 
         list.forEach(function (s, i) {
             html += '<tr>'
+                + '<td><input type="checkbox" class="form-check-input mg-pick" value="' + Number(s.pk) + '"></td>'
                 + '<td class="mg-col-no">' + (i + 1) + '</td>'
-                + '<td>' + escapeHtml(s.ot_code) + '</td>'
                 + '<td class="fw-semibold">' + escapeHtml(s.name) + '</td>'
+                + '<td>' + escapeHtml(s.ot_code) + '</td>'
+                + '<td>' + escapeHtml(s.email) + '</td>'
+                + '<td>' + escapeHtml(s.mobile) + '</td>'
                 + '</tr>';
         });
 
         return html + '</tbody></table></div>';
     }
 
+    let currentMapPk = null;
+
+    function selectedIds() {
+        return $('.mg-pick:checked').map(function () { return Number(this.value); }).get();
+    }
+
+    function refreshSelection() {
+        const n = selectedIds().length;
+        $('#mgSelectedCount').text(n + ' OT(s) selected');
+        $('.mg-send').prop('disabled', n === 0);
+    }
+
+    function showMessageAlert(type, text) {
+        $('#mgMessageAlert').removeClass('d-none alert-success alert-danger alert-warning')
+            .addClass('alert-' + type).text(text);
+    }
+
+    $(document).on('change', '#mgCheckAll', function () {
+        $('.mg-pick').prop('checked', this.checked);
+        refreshSelection();
+    });
+    $(document).on('change', '.mg-pick', function () {
+        $('#mgCheckAll').prop('checked', $('.mg-pick:not(:checked)').length === 0);
+        refreshSelection();
+    });
+
+    $('#mgToggleMessage').on('click', function () {
+        $('#mgMessageBox').toggleClass('d-none');
+        $('#mgMessageAlert').addClass('d-none');
+    });
+    $('#mgCloseMessage').on('click', function () { $('#mgMessageBox').addClass('d-none'); });
+    $('#mgMessageText').on('input', function () { $('#mgMessageCount').text(this.value.length); });
+
+    $(document).on('click', '.mg-send', function () {
+        const channel = $(this).data('channel');
+        const ids = selectedIds();
+        const message = ($('#mgMessageText').val() || '').trim();
+
+        if (!ids.length) { showMessageAlert('warning', 'Tick at least one officer trainee.'); return; }
+        if (!message) { showMessageAlert('warning', 'Enter a message before sending.'); return; }
+
+        const $btn = $(this).prop('disabled', true);
+        $.post(messageUrlTemplate.replace('__PK__', currentMapPk), {
+            _token: $('meta[name="csrf-token"]').attr('content'),
+            channel: channel,
+            message: message,
+            student_ids: ids
+        })
+            .done(function (res) { showMessageAlert('success', (res && res.message) || 'Message sent.'); })
+            .fail(function (xhr) {
+                showMessageAlert('danger', (xhr.responseJSON && xhr.responseJSON.message) || 'Could not send the message.');
+            })
+            .always(function () { $btn.prop('disabled', false); refreshSelection(); });
+    });
+
     $(document).on('click', '.mg-view-btn', function () {
         const mapPk = $(this).data('mapPk');
         const groupName = $(this).data('groupName');
+        currentMapPk = mapPk;
 
         $('#mgMembersLabel').text(groupName || 'Group Members');
         $('#mgMembersMeta').text('');
         $('#mgMembersBody').html('<p class="text-center text-muted my-4 mb-0">Loading…</p>');
+        $('#mgMessageBox').addClass('d-none');
+        $('#mgMessageText').val('');
+        $('#mgMessageCount').text('0');
+        $('#mgMessageAlert').addClass('d-none');
+        $('#mgExportExcel').attr('href', exportUrlTemplate.replace('__PK__', mapPk) + '?format=excel');
+        $('#mgExportPdf').attr('href', exportUrlTemplate.replace('__PK__', mapPk) + '?format=pdf');
+        refreshSelection();
         showModal();
 
         $.get(studentsUrlTemplate.replace('__PK__', mapPk))
@@ -304,6 +413,7 @@ $(function () {
                     + ((res.students && res.students.length === 1) ? '' : 's')
                 );
                 $('#mgMembersBody').html(renderStudents(res.students));
+                refreshSelection();
             })
             .fail(function (xhr) {
                 const msg = (xhr.responseJSON && xhr.responseJSON.message)

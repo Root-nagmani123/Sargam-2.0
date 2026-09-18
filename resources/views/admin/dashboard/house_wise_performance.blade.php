@@ -92,8 +92,6 @@
 }
 .hwp-severity--major { background: #fee2e2; color: #991b1b; }
 
-.hwp-clean { color: #64748b; font-style: italic; }
-
 .hwp-student-total {
     font-weight: 700;
     color: var(--hwp-navy);
@@ -124,17 +122,29 @@
 
 <div class="container-fluid hwp-page">
     <x-breadcrum title="House wise Performance">
-        <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-2 rounded-2 hwp-noprint"
-            onclick="window.print()">
-            <i class="material-icons material-symbols-rounded" aria-hidden="true">print</i>
-            <span>Print</span>
-        </button>
+        <div class="d-inline-flex align-items-center gap-2 hwp-noprint">
+            <a href="{{ route('admin.dashboard.house-wise-performance', ['format' => 'excel']) }}"
+                class="btn btn-outline-success d-inline-flex align-items-center gap-2 rounded-2">
+                <i class="bi bi-file-earmark-excel" aria-hidden="true"></i>
+                <span>Excel</span>
+            </a>
+            <a href="{{ route('admin.dashboard.house-wise-performance', ['format' => 'pdf']) }}"
+                class="btn btn-outline-danger d-inline-flex align-items-center gap-2 rounded-2">
+                <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+                <span>PDF</span>
+            </a>
+            <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-2 rounded-2"
+                onclick="window.print()">
+                <i class="material-icons material-symbols-rounded" aria-hidden="true">print</i>
+                <span>Print</span>
+            </button>
+        </div>
     </x-breadcrum>
 
     @if($houses->isEmpty())
         <div class="hwp-empty">
             <i class="bi bi-house fs-1 d-block mb-2 opacity-50" aria-hidden="true"></i>
-            <p class="mb-0">No houses are mapped on the courses running now.</p>
+            <p class="mb-0">No officer trainee on a running course is carrying a closed deduction.</p>
         </div>
     @else
         @foreach($houses as $house)
@@ -160,16 +170,9 @@
                             </tr>
                         </thead>
                         <tbody>
+                            {{-- Only OTs carrying a final mark reach here; the
+                                 controller filters the rest out. --}}
                             @foreach($house['members'] as $index => $member)
-                                @if($member['rows']->isEmpty())
-                                    <tr>
-                                        <td class="hwp-col-no">{{ $index + 1 }}</td>
-                                        <td class="hwp-col-name fw-semibold">{{ $member['name'] }}</td>
-                                        <td class="hwp-col-code">{{ $member['ot_code'] }}</td>
-                                        <td class="hwp-clean">No deduction on record</td>
-                                        <td class="hwp-col-marks">0</td>
-                                    </tr>
-                                @else
                                     @foreach($member['rows'] as $rowIndex => $row)
                                         <tr class="{{ $rowIndex > 0 ? 'hwp-row-continued' : '' }}">
                                             <td class="hwp-col-no">{{ $rowIndex === 0 ? $index + 1 : '' }}</td>
@@ -193,7 +196,6 @@
                                             <td class="hwp-col-marks hwp-student-total">{{ $member['total'] + 0 }}</td>
                                         </tr>
                                     @endif
-                                @endif
                             @endforeach
 
                             <tr class="hwp-final">
