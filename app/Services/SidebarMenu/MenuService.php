@@ -75,6 +75,16 @@ class MenuService
         $menu = $this->find($id);
         $oldPermission = $menu->permission_name;
         $newPermission = Str::slug($data['name'], '_');
+
+        // Derive the permission name here exactly as store() does, instead of
+        // saving whatever the edit form posted. Without this line the posted
+        // permission_name went through verbatim - Menu has $guarded = [] and
+        // MenuRequest puts no format rule on the field - while the block below
+        // renamed the PERMISSIONS row to $newPermission, so an edit left the two
+        // disagreeing, and a name the slug cannot produce (anything with a dot)
+        // could be planted on a menus row and would then be offered as a
+        // checkbox by the Roles matrix. PR #317 F-011, root cause L-9.
+        $data['permission_name'] = $newPermission;
         $data['order'] = $data['order'] ?? Menu::max('order') + 1;
         $menu->update($data);
 
