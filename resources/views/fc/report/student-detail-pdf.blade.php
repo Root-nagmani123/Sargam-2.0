@@ -5,11 +5,20 @@
     <title>FC Registration - {{ $userId }}</title>
     <style>
         {!! $pdfFontFaceCss ?? '' !!}
-        /* Tighter print margins (Chrome + Dompdf); default print margins leave a large empty band */
+@if(empty($mpdfMode))
+        /* Print margins. 8mm/10mm put the page rule inside the non-printable band of most
+           office laser printers, so the frame came out clipped and the text read as if it
+           were falling off the sheet. 13mm all round clears that band on every printer we
+           have seen and still keeps the page count down.
+
+           Omitted under mPDF: it mis-parses this rule badly enough to emit ~1000 blank
+           pages (verified — 996 with it, 3 without). mPDF takes its margins from the
+           constructor instead, in fcRegistrationPdfRenderMpdf(). */
         @page {
             size: A4;
-            margin: 8mm 10mm 10mm 10mm;
+            margin: 13mm;
         }
+@endif
         html, body {
             margin: 0;
             padding: 0;
@@ -36,22 +45,74 @@
             margin: 2.4pt;
         }
         .page-body {
-            padding: 3mm 3.5mm 2mm;
+            /* mPDF: the constructor margin (17mm) is already 4mm inside the drawn rule
+               (13mm), on every page, so no padding is needed or wanted here. */
+            padding: {{ !empty($mpdfMode) || !empty($pagedShell) ? '0' : '4mm' }} {{ !empty($mpdfMode) ? '0' : '5mm' }};
+        }
+        /* Vertical breathing room INSIDE the rule, on EVERY page.
+           .page-body's own padding only applies on the first and last page, so from page 2
+           on the first row sat directly on the top rule and the last row on the bottom one.
+           An empty thead/tfoot pair is what browsers and headless Chrome repeat on each
+           printed page, so it is what actually reserves that gap.
+
+           Chrome/browser only ($pagedShell). Dompdf cannot paginate content inside a table
+           cell — wrapping the document in this shell made it emit one page of content and
+           then blanks — so the Dompdf fallback keeps the plain first-page padding above.
+           A negative inset on .page-frame is not an alternative either: Chrome clips a fixed
+           box to the page content area and the left/right edges vanish (verified). */
+        table.page-shell {
+            width: 100%;
+            border-collapse: collapse;
+            /* Mandatory. With auto layout the single content cell takes its min-content width
+               from the WIDEST descendant table (the 9-column Education Summary), so the shell
+               grew past 100% and pushed the masthead out over the right-hand page rule.
+               Fixed layout pins the cell to the table width and leaves the inner tables to
+               wrap on their own (they already carry overflow-wrap: anywhere). */
+            table-layout: fixed;
+        }
+        table.page-shell > thead > tr > td,
+        table.page-shell > tfoot > tr > td {
+            height: 3.5mm;
+            border: 0;
+            padding: 0;
+            font-size: 0;
+            line-height: 0;
+        }
+        table.page-shell > tbody > tr > td {
+            border: 0;
+            padding: 0;
+            vertical-align: top;
         }
         body {
             font-family: {!! $pdfFontFamilyCss !!};
-            font-size: 9.5pt;
-            color: #111;
-            line-height: 1.35;
+            font-size: 8.5pt;
+            color: #000;
+            line-height: 1.3;
+            /* Chrome drops background fills from print unless told otherwise; without this the
+               section bands and label tints disappear and the sheet reads as unstructured. */
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        /* Never slice a row in half across a page break — the printed copy was starting pages
+           mid-row (top half of "Mobile No" on one page, bottom half on the next). */
+        table.fields tr,
+        table.grid tr,
+        .meta-bar tr {
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
         table, table.fields, table.grid, table.meta-bar {
             font-family: {!! $pdfFontFamilyCss !!};
         }
+        /* Density matched to the academy's legacy Descriptive Roll sample: that sheet fits
+           the whole profile in far fewer pages than this one did, and the masthead/title
+           block is the largest single saving. Type sizes below are set to that sample, not
+           to on-screen comfort — this document is read on paper. */
         .masthead {
             text-align: center;
             border: 2px solid #0a3d6b;
-            padding: 7px 8px 8px;
-            margin-bottom: 6px;
+            padding: 4px 6px 5px;
+            margin-bottom: 4px;
             background: #f8fafc;
         }
         /* 3-column masthead: the crest sits on the LEFT and an equal-width empty cell on
@@ -66,7 +127,7 @@
             vertical-align: middle;
         }
         .masthead-side {
-            width: 62px;
+            width: 52px;
         }
         /* Explicit, not inherited from .masthead — Dompdf does not pass text-align down
            into table cells, which left the academy name flush left in the fallback render. */
@@ -77,62 +138,62 @@
             text-align: left;
         }
         .masthead-logo img {
-            width: 58px;
+            width: 48px;
             height: auto;
         }
         .masthead-hi {
-            font-size: 12.5pt;
+            font-size: 11pt;
             font-weight: bold;
             color: #0a3d6b;
             margin: 0 0 3px;
             line-height: 1.45;
         }
         .masthead-en-org {
-            font-size: 10.5pt;
+            font-size: 9.5pt;
             font-weight: bold;
             color: #0a3d6b;
             margin: 0 0 5px;
         }
         .masthead-place-hi {
-            font-size: 9.5pt;
+            font-size: 8.2pt;
             color: #333;
             margin: 0 0 1px;
             line-height: 1.45;
         }
         .masthead-place {
-            font-size: 9pt;
+            font-size: 8pt;
             color: #333;
             margin: 0;
         }
         .doc-title {
             text-align: center;
-            margin: 4px 0 6px;
-            padding: 4px 6px;
+            margin: 3px 0 4px;
+            padding: 3px 6px;
             border-top: 1px solid #0a3d6b;
             border-bottom: 2px solid #0a3d6b;
         }
         .doc-title-en {
-            font-size: 12pt;
+            font-size: 11pt;
             font-weight: bold;
             letter-spacing: 0.5px;
             color: #0a3d6b;
             margin: 0;
         }
         .doc-title-hi {
-            font-size: 10.5pt;
+            font-size: 9.5pt;
             font-weight: bold;
             color: #333;
-            margin: 4px 0 0;
+            margin: 2px 0 0;
         }
         .meta-bar {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 6px;
-            font-size: 8.5pt;
+            margin-bottom: 4px;
+            font-size: 8.2pt;
         }
         .meta-bar td {
-            border: 1px solid #999;
-            padding: 5px 8px;
+            border: 1px solid #a6b4c3;
+            padding: 4px 6px;
             vertical-align: top;
             word-wrap: break-word;
             overflow-wrap: break-word;
@@ -150,7 +211,7 @@
             line-height: 0;
         }
         .section {
-            margin-top: 6px;
+            margin-top: 3px;
             /* Do not avoid-break whole sections: long blocks jump to next page and leave a huge gap */
             page-break-inside: auto;
         }
@@ -160,33 +221,40 @@
         .section-h {
             background: #d8e2ec;
             color: #24486e;
-            padding: 3px 8px;
+            padding: 2px 6px;
             border-left: 3px solid #6d8bab;
-            font-size: 9.5pt;
+            font-size: 8.5pt;
             font-weight: bold;
             break-after: avoid-page;
         }
         .section-h-sub {
-            font-size: 8pt;
+            font-size: 7.4pt;
             font-weight: normal;
-            color: #5b7188;
+            color: #3f5568;
         }
         table.fields {
             width: 100%;
             border-collapse: collapse;
-            font-size: 8.8pt;
+            font-size: 8pt;
             /* Fixed layout: without it a single long unbroken value (e.g. a Vision
                Statement with no spaces) squeezes the label column to one word per line. */
             table-layout: fixed;
             /* Outer box only. Row-to-row rules live on the group headings below, so a run of
-               fields inside one group reads as a single block instead of a ruled ledger. */
-            border: 1px solid #bbb;
+               fields inside one group reads as a single block instead of a ruled ledger.
+               Superseded: every row is now ruled (see td below). The outer box is kept a
+               step darker than the row rules so the block still reads as one table. */
+            border: 1px solid #9aa8b6;
         }
         table.fields td {
-            /* Vertical rule between label and value only — no horizontal rule per row. */
+            /* One light rule under every field, so the eye tracks label -> value across the
+               row instead of relying on the label tint alone. Deliberately pale: at 8pt a
+               dark rule per row turns the page into a ledger and competes with the text.
+               #e4eaf0 is about as light as this can go and still print — below roughly
+               #eef2f6 a hairline rule starts dropping out of laser output entirely. */
             border: 0;
-            border-right: 1px solid #bbb;
-            padding: 4px 6px;
+            border-bottom: 0.5pt solid #e4eaf0;
+            border-right: 0.5pt solid #d2dae3;
+            padding: 3px 6px;
             vertical-align: top;
             /* Long filenames / unbroken statements must wrap instead of running off the
                page. `anywhere` also shrinks min-content width, so an unbreakable value can
@@ -196,11 +264,15 @@
             overflow-wrap: anywhere;
         }
         table.fields .lab {
-            width: 32%;
+            width: 26%;
             background: #f7f9fc;
-            /* mPDF + bold + script-mix can emit tofu; keep labels regular weight */
-            font-weight: normal;
-            color: #0a3d6e;
+            /* Bold, matching the meta-bar labels ("Name / नाम", "Course / पाठ्यक्रम") so every
+               label on the sheet reads the same way. The old note here warned that bold +
+               script-mix emits tofu — that was mPDF, which no longer renders this document;
+               Chrome and Dompdf both take the embedded NotoSansDevanagari-Bold @font-face
+               (verified on both engines, Devanagari included). */
+            font-weight: bold;
+            color: #0a3d6b;
         }
         /* Hindi sits inline after the English in the SAME cell ("Gender / लिंग"), matching
            the meta-bar convention above, and only when it differs. hindiLabel() falls back
@@ -209,11 +281,21 @@
            double-height rows wherever the label was long. Inline (not stacked) keeps the
            row on one line, which is what kept the page count down. */
         table.fields .lab-hi {
-            font-size: 8pt;
-            color: #555;
+            font-size: 7.2pt;
+            /* Bold with the English half — the meta-bar sets both parts of "Name / नाम" in
+               one weight, and a regular-weight Hindi tail next to a bold English one read as
+               a mistake. Still a shade smaller and lighter, which is what keeps the English
+               term dominant in the row. */
+            font-weight: bold;
+            color: #2c4460;
         }
         table.fields .val {
-            width: 68%;
+            width: 74%;
+        }
+        /* The outer box already closes the table; a row rule on top of it prints as a
+           double line at the foot of every section. */
+        table.fields tr:last-child td {
+            border-bottom: 0;
         }
         /* Group heading ("Mailing Address", "Physical Details") — this is the only
            horizontal rule left inside a section, so groups stay clearly separated. */
@@ -221,8 +303,8 @@
             background: #edf2f7;
             font-weight: bold;
             color: #24486e;
-            border-top: 1px solid #bbb;
-            border-bottom: 1px solid #bbb;
+            border-top: 1px solid #9aa8b6;
+            border-bottom: 1px solid #9aa8b6;
             border-right: 0;
         }
         table.fields tr:first-child .grp {
@@ -236,27 +318,27 @@
         table.grid {
             width: 100%;
             border-collapse: collapse;
-            font-size: 8.3pt;
+            font-size: 8pt;
         }
         /* Column headings sit one level below a section header, so they take the same muted
            palette a shade stronger — not the old solid navy. */
         table.grid th {
             background: #e4ebf2;
             color: #24486e;
-            border: 1px solid #b9c6d6;
-            padding: 4px 3px;
+            border: 1px solid #a6b4c3;
+            padding: 3px 3px;
             text-align: center;
             font-weight: bold;
         }
         table.grid th small {
             display: block;
             font-weight: normal;
-            font-size: 7.5pt;
-            color: #5b7188;
-            margin-top: 2px;
+            font-size: 7pt;
+            color: #3f5568;
+            margin-top: 1px;
         }
         table.grid td {
-            border: 1px solid #999;
+            border: 1px solid #c3cedb;
             padding: 3px 4px;
             vertical-align: top;
             /* `anywhere`, not `break-word`: only `anywhere` also shrinks the cell's
@@ -270,16 +352,29 @@
             word-wrap: break-word;
             overflow-wrap: break-word;
         }
+        /* Wide grids (Education Summary, 9 columns) are the exception. Their headings hold
+           long unbreakable words — "Matriculation", "Qualification" — and with break-word
+           the sum of those minimum widths exceeds the page, so the table ran out under the
+           page rule and the last column was clipped by it. Here fitting the page wins over
+           keeping headings whole. */
+        table.grid.grid-wide th {
+            overflow-wrap: anywhere;
+            font-size: 7pt;
+            padding: 2px 2px;
+        }
+        table.grid.grid-wide td {
+            padding: 2px 2px;
+        }
         table.grid tr:nth-child(even) td {
             background: #fafafa;
         }
         .footer-note {
-            margin-top: 6px;
-            padding-top: 4px;
-            border-top: 1px solid #ccc;
-            font-size: 7.2pt;
+            margin-top: 4px;
+            padding-top: 3px;
+            border-top: 1px solid #999;
+            font-size: 7pt;
             line-height: 1.25;
-            color: #555;
+            color: #333;
             text-align: center;
             /* Both lines travel together: the Hindi line alone was spilling onto a page of
                its own whenever the content ended near the bottom of a page. */
@@ -287,7 +382,7 @@
             page-break-inside: avoid;
         }
         .photo-cell {
-            width: 112px;
+            width: 98px;
             text-align: center;
             vertical-align: middle;
             padding: 4px !important;
@@ -299,15 +394,15 @@
         .photo-cell img {
             display: block;
             margin: 0 auto;
-            width: 96px;
-            height: 120px;
+            width: 84px;
+            height: 105px;
             object-fit: cover;
             object-position: top center;
             border: 1px solid #999;
         }
         /* Specimen signature, boxed directly under the photograph. */
         .sign-box {
-            width: 96px;
+            width: 84px;
             margin: 4px auto 0;
             border: 1px solid #999;
             background: #fff;
@@ -316,7 +411,7 @@
         /* height:auto, not a fixed box — Dompdf ignores object-fit and would stretch the
            specimen out of shape. The source is already capped at 220x110 px. */
         .photo-cell .sign-img {
-            width: 90px;
+            width: 78px;
             height: auto;
             max-height: 40px;
             border: 0;
@@ -330,8 +425,8 @@
             color: #888;
         }
         .sign-cap {
-            font-size: 6.5pt;
-            color: #555;
+            font-size: 6.2pt;
+            color: #333;
             margin-top: 1px;
             line-height: 1.2;
         }
@@ -339,17 +434,29 @@
 </head>
 <body>
 
+@if(empty($mpdfMode))
+{{-- mPDF cannot repeat a position:fixed block per page (it loops); its copy of this double
+     rule is stroked directly onto each page in fcRegistrationPdfRenderMpdf(). --}}
 <div class="page-frame"></div>
 <div class="page-frame-inner"></div>
+@endif
 
 <div class="page-body">
+
+@if(!empty($pagedShell))
+<table class="page-shell" cellspacing="0">
+<thead><tr><td>&nbsp;</td></tr></thead>
+<tfoot><tr><td>&nbsp;</td></tr></tfoot>
+<tbody><tr><td>
+@endif
 
 <div class="masthead">
     <table class="masthead-grid" cellspacing="0">
         <tr>
             @if(!empty($lbsnaaLogoDataUri))
                 <td class="masthead-side masthead-logo">
-                    <img src="{{ $lbsnaaLogoDataUri }}" alt="LBSNAA">
+                    {{-- width attribute, not just CSS: mPDF sizes images from the attribute --}}
+                    <img src="{{ $lbsnaaLogoDataUri }}" alt="LBSNAA" width="48">
                 </td>
             @endif
             <td class="masthead-main">
@@ -410,16 +517,16 @@
         @if($i === 0)
         <td class="photo-cell" rowspan="{{ count($metaRows) }}">
             @if(!empty($photoDataUri))
-                <img src="{{ $photoDataUri }}" alt="Photo" width="96" height="124">
+                <img src="{{ $photoDataUri }}" alt="Photo" width="84" height="105">
             @elseif(!empty($photoUrl))
-                <img src="{{ $photoUrl }}" alt="Photo" width="96" height="124">
+                <img src="{{ $photoUrl }}" alt="Photo" width="84" height="105">
             @else
                 <span style="font-size:8pt;color:#888;">Photo<br/>फोटो<br/>-</span>
             @endif
 
             <div class="sign-box">
                 @if(!empty($signatureDataUri))
-                    <img class="sign-img" src="{{ $signatureDataUri }}" alt="Signature">
+                    <img class="sign-img" src="{{ $signatureDataUri }}" alt="Signature" width="78">
                 @else
                     <span class="sign-empty">-</span>
                 @endif
@@ -505,7 +612,8 @@
                 @endforeach
             </table>
         @elseif(($sec['type'] ?? '') === 'table' && !empty($sec['body']))
-            <table class="grid" cellspacing="0">
+            {{-- grid-wide: see the CSS — past ~7 columns the headings no longer fit the page. --}}
+            <table class="grid{{ count((array) ($sec['columns'] ?? [])) >= 7 ? ' grid-wide' : '' }}" cellspacing="0">
                 @unless($fcHeadIsRedundant($secTitle, $sec['columns'] ?? []))
                 <thead>
                     <tr>
@@ -538,6 +646,11 @@
     Computer-generated document from Sargam FC Registration module. Signatures / stamps where required may be appended separately.<br/>
     सारगम पंजीकरण मॉड्यूल से कंप्यूटर जनित दस्तावेज़ - आवश्यकतानुसार हस्ताक्षर / मुहर अलग से जोड़े जा सकते हैं।
 </div>
+
+@if(!empty($pagedShell))
+</td></tr></tbody>
+</table>{{-- .page-shell --}}
+@endif
 
 </div>{{-- .page-body --}}
 

@@ -37,9 +37,18 @@
                             <td class="ps-3">{{ $items->firstItem() + $index }}</td>
                             <td class="fw-medium">{{ $row->unit_type }}</td>
                             <td class="pe-3 text-end">
-                                <a href="{{ route('admin.estate.define-unit-type.edit', $row->pk) }}" class="text-primary" title="Edit">
-                                    <i class="material-icons material-symbols-rounded">edit</i>
-                                </a>
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <a href="{{ route('admin.estate.define-unit-type.edit', $row->pk) }}" class="text-primary" title="Edit">
+                                        <i class="material-icons material-symbols-rounded">edit</i>
+                                    </a>
+                                    <form action="{{ route('admin.estate.define-unit-type.destroy', $row->pk) }}" method="POST" onsubmit="return confirm('Delete this Unit Type?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-link p-0 text-danger" title="Delete">
+                                            <i class="material-icons material-symbols-rounded">delete</i>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         @empty
@@ -101,13 +110,10 @@ $(document).ready(function() {
         dom: '<\"row\"<\"col-sm-12 col-md-6\"l><\"col-sm-12 col-md-6\"f>>rt<\"row\"<\"col-sm-12 col-md-5\"i><\"col-sm-12 col-md-7\"p>>'
     });
 
-    // Move "Add New" button next to the search box and align right
-    var $wrapper = $('#unitTypeTable').closest('.dataTables_wrapper');
-    var $filter = $wrapper.find('.dataTables_filter');
-    var $addBtn = $('.unit-type-add-btn').detach().addClass('ms-2');
-    if ($filter.length && $addBtn.length) {
-        $filter.append($addBtn);
-        $filter.addClass('d-flex align-items-center justify-content-end gap-2');
+    // Move "Add New" next to the search box. appendToSearchRow() finds the search row wherever the
+    // global UI script has put it; if it can't, the button simply stays in the header above.
+    if (window.SargamDataTableUI) {
+        window.SargamDataTableUI.appendToSearchRow('unitTypeTable', $('.unit-type-add-btn').addClass('ms-2'));
     }
 });
 </script>

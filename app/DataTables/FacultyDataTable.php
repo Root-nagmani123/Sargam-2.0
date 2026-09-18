@@ -166,20 +166,36 @@ class FacultyDataTable extends DataTable
                     //->dom('Bfrtip')
                     ->orderBy(1)
                     ->selectStyleSingle()
+                    // No `dom` / `sargamDtUi` here on purpose: this table uses the
+                    // shared programme-dt chrome, which public/js/datatable-global-ui.js
+                    // relocates into the #facultyDtSearch / #facultyDtFooter slots
+                    // declared in admin/faculty/index.blade.php.
+                    //
+                    // Deliberately NOT `sargamServerOrder => true`. Every visible column
+                    // here is an addColumn() closure computed in PHP (full_name,
+                    // faculty_code, faculty_email, mobile_number, last_update,
+                    // created_by, status, action) — none of them exist in the result set
+                    // for SQL to ORDER BY, which is why they are all orderable(false).
+                    // Opting into server ordering would ask the database to sort by
+                    // columns it cannot see. The global script instead gives the loaded
+                    // page a client-side header sort, same as hostel_floor/hostel_building.
                     ->parameters([
                         'order' => [],
                         'ordering' => true,
                         'searching' => true,
                         'lengthChange' => true,
                         'pageLength' => 10,
-                        'sargamDtUi' => false,
-                        'dom' => "<'row mb-2 align-items-center'<'col-sm-6'l><'col-sm-6'f>>" .
-                                 "<'row'<'col-sm-12'tr>>" .
-                                 "<'row mt-2 align-items-center'<'col-sm-5'i><'col-sm-7'p>>",
+                        'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
                         'language' => [
+                            'search' => '',
+                            'searchPlaceholder' => 'Search',
+                            'lengthMenu' => 'Showing _MENU_',
+                            'info' => 'of _TOTAL_ items',
+                            'infoEmpty' => 'of 0 items',
+                            'infoFiltered' => 'of _MAX_ items',
                             'paginate' => [
-                                'previous' => '<i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">chevron_left</i>',
-                                'next' => '<i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">chevron_right</i>',
+                                'previous' => '&lsaquo;',
+                                'next' => '&rsaquo;',
                             ],
                         ],
                     ])

@@ -97,6 +97,13 @@ class ExemptionMasterController extends Controller
 
         $this->assertCourseAllowed((int) $validated['course_master_pk']);
 
+        $course = CourseMaster::find($validated['course_master_pk']);
+        if (blank($course?->pt_start_time)) {
+            return back()->withInput()->withErrors([
+                'course_master_pk' => 'PT start time is not set for this course. Please add the PT time in Course Master first.',
+            ]);
+        }
+
         if ($this->courseHasConflictingExemption(
             (int) $validated['course_master_pk'],
             $validated['effective_from']
@@ -281,11 +288,15 @@ class ExemptionMasterController extends Controller
                 return $row->effective_from ? $row->effective_from->format('d-m-Y') : 'N/A';
             })
             ->addColumn('apply_cutoff_time_display', function ($row) {
-                if (blank($row->apply_cutoff_time)) {
+                // Always reflect the course's current PT start time (Course Master is the
+                // source of truth), not the stale value snapshotted when this row was saved.
+                $cutoffTime = $row->course->pt_start_time ?? $row->apply_cutoff_time;
+
+                if (blank($cutoffTime)) {
                     return 'N/A';
                 }
 
-                return \Carbon\Carbon::parse($row->apply_cutoff_time)->format('h:i A');
+                return \Carbon\Carbon::parse($cutoffTime)->format('h:i A');
             })
             ->addColumn('exemption_days_display', function ($row) {
                 return number_format((float) $row->exemption_days, 1) . ' Days';
@@ -413,11 +424,13 @@ class ExemptionMasterController extends Controller
 
             $serial = 1;
             foreach ($rows as $row) {
+                $cutoffTime = $row->course->pt_start_time ?? $row->apply_cutoff_time;
+
                 fputcsv($out, [
                     $serial++,
                     $row->course->course_name ?? 'N/A',
                     $row->effective_from ? $row->effective_from->format('d-m-Y') : 'N/A',
-                    blank($row->apply_cutoff_time) ? 'N/A' : \Carbon\Carbon::parse($row->apply_cutoff_time)->format('h:i A'),
+                    blank($cutoffTime) ? 'N/A' : \Carbon\Carbon::parse($cutoffTime)->format('h:i A'),
                     $row->gender,
                     number_format((float) $row->exemption_days, 1) . ' Days',
                     (int) $row->active_inactive === 1 ? 'Active' : 'Inactive',

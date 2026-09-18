@@ -419,6 +419,7 @@ class MessBuyerClientFilter
                 "TRIM(CONCAT(COALESCE(first_name,''), ' ', COALESCE(middle_name,''), ' ', COALESCE(last_name,''))) = ?",
                 [$nameForMatch]
             )
+            ->orderBy('pk')
             ->value('pk');
 
         return ($pk !== null && (int) $pk > 0) ? (int) $pk : null;

@@ -115,14 +115,32 @@
     <div class="bill-cards-wrapper border border-2 rounded-3 bg-body-secondary overflow-auto" style="max-height: 65vh;">
         <div class="p-3 p-md-4">
             @forelse($bills as $bill)
-            <div class="card shadow-sm border-0 rounded-3 mb-3 bill-card" data-bill-no="{{ $bill->bill_no ?? '' }}" data-bill-month="{{ $bill->bill_month ?? '' }}" data-bill-year="{{ $bill->bill_year ?? '' }}">
+            @php
+                // Other/contract bills alag table (estate_month_reading_details_other) se aate hain —
+                // unke pk LBSNAA pks se takra sakte hain, isliye na checkbox (Print Selected) me jaate hain
+                // aur na hi LBSNAA print route par; unka print is_other flag ke saath hota hai.
+                $billIsOther = ! empty($bill->is_other_bill);
+                $billPrintUrl = $billIsOther
+                    ? route('admin.estate.reports.bill-report-print-all', array_filter([
+                        'selected_pks' => $bill->pk,
+                        'is_other' => 1,
+                        'bill_month' => $billMonth,
+                        'scope' => request('scope') === 'self' ? 'self' : null,
+                    ], static fn ($v) => $v !== null && $v !== ''))
+                    : route('admin.estate.reports.bill-report-print') . '?bill_no=' . urlencode($bill->bill_no) . '&month=' . urlencode($bill->bill_month) . '&year=' . urlencode($bill->bill_year);
+            @endphp
+            <div class="card shadow-sm border-0 rounded-3 mb-3 bill-card" data-bill-no="{{ $bill->bill_no ?? '' }}" data-bill-month="{{ $bill->bill_month ?? '' }}" data-bill-year="{{ $bill->bill_year ?? '' }}" data-bill-source="{{ $billIsOther ? 'other' : 'lbsnaa' }}">
                 <div class="card-body p-4 position-relative">
                     <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3 pb-2 border-bottom">
+                        @if($billIsOther)
+                        <span class="text-muted small">Other employee bill</span>
+                        @else
                         <div class="form-check form-check-lg mb-0">
                             <input class="form-check-input bill-checkbox" type="checkbox" value="{{ $bill->pk }}" id="bill_{{ $bill->pk }}" data-bill-pk="{{ $bill->pk }}">
                             <label class="form-check-label text-muted small" for="bill_{{ $bill->pk }}">Select this bill</label>
                         </div>
-                        <a href="{{ route('admin.estate.reports.bill-report-print') }}?bill_no={{ $bill->bill_no }}&month={{ $bill->bill_month }}&year={{ $bill->bill_year }}" target="_blank" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" title="Print this bill">
+                        @endif
+                        <a href="{{ $billPrintUrl }}" target="_blank" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" title="Print this bill">
                             <i class="material-symbols-rounded" style="font-size: 1rem;">print</i>
                             Print
                         </a>
@@ -150,7 +168,7 @@
                                     </tr>
                                     <tr>
                                         <td class="text-muted">Employee Type</td>
-                                        <td><span class="badge text-bg-secondary">REGULAR</span></td>
+                                        <td><span class="badge text-bg-secondary">{{ $bill->employee_type_label ?? 'REGULAR' }}</span></td>
                                     </tr>
                                 </tbody>
                             </table>

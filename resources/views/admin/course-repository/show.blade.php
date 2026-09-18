@@ -1,5 +1,49 @@
 @extends('admin.layouts.master')
 
+@php
+    // Upload limits, resolved once and reused by the form hints, the file inputs' accept
+    // filter and the client-side checks, so all three can never drift apart.
+    // PHP drops an oversized POST before Laravel ever runs, so the browser gets an HTML
+    // error page instead of our JSON and the real reason (size) is lost — the client needs
+    // the actual limits to name the problem before sending anything.
+    $iniToBytes = static function ($value) {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return 0;
+        }
+        $unit = strtolower(substr($value, -1));
+        $bytes = (int) $value;
+        if ($unit === 'g') {
+            return $bytes * 1024 * 1024 * 1024;
+        }
+        if ($unit === 'm') {
+            return $bytes * 1024 * 1024;
+        }
+        if ($unit === 'k') {
+            return $bytes * 1024;
+        }
+        return $bytes;
+    };
+    $postMaxBytes = $iniToBytes(ini_get('post_max_size'));
+    // Same limit the controller validates with on submit and update, so the hint, the
+    // client-side check and the server rule always state one number.
+    //
+    // Clamped through the SAME helper CourseRepositoryController::uploadMaxKb() uses, so
+    // the hint, the client-side check and the server `max:` rule cannot state different
+    // numbers. Announcing the configured 25 MB while php.ini only accepts ~19 MB would
+    // promise a size the server then discards silently.
+    $perFileMaxBytes = \App\Rules\SafeUploadedDocument::maxKilobytes(
+        (int) config('course_repository.max_file_kb', 25600)
+    ) * 1024;
+
+    $allowedUploadExtensions = (array) config('course_repository.allowed_extensions', ['pdf']);
+    // Feeds the file picker's own type filter, e.g. ".pdf"
+    $uploadAcceptAttr = '.' . implode(',.', $allowedUploadExtensions);
+    $uploadTypesLabel = strtoupper(implode(', ', $allowedUploadExtensions));
+    $uploadMaxSizeLabel = rtrim(rtrim(number_format($perFileMaxBytes / (1024 * 1024), 1), '0'), '.') . ' MB';
+    $uploadHint = 'Allowed file types: ' . $uploadTypesLabel . '. Maximum size: ' . $uploadMaxSizeLabel . ' per file.';
+@endphp
+
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet"
@@ -656,7 +700,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>
                                 </div>
 
-                                <!-- Row 1: Course Name & Major Subject Name -->
+                                <!-- Row 1: Course Name & Session Date -->
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6 choices-bs-scope cr-course-choices">
                                         <label for="course_name" class="form-label">
@@ -678,6 +722,27 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </small>
                                     </div>
                                     <div class="col-md-6">
+                                        <label for="session_date" class="form-label">
+                                            Session Date <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="date" class="form-select" id="session_date" name="session_date"
+                                            required>
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select a course first, then the session date
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- Shown when the chosen course + date has no timetable session -->
+                                <div id="noSessionInfo" class="alert alert-info d-none py-2 px-3 mb-3" role="status">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    No session found for the selected date. Please choose another date, or fill the
+                                    details manually.
+                                </div>
+
+                                <!-- Row 2: Major Subject Name & Topic Name -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
                                         <label for="subject_name" class="form-label">
                                             Major Subject Name <span class="text-danger">*</span>
                                         </label>
@@ -685,13 +750,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <option value="" selected>Select</option>
                                         </select>
                                         <small class="text-muted d-flex align-items-center mt-1">
-                                            <i class="bi bi-info-circle me-1"></i> Select Major Subject Name
+                                            <i class="bi bi-info-circle me-1"></i> Auto-filled from the selected date
                                         </small>
                                     </div>
-                                </div>
-
-                                <!-- Row 2: Topic Name & Session Date -->
-                                <div class="row g-3 mb-3">
                                     <div class="col-md-6">
                                         <label for="timetable_name" class="form-label">
                                             Topic Name <span class="text-danger">*</span>
@@ -700,17 +761,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <option value="" selected>Select</option>
                                         </select>
                                         <small class="text-muted d-flex align-items-center mt-1">
-                                            <i class="bi bi-info-circle me-1"></i> Select Topic Name
-                                        </small>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="session_date" class="form-label">
-                                            Session Date <span class="text-danger">*</span>
-                                        </label>
-                                        <input type="date" class="form-select" id="session_date" name="session_date"
-                                            placeholder="ABCD12345" required>
-                                        <small class="text-muted d-flex align-items-center mt-1">
-                                            <i class="bi bi-info-circle me-1"></i> Select Session Date
+                                            <i class="bi bi-info-circle me-1"></i> Auto-filled from the selected date
                                         </small>
                                     </div>
                                 </div>
@@ -748,9 +799,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6">
                                         <label for="sector_master" class="form-label">
-                                            Sector <span class="text-danger">*</span>
+                                            Sector
                                         </label>
-                                        <select class="form-select" id="sector_master" name="sector_master" required>
+                                        <select class="form-select" id="sector_master" name="sector_master">
                                             <option value="" selected>Select</option>
                                             @foreach(($sectors ?? []) as $sector)
                                             <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
@@ -759,10 +810,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>
                                     <div class="col-md-6">
                                         <label for="ministry_master" class="form-label">
-                                            Ministry <span class="text-danger">*</span>
+                                            Ministry
                                         </label>
-                                        <select class="form-select" id="ministry_master" name="ministry_master"
-                                            required>
+                                        <select class="form-select" id="ministry_master" name="ministry_master">
                                             <option value="" selected>Select</option>
                                             @foreach(($ministries ?? []) as $ministry)
                                             <option value="{{ $ministry->pk }}"
@@ -785,11 +835,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
                                 <!-- Document Upload -->
                                 <div class="mb-4">
-                                    <label class="form-label">
+                                    <label class="form-label mb-1">
                                         Document Upload <span class="text-danger">*</span>
-                                        <i class="bi bi-info-circle text-muted ms-1"
-                                            title="Max 10MB. jpg, jpeg, png, pdf, doc, docx" aria-hidden="true"></i>
+                                        <i class="bi bi-info-circle text-muted ms-1" title="{{ $uploadHint }}"
+                                            aria-hidden="true"></i>
                                     </label>
+                                    {{-- Stated in the open, not just in the icon's tooltip: uploaders were
+                                         only finding out the limits from an error after picking a file. --}}
+                                    <div class="small text-muted mb-2">{{ $uploadHint }}</div>
 
                                     <div class="table-responsive" id="course_attachments_container">
                                         <table class="table table-sm mb-0 align-middle">
@@ -810,7 +863,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                                     </td>
                                                     <td>
                                                         <input type="file" class="form-control" name="attachments[]"
-                                                            accept="*/*">
+                                                            accept="{{ $uploadAcceptAttr }}"
+                                                            title="{{ $uploadHint }}">
                                                     </td>
                                                     <td class="text-center">
                                                         <button type="button"
@@ -936,7 +990,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6">
                                         <label for="sector_master_other" class="form-label">
-                                            Sector <span class="text-danger">*</span>
+                                            Sector
                                         </label>
                                         <select class="form-select" id="sector_master_other" name="sector_master_other">
                                             <option value="" selected>Select</option>
@@ -947,7 +1001,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>
                                     <div class="col-md-6">
                                         <label for="ministry_master_other" class="form-label">
-                                            Ministry <span class="text-danger">*</span>
+                                            Ministry
                                         </label>
                                         <select class="form-select" id="ministry_master_other"
                                             name="ministry_master_other">
@@ -969,10 +1023,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
 
                                 <div class="mb-4">
-                                    <label class="form-label">
+                                    <label class="form-label mb-1">
                                         Document Upload <span class="text-danger">*</span>
-                                        <i class="bi bi-info-circle text-muted ms-1" aria-hidden="true"></i>
+                                        <i class="bi bi-info-circle text-muted ms-1" title="{{ $uploadHint }}"
+                                            aria-hidden="true"></i>
                                     </label>
+                                    <div class="small text-muted mb-2">{{ $uploadHint }}</div>
 
                                     <div class="table-responsive" id="other_attachments_container">
                                         <table class="table table-sm mb-0 align-middle">
@@ -994,7 +1050,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                                     </td>
                                                     <td>
                                                         <input type="file" class="form-control"
-                                                            name="attachments_other[]" accept="*/*">
+                                                            name="attachments_other[]" accept="{{ $uploadAcceptAttr }}"
+                                                            title="{{ $uploadHint }}">
                                                     </td>
                                                     <td class="text-center">
                                                         <button type="button"
@@ -1031,7 +1088,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6">
                                         <label for="sector_master_institutional" class="form-label">
-                                            Sector <span class="text-danger">*</span>
+                                            Sector
                                         </label>
                                         <select class="form-select" id="sector_master_institutional"
                                             name="sector_master_institutional">
@@ -1042,8 +1099,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </select>
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="ministry_master_institutional" class="form-label">Ministry <span
-                                                class="text-danger">*</span></label>
+                                        <label for="ministry_master_institutional" class="form-label">Ministry</label>
                                         <select class="form-select" id="ministry_master_institutional"
                                             name="ministry_master_institutional">
                                             <option value="" selected>Select</option>
@@ -1057,15 +1113,17 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label d-block">
+                                    <label class="form-label d-block mb-1">
                                         Document Upload <span class="text-danger">*</span>
-                                        <i class="bi bi-info-circle text-muted ms-1" aria-hidden="true"></i>
+                                        <i class="bi bi-info-circle text-muted ms-1" title="{{ $uploadHint }}"
+                                            aria-hidden="true"></i>
                                     </label>
+                                    <div class="small text-muted mb-2">{{ $uploadHint }}</div>
                                     @include('admin.course-repository.partials.cr-design-file', [
                                     'inputId' => 'attachments_institutional',
                                     'inputName' => 'attachments_institutional[]',
                                     'inputClass' => 'file-input-institutional',
-                                    'accept' => '*/*',
+                                    'accept' => $uploadAcceptAttr,
                                     'multiple' => true,
                                     ])
                                     <div class="selected-files-institutional mt-2 text-start small text-muted"
@@ -1279,24 +1337,49 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
     e.preventDefault();
 
     var uploadFormErrorsEl = document.getElementById('uploadFormErrors');
-    var showUploadError = function(msg) {
-        var text = (typeof msg === 'string') ? msg : String(msg);
-        if (uploadFormErrorsEl) {
-            uploadFormErrorsEl.textContent = text;
-            uploadFormErrorsEl.classList.remove('d-none');
-            uploadFormErrorsEl.style.display = 'block';
-            uploadFormErrorsEl.scrollIntoView({
-                behavior: 'smooth',
-                block: 'nearest'
+    // Accepts a single message or an array, and lists every problem as its own bullet.
+    // Previously all errors were flattened into one run-on line, so a long list was
+    // unreadable and anything after the first failing check never got reported at all.
+    var showUploadError = function(msgs) {
+        var list = (Array.isArray(msgs) ? msgs : [msgs])
+            .map(function(m) {
+                return (m === null || m === undefined) ? '' : String(m).trim();
+            })
+            .filter(function(m, i, all) {
+                return m !== '' && all.indexOf(m) === i; // drop blanks + duplicates
             });
-        }
-        try {
-            alert(text);
-        } catch (a) {}
+        if (!list.length) list = ['Upload failed. Please try again.'];
+        if (!uploadFormErrorsEl) return;
+
+        uploadFormErrorsEl.innerHTML = '';
+
+        var heading = document.createElement('div');
+        heading.className = 'fw-semibold mb-1';
+        heading.textContent = list.length > 1 ?
+            ('Please fix the following ' + list.length + ' errors:') :
+            'Please fix the following error:';
+        uploadFormErrorsEl.appendChild(heading);
+
+        var ul = document.createElement('ul');
+        ul.className = 'mb-0 ps-3';
+        list.forEach(function(m) {
+            var li = document.createElement('li');
+            li.textContent = m; // textContent: server text and file names are never rendered as HTML
+            ul.appendChild(li);
+        });
+        uploadFormErrorsEl.appendChild(ul);
+
+        uploadFormErrorsEl.classList.remove('d-none');
+        uploadFormErrorsEl.style.display = 'block';
+        uploadFormErrorsEl.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest'
+        });
     };
     var hideUploadError = function() {
         if (uploadFormErrorsEl) {
             uploadFormErrorsEl.classList.add('d-none');
+            uploadFormErrorsEl.style.display = '';
             uploadFormErrorsEl.innerHTML = '';
         }
     };
@@ -1330,59 +1413,32 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             }
         }
 
+        // Every check below appends to uploadErrors instead of returning early, so one
+        // submit reports the missing fields AND the attachment problems together.
+        var uploadErrors = [];
+        var requiredMissing = function(label) {
+            uploadErrors.push(label + ' is required.');
+        };
+
         if (selectedCategory === 'Course') {
-            var course_name = formData.get('course_name');
-            var subject_name = formData.get('subject_name');
-            var timetable_name = formData.get('timetable_name');
-            var session_date = formData.get('session_date');
-            var author_name = formData.get('author_name');
             var keywordsEl = document.getElementById('keywords_course');
-            var keywords = keywordsEl ? keywordsEl.value.trim() : '';
-            var sector = formData.get('sector_master');
-            var ministry = formData.get('ministry_master');
-            var req = [];
-            if (!course_name) req.push('Course Name');
-            if (!subject_name) req.push('Major Subject Name');
-            if (!timetable_name) req.push('Topic Name');
-            if (!session_date) req.push('Session Date');
-            if (!author_name) req.push('Author Name');
-            if (!keywords) req.push('Keywords');
-            if (!sector) req.push('Sector');
-            if (!ministry) req.push('Ministry');
-            if (req.length > 0) {
-                showUploadError('Please fill required fields: ' + req.join(', '));
-                return;
-            }
+            if (!formData.get('course_name')) requiredMissing('Course Name');
+            if (!formData.get('subject_name')) requiredMissing('Major Subject Name');
+            if (!formData.get('timetable_name')) requiredMissing('Topic Name');
+            if (!formData.get('session_date')) requiredMissing('Session Date');
+            if (!formData.get('author_name')) requiredMissing('Author Name');
+            if (!(keywordsEl ? keywordsEl.value.trim() : '')) requiredMissing('Keywords');
         } else if (selectedCategory === 'Other') {
-            var course_name_other = formData.get('course_name_other');
-            var major_subject_other = formData.get('major_subject_other');
-            var topic_name_other = formData.get('topic_name_other');
-            var session_date_other = formData.get('session_date_other');
-            var author_name_other = formData.get('author_name_other');
             var keywordsOtherEl = document.getElementById('keywords_other');
-            var keywords_other = keywordsOtherEl ? keywordsOtherEl.value.trim() : '';
-            var sector_other = formData.get('sector_master_other');
-            var ministry_other = formData.get('ministry_master_other');
-            var req = [];
-            if (!course_name_other) req.push('Course Name');
-            if (!major_subject_other) req.push('Major Subject Name');
-            if (!topic_name_other) req.push('Topic Name');
-            if (!session_date_other) req.push('Session Date');
-            if (!author_name_other) req.push('Author Name');
-            if (!keywords_other) req.push('Keywords');
-            if (!sector_other) req.push('Sector');
-            if (!ministry_other) req.push('Ministry');
-            if (req.length > 0) {
-                showUploadError('Please fill required fields: ' + req.join(', '));
-                return;
-            }
+            if (!formData.get('course_name_other')) requiredMissing('Course Name');
+            if (!formData.get('major_subject_other')) requiredMissing('Major Subject Name');
+            if (!formData.get('topic_name_other')) requiredMissing('Topic Name');
+            if (!formData.get('session_date_other')) requiredMissing('Session Date');
+            if (!formData.get('author_name_other')) requiredMissing('Author Name');
+            if (!(keywordsOtherEl ? keywordsOtherEl.value.trim() : '')) requiredMissing('Keywords');
         } else if (selectedCategory === 'Institutional') {
             var keywordsInstEl = document.getElementById('Key_words_institutional');
-            var keywordsInst = keywordsInstEl ? keywordsInstEl.value.trim() : '';
-            if (!keywordsInst) {
-                showUploadError('Please fill Keywords.');
-                return;
-            }
+            if (!(keywordsInstEl ? keywordsInstEl.value.trim() : '')) requiredMissing('Keywords');
         }
 
         var attachmentFiles = [];
@@ -1402,36 +1458,78 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             attachmentTitles = [];
         }
 
+        // Mirrors the server rules from config/course_repository.php so a rejected file is
+        // named here instead of coming back as one opaque line after the whole upload — or,
+        // when PHP drops the request outright, not coming back at all.
+        var ALLOWED_EXTENSIONS = @json($allowedUploadExtensions);
+        var MAX_FILE_BYTES = @json($perFileMaxBytes);
+        var MAX_TOTAL_BYTES = @json($postMaxBytes);
+        var asMb = function(bytes) {
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        };
+        var totalUploadBytes = 0;
+        var checkFile = function(file, label) {
+            var name = file.name || 'file';
+            var ext = name.indexOf('.') > -1 ? name.split('.').pop().toLowerCase() : '';
+            totalUploadBytes += (file.size || 0);
+            if (ALLOWED_EXTENSIONS.indexOf(ext) === -1) {
+                uploadErrors.push(label + ' "' + name +
+                    '" is not an allowed file type. Allowed types: {{ $uploadTypesLabel }}.');
+            }
+            if (file.size === 0) {
+                uploadErrors.push(label + ' "' + name + '" is empty (0 KB). Please select a valid file.');
+            } else if (file.size > MAX_FILE_BYTES) {
+                uploadErrors.push(label + ' "' + name + '" is ' + asMb(file.size) +
+                    '. Maximum allowed size per file is ' + asMb(MAX_FILE_BYTES) + '.');
+            }
+        };
+
         var validAttachmentCount = 0;
-        var validationErrors = [];
+        var errorsBeforeAttachments = uploadErrors.length;
         if (selectedCategory === 'Institutional') {
             attachmentFiles.forEach(function(fileInput) {
-                if (fileInput.files && fileInput.files.length > 0) validAttachmentCount += fileInput
-                    .files.length;
+                if (!fileInput.files) return;
+                for (var i = 0; i < fileInput.files.length; i++) {
+                    checkFile(fileInput.files[i], 'File ' + (validAttachmentCount + 1));
+                    validAttachmentCount++;
+                }
             });
             if (validAttachmentCount === 0) {
-                showUploadError('Please select at least one file to upload.');
-                return;
+                uploadErrors.push('Please select at least one file to upload.');
             }
         } else {
             attachmentFiles.forEach(function(fileInput, index) {
+                var rowLabel = 'Attachment row ' + (index + 1);
                 var hasFile = fileInput.files && fileInput.files.length > 0;
                 var titleEl = attachmentTitles[index];
                 var hasTitle = titleEl && titleEl.value && titleEl.value.trim() !== '';
-                if (hasFile && !hasTitle) validationErrors.push('Row ' + (index + 1) +
-                    ': File selected but title is missing');
-                else if (hasTitle && !hasFile) validationErrors.push('Row ' + (index + 1) +
-                    ': Title provided but no file selected');
-                else if (hasFile && hasTitle) validAttachmentCount++;
+                if (hasFile && !hasTitle) {
+                    uploadErrors.push(rowLabel + ': a file is selected but its title is missing.');
+                } else if (hasTitle && !hasFile) {
+                    uploadErrors.push(rowLabel + ': a title is entered but no file is selected.');
+                } else if (hasFile && hasTitle) {
+                    validAttachmentCount++;
+                }
+                if (hasFile) checkFile(fileInput.files[0], rowLabel);
             });
-            if (validationErrors.length > 0) {
-                showUploadError(validationErrors.join(' | '));
-                return;
+            // Only ask for an attachment when nothing was attempted — otherwise the row
+            // errors above already say what is wrong with the rows that were filled in.
+            if (validAttachmentCount === 0 && uploadErrors.length === errorsBeforeAttachments) {
+                uploadErrors.push('Please add at least one attachment with both a title and a file.');
             }
-            if (validAttachmentCount === 0) {
-                showUploadError('Please add at least one attachment with both title and file.');
-                return;
-            }
+        }
+
+        // Each file can be within the per-file limit while the batch still exceeds what PHP
+        // accepts in one POST. That request never reaches Laravel, so it has to be caught here.
+        if (MAX_TOTAL_BYTES > 0 && totalUploadBytes > MAX_TOTAL_BYTES) {
+            uploadErrors.push('The selected files total ' + asMb(totalUploadBytes) +
+                ', which is more than the ' + asMb(MAX_TOTAL_BYTES) +
+                ' the server accepts in one upload. Please upload fewer files at a time.');
+        }
+
+        if (uploadErrors.length > 0) {
+            showUploadError(uploadErrors);
+            return;
         }
 
         if (submitBtn) {
@@ -1526,10 +1624,23 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
                         data: data
                     };
                 }).catch(function() {
+                    // Non-JSON body. 413 is the server refusing the size outright; 419 is
+                    // what an over-size POST looks like from Laravel's side, because PHP
+                    // discarded the fields (CSRF token included) before it ran.
+                    var msg;
+                    if (response.status === 413) {
+                        msg = 'The upload is too large for the server to accept. Please upload smaller files.';
+                    } else if (response.status === 419) {
+                        msg = 'The upload was rejected — the files may be too large for the server, or your session expired. Try fewer/smaller files, or reload the page and sign in again.';
+                    } else {
+                        msg = 'Server returned an invalid response (HTTP ' + response.status +
+                            '). Please try again.';
+                    }
                     return {
                         ok: false,
+                        status: response.status,
                         data: {
-                            error: 'Server returned an invalid response. Please try again.'
+                            error: msg
                         }
                     };
                 });
@@ -1551,16 +1662,22 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
                 if (uploadModal) try {
                     uploadModal.show();
                 } catch (s) {}
-                var errMsg = (result.data && result.data.error) || 'Upload failed';
+                // Every validation message the server returned, one bullet each — a field
+                // that failed two rules used to be flattened into a single line.
+                var serverErrors = [];
                 if (result.data && result.data.errors && typeof result.data.errors === 'object') {
-                    var parts = [];
                     Object.keys(result.data.errors).forEach(function(field) {
                         var val = result.data.errors[field];
-                        parts.push(Array.isArray(val) ? val.join(' ') : val);
+                        (Array.isArray(val) ? val : [val]).forEach(function(m) {
+                            serverErrors.push(m);
+                        });
                     });
-                    if (parts.length) errMsg = parts.join(' | ');
                 }
-                showUploadError(errMsg);
+                if (!serverErrors.length) {
+                    serverErrors.push((result.data && result.data.error) ||
+                        'Upload failed. Please try again.');
+                }
+                showUploadError(serverErrors);
             })
             .catch(function(error) {
                 if (submitBtn) {
@@ -1570,7 +1687,7 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
                 if (uploadModal) try {
                     uploadModal.show();
                 } catch (s) {}
-                showUploadError('Network error. Please try again.');
+                showUploadError('Network error: could not reach the server. Please check your connection and try again.');
             });
     } catch (err) {
         if (submitBtn) {
@@ -1753,27 +1870,33 @@ window.crDocEdit = (function() {
         return selectWhenReady(selectId, value, label, timeoutMs);
     }
 
-    // Pre-fill the Course-category section (cascading dropdowns).
+    // Pre-fill the Course-category section. Order mirrors the new cascade:
+    // course -> session date -> subject -> topic -> author, each level waiting for
+    // the async-loaded option from the level above before selecting the saved value.
     function prefillCourse(d) {
         var courseSel = setSelectValue('course_name', d.course_master_pk, d.course_name);
         syncCourseChoiceForEdit(d.course_master_pk, d.course_name); // keep Choices UI in sync
         // Same reasoning as selectFast: when the saved course doesn't match a local
-        // record, loading subjects for it is pointless AND dangerous — that fetch
+        // record, loading sessions for it is pointless AND dangerous — that fetch
         // resolves during the wait(450) below and would wipe the subject/topic values
-        // we're about to fast-fill from saved data.
-        if (d.course_resolved !== false) fireChange(courseSel); // -> loads subjects
+        // we fast-fill from saved data. So skip firing the date change in that case
+        // and let selectFast inject the subject/topic options directly.
+        if (d.course_resolved !== false) fireChange(courseSel); // resets dependent fields
+        // Session Date is a native date input: set it, then (when the course
+        // resolved) fire change to fetch the matching sessions.
+        setVal('session_date', d.session_date);
+        if (d.course_resolved !== false && d.session_date) fireChange($id('session_date')); // -> loads sessions
         return Promise.resolve()
             .then(function() {
                 return selectFast('subject_name', d.subject_pk, d.subject_name, d.subject_resolved);
-            }) // -> loads topics
+            }) // -> loads/narrows topics
             .then(function() {
                 return selectFast('timetable_name', d.topic_pk, d.topic_name, d.topic_resolved);
-            }) // -> loads session/author
+            }) // -> fills author from the selected row
             .then(function() {
                 return wait(450);
-            }) // let session/author auto-fill settle, then override with saved values
+            }) // let the subject/topic/author auto-fill settle, then override with saved values
             .then(function() {
-                setVal('session_date', d.session_date);
                 setSelectValue('author_name', d.author_name, d.author_label);
                 var sectorSel = setSelectValue('sector_master', d.sector_master_pk, d.sector_name);
                 fireChange(sectorSel); // -> loads ministries
@@ -1783,7 +1906,7 @@ window.crDocEdit = (function() {
                 // keywords + video LAST — cascade change handlers overwrite keywords
                 setVal('keywords_course', d.keyword);
                 setVal('video_link_course', d.videolink);
-                setVal('session_date', d.session_date);
+                setVal('session_date', d.session_date); // reaffirm in case a reset cleared it
             });
     }
 
@@ -1973,7 +2096,7 @@ window.crDocEdit = (function() {
 
         helpers = helpers || {};
         var showError = helpers.showError || function(m) {
-            alert(m);
+            alert(Array.isArray(m) ? m.join('\n') : m);
         };
         var category = (document.querySelector('input[name="category"]:checked') || {}).value || 'Course';
 
@@ -2022,7 +2145,29 @@ window.crDocEdit = (function() {
         fd.append('file_title', fileTitle || '');
 
         if (fileInput && fileInput.files && fileInput.files.length > 0) {
-            fd.append('document_file', fileInput.files[0]);
+            // Same type/size rules as a new upload — check before sending, so an oversized
+            // replacement is named here instead of dying as an HTTP error page.
+            var replacement = fileInput.files[0];
+            var allowed = @json($allowedUploadExtensions);
+            var maxBytes = @json($perFileMaxBytes);
+            var rName = replacement.name || 'file';
+            var rExt = rName.indexOf('.') > -1 ? rName.split('.').pop().toLowerCase() : '';
+            var fileErrors = [];
+            if (allowed.indexOf(rExt) === -1) {
+                fileErrors.push('"' + rName +
+                    '" is not an allowed file type. Allowed types: {{ $uploadTypesLabel }}.');
+            }
+            if (replacement.size === 0) {
+                fileErrors.push('"' + rName + '" is empty (0 KB). Please select a valid file.');
+            } else if (replacement.size > maxBytes) {
+                fileErrors.push('"' + rName + '" is ' + (replacement.size / (1024 * 1024)).toFixed(1) +
+                    ' MB. Maximum allowed size per file is ' + (maxBytes / (1024 * 1024)).toFixed(1) + ' MB.');
+            }
+            if (fileErrors.length) {
+                showError(fileErrors);
+                return true; // handled — do not fall through to the upload flow
+            }
+            fd.append('document_file', replacement);
         }
 
         var csrfEl = document.querySelector('[name="_token"]') || document.querySelector('meta[name="csrf-token"]');
@@ -2055,6 +2200,23 @@ window.crDocEdit = (function() {
                         ok: r.ok,
                         data: data
                     };
+                }).catch(function() {
+                    // Non-JSON body: an oversized POST is discarded by PHP before Laravel
+                    // runs, so it comes back as an error page rather than a validation error.
+                    var msg;
+                    if (r.status === 413) {
+                        msg = 'The document is too large for the server to accept. Please upload a smaller file.';
+                    } else if (r.status === 419) {
+                        msg = 'The update was rejected — the document may be too large for the server, or your session expired. Try a smaller file, or reload the page and sign in again.';
+                    } else {
+                        msg = 'Server returned an invalid response (HTTP ' + r.status + '). Please try again.';
+                    }
+                    return {
+                        ok: false,
+                        data: {
+                            error: msg
+                        }
+                    };
                 });
             })
             .then(function(result) {
@@ -2080,20 +2242,25 @@ window.crDocEdit = (function() {
                     return;
                 }
                 restoreBtn();
-                var errMsg = (result.data && result.data.error) || 'Update failed';
+                // showError renders an array as one bullet per message.
+                var serverErrors = [];
                 if (result.data && result.data.errors && typeof result.data.errors === 'object') {
-                    var parts = [];
                     Object.keys(result.data.errors).forEach(function(field) {
                         var val = result.data.errors[field];
-                        parts.push(Array.isArray(val) ? val.join(' ') : val);
+                        (Array.isArray(val) ? val : [val]).forEach(function(m) {
+                            serverErrors.push(m);
+                        });
                     });
-                    if (parts.length) errMsg = parts.join(' | ');
                 }
-                showError(errMsg);
+                if (!serverErrors.length) {
+                    serverErrors.push((result.data && result.data.error) ||
+                        'Update failed. Please try again.');
+                }
+                showError(serverErrors);
             })
             .catch(function() {
                 restoreBtn();
-                showError('Network error. Please try again.');
+                showError('Network error: could not reach the server. Please check your connection and try again.');
             });
 
         return true; // handled
@@ -2565,168 +2732,209 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ===== CASCADING DROPDOWNS AJAX =====
+    // New flow: Course -> Session Date -> (Major Subject / Topic / Author).
+    // Picking a course loads that course's available session dates. Picking a
+    // date fetches every timetable row for that course + date; then for each of
+    // Major Subject / Topic / Author, a single distinct match is auto-filled and
+    // multiple matches become a dropdown to choose from. Selecting an upper
+    // field (subject, then topic) narrows the ones below it.
+    let courseSessionRows = [];
+
+    // Rebuild the Author <select> from a list of {value, label}; optionally
+    // auto-select it when the list holds exactly one entry. Author options come
+    // only from the selected session's faculty — there is no "all faculty"
+    // fallback, so a date with no session data leaves Author empty.
+    function fillAuthorSelect(list, selectWhenSingle) {
+        const authorSelect = document.getElementById('author_name');
+        if (!authorSelect) return;
+        authorSelect.innerHTML = '<option value="">Select</option>';
+        (list || []).forEach(function (a) {
+            const opt = document.createElement('option');
+            opt.value = a.value;
+            opt.textContent = a.label || a.value;
+            authorSelect.appendChild(opt);
+        });
+        if (selectWhenSingle && list && list.length === 1) {
+            authorSelect.value = String(list[0].value);
+        }
+    }
 
     // Helper functions to reset dropdowns
     function resetSubjectDropdown() {
         const subjectSelect = document.getElementById('subject_name');
-        subjectSelect.innerHTML = '<option value="">Select</option>';
+        if (subjectSelect) subjectSelect.innerHTML = '<option value="">Select</option>';
     }
 
     function resetTopicDropdown() {
         const topicSelect = document.getElementById('timetable_name');
-        topicSelect.innerHTML = '<option value="">Select</option>';
+        if (topicSelect) topicSelect.innerHTML = '<option value="">Select</option>';
     }
 
+    // Session Date is a native date input; the user picks any date and the rows
+    // for that course + date are then fetched.
     function resetSessionDateInput() {
         const sessionDate = document.getElementById('session_date');
-        if (sessionDate) {
-            sessionDate.value = '';
+        if (sessionDate) sessionDate.value = '';
+    }
+
+    // Reset Author to an empty "Select" — it only carries the current session's
+    // faculty, so with no session selected there is nothing to pick.
+    function resetAuthorDropdown() {
+        const authorSelect = document.getElementById('author_name');
+        if (authorSelect) authorSelect.innerHTML = '<option value="">Select</option>';
+    }
+
+    // Populate Major Subject from the fetched session rows: fill when there is a
+    // single distinct subject, offer a dropdown when there are several. When
+    // single, it auto-advances to topics (and topics may in turn auto-fill).
+    function applySubjectsFromRows(rows) {
+        const subjectSelect = document.getElementById('subject_name');
+        resetSubjectDropdown();
+        resetTopicDropdown();
+        resetAuthorDropdown();
+        if (!subjectSelect || !Array.isArray(rows) || rows.length === 0) return;
+
+        const seen = {};
+        const subjects = [];
+        rows.forEach(function(r) {
+            const key = String(r.subject_master_pk);
+            if (r.subject_master_pk && !seen[key]) {
+                seen[key] = true;
+                subjects.push({ pk: r.subject_master_pk, name: r.subject_name || '' });
+            }
+        });
+
+        subjects.forEach(function(s) {
+            const opt = document.createElement('option');
+            opt.value = s.pk;
+            opt.textContent = s.name;
+            subjectSelect.appendChild(opt);
+        });
+
+        if (subjects.length === 1) {
+            subjectSelect.value = String(subjects[0].pk);
+            applyTopicsFromRows(subjects[0].pk);
         }
     }
 
-    function resetAuthorDropdown() {
-        const authorSelect = document.getElementById('author_name');
-        authorSelect.value = '';
+    // Populate Topic for the chosen subject: fill when a single row matches,
+    // dropdown when several. When single, it auto-fills the Author.
+    function applyTopicsFromRows(subjectPk) {
+        const topicSelect = document.getElementById('timetable_name');
+        resetTopicDropdown();
+        resetAuthorDropdown();
+        if (!topicSelect || subjectPk === undefined || subjectPk === null || subjectPk === '') return;
+
+        const rows = courseSessionRows.filter(function(r) {
+            return String(r.subject_master_pk) === String(subjectPk);
+        });
+
+        rows.forEach(function(r) {
+            const opt = document.createElement('option');
+            opt.value = r.pk;
+            opt.textContent = r.subject_topic || '';
+            topicSelect.appendChild(opt);
+        });
+
+        if (rows.length === 1) {
+            topicSelect.value = String(rows[0].pk);
+            applyAuthorFromRow(rows[0]);
+        }
     }
 
-    // Course change - load subjects via AJAX
+    // Author comes from the chosen row's faculty. A row can list several
+    // co-faculty (faculty_master is a JSON array server-side, returned here as
+    // authors: [{pk, name}]). One faculty -> auto-fill; several -> a dropdown of
+    // just those; none -> leave Author empty (no session faculty to offer).
+    function applyAuthorFromRow(row) {
+        const authors = (row && Array.isArray(row.authors)) ? row.authors : [];
+        if (authors.length > 0) {
+            fillAuthorSelect(authors.map(function (a) {
+                return { value: a.pk, label: a.name };
+            }), true);
+        } else {
+            resetAuthorDropdown();
+        }
+    }
+
+    // Toggle the "no session for this date" info message.
+    function showNoSessionInfo(show) {
+        const el = document.getElementById('noSessionInfo');
+        if (el) el.classList.toggle('d-none', !show);
+    }
+
+    // Course change - reset the date + dependent fields (user picks a date next)
     if (courseSelect) {
         courseSelect.addEventListener('change', function() {
-            const coursePk = this.value;
-            const subjectSelect = document.getElementById('subject_name');
-
-            resetTopicDropdown();
             resetSessionDateInput();
+            resetSubjectDropdown();
+            resetTopicDropdown();
             resetAuthorDropdown();
+            courseSessionRows = [];
+            showNoSessionInfo(false);
             updateKeywords(); // Update keywords when course changes
+        });
+    }
 
-            if (!coursePk) {
-                resetSubjectDropdown();
-                return;
-            }
+    // Session Date change - fetch matching timetable rows for course + date
+    const sessionDateField = document.getElementById('session_date');
+    if (sessionDateField) {
+        sessionDateField.addEventListener('change', function() {
+            const sessionDate = this.value;
+            const coursePk = document.getElementById('course_name').value;
 
-            // Fetch subjects for selected course
-            fetch(`/course-repository/subjects/${coursePk}`)
+            resetSubjectDropdown();
+            resetTopicDropdown();
+            resetAuthorDropdown();
+            courseSessionRows = [];
+            showNoSessionInfo(false);
+            updateKeywords(); // Update keywords when session date changes
+
+            if (!coursePk || !sessionDate) return;
+
+            fetch(`/course-repository/sessions-by-course-date?course_pk=${coursePk}&session_date=${encodeURIComponent(sessionDate)}`)
                 .then(response => response.json())
                 .then(data => {
-                    subjectSelect.innerHTML = '<option value="">Select</option>';
-                    // Handle response - data.data because API returns {success: true, data: [...]}
-                    const subjects = data.data || data || [];
-                    if (Array.isArray(subjects) && subjects.length > 0) {
-                        subjects.forEach(subject => {
-                            const option = document.createElement('option');
-                            option.value = subject.pk;
-                            option.textContent = subject.subject_name;
-                            subjectSelect.appendChild(option);
-                        });
-                    }
+                    courseSessionRows = data.data || data || [];
+                    applySubjectsFromRows(courseSessionRows);
+                    // No timetable session on this date -> tell the user.
+                    showNoSessionInfo(courseSessionRows.length === 0);
+                    updateKeywords();
                 })
                 .catch(error => {
-                    console.error('Error fetching subjects:', error);
-                    resetSubjectDropdown();
+                    console.error('Error fetching sessions:', error);
+                    courseSessionRows = [];
+                    showNoSessionInfo(false);
                 });
         });
     }
 
-    // Subject change - load topics via AJAX
+    // Subject change - narrow topics (only actionable when a date matched several subjects)
     const subjectSelect = document.getElementById('subject_name');
     if (subjectSelect) {
         subjectSelect.addEventListener('change', function() {
             const subjectPk = this.value;
-            const coursePk = document.getElementById('course_name').value;
-            const topicSelect = document.getElementById('timetable_name');
-
-            resetSessionDateInput();
+            resetTopicDropdown();
             resetAuthorDropdown();
             updateKeywords(); // Update keywords when subject changes
-
-            if (!subjectPk) {
-                resetTopicDropdown();
-                return;
-            }
-
-            // Fetch topics for selected subject with course parameter
-            fetch(`/course-repository/topics/${subjectPk}?course_master_pk=${coursePk}`)
-                .then(response => response.json())
-                .then(data => {
-                    topicSelect.innerHTML = '<option value="">Select</option>';
-                    // Handle response - data.data because API returns {success: true, data: [...]}
-                    const topics = data.data || data || [];
-                    if (Array.isArray(topics) && topics.length > 0) {
-                        topics.forEach(topic => {
-                            const option = document.createElement('option');
-                            option.value = topic.pk;
-                            option.textContent = topic.subject_topic || topic
-                                .course_repo_topic || topic.course_repo_sub_topic;
-                            topicSelect.appendChild(option);
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching topics:', error);
-                    resetTopicDropdown();
-                });
+            if (!subjectPk) return;
+            applyTopicsFromRows(subjectPk);
         });
     }
 
-    // Topic change - load session dates and faculty via AJAX
+    // Topic change - fill author from the selected row
     const topicSelect = document.getElementById('timetable_name');
     if (topicSelect) {
         topicSelect.addEventListener('change', function() {
             const topicPk = this.value;
-            const sessionDateInput = document.getElementById('session_date');
-            const authorSelect = document.getElementById('author_name');
-
+            resetAuthorDropdown();
             updateKeywords(); // Update keywords when topic changes
-
-            if (!topicPk) {
-                resetSessionDateInput();
-                resetAuthorDropdown();
-                return;
-            }
-
-            // Fetch session dates for selected topic
-            fetch(`/course-repository/session-dates?topic_pk=${topicPk}`)
-                .then(response => response.json())
-                .then(data => {
-                    const dates = data.data || data || [];
-                    if (Array.isArray(dates) && dates.length > 0) {
-                        // Set first session date automatically
-                        if (sessionDateInput && dates[0].session_date) {
-                            sessionDateInput.value = dates[0].session_date;
-                        }
-                    }
-                })
-                .catch(error => console.error('Error fetching session dates:', error));
-
-            // Fetch authors/faculty for selected topic
-            fetch(`/course-repository/authors-by-topic?topic_pk=${topicPk}`)
-                .then(response => response.json())
-                .then(data => {
-                    authorSelect.innerHTML = '<option value="">Select</option>';
-                    const authors = data.data || data || [];
-                    if (Array.isArray(authors) && authors.length > 0) {
-                        authors.forEach(author => {
-                            const option = document.createElement('option');
-                            option.value = author.pk;
-                            option.textContent = author.full_name || author.author_name;
-                            authorSelect.appendChild(option);
-                        });
-                        // Auto-select first author if only one exists
-                        if (authors.length === 1) {
-                            authorSelect.value = authors[0].pk;
-                        }
-                    }
-                })
-                .catch(error => console.error('Error fetching authors:', error));
-        });
-    }
-
-    // Session Date change - update keywords
-    const sessionDateInput = document.getElementById('session_date');
-    if (sessionDateInput) {
-        sessionDateInput.addEventListener('change', function() {
-            updateKeywords(); // Update keywords when session date changes
+            if (!topicPk) return;
+            const row = courseSessionRows.filter(function(r) {
+                return String(r.pk) === String(topicPk);
+            })[0];
+            applyAuthorFromRow(row);
+            updateKeywords();
         });
     }
 
@@ -3415,7 +3623,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     timetableSelect.innerHTML = '<option value="">-- Select Topic --</option>';
                 }
                 if (sessionSelect) {
-                    sessionSelect.innerHTML = '<option value="">-- Select Session Date --</option>';
+                    sessionSelect.value = ''; // native date input
                 }
                 updateKeywords();
             } else {
@@ -3487,6 +3695,7 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadModalElement.addEventListener('show.bs.modal', function(ev) {
             if (ev.relatedTarget && window.crDocEdit) {
                 window.crDocEdit.reset();
+                showNoSessionInfo(false); // clear any stale "no session" notice on fresh open
                 const f = document.getElementById('uploadForm');
                 if (f) {
                     try {
@@ -3706,7 +3915,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <input type="text" class="form-control" name="${titleFieldName}" placeholder="Document title">
                 </td>
                 <td>
-                    <input type="file" class="form-control" name="${filesFieldName}" accept="*/*">
+                    <input type="file" class="form-control" name="${filesFieldName}" accept="{{ $uploadAcceptAttr }}" title="{{ $uploadHint }}">
                 </td>
                 <td class="text-center">
                     <button type="button" class="btn btn-sm btn-outline-danger remove-row">
@@ -3878,7 +4087,7 @@ document.addEventListener('click', function(e) {
             </td>
             <td>
                 <input type="file" class="form-control"
-                    name="attachments[]" accept="*/*">
+                    name="attachments[]" accept="{{ $uploadAcceptAttr }}" title="{{ $uploadHint }}">
             </td>
             <td class="text-center">
                 <button type="button" class="btn cr-btn-remove-row delete-attachment" aria-label="Remove row">
@@ -3918,7 +4127,7 @@ document.addEventListener('click', function(e) {
             </td>
             <td>
                 <input type="file" class="form-control"
-                    name="attachments_other[]" accept="*/*">
+                    name="attachments_other[]" accept="{{ $uploadAcceptAttr }}" title="{{ $uploadHint }}">
             </td>
             <td class="text-center">
                 <button type="button" class="btn cr-btn-remove-row delete-attachment" aria-label="Remove row">

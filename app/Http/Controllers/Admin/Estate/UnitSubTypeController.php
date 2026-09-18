@@ -3,14 +3,18 @@
 namespace App\Http\Controllers\Admin\Estate;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Admin\Estate\Concerns\AuthorizesEstateMaster;
 use App\Models\UnitSubType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class UnitSubTypeController extends Controller
 {
+    use AuthorizesEstateMaster;
+
     public function index()
     {
+        // Naya record hamesha sabse upar — isliye pk desc, naam se nahi.
         $items = UnitSubType::orderBy('pk', 'desc')->get();
         return view('admin.estate.define_unit_sub_type.index', compact('items'));
     }
@@ -58,7 +62,19 @@ class UnitSubTypeController extends Controller
 
     public function destroy(Request $request, string $id)
     {
-        UnitSubType::findOrFail($id)->delete();
+        $item = UnitSubType::findOrFail($id);
+
+        try {
+            $item->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Unit sub type abhi bhi houses / possessions se referenced hai (FK constraint).
+            $message = 'This Unit Sub Type is used by other estate records and cannot be deleted.';
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'message' => $message], 409);
+            }
+            return redirect()->route('admin.estate.define-unit-sub-type.index')->with('error', $message);
+        }
+
         if ($request->ajax()) {
             return response()->json(['success' => true, 'message' => 'Unit sub type deleted successfully.']);
         }

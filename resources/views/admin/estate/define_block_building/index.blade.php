@@ -35,7 +35,16 @@
                             <td class="ps-3">{{ $index + 1 }}</td>
                             <td class="fw-medium">{{ $row->block_name }}</td>
                             <td class="pe-3 text-end">
-                                <a href="{{ route('admin.estate.define-block-building.edit', $row->pk) }}" class="text-primary" title="Edit"><i class="material-icons material-symbols-rounded">edit</i></a>
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <a href="{{ route('admin.estate.define-block-building.edit', $row->pk) }}" class="text-primary" title="Edit"><i class="material-icons material-symbols-rounded">edit</i></a>
+                                    <form action="{{ route('admin.estate.define-block-building.destroy', $row->pk) }}" method="POST" onsubmit="return confirm('Delete this Building/Block?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-link p-0 text-danger" title="Delete">
+                                            <i class="material-icons material-symbols-rounded">delete</i>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         @empty
@@ -53,7 +62,9 @@
 <script>
 $(document).ready(function() {
     $('#blockBuildingTable').DataTable({
-        order: [[1, 'asc']],
+        // Khaali rakho: controller pehle hi pk desc bhejta hai (naya record sabse upar).
+        // Yahan koi order dene par DataTables use client-side dobara sort kar dega.
+        order: [],
         pageLength: 10,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
         columnDefs: [
@@ -73,12 +84,10 @@ $(document).ready(function() {
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
     });
     // Move "Add New" button next to the search box (same as estate define-campus / define-unit-type)
-    var $wrapper = $('#blockBuildingTable').closest('.dataTables_wrapper');
-    var $filter = $wrapper.find('.dataTables_filter');
-    var $addBtn = $('.block-building-add-btn').detach().addClass('ms-2');
-    if ($filter.length && $addBtn.length) {
-        $filter.append($addBtn);
-        $filter.addClass('d-flex align-items-center justify-content-end gap-2');
+    // Move "Add New" next to the search box. appendToSearchRow() finds the search row wherever the
+    // global UI script has put it; if it can't, the button simply stays in the header above.
+    if (window.SargamDataTableUI) {
+        window.SargamDataTableUI.appendToSearchRow('blockBuildingTable', $('.block-building-add-btn').addClass('ms-2'));
     }
 });
 </script>

@@ -7,6 +7,14 @@ built on the Attendance page.
 **Canonical reference:** `resources/views/admin/attendance/index.blade.php`.
 It is not the `employee_idcard` layout and not the old DataTables default chrome.
 
+**Second reference —** the Centcom module
+(`issue_management/{categories,sub_categories,priorities}/index.blade.php` plus
+the `centcom.blade.php` issue queue, one shared stylesheet) for everything
+Attendance doesn't show: the status badge +
+row-action stack (§3b), the matching Add/Edit modals (§3c), the Laravel-paginated
+footer with its own sort/search/per-page wiring (§4B), and the Download + Print
+export pair (§1).
+
 This doc covers page *chrome*. The `--ds-*` token and `.ds-*` component layer is
 documented separately in [design.md](design.md); column visibility has its own
 doc, [column-visibility.md](column-visibility.md).
@@ -20,7 +28,17 @@ doc, [column-visibility.md](column-visibility.md).
 | `programme-dt-*` chrome | `public/css/custom.css:104-640` | `admin/layouts/pre_header.blade.php:19` |
 | `--ds-*` tokens + `.ds-*` components | `public/css/sargam-app.css` | `pre_header.blade.php:39` — **must stay last** |
 | Global DataTables behaviour | `public/js/datatable-global-ui.js` | `admin/layouts/footer.blade.php:72` |
-| Page-specific | `public/css/<module>-admin.css` or an inline `<style>` | `@push('styles')` / `@section('css')` |
+| Module-shared (`ic-*`, …) | `public/css/<module>-admin.css` | `@push('styles')` on each page in the module |
+| Page-specific | an inline `<style>` | `@push('styles')` / `@section('css')` |
+
+**Second page in a module → move the CSS to a file.** An inline `<style>` is fine
+for the first screen. The moment a sibling needs the same look, extract it —
+copy-pasting the block is how two pages that are supposed to be identical start
+to drift. `public/css/issue-management-admin.css` is the worked example: the
+`ic-*` layer for Manage Categories, Sub-Categories **and** Priorities, scoped
+`.ic-page` (page root) / `.ic-modal` (modal root) so it can beat Bootstrap
+without `!important` and still can't leak. All three pages then carry only the
+link tag — the third one cost no CSS at all. See §7 for the naming rule.
 
 Page CSS is cache-busted with:
 
@@ -43,7 +61,7 @@ container-fluid <module>-page
 └── card > card-body
     ├── toolbar   (filters left · columns + search right)
     ├── programme-dt-panel
-    │   └── table-responsive > table.programme-dt-table
+    │   └── table-responsive > table.programme-dt-table   ← Status column + row actions §3b
     └── programme-dt-footer            (pagination left · "Showing N of M items" right)
 ```
 
@@ -80,6 +98,53 @@ The status pills and Download button sit **above the card**, not inside it.
 
 If the page exports more than one format, make Download a dropdown instead
 (`memo_discipline/index.blade.php:202-210` has the Excel + PDF version).
+
+### Scope tabs instead of status pills
+
+Where the "pills" select a **scope** rather than a status, they are links, not
+JS filters — each is a different route/query, so the active one is a server-side
+class (`centcom.blade.php`, `.ic-tabs` / `.ic-tab.is-active`):
+
+```blade
+<nav class="ic-tabs" aria-label="Issue scope">
+    <a href="{{ route('…index') }}" class="ic-tab">All Requests</a>
+    <a href="{{ route('…index', ['raised_by' => 'self']) }}" class="ic-tab">Raised By You</a>
+    <a href="{{ route('…centcom') }}" class="ic-tab is-active" aria-current="page">Assign to you</a>
+</nav>
+```
+
+### No status pills? Right-align the export row
+
+A grid with nothing to filter by status still keeps the row — just drop the `<ul>`
+and let the buttons sit alone on the right. Reuse `.programme-dt-btn-columns` for
+them so they match the toolbar below
+(`issue_management/categories/index.blade.php:36-45`):
+
+```blade
+<div class="d-flex flex-wrap justify-content-end gap-2 mb-3 ic-secondary-actions">
+    <a href="{{ route('…export', ['format' => 'csv']) }}"
+       class="btn programme-dt-btn-columns border-0 text-primary" title="Download as CSV">
+        <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+    </a>
+    <a href="{{ route('…export', ['format' => 'print']) }}" target="_blank" rel="noopener"
+       class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
+        <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
+    </a>
+</div>
+```
+
+**Print is a server-rendered view, not `window.print()`.** One controller action
+serves both formats off the same query so the CSV and the printout can't drift
+apart (`IssueCategoryController@export`, `categories/export_print.blade.php` — a
+`<body onload="window.print()">` page branded like the module's `export_pdf`).
+Carry the grid's own `q` / `sort` / `dir` into the export links so the user gets
+what they are looking at, not the unfiltered table.
+
+**Never drop an export the page already had.** All Requests already shipped Excel
+and PDF, so its Download became a dropdown (CSV · Excel · PDF) rather than a
+single button — same chrome, no lost feature. And keep the export's first column
+identical to the grid's: an "ID No." that is the ticket `pk` on screen must not
+become a running 1..n in the CSV, or the two can't be reconciled.
 
 ---
 
@@ -149,6 +214,12 @@ wrapping to a second row.
   server-side and not a DataTables filter (`#discSearchToggle` +
   `.disc-search-wrap`, `memo_discipline/index.blade.php:280-289`).
 
+  The revealed input can just be a **GET `<form>`** whose submit reloads the page
+  — no JS beyond the reveal. Keep the other grid state (`per_page`, `sort`, `dir`)
+  as `<input type="hidden">` inside it or the search will reset them
+  (`#icSearchToggle` + `#icSearchWrap`, `categories/index.blade.php:60-74`).
+  Start it un-hidden when a search is active: `class="… {{ filled($search) ? '' : 'd-none' }}"`.
+
 ### Reset Filters is a `<button>`, not a link
 
 `attendance:351` and `programme/index.blade.php:55` both use
@@ -177,12 +248,344 @@ Yajra pages pass the same class list server-side:
 {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
 ```
 
-`.programme-dt-table` (custom.css:359) gives `#f2f4f7` headers, 16px cell
+`.programme-dt-table` (custom.css:368) gives `#f2f4f7` headers, 16px cell
 padding, a 3%-primary hover row, a muted first column (S. No.) and a wrapping,
 420px-max second column.
 
+> ⚠️ **Only column 2 wraps** (`custom.css:416`). A long-text column anywhere else
+> — a Description in column 3, say — renders as one unbroken line and blows the
+> table out sideways. Give it a wrap class of your own
+> (`.ic-col-wrap { white-space: normal; max-width: 420px }`) rather than widening
+> the global rule.
+
 > **Never hand-roll `dom`/`colVis` options on a Yajra table** — it breaks the
 > init. Use the global UI script plus the column-visibility modal.
+
+---
+
+## 3b. Status column + row actions
+
+Reference: `issue_management/categories/index.blade.php` (blade rows) — Yajra
+pages build the identical markup inside `addColumn('status'|'action', …)`.
+
+The layout splits status **display** from the **control**:
+
+- **Status column** = a soft badge, display only. `data-order` lets a client-side
+  sort order by state.
+- **Action column** = **Edit** · the **status switch** · **Delete**, each an
+  icon over a caption. The switch stays in the action group — never drop it for a
+  badge-only display, that removes the inline-toggle feature.
+
+```blade
+{{-- Status: soft badge --}}
+<td data-order="{{ (int) $row->status }}">
+    <span class="status-pill badge rounded-1 {{ $isActive ? 'bg-success-subtle' : 'bg-danger-subtle' }}">
+        {{ $isActive ? 'Active' : 'Inactive' }}
+    </span>
+</td>
+
+{{-- Action: three identical stacks --}}
+<td>
+    <div class="ic-act-group" role="group" aria-label="Row actions">
+        <button type="button" class="ic-act ic-act--edit ic-edit-btn" data-id="…" data-name="…" data-status="…">
+            <span class="ic-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
+            <span class="ic-act__label">Edit</span>
+        </button>
+
+        <label class="ic-act ic-act--toggle">
+            <span class="ic-act__icon">
+                <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                       data-table="<table>" data-column="<col>" data-id="{{ $row->pk }}" @checked($isActive)>
+            </span>
+            <span class="ic-act__label">{{ $isActive ? 'Deactivate' : 'Activate' }}</span>
+        </label>
+
+        {{-- Delete: guarded — a disabled <span> when the server would refuse it,
+             a DELETE <form> otherwise --}}
+    </div>
+</td>
+```
+
+- **Soft badge.** Active = `bg-success-subtle`, Inactive = `bg-danger-subtle`.
+  ⚠️ The theme ships the `*-subtle` **backgrounds** but not the
+  `text-*-emphasis` colours, so the label renders black. Tint it in the page's
+  scoped `<style>`:
+  ```css
+  .<page> .status-pill.bg-success-subtle { color: #146c43; }
+  .<page> .status-pill.bg-danger-subtle  { color: #b02a37; }
+  ```
+- **Toggle wiring is automatic.** `custom.js:170` binds `.status-toggle` change
+  globally (SweetAlert confirm → AJAX to `routes.toggleStatus`). You write **no**
+  toggle JS. The badge and the switch live in different columns, so on success
+  **reload the page** rather than hand-mirroring them:
+  ```js
+  $(document).ajaxSuccess(function (e, xhr, s) {
+      if (s.url.indexOf('toggle-status') === -1 && s.url.indexOf('toggleStatus') === -1) return;
+      setTimeout(function () { window.location.reload(); }, 600);
+  });
+  ```
+- **Guard Delete against the server's own rule.** Read `destroy()` and mirror its
+  refusal in the markup: a muted disabled `<span>` with a `title` saying why, and
+  the real DELETE `<form>` only in the allowed state. A red icon that always
+  fails is worse than a greyed one. The rule differs per table — Categories and
+  Sub-Categories block on `status == 1`, Priorities block on *referenced by an
+  issue log*, which needs `withCount('issueLogs')` in the hydration query so the
+  blade can test `issue_logs_count > 0`. Derive the guard from data, never
+  hard-code it: on Priorities all three seeded rows are in use and render
+  disabled, while a freshly created one is immediately deletable.
+- **Workflow states need their own badge, not the Active/Inactive pill.** A
+  multi-state column (Reported / In Progress / Completed / Pending / Reopened)
+  can't be expressed with two `*-subtle` tints. Use `.ic-state` +
+  a `--<state>` modifier per state, mapped from the status constant in the
+  blade, so an unknown value degrades to a default instead of rendering blank.
+- **The switch is not mandatory on tiny lookup tables.** Priorities ships
+  Edit + Delete only, per its design; status is then set from the Edit modal, so
+  put a Status field there or the row becomes impossible to deactivate. If you
+  drop the switch, drop it deliberately — the default remains Edit · switch ·
+  Delete.
+- **The switch caption names the ACTION, not the state** — an Active row reads
+  "Deactivate". The state is already shown by the badge one column over, so
+  repeating it there is redundant *and* reads as a contradiction.
+  ⚠️ `categories/index.blade.php:149` currently ships the inverse
+  (`$isActive ? 'Activate' : 'Deactivate'`) — that line is the exception, not the
+  pattern. Copy the rule above, not that line.
+
+### The two alignment traps
+
+Both cost real debugging time. Both are in the CSS you inherit.
+
+**1. Never wrap the switch in `.form-check.form-switch` here.**
+`custom.css:107-112` pulls `.form-check-input` left by `-2.375rem` whenever it
+sits inside `.form-check.form-switch:has(.status-toggle)` — correct for the
+switch-*beside*-label layout, wrong for switch-*above*-caption. At 4 classes it
+out-specifies a 3-class page reset, so the wrapper collapses to **0px wide** and
+the switch renders ~38px left of its caption. Drop the wrapper entirely: the
+skin is keyed on `.form-check-input.status-toggle[type="checkbox"]`
+(`custom.css:41`) and still applies without any `.form-check` ancestor.
+
+**2. Give every action the same width.** Otherwise each column is sized by its
+caption ("Edit" 21px vs "Deactivate" 58px) and the icon row comes out unevenly
+spaced. One fixed-height icon strip keeps glyphs and the switch on one baseline:
+
+```css
+.<page> .ic-act-group { display: inline-flex; align-items: stretch; gap: 0.25rem; }
+
+.<page> .ic-act {
+    display: inline-flex; flex-direction: column;
+    align-items: center; justify-content: flex-start; gap: 4px;
+    min-width: 62px;                 /* ≈ the widest caption */
+    font-size: 0.72rem; font-weight: 500; line-height: 1;
+    background: transparent; border: 0; padding: 0; margin: 0; cursor: pointer;
+}
+
+.<page> .ic-act__icon {              /* one strip for glyphs AND the switch */
+    display: flex; align-items: center; justify-content: center; height: 22px;
+}
+.<page> .ic-act__icon > i { font-size: 1.1rem; line-height: 1; }
+.<page> .ic-act__icon .form-check-input { margin: 0; float: none; }
+.<page> .ic-act__label { white-space: nowrap; }
+```
+
+Colours: Edit `#2563eb`, Delete `var(--bs-danger)`, disabled Delete `#98a2b3` at
+`opacity .65`, toggle caption `#475467`. A wrapping `<form>` around Delete needs
+`display: flex; margin: 0; padding: 0` so it adds no box of its own.
+
+Verify by measuring, not by eye — every `.ic-act` should report the same width
+and every `.ic-act__icon` the same `top`/`height`.
+
+---
+
+## 3c. Create / Edit modals
+
+Create and Edit open **modals** — no page navigation — and they look **alike**:
+same header, same tinted field card, same labels/controls, same footer pair.
+Only the contents and the submit caption differ. Reference:
+`categories/index.blade.php` (`#addCategoryModal` / `#editCategoryModal`).
+
+```
+modal-content (radius 12)
+├── .ic-modal-header      title left · btn-close right · 1px #eaecf0 rule under
+├── .ic-modal-body
+│   └── .ic-field-card    #eef1fc, radius 10, padding 1rem   ← one per record
+│       ├── .ic-form-label + .ic-req ("*")  → .form-control.ic-control
+│       └── .ic-field-actions               → − / +   (Add only)
+└── .ic-modal-footer      centred · .ic-btn-cancel (red outline) · .ic-btn-submit (#004384)
+```
+
+Tokens: card `#eef1fc`; label `.8125rem/600 #1f2937`; asterisk `#dc2626`;
+control white on `#e5e7eb`, radius 8; remove `#ef4444`, add `#2563eb`, both
+30×30 radius 7; Cancel `#dc2626` text on `#fca5a5`; submit brand `#004384`.
+Scope the control rules to the two modal IDs — they must beat `.form-control`
+without `!important`.
+
+### Repeatable field cards (Add)
+
+Where create accepts several records at once, each is one `.ic-field-card` and
+the whole state is derived from the DOM after every change — **never** by nudging
+the previous/next card:
+
+```js
+function syncFieldCards() {
+    var $groups = $('#categoryFieldsContainer .category-field-group');
+    var last = $groups.length - 1;
+    $groups.each(function (index) {
+        $(this).attr('data-index', index);
+        $(this).find('.complaint-field').attr('name', 'categories[' + index + '][issue_category]');
+        $(this).find('.description-field').attr('name', 'categories[' + index + '][description]');
+        $(this).find('.remove-field-btn').toggle($groups.length > 1);  // − once >1 card
+        $(this).find('.add-field-btn').toggle(index === last);         // + on the last only
+    });
+}
+```
+
+Call it after add, after remove, on `hidden.bs.modal`, and once on load. Clone
+the **first** card as the template and blank its values — deriving visibility
+afterwards is what stops a clone inheriting the template's hidden state (the bug
+in §9's `.d-flex` note had exactly this shape).
+
+### Long option lists → Select2, and don't server-render them
+
+Select2's **JS is already global** (`footer.blade.php:66`, ~41 views use it); only
+its CSS is per-page by convention:
+
+```blade
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
+```
+
+```js
+$sel.select2({
+    width: '100%',
+    dropdownParent: $modal,        // without this the search box in a modal can't be focused
+    minimumResultsForSearch: 10,   // short lists don't need a search box
+});
+```
+
+**Feed it from one JSON array, not from server-rendered `<option>`s.** Escalation
+Matrix rendered its ~1,800 employees into six selects *and* embedded the list
+twice as JSON: **11,017 `<option>` elements, 1,354 KB per page load**. Rendering
+just a placeholder and filling the selects from a single shared array on
+`shown.bs.modal` took it to **34 options / 375 KB — a 73% cut** with no change
+in behaviour.
+
+### ⚠️ Select2 fires a jQuery event; `addEventListener` never hears it
+
+Select2 signals a pick with `$(el).trigger('change')`. jQuery's `.trigger()`
+runs **jQuery-bound handlers only** — a listener registered with
+`el.addEventListener('change', …)` is never called. On Escalation Matrix that
+silently broke the "same person can't hold two levels" rule: picking a Level 1
+employee no longer removed them from Levels 2 and 3.
+
+Bridge it explicitly, guarding the re-entry the dispatch itself causes:
+
+```js
+$modal.on('change', 'select', function () {
+    if (this.__bridging) { return; }
+    this.__bridging = true;
+    this.dispatchEvent(new Event('change', { bubbles: true }));
+    this.__bridging = false;
+});
+```
+
+Two more Select2 details worth knowing:
+
+- **It re-reads `<option>`s live**, so code that rewrites `innerHTML` still
+  works — but the *rendered selection* only refreshes on
+  `$(el).trigger('change.select2')`. Call it after any rebuild.
+- **Order matters when prefilling.** Assigning `select.value = x` before the
+  options exist is silently dropped. Populate first, then prefill — this is
+  what broke Edit's Level 1 until the filler was called ahead of `editMatrix()`.
+
+### ⚠️ `required` + an optional extra card = dead end
+
+If the user adds a card and leaves it empty, native validation blocks submit and
+your handler — the one that would have dropped the blank card — never runs. The
+field is invalid, invisible-ish, and the form just refuses to submit.
+
+Put **`novalidate` on the create form** and let the submit handler own it:
+count a card as filled if either field has a value, error only on half-filled
+cards, and `prop('disabled', true)` the fully-blank ones so they are not posted.
+Disable **`input, textarea`** — a `find('input')` alone silently posts empty
+textareas and the controller writes blank rows.
+
+Keep the `required` attributes for semantics/a11y; `novalidate` only stops the
+browser from enforcing them.
+
+---
+
+## 3d. Detail and full-page form views
+
+The same module often owns a **detail** view and a **full-page form** (Log New
+Issue / Edit). They reuse the modal's language rather than inventing a third:
+`.ic-card` panels, `.ic-field-label` + `.ic-req`, `.ic-btn-cancel` /
+`.ic-btn-submit`. References: `issue_management/show.blade.php` and
+`create.blade.php`.
+
+**Detail = hero + facts grid.** `.ic-hero` carries the record number, two or
+three headline facts and the current state badge; below it `.ic-facts` is a
+4-column grid of `.ic-fact__label` over `.ic-fact__value`. Long-form content
+(Description, Location, Remarks, Attachments, history) each get their own
+`.ic-card`. A `<table>` in a detail view still gets `.programme-dt-table` inside
+a `.programme-dt-panel` so it matches the grids.
+
+Two things that only show up once it renders:
+
+- **The hero's facts row is flex, not grid.** `.ic-facts` uses
+  `grid-template-columns: repeat(auto-fit, …)`, and inside the hero's
+  shrink-to-fit flex child that collapses to a single column — the facts stack
+  and the hero doubles in height. `.ic-facts--hero` overrides to
+  `display:flex; gap:.5rem 3.5rem`.
+- **The state badge goes white on the tinted hero.** A `*-subtle` tint on top of
+  `#e8ecfb` reads as a smudge. `.ic-hero .ic-state` is white with a light border;
+  the colour-coded badges stay in the tables.
+
+**Form = `.ic-form-grid`** — a 3-column grid collapsing to 2 then 1, with
+`.ic-form-grid--full` for anything spanning the row (a conditional sub-panel).
+Footer is `.ic-form-footer`, right-aligned.
+
+### ⚠️ Scope shared components to BOTH roots
+
+`.ic-btn-submit` and friends were first written under `.ic-modal`. Reused on a
+full-page form they silently render as unstyled `<button>`s — the rule simply
+never matches. Anything used by both a modal and a page needs both selectors:
+
+```css
+.ic-modal .ic-btn-submit,
+.ic-page  .ic-btn-submit { … }
+```
+
+This bites in both directions and has already cost two rounds: the buttons /
+`.ic-field-card` / `.ic-form-label` / `.ic-req` were page-blind, then
+`.ic-facts` / `.ic-fact__label` / `.ic-fact__value` were modal-blind (a
+label-over-value list inside a modal collapsed onto one line, because the modal
+markup lives **outside** the `.container-fluid.ic-page`). When you reuse an
+`ic-*` component in the other context, grep the stylesheet for it first and add
+the missing root — including inside any `@media` override, or the responsive
+collapse silently stops applying.
+
+### ⚠️ Restyling a JS-heavy form: inventory the hooks first
+
+`create.blade.php` is driven by ~430 lines of jQuery + Choices.js: dependent
+category → sub-category → nodal dropdowns, an escalation-matrix lookup, a
+location-conditional building/floor/room block, a character counter and file
+validation. Before touching the markup, list every selector the script binds:
+
+```sh
+grep -oE "(getElementById\('[^']+'\)|\\\$\('#[^']+'\))" <view> | sort -u
+```
+
+Keep every one of those `id`s, `name`s and hook classes (`choices-select`, and
+the page-root class the Choices CSS is scoped to). Then verify **behaviour**,
+not markup: dependent dropdown populates, conditional block reveals, counter
+updates.
+
+> Testing note: Choices.js **hides the native `<select>` and empties its
+> `options`**, so Playwright's `selectOption` and reading `.options` both fail.
+> Drive the widget (click `.choices`, click `.choices__item--selectable`) — that
+> is also the only path that proves the real user flow works. And fire **native**
+> events (`dispatchEvent`) rather than `jQuery(...).trigger()`: the page may hold
+> a different jQuery instance than `window.jQuery`, in which case `.trigger()`
+> reaches nothing and you will misread working code as broken.
 
 ---
 
@@ -227,6 +630,77 @@ For server-side paginated pages that aren't DataTables-driven. Reuses the
 
 `vendor/pagination/custom.blade.php` renders `‹` / `›` — the same glyphs the JS
 uses for its pager, which is why the two variants match.
+
+The rows-per-page `<select>` is yours to wire — one handler, no DataTables
+involved (`categories/index.blade.php:335-340`):
+
+```js
+$('#icPerPage').on('change', function () {
+    var url = new URL(window.location.href);
+    url.searchParams.set('per_page', this.value);
+    url.searchParams.set('page', '1');       // page 1, or the user lands past the end
+    window.location.href = url.toString();
+});
+```
+
+Whitelist the value server-side (`in_array($perPage, self::PER_PAGE_OPTIONS, true)`)
+and fold `per_page` / `q` / `sort` / `dir` into the **listing cache key** if the
+controller memoises its page snapshot — otherwise every variant serves page 1's rows.
+
+### Sortable headers without DataTables
+
+Variant B has no client-side sorter, so a header caret must be a real link. Keep
+a whitelist in the controller (`SORTABLE_COLUMNS` → column name or a `withCount`
+alias) and flip direction on the active column:
+
+```php
+$sortUrl = fn (string $key) => request()->fullUrlWithQuery(array_merge($baseQuery, [
+    'sort' => $key,
+    'dir'  => ($sortKey === $key && $sortDir === 'asc') ? 'desc' : 'asc',
+    'page' => 1,
+]));
+```
+
+Only give a caret to columns you actually sort — a running "S. No." isn't one.
+
+### ⚠️ Measure before you make a relation column sortable
+
+Ordering by a joined name needs a `leftJoin`, and on a big table without the
+right index that is not a nice-to-have — it is the page's whole budget. Measured
+on `issue_log_management` (65,739 rows, **PRIMARY key only, no secondary
+indexes**):
+
+| order by | cost |
+|---|---|
+| `pk` | 1 ms |
+| `created_date` | 39 ms |
+| join `issue_category_master` | 110 ms |
+| join `employee_master` ×2 (Complainant + Nodal) | **467 ms** |
+| all 4 joins + pagination count | **~860 ms** |
+
+So the Centcom grid sorts only on its own columns (ID / Date / Description /
+Status) and the four relation headers carry **no caret**. Shipping a caret that
+costs half a second is worse than shipping none. If a relation sort is genuinely
+required, add the index first — don't pay for it on every request.
+
+### ⚠️ Don't reuse the detail page's eager-load list for a grid
+
+A shared `…IndexEagerLoads()` grows to whatever the *heaviest* consumer needs.
+Centcom's hydration originally borrowed one carrying
+`subCategoryMappings.subCategory`, `buildingMapping.building`,
+`hostelMapping.hostelBuilding`, `statusHistory` and `reproducibility` — none of
+which the grid renders. Cost for a **4-row** page: **~700 ms across 18 queries**.
+A dedicated loader with just the four relations the columns use:
+
+```php
+IssueLogManagement::with(['category', 'priority', 'creator', 'nodal_officer'])
+    ->whereIn('pk', $ids)->get()
+```
+
+**~9 ms, 5 queries — a ~70× improvement.** Give a grid its own hydration method
+and list exactly the relations its `<td>`s touch. Then verify both directions:
+zero queries fired while rendering (no N+1) *and* no relation loaded that no
+column reads.
 
 ---
 
@@ -306,6 +780,19 @@ Page CSS is namespaced under a page-root class (`.disc-page .disc-tab`,
 | `gm-*` | Group Mapping |
 | `sm-*` | Subject Master / Module |
 | `attendance-*` | Attendance |
+| `ic-*` | Centcom / Issue Management — **all** its index pages: categories, sub-categories, priorities (`public/css/issue-management-admin.css`) |
+
+Within a prefix, the row-action stack uses BEM-ish element names — `.ic-act` /
+`.ic-act__icon` / `.ic-act__label`, modifiers `--edit` / `--toggle` / `--del`
+(§3b). Keep those element/modifier names when you port the pattern; only the
+prefix changes.
+
+**Prefix per module, not per page.** `ic-*` covers every Centcom index screen,
+scoped `.ic-page` / `.ic-modal` rather than `.manage-categories-page`. Per-page
+roots are for genuinely page-specific CSS; anything two screens in the module
+share belongs in the module stylesheet under the module root. Page-level IDs
+still differ (`#issueCategoriesTable` vs `#issueSubCategoriesTable`,
+`#icPerPage` vs `#iscPerPage`) — only the *component* classes are shared.
 
 `public/css` is flat, named `<module>-<audience>.css`
 (`course-repository-admin.css`, `roles-admin.css`, …).
@@ -315,15 +802,28 @@ Page CSS is namespaced under a page-root class (`.disc-page .disc-tab`,
 ## 8. Checklist for a new index page
 
 1. `<x-breadcrum>` heading, with the primary action button in its slot.
-2. Status pills + Download row **above** the card.
+2. Status pills + Download row **above** the card (right-aligned exports alone if
+   there are no pills — §1).
 3. Toolbar: `Filters` label → filter selects → red `Reset Filters` on the left;
    `Columns` + search slot on the right (`ms-lg-auto`).
 4. `.programme-dt-panel` > `.table-responsive` > `table.programme-dt-table`.
-5. Footer — empty div if DataTables paginates, hand-written variant B if Laravel does.
-6. If Laravel paginates: add `data-sargam-dt-ui="false"`.
-7. Column visibility → [column-visibility.md](column-visibility.md).
-8. Page CSS namespaced under a page-root class, tokens from
-   [design.md](design.md), `?v={{ @filemtime(...) }}` on the link tag.
+5. Status column = soft badge; Action column = Edit · switch · Delete as
+   equal-width icon-over-label stacks (§3b). No `.form-check`/`.form-switch`
+   wrapper around the switch.
+6. Create + Edit in modals that look alike — shared header / field card / footer
+   (§3c). `novalidate` on any create form with repeatable cards.
+7. Footer — empty div if DataTables paginates, hand-written variant B if Laravel does.
+8. If Laravel paginates: add `data-sargam-dt-ui="false"`, and wire `per_page` /
+   `sort` / `dir` yourself (§4). Whitelist all three server-side and include them
+   in the listing cache key.
+9. Column visibility → [column-visibility.md](column-visibility.md). Add the new
+   grid's **own** ID to the `colvis-item` list in `custom.css:238-278` (§9) —
+   don't reuse a sibling page's grid ID just because the rule already exists.
+10. CSS namespaced under a page root, or the module stylesheet if a sibling page
+    shares it ("Where the CSS lives"). Tokens from [design.md](design.md),
+    `?v={{ @filemtime(...) }}` on the link tag.
+11. Use only **one** of `@push('scripts')` / `@section('scripts')` — the master
+    layout renders both, so using both double-renders your script.
 
 ---
 
@@ -340,7 +840,28 @@ Real traps, not nitpicks:
   vs `#f04438` (`disc-reset`).
 - **Two column-visibility modals** — the `sn-colvis-*` chip grid and the
   `colvis-item` card grid. The latter is styled by a hard-coded **ID list** at
-  `custom.css:238-269`, so a new page must be added there.
+  `custom.css:238-278`, so a new page must be added there (three separate
+  selector lists: base, `:hover`, `.form-check-input`).
+- **Client-side DataTable on top of a server-side paginator = only page 1 exists.**
+  The All Requests grid initialised `$('#issueManagementTable').DataTable()` over
+  a `LengthAwarePaginator` and rendered **no `links()` at all**. DataTables then
+  paginated the 20 rows the server had already sliced, so the pager looked
+  healthy while the other 65,719 rows were unreachable. Symptom: the row count in
+  the pager never matches the real total. Either let the server paginate (variant
+  B footer, `data-sargam-dt-ui="false"`) or give DataTables the whole set — never
+  both. Worth grepping for: a `->paginate()`/`LengthAwarePaginator` view with a
+  `.DataTable(` init and no `->links()`.
+- **`.d-flex` beats `jQuery.hide()`.** Bootstrap's display utilities are
+  `!important`, so `.hide()` — which writes inline `display:none` — silently does
+  nothing on an element carrying `d-flex`. This shipped as a live bug in the
+  Manage Categories add-modal: the repeat-row `+`/`−` buttons were always both
+  visible. If JS toggles an element's visibility, give it a plain
+  (non-`!important`) `display` from your own scoped class, not `d-flex`. Cloning
+  compounds it — a clone of a hidden template inherits the hidden state, so
+  `.show()` the controls that must be live on the copy.
+- **The status switch carries layout baggage.** `.form-check.form-switch:has(.status-toggle)`
+  yanks the input `-2.375rem` left (`custom.css:107-112`). Fine beside a label,
+  broken above a caption — see §3b.
 - **Two token sets** — `--ds-*` (`sargam-app.css`) and `--gigw-*`
   (`notice-memo-discipline.css:14-23`). Prefer `--ds-*` in new work.
 - **Adoption is partial.** ~41 views use `programme-dt-*`; ~15 more use

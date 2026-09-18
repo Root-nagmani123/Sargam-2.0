@@ -50,6 +50,8 @@ class CourseService
                 'course_year' => $validatedData['courseyear'],
                 'start_year' => $validatedData['startdate'],
                 'end_date' => $validatedData['enddate'],
+                'pt_start_time' => $validatedData['pt_start_time'] ?? null,
+                'pt_end_time' => $validatedData['pt_end_time'] ?? null,
                 'Modified_date' => now(),
             ];
             
@@ -69,6 +71,8 @@ class CourseService
                 'course_year' => $validatedData['courseyear'],
                 'start_year' => $validatedData['startdate'],
                 'end_date' => $validatedData['enddate'],
+                'pt_start_time' => $validatedData['pt_start_time'] ?? null,
+                'pt_end_time' => $validatedData['pt_end_time'] ?? null,
                 'created_by' => Auth::id(),
                 'created_date' => now(),
                 'Modified_date' => now(),

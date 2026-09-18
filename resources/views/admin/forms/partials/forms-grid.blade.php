@@ -54,7 +54,7 @@
 
                 <div class="d-flex flex-wrap gap-2">
                     <a href="{{ route('fc-reg.admin.forms.edit', $form) }}" class="btn btn-sm btn-primary">
-                        <i class="bi bi-pencil-square me-1"></i>Edit / Steps
+                        <i class="bi bi-pencil me-1"></i>Edit / Steps
                     </a>
                     <a href="{{ route('fc-reg.forms.dashboard', $form) }}" class="btn btn-sm btn-outline-secondary" target="_blank">
                         <i class="bi bi-eye me-1"></i>User View

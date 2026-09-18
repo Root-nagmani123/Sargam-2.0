@@ -286,10 +286,43 @@ $(function () {
         $('#otCount').text($('#studentAttendanceTable tbody tr').filter(':visible').not(':has(td.dataTables_empty)').length);
     }
 
-    // "Mark Attendance" saves every OT's inline Present/Late/Absent selection at once.
+    // "Mark Attendance" saves every OT's inline selection at once. Every OT flagged
+    // Other Exemption must carry a reason before the sheet can be saved.
     $('#markAllBtn').on('click', function () {
+        var missingReason = false;
+        $('input.js-att-other:checked').each(function () {
+            var pk = $(this).attr('name').slice(16, -1); // other_exemption[pk]
+            if ($.trim($('.att-other-reason[data-att-ot="' + pk + '"]').val() || '') === '') {
+                missingReason = true;
+            }
+        });
+        if (missingReason) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Reason required', 'Please enter a reason for every Other Exemption before saving.', 'warning');
+            } else {
+                alert('Please enter a reason for every Other Exemption before saving.');
+            }
+            return;
+        }
         var form = document.getElementById('attMarkForm');
         if (form) { form.submit(); }
+    });
+
+    // Clicking "Other Exemption" auto-selects Absent and opens its reason field.
+    // (.prop does not fire change, so it won't re-trigger the status handler below.)
+    $(document).on('change', 'input.js-att-other', function () {
+        var pk = $(this).attr('name').slice(16, -1); // other_exemption[pk]
+        if (this.checked) {
+            $('input.js-att-status[name="student[' + pk + ']"][value="3"]').prop('checked', true);
+            $('.att-other-reason[data-att-ot="' + pk + '"]').prop('disabled', false).trigger('focus');
+        }
+    });
+
+    // Choosing a normal Present/Late/Absent turns Other Exemption back off.
+    $(document).on('change', 'input.js-att-status', function () {
+        var pk = $(this).attr('name').slice(8, -1); // student[pk]
+        $('input.js-att-other[name="other_exemption[' + pk + ']"]').prop('checked', false);
+        $('.att-other-reason[data-att-ot="' + pk + '"]').prop('disabled', true).val('');
     });
 
     // Client-side search over the loaded rows.
@@ -313,7 +346,29 @@ $(function () {
 
         var clone = table.cloneNode(true);
 
+        // The Other Exemption column carries a radio + text field on screen; on
+        // paper we want just the typed reason. Pull the live values and write them
+        // into the matching clone cells as plain text.
+        var otherIdx = -1;
+        $(table).find('thead th').each(function (i) {
+            if ($(this).text().trim().toLowerCase() === 'other exemption') { otherIdx = i; }
+        });
+        if (otherIdx !== -1) {
+            var reasons = [];
+            $(table).find('tbody tr').each(function () {
+                var $cell = $(this).children().eq(otherIdx);
+                var on = $cell.find('input.js-att-other').is(':checked');
+                var reason = $.trim($cell.find('.att-other-reason').val() || '');
+                reasons.push((on && reason) ? reason : '');
+            });
+            $(clone).find('tbody tr').each(function (ri) {
+                var cell = this.children[otherIdx];
+                if (cell) { $(cell).text(reasons[ri] || ''); }
+            });
+        }
+
         // Drop the interactive columns — radios and buttons mean nothing on paper.
+        // (Other Exemption is kept — converted to plain text just above.)
         var drop = [];
         $(clone).find('thead th').each(function (i) {
             var t = $(this).text().trim().toLowerCase();
@@ -411,6 +466,9 @@ $(function () {
         }
 
         $('input[name="student[' + pk + ']"][value="1"]').prop('checked', true);
+        // Status is forced back to Present, so any Other Exemption is void.
+        $('input.js-att-other[name="other_exemption[' + pk + ']"]').prop('checked', false);
+        $('.att-other-reason[data-att-ot="' + pk + '"]').prop('disabled', true).val('');
 
         if (typeof Swal !== 'undefined') {
             Swal.fire({
@@ -442,8 +500,21 @@ $(function () {
     // and refreshes its Current Status pill — no modal.
     $(document).on('click', '.js-mark-ot', function () {
         var pk = String($(this).data('ot'));
+        var isOther = $('input.js-att-other[name="other_exemption[' + pk + ']"]').is(':checked');
         var $checked = $('input[name="student[' + pk + ']"]:checked');
         var status = $checked.length ? (parseInt($checked.val(), 10) || 1) : 1;
+
+        // Other Exemption is saved as Absent + reason; the reason is required.
+        var reason = '';
+        if (isOther) {
+            reason = $.trim($('.att-other-reason[data-att-ot="' + pk + '"]').val() || '');
+            if (reason === '') {
+                if (typeof Swal !== 'undefined') { Swal.fire('Reason required', 'Please enter the Other Exemption reason.', 'warning'); }
+                else { alert('Please enter the Other Exemption reason.'); }
+                return;
+            }
+            status = 3; // Absent
+        }
 
         var data = {
             _token: '{{ csrf_token() }}',
@@ -452,18 +523,24 @@ $(function () {
             timetable_pk: $('#timetable_pk').val()
         };
         data['student[' + pk + ']'] = status;
+        if (isOther) {
+            data['other_exemption[' + pk + ']'] = 1;
+            data['other_exemption_comments[' + pk + ']'] = reason;
+        }
 
         var $btn = $(this).prop('disabled', true);
         $.post('{{ route("attendance.save") }}', data)
             .done(function () {
+                // Other Exemption stores Absent (3); its own radio is left as-is.
                 updateOtBadge(pk, status);
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({ icon: 'success', title: 'Attendance saved', timer: 1200, showConfirmButton: false });
                 }
             })
-            .fail(function () {
-                if (typeof Swal !== 'undefined') { Swal.fire('Error', 'Failed to save attendance.', 'error'); }
-                else { alert('Failed to save attendance.'); }
+            .fail(function (xhr) {
+                var msg = (xhr && xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to save attendance.';
+                if (typeof Swal !== 'undefined') { Swal.fire('Error', msg, 'error'); }
+                else { alert(msg); }
             })
             .always(function () { $btn.prop('disabled', false); });
     });

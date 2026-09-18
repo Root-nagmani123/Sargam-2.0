@@ -1,119 +1,147 @@
-<!DOCTYPE html>
-<html>
+{{-- All Requests / Centcom queue → PDF (DomPDF).
+
+     Deliberately NOT sharing export_print_styles: DomPDF has no print-color-adjust,
+     no @media print and only partial CSS support, and it needs base64 image data
+     rather than asset() URLs. The visual language is kept identical by hand —
+     same navy, same header order, same zebra. --}}
+@php
+    $logoFor = function (string $relative): ?string {
+        $path = public_path($relative);
+        if (! is_file($path) || ! is_readable($path)) {
+            return null;
+        }
+        $mime = str_ends_with(strtolower($relative), '.png') ? 'image/png' : 'image/jpeg';
+
+        return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($path));
+    };
+
+    $emblem = $logoFor('images/ashoka.png');
+    $logo   = $logoFor('images/lbsnaa_logo.jpg');
+@endphp
+<!doctype html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Issue Management Export</title>
+    <title>{{ $title }} — LBSNAA</title>
     <style>
-        body { font-family: Arial, sans-serif; font-size: 9px; color: #333; margin: 0; padding: 10px; }
-        .header { text-align: center; margin-bottom: 12px; border-bottom: 2px solid #004a93; padding-bottom: 8px; }
-        .title { color: #004a93; font-size: 16px; font-weight: bold; }
-        .subtitle { font-size: 10px; color: #666; margin-top: 4px; }
-        .timestamp { font-size: 8px; color: #888; font-style: italic; }
-        .filters { background: #f8f9fa; border: 1px solid #dee2e6; padding: 6px 10px; margin-bottom: 10px; font-size: 8px; border-radius: 4px; }
-        .filters span { margin-right: 12px; }
-        .main-table { width: 100%; border-collapse: collapse; font-size: 8px; }
-        .main-table th { background: #004a93; color: white; padding: 5px 4px; text-align: left; border: 1px solid #003a73; }
-        .main-table td { padding: 4px; border: 1px solid #dee2e6; vertical-align: top; word-wrap: break-word; }
-        .main-table tr:nth-child(even) { background: #f8f9fa; }
-        .main-table th, .main-table td { font-size: 7px; }
-        .main-table .col-sno { width: 3%; }
-        .main-table .col-section { width: 8%; }
-        .main-table .col-callid { width: 5%; }
-        .main-table .col-name { width: 12%; }
-        .main-table .col-desc { width: 18%; }
-        .main-table .col-attended { width: 10%; }
-        .main-table .col-date { width: 6%; }
-        .main-table .col-time { width: 5%; }
-        .main-table .col-cleared-date { width: 6%; }
-        .main-table .col-cleared-time { width: 5%; }
-        .main-table .col-taken { width: 6%; }
-        .main-table .col-location { width: 6%; }
-        .main-table .col-status { width: 6%; }
-        .main-table .col-remarks { width: 10%; }
+        @page { size: A4 landscape; margin: 12mm 10mm; }
+        * { font-family: 'DejaVu Sans', sans-serif; }
+        body { margin: 0; padding: 0; color: #1f2937; font-size: 8px; }
+
+        table.pdf-hdr { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+        table.pdf-hdr td { vertical-align: middle; padding: 0; }
+        table.pdf-hdr .logo { width: 120px; }
+        table.pdf-hdr .logo img { height: 44px; }
+        table.pdf-hdr .centre { text-align: center; }
+
+        .inst { font-size: 12px; font-weight: bold; color: #003366; line-height: 1.3; }
+        .sub  { font-size: 8px; color: #4b5563; margin-top: 2px; }
+        .rule { border-bottom: 2px solid #003366; margin-bottom: 6px; }
+
+        .report-title { text-align: center; font-size: 12px; font-weight: bold; color: #003366; margin: 5px 0 2px; }
+        .meta  { text-align: center; font-size: 8px; color: #6b7280; margin-bottom: 6px; }
+        .total { text-align: center; font-size: 9px; font-weight: bold; color: #003366;
+                 background: #eef2f8; padding: 3px 0; margin-bottom: 6px; }
+        .note  { font-size: 7.5px; color: #92400e; background: #fef3c7; border: 0.8px solid #fcd34d;
+                 padding: 3px 6px; margin-bottom: 6px; }
+
+        table.data-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        table.data-table th, table.data-table td {
+            border: 0.8px solid #cccccc;
+            padding: 3px 4px;
+            text-align: left;
+            vertical-align: top;
+            word-wrap: break-word;
+        }
+        table.data-table thead th {
+            background: #003366;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 8px;
+            border-color: #002244;
+        }
+        table.data-table tbody tr:nth-child(even) { background: #f4f7fb; }
+
+        /* DomPDF ignores <colgroup> widths — they have to sit on the cells. */
+        .col-id          { width: 5%;  text-align: center; }
+        .col-date        { width: 11%; }
+        .col-category    { width: 12%; }
+        .col-desc        { width: 26%; }
+        .col-complainant { width: 14%; }
+        .col-nodal       { width: 14%; }
+        .col-priority    { width: 8%;  }
+        .col-status      { width: 10%; }
+
+        .empty { text-align: center; padding: 16px; color: #6b7280; }
+        .foot  { margin-top: 8px; text-align: center; font-size: 7px; color: #6b7280; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="title">Issue Management - Export Report</div>
-        <div class="subtitle">Sargam | Lal Bahadur Shastri National Academy of Administration (LBSNAA), Mussoorie</div>
-        <div class="timestamp">Generated: {{ $export_date }}</div>
-    </div>
 
-    @if(count($filters) > 0)
-    <div class="filters">
-        <strong>Filters applied:</strong>
-        @foreach($filters as $key => $value)
-            <span>{{ ucfirst(str_replace('_', ' ', $key)) }}: {{ $value }}</span>
-        @endforeach
+    <table class="pdf-hdr">
+        <tr>
+            <td class="logo">
+                @if($emblem)<img src="{{ $emblem }}" alt="">@endif
+                @if($logo)<img src="{{ $logo }}" alt="">@endif
+            </td>
+            <td class="centre">
+                <div class="inst">LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION</div>
+                <div class="sub">Mussoorie, Uttarakhand &nbsp;|&nbsp; Sargam 2.0</div>
+            </td>
+            <td class="logo"></td>
+        </tr>
+    </table>
+
+    <div class="rule"></div>
+
+    <div class="report-title">{{ mb_strtoupper($title) }}</div>
+    <div class="meta">
+        @if(filled($filterLine)){!! strip_tags($filterLine, '<strong>') !!} &nbsp;|&nbsp; @endif Generated: {{ $exportDate }}
     </div>
+    <div class="total">Total Records: {{ number_format($total) }}</div>
+
+    @if ($truncated)
+        <div class="note">
+            Only the first {{ number_format($limit) }} of {{ number_format($total) }} matching rows
+            are included. Narrow the filters to export the rest.
+        </div>
     @endif
 
-    @if(!empty($truncated))
-    <div class="filters" style="background: #fff3cd; border-color: #ffc107;">
-        <strong>Note:</strong> Showing first {{ $limit ?? 5000 }} of {{ $total_count ?? 0 }} records. Use <strong>Excel export</strong> for the full dataset.
-    </div>
-    @endif
-
-    <table class="main-table">
+    {{-- Same resolved $columns as the CSV, Excel and print view. Keyed by column,
+         never by position, so a hidden column drops cleanly from all four. --}}
+    <table class="data-table">
         <thead>
             <tr>
-                @if(isset($header) && is_array($header))
-                    <th class="col-sno">{{ $header[0] ?? 'S.No.' }}</th>
-                    <th class="col-section">{{ $header[1] ?? 'Section' }}</th>
-                    <th class="col-callid">{{ $header[2] ?? 'Call ID' }}</th>
-                    <th class="col-name">{{ $header[3] ?? 'Name' }}</th>
-                    <th class="col-desc">{{ $header[4] ?? 'Description' }}</th>
-                    <th class="col-attended">{{ $header[5] ?? 'Attended By' }}</th>
-                    <th class="col-date">{{ $header[6] ?? 'Call Date' }}</th>
-                    <th class="col-time">{{ $header[7] ?? 'Call Time' }}</th>
-                    <th class="col-cleared-date">{{ $header[8] ?? 'Cleared Date' }}</th>
-                    <th class="col-cleared-time">{{ $header[9] ?? 'Cleared Time' }}</th>
-                    <th class="col-taken">{{ $header[10] ?? 'Time Taken In Hours' }}</th>
-                    <th class="col-location">{{ $header[11] ?? 'location' }}</th>
-                    <th class="col-status">{{ $header[12] ?? 'Status' }}</th>
-                    <th class="col-remarks">{{ $header[13] ?? 'Remarks' }}</th>
-                @else
-                    <th class="col-sno">S.No.</th>
-                    <th class="col-section">Section</th>
-                    <th class="col-callid">Call ID</th>
-                    <th class="col-name">Name</th>
-                    <th class="col-desc">Description</th>
-                    <th class="col-attended">Attended By</th>
-                    <th class="col-date">Call Date</th>
-                    <th class="col-time">Call Time</th>
-                    <th class="col-cleared-date">Cleared Date</th>
-                    <th class="col-cleared-time">Cleared Time</th>
-                    <th class="col-taken">Time Taken In Hours</th>
-                    <th class="col-location">location</th>
-                    <th class="col-status">Status</th>
-                    <th class="col-remarks">Remarks</th>
-                @endif
+                @foreach ($columns as $key => $col)
+                    <th class="{{ $col['class'] }}">{{ $col['heading'] }}</th>
+                @endforeach
             </tr>
         </thead>
         <tbody>
-            @forelse($rows as $row)
-            <tr>
-                <td class="col-sno">{{ $row[0] ?? '-' }}</td>
-                <td class="col-section">{{ $row[1] ?? '-' }}</td>
-                <td class="col-callid">{{ $row[2] ?? '-' }}</td>
-                <td class="col-name">{{ $row[3] ?? '-' }}</td>
-                <td class="col-desc">{{ $row[4] ?? '-' }}</td>
-                <td class="col-attended">{{ $row[5] ?? '-' }}</td>
-                <td class="col-date">{{ $row[6] ?? '-' }}</td>
-                <td class="col-time">{{ $row[7] ?? '-' }}</td>
-                <td class="col-cleared-date">{{ $row[8] ?? '-' }}</td>
-                <td class="col-cleared-time">{{ $row[9] ?? '-' }}</td>
-                <td class="col-taken">{{ $row[10] ?? '-' }}</td>
-                <td class="col-location">{{ $row[11] ?? '-' }}</td>
-                <td class="col-status">{{ $row[12] ?? '-' }}</td>
-                <td class="col-remarks">{{ $row[13] ?? '-' }}</td>
-            </tr>
+            @forelse ($rows as $row)
+                <tr>
+                    @foreach ($columns as $key => $col)
+                        <td class="{{ $col['class'] }}">{{ $row[$key] !== '' ? $row[$key] : '-' }}</td>
+                    @endforeach
+                </tr>
             @empty
-            <tr>
-                <td colspan="14" style="text-align: center; padding: 20px;">No issues to export</td>
-            </tr>
+                <tr><td colspan="{{ count($columns) }}" class="empty">No rows to export</td></tr>
             @endforelse
         </tbody>
     </table>
+
+    <div class="foot">Sargam 2.0 · Centcom · Lal Bahadur Shastri National Academy of Administration</div>
+    {{-- Page numbers on every page. Must be the LAST thing in <body>: DomPDF
+         only resolves the page count once the whole document is laid out, so a
+         script placed earlier renders every page as "Page N of 1". --}}
+    <script type="text/php">
+        if (isset($pdf)) {
+            $text = "Page {PAGE_NUM} of {PAGE_COUNT}";
+            $font = $fontMetrics->getFont("DejaVu Sans", "normal");
+            $size = 7;
+            $w = $fontMetrics->getTextWidth($text, $font, $size);
+            $pdf->page_text($pdf->get_width() - $w - 28, $pdf->get_height() - 24, $text, $font, $size, [0.42, 0.45, 0.5]);
+        }
+    </script>
 </body>
 </html>

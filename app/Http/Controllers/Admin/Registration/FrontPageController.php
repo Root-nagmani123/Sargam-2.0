@@ -410,10 +410,26 @@ class FrontPageController extends Controller
                 'lowercase',
                 'regex:/^(?=.{6,20}$)(?!.*[_.]{2})[a-z][a-z0-9._]*[a-z0-9]$/',
                 'unique:user_credentials,user_name',
-                function (string $attribute, mixed $value, \Closure $fail) {
+                function (string $attribute, mixed $value, \Closure $fail) use ($request) {
+                    // Exclude the applicant's own roster row, matched on the mobile
+                    // they submitted. Read from $request rather than the request()
+                    // helper so this sees the same merged input as the rest of the
+                    // rule set.
+                    $mobile = trim((string) $request->input('reg_mobile', ''));
+
+                    // Without a usable mobile there is no "own row" to exclude, and
+                    // Laravel compiles a null binding to `contact_no IS NOT NULL`,
+                    // which would match the applicant's own row and report a false
+                    // "username already taken". reg_mobile carries its own
+                    // required|digits:10 rules, so the submission still fails — just
+                    // with the correct message instead of two.
+                    if ($mobile === '') {
+                        return;
+                    }
+
                     $takenOnRoster = DB::table('fc_registration_master')
                         ->where('user_id', $value)
-                        ->where('contact_no', '!=', request('reg_mobile'))
+                        ->where('contact_no', '!=', $mobile)
                         ->exists();
                     if ($takenOnRoster) {
                         $fail('The username has already been taken.');

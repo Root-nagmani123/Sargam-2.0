@@ -18,6 +18,9 @@ class EstateOtherRequest extends Model
     public $timestamps = false;
 
     protected $fillable = [
+        // employee_master.emp_id — Other/contract request ko us employee se jodta hai taaki
+        // "My Estate Bill" (?scope=self) me use apna bill dikhe.
+        'employee_master_emp_id',
         'emp_name',
         'f_name',
         'section',

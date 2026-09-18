@@ -881,6 +881,26 @@ function isEstateAuthority(): bool
 }
 
 /**
+ * Estate Master screens (Define Campus / Unit Type / Unit Sub Type / Block-Building /
+ * Pay Scale / Electric Slab / Eligibility Criteria).
+ *
+ * Deliberately the UNION of the two estate role vocabularies this codebase uses:
+ *   - hasRole('Estate')     — what the Estate Master sidebar block gates on
+ *                             (components/menu/setup_estate_management.blade.php)
+ *   - isEstateAuthority()   — 'Estate Admin' || 'Super Admin', what EstateController gates on
+ *
+ * hasRole() checks session roles before Spatie roles, so the same operator can satisfy one
+ * vocabulary or the other depending on how they logged in. Taking the union means nobody who
+ * can reach these screens today loses access, while every other role (Student-OT, Faculty,
+ * Training, HAC Person, ...) is refused — the Admin/Estate/* controllers previously had no
+ * server-side check at all and relied on the sidebar hiding the link.
+ */
+function isEstateMasterAuthority(): bool
+{
+    return hasRole('Estate') || isEstateAuthority();
+}
+
+/**
  * Estate HAC authority: can perform HAC-related actions.
  * DB role names: 'Estate HAC' (id:9), 'Estate Admin' (id:8), 'Super Admin' (id:1).
  */
@@ -1386,15 +1406,21 @@ function get_Role_by_course()
         return [-1];
     }
 
+    // course_master.user_role_master_pk stores a Spatie roles.id — confirmed
+    // by CourseController@create/@edit, which populates and reads this exact
+    // field via Spatie's Role model (Role::pluck('name','id') /
+    // Role::where('id', $course->user_role_master_pk)). Despite the
+    // misleading column name, this is NOT a foreign key into the separate
+    // legacy `user_role_master` table.
     $role_course = DB::table('course_master as cm')
         ->join('roles as r', 'cm.user_role_master_pk', '=', 'r.id')
         ->whereIn('r.id', $userRoleIds)
         ->pluck('cm.pk')
         ->toArray();
+
     if (empty($role_course)) {
         // Non-admin user with roles but no mapped courses should see no data.
         return [-1];
-        // return [-1];
     }
 
     return $role_course;
@@ -1438,6 +1464,16 @@ function employee_designation_search()
     });
     return $designation;
 }
+if (!function_exists('build_student_photo_url')) {
+    function build_student_photo_url(?string $photoPath): string
+    {
+        if ($photoPath == null) {
+            return 'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+        }
+
+        return asset('storage/form-uploads/photo/' . $photoPath);
+    }
+}
 function get_profile_pic()
 {
     $user = Auth::user();
@@ -1456,11 +1492,7 @@ function get_profile_pic()
                 ->where('pk', $user->user_id)
                 ->value('photo_path');
 
-            if ($data == null) {
-                return 'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
-            } else {
-                return asset('storage/form-uploads/photo/' . $data);
-            }
+            return build_student_photo_url($data);
         });
 
         return $profile_pic;
@@ -1479,14 +1511,56 @@ function get_profile_pic()
         return $profile_pic;
     }
 }
-if (!function_exists('get_notice_notification_by_role')) {
-    function get_notice_notification_by_role()
+if (!function_exists('notice_feed_base_query')) {
+    /**
+     * Base notice query with the author name and department resolved.
+     * Columns are table-qualified because user_credentials / department_master
+     * carry their own active_inactive + pk columns.
+     */
+    function notice_feed_base_query()
+    {
+        return DB::table('notices_notification')
+            ->leftJoin('user_credentials as notice_author', 'notice_author.pk', '=', 'notices_notification.created_by')
+            ->leftJoin('employee_master as notice_author_emp', 'notice_author_emp.pk', '=', 'notice_author.user_id')
+            ->leftJoin('department_master as notice_author_dept', 'notice_author_dept.pk', '=', 'notice_author_emp.department_master_pk')
+            ->select(
+                'notices_notification.pk',
+                'notices_notification.notice_title',
+                'notices_notification.notice_type',
+                'notices_notification.description',
+                'notices_notification.target_audience',
+                'notices_notification.course_master_pk',
+                'notices_notification.document',
+                'notices_notification.display_date',
+                'notices_notification.expiry_date',
+                'notices_notification.created_at',
+                'notices_notification.created_by',
+                DB::raw("NULLIF(TRIM(CONCAT_WS(' ', notice_author.first_name, notice_author.last_name)), '') as author_name"),
+                'notice_author_dept.department_name as author_department'
+            )
+            ->where('notices_notification.active_inactive', 1)
+            ->where('notices_notification.expiry_date', '>=', date('Y-m-d'))
+            ->orderBy('notices_notification.display_date', 'desc');
+    }
+}
+if (!function_exists('notice_feed_query_by_role')) {
+    /**
+     * Role-scoped notice feed as an UNEXECUTED query builder.
+     *
+     * Returning the builder (rather than a Collection) is what lets callers add
+     * filters and ->paginate() in SQL instead of pulling every live notice into
+     * memory and filtering in PHP.
+     *
+     * Each role resolves to ONE statement — the previous version ran a second
+     * query per role and merged the two collections, which cannot be paginated.
+     *
+     * @return \Illuminate\Database\Query\Builder|null  null when unauthenticated
+     */
+    function notice_feed_query_by_role()
     {
         $user = Auth::user();
-
-        // Return empty collection if user is not authenticated
         if (!$user) {
-            return collect([]);
+            return null;
         }
 
         $sessionRoles = Session::get('user_roles', []);
@@ -1497,45 +1571,56 @@ if (!function_exists('get_notice_notification_by_role')) {
         $isStaffFaculty = !empty(array_intersect($roleStaffFaculty, $sessionRoles));
         $isStudent      = !empty(array_intersect($roleStudent, $sessionRoles));
 
+        $query = notice_feed_base_query();
 
-        $commonNotices = DB::table('notices_notification')
-            ->where('target_audience', 'All')
-            ->where('active_inactive', 1)
-            ->where('expiry_date', '>=', date('Y-m-d'))
-            ->orderBy('display_date', 'desc')
-            ->get();
-
-        // 🔥 Staff/Faculty Notices
+        // Staff/Faculty: everyone's "All" notices plus their own audience.
         if ($isStaffFaculty) {
-
-            $data = DB::table('notices_notification')
-                ->where('target_audience', 'like', '%Staff/Faculty%')
-                ->where('active_inactive', 1)
-                ->where('expiry_date', '>=', date('Y-m-d'))
-                ->orderBy('display_date', 'desc')
-                ->get();
-
-
-            return $commonNotices->merge($data);
+            return $query->where(function ($w) {
+                $w->where('notices_notification.target_audience', 'All')
+                    ->orWhere('notices_notification.target_audience', 'like', '%Staff/Faculty%');
+            });
         }
 
-        // 🔥 Student OT Notices
+        // Student-OT: "All" notices plus Office-trainee notices for the courses
+        // they are enrolled in. The course ids are resolved in their own small
+        // query rather than joined in: the old inner join on
+        // student_master_course__map emitted the same notice once per mapping
+        // row (duplicate cards), and a joined query cannot be counted for
+        // pagination without a distinct().
         if ($isStudent) {
-            $roleNotices =  DB::table('notices_notification')
-                ->join('student_master_course__map as smcm', 'notices_notification.course_master_pk', '=', 'smcm.course_master_pk')
-                ->where('target_audience', 'like', '%Office trainee%')
-                ->where('notices_notification.active_inactive', 1)
-                ->where('smcm.student_master_pk', $user->user_id)
-                ->where('expiry_date', '>=', date('Y-m-d'))
-                ->orderBy('display_date', 'desc')
-                ->get();
+            $courseIds = DB::table('student_master_course__map')
+                ->where('student_master_pk', $user->user_id)
+                ->distinct()
+                ->pluck('course_master_pk');
 
+            return $query->where(function ($w) use ($courseIds) {
+                $w->where('notices_notification.target_audience', 'All');
 
-            return $commonNotices->merge($roleNotices);
+                if ($courseIds->isNotEmpty()) {
+                    $w->orWhere(function ($o) use ($courseIds) {
+                        $o->where('notices_notification.target_audience', 'like', '%Office trainee%')
+                            ->whereIn('notices_notification.course_master_pk', $courseIds);
+                    });
+                }
+            });
         }
 
-        // Roles not matching → return only "All"
-        return $commonNotices;
+        // Roles not matching → only "All"
+        return $query->where('notices_notification.target_audience', 'All');
+    }
+}
+if (!function_exists('get_notice_notification_by_role')) {
+    /**
+     * Every live notice for the current user, as a Collection.
+     *
+     * Unbounded by design — only use it where the caller needs the whole set.
+     * For listing screens prefer notice_feed_query_by_role() with ->paginate().
+     */
+    function get_notice_notification_by_role()
+    {
+        $query = notice_feed_query_by_role();
+
+        return $query ? $query->get() : collect([]);
     }
 }
 
@@ -1856,16 +1941,182 @@ if (! function_exists('fc_report_login_username_sql')) {
     function fc_report_login_username_sql(string $trackerTable, ?string $alias = null): string
     {
         $t = $alias ?? $trackerTable;
-        $parts = ["NULLIF(TRIM(uc.user_name), '')"];
+        $u = fc_user_col($trackerTable);
 
-        if (fc_schema_has_table('fc_registration_master')) {
+        // `frm` / `uc_frm` only exist when the tracker is keyed by user_id — mirror the
+        // join conditions in fc_report_apply_tracker_user_resolution() exactly, or this
+        // SQL references aliases that were never joined.
+        $hasRoster = $u === 'user_id' && fc_schema_has_table('fc_registration_master');
+
+        $parts = [];
+
+        if ($hasRoster) {
+            // The tracker's user_id is NOT one id space: it holds a user_credentials.pk for a
+            // migrated trainee and an fc_registration_master.pk for one who registered through
+            // /fc/login and was never migrated (see fc_user_val()). Both tables number from 1,
+            // so one integer can be a live credentials pk AND a live roster pk belonging to two
+            // DIFFERENT people. Reading credentials first therefore rendered a stranger's
+            // username — roster pk 3 ("shailitm") displayed as credentials pk 3 ("rohit.kumar").
+            //
+            // fc_user_val() switches to storing the CREDENTIALS pk the moment a trainee is
+            // migrated. So a roster row whose username owns no credentials record proves this
+            // id is still in the roster id space, and the roster username is the right one.
+            // Resolve that case first; every other case keeps the original ordering.
+            $parts[] = fc_report_roster_username_case('frm');
+        }
+
+        $parts[] = "NULLIF(TRIM(uc.user_name), '')";
+
+        if ($hasRoster) {
             $parts[] = "NULLIF(TRIM(frm.user_id), '')";
             $parts[] = "NULLIF(TRIM(uc_frm.user_name), '')";
         }
 
-        $parts[] = "CAST(`{$t}`.`user_id` AS CHAR)";
+        $parts[] = "CAST(`{$t}`.`{$u}` AS CHAR)";
 
         return 'COALESCE('.implode(', ', $parts).')';
+    }
+}
+
+if (! function_exists('fc_archive_entry_stem')) {
+    /**
+     * The ONE archive naming rule: <username>_<rank>_<exam year>.
+     *
+     * Every FC download that names something after a trainee — ZIP folders, per-trainee PDFs,
+     * exported photos — goes through this, because five call sites previously each rolled their
+     * own and drifted: two used the full name instead of the username, and two disagreed on
+     * whether the name or the username came first.
+     *
+     * Blank parts are dropped rather than left as stray underscores ("lbs0999", not "lbs0999__"),
+     * and $fallback is used when the username reduces to nothing — a folder called "_154_2026"
+     * identifies nobody.
+     *
+     * Collisions get a numeric suffix and are tracked case-insensitively, because Windows and
+     * macOS treat "Ravi_Kumar" and "ravi_kumar" as the same entry when the archive is unpacked.
+     *
+     * @param  array<string,int>  $used  by reference — the collision ledger for this archive
+     */
+    function fc_archive_entry_stem(
+        ?string $username,
+        ?string $rank,
+        ?string $examYear,
+        string $fallback,
+        array &$used
+    ): string {
+        $clean = static fn ($v) => trim((string) preg_replace('/[^A-Za-z0-9]+/', '_', (string) $v), '_');
+
+        $name = $clean($username);
+        if ($name === '') {
+            $name = $clean($fallback);
+        }
+        if ($name === '') {
+            $name = 'trainee_'.(count($used) + 1);
+        }
+
+        $stem = implode('_', array_filter(
+            [$name, $clean($rank), $clean($examYear)],
+            static fn ($v) => $v !== ''
+        ));
+
+        $key = strtolower($stem);
+        if (isset($used[$key])) {
+            $stem .= '_'.(++$used[$key]);
+        } else {
+            $used[$key] = 1;
+        }
+
+        return $stem;
+    }
+}
+
+if (! function_exists('fc_report_roster_username_case')) {
+    /**
+     * SQL deciding when the ROSTER username is the right one for a tracker row.
+     *
+     * The tracker's user_id is either a user_credentials.pk or an fc_registration_master.pk,
+     * and both tables number from 1 — so one integer can be a live credentials pk AND a live
+     * roster pk belonging to two different people. fc_user_val() stores the CREDENTIALS pk from
+     * the moment a trainee is migrated, so a roster row whose username owns no credentials
+     * record proves this id is still a roster pk and the roster username is the correct one.
+     *
+     * Returns an expression usable as the FIRST arm of a COALESCE; NULL when it does not apply.
+     */
+    function fc_report_roster_username_case(string $frmAlias = 'frm', ?string $identityAlias = 's1'): string
+    {
+        $f = $frmAlias;
+
+        // IDENTITY CORROBORATION.
+        //
+        // A roster row sitting at the same number proves nothing on its own. The migration test
+        // below establishes that the roster PERSON has no login — it does not establish that the
+        // roster person is the trainee on this row. Because the two pk spaces overlap, the row
+        // may belong to somebody else entirely, and preferring their username would be the same
+        // wrong-identity bug this CASE exists to fix, running in the other direction.
+        //
+        // So where the trainee's own profile carries a mobile or an email, require it to match
+        // the roster row before trusting the roster username. Where it carries neither there is
+        // nothing to compare against and the migration test stands alone — that residue is the
+        // only case this cannot decide, and it is the one where no evidence exists either way.
+        $corroborated = '1 = 1';
+        if ($identityAlias !== null) {
+            $s = $identityAlias;
+            $checks = [];
+
+            if (fc_schema_has_column('student_master_firsts', 'mobile_no')
+                && fc_schema_has_column('fc_registration_master', 'contact_no')) {
+                $checks[] = "NULLIF(TRIM(`{$s}`.`mobile_no`), '') IS NULL";
+                $checks[] = "NULLIF(TRIM(`{$f}`.`contact_no`), '') IS NULL";
+                $checks[] = "TRIM(`{$s}`.`mobile_no`) = TRIM(`{$f}`.`contact_no`)";
+            }
+
+            if (fc_schema_has_column('student_master_firsts', 'email')
+                && fc_schema_has_column('fc_registration_master', 'email')) {
+                $checks[] = "(NULLIF(TRIM(`{$s}`.`email`), '') IS NOT NULL
+                              AND LOWER(TRIM(`{$s}`.`email`)) = LOWER(TRIM(`{$f}`.`email`)))";
+            }
+
+            if ($checks !== []) {
+                $corroborated = '('.implode("\n                           OR ", $checks).')';
+            }
+        }
+
+        return "CASE WHEN `{$f}`.`pk` IS NOT NULL
+                      AND NULLIF(TRIM(`{$f}`.`user_id`), '') IS NOT NULL
+                      AND NOT EXISTS (
+                            SELECT 1 FROM user_credentials uc_chk
+                             WHERE uc_chk.user_name = `{$f}`.`user_id`
+                      )
+                      AND {$corroborated}
+                     THEN TRIM(`{$f}`.`user_id`) END";
+    }
+}
+
+if (! function_exists('fc_report_roster_alias_joined')) {
+    /**
+     * Is the `frm` roster alias part of this query?
+     *
+     * fc_report_apply_tracker_user_resolution() joins it only for user_id-keyed trackers, and
+     * the search builders have no $form to re-derive that from, so the query's own join list is
+     * the authority — naming frm.user_id without the join is an unknown-column error.
+     *
+     * @param  \Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder  $query
+     */
+    function fc_report_roster_alias_joined($query): bool
+    {
+        if (! fc_schema_has_table('fc_registration_master')) {
+            return false;
+        }
+
+        $inner = method_exists($query, 'getQuery') ? $query->getQuery() : $query;
+
+        foreach ($inner->joins ?? [] as $join) {
+            $table = $join->table ?? null;
+            if (is_string($table) && preg_match('/\bas\s+frm\b/i', $table)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 

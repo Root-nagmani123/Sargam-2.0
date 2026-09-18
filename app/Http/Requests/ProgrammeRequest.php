@@ -29,6 +29,8 @@ class ProgrammeRequest extends FormRequest
             'courseyear' => 'required|date_format:Y|integer|between:1900,2099', //in between 1900 and 2099
             'startdate' => 'required|date',
             'enddate' => 'required|date|after:startdate',
+            'pt_start_time' => 'nullable|date_format:H:i',
+            'pt_end_time' => 'nullable|date_format:H:i|after:pt_start_time',
             'coursecoordinator' => 'required|string|max:255',
             'assistantcoursecoordinator' => 'required|array',
             'assistantcoursecoordinator.*' => 'required|string|max:255',
@@ -54,6 +56,9 @@ class ProgrammeRequest extends FormRequest
             'enddate.required' => 'The end date is required.',
             'enddate.date' => 'The end date must be a date.',
             'enddate.after' => 'The end date must be greater than the start date.',
+            'pt_start_time.date_format' => 'The PT start time must be a valid time.',
+            'pt_end_time.date_format' => 'The PT end time must be a valid time.',
+            'pt_end_time.after' => 'The PT end time must be after the PT start time.',
             'coursecoordinator.required' => 'The course coordinator is required.',
             'coursecoordinator.string' => 'The course coordinator must be a string.',
             'coursecoordinator.max' => 'The course coordinator must be less than 255 characters.',

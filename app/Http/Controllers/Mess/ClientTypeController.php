@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
 use App\Support\DataTableRedisCache;
+use App\Support\DataTableSearchHelper;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Models\Mess\ClientType;
@@ -11,28 +13,138 @@ use App\Models\Mess\ClientType;
 class ClientTypeController extends Controller
 {
     private const LIST_CACHE_EPOCH_KEY = 'mess_client_type_master_list_epoch';
+    private const DT_LIST_EPOCH_KEY = 'mess_client_type_master_dt_list_epoch';
 
     public static function bumpListCacheEpoch(): void
     {
         DataTableRedisCache::bumpListEpoch(self::LIST_CACHE_EPOCH_KEY, 'ClientTypeController');
+        DataTableRedisCache::bumpListEpoch(self::DT_LIST_EPOCH_KEY, 'ClientTypeController');
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $epoch = DataTableRedisCache::readListEpoch(self::LIST_CACHE_EPOCH_KEY);
-        $cacheKey = 'mess_client_type_master_list:v1:' . md5(json_encode(['epoch' => $epoch]));
+        if ($request->ajax() && $request->has('draw')) {
+            return DataTableRedisCache::serveCachedAjax(
+                $request,
+                'mess_client_type_master_dt:v1:',
+                self::DT_LIST_EPOCH_KEY,
+                [
+                    'enabled' => 'MESS_CLIENT_TYPE_MASTER_DATATABLE_CACHE_ENABLED',
+                    'seconds' => 'MESS_CLIENT_TYPE_MASTER_DATATABLE_CACHE_SECONDS',
+                ],
+                'ClientTypeController@index',
+                fn () => $this->buildClientTypeDatatableResponse($request)
+            );
+        }
 
-        $clientTypes = DataTableRedisCache::remember(
-            $cacheKey,
-            [
-                'enabled' => 'MESS_CLIENT_TYPE_MASTER_LIST_CACHE_ENABLED',
-                'seconds' => 'MESS_CLIENT_TYPE_MASTER_LIST_CACHE_SECONDS',
-            ],
-            'ClientTypeController@index',
-            fn () => ClientType::orderByDesc('id')->get()
-        );
+        return view('mess.client-types.index');
+    }
 
-        return view('mess.client-types.index', compact('clientTypes'));
+    private function buildClientTypeDatatableResponse(Request $request): JsonResponse
+    {
+        $query = ClientType::query();
+
+        $draw = (int) $request->input('draw', 0);
+        $start = max((int) $request->input('start', 0), 0);
+        $length = (int) $request->input('length', 10);
+        if ($length < 1 || $length > 100) {
+            $length = 10;
+        }
+
+        $searchTokens = DataTableSearchHelper::tokens((string) $request->input('search.value', ''));
+
+        $recordsTotal = (clone $query)->count();
+
+        if ($searchTokens !== []) {
+            $query->where(function ($q) use ($searchTokens) {
+                foreach ($searchTokens as $token) {
+                    $like = DataTableSearchHelper::likePattern($token);
+                    $q->where(function ($inner) use ($like) {
+                        $inner->where('client_type', 'like', $like)
+                            ->orWhere('client_name', 'like', $like)
+                            ->orWhere('status', 'like', $like);
+                    });
+                }
+            });
+        }
+
+        $recordsFiltered = (clone $query)->count();
+
+        $paged = clone $query;
+        $orderCol = DataTableSearchHelper::orderColumnIndex($request, 0);
+        $orderDir = DataTableSearchHelper::orderDirection($request, 'asc');
+
+        switch ($orderCol) {
+            case 0:
+                $paged->orderBy('client_type', $orderDir);
+                break;
+            case 1:
+                $paged->orderBy('client_name', $orderDir);
+                break;
+            case 2:
+                $paged->orderBy('status', $orderDir);
+                break;
+            default:
+                $paged->orderByDesc('id');
+        }
+        $paged->orderByDesc('id');
+
+        if ($length !== -1) {
+            $paged->skip($start)->take($length);
+        }
+
+        $rows = $paged->get();
+        $canDelete = function_exists('hasRole') && (hasRole('Super Admin') || hasRole('Mess-Admin'));
+        $clientTypeOptions = ClientType::clientTypes();
+
+        $data = $rows->map(fn (ClientType $clientType) => $this->buildClientTypeDatatableRow($clientType, $canDelete, $clientTypeOptions))->all();
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+        ]);
+    }
+
+    /**
+     * @return string[]
+     */
+    private function buildClientTypeDatatableRow(ClientType $clientType, bool $canDelete, array $clientTypeOptions): array
+    {
+        $typeLabel = $clientTypeOptions[$clientType->client_type] ?? $clientType->client_type;
+        $typeCell = '<div class="fw-semibold">' . e($typeLabel) . '</div>';
+        $nameCell = '<div class="fw-semibold">' . e($clientType->client_name) . '</div>';
+        $statusCell = '<span class="badge bg-' . e($clientType->status_badge_class) . '">'
+            . e($clientType->status_label) . '</span>';
+
+        $editBtn = '<button type="button" class="text-primary btn-edit-clienttype bg-transparent border-0"'
+            . ' data-id="' . (int) $clientType->id . '"'
+            . ' data-client-type="' . e($clientType->client_type) . '"'
+            . ' data-client-name="' . e($clientType->client_name) . '"'
+            . ' data-status="' . e($clientType->status ?? 'active') . '"'
+            . ' title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>';
+
+        $deleteForm = '';
+        if ($canDelete) {
+            $deleteUrl = route('admin.mess.client-types.destroy', $clientType->id);
+            $deleteForm = '<form method="POST" action="' . e($deleteUrl) . '" class="d-inline"'
+                . ' onsubmit="return confirm(\'Are you sure you want to delete this client type?\');">'
+                . '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">'
+                . '<input type="hidden" name="_method" value="DELETE">'
+                . '<button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">'
+                . '<i class="material-icons material-symbol-rounded">delete</i></button>'
+                . '</form>';
+        }
+
+        $actions = '<div class="d-flex gap-2 flex-wrap">' . $editBtn . $deleteForm . '</div>';
+
+        return [
+            $typeCell,
+            $nameCell,
+            $statusCell,
+            $actions,
+        ];
     }
 
     public function create()

@@ -22,11 +22,6 @@ class PurchaseOrderItem extends Model
         return $this->belongsTo(PurchaseOrder::class, 'purchase_order_id');
     }
     
-    public function inventory()
-    {
-        return $this->belongsTo(Inventory::class, 'inventory_id');
-    }
-
     public function itemSubcategory()
     {
         return $this->belongsTo(ItemSubcategory::class, 'item_subcategory_id');

@@ -35,9 +35,18 @@
                             <td class="ps-3">{{ $index + 1 }}</td>
                             <td class="fw-medium">{{ $row->unit_sub_type }}</td>
                             <td class="pe-3 text-end">
-                                <a href="{{ route('admin.estate.define-unit-sub-type.edit', $row->pk) }}" class="text-primary" title="Edit">
-                                    <i class="material-icons material-symbols-rounded">edit</i>
-                                </a>
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <a href="{{ route('admin.estate.define-unit-sub-type.edit', $row->pk) }}" class="text-primary" title="Edit">
+                                        <i class="material-icons material-symbols-rounded">edit</i>
+                                    </a>
+                                    <form action="{{ route('admin.estate.define-unit-sub-type.destroy', $row->pk) }}" method="POST" onsubmit="return confirm('Delete this Unit Sub Type?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-link p-0 text-danger" title="Delete">
+                                            <i class="material-icons material-symbols-rounded">delete</i>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         @empty
@@ -76,12 +85,10 @@ $(document).ready(function() {
     });
 
     // Move "Add New" button next to the search box and align right
-    var $wrapper = $('#unitSubTypeTable').closest('.dataTables_wrapper');
-    var $filter = $wrapper.find('.dataTables_filter');
-    var $addBtn = $('.unit-sub-type-add-btn').detach().addClass('ms-2');
-    if ($filter.length && $addBtn.length) {
-        $filter.append($addBtn);
-        $filter.addClass('d-flex align-items-center justify-content-end gap-2');
+    // Move "Add New" next to the search box. appendToSearchRow() finds the search row wherever the
+    // global UI script has put it; if it can't, the button simply stays in the header above.
+    if (window.SargamDataTableUI) {
+        window.SargamDataTableUI.appendToSearchRow('unitSubTypeTable', $('.unit-sub-type-add-btn').addClass('ms-2'));
     }
 });
 </script>

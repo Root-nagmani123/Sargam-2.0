@@ -92,7 +92,7 @@
                         </button>
                     </div>
                     <ul class="small mt-2 mb-0 cred-rules" id="password-rules">
-                        <li data-rule="len"><span class="rule-icon">•</span> At least 6 characters long</li>
+                        <li data-rule="len"><span class="rule-icon">•</span> At least 8 characters long</li>
                         <li data-rule="special"><span class="rule-icon">•</span> At least one special character (e.g. ! @ # $ _)</li>
                         <li data-rule="match"><span class="rule-icon">•</span> Password and Confirm Password match</li>
                     </ul>
@@ -174,7 +174,7 @@
     function checkPassword() {
         var p = (pwd.value || ''), c = (cpwd.value || '');
         mark('password-rules', {
-            len: p.length >= 6,
+            len: p.length >= 8,
             special: /[^A-Za-z0-9]/.test(p),
             match: p.length > 0 && p === c
         }, p.length > 0 || c.length > 0);

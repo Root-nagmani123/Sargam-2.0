@@ -201,6 +201,16 @@ class AttendanceDataExport implements FromArray, WithColumnWidths, WithEvents, W
                 $attendanceStatus = 'Present';
             }
 
+            // Other Exemption reason typed on the mark-attendance screen. Only set
+            // when the OT was saved Absent with a reason (status 3 + comment).
+            $otherExemptionReason = '';
+            if ($attendance
+                && (int) $attendance->status === 3
+                && trim((string) ($attendance->other_exemption_comments ?? '')) !== ''
+            ) {
+                $otherExemptionReason = trim((string) $attendance->other_exemption_comments);
+            }
+
             $row = [
                 $serialNumber++,
                 $student->display_name ?? 'N/A',
@@ -208,6 +218,7 @@ class AttendanceDataExport implements FromArray, WithColumnWidths, WithEvents, W
                 $attendanceStatus,
                 $mdoDuty,
                 $escortDuty,
+                $otherExemptionReason,
             ];
 
             $data[] = $row;
@@ -354,6 +365,7 @@ class AttendanceDataExport implements FromArray, WithColumnWidths, WithEvents, W
             'Attendance Status',
             'MDO Duty',
             'Escort Duty',
+            'Other Exemption',
         ];
     }
 
@@ -364,7 +376,7 @@ class AttendanceDataExport implements FromArray, WithColumnWidths, WithEvents, W
 
     public function columnWidths(): array
     {
-        return ['A' => 8, 'B' => 40, 'C' => 18, 'D' => 20, 'E' => 14, 'F' => 18];
+        return ['A' => 8, 'B' => 40, 'C' => 18, 'D' => 20, 'E' => 14, 'F' => 18, 'G' => 40];
     }
 
     /** Session context shown under the report title, mirroring the on-screen info cards. */

@@ -7,6 +7,7 @@ use App\Models\Mess\StoreAllocation;
 use App\Models\Mess\StoreAllocationItem;
 use App\Models\Mess\SubStore;
 use App\Models\Mess\ItemSubcategory;
+use App\Services\Mess\AvailableQuantityService;
 use App\Support\DataTableSearchHelper;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
@@ -15,14 +16,23 @@ use Illuminate\Support\Facades\Schema;
 
 class StoreAllocationController extends Controller
 {
+    /**
+     * Invalidate the available-quantity cache after mutations that change
+     * mess_store_allocation_items (create/update/delete).
+     */
+    private static function bumpAvailableQuantityCacheEpoch(): void
+    {
+        AvailableQuantityService::bumpCacheEpoch();
+    }
+
     public function index(Request $request)
     {
         if ($request->ajax() && $request->has('draw')) {
             return $this->storeAllocationsDatatable($request);
         }
 
-        $subStores = SubStore::active()->orderBy('sub_store_name')->get();
-        $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get()
+        $subStores = SubStore::active()->orderBy('sub_store_name')->get(['id', 'sub_store_name']);
+        $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get(ItemSubcategory::listSelectColumns())
             ->map(fn ($s) => [
                 'id' => $s->id,
                 'item_name' => $s->item_name ?? $s->name ?? '—',
@@ -228,11 +238,13 @@ class StoreAllocationController extends Controller
                 'allocation_date' => $request->allocation_date,
             ]);
 
+            $subcategories = ItemSubcategory::whereIn('id', collect($request->items)->pluck('item_subcategory_id'))->get()->keyBy('id');
+
             foreach ($request->items as $item) {
                 $qty = (float) $item['quantity'];
                 $unitPrice = (float) $item['unit_price'];
                 $totalPrice = round($qty * $unitPrice, 2);
-                $sub = ItemSubcategory::find($item['item_subcategory_id']);
+                $sub = $subcategories->get($item['item_subcategory_id']);
                 StoreAllocationItem::create([
                     'store_allocation_id' => $allocation->id,
                     'item_subcategory_id' => $item['item_subcategory_id'],
@@ -243,6 +255,7 @@ class StoreAllocationController extends Controller
                 ]);
             }
         });
+        self::bumpAvailableQuantityCacheEpoch();
 
         return redirect()->route('admin.mess.storeallocations.index')->with('success', 'Store allocation added successfully.');
     }
@@ -289,11 +302,13 @@ class StoreAllocationController extends Controller
                 'allocation_date' => $request->allocation_date,
             ]);
             $allocation->items()->delete();
+            $subcategories = ItemSubcategory::whereIn('id', collect($request->items)->pluck('item_subcategory_id'))->get()->keyBy('id');
+
             foreach ($request->items as $item) {
                 $qty = (float) $item['quantity'];
                 $unitPrice = (float) $item['unit_price'];
                 $totalPrice = round($qty * $unitPrice, 2);
-                $sub = ItemSubcategory::find($item['item_subcategory_id']);
+                $sub = $subcategories->get($item['item_subcategory_id']);
                 StoreAllocationItem::create([
                     'store_allocation_id' => $allocation->id,
                     'item_subcategory_id' => $item['item_subcategory_id'],
@@ -304,6 +319,7 @@ class StoreAllocationController extends Controller
                 ]);
             }
         });
+        self::bumpAvailableQuantityCacheEpoch();
 
         return redirect()->route('admin.mess.storeallocations.index')->with('success', 'Store allocation updated successfully.');
     }
@@ -313,6 +329,7 @@ class StoreAllocationController extends Controller
         $allocation = StoreAllocation::whereNotNull('sub_store_id')->findOrFail($id);
         $allocation->items()->delete();
         $allocation->delete();
+        self::bumpAvailableQuantityCacheEpoch();
 
         return redirect()->route('admin.mess.storeallocations.index')->with('success', 'Store allocation deleted successfully.');
     }
