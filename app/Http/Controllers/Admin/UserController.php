@@ -5019,6 +5019,33 @@ public function assignRoleSave(Request $request)
         'roles.*' => 'exists:roles,id',
     ]);
 
+    // Privilege-escalation guard. This route is gated on `menu.permission:users`,
+    // which admits Super Admin AND any holder of the `users` permission - and this
+    // PR's own condition-1 migration grants `users` to Training-Induction (10
+    // accounts). syncRoles() below writes whatever role ids are posted, so without
+    // this guard a `users` holder could post its own pk with the Super Admin role id
+    // and become Super Admin - which then bypasses EnsureMenuPermission entirely,
+    // because that middleware admits isSidebarPrivilegedUser() before it checks any
+    // permission. Confirmed by executed probe against the review database before this
+    // guard existed: a Training-Induction account went from 403 to Super Admin in one
+    // request.
+    //
+    // The rule is deliberately narrow: a caller who is not Super Admin may not CHANGE
+    // anyone's Super Admin membership - neither granting it (escalation) nor removing
+    // it (which would let a `users` holder demote every Super Admin and strand the
+    // only accounts able to undo that). Every other role assignment is unchanged.
+    if (! isSidebarPrivilegedUser()) {
+        $target = User::find($request->user_id);
+        $requestedRoleNames = Role::whereIn('id', $request->input('roles', []))->pluck('name')->toArray();
+
+        $wouldHoldSuperAdmin = in_array('Super Admin', $requestedRoleNames, true);
+        $holdsSuperAdmin = $target ? $target->hasRole('Super Admin') : false;
+
+        if ($wouldHoldSuperAdmin !== $holdsSuperAdmin) {
+            abort(403, 'Only a Super Admin may grant or revoke the Super Admin role.');
+        }
+    }
+
     try {
         DB::beginTransaction();
 

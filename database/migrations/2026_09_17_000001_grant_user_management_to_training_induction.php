@@ -21,14 +21,29 @@ use Spatie\Permission\PermissionRegistrar;
  * keeps the access it had before the gate.
  *
  * ---------------------------------------------------------------------------------
- * SECURITY NOTE — read before extending this to another role.
+ * SECURITY NOTE - read before extending this to another role.
  *
- * Granting `roles` is not merely read access to the Roles screen. It admits the
- * holder to POST `assign.roles.permissions` (routes/web.php:157), whose handler
- * `RoleController::assignPermission()` firstOrCreate()s ANY permission name posted
- * to it and grants it to ANY role by id. A holder of `roles` can therefore grant
- * itself any permission in the system. This migration hands that capability to 10
- * accounts, deliberately and on instruction.
+ * Both names here are administration rights, not read access.
+ *
+ * `users` admits the holder to POST `admin.users.assign-role-save`, which writes a
+ * ROLE to a USER. That handler validates only that the posted role ids EXIST, so
+ * until this PR added the guard in UserController::assignRoleSave() a holder could
+ * post its own pk with the Super Admin role id and become Super Admin - which does
+ * not merely open one screen but bypasses every gate in the application, because
+ * EnsureMenuPermission admits isSidebarPrivilegedUser() BEFORE it reads any
+ * permission. Confirmed by executed probe against the review database, then closed:
+ * a caller who is not Super Admin may no longer change anyone's Super Admin
+ * membership, in either direction. Pinned by
+ * tests/Feature/RoleAssignmentEscalationTest.php. Ordinary role administration is
+ * untouched, which is the capability this grant exists to restore.
+ *
+ * `roles` admits the holder to POST `assign.roles.permissions`, whose handler
+ * `RoleController::assignPermission()` grants a permission to any role by id.
+ * Inventing a NEW permission name is refused - the name must already exist or be
+ * defined by a `menus` row - but every permission this application actually uses
+ * already exists, so a holder of `roles` can still grant its own role any of them.
+ * This migration hands that capability to 10 accounts, deliberately and on
+ * instruction. It stops short of Super Admin, per the guard described above.
  *
  * To narrow it later without reverting the User Management fix, remove `roles` from
  * PERMISSIONS below and re-run, or run `down()` and re-apply with `users` only.

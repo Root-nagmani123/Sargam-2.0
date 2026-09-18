@@ -48,17 +48,77 @@ php artisan package:discover
 ## 3. Migrations
 
 ```bash
-php artisan migrate     # two migrations
+php artisan migrate     # four migrations
 ```
 
-Both are guarded in `up()` and `down()`, and the back-fill is idempotent and
-scoped. The back-fill sets `is_container = 1` on every menu that has children and
-no route or attachment. Measured on `testsargam6` (2026-09-15): **4 rows of 258**,
-out of 43 parent menus.
+Two alter `menus` (`attachment`, `is_container`). Two are **data** migrations that
+grant permissions — see section 3a. They are not optional: skipping `migrate`
+leaves real accounts locked out of screens the sidebar still offers them.
+
+The two schema migrations are guarded in `up()` and `down()`, and the back-fill is
+idempotent and scoped. The back-fill sets `is_container = 1` on every menu that has
+children and no route or attachment. Measured on `testsargam6` (2026-09-15):
+**4 rows of 258**, out of 43 parent menus.
 
 Those rows can only be saved afterwards because the Add/Edit form now renders the
 "This menu only holds sub-menus" control. Without it the rule rejects them, which
 is what review finding F-002 was.
+
+## 3a. This release NARROWS who can reach User Management and Roles
+
+This is the largest behavioural change in the release and the PR title does not
+imply it. Read it before deploying.
+
+Before this release, `admin/users/*` and the Roles screen carried `web,auth` only:
+**every authenticated account could reach them**, and `admin/users/assign-role-save`
+would hand any caller the Super Admin role. That was review finding F-015, and it is
+why the gates exist.
+
+After this release every `admin.users.*` route carries `menu.permission:users` and
+every Roles route carries `menu.permission:roles`. A route now admits Super Admin,
+or a holder of that permission, and nobody else.
+
+The catch is that the sidebar advertises those screens on **role** names while the
+routes gate on **permissions**, and the two disagree.
+`resources/views/components/menu/setup_activities.blade.php` shows the block to
+`Admin`, `Super Admin`, `Training-Induction`, `Training-MCTP` and `IST`. On
+`testsargam6` only two of those five roles exist, and only Super Admin held `users`
+— so **10 Training-Induction accounts would have seen the links and got 403**. That
+was finding F-017.
+
+`2026_09_17_000001_grant_user_management_to_training_induction.php` closes it by
+granting `users` and `roles` to Training-Induction, restoring the access that role
+had before the gate. It logs what it did, is safe to re-run, and `down()` revokes.
+
+**If `Admin`, `Training-MCTP` or `IST` are ever created as roles, they will hit the
+same 403.** Grant them `users` (and `roles` if they need the Roles screen) at the
+point of creation, or remove them from `$showUserManagement`. Nothing detects this
+automatically.
+
+### Granting `users` is an administration right, not a view
+
+`users` admits the holder to `admin.users.assign-role-save`, which writes roles to
+users. This release adds a guard in `UserController::assignRoleSave()`: a caller who
+is not Super Admin may not grant **or** revoke the Super Admin role, in either
+direction. Without it, granting `users` to a role would have let those accounts make
+themselves Super Admin in one request — confirmed by an executed probe — which
+bypasses every `menu.permission` gate, since `EnsureMenuPermission` admits
+`isSidebarPrivilegedUser()` before it reads any permission. Pinned by
+`tests/Feature/RoleAssignmentEscalationTest.php`.
+
+`roles` still lets its holder grant any **existing** permission to any role via
+`assign.roles.permissions`. Inventing a new permission name is refused, but every
+permission the application uses already exists. That is a deliberate, instructed
+widening to 10 accounts, and it stops short of Super Admin because of the guard
+above. Narrow it by dropping `roles` from that migration's `PERMISSIONS` list.
+
+### `2026_09_17_000002_create_bank_detail_report_permission.php`
+
+Unrelated to the above and not a PR #311 finding. Five `admin/reports/bank-report*`
+routes carry `can:bank_detail_report` and no such permission row existed. `can:` has
+no Super Admin bypass in this application, so those five routes returned 403 to
+**every** account while the sidebar advertised the screen. The migration creates the
+row via the Spatie model so the permission cache is flushed.
 
 ## 4. Merge order with the Faculty and Employee releases
 
@@ -81,8 +141,13 @@ Two things still need a decision when the second and third merge:
 
 ```bash
 git revert <merge commit>
-php artisan migrate:rollback --step=2     # both down() bodies are guarded
+php artisan migrate:rollback --step=4     # every down() body is guarded
 ```
+
+Rolling back the two data migrations revokes `users`/`roles` from
+Training-Induction and deletes the `bank_detail_report` permission row. Do that
+only together with the code revert: without the gates, the revoked permissions are
+not needed; with the gates and without the grant, 10 accounts are locked out.
 
 The back-fill only sets a flag the reverted code never reads, so rolling back
 loses nothing. Files under `storage/app/public/menu-attachments/` remain and are
@@ -95,6 +160,14 @@ harmless.
 - Run Print / CSV / Excel / PDF once on each with a search term.
 - As a non-Super-Admin **without** the `roles` permission, request
   `/roles/export` — expect **403**.
+- As a **Training-Induction** account, open User Permissions and Roles from the
+  sidebar — both must return **200**. A 403 here means `migrate` did not run, and
+  is the single check that tells you the F-017 grant was actually applied.
+- As that same Training-Induction account, open Assign Role for any user, tick
+  **Super Admin** and save — expect **403** and no change to that user's roles.
+  Then assign an ordinary role to confirm normal administration still works.
+- As a Super Admin, assign Super Admin to a test account — this must still work.
+- Open `/admin/reports/bank-report` as Super Admin — expect **200**, not 403.
 - As Super Admin, **create a parent-only menu** and **edit an existing
   container** — both must save (this is F-002).
 - Upload a PDF attachment to a menu and open it from the sidebar. Remember the
