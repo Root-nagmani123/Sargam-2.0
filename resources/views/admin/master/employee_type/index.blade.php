@@ -123,7 +123,7 @@
                             Category Type Name <span class="mst-req">*</span>
                         </label>
                         <input type="text" class="mst-control" id="etmName" name="employee_type_name"
-                            placeholder="eg. Contractual" maxlength="255" required>
+                            placeholder="eg. Contractual" maxlength="50" required>
                         <div class="invalid-feedback" data-field="employee_type_name"></div>
                     </div>
 

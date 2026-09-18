@@ -32,7 +32,8 @@ class EmployeeTypeMasterController extends Controller
             'employee_type_name' => [
                 'required',
                 'string',
-                'max:255',
+                // The column is varchar(50); max:255 reached MySQL and threw 1406.
+                'max:50',
                 Rule::unique('employee_type_master', 'category_type_name')->ignore($id, 'pk'),
             ],
         ];
