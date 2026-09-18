@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Object-level gate for the member edit wizard.
@@ -98,16 +99,121 @@ class EnsureMemberRecordAccess
             return $next($request);
         }
 
-        $requested = $request->route('id');
-        $own = optional(auth()->user())->user_id;
-
-        // `!== null` on both sides, then a string compare: user_id is nullable
-        // for credentials that belong to no employee row, and null == null must
-        // NOT be read as "this is my record".
-        if ($requested !== null && $own !== null && (string) $own === (string) $requested) {
+        if (self::ownsMemberRecord($request->route('id'))) {
             return $next($request);
         }
 
         abort(403, 'You do not have access to this member record.');
+    }
+
+    /**
+     * Does the authenticated credential DEMONSTRABLY own this employee row?
+     *
+     * This is the F-024 fix, and it is a narrowing, so the reasoning is written
+     * down rather than left in a commit message.
+     *
+     * The old rule was `user_credentials.user_id === <the requested pk>` and
+     * nothing else. The census above is why that is not ownership: 326
+     * blank-category and 1 'S' credential resolve to an employee row, and for
+     * ALL 327 of them the credential's own contact details match that row in no
+     * respect whatsoever - 311 of them do not even share a name token with it.
+     * Those accounts were not reaching "their own record"; they were reaching a
+     * stranger's, with edit rights.
+     *
+     * So the rule now needs two things, and both are exact - no fuzzy name
+     * comparison is used anywhere in this decision, deliberately. A name-based
+     * test would be a rule an attacker can satisfy by editing their own
+     * credential's name, which is a worse defect than the one being fixed:
+     *
+     *   1. user_category = 'E'. The column is not namespaced, so 'S' and blank
+     *      credentials carry user_id values inside employee_master's pk range.
+     *      Necessary, and on its own NOT sufficient - it leaves the nine
+     *      E-category rows named above.
+     *   2. A CONTACT PROOF: the credential's own email_id equals the employee
+     *      row's email or officalemail, or its mobile_no equals the row's
+     *      mobile. Both compared lower-cased and trimmed; mobile only when it
+     *      is at least ten digits, so two blank or truncated numbers cannot
+     *      match each other.
+     *
+     * MEASURED ON testsargam6 (census 2026-09-18, 1,547 credentials resolving
+     * to an employee row):
+     *
+     *   admitted by the new rule      1,188   (E-category with a contact proof)
+     *   refused, and rightly          327     (326 blank + 1 'S' - not one of
+     *                                          them has a proof of any kind)
+     *   refused, E-category           32      (8 of these are among the nine
+     *                                          known-misaligned rows; the other
+     *                                          24 look like their own record but
+     *                                          cannot prove it from contact data)
+     *
+     * THE COST IS REAL AND IT IS THE 32. Those accounts lose self-service on
+     * their own profile and get a 403 instead. That is the deliberate trade:
+     * 359 accounts stop reaching a record they cannot prove is theirs, and 32
+     * people are inconvenienced until their contact details are corrected -
+     * which is a data repair with an obvious remedy, not a code change. The
+     * alternative, leaving the gate as it was, keeps 327 accounts reading and
+     * writing somebody else's personal record. Whether the underlying user_id
+     * misalignment is repaired in data remains open with the DBA (F-024/F-029);
+     * this makes the gate safe while that is decided, rather than waiting.
+     *
+     * One query, and it is the join that carries the decision - the caller's
+     * pk, the requested pk and the proof are all resolved in the database
+     * rather than compared in PHP against values a request could influence.
+     */
+    public static function ownsMemberRecord($requestedPk): bool
+    {
+        $user = auth()->user();
+
+        // `!== null` on both sides: user_id is nullable for credentials that
+        // belong to no employee row, and null == null must NOT be read as
+        // "this is my record".
+        if (! $user || $requestedPk === null || $user->user_id === null) {
+            return false;
+        }
+
+        if ((string) $user->user_id !== (string) $requestedPk) {
+            return false;
+        }
+
+        // Anything that is not an employee credential is refused here, whatever
+        // its user_id happens to point at.
+        if (strtoupper(trim((string) ($user->user_category ?? ''))) !== 'E') {
+            return false;
+        }
+
+        // Every cross-table string comparison below carries an explicit
+        // COLLATE. user_credentials and employee_master do not share a
+        // collation on this server (utf8mb4_0900_ai_ci vs utf8mb4_unicode_ci),
+        // and MySQL raises "Illegal mix of collations" rather than returning
+        // false - which, in an authorisation check, is a 500 where a decision
+        // was wanted. Pinning both sides makes the comparison deterministic and
+        // portable across the two hosts' defaults.
+        //
+        // The collation is written out in full in each string rather than held
+        // in a local and interpolated. It is a constant either way, but a raw
+        // SQL fragment assembled from a PHP variable matches SAST-01 (CWE-89) -
+        // a High-severity injection rule - and this is an authorisation path,
+        // so the hit would have to be re-triaged as a false positive on every
+        // review. There is no binding here and no request input anywhere in
+        // this query; writing the literals out keeps that obvious to a reader
+        // and to the scanner.
+        return DB::table('user_credentials as uc')
+            ->join('employee_master as em', 'em.pk', '=', 'uc.user_id')
+            ->where('uc.pk', $user->pk)
+            ->where(function ($q) {
+                $q->where(function ($e) {
+                    $e->whereRaw("TRIM(uc.email_id) COLLATE utf8mb4_unicode_ci <> '' COLLATE utf8mb4_unicode_ci")
+                      ->where(function ($m) {
+                          $m->whereRaw('LOWER(TRIM(uc.email_id)) COLLATE utf8mb4_unicode_ci = LOWER(TRIM(em.email)) COLLATE utf8mb4_unicode_ci')
+                            ->orWhereRaw('LOWER(TRIM(uc.email_id)) COLLATE utf8mb4_unicode_ci = LOWER(TRIM(em.officalemail)) COLLATE utf8mb4_unicode_ci');
+                      });
+                })->orWhere(function ($m) {
+                    // Ten digits minimum: two blank or truncated numbers must
+                    // not be able to match each other.
+                    $m->whereRaw('CHAR_LENGTH(TRIM(uc.mobile_no)) >= 10')
+                      ->whereRaw('TRIM(uc.mobile_no) COLLATE utf8mb4_unicode_ci = TRIM(em.mobile) COLLATE utf8mb4_unicode_ci');
+                });
+            })
+            ->exists();
     }
 }

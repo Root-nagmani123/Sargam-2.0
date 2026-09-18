@@ -19,18 +19,33 @@ use Illuminate\Http\Request;
  *           /member/show/<id> and /member/print/<id> and receive one
  *           member's full profile sheet: date of birth, both addresses,
  *           father's name and personal email.
- *   After:  the four endpoints that hand out that data — show, print,
- *           export/{format} and the legacy excel-export — require a Super
- *           Admin or the holder of a grantable permission. Every other role
- *           keeps the listing grid and the create wizard, reaches the EDIT
- *           wizard for its own record only (see EnsureMemberRecordAccess),
- *           and loses the bulk and row-level personal-data reads.
+ *   After:  SIX endpoints require a Super Admin or the holder of a grantable
+ *           permission. Four are the reads that hand out that data — show,
+ *           print, export/{format} and the legacy excel-export. Two are the
+ *           destructive WRITES — POST {id}/toggle-status and DELETE
+ *           delete/{id} — which sat outside every gate until PR #309 round 12
+ *           (F-038 / R11-001): any authenticated account could deactivate any
+ *           member and then delete them, taking the member's user_credentials
+ *           row and every EmployeeRoleMapping with it. Every other role keeps
+ *           the listing grid and the create wizard, reaches the EDIT wizard
+ *           for its own record only (see EnsureMemberRecordAccess), and loses
+ *           the bulk and row-level personal-data reads, the status toggle and
+ *           Delete — in the Action column as well as at the endpoint, so the
+ *           screen does not offer a control the route will refuse.
  *
  * Why the split: the LISTING is an operational screen and stays open, exactly
- * as it was. The four gated endpoints are a different exposure — one GET
+ * as it was. The six gated endpoints are a different exposure — one GET
  * returns a whole roster, or one person's complete record, as a document that
- * leaves the application. Bulk and full-record extraction of personal data is
- * the privileged act; working the grid is not.
+ * leaves the application; one POST or DELETE removes an employee and their
+ * login. Bulk and full-record extraction of personal data, and destroying the
+ * record, are the privileged acts; working the grid is not.
+ *
+ * Why the two WRITES take `member.pii` and not `member.record`:
+ * `member.record` admits an ordinary account to its OWN record, and destroy()
+ * deletes that account's user_credentials row and every role mapping with it,
+ * so the own-record branch would hand every user a working self-delete.
+ * Deactivating and deleting an employee are administrative acts, so they take
+ * the administrative entitlement.
  *
  * Why the PRE-EXISTING endpoints are gated too: `excel-export` and `show`
  * predate this change and return the same data as the two routes added here.
@@ -100,9 +115,14 @@ use Illuminate\Http\Request;
  * is every hasRole() caller's behaviour, not this gate's; it is recorded here
  * because this gate guards personal data, where the window costs more.
  *
- * Both branches are executed by MemberPiiAccessTest: a non-privileged user gets
- * 403 through the real router on all four routes, a privileged one is passed
- * through.
+ * Both branches are executed by MemberPiiAccessTest, through the real router:
+ * a non-privileged user gets 403 on all four READ routes and on both WRITE
+ * routes, and for the writes the member row is read either side of the call, so
+ * a 403 that still wrote would fail the test rather than pass it. A privileged
+ * user is passed through on all six, and the destroy path is driven to
+ * completion inside a rolled-back transaction rather than stopped at the gate.
+ * Both mutations write a logMemberPii() audit line, and the tests assert the
+ * record - an unasserted audit line is an audit line nobody will notice losing.
  */
 class EnsureMemberPiiAccess
 {

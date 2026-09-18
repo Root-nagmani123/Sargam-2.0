@@ -84,15 +84,32 @@ that row in `owners.md` is filled.
 **Know what the grant restores, because the screen label says less than it
 does.** The row reads *Employee Downloads*, but `member_pii_read` is the
 entitlement flag for the whole member module, checked in five places through
-`EnsureMemberPiiAccess::grantsAccess()`. Granting it hands the role the four
-document routes **and** cross-member access to the edit wizard — `edit/{id}`,
-`profile/edit/{id}`, the edit-step routes and `POST member/update` — which
-without it reach the holder's own record only. Grant it to restore a download
-and you have also granted the ability to open and save *any* member's record.
-If that is not what you want, the answer is not a narrower grant — there is no
-narrower grant — it is to leave the permission ungranted and have someone who
-**already** holds Super Admin run the export on the office's behalf. Do not
-issue a Super Admin account to solve a download request.
+`EnsureMemberPiiAccess::grantsAccess()`. Granting it hands the role three
+things, not one:
+
+1. **The four document routes** — `show/{id}`, `print/{id}`, `export/{format}`
+   and the legacy `excel-export`. This is the download the office asked for.
+2. **Cross-member access to the edit wizard** — `edit/{id}`,
+   `profile/edit/{id}`, the edit-step routes and `POST member/update` — which
+   without it reach the holder's own record only. So the grant also confers the
+   ability to open and *save* any member's record.
+3. **The two destructive mutations** — `POST member/{id}/toggle-status` and
+   `DELETE member/delete/{id}`. These moved behind this permission in the
+   round-12 fix (PR #309 F-038 / R11-001); before it they sat outside every
+   gate. **`destroy()` is not a soft delete.** It removes the
+   `employee_master` row, the member's `user_credentials` row, and every
+   `EmployeeRoleMapping` attached to that credential — three tables, no
+   transaction wrapping them, and no undo. The only precondition is that the
+   member is inactive, and the same grant includes the toggle that makes them
+   inactive.
+
+So: **grant it to restore a download and you have also granted the ability to
+delete any employee and their login.** If that is not what you want, the answer
+is not a narrower grant — there is no narrower grant — it is to leave the
+permission ungranted and have someone who **already** holds Super Admin run the
+export on the office's behalf. Do not issue a Super Admin account to solve a
+download request, and do not grant `member_pii_read` to solve one either unless
+you are content for that role to hold an irreversible delete.
 
 **Do not read this permission as a boundary.** Granting it is not restricted to
 an administrator: `POST roles/permissions/{id}` carries `auth` and nothing else,
@@ -114,6 +131,75 @@ it, and deletes the permission row. Any role that had been granted the download
 loses it, which is the same state as before the release. That statement is about
 this one migration; a bare `migrate:rollback` is a different and unvouched-for
 operation, see §2.1 and §3.
+
+### 0.3 "Their own record" now means a record they can be shown to own
+
+**This one changes what live accounts can do, with no migration and no setting.
+Read it before deploying.**
+
+Until this release the self-service rule was `user_credentials.user_id` equals
+the requested employee pk, and nothing else. That column is not ownership. A
+census of `testsargam6` (2026-09-18) over the **1,547** credentials whose
+`user_id` resolves to an `employee_master` row found:
+
+| `user_category` | credentials | match the row on email or mobile | share no name token with it |
+| --- | --- | --- | --- |
+| `E` | 1,220 | **1,188** | 9 |
+| *(blank)* | 326 | **0** | 311 |
+| `S` | 1 | **0** | 0 |
+
+Every blank-category and `S` credential — **327 accounts** — matched its
+supposed record on *nothing*, and 311 of them did not even share a name token
+with it. Those people were not opening their own profile. They were opening a
+stranger's, with the right to save it, and the sidebar's **My Profile** link
+sent them there. That is PR #309 F-024.
+
+The rule is now: `user_category = 'E'` **and** the credential's own `email_id`
+matches the row's `email`/`officalemail`, or its `mobile_no` matches the row's
+`mobile`. No name comparison is used anywhere in the decision — a name test
+would be one an attacker satisfies by editing their own credential.
+
+**Who is affected on the day:**
+
+- **1,188 accounts** — unchanged, self-service works exactly as before.
+- **327 accounts** (blank / `S` category) — now get **403** on the profile they
+  used to reach. They have lost nothing of their own; they have stopped seeing
+  somebody else's personal data.
+- **32 employee accounts** — these are the ones to expect a ticket from. Their
+  `user_category` is `E`, so they are probably looking at their own record, but
+  their credential's email and mobile match it in neither field, so the
+  application cannot tell them apart from the 327. **The remedy is a data fix,
+  not a code change:** correct `user_credentials.email_id` or `mobile_no` to
+  match the employee row, and access returns on the next request. Do not widen
+  the rule in code to accommodate them.
+
+Report any such ticket to the **Engineering lead** with the credential pk, and
+to the **DBA** alongside the F-024/F-029 question of whether the underlying
+`user_id` misalignment is repaired in data. Nine `E`-category rows are known to
+be misaligned outright (pks listed in §5); eight of those nine are closed by
+this rule, and the ninth matches on email and is therefore still admitted —
+that one is a data question, and it is the only known case this gate does not
+answer.
+
+### 0.4 Role and permission administration now requires Super Admin
+
+`POST roles/permissions/{id}` carried `auth` and nothing else, and the
+controller behind it created whatever permission name it was posted and granted
+it to the role in the URL, with no check on the caller. **Any authenticated
+account could grant itself any permission**, which made every `can()`-based gate
+in this application — including `member_pii_read` above — advisory rather than
+enforced. PR #309 F-027 / PR #317 L-8.
+
+Every endpoint that changes what a role can do is now Super-Admin-only. The
+check sits in `RoleController`'s constructor rather than on the route, because
+the controller answers on two mounts (`roles/*` and `admin/roles/*`) and a
+route-level gate would have closed one of them. Reads — the roles listing, the
+dashboard-card screen — are untouched.
+
+**What to expect:** nothing, for anyone who was administering roles through the
+UI, because that screen is already offered to Super Admin alone. If a
+non-Super-Admin account reports losing role administration, do not widen the
+gate: that account was relying on the defect. Route it to the Engineering lead.
 
 ---
 
@@ -250,16 +336,25 @@ downloads:
 - refused `POST member/update` when the posted `emp_id` is someone else's. This
   one lands on a **save**, so a wizard already open on another member's record
   cannot be written back;
+- refused `POST member/{id}/toggle-status` and `DELETE member/delete/{id}` for
+  **every** member, including their own. Unlike the bullets above there is no
+  own-record fallthrough here: both mutations are gated on `member.pii` alone,
+  deliberately, because `destroy()` deletes the caller's own `user_credentials`
+  row and role mappings and an own-record branch would be a working
+  self-delete. During the window, deactivating and deleting members is a Super
+  Admin action only;
 - served a listing whose Action column no longer offers View or Print, offers
   **Edit on that operator's own row only** — the same own-record rule as the
   second bullet, resolved in `MemberDataTable` so the column does not show a
-  link `member.record` would refuse — and whose Download and Print toolbar is
+  link `member.record` would refuse — no longer offers the **status toggle** or
+  **Delete** on any row, matching the bullet above so the screen never shows a
+  control the endpoint will refuse, and whose Download and Print toolbar is
   gone.
 
 One rule in five places: `EnsureMemberPiiAccess::grantsAccess()` is the
 entitlement flag for the whole module, not only for the exports. The `member.pii`
 gate itself, `member.record`, `MemberController::update()`, `MemberDataTable` and
-the listing view all ask it the same question. Expect all four bullets, not just
+the listing view all ask it the same question. Expect all five bullets, not just
 the first.
 
 The loss is immediate, not delayed: `down()` flushes Spatie's cache after
@@ -335,5 +430,50 @@ button (it raises "Unknown column 'pk'" and the switch reverts).
   rather than as a category being conflated. The other three match nothing
   inside the set. Stated by pk and never by name on purpose: this repository is
   public, see PR #309 F-031.
-- Confirm two `member.pii.*` lines in `storage/logs/laravel.log`, each on a
-  single line.
+- **Self-service still works for an account that can prove ownership.** Sign in
+  as an employee account whose `user_credentials.email_id` matches its
+  `employee_master` row, open **My Profile**, and confirm the record is theirs.
+  Then confirm the count: `SELECT COUNT(*) FROM user_credentials uc JOIN
+  employee_master em ON em.pk = uc.user_id WHERE UPPER(TRIM(uc.user_category)) =
+  'E' AND (LOWER(TRIM(uc.email_id)) = LOWER(TRIM(em.email)) OR
+  LOWER(TRIM(uc.email_id)) = LOWER(TRIM(em.officalemail)))` — on the review
+  database that is 1,179, and with the mobile fallback 1,188. A number near zero
+  on the target host means the contact data does not line up there and §0.3 will
+  lock out far more than 32 people: **stop and tell the Engineering lead before
+  announcing the release.**
+- **And a blank-category account no longer reaches a stranger's record.** Sign
+  in as an account whose `user_category` is blank, open **My Profile**, and
+  confirm **403** — not somebody else's name. Before this release it showed one.
+- **Role administration is Super-Admin-only.** As a non-Super-Admin account,
+  `POST roles/permissions/{id}` with any permission name must return **403**,
+  and `SELECT * FROM permissions WHERE name = '<that name>'` must return no row
+  — a 403 that still created the permission would be the same escalation with a
+  tidier response. Then confirm a Super Admin can still toggle a permission on
+  the Roles screen.
+- **The two destructive mutations refuse a non-entitled account.** As an
+  account with no entitlement, on the Members grid: the Action column must show
+  **no status toggle and no Delete** on any row. Then, because a missing button
+  is not a gate, call the endpoints directly — `POST /member/<pk>/toggle-status`
+  and `DELETE /member/delete/<encrypted pk>` — and confirm **403** on both, then
+  confirm in the database that the member's `status` is unchanged and the row is
+  still present. Until the round-12 fix these carried `auth` and nothing else,
+  so any authenticated account could deactivate any member and then delete them
+  along with their login.
+- **And that they admit an entitled one.** As Super Admin, confirm the Action
+  column offers Edit, View, Print, the status toggle and Delete, and that
+  toggling a member's status succeeds. Do **not** exercise Delete on a live
+  member to satisfy this check — the suite covers it inside a rolled-back
+  transaction.
+- **Both doors to the edit wizard refuse the same record.** As a non-entitled
+  account, open `/member/edit/<somebody else's pk>` **and**
+  `/admin/setup/member/edit/<the same pk>`. Both must be **403**. The second URL
+  is a pre-existing mirror route onto the same controller method that carried
+  `auth` alone until the round-12 fix (PR #309 F-041); it returned 200 while the
+  first returned 403. Then open the same two URLs on **your own** pk and confirm
+  both are 200 — the fix must not have taken self-service away.
+- Confirm the `member.pii.*` lines in `storage/logs/laravel.log`, each on a
+  single line: a download writes one, and after the mutation checks above there
+  must also be a `member.pii.toggle_status` and — if Delete was exercised on a
+  disposable record — a `member.pii.destroy`, each naming `user_pk` and `ip`. A
+  privileged mutation with no trail is what let the ungated version of these
+  endpoints go unnoticed.

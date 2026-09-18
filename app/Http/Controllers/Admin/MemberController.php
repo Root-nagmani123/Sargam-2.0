@@ -240,16 +240,26 @@ class MemberController extends Controller
      * One rule, resolved through one method, so the middleware and the
      * controller cannot come to different answers about who may touch a record.
      */
+    /**
+     * The same decision EnsureMemberRecordAccess makes, from the same method.
+     *
+     * It used to be a copy of the rule rather than a call to it - `user_id`
+     * compared to the requested pk, in both places. Two copies of an
+     * authorisation rule drift, and this pair had further to drift than most:
+     * the middleware guards the wizard READS and this guards the WRITE, so a
+     * divergence would have meant a record you may not open but may save.
+     * F-024 tightened the rule (user_category = 'E' plus a contact proof, see
+     * that class), and this now inherits the change instead of needing the same
+     * edit made twice.
+     */
     private function authorizeMemberRecord($memberPk): void
     {
         if (\App\Http\Middleware\EnsureMemberPiiAccess::grantsAccess()) {
             return;
         }
 
-        $own = optional(auth()->user())->user_id;
-
         abort_unless(
-            $memberPk !== null && $own !== null && (string) $own === (string) $memberPk,
+            \App\Http\Middleware\EnsureMemberRecordAccess::ownsMemberRecord($memberPk),
             403,
             'You do not have access to this member record.'
         );
@@ -549,7 +559,41 @@ class MemberController extends Controller
         ]);
     }
 
+    /**
+     * The wizard reads, gated IN THE METHOD and not only on the route.
+     *
+     * `member.record` is attached to member/edit/{id}, member/profile/edit/{id}
+     * and the edit-step routes, and that was the whole boundary until now. It
+     * was never the whole story: middleware protects a URL, not the method
+     * behind it, and this controller is mounted TWICE. The mirror group at
+     * routes/web.php:1218 - Route::prefix('admin/setup/member')->controller(
+     * MemberController::class) - carries the enclosing `auth` and nothing else,
+     * and it includes edit/{id}. So GET /admin/setup/member/edit/<any pk>
+     * answered 200 to an account that GET /member/edit/<same pk> answered 403.
+     *
+     * Nothing leaked through it, and the reason is worth stating because it is
+     * not a control: admin/member/edit.blade.php is a SHELL. It embeds
+     * $member->pk and fetches every field over member/edit-step/{step}/{id},
+     * which is gated, then saves through member.update, which calls
+     * authorizeMemberRecord() below. Render one member field into that view
+     * server-side and the mirror route serves it to every authenticated
+     * account. The 200 also distinguishes a live pk from an absent one (404),
+     * which is an enumeration oracle on its own.
+     *
+     * So the check moves to where the data is. update() has always done this;
+     * these three now do the same, which makes the rule hold for every route
+     * that reaches them - including one added later by someone who never reads
+     * this file. Recorded as PR #309 F-041; it also answers F-019, which asked
+     * for the boundary to be decided once and applied to every route that
+     * returns member personal data rather than only to the ones returning a
+     * file.
+     *
+     * The route middleware stays. It refuses before the controller is reached,
+     * which is cheaper and keeps the 403 uniform; this is defence in depth, not
+     * a replacement.
+     */
     public function edit($id) {
+        $this->authorizeMemberRecord($id);
         $member = EmployeeMaster::findOrFail($id);
         $appellationMasterList = AppellationMaster::where('active_inactive', 1)
             ->pluck('appettation_name', 'pk')
@@ -558,6 +602,7 @@ class MemberController extends Controller
     }
 
     public function editProfile($id) {
+        $this->authorizeMemberRecord($id);
         $member = EmployeeMaster::findOrFail($id);
         $appellationMasterList = AppellationMaster::where('active_inactive', 1)
             ->pluck('appettation_name', 'pk')
@@ -567,6 +612,7 @@ class MemberController extends Controller
 
     function editStep($step, $id)
     {
+        $this->authorizeMemberRecord($id);
         $member = EmployeeMaster::findOrFail($id);
         $appellationMasterList = AppellationMaster::where('active_inactive', 1)
             ->pluck('appettation_name', 'pk')
@@ -576,6 +622,12 @@ class MemberController extends Controller
 
     public function updateValidateStep(Request $request, $step, $id)
     {
+        // Same rule as the three reads above and as update(): this endpoint
+        // takes a member pk and validates a payload against that member, so it
+        // answers "does this row exist / would this write be accepted" for
+        // whichever pk it is handed.
+        $this->authorizeMemberRecord($id);
+
 
         $request->merge(['emp_id' => $id]);
 

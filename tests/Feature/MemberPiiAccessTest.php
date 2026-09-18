@@ -8,6 +8,7 @@ use App\Models\EmployeeMaster;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 /**
@@ -394,6 +395,11 @@ class MemberPiiAccessTest extends TestCase
         // That is defensive, not cosmetic: if the gate ever regressed, the
         // DELETE below would remove a live member, their user_credentials row
         // and every role mapping BEFORE the assertion could fail.
+        $lines = [];
+        Log::listen(function ($e) use (&$lines) {
+            $lines[] = $e->message;
+        });
+
         DB::beginTransaction();
 
         try {
@@ -413,27 +419,57 @@ class MemberPiiAccessTest extends TestCase
                 (string) $after->status,
                 "member {$pk} had its status rewritten by an account the gate refuses"
             );
+
+            // The mirror of the grant case: a refused call must not write an
+            // audit line either. A mutation record for a mutation that never
+            // happened is a false entry in the only trace these endpoints leave.
+            $this->assertNotContains('member.pii.toggle_status', $lines,
+                'a refused toggle-status wrote an audit line for a change it did not make');
+            $this->assertNotContains('member.pii.destroy', $lines,
+                'a refused destroy wrote an audit line for a deletion it did not make');
         } finally {
             DB::rollBack();
         }
     }
 
-    /** The grant side of the same pair: the gate admits an entitled account. */
+    /**
+     * The grant side of the same pair: the gate admits an entitled account, on
+     * BOTH routes, and both mutations leave an audit line.
+     *
+     * F-044. The first version of this test posted only toggle-status and
+     * asserted only "not 403", which left the destructive half of the pair
+     * unexercised - the same asymmetry R11-003 was raised about one round
+     * earlier and in this same file: a refusal side built airtight and a grant
+     * side that need never run. So this one drives DELETE to completion and
+     * asserts the row is gone, rather than stopping at the gate.
+     *
+     * The audit assertions are the other half of round 11's condition 2. The
+     * logMemberPii() calls shipped without them, so removing both calls left
+     * the whole suite green - and that audit line is the ONLY trace either
+     * mutation leaves.
+     *
+     * Both cases reach the controller and write to a real database. The class
+     * has no DatabaseTransactions trait (setUp opens its own transaction, so
+     * these nest as savepoints), and the DELETE removes an employee row, a
+     * user_credentials row and every role mapping attached to it - so the
+     * rollback is load-bearing, and the restoration is asserted rather than
+     * assumed.
+     */
     public function test_the_member_mutations_admit_an_entitled_account(): void
     {
         $this->actAsSuperAdmin();
 
-        $pk = $this->anyMemberPk();
+        $lines = [];
+        Log::listen(function ($e) use (&$lines) {
+            $lines[] = $e->message;
+        });
 
-        // Asserting the GATE, not the write: the response is whatever the
-        // controller makes of it. What must not happen is 403.
-        //
-        // This case DOES reach the controller and flip a real member's status,
-        // and the class has no DatabaseTransactions trait, so it rolls its own
-        // write back rather than leaving it in the database.
         DB::beginTransaction();
 
         try {
+            // --- toggle-status -------------------------------------------------
+            $pk = $this->anyMemberPk();
+
             $response = $this->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
                 ->post(route('member.toggle-status', $pk));
 
@@ -442,9 +478,57 @@ class MemberPiiAccessTest extends TestCase
                 $response->getStatusCode(),
                 'the gate refused an entitled account on member.toggle-status'
             );
+            $this->assertContains(
+                'member.pii.toggle_status',
+                $lines,
+                'member.toggle-status changed a member and left no audit line'
+            );
+
+            // --- destroy -------------------------------------------------------
+            // Not the actor's own record: destroy() deletes the credential too,
+            // and deleting the row the test is authenticated as would make the
+            // rest of the case meaningless.
+            $target = (int) EmployeeMaster::query()
+                ->where('pk', '!=', (int) optional(auth()->user())->user_id)
+                ->orderBy('pk', 'desc')
+                ->value('pk');
+
+            if (! $target) {
+                $this->markTestSkipped('no member row other than the actor own record');
+            }
+
+            // destroy() refuses an ACTIVE member by design, so the precondition
+            // is set here rather than hoped for; both writes are inside the
+            // transaction that is rolled back below.
+            DB::table('employee_master')->where('pk', $target)->update(['status' => 2]);
+
+            $deleted = $this->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
+                ->delete(route('member.destroy', encrypt($target)));
+
+            $this->assertNotSame(
+                403,
+                $deleted->getStatusCode(),
+                'the gate refused an entitled account on member.destroy'
+            );
+            $this->assertFalse(
+                EmployeeMaster::query()->where('pk', $target)->exists(),
+                "member {$target} survived a destroy the gate admitted - the route is gated but broken"
+            );
+            $this->assertContains(
+                'member.pii.destroy',
+                $lines,
+                'member.destroy removed an employee, their credential and their role mappings, and left no audit line'
+            );
         } finally {
             DB::rollBack();
         }
+
+        // The rollback is the only thing standing between this test and a
+        // deleted employee. Prove it worked.
+        $this->assertTrue(
+            EmployeeMaster::query()->where('pk', $target ?? 0)->exists(),
+            'the rollback did not restore the member this test deleted'
+        );
     }
 
     /**

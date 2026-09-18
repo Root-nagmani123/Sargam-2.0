@@ -140,13 +140,35 @@ Route::post('/login', [LoginController::class, 'authenticate'])->middleware('thr
 
 
 Route::middleware(['auth'])->group(function () {
-    Route::post('roles/permissions/{id}', [RoleController::class, 'assignPermission'])->name('assign.roles.permissions');
+    // Reads stay open to anyone who can already reach the screen; gating them
+    // would break navigation without closing an escalation.
     Route::get('roles/{id}/dashboard', [RoleController::class, 'showDashboard'])->name('roles.dashboard');
-    Route::post('roles/{id}/dashboard', [RoleController::class, 'assignDashboardCard'])->name('assign.roles.dashboard');
-    Route::post('dashboard-cards', [RoleController::class, 'storeDashboardCard'])->name('dashboard.cards.store');
-    Route::put('dashboard-cards/{id}', [RoleController::class, 'updateDashboardCard'])->name('dashboard.cards.update');
-    Route::delete('dashboard-cards/{id}', [RoleController::class, 'destroyDashboardCard'])->name('dashboard.cards.destroy');
-    Route::resource('roles', RoleController::class);
+
+    // Everything that CHANGES what a role can do.
+    //
+    // `POST roles/permissions/{id}` carried `auth` and nothing else, and
+    // RoleController::assignPermission() checked nothing itself: it
+    // firstOrCreate()d whatever permission name it was posted and granted it to
+    // the role named in the URL. Any authenticated account could therefore hand
+    // itself any permission and walk back through every `can()`-based gate in
+    // the application - including `member_pii_read`, which this same PR
+    // introduces. Recorded as PR #309 F-027 / PR #317 L-8.
+    //
+    // The middleware is referenced BY CLASS, not through a Kernel alias, on
+    // purpose: $middlewareAliases is the array this branch conflicts with
+    // `main` on, and a gate that lives there can be lost in a conflict
+    // resolution without anything failing loudly. See the class docblock.
+    Route::middleware([\App\Http\Middleware\EnsureRoleAdmin::class])->group(function () {
+        Route::post('roles/permissions/{id}', [RoleController::class, 'assignPermission'])->name('assign.roles.permissions');
+        Route::post('roles/{id}/dashboard', [RoleController::class, 'assignDashboardCard'])->name('assign.roles.dashboard');
+        Route::post('dashboard-cards', [RoleController::class, 'storeDashboardCard'])->name('dashboard.cards.store');
+        Route::put('dashboard-cards/{id}', [RoleController::class, 'updateDashboardCard'])->name('dashboard.cards.update');
+        Route::delete('dashboard-cards/{id}', [RoleController::class, 'destroyDashboardCard'])->name('dashboard.cards.destroy');
+        Route::resource('roles', RoleController::class)->only(['store', 'update', 'destroy']);
+    });
+
+    // The remaining resource verbs - index, create, show, edit - are reads.
+    Route::resource('roles', RoleController::class)->except(['store', 'update', 'destroy']);
 });
 
 // Protected Routes
