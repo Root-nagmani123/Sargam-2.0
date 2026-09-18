@@ -99,20 +99,28 @@ class MemberDataTable extends DataTable
      *     one entry whose payload differs between them, which is R11-002's
      *     defect re-created: whoever warms the cache decides what the others
      *     see. Keyed on the decision they land on different entries.
-     *   - It also shrinks the fan-out that was recorded as F-045. Every actor
-     *     who owns nothing - which is every account the gate refuses, 359 of
-     *     the 1,547 that resolve to an employee row, plus the ~13,500 that
-     *     resolve to none - renders an identical column and now shares the
-     *     single 'own:none' entry, instead of taking one apiece for every
-     *     (page, length, ordering, search, filter-set) for the full 86400s TTL.
-     *     The remaining per-account entries belong to accounts that genuinely
-     *     see something nobody else sees.
+     *   - It also shrinks the fan-out recorded as F-045, but by less than it
+     *     first looks, and the difference matters because F-045 is still open
+     *     and someone has to size this cache against it. What NEWLY collapses
+     *     into the single 'own:none' entry is the 359 accounts the gate refuses:
+     *     they used to key on their own user_id and take one entry apiece for
+     *     every (page, length, ordering, search, filter-set) for the full 86400s
+     *     TTL, and they now share one. The ~13,500 credentials whose user_id is
+     *     null were ALREADY on 'own:none' before this change - the old body read
+     *     'own:' . ($own === null ? 'none' : (string) $own) - so counting them as
+     *     newly saved overstates the saving by more than an order of magnitude.
+     *     Size the store for one key per account the gate ADMITS (see the census
+     *     in EnsureMemberRecordAccess), not for a collapse to nothing. Those
+     *     remaining per-account entries belong to accounts that genuinely see
+     *     something nobody else sees. PR #309 F-049.
      *
      * Still deliberately not `auth()->id()`: that would give every
      * administrator a private copy of an identical payload.
      *
      * ownedMemberPk() is memoised per request, so asking here and again in
-     * dataTable() costs one query between them, not two. PR #309 F-046, F-047.
+     * dataTable() costs one query between them, not two - see
+     * EnsureMemberRecordAccess::ownsMemberRecord() for exactly how long "per
+     * request" lasts, because it is not the same in tests. PR #309 F-046, F-047.
      */
     public static function actionColumnCacheIdentity(): string
     {
