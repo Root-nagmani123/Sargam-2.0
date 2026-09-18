@@ -222,6 +222,29 @@ class EmployeeTypeMasterTest extends TestCase
                 ])
                 ->assertOk();
 
+            // The column is varchar(50): longer names must be rejected, not reach
+            // MySQL. Without this the rule sat at max:255 and a 51-char name
+            // returned 500 instead of 422. (F-054)
+            $this->actingAs($user)
+                ->withHeaders(['X-Requested-With' => 'XMLHttpRequest', 'Accept' => 'application/json'])
+                ->postJson('/master/employee-type/store', [
+                    'pk' => '',
+                    'employee_type_name' => str_repeat('x', 51),
+                ])
+                ->assertStatus(422)
+                ->assertJsonValidationErrors('employee_type_name');
+
+            // The boundary itself must still be accepted, so the rule is not
+            // merely tighter but correct.
+            $atLimit = $this->actingAs($user)
+                ->withHeaders(['X-Requested-With' => 'XMLHttpRequest', 'Accept' => 'application/json'])
+                ->postJson('/master/employee-type/store', [
+                    'pk' => '',
+                    'employee_type_name' => str_repeat('y', 50),
+                ]);
+            $atLimit->assertOk()->assertJson(['status' => true]);
+            \App\Models\EmployeeTypeMaster::where('category_type_name', str_repeat('y', 50))->delete();
+
             fwrite(STDERR, "modal create/update/duplicate all answered in JSON\n");
         } finally {
             \Illuminate\Support\Facades\DB::rollBack();

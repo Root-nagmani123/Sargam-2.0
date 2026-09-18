@@ -1,0 +1,49 @@
+# Static analysis baseline for Sargam 2.0.
+#
+# Supplied for PR #309 condition 6, which asks for this file or a recorded
+# decision not to have one.
+#
+# READ THIS BEFORE EXPECTING IT TO RUN. The analyser itself is NOT installed:
+# neither phpstan/phpstan nor larastan/larastan appears in composer.json's
+# require-dev, and neither is present in vendor/. This file therefore makes the
+# gate CONFIGURED, not RUNNABLE. Installing it is a human decision because this
+# checkout's vendor/ is ahead of composer.lock, so a plain `composer install`
+# or `composer update` here would move a large number of unrelated packages.
+#
+#   composer require --dev larastan/larastan --no-update
+#   # then install deliberately, on a branch, and diff vendor/ before trusting it
+#
+# Once larastan IS installed, uncomment the includes below - without them
+# PHPStan does not understand facades, Eloquent magic or the container, and
+# level 1 will report hundreds of false positives on this codebase.
+#
+# includes:
+#     - vendor/larastan/larastan/extension.neon
+
+parameters:
+    # Deliberately the lowest useful level. This codebase has never been
+    # analysed, so the first run is an inventory, not a gate. Raise it one level
+    # at a time, fixing or baselining as you go - starting at level 5+ produces
+    # a number large enough that the result gets ignored, which is how a gate
+    # becomes decoration.
+    level: 0
+
+    paths:
+        - app
+        - database
+        - routes
+
+    # Generated, vendored or intentionally dynamic code.
+    excludePaths:
+        analyseAndScan:
+            - app/Console/Kernel.php
+            - database/migrations/*_create_failed_jobs_table.php
+
+    # Keep the run honest: an unmatched ignore should be reported rather than
+    # quietly accumulating as the code changes.
+    reportUnmatchedIgnoredErrors: true
+
+    # Nothing is ignored yet, on purpose. When the first run is triaged, prefer
+    # a committed baseline file (phpstan-baseline.neon) over broad ignores here,
+    # so new violations are still caught while existing ones are parked.
+    ignoreErrors: []
