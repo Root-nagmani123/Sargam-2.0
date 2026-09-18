@@ -10,7 +10,8 @@
       $cssFile      - page-specific stylesheet path (asset())
       $cardClass    - card wrapper modifier class
       $pageTitle    - breadcrumb / heading title
-      $exportTitle  - title used for export + print output
+      $exportTitle  - title used for print output
+      $exportUrl    - server-side export endpoint; ?format=excel|pdf is appended
       $emptyMessage - message shown when there are no rows
 --}}
 <link rel="stylesheet" href="{{ asset($cssFile) }}?v={{ @filemtime(public_path($cssFile)) ?: time() }}">
@@ -218,6 +219,7 @@
 $(document).ready(function() {
     var tableId = '{{ $tableId }}';
     var exportTitle = @json($exportTitle);
+    var exportUrl   = @json($exportUrl);
     var $toolbar = $('#' + tableId + '_toolbar');
 
     // LBSNAA report branding (mirrors the Mess report theme)
@@ -425,66 +427,30 @@ $(document).ready(function() {
             );
         }
 
-        // PDF (pdfmake) theme matched to the Mess report look: blue title, grey
-        // header fill, zebra rows, page numbers. (pdfmake cannot embed the logo
-        // images the way the server-side Mess PDFs do, so it uses a text header.)
-        function customizePdf(doc) {
-            try {
-                doc.pageMargins = [22, 26, 22, 32];
-                doc.defaultStyle.fontSize = 8;
 
-                doc.styles = doc.styles || {};
-                doc.styles.title = { fontSize: 14, bold: true, color: '#212529', alignment: 'center', margin: [0, 0, 0, 8] };
-                doc.styles.tableHeader = { bold: true, fontSize: 8, color: '#212529', fillColor: '#d3d6d9' };
-
-                // Branding lines above the title.
-                doc.content.unshift(
-                    { text: brandLine1, fontSize: 8, color: '#004a93', alignment: 'center', characterSpacing: 0.5 },
-                    { text: brandLine2.toUpperCase(), fontSize: 12, bold: true, alignment: 'center', margin: [0, 2, 0, 2] },
-                    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 751, y2: 0, lineWidth: 1.5, lineColor: '#004a93' }], margin: [0, 0, 0, 8] }
-                );
-
-                var tableNode = doc.content.find(function (c) { return c && c.table; });
-                if (tableNode) {
-                    tableNode.layout = {
-                        fillColor: function (rowIndex) {
-                            if (rowIndex === 0) { return '#d3d6d9'; }
-                            return rowIndex % 2 === 0 ? '#fafbfc' : null;
-                        },
-                        hLineWidth: function () { return 0.5; },
-                        vLineWidth: function () { return 0.5; },
-                        hLineColor: function () { return '#dee2e6'; },
-                        vLineColor: function () { return '#dee2e6'; }
-                    };
-                }
-
-                doc.footer = function (page, pages) {
-                    return {
-                        columns: [
-                            { text: brandLine2 + ' — ' + exportTitle + ' Report', fontSize: 7, color: '#666', margin: [22, 6, 0, 0] },
-                            { text: page + ' / ' + pages, fontSize: 7, color: '#666', alignment: 'right', margin: [0, 6, 22, 0] }
-                        ]
-                    };
-                };
-            } catch (e) {
-                console.warn('PDF customize failed:', e);
-            }
-        }
+        // Excel and PDF are served by the controller, not by the DataTables
+        // Buttons extension. The client-side builders scrape the rendered table
+        // and emit an unstyled sheet — no letterhead, no column band, no borders
+        // — which is what the branded server-side export replaces. Print still
+        // uses the Buttons extension, since that is a browser dialog, not a file.
+        var $exportGroup = $(
+            '<div class="btn-group" role="group" aria-label="Export">' +
+                '<button type="button" class="btn btn-sm dtb-btn dtb-export dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">' +
+                    '<i class="bi bi-download me-1"></i>Export' +
+                '</button>' +
+                '<ul class="dropdown-menu dropdown-menu-end">' +
+                    '<li><a class="dropdown-item" href="' + exportUrl + '?format=excel">' +
+                        '<i class="bi bi-file-earmark-excel me-2"></i>Excel (.xlsx)</a></li>' +
+                    '<li><a class="dropdown-item" href="' + exportUrl + '?format=pdf">' +
+                        '<i class="bi bi-file-earmark-pdf me-2"></i>PDF (.pdf)</a></li>' +
+                '</ul>' +
+            '</div>'
+        );
+        $toolbar.find('.dt-toolbar-right').append($exportGroup);
 
         try {
             new $.fn.dataTable.Buttons(api, {
                 buttons: [
-                    {
-                        extend: 'collection',
-                        text: '<i class="bi bi-download me-1"></i>Export',
-                        className: 'btn btn-sm dtb-btn dtb-export',
-                        autoClose: true,
-                        buttons: [
-                            { extend: 'excelHtml5', text: '<i class="bi bi-file-earmark-excel me-2"></i>Excel (.xlsx)', title: exportTitle, exportOptions: sharedExportOptions },
-                            { extend: 'csvHtml5',   text: '<i class="bi bi-filetype-csv me-2"></i>CSV (.csv)',   title: exportTitle, exportOptions: sharedExportOptions },
-                            { extend: 'pdfHtml5',   text: '<i class="bi bi-file-earmark-pdf me-2"></i>PDF (.pdf)',   title: exportTitle + ' Report', orientation: 'landscape', pageSize: 'A4', exportOptions: sharedExportOptions, customize: customizePdf }
-                        ]
-                    },
                     {
                         extend: 'print',
                         text: '<i class="bi bi-printer me-1"></i>Print',
@@ -497,7 +463,7 @@ $(document).ready(function() {
             });
             api.buttons().container().appendTo($toolbar.find('.dt-toolbar-right'));
         } catch (e) {
-            console.warn('DataTables export/print buttons unavailable:', e);
+            console.warn('DataTables print button unavailable:', e);
         }
     }
 });

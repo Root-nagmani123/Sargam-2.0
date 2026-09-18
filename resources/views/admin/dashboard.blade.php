@@ -497,7 +497,17 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 <div class="card dashboard-panel dashboard-house-panel border-0 mb-4">
                     <div class="card-header bg-white border-0">
                         <div class="d-flex align-items-center justify-content-between w-100">
-                            <h5 class="dashboard-birthdays-panel__title mb-0">House wise Performance</h5>
+                            {{-- The title opens the full breakdown: the panel can only
+                                 show a total per house, not who it came from. --}}
+                            <a href="{{ route('admin.dashboard.house-wise-performance') }}"
+                                class="dashboard-birthdays-panel__title mb-0 h5 text-decoration-none stretched-link-none"
+                                title="Open the full house wise performance breakdown">
+                                House wise Performance
+                            </a>
+                            <a href="{{ route('admin.dashboard.house-wise-performance') }}"
+                                class="btn btn-sm btn-link text-decoration-none px-1" aria-label="Open house wise performance">
+                                <i class="material-icons material-symbols-rounded align-middle" style="font-size:20px;">chevron_right</i>
+                            </a>
                         </div>
                         <hr class="dashboard-birthdays-divider mb-0">
                     </div>

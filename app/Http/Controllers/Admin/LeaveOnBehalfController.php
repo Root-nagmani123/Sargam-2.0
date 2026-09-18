@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Exports\LeaveReportExport;
+use App\Exports\LbsnaaTableExport;
 use App\Http\Controllers\Controller;
 use App\Models\CourseMaster;
 use App\Models\LeaveApplication;
@@ -197,21 +197,26 @@ class LeaveOnBehalfController extends Controller
         ])->values();
 
         $baseName = 'Leave_On_Behalf_' . now()->format('Ymd_His');
+        // Serial, OT code, dates, times, day count and status centred; names,
+        // course, nature, reason and recorder stay left-aligned.
+        $centreColumns = [0, 2, 5, 6, 7, 8, 9, 12];
+        $filterLine = $this->exportFilterLine($request);
 
         if (strtolower((string) $request->get('format')) === 'pdf') {
             @ini_set('memory_limit', '256M');
             @set_time_limit(120);
 
-            return Pdf::loadView('admin.leave.export.leave_pdf', [
+            return Pdf::loadView('admin.exports.table_pdf', [
                 'headings' => $headings,
                 'rows' => $data,
                 'reportTitle' => 'Leave Applied on Behalf of OT',
-                'filterLine' => $this->exportFilterLine($request),
+                'filterLine' => $filterLine,
+                'centreColumns' => $centreColumns,
             ])->setPaper('a4', 'landscape')->download($baseName . '.pdf');
         }
 
         return Excel::download(
-            new LeaveReportExport($data, $headings, 'Leave On Behalf'),
+            new LbsnaaTableExport($data, $headings, 'Leave Applied on Behalf of OT', $filterLine, $centreColumns, 'Leave On Behalf'),
             $baseName . '.xlsx'
         );
     }

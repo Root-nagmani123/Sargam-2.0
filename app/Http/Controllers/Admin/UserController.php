@@ -739,54 +739,10 @@ class UserController extends Controller
      */
     private function houseWisePerformance(): \Illuminate\Support\Collection
     {
-        $houseTypeIds = DB::table('course_group_type_master')
-            ->where('active_inactive', 1)
-            ->whereRaw('LOWER(type_name) LIKE ?', ['%house%'])
-            ->pluck('pk');
+        ['houses' => $studentsByHouse, 'course_ids' => $currentCourseIds] = $this->houseMemberships();
 
-        if ($houseTypeIds->isEmpty()) {
+        if ($studentsByHouse === []) {
             return collect();
-        }
-
-        // Every mapped house, whatever course it belongs to — the panel is about
-        // the houses themselves, which outlive any one programme.
-        // Every house on a RUNNING course. A house whose batch has finished, or
-        // whose course was switched off in the master, leaves the panel with it —
-        // otherwise the list grows a row per past programme and the panel stops
-        // being this term's table.
-        $currentCourseIds = $this->currentCourseIds();
-
-        $mappings = DB::table('group_type_master_course_master_map')
-            ->whereIn('type_name', $houseTypeIds)
-            ->whereIn('course_name', $currentCourseIds)
-            ->where('active_inactive', 1)
-            ->whereNotNull('group_name')
-            ->where('group_name', '<>', '')
-            ->get(['pk', 'group_name']);
-
-        if ($mappings->isEmpty()) {
-            return collect();
-        }
-
-        $houseByMapping = $mappings->pluck('group_name', 'pk');
-
-        // house name => [student_master_pk => true]
-        $studentsByHouse = [];
-        foreach ($houseByMapping as $mappingPk => $houseName) {
-            $studentsByHouse[trim((string) $houseName)] ??= [];
-        }
-
-        $memberships = DB::table('student_course_group_map')
-            ->whereIn('group_type_master_course_master_map_pk', $mappings->pluck('pk'))
-            ->where('active_inactive', 1)
-            ->get(['group_type_master_course_master_map_pk as map_pk', 'student_master_pk']);
-
-        foreach ($memberships as $row) {
-            $house = trim((string) ($houseByMapping[$row->map_pk] ?? ''));
-            if ($house === '' || empty($row->student_master_pk)) {
-                continue;
-            }
-            $studentsByHouse[$house][(int) $row->student_master_pk] = true;
         }
 
         $studentPks = collect($studentsByHouse)->flatMap(fn ($set) => array_keys($set))->unique()->values()->all();
@@ -819,6 +775,148 @@ class UserController extends Controller
             })
             ->sortBy([['total', 'asc'], ['house', 'asc']])
             ->values();
+    }
+
+    /**
+     * Which officer trainees sit in which house, on the courses running now.
+     *
+     * Shared by the dashboard panel and the House wise Performance page, so the
+     * tile's figure and the page's rows are drawn from exactly the same set — a
+     * house missing from one and present in the other would be indefensible.
+     *
+     * @return array{houses: array<string, array<int, true>>, course_ids: mixed}
+     */
+    private function houseMemberships(): array
+    {
+        $currentCourseIds = $this->currentCourseIds();
+
+        $houseTypeIds = DB::table('course_group_type_master')
+            ->where('active_inactive', 1)
+            ->whereRaw('LOWER(type_name) LIKE ?', ['%house%'])
+            ->pluck('pk');
+
+        if ($houseTypeIds->isEmpty()) {
+            return ['houses' => [], 'course_ids' => $currentCourseIds];
+        }
+
+        // Every house on a RUNNING course. A house whose batch has finished, or
+        // whose course was switched off in the master, drops out with it —
+        // otherwise the list grows a row per past programme and stops being
+        // this term's table.
+        $mappings = DB::table('group_type_master_course_master_map')
+            ->whereIn('type_name', $houseTypeIds)
+            ->whereIn('course_name', $currentCourseIds)
+            ->where('active_inactive', 1)
+            ->whereNotNull('group_name')
+            ->where('group_name', '<>', '')
+            ->get(['pk', 'group_name']);
+
+        if ($mappings->isEmpty()) {
+            return ['houses' => [], 'course_ids' => $currentCourseIds];
+        }
+
+        $houseByMapping = $mappings->pluck('group_name', 'pk');
+
+        // house name => [student_master_pk => true]
+        $studentsByHouse = [];
+        foreach ($houseByMapping as $houseName) {
+            $studentsByHouse[trim((string) $houseName)] ??= [];
+        }
+
+        $memberships = DB::table('student_course_group_map')
+            ->whereIn('group_type_master_course_master_map_pk', $mappings->pluck('pk'))
+            ->where('active_inactive', 1)
+            ->get(['group_type_master_course_master_map_pk as map_pk', 'student_master_pk']);
+
+        foreach ($memberships as $row) {
+            $house = trim((string) ($houseByMapping[$row->map_pk] ?? ''));
+            if ($house === '' || empty($row->student_master_pk)) {
+                continue;
+            }
+            $studentsByHouse[$house][(int) $row->student_master_pk] = true;
+        }
+
+        return ['houses' => $studentsByHouse, 'course_ids' => $currentCourseIds];
+    }
+
+    /**
+     * House wise Performance in full: every house, its officer trainees, and each
+     * closed deduction against them, with the house total last.
+     *
+     * The page the dashboard panel links to.
+     */
+    public function houseWisePerformanceDetail()
+    {
+        ['houses' => $studentsByHouse, 'course_ids' => $currentCourseIds] = $this->houseMemberships();
+
+        $studentPks = collect($studentsByHouse)->flatMap(fn ($set) => array_keys($set))->unique()->values()->all();
+
+        $courseIdList = $currentCourseIds instanceof \Illuminate\Support\Collection
+            ? $currentCourseIds->all()
+            : (array) $currentCourseIds;
+
+        $service = app(OtMarksDeductedService::class);
+        $rowsByStudent = $service->rowsForStudents($studentPks, $courseIdList);
+
+        $students = empty($studentPks)
+            ? collect()
+            : StudentMaster::whereIn('pk', $studentPks)
+                ->get(['pk', 'display_name', 'first_name', 'last_name', 'generated_OT_code'])
+                ->keyBy('pk');
+
+        // One entry per house: its OTs (each with their deduction rows) and the
+        // house total, which is the sum of those rows.
+        $houses = collect($studentsByHouse)
+            ->map(function (array $memberSet, string $house) use ($rowsByStudent, $students) {
+                $members = collect(array_keys($memberSet))
+                    ->map(function (int $pk) use ($rowsByStudent, $students) {
+                        $student = $students->get($pk);
+                        $rows = collect($rowsByStudent->get($pk, collect()))->values();
+
+                        return [
+                            'name' => $this->studentDisplayName($student),
+                            'ot_code' => $student->generated_OT_code ?? '-',
+                            'rows' => $rows,
+                            'total' => round((float) $rows->sum('marks'), 2),
+                        ];
+                    })
+                    // Heaviest penalty first, then alphabetical — the reason
+                    // someone opens this page is to see who is carrying marks.
+                    ->sortBy([['total', 'desc'], ['name', 'asc']])
+                    ->values();
+
+                return [
+                    'house' => $house,
+                    'members' => $members,
+                    'student_count' => $members->count(),
+                    'total' => round((float) $members->sum('total'), 2),
+                ];
+            })
+            ->sortBy('house')
+            ->values();
+
+        return view('admin.dashboard.house_wise_performance', [
+            'houses' => $houses,
+            'generatedOn' => now(),
+        ]);
+    }
+
+    /** Display name for a student_master row, falling back to first + last. */
+    private function studentDisplayName($student): string
+    {
+        if (! $student) {
+            return 'Officer Trainee';
+        }
+
+        $display = trim((string) ($student->display_name ?? ''));
+        if ($display !== '') {
+            return $display;
+        }
+
+        return trim(implode(' ', array_filter([
+            $student->first_name ?? '',
+            $student->last_name ?? '',
+        ]))) ?: 'Officer Trainee';
     }
 
     /**
@@ -4585,6 +4683,64 @@ class UserController extends Controller
         }
 
         return view('admin.dashboard.my_groups', compact('groups'));
+    }
+
+    /**
+     * The officer trainees mapped to one of the viewer's own groups — what the
+     * view icon on My Groups opens.
+     *
+     * Membership is re-checked rather than trusted: the group pk comes from the
+     * URL, so without this an OT could read the roster of any group in the
+     * Academy by editing it.
+     */
+    public function myGroupStudents($mapPk)
+    {
+        if (! hasRole('Student-OT')) {
+            return response()->json(['message' => 'Not authorised.'], 403);
+        }
+
+        $studentPk = Auth::user()->user_id;
+        $mapPk = (int) $mapPk;
+
+        $isMember = $this->myGroupsQuery($studentPk)
+            ->where('gmap.pk', $mapPk)
+            ->exists();
+
+        if (! $isMember) {
+            return response()->json(['message' => 'You are not a member of this group.'], 403);
+        }
+
+        $group = DB::table('group_type_master_course_master_map as gmap')
+            ->leftJoin('course_group_type_master as gtype', 'gtype.pk', '=', 'gmap.type_name')
+            ->leftJoin('course_master as cm', 'cm.pk', '=', 'gmap.course_name')
+            ->where('gmap.pk', $mapPk)
+            ->first(['gmap.group_name', 'gtype.type_name as group_type', 'cm.course_name']);
+
+        $students = DB::table('student_course_group_map as scgm')
+            ->join('student_master as sm', 'sm.pk', '=', 'scgm.student_master_pk')
+            ->where('scgm.group_type_master_course_master_map_pk', $mapPk)
+            ->where('scgm.active_inactive', 1)
+            ->select('sm.pk', 'sm.display_name', 'sm.first_name', 'sm.last_name', 'sm.generated_OT_code')
+            // Same duplicate rows the count guards against.
+            ->distinct()
+            ->orderBy('sm.display_name')
+            ->get()
+            ->map(fn ($row) => [
+                'ot_code' => $row->generated_OT_code ?: '-',
+                'name' => trim((string) $row->display_name) ?: (trim(implode(' ', array_filter([
+                    $row->first_name ?? '', $row->last_name ?? '',
+                ]))) ?: 'Officer Trainee'),
+            ])
+            ->values();
+
+        return response()->json([
+            'group' => [
+                'name' => $group->group_name ?? '—',
+                'type' => $group->group_type ?? '—',
+                'course' => $group->course_name ?? '—',
+            ],
+            'students' => $students,
+        ]);
     }
 
     /**

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Exports\LeaveReportExport;
+use App\Exports\LbsnaaTableExport;
 use App\Http\Controllers\Controller;
 use App\Models\LeaveApplication;
 use App\Models\LeaveApplicationAttachment;
@@ -524,23 +524,28 @@ class LeaveApplicationController extends Controller
         ])->values();
 
         $baseName = 'My_Leave_Applications_' . now()->format('Ymd_His');
+        // Serial, dates, times, day count and status centred; course, type,
+        // nature stay left-aligned.
+        $centreColumns = [0, 4, 5, 6, 7, 8, 9];
+        $filterLine = $this->myLeaveFilterLine($request);
 
         if (strtolower((string) $request->get('format')) === 'pdf') {
             @ini_set('memory_limit', '256M');
             @set_time_limit(120);
 
-            $pdf = Pdf::loadView('admin.leave.export.leave_pdf', [
+            $pdf = Pdf::loadView('admin.exports.table_pdf', [
                 'headings' => $headings,
                 'rows' => $data,
                 'reportTitle' => 'My Leave Applications',
-                'filterLine' => $this->myLeaveFilterLine($request),
+                'filterLine' => $filterLine,
+                'centreColumns' => $centreColumns,
             ])->setPaper('a4', 'landscape');
 
             return $pdf->download($baseName . '.pdf');
         }
 
         return Excel::download(
-            new LeaveReportExport($data, $headings, 'My Leave'),
+            new LbsnaaTableExport($data, $headings, 'My Leave Applications', $filterLine, $centreColumns, 'My Leave'),
             $baseName . '.xlsx'
         );
     }

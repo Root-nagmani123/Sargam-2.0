@@ -130,6 +130,109 @@ class OtMarksDeductedService
     }
 
     /**
+     * One row per deduction for many OTs at once, grouped by student.
+     *
+     * The batched twin of {@see rowsFor()} — same rules, three queries instead of
+     * two per student, which is what a House-wise listing of several hundred OTs
+     * needs. Rows carry student_pk so the caller can group them.
+     *
+     * @param  list<int>  $studentPks
+     * @param  list<int>|null  $courseIds  null = every course
+     * @return Collection<int, Collection<int, array>>  student_master_pk => rows
+     */
+    public function rowsForStudents(array $studentPks, ?array $courseIds = null): Collection
+    {
+        if ($studentPks === []) {
+            return collect();
+        }
+
+        $scope = fn ($query, string $column) => $courseIds === null
+            ? $query
+            : $query->whereIn($column, $courseIds ?: [-1]);
+
+        $discipline = $scope(
+            DB::table('discipline_memo_status as d')
+                ->leftJoin('course_master as cm', 'cm.pk', '=', 'd.course_master_pk')
+                ->leftJoin('discipline_master as dm', 'dm.pk', '=', 'd.discipline_master_pk')
+                ->whereIn('d.student_master_pk', $studentPks)
+                ->where('d.status', MemoDiscipline::STATUS_CLOSED),
+            'd.course_master_pk'
+        )->get([
+            'd.student_master_pk', 'd.date', 'd.final_mark_deduction', 'd.minor_major',
+            'd.remarks', 'cm.course_name', 'dm.discipline_name',
+        ])->map(fn ($r) => [
+            'student_pk' => (int) $r->student_master_pk,
+            'date' => $r->date,
+            'type' => 'Discipline Memo',
+            'course' => (string) ($r->course_name ?? '—'),
+            'category' => trim((string) ($r->discipline_name ?? ''))
+                ?: (trim((string) ($r->remarks ?? '')) ?: 'Discipline Memo'),
+            'severity' => match ((int) $r->minor_major) {
+                2 => 'Major',
+                1 => 'Minor',
+                default => '',
+            },
+            'marks' => (float) ($r->final_mark_deduction ?: 0),
+        ]);
+
+        $memos = $scope(
+            DB::table('student_memo_status as m')
+                ->leftJoin('course_master as cm', 'cm.pk', '=', 'm.course_master_pk')
+                ->leftJoin('student_notice_status as n', 'n.pk', '=', 'm.student_notice_status_pk')
+                ->whereIn('m.student_pk', $studentPks)
+                ->where('m.status', self::MEMO_NOTICE_CLOSED),
+            'm.course_master_pk'
+        )->get([
+            'm.student_pk', 'm.date', 'm.mark_of_deduction', 'cm.course_name',
+            'n.mark_of_deduction as notice_mark', 'n.subject_topic as notice_topic',
+        ])->map(fn ($r) => [
+            'student_pk' => (int) $r->student_pk,
+            'date' => $r->date,
+            'type' => 'Memo',
+            'course' => (string) ($r->course_name ?? '—'),
+            'category' => trim((string) ($r->notice_topic ?? '')) ?: 'Memo / Notice',
+            'severity' => '',
+            'marks' => (float) ($r->mark_of_deduction !== null && $r->mark_of_deduction !== ''
+                ? $r->mark_of_deduction
+                : ($r->notice_mark ?: 0)),
+        ]);
+
+        $notices = $scope(
+            DB::table('student_notice_status as n')
+                ->leftJoin('course_student_attendance as csa', 'csa.pk', '=', 'n.course_student_attendance_pk')
+                ->leftJoin('course_master as cm', 'cm.pk', '=', 'n.course_master_pk')
+                ->where(function ($q) use ($studentPks) {
+                    $q->whereIn('n.student_pk', $studentPks)
+                        ->orWhereIn('csa.Student_master_pk', $studentPks);
+                })
+                ->where('n.status', self::MEMO_NOTICE_CLOSED)
+                ->whereNotExists(function ($q) {
+                    $q->select(DB::raw(1))
+                        ->from('student_memo_status as sms')
+                        ->whereColumn('sms.student_notice_status_pk', 'n.pk')
+                        ->where('sms.status', self::MEMO_NOTICE_CLOSED);
+                }),
+            'n.course_master_pk'
+        )->get([
+            DB::raw('COALESCE(csa.Student_master_pk, n.student_pk) AS student_pk'),
+            'n.date_ as date', 'n.mark_of_deduction', 'n.subject_topic', 'cm.course_name',
+        ])->map(fn ($r) => [
+            'student_pk' => (int) $r->student_pk,
+            'date' => $r->date,
+            'type' => 'Notice',
+            'course' => (string) ($r->course_name ?? '—'),
+            'category' => trim((string) ($r->subject_topic ?? '')) ?: 'Notice',
+            'severity' => '',
+            'marks' => (float) ($r->mark_of_deduction ?: 0),
+        ]);
+
+        return $discipline->concat($memos)->concat($notices)
+            ->filter(fn (array $row) => in_array($row['student_pk'], array_map('intval', $studentPks), true))
+            ->sortByDesc(fn (array $row) => $row['date'] ?? '')
+            ->groupBy('student_pk');
+    }
+
+    /**
      * One row per deduction, newest first — what the page lists.
      *
      * @return Collection<int, array{date: ?string, type: string, course: string, detail: string, status: string, marks: float}>

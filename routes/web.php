@@ -185,7 +185,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/ot-participants', [UserController::class, 'otParticipantsList'])->name('admin.dashboard.ot-participants');
     Route::get('/dashboard/students/export/{format}', [UserController::class, 'studentListExport'])->name('admin.dashboard.students.export');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
+    Route::get('/dashboard/house-wise-performance', [UserController::class, 'houseWisePerformanceDetail'])->name('admin.dashboard.house-wise-performance');
     Route::get('/dashboard/my-groups', [UserController::class, 'myGroups'])->name('admin.dashboard.my-groups');
+    Route::get('/dashboard/my-groups/{mapPk}/students', [UserController::class, 'myGroupStudents'])->name('admin.dashboard.my-groups.students');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
     Route::post('/dashboard/report-issue', [\App\Http\Controllers\Admin\IssueReportController::class, 'store'])->middleware('throttle:10,1')->name('admin.dashboard.report-issue');
     // Admin console for issues submitted via the dashboard "Report Issue" launcher
@@ -1325,7 +1327,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/active-course', [DashboardController::class, 'active_course'])->name('admin.dashboard.active_course');
     Route::get('/incoming-course', [DashboardController::class, 'incoming_course'])->name('admin.dashboard.incoming_course');
     Route::get('/guest-faculty', [DashboardController::class, 'guest_faculty'])->name('admin.dashboard.guest_faculty');
+    Route::get('/guest-faculty/export', [DashboardController::class, 'guest_faculty_export'])->name('admin.dashboard.guest_faculty.export');
     Route::get('/inhouse-faculty', [DashboardController::class, 'inhouse_faculty'])->name('admin.dashboard.inhouse_faculty');
+    Route::get('/inhouse-faculty/export', [DashboardController::class, 'inhouse_faculty_export'])->name('admin.dashboard.inhouse_faculty.export');
 
     // Who's Who Routes
     Route::get('/faculty/whos-who', [WhosWhoController::class, 'index'])->name('admin.faculty.whos-who');

@@ -3,8 +3,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\LbsnaaTableExport;
 use App\Http\Controllers\Controller;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -61,6 +64,63 @@ private function getFacultyContactList(int $facultyType)
         ->where('active_inactive', 1)
         ->orderBy('full_name')
         ->get(['pk', 'full_name', 'email_id', 'mobile_no']);
+}
+
+/**
+ * Branded Excel / PDF of a faculty listing.
+ *
+ * Server-side on purpose. These two pages used to export through the client-side
+ * DataTables buttons, which scrape the rendered table and emit an unstyled sheet
+ * — no letterhead, no column band, no borders. Routing it through
+ * LbsnaaTableExport and admin/exports/table_pdf gives both formats the same
+ * layout the Feedback Database export uses, which is the house standard.
+ */
+public function guest_faculty_export(Request $request)
+{
+    return $this->exportFacultyList(2, 'Guest Faculty', $request);
+}
+
+public function inhouse_faculty_export(Request $request)
+{
+    return $this->exportFacultyList(1, 'In-House Faculty', $request);
+}
+
+private function exportFacultyList(int $facultyType, string $reportTitle, Request $request)
+{
+    $faculties = $this->getFacultyContactList($facultyType);
+
+    // The four columns the listing shows, in the same order.
+    $headings = ['S. No.', 'Faculty Name', 'Email', 'Mobile Number'];
+    $centreColumns = [0, 3];
+
+    $serial = 1;
+    $rows = $faculties->map(fn ($faculty) => [
+        $serial++,
+        $faculty->full_name ?: '-',
+        $faculty->email_id ?: 'N/A',
+        $faculty->mobile_no ?: 'N/A',
+    ])->values();
+
+    $baseName = str_replace([' ', '-'], '_', $reportTitle) . '_' . now()->format('Ymd_His');
+
+    if (strtolower((string) $request->get('format')) === 'pdf') {
+        @ini_set('memory_limit', '256M');
+        @set_time_limit(120);
+
+        // Four narrow columns read better on portrait than stretched landscape.
+        return Pdf::loadView('admin.exports.table_pdf', [
+            'headings' => $headings,
+            'rows' => $rows,
+            'reportTitle' => $reportTitle,
+            'centreColumns' => $centreColumns,
+            'orientation' => 'portrait',
+        ])->setPaper('a4', 'portrait')->download($baseName . '.pdf');
+    }
+
+    return Excel::download(
+        new LbsnaaTableExport($rows, $headings, $reportTitle, '', $centreColumns),
+        $baseName . '.xlsx'
+    );
 }
 function sessions(Request $request)
 {

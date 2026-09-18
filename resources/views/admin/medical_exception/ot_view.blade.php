@@ -96,60 +96,88 @@
 /* =======================
    PRINT MODE
 ======================= */
+/* The letterhead belongs to the printed sheet only. */
+.me-print-head { display: none; }
+
 @media print {
-    /* Hide unnecessary elements */
-    .btn,
-    .breadcrumb,
-    nav,
-    .navbar,
-    .sidebar,
-    .header,
-    footer,
-    .d-print-none {
-        display: none !important;
-    }
-    
-    /* Reset body and container */
-    body {
-        background: white !important;
-        margin: 0 !important;
-        padding: 20px !important;
-    }
-    
-    .container-fluid {
+    @page { size: A4 portrait; margin: 12mm 10mm; }
+
+    /* Print ONLY the report card. Hiding the shell selector by selector is
+       fragile — the admin layout's wrappers change and a stray topbar or
+       sidebar column leaks onto the page. Blanking everything and re-showing
+       the print area is immune to that. */
+    body * { visibility: hidden !important; }
+    #meOtPrintArea, #meOtPrintArea * { visibility: visible !important; }
+    #meOtPrintArea {
+        position: absolute !important;
+        left: 0; top: 0;
         width: 100% !important;
+        margin: 0 !important;
+        border: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .d-print-none, .btn { display: none !important; }
+
+    body {
+        background: #fff !important;
         margin: 0 !important;
         padding: 0 !important;
     }
-    
-    /* Card styling for print */
-    .card {
-        box-shadow: none !important;
-        border: 1px solid #dee2e6 !important;
-        page-break-inside: avoid;
+
+    /* Keep the fills and the navy rules — a report printed as bare text loses
+       the structure that makes it readable. */
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+    .me-print-head {
+        display: block !important;
+        text-align: center;
+        border-bottom: 2px solid #003366;
+        padding-bottom: 6px;
+        margin-bottom: 10px;
     }
-    
-    .info-card {
-        margin-bottom: 1rem !important;
+    .me-print-head img { max-height: 52px; margin-bottom: 4px; }
+    .me-print-head .mph-academy { font-size: 13pt; font-weight: 700; color: #003366; line-height: 1.25; }
+    .me-print-head .mph-place { font-size: 8.5pt; color: #486581; }
+    .me-print-head .mph-title {
+        margin-top: 6px; font-size: 11.5pt; font-weight: 700; color: #004a93;
+        text-transform: uppercase; letter-spacing: .02em;
     }
-    
-    /* Prevent page breaks inside exemption items */
+    .me-print-head .mph-meta { font-size: 8pt; color: #555; margin-top: 2px; }
+
+    .card { box-shadow: none !important; border: 0 !important; page-break-inside: avoid; }
+    .card-body { padding: 0 !important; }
+    .info-card { margin-bottom: .5rem !important; }
+
+    /* One exemption block per unit — never split across a page. */
     .exemption-item {
         page-break-inside: avoid;
+        border: 1px solid #9bb0c9 !important;
+        border-radius: 0 !important;
+        padding: 8px 10px !important;
+        margin-bottom: 8px !important;
     }
-    
-    /* Optimize colors for print */
+
+    /* The on-screen grid collapses to one long column on paper; two fixed
+       columns keep a label beside its value. */
+    .exemption-details {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 4px 14px !important;
+    }
+    .exemption-details > div { break-inside: avoid; }
+
+    .detail-label { font-size: 7.5pt !important; color: #333 !important; }
+    .detail-value { font-size: 9pt !important; color: #000 !important; }
+    .me-text-time { background: #eceff3 !important; color: #000 !important; }
+
     .exemption-count-badge {
-        background: #f8f9fa !important;
-        border: 1px solid #dee2e6 !important;
-        color: #212529 !important;
+        background: #f0f4fa !important;
+        border: 1px solid #cbd6e6 !important;
+        color: #003366 !important;
     }
-    
-    /* Ensure text is readable */
-    .detail-value,
-    .detail-label {
-        color: #000 !important;
-    }
+
+    .section-divider { border-top: 1px solid #cbd6e6 !important; }
 }
 </style>
 
@@ -158,8 +186,22 @@
         <x-breadcrum title="Medical Exception OT View"></x-breadcrum>
     </div>
 
-    <div class="card info-card">
+    <div class="card info-card" id="meOtPrintArea">
         <div class="card-body">
+
+            {{-- Letterhead: print only. On screen the page already sits inside
+                 the admin shell, which carries the branding. --}}
+            <div class="me-print-head">
+                <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA">
+                <div class="mph-academy">LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION</div>
+                <div class="mph-place">Mussoorie, Uttarakhand</div>
+                <div class="mph-title">Medical Exemption — Officer Trainee</div>
+                <div class="mph-meta">
+                    {{ $studentData['student_name'] ?? '' }}
+                    @if(! empty($studentData['ot_code'])) ({{ $studentData['ot_code'] }}) @endif
+                    &nbsp;|&nbsp; Printed on {{ now()->format('d-m-Y H:i') }}
+                </div>
+            </div>
 
             <!-- HEADER -->
             <div class="d-flex justify-content-between align-items-center mb-4">

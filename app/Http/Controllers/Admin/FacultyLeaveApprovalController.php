@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Exports\LeaveReportExport;
+use App\Exports\LbsnaaTableExport;
 use App\Http\Controllers\Controller;
 use App\Models\CourseMaster;
 use App\Models\LeaveApplication;
@@ -222,23 +222,28 @@ class FacultyLeaveApprovalController extends Controller
         ])->values();
 
         $baseName = 'Leave_Approval_' . now()->format('Ymd_His');
+        // Serial, dates, times, day count and status read better centred; the
+        // names, course and reason stay left-aligned.
+        $centreColumns = [0, 5, 6, 7, 8, 9, 11];
+        $filterLine = $this->exportFilterLine($request);
 
         if (strtolower((string) $request->get('format')) === 'pdf') {
             @ini_set('memory_limit', '256M');
             @set_time_limit(120);
 
-            $pdf = Pdf::loadView('admin.leave.export.leave_pdf', [
+            $pdf = Pdf::loadView('admin.exports.table_pdf', [
                 'headings' => $headings,
                 'rows' => $data,
                 'reportTitle' => 'Leave Approval',
-                'filterLine' => $this->exportFilterLine($request),
+                'filterLine' => $filterLine,
+                'centreColumns' => $centreColumns,
             ])->setPaper('a4', 'landscape');
 
             return $pdf->download($baseName . '.pdf');
         }
 
         return Excel::download(
-            new LeaveReportExport($data, $headings, 'Leave Approval'),
+            new LbsnaaTableExport($data, $headings, 'Leave Approval', $filterLine, $centreColumns),
             $baseName . '.xlsx'
         );
     }

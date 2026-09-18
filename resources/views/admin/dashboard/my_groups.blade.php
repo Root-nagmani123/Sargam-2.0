@@ -56,17 +56,35 @@
     white-space: nowrap;
 }
 
-.mg-members {
-    display: inline-block;
-    min-width: 2.25rem;
-    padding: var(--ds-space-1) var(--ds-space-2);
+.mg-view-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 1px solid var(--ds-line);
     border-radius: var(--ds-radius-1);
     background: var(--ds-surface-2);
-    color: var(--ds-ink);
-    font-variant-numeric: tabular-nums;
-    font-weight: 600;
+    color: var(--ds-primary);
+    line-height: 1;
+    cursor: pointer;
+}
+
+.mg-view-btn:hover {
+    background: var(--ds-primary);
+    border-color: var(--ds-primary);
+    color: #fff;
+}
+
+.mg-view-btn .material-icons {
+    font-size: 18px;
+}
+
+/* Roster rows inside the modal. */
+.mg-modal-meta {
     font-size: 0.8125rem;
-    line-height: 1.25;
+    color: var(--ds-ink-muted);
 }
 
 /* Keeps the empty-state sentence to a readable measure instead of one long
@@ -157,7 +175,7 @@
                                 <th scope="col">Group Type</th>
                                 <th scope="col">Group Name</th>
                                 <th scope="col">Faculty</th>
-                                <th scope="col" class="mg-col-members">Total Members</th>
+                                <th scope="col" class="mg-col-members">Members</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -179,8 +197,17 @@
                                             <span class="mg-muted">—</span>
                                         @endif
                                     </td>
+                                    {{-- View, not a bare number: the count alone said
+                                         how many but not who. The tally rides along
+                                         in the tooltip so nothing is lost. --}}
                                     <td class="mg-col-members">
-                                        <span class="mg-members">{{ $group->total_members ?? 0 }}</span>
+                                        <button type="button" class="mg-view-btn"
+                                            data-map-pk="{{ $group->pk }}"
+                                            data-group-name="{{ $group->group_name }}"
+                                            title="View {{ $group->total_members ?? 0 }} member{{ ($group->total_members ?? 0) == 1 ? '' : 's' }}"
+                                            aria-label="View members of {{ $group->group_name }}">
+                                            <i class="material-icons material-symbols-rounded" aria-hidden="true">visibility</i>
+                                        </button>
                                     </td>
                                 </tr>
                             @endforeach
@@ -191,4 +218,100 @@
         @endforeach
     @endif
 </div>
+
+{{-- Group roster --}}
+<div class="modal fade" id="mgMembersModal" tabindex="-1" aria-labelledby="mgMembersLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title fw-semibold mb-0" id="mgMembersLabel">Group Members</h5>
+                    <div class="mg-modal-meta mt-1" id="mgMembersMeta"></div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="mgMembersBody">
+                    <p class="text-center text-muted my-4 mb-0">Loading…</p>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
+
+@push('scripts')
+<script>
+$(function () {
+    // {mapPk} is substituted client-side; the server re-checks that the viewer
+    // is actually a member of the group before returning its roster.
+    const studentsUrlTemplate = @json(route('admin.dashboard.my-groups.students', ['mapPk' => '__PK__']));
+    const modalEl = document.getElementById('mgMembersModal');
+
+    function showModal() {
+        if (window.bootstrap && bootstrap.Modal) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        } else if (window.jQuery) {
+            $(modalEl).modal('show');
+        }
+    }
+
+    function escapeHtml(value) {
+        return $('<div>').text(value == null ? '' : value).html();
+    }
+
+    function renderStudents(list) {
+        if (!list || !list.length) {
+            return '<p class="text-center text-muted my-4 mb-0">No officer trainees are mapped to this group.</p>';
+        }
+
+        let html = '<div class="table-responsive"><table class="table align-middle mb-0 mg-table">'
+            + '<thead><tr>'
+            + '<th scope="col" class="mg-col-no">S. No.</th>'
+            + '<th scope="col">OT Code</th>'
+            + '<th scope="col">Student Name</th>'
+            + '</tr></thead><tbody>';
+
+        list.forEach(function (s, i) {
+            html += '<tr>'
+                + '<td class="mg-col-no">' + (i + 1) + '</td>'
+                + '<td>' + escapeHtml(s.ot_code) + '</td>'
+                + '<td class="fw-semibold">' + escapeHtml(s.name) + '</td>'
+                + '</tr>';
+        });
+
+        return html + '</tbody></table></div>';
+    }
+
+    $(document).on('click', '.mg-view-btn', function () {
+        const mapPk = $(this).data('mapPk');
+        const groupName = $(this).data('groupName');
+
+        $('#mgMembersLabel').text(groupName || 'Group Members');
+        $('#mgMembersMeta').text('');
+        $('#mgMembersBody').html('<p class="text-center text-muted my-4 mb-0">Loading…</p>');
+        showModal();
+
+        $.get(studentsUrlTemplate.replace('__PK__', mapPk))
+            .done(function (res) {
+                const g = res.group || {};
+                $('#mgMembersMeta').text(
+                    [g.course, g.type].filter(Boolean).join(' · ')
+                    + '  —  ' + (res.students ? res.students.length : 0) + ' member'
+                    + ((res.students && res.students.length === 1) ? '' : 's')
+                );
+                $('#mgMembersBody').html(renderStudents(res.students));
+            })
+            .fail(function (xhr) {
+                const msg = (xhr.responseJSON && xhr.responseJSON.message)
+                    ? xhr.responseJSON.message
+                    : 'Could not load the group members.';
+                $('#mgMembersBody').html('<p class="text-center text-danger my-4 mb-0">' + escapeHtml(msg) + '</p>');
+            });
+    });
+});
+</script>
+@endpush
