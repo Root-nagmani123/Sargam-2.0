@@ -2,15 +2,22 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\LeaveApprovalExport;
 use App\Http\Controllers\Controller;
 use App\Models\CourseMaster;
 use App\Models\LeaveApplication;
 use App\Services\FacultyLeaveApprovalService;
+use App\Traits\StampsPdfPageNumbers;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Excel as ExcelFormat;
+use Maatwebsite\Excel\Facades\Excel;
 use Yajra\DataTables\Facades\DataTables;
 
 class FacultyLeaveApprovalController extends Controller
 {
+    use StampsPdfPageNumbers;
+
     public function __construct(protected FacultyLeaveApprovalService $approvalService)
     {
         $this->middleware(function ($request, $next) {
@@ -168,6 +175,7 @@ class FacultyLeaveApprovalController extends Controller
 
                 return '<span class="badge rounded-1 approval-status approval-status--' . $variant . '">' . $label . '</span>';
             })
+            ->addColumn('approver_name', fn ($row) => e($row->action_by_faculty_name))
             ->addColumn('action', function ($row) {
                 $viewUrl = route('faculty.leave-approval.show', $row->pk);
                 $html = '<div class="d-inline-flex align-items-center gap-2 approval-action">';
@@ -188,32 +196,111 @@ class FacultyLeaveApprovalController extends Controller
 
     public function export(Request $request)
     {
+        $format = strtolower((string) $request->get('format', 'excel'));
+        $filename = 'Leave_Approval_' . now()->format('Ymd_His');
+
+        if ($format === 'pdf') {
+            @ini_set('memory_limit', '256M');
+            @set_time_limit(120);
+
+            $rows = $this->baseQuery($request)->get();
+
+            $logoPath = public_path('images/lbsnaa_logo.jpg');
+            $logo = (is_file($logoPath) && is_readable($logoPath))
+                ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoPath))
+                : null;
+
+            $pdf = Pdf::loadView('admin.leave.faculty_approval.export_pdf', [
+                'rows' => $rows,
+                'approvalService' => $this->approvalService,
+                'filterLine' => $this->buildExportFilterLine($request),
+                'approverLine' => $this->buildApproverHeaderLine($rows),
+                'printedOn' => now()->format('d-m-Y H:i'),
+                'reportTitle' => 'Leave Approval Report',
+                'logo' => $logo,
+            ])
+                ->setPaper('a4', 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    // Both off deliberately. A report has no reason to execute PHP, and
+                    // isPhpEnabled turns any raw block that later appears in the view into
+                    // server-side code execution on stored data. The only image is $logo,
+                    // a base64 data URI or null, so nothing needs fetching over the network.
+                    'isRemoteEnabled' => false,
+                    'isPhpEnabled' => false,
+                    'dpi' => 96,
+                ]);
+
+            $this->stampPageNumbers($pdf);
+
+            return $pdf->download($filename . '.pdf');
+        }
+
         $rows = $this->baseQuery($request)->get();
 
-        $columns = ['S. No.', 'OT Code', 'OT Name', 'Leave Type', 'Date From', 'Date To', 'Total Days', 'Reason', 'Status'];
-        $filename = 'Leave_Approval_' . now()->format('Ymd_His') . '.csv';
+        return Excel::download(
+            new LeaveApprovalExport(
+                $rows,
+                $this->approvalService,
+                $this->buildExportFilterLine($request),
+                $this->buildApproverHeaderLine($rows)
+            ),
+            $filename . '.xlsx',
+            ExcelFormat::XLSX
+        );
+    }
 
-        return response()->streamDownload(function () use ($rows, $columns) {
-            $out = fopen('php://output', 'w');
-            fputcsv($out, $columns);
+    private function buildExportFilterLine(Request $request): string
+    {
+        $parts = [];
 
-            $serial = 1;
-            foreach ($rows as $row) {
-                fputcsv($out, [
-                    $serial++,
-                    $row->student->generated_OT_code ?? '-',
-                    $this->approvalService->studentDisplayName($row->student),
-                    $row->leave_type_label,
-                    $row->from_date?->format('d-m-Y') ?? '-',
-                    $row->to_date?->format('d-m-Y') ?? '-',
-                    number_format((float) $row->total_days, 0),
-                    $row->reason ?? '-',
-                    $row->status_label,
-                ]);
-            }
+        $statusMap = [
+            (string) LeaveApplication::STATUS_PENDING => 'Pending',
+            (string) LeaveApplication::STATUS_APPROVED => 'Approved',
+            (string) LeaveApplication::STATUS_REJECTED => 'Rejected',
+        ];
+        if ($request->filled('status') && isset($statusMap[(string) $request->status])) {
+            $parts[] = 'Status: ' . $statusMap[(string) $request->status];
+        }
 
-            fclose($out);
-        }, $filename, ['Content-Type' => 'text/csv']);
+        if ($request->filled('course_filter')) {
+            $course = CourseMaster::find($request->course_filter);
+            $parts[] = 'Course: ' . ($course->course_name ?? $request->course_filter);
+        }
+
+        if ($request->filled('from_date') || $request->filled('to_date')) {
+            $parts[] = 'Period: ' . ($request->from_date ?: '…') . ' to ' . ($request->to_date ?: '…');
+        }
+
+        return implode('  |  ', $parts);
+    }
+
+    /**
+     * "Approved By: <Name>" summary line for the report header — shown only when
+     * every actioned row (approved/rejected) in the export shares the same faculty
+     * approver, so it never misattributes a mixed-approver export to one person.
+     * Pending-only exports (no approver yet) show nothing.
+     */
+    private function buildApproverHeaderLine($rows): string
+    {
+        $actionedRows = $rows->filter(fn ($row) => (int) $row->status !== LeaveApplication::STATUS_PENDING);
+
+        if ($actionedRows->isEmpty()) {
+            return '';
+        }
+
+        $approverPks = $actionedRows->pluck('approved_by_faculty_pk')->unique()->filter();
+
+        if ($approverPks->count() !== 1) {
+            return $actionedRows->pluck('approved_by_faculty_pk')->unique()->count() > 1
+                ? 'Approved/Rejected By: Multiple Approvers'
+                : '';
+        }
+
+        $name = $actionedRows->first()->action_by_faculty_name;
+
+        return $name && $name !== '-' ? 'Approved/Rejected By: ' . $name : '';
     }
 
     /**
