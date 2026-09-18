@@ -99,20 +99,33 @@ class MemberDataTable extends DataTable
      *     one entry whose payload differs between them, which is R11-002's
      *     defect re-created: whoever warms the cache decides what the others
      *     see. Keyed on the decision they land on different entries.
-     *   - It also shrinks the fan-out recorded as F-045, but by less than it
-     *     first looks, and the difference matters because F-045 is still open
-     *     and someone has to size this cache against it. What NEWLY collapses
-     *     into the single 'own:none' entry is the 359 accounts the gate refuses:
-     *     they used to key on their own user_id and take one entry apiece for
-     *     every (page, length, ordering, search, filter-set) for the full 86400s
-     *     TTL, and they now share one. The ~13,500 credentials whose user_id is
-     *     null were ALREADY on 'own:none' before this change - the old body read
-     *     'own:' . ($own === null ? 'none' : (string) $own) - so counting them as
-     *     newly saved overstates the saving by more than an order of magnitude.
-     *     Size the store for one key per account the gate ADMITS (see the census
-     *     in EnsureMemberRecordAccess), not for a collapse to nothing. Those
-     *     remaining per-account entries belong to accounts that genuinely see
-     *     something nobody else sees. PR #309 F-049.
+          *   - It also shrinks the fan-out recorded as F-045, and the size of that
+     *     reduction is the number whoever closes F-045 has to size against, so
+     *     it is quoted with the query that produced it rather than inferred
+     *     from this method. MEASURED ON testsargam6 (2026-09-18):
+     *
+     *       before   14,485 distinct 'own:' identities
+     *                = COUNT(DISTINCT user_id) over user_credentials. The old
+     *                  body read 'own:' . ($own === null ? 'none' : (string) $own)
+     *                  with $own = optional(auth()->user())->user_id, and NO
+     *                  credential has a null user_id (0 of 15,108) - so nothing
+     *                  shared 'own:none'. Every account keyed on its own user_id
+     *                  and took one entry apiece for every (page, length,
+     *                  ordering, search, filter-set) for the full 86400s TTL.
+     *       after    'own:none', plus one entry per account the gate ADMITS
+     *                  (<= 1,341 distinct admitted pks; the census in
+     *                  EnsureMemberRecordAccess counts 1,188 admitted accounts).
+     *
+     *     What collapses onto 'own:none' is every account ownedMemberPk()
+     *     resolves to null: the 359 the gate refuses PLUS the 13,561 whose
+     *     user_id matches no employee_master row. "Resolves to none" is NOT
+     *     "user_id is null" - those two were conflated once already, in the
+     *     review finding this paragraph was rewritten to satisfy.
+     *
+     *     Size the store for one key per ADMITTED account. The remaining
+     *     per-account entries belong to accounts that genuinely see something
+     *     nobody else sees. PR #309 F-049, F-050.
+
      *
      * Still deliberately not `auth()->id()`: that would give every
      * administrator a private copy of an identical payload.
