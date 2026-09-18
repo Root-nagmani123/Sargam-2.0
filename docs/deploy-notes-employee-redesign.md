@@ -344,12 +344,17 @@ downloads:
   self-delete. During the window, deactivating and deleting members is a Super
   Admin action only;
 - served a listing whose Action column no longer offers View or Print, offers
-  **Edit on that operator's own row only** — the same own-record rule as the
-  second bullet, resolved in `MemberDataTable` so the column does not show a
-  link `member.record` would refuse — no longer offers the **status toggle** or
-  **Delete** on any row, matching the bullet above so the screen never shows a
-  control the endpoint will refuse, and whose Download and Print toolbar is
-  gone.
+  **Edit only on a row that operator can be shown to own** — `MemberDataTable`
+  asks `EnsureMemberRecordAccess::ownedMemberPk()`, which is the same method the
+  gate itself uses, so the column cannot offer a link `member.record` would
+  refuse. An operator among the **359** §0.3 refuses therefore sees **no Edit on
+  any row**, which is correct and is what they should expect: if §0.3 has taken
+  their self-service away, the button goes with it rather than staying behind to
+  answer 403. (Until this was corrected the column still used the pre-§0.3 rule
+  and offered those 359 accounts an Edit link the route refused — PR #309 F-046.)
+  It no longer offers the **status toggle** or **Delete** on any row, matching the
+  bullet above so the screen never shows a control the endpoint will refuse, and
+  its Download and Print toolbar is gone.
 
 One rule in five places: `EnsureMemberPiiAccess::grantsAccess()` is the
 entitlement flag for the whole module, not only for the exports. The `member.pii`
@@ -464,6 +469,16 @@ button (it raises "Unknown column 'pk'" and the switch reverts).
   toggling a member's status succeeds. Do **not** exercise Delete on a live
   member to satisfy this check — the suite covers it inside a rolled-back
   transaction.
+- **The Action column agrees with the gate for an account §0.3 REFUSES.** The
+  check above uses Super Admin, and a Super Admin sees every control, so it
+  cannot detect the screen and the gate disagreeing — that is how PR #309 F-046
+  reached round 13 unnoticed. Take one credential pk from the refused list
+  produced in §0.3 (the ones whose `user_category` is not `E`, or that carry no
+  matching email or mobile), log in as it, and open the Members grid. The Action
+  column must offer **no Edit on any row, including the row whose pk equals that
+  credential's `user_id`**. Then open `/member/edit/<that user_id>` directly and
+  confirm **403**. Screen and route must give the same answer; a visible Edit
+  button with a 403 behind it is the failure this check exists to catch.
 - **Both doors to the edit wizard refuse the same record.** As a non-entitled
   account, open `/member/edit/<somebody else's pk>` **and**
   `/admin/setup/member/edit/<the same pk>`. Both must be **403**. The second URL

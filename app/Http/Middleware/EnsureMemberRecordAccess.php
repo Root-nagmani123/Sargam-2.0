@@ -197,7 +197,25 @@ class EnsureMemberRecordAccess
         // review. There is no binding here and no request input anywhere in
         // this query; writing the literals out keeps that obvious to a reader
         // and to the scanner.
-        return DB::table('user_credentials as uc')
+        // Memoised for the life of the request. The three guards above are free,
+        // but this join is not, and the decision is now asked for more than once
+        // per request: the header renders an "Edit Profile" item on EVERY admin
+        // page (admin/layouts/master includes header_new), the member grid asks
+        // once per feed, and authorizeMemberRecord() asks again inside the
+        // wizard methods. Same actor, same pk, same answer - so ask the database
+        // once. PR #309 F-047.
+        //
+        // The memo lives in the container rather than in a static, deliberately:
+        // a static would survive between tests in the same process, and Laravel
+        // rebuilds the container per request and per test, so this resets itself
+        // without anything having to remember to flush it.
+        $memo = 'member.ownership.' . $user->pk . ':' . $requestedPk;
+
+        if (app()->bound($memo)) {
+            return app()->make($memo);
+        }
+
+        return app()->instance($memo, DB::table('user_credentials as uc')
             ->join('employee_master as em', 'em.pk', '=', 'uc.user_id')
             ->where('uc.pk', $user->pk)
             ->where(function ($q) {
@@ -214,6 +232,39 @@ class EnsureMemberRecordAccess
                       ->whereRaw('TRIM(uc.mobile_no) COLLATE utf8mb4_unicode_ci = TRIM(em.mobile) COLLATE utf8mb4_unicode_ci');
                 });
             })
-            ->exists();
+            ->exists());
+    }
+
+    /**
+     * The one member pk this actor may edit, or null - resolved ONCE per request.
+     *
+     * This exists because a screen that offers a control the route refuses is
+     * the defect this module keeps re-introducing, and the F-024 narrowing
+     * re-introduced it: the rule moved from `user_id === pk` to `user_id === pk
+     * AND user_category = 'E' AND a contact proof`, but the member grid, the
+     * grid's cache key, that grid's regression test and the deploy note were all
+     * left restating the OLD rule. 359 of the 1,547 credentials that resolve to
+     * an employee row were offered an Edit link answering 403. PR #309 F-046.
+     *
+     * The fix is not "copy the new rule into the grid too" - that is what
+     * produced four copies of the old one. Every reader now calls THIS, and
+     * this calls ownsMemberRecord(), so there is one decision with one
+     * implementation and nothing left to drift.
+     *
+     * ONE QUERY, NOT ONE PER ROW. ownsMemberRecord() refuses immediately unless
+     * the requested pk equals the caller's own user_id, so at most one row in
+     * any listing can be owned and it is knowable before the page is fetched.
+     * Resolving it per row would have been a query per row; resolving it here
+     * is a single memoised call whichever way the answer goes.
+     */
+    public static function ownedMemberPk(): ?string
+    {
+        $own = optional(auth()->user())->user_id;
+
+        if ($own === null || ! self::ownsMemberRecord($own)) {
+            return null;
+        }
+
+        return (string) $own;
     }
 }

@@ -303,7 +303,7 @@
                  than as a boundary, which is the same reason the member grid's
                  Action column resolves its links up front. Same method as the
                  gate, so the menu and the route cannot disagree. --}}
-            @if (\App\Http\Middleware\EnsureMemberRecordAccess::ownsMemberRecord(Auth::user()->user_id ?? null)
+            @if (\App\Http\Middleware\EnsureMemberRecordAccess::ownedMemberPk() !== null
                 || \App\Http\Middleware\EnsureMemberPiiAccess::grantsAccess())
             <li>
                 <a class="dropdown-item profile-dd-item d-flex align-items-center gap-3" href="{{ route('member.profile.edit', Auth::user()->user_id ?? 0) }}">
