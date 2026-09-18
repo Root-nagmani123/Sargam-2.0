@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin\Master;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-// use App\DataTables\Master\HostelBuildingMasterDataTable;
+use Illuminate\Validation\Rule;
 use App\DataTables\Master\BuildingMasterDataTable;
 // use App\Models\HostelBuildingMaster;
 use App\Models\BuildingMaster;
@@ -17,7 +17,6 @@ class HostelBuildingMasterController extends Controller
     public function __construct(){
         $this->buildingType = BuildingMaster::$buildingType;
     }
-    // public function index(HostelBuildingMasterDataTable $dataTable){
     public function index(BuildingMasterDataTable $dataTable){
         return $dataTable->render('admin.master.hostel_building.index', ['buildingType' => $this->buildingType]);
     }
@@ -32,7 +31,12 @@ class HostelBuildingMasterController extends Controller
             'building_name'  => 'required|string|max:255|unique:building_master,building_name,' . ($request->pk ? decrypt($request->pk) : 'null').',pk',
             'no_of_floors'   => 'required|integer|min:0',
             'no_of_rooms'    => 'required|integer|min:0',
-            'building_type'  => 'required|string|max:255',
+            // building_master.building_type is an ENUM, not a varchar: a value
+            // outside the list passes a plain string rule and is then rejected by
+            // MySQL (error 1265 under STRICT_TRANS_TABLES), surfacing as a 500
+            // instead of a 422. Validate against the same list the form offers,
+            // so the column's domain is enforced where the error is reportable.
+            'building_type'  => ['required', 'string', Rule::in(array_keys($this->buildingType))],
         ]);
 
         if($request->pk) {

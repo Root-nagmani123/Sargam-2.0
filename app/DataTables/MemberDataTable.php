@@ -19,11 +19,231 @@ class MemberDataTable extends DataTable
     private const LISTING_CACHE_EPOCH_KEY = 'member_dt_list_epoch';
 
     /**
+     * The employee_master columns this listing actually reads.
+     *
+     * pk keys the row actions; appellation + the three name parts build the
+     * displayed name; emp_id, mobile, email and status are columns of the grid;
+     * emp_type, emp_group_pk and department_master_pk are both toolbar filters
+     * and the foreign keys the three eager loads resolve through. Nothing else
+     * is displayed, exported or filtered on, so nothing else is fetched.
+     *
+     * Shared with MemberController::export() so the download and the screen
+     * cannot read different columns.
+     *
+     * @var string[]
+     */
+    public const LISTING_COLUMNS = [
+        'pk',
+        'appellation',
+        'first_name',
+        'middle_name',
+        'last_name',
+        'emp_id',
+        'emp_type',
+        'emp_group_pk',
+        'department_master_pk',
+        'mobile',
+        'email',
+        'status',
+    ];
+
+    /**
+     * The four relations the Name / Type / Group / Department columns read,
+     * each constrained to its key and its one label column.
+     *
+     * Eager-loaded because resolving them per row costs four queries x page
+     * length; constrained because an unconstrained load hydrates every column
+     * of four master tables into a payload that shows one string from each.
+     * The key column has to stay in each list or Eloquent cannot match the
+     * loaded rows back to their parents.
+     *
+     * @var string[]
+     */
+    public const LISTING_RELATIONS = [
+        'appellationMaster:pk,appettation_name',
+        'employeeType:pk,category_type_name',
+        'employeeGroup:pk,emp_group_name',
+        'department:pk,department_name',
+    ];
+
+    /**
      * Bump after any change that should refresh the /member listing (create, edit steps, update, delete).
      */
     public static function bumpListingCacheEpoch(): void
     {
         DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'MemberDataTable');
+    }
+
+    /**
+     * What the rendered Action column depends on, and nothing else.
+     *
+     * The column varies on exactly two things: whether the actor is entitled
+     * (View / Print / Delete / the status toggle) and which row the actor owns
+     * (Edit). For an ENTITLED account the owned pk cannot change the output -
+     * every row gets every control - so all entitled accounts legitimately share
+     * one cache entry. For everyone else the output turns on their own pk, so
+     * that is the key.
+     *
+     * Deliberately not `auth()->id()` for both branches: that would give every
+     * administrator a private copy of an identical payload.
+     *
+     * THE KEY IS THE DECISION, NOT THE ACTOR. The non-entitled branch keys on
+     * the pk this actor may actually EDIT - EnsureMemberRecordAccess::
+     * ownedMemberPk() - and not on its raw user_id. The distinction is not
+     * cosmetic, and it is why this method changed:
+     *
+     *   - user_id is not ownership. 205 user_id values on testsargam6 are held
+     *     by MORE THAN ONE credential, and under the F-024 rule 197 of those
+     *     keys carry credentials that DISAGREE - one proves the record is its
+     *     own, the other cannot. Keyed on user_id those 395 credentials shared
+     *     one entry whose payload differs between them, which is R11-002's
+     *     defect re-created: whoever warms the cache decides what the others
+     *     see. Keyed on the decision they land on different entries.
+     *   - It also shrinks the fan-out recorded as F-045, and the size of that
+     *     reduction is the number whoever closes F-045 has to size against, so
+     *     it is quoted with the query that produced it rather than inferred
+     *     from this method. MEASURED ON testsargam6 (2026-09-18):
+     *
+     *       before   14,485 distinct 'own:' identities
+     *                = COUNT(DISTINCT user_id) over user_credentials. The old
+     *                  body read 'own:' . ($own === null ? 'none' : (string) $own)
+     *                  with $own = optional(auth()->user())->user_id, and NO
+     *                  credential has a null user_id (0 of 15,108) - so nothing
+     *                  shared 'own:none'. Every account keyed on its own user_id
+     *                  and took one entry apiece for every (page, length,
+     *                  ordering, search, filter-set) for the full 86400s TTL.
+     *       after    'own:none', plus one entry per account the gate ADMITS.
+     *                  The gate admits 1,188 credentials - user_category 'E'
+     *                  AND a contact proof, which is the predicate in
+     *                  EnsureMemberRecordAccess::ownsMemberRecord() - and
+     *                  COUNT(DISTINCT user_id) over THAT predicate is also
+     *                  1,188: no two admitted credentials share a pk. So the
+     *                  ceiling is 1,189 entries per (page, length, ordering,
+     *                  search, filter-set).
+     *
+     *                  It is NOT 1,341. That figure is COUNT(DISTINCT
+     *                  user_id) over the 1,547 credentials that merely
+     *                  RESOLVE to an employee_master row - the admitted ones
+     *                  AND the 359 refused - so it is a different population,
+     *                  and sizing against it over-provisions by ~13%.
+     *
+     *     What collapses onto 'own:none' is every account ownedMemberPk()
+     *     resolves to null: the 359 the gate refuses PLUS the 13,561 whose
+     *     user_id matches no employee_master row. "Resolves to none" is NOT
+     *     "user_id is null" - those two were conflated once already, in the
+     *     review finding this paragraph was rewritten to satisfy.
+     *
+     *     Size the store for one key per ADMITTED account. The remaining
+     *     per-account entries belong to accounts that genuinely see something
+     *     nobody else sees. PR #309 F-049, F-050, F-051.
+     *
+     * Still deliberately not `auth()->id()`: that would give every
+     * administrator a private copy of an identical payload.
+     *
+     * ownedMemberPk() is memoised per request, so asking here and again in
+     * dataTable() costs one query between them, not two - see
+     * EnsureMemberRecordAccess::ownsMemberRecord() for exactly how long "per
+     * request" lasts, because it is not the same in tests. PR #309 F-046, F-047.
+     */
+    public static function actionColumnCacheIdentity(): string
+    {
+        if (\App\Http\Middleware\EnsureMemberPiiAccess::grantsAccess()) {
+            return 'entitled';
+        }
+
+        $own = \App\Http\Middleware\EnsureMemberRecordAccess::ownedMemberPk();
+
+        return 'own:' . ($own ?? 'none');
+    }
+
+    /**
+     * Status pill above the grid (All / Active / Inactive). Whitelisted here so an
+     * arbitrary ?status_filter= can neither reach the query nor fragment the cache.
+     */
+    public static function resolveStatusFilter(): string
+    {
+        $value = strtolower(trim((string) request('status_filter', '')));
+
+        return in_array($value, ['active', 'inactive'], true) ? $value : '';
+    }
+
+    /**
+     * The toolbar's Type / Group / Department dropdowns.
+     *
+     * Each is a foreign key, so an id is all that can ever be legal — anything
+     * else is dropped rather than passed to the query. Returned as one array so
+     * the grid, the export and the cache key cannot disagree about what is
+     * applied.
+     *
+     * @return array{status:string, type:int|null, group:int|null, department:int|null}
+     */
+    public static function resolveFilters(): array
+    {
+        $id = function (string $key): ?int {
+            $raw = trim((string) request($key, ''));
+
+            // "No filter" is spelt as an ABSENT value, not as zero. pk 0 is a
+            // real, selectable row here - department_master holds one - so
+            // rejecting it made the dropdown offer an option that rendered as
+            // chosen, applied no WHERE clause, and left no trace on the export
+            // band or the audit line. An export of one department and an export
+            // of every member would have looked identical.
+            return ($raw !== '' && ctype_digit($raw)) ? (int) $raw : null;
+        };
+
+        return [
+            'status' => self::resolveStatusFilter(),
+            'type' => $id('type_filter'),
+            'group' => $id('group_filter'),
+            'department' => $id('department_filter'),
+        ];
+    }
+
+    /**
+     * The grid's own scoping — the toolbar filters plus free-text search.
+     *
+     * Shared with MemberController::export() so a download can never show a
+     * different set of rows than the screen it was started from.
+     *
+     * @param  QueryBuilder  $query
+     * @param  array{status?:string, type?:int|null, group?:int|null, department?:int|null}  $filters
+     */
+    public static function applyListingFilters($query, array $filters, string $search = '')
+    {
+        $statusFilter = $filters['status'] ?? '';
+
+        if ($statusFilter === 'active') {
+            $query->where('status', 1);
+        } elseif ($statusFilter === 'inactive') {
+            // "Inactive" is everything that is not explicitly active, NULL included.
+            $query->where(function ($sub) {
+                $sub->where('status', '!=', 1)->orWhereNull('status');
+            });
+        }
+
+        // employee_type_master.pk, employee_group_master.pk, department_master.pk.
+        // `!== null` rather than `! empty()`: pk 0 is a real row and empty(0) is
+        // true, so the emptiness test silently dropped that filter even once
+        // resolveFilters() started accepting it.
+        foreach (['type' => 'emp_type', 'group' => 'emp_group_pk', 'department' => 'department_master_pk'] as $key => $column) {
+            if (($filters[$key] ?? null) !== null) {
+                $query->where($column, $filters[$key]);
+            }
+        }
+
+        $search = trim($search);
+        if ($search !== '') {
+            // Same columns the DataTable's global filter searches.
+            $query->where(function ($sub) use ($search) {
+                $sub->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('middle_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('mobile', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        return $query;
     }
 
     /**
@@ -41,7 +261,20 @@ class MemberDataTable extends DataTable
                 'seconds' => 'MEMBER_DATATABLE_CACHE_SECONDS',
             ],
             'MemberDataTable',
-            fn () => parent::ajax()
+            fn () => parent::ajax(),
+            [
+                // Not part of the standard DataTables fingerprint — without these
+                // every filter combination would share one cached payload, and the
+                // grid would answer a Department pick with the previous rows.
+                'listing_filters' => self::resolveFilters(),
+                // Nor is the ACTOR, and the Action column is rendered per actor:
+                // View and Print appear only for an entitled account, and Edit
+                // only on the row that account owns. Without this, two accounts
+                // with the same filters share one cached payload, so whoever
+                // warms the cache decides which controls everybody else sees for
+                // the rest of the TTL (default 86400s).
+                'actor' => self::actionColumnCacheIdentity(),
+            ]
         );
     }
 
@@ -53,36 +286,134 @@ class MemberDataTable extends DataTable
      */
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
+        // Resolved once per request, not once per row: the listing is open to
+        // every authenticated user but View and Print are not, and a link the
+        // gate will refuse is a button that reports a permission error instead
+        // of doing anything. Same decision the middleware makes, from the same
+        // method, so the screen and the gate cannot drift apart.
+        $mayReadPii = \App\Http\Middleware\EnsureMemberPiiAccess::grantsAccess();
+
+        // Edit is gated by member.record, not by member.pii, and its rule is
+        // one step wider: an entitled account reaches every record, everyone
+        // else reaches exactly the one it can be SHOWN to own. Resolved here
+        // for the same reason as above - a link the gate will refuse is a dead
+        // button that reads as a fault rather than as a boundary.
+        //
+        // This CALLS the gate rather than restating it, and that is the whole
+        // point. It used to restate it - `user_id === row pk` - under a comment
+        // claiming it mirrored EnsureMemberRecordAccess::handle(). When F-024
+        // narrowed the real rule to add user_category = 'E' and a contact
+        // proof, the restatement stayed behind and the claim silently became
+        // false: 359 accounts kept an Edit link that answers 403. A copy of an
+        // authorisation rule is a copy that will drift, so there is no longer
+        // one here. PR #309 F-046.
+        //
+        // One call, one memoised query, whichever way it goes - see
+        // EnsureMemberRecordAccess::ownedMemberPk().
+        $ownPk = \App\Http\Middleware\EnsureMemberRecordAccess::ownedMemberPk();
+
         return (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->addColumn('employee_name',
-            function($row) {
-                $appellationPrefix = '';
-                if ($row->appellation) {
-                    $appellation = $row->appellationMaster;
-                    if ($appellation) {
-                        $appellationPrefix = $appellation->appettation_name . ' ';
-                    }
-                }
-                return '<label class="text-dark">' . $appellationPrefix . $row->first_name . ' ' . $row->middle_name . ' ' . $row->last_name . '</label>';
+            ->addColumn('employee_name', function ($row) {
+                $appellation = $row->appellation ? ($row->appellationMaster->appettation_name ?? null) : null;
+
+                $parts = array_filter(
+                    array_map(
+                        fn ($part) => trim((string) $part),
+                        [$appellation, $row->first_name, $row->middle_name, $row->last_name]
+                    ),
+                    fn ($part) => $part !== ''
+                );
+
+                return implode(' ', $parts);
             })
-            ->addColumn('employee_id', fn($row) => '<label class="text-dark">' . $row->emp_id . '</label>')
-            ->addColumn('mobile_no', fn($row) => '<label class="text-dark">' . $row->mobile . '</label>')
-            ->addColumn('email', fn($row) => '<label class="text-dark">' . $row->email . '</label>')
-            ->addColumn('actions', function($row) {
+            ->addColumn('employee_id', fn ($row) => (string) $row->emp_id)
+            // Type / Group / Department: the three the toolbar already filters on,
+            // now on the row as well, so a filtered grid shows what it filtered by.
+            // Their tables are eager-loaded in query() - resolving them per row
+            // would be three extra queries x page length.
+            ->addColumn('employee_type', fn ($row) => (string) optional($row->employeeType)->category_type_name)
+            ->addColumn('employee_group', fn ($row) => (string) optional($row->employeeGroup)->emp_group_name)
+            ->addColumn('department', fn ($row) => (string) optional($row->department)->department_name)
+            ->addColumn('mobile_no', fn ($row) => (string) $row->mobile)
+            ->addColumn('email', fn ($row) => (string) $row->email)
+            ->addColumn('actions', function ($row) use ($mayReadPii, $ownPk) {
+                $isActive = (int) $row->status === 1;
+                $mayEdit = $mayReadPii
+                    || ($ownPk !== null && $row->pk !== null && (string) $ownPk === (string) $row->pk);
+                $editUrl = route('member.edit', $row->pk);
+                $viewUrl = route('member.show', encrypt($row->pk));
+                $printUrl = route('member.print', encrypt($row->pk));
                 $deleteUrl = route('member.destroy', encrypt($row->pk));
-                $isActive = $row->status == 1;
-                $deleteButtonDisabled = $isActive ? 'disabled' : '';
-                $deleteButtonTitle = $isActive ? 'Cannot delete active records. Set to inactive first.' : 'Delete Member';
+                $checked = $isActive ? 'checked' : '';
+                $toggleLabel = $isActive ? 'Deactivate' : 'Activate';
 
-                return '<div class="d-flex justify-content-center gap-2">
-                    <a href="' . route('member.edit', $row->pk) . '" class="btn btn-sm btn-primary">Edit</a>
-                    <a href="' . route('member.show', encrypt($row->pk)) . '" class="btn btn-sm btn-success">View</a>
-                    <button type="button" class="btn btn-sm btn-danger member-delete-btn" ' . $deleteButtonDisabled . ' title="' . $deleteButtonTitle . '"
-                        data-delete-url="' . $deleteUrl . '" ' . ($isActive ? 'onclick="return false;"' : '') . '>Delete</button>
+                // Deactivate and Delete are gated on member.pii now, so they are
+                // rendered only for an account that gate admits - the same rule as
+                // View and Print. Rendering them to everyone is what made the
+                // ungated endpoints reachable from the screen itself: the Delete
+                // button carried the encrypted id its route needed, so nothing had
+                // to be forged.
+                //
+                // MemberController@destroy refuses an active member, so for an
+                // entitled account the delete action is rendered disabled rather
+                // than red-and-always-failing.
+                $delete = '';
+                if ($mayReadPii) {
+                    $delete = $isActive
+                        ? '<span class="mbr-act mbr-act--del is-disabled" aria-disabled="true"
+                                title="Set this member to inactive before deleting">
+                                <span class="mbr-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>
+                                <span class="mbr-act__label">Delete</span>
+                           </span>'
+                        : '<button type="button" class="mbr-act mbr-act--del member-delete-btn"
+                                data-delete-url="' . e($deleteUrl) . '" title="Delete member">
+                                <span class="mbr-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>
+                                <span class="mbr-act__label">Delete</span>
+                           </button>';
+                }
+
+                // Same gate as Delete: the status switch POSTs to
+                // member.toggle-status, which member.pii now refuses.
+                $toggle = $mayReadPii
+                    ? '<label class="mbr-act mbr-act--toggle" title="' . $toggleLabel . ' member">
+                        <span class="mbr-act__icon">
+                            <input class="form-check-input plain-status-toggle member-status-toggle" type="checkbox"
+                                role="switch" data-id="' . (int) $row->pk . '" ' . $checked . '>
+                        </span>
+                        <span class="mbr-act__label">' . $toggleLabel . '</span>
+                    </label>'
+                    : '';
+
+                // Personal-data reads: rendered only for an account the gate
+                // admits. See App\Http\Middleware\EnsureMemberPiiAccess.
+                $piiActions = $mayReadPii
+                    ? '<a href="' . e($viewUrl) . '" class="mbr-act mbr-act--view" title="View member">
+                        <span class="mbr-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span>
+                        <span class="mbr-act__label">View</span>
+                    </a>
+                    <a href="' . e($printUrl) . '" class="mbr-act mbr-act--print" target="_blank" rel="noopener"
+                        title="Print this member\'s details">
+                        <span class="mbr-act__icon"><i class="bi bi-printer" aria-hidden="true"></i></span>
+                        <span class="mbr-act__label">Print</span>
+                    </a>'
+                    : '';
+
+                // Same treatment as View and Print: rendered only for an
+                // account member.record will admit to THIS row.
+                $edit = $mayEdit
+                    ? '<a href="' . e($editUrl) . '" class="mbr-act mbr-act--edit" title="Edit member">
+                        <span class="mbr-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
+                        <span class="mbr-act__label">Edit</span>
+                    </a>'
+                    : '';
+
+                return '<div class="mbr-act-group" role="group" aria-label="Row actions">
+                    ' . $edit . '
+                    ' . $piiActions . '
+                    ' . $toggle . '
+                    ' . $delete . '
                 </div>';
-
-
             })
             ->filterColumn('employee_name', function ($query, $keyword) {
                 $query->where('first_name', 'like', "%{$keyword}%")
@@ -95,14 +426,13 @@ class MemberDataTable extends DataTable
             ->filterColumn('email', function ($query, $keyword) {
                 $query->where('email', 'like', "%{$keyword}%");
             })
+            // Display only — the switch that changes it lives in the Actions stack.
             ->addColumn('status', function ($row) {
-                $checked = $row->status == 1 ? 'checked' : '';
-                return "
-                <div class='form-check form-switch d-inline-block'>
-                    <input class='form-check-input member-status-toggle' type='checkbox' role='switch'
-                        data-id='{$row->pk}' {$checked}>
-                </div>
-                ";
+                $isActive = (int) $row->status === 1;
+
+                return '<span class="status-pill badge rounded-1 ' . ($isActive ? 'bg-success-subtle' : 'bg-danger-subtle') . '">'
+                    . ($isActive ? 'Active' : 'Inactive')
+                    . '</span>';
             })
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
@@ -117,13 +447,26 @@ class MemberDataTable extends DataTable
                     });
                 }
             }, true)
-            ->rawColumns(['employee_name', 'employee_id', 'actions', 'mobile_no', 'email','status']);
+            ->rawColumns(['actions', 'status']);
     }
 
 
     public function query(EmployeeMaster $model): QueryBuilder
     {
-        return $model->newQuery()->with('appellationMaster')->orderBy('pk', 'desc');
+        // Explicit column list, not SELECT *: employee_master is 73 columns wide
+        // and this grid renders ten of them, so the default shipped pan_no, dob,
+        // father_name and both addresses to the browser on every draw - into
+        // devtools, any client-side cache and anything that proxies or logs the
+        // response - for a grid that displays none of them.
+        $query = $model->newQuery()
+            ->select(self::LISTING_COLUMNS)
+            ->with(self::LISTING_RELATIONS);
+
+        // Search is left to Yajra here (it owns the DataTables request); only the
+        // toolbar filters are applied, through the same helper the exports use.
+        self::applyListingFilters($query, self::resolveFilters());
+
+        return $query->orderBy('pk', 'desc');
     }
 
     public function html(): HtmlBuilder
@@ -135,12 +478,37 @@ class MemberDataTable extends DataTable
                     // ->dom('Bfrtip')
                     // ->orderBy(1)
                     ->selectStyleSingle()
+                    // Responsive is loaded globally and would collapse the Actions
+                    // column into a "+" detail row on a normal 1440px screen. The
+                    // programme-dt chrome scrolls inside .table-responsive instead.
+                    ->responsive(false)
+                    // No `dom` here on purpose: this grid uses the shared programme-dt
+                    // chrome, and public/js/datatable-global-ui.js relocates the search
+                    // box / pagination / count into the #memberDtSearch and
+                    // #memberDtFooter slots declared in admin/member/index.blade.php.
                     ->parameters([
+                        'responsive' => false,
+                        'autoWidth' => false,
                         'order' => [],
                         'ordering' => true,
                         'searching' => true,
                         'lengthChange' => true,
                         'pageLength' => 10,
+                        'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+                        'language' => [
+                            'search' => '',
+                            'searchPlaceholder' => 'Search',
+                            'emptyTable' => 'No members found.',
+                            'zeroRecords' => 'No matching members found.',
+                            'lengthMenu' => 'Showing _MENU_',
+                            'info' => 'of _TOTAL_ items',
+                            'infoEmpty' => 'of 0 items',
+                            'infoFiltered' => 'of _MAX_ items',
+                            'paginate' => [
+                                'previous' => '&lsaquo;',
+                                'next' => '&rsaquo;',
+                            ],
+                        ],
                     ])
                     ->buttons([
                         Button::make('excel'),
@@ -160,13 +528,20 @@ class MemberDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('#')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('employee_name')->title('Employee Name')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('employee_id')->title('Employee ID')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('mobile_no')->title('Mobile No')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('email')->title('Email')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::computed('status')->title('Status')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('employee_name')->title('Employee Name')->addClass('text-start')->orderable(false)->searchable(true),
+            Column::make('employee_id')->title('Employee ID')->addClass('text-start')->orderable(false)->searchable(false),
+            // Computed, not make(): these read off relations, so there is no
+            // employee_master column for DataTables to sort or search on.
+            Column::computed('employee_type')->title('Employee Type')->addClass('text-start'),
+            Column::computed('employee_group')->title('Employee Group')->addClass('text-start'),
+            Column::computed('department')->title('Department')->addClass('text-start'),
+            Column::make('mobile_no')->title('Mobile No')->addClass('text-start')->orderable(false)->searchable(true),
+            Column::make('email')->title('Email')->addClass('text-start')->orderable(false)->searchable(true),
+            Column::computed('status')->title('Status')->addClass('text-center')->orderable(false)->searchable(false)
+                ->exportable(false)->printable(false),
+            Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false)
+                ->exportable(false)->printable(false),
         ];
     }
 

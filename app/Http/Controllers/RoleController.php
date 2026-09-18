@@ -15,6 +15,38 @@ class RoleController extends Controller
     public function __construct(RoleService $roleService)
     {
         $this->service = $roleService;
+
+        // Everything that CHANGES what a role can do requires Super Admin.
+        //
+        // Registered HERE and not only on the route, because this controller is
+        // mounted TWICE: `roles/*` at routes/web.php:162-171 and a second,
+        // hand-written `admin/roles/*` block at routes/web.php:180-185. A gate
+        // attached to one route group protects that URL and nothing else, so
+        // gating only the first would have left store/update/destroy reachable
+        // through the second - and left the next mount unprotected as well.
+        // Constructor middleware runs for every route that resolves to this
+        // class, which is the property the fix needs.
+        //
+        // assignPermission() is the one that made this urgent: it
+        // firstOrCreate()d whatever permission name it was posted and granted
+        // it to the role in the URL, with no check on the caller, so any
+        // authenticated account could grant itself any permission and defeat
+        // every `can()`-based gate in the application. PR #309 F-027 /
+        // PR #317 L-8.
+        //
+        // Reads are deliberately NOT included: listing roles is not escalation,
+        // and refusing the screen to an account that can already open it would
+        // be a different defect rather than a fix.
+        $this->middleware(\App\Http\Middleware\EnsureRoleAdmin::class)->only([
+            'store',
+            'update',
+            'destroy',
+            'assignPermission',
+            'assignDashboardCard',
+            'storeDashboardCard',
+            'updateDashboardCard',
+            'destroyDashboardCard',
+        ]);
     }
     /**
      * Display a listing of the resource.

@@ -140,13 +140,35 @@ Route::post('/login', [LoginController::class, 'authenticate'])->middleware('thr
 
 
 Route::middleware(['auth'])->group(function () {
-    Route::post('roles/permissions/{id}', [RoleController::class, 'assignPermission'])->name('assign.roles.permissions');
+    // Reads stay open to anyone who can already reach the screen; gating them
+    // would break navigation without closing an escalation.
     Route::get('roles/{id}/dashboard', [RoleController::class, 'showDashboard'])->name('roles.dashboard');
-    Route::post('roles/{id}/dashboard', [RoleController::class, 'assignDashboardCard'])->name('assign.roles.dashboard');
-    Route::post('dashboard-cards', [RoleController::class, 'storeDashboardCard'])->name('dashboard.cards.store');
-    Route::put('dashboard-cards/{id}', [RoleController::class, 'updateDashboardCard'])->name('dashboard.cards.update');
-    Route::delete('dashboard-cards/{id}', [RoleController::class, 'destroyDashboardCard'])->name('dashboard.cards.destroy');
-    Route::resource('roles', RoleController::class);
+
+    // Everything that CHANGES what a role can do.
+    //
+    // `POST roles/permissions/{id}` carried `auth` and nothing else, and
+    // RoleController::assignPermission() checked nothing itself: it
+    // firstOrCreate()d whatever permission name it was posted and granted it to
+    // the role named in the URL. Any authenticated account could therefore hand
+    // itself any permission and walk back through every `can()`-based gate in
+    // the application - including `member_pii_read`, which this same PR
+    // introduces. Recorded as PR #309 F-027 / PR #317 L-8.
+    //
+    // The middleware is referenced BY CLASS, not through a Kernel alias, on
+    // purpose: $middlewareAliases is the array this branch conflicts with
+    // `main` on, and a gate that lives there can be lost in a conflict
+    // resolution without anything failing loudly. See the class docblock.
+    Route::middleware([\App\Http\Middleware\EnsureRoleAdmin::class])->group(function () {
+        Route::post('roles/permissions/{id}', [RoleController::class, 'assignPermission'])->name('assign.roles.permissions');
+        Route::post('roles/{id}/dashboard', [RoleController::class, 'assignDashboardCard'])->name('assign.roles.dashboard');
+        Route::post('dashboard-cards', [RoleController::class, 'storeDashboardCard'])->name('dashboard.cards.store');
+        Route::put('dashboard-cards/{id}', [RoleController::class, 'updateDashboardCard'])->name('dashboard.cards.update');
+        Route::delete('dashboard-cards/{id}', [RoleController::class, 'destroyDashboardCard'])->name('dashboard.cards.destroy');
+        Route::resource('roles', RoleController::class)->only(['store', 'update', 'destroy']);
+    });
+
+    // The remaining resource verbs - index, create, show, edit - are reads.
+    Route::resource('roles', RoleController::class)->except(['store', 'update', 'destroy']);
 });
 
 // Protected Routes
@@ -388,21 +410,56 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('member')->name('member.')->controller(MemberController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('create', 'create')->name('create');
-        Route::get('edit/{id}', 'edit')->name('edit');
         Route::get('profile/edit', function () {
             return redirect()->route('member.profile.edit', Auth::user()->user_id);
         })->name('profile.edit.self');
-        Route::get('profile/edit/{id}', 'editProfile')->name('profile.edit');
-        Route::get('show/{id}', 'show')->name('show');
         Route::get('/step/{step}', 'loadStep')->name('load-step');
-        Route::get('/edit-step/{step}/{id}', 'editStep')->name('edit-step');
         Route::post('/validate-step/{step}', 'validateStep');
-        Route::post('/update-validate-step/{step}/{id}', 'updateValidateStep');
+        // The edit wizard returns the SAME personal data as the gated documents
+        // below - permanent address, current address, father's name, personal
+        // email - one member per request, addressed by a raw integer pk. Gating
+        // only the document routes left that open, so the wizard is gated too.
+        //
+        // NOT on `member.pii`, because profile/edit is self-service: the
+        // redirect above sends every user to their own record. `member.record`
+        // admits an entitled account to any member and everybody else to
+        // exactly their own. See App\Http\Middleware\EnsureMemberRecordAccess.
+        Route::middleware(['member.record'])->group(function () {
+            Route::get('edit/{id}', 'edit')->name('edit');
+            Route::get('profile/edit/{id}', 'editProfile')->name('profile.edit');
+            Route::get('/edit-step/{step}/{id}', 'editStep')->name('edit-step');
+            Route::post('/update-validate-step/{step}/{id}', 'updateValidateStep');
+        });
         Route::post('/store', 'store')->name('store');
         Route::post('update', 'update')->name('update');
-        Route::post('{id}/toggle-status', 'toggleStatus')->name('toggle-status');
-        Route::get('excel-export', 'excelExport')->name('excel.export');
-        Route::delete('delete/{id}', 'destroy')->name('destroy');
+        // Personal-data egress AND the two destructive mutations. The reads hand
+        // out a member's full profile or the whole filtered roster as a document
+        // that leaves the application; the writes deactivate or delete a member
+        // outright. `show` and `excel-export` pre-date this change and carry the
+        // same rows as the two reads added with it - gating only the new pair
+        // would be a gate in name only.
+        //
+        // toggle-status and destroy sat OUTSIDE both gates until this change, so
+        // any authenticated account could deactivate any member and then delete
+        // them. They are gated on `member.pii` rather than on `member.record`
+        // deliberately: `member.record` admits an ordinary account to its OWN
+        // record, and destroy() deletes that account's user_credentials row and
+        // every role mapping with it, so the own-record branch would hand every
+        // user a working self-delete. Deactivating and deleting an employee are
+        // administrative acts, so they take the administrative entitlement.
+        // See App\Http\Middleware\EnsureMemberPiiAccess for the access decision.
+        Route::middleware(['member.pii'])->group(function () {
+            Route::get('show/{id}', 'show')->name('show');
+            // Row-level Print: one member's profile, as opposed to export/print
+            // which prints the whole filtered listing.
+            Route::get('print/{id}', 'printMember')->name('print');
+            Route::get('excel-export', 'excelExport')->name('excel.export');
+            // Grid exports: one query, one column list, four formats.
+            Route::get('export/{format}', 'export')->name('export')
+                ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
+            Route::post('{id}/toggle-status', 'toggleStatus')->name('toggle-status');
+            Route::delete('delete/{id}', 'destroy')->name('destroy');
+        });
     });
 
     // Faculty Routes
