@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Support\PdfPageNumbers;
 
 
 
@@ -1525,9 +1526,16 @@ class CalendarController extends Controller
                 'defaultFont'          => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
                 'isRemoteEnabled'      => true,
-                'isPhpEnabled'         => true,
+                // Never true: isPhpEnabled makes the renderer a PHP
+                // execution context for the whole view, so any raw block
+                // that later appears in an export blade would execute.
+                // Page numbers are stamped on the canvas after render
+                // instead - see PdfPageNumbers.
+                'isPhpEnabled'         => false,
                 'dpi'                  => 96,
             ]);
+
+        $pdf = PdfPageNumbers::stamp($pdf, 16, 14, [0.4, 0.4, 0.4]);
 
         $fileName = 'time-table-' . $rangeStartDate->format('Y-m-d') . '.pdf';
 
@@ -1643,9 +1651,16 @@ class CalendarController extends Controller
                 'defaultFont'          => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
                 'isRemoteEnabled'      => true,
-                'isPhpEnabled'         => true,
+                // Never true: isPhpEnabled makes the renderer a PHP
+                // execution context for the whole view, so any raw block
+                // that later appears in an export blade would execute.
+                // Page numbers are stamped on the canvas after render
+                // instead - see PdfPageNumbers.
+                'isPhpEnabled'         => false,
                 'dpi'                  => 96,
             ]);
+
+        $pdf = PdfPageNumbers::stamp($pdf, 16, 14, [0.4, 0.4, 0.4]);
 
         $fileName = 'time-table-' . $rangeStartDate->format('Y-m-d') . '.pdf';
 
@@ -1770,10 +1785,16 @@ class CalendarController extends Controller
                 'defaultFont'          => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
                 'isRemoteEnabled'      => true,
-                // Enables the <script type="text/php"> page-number block in the view.
-                'isPhpEnabled'         => true,
+                // Never true: isPhpEnabled makes the renderer a PHP
+                // execution context for the whole view, so any raw block
+                // that later appears in an export blade would execute.
+                // Page numbers are stamped on the canvas after render
+                // instead - see PdfPageNumbers.
+                'isPhpEnabled'         => false,
                 'dpi'                  => 96,
             ]);
+
+        $pdf = PdfPageNumbers::stamp($pdf, 16, 14, [0.4, 0.4, 0.4]);
 
         $fileName = 'time-table-' . now()->format('Y-m-d_His') . '.pdf';
 

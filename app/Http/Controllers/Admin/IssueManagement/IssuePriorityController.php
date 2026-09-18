@@ -14,6 +14,7 @@ use App\Support\ExportCsvHeader;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Support\PdfPageNumbers;
 
 class IssuePriorityController extends Controller
 {
@@ -306,7 +307,7 @@ class IssuePriorityController extends Controller
         }
 
         if ($format === 'pdf') {
-            return Pdf::loadView('admin.issue_management.priorities.export_pdf', [
+            $pdf = Pdf::loadView('admin.issue_management.priorities.export_pdf', [
                 'columns' => $columns,
                 'rows' => $rows,
                 'search' => $search,
@@ -316,9 +317,15 @@ class IssuePriorityController extends Controller
                 ->setOptions([
                     'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    'isPhpEnabled' => true,
-                ])
-                ->download('ManagePriorities_' . $stamp . '.pdf');
+                    // Never true: isPhpEnabled makes the renderer a PHP
+                    // execution context for the whole view, so any raw
+                    // block that later appears in an export blade would
+                    // execute. Page numbers are stamped on the canvas
+                    // after render instead - see PdfPageNumbers.
+                    'isPhpEnabled' => false,
+                ]);
+
+            return PdfPageNumbers::stamp($pdf)->download('ManagePriorities_' . $stamp . '.pdf');
         }
 
         $filename = 'ManagePriorities_' . $stamp . '.csv';

@@ -4,7 +4,12 @@
 <head>
     @include('admin.layouts.pre_header')
     <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
-    @section('css')
+    {{-- No @section('css') here: it was opened and never closed, which left a
+         stray output buffer open on every page this layout renders. @yield('css')
+         lives in pre_header, which is included ABOVE this point, so a section opened
+         here could never be yielded anyway - closing it would have deleted these
+         styles instead. Page-specific CSS belongs in @push('styles') / @stack('styles').
+         The <style> block below renders inline, exactly as it did before. --}}
     <style>
     .nav-item .tab-item .active {
         background-color: #bbd9f7;

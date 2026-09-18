@@ -18,6 +18,7 @@ use App\Http\Requests\Admin\GroupMapping\BulkMessageRequest;
 use App\Services\Messaging\EmailService;
 use App\Services\Messaging\SmsService;
 use App\Services\NotificationService;
+use App\Support\PdfPageNumbers;
 
 class GroupMappingController extends Controller
 {
@@ -1063,7 +1064,8 @@ class GroupMappingController extends Controller
                     'dpi'                  => 96,
                 ]);
 
-            return $pdf->download($this->studentListFileName($group, 'pdf'));
+            return PdfPageNumbers::stamp($pdf, 18, 20, [0.4, 0.4, 0.4])
+                ->download($this->studentListFileName($group, 'pdf'));
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }

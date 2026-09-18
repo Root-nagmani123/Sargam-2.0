@@ -17,6 +17,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Support\PdfPageNumbers;
 
 class AttendanceController extends Controller
 {
@@ -881,9 +882,14 @@ $currentPath = $segments[1] ?? null;
                     'printedOn'   => now()->format('d-m-Y H:i'),
                 ], $this->pdfHeaderAssets()))
                     ->setPaper('a4', 'landscape')
-                    ->setOptions(['defaultFont' => 'DejaVu Sans', 'isRemoteEnabled' => true, 'isPhpEnabled' => true, 'dpi' => 96]);
+                    // Never true: isPhpEnabled makes the renderer a PHP
+                    // execution context for the whole view, so any raw
+                    // block that later appears in an export blade would
+                    // execute. Page numbers are stamped on the canvas
+                    // after render instead - see PdfPageNumbers.
+                    ->setOptions(['defaultFont' => 'DejaVu Sans', 'isRemoteEnabled' => true, 'isPhpEnabled' => false, 'dpi' => 96]);
 
-                return $pdf->download($filename . '.pdf');
+                return PdfPageNumbers::stamp($pdf, 18, 20, [0.4, 0.4, 0.4])->download($filename . '.pdf');
             }
 
             return Excel::download($export, $filename . '.xlsx');

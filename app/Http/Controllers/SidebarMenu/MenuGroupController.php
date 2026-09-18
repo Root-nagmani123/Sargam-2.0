@@ -13,6 +13,11 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\SidebarMenu\MenuGroupService;
 use App\Http\Requests\SidebarMenu\MenuGroupRequest;
+use App\Exports\BrandedGridExport;
+use App\Support\ExportCsvHeader;
+use App\Support\PdfPageNumbers;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 
 class MenuGroupController extends Controller
 {
@@ -30,6 +35,122 @@ class MenuGroupController extends Controller
         }
         $pageData = $this->service->pageData();
         return view('SidebarMenu.menu_groups.index', $pageData);
+    }
+
+    /**
+     * Download / Print — one action, two formats, off the same query and the
+     * same column definitions, so the CSV and the printout can't drift apart
+     * (docs/new-design-index-page.md §1). ?category_id, ?q and ?cols are stamped
+     * on by the grid so the export carries what the user is looking at.
+     */
+    public function export(Request $request)
+    {
+        $format = strtolower((string) $request->input('format', 'csv'));
+        abort_unless(in_array($format, ['csv', 'excel', 'pdf', 'print'], true), 404);
+
+        $columns = $this->service->exportColumns($request->input('cols'));
+        $rows = $this->service->exportRows($request);
+
+        // Two renderings of the same filters: the print sheet gets the bold HTML
+        // one, the CSV / .xlsx / PDF band gets plain text. Built once, above the
+        // format branch, so a filter can never be applied and then go unmentioned
+        // on one of the four formats.
+        $bits = [];
+        $plain = [];
+        $categoryId = $request->input('category_id');
+        if (filled($categoryId) && ctype_digit((string) $categoryId)) {
+            $category = \App\Models\SidebarMenu\SidebarCategory::find((int) $categoryId);
+            if ($category) {
+                $bits[] = '<strong>Category:</strong> '.e($category->name);
+                $plain[] = 'Category: '.$category->name;
+            }
+        }
+        $search = trim((string) $request->input('q', ''));
+        if ($search !== '') {
+            $bits[] = '<strong>Search:</strong> '.e($search);
+            $plain[] = 'Search: '.$search;
+        }
+
+        if ($format === 'print') {
+            return view('SidebarMenu.menu_groups.export_print', [
+                'rows' => $rows,
+                'columns' => $columns,
+                'filterLine' => empty($bits) ? null : implode(' &nbsp;|&nbsp; ', $bits),
+                'exportDate' => now()->format('d-m-Y H:i'),
+            ]);
+        }
+
+        $exportDate = now()->format('d-m-Y h:i A');
+        $filename = 'SideMenuGroups_'.now()->format('YmdHis');
+        $filterLine = empty($plain) ? null : implode('  |  ', $plain);
+        $reportTitle = 'SideMenu Groups';
+
+        if ($format === 'excel') {
+            return Excel::download(
+                new BrandedGridExport($rows, $columns, $reportTitle, $exportDate, $filterLine),
+                $filename.'.xlsx'
+            );
+        }
+
+        if ($format === 'pdf') {
+            $pdf = Pdf::loadView('exports.branded_grid_pdf', [
+                'reportTitle' => $reportTitle,
+                'columns' => $columns,
+                'rows' => $rows,
+                'filterLine' => $filterLine,
+                'exportDate' => $exportDate,
+                // Mirrors export_print.blade.php's column widths, so the PDF and
+                // the printout lay out the same.
+                'widths' => [
+                    'sno' => '7%', 'category' => '22%', 'name' => '24%', 'icon' => '17%',
+                    'order' => '9%', 'created_at' => '12%', 'status' => '9%',
+                ],
+            ])
+                ->setPaper('a4', 'portrait')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    // Never true: isPhpEnabled makes the renderer a PHP
+                    // execution context for the whole view, so any raw block
+                    // that later appears in an export blade would execute.
+                    // Page numbers are stamped on the canvas after render
+                    // instead — see PdfPageNumbers.
+                    'isPhpEnabled' => false,
+                ]);
+
+            return PdfPageNumbers::stamp($pdf)->download($filename.'.pdf');
+        }
+
+        // The same band the .xlsx and the print/PDF headers carry, so the CSV names
+        // the report and its applied filters too instead of arriving as bare columns.
+        $band = ExportCsvHeader::rows(
+            $reportTitle,
+            $filterLine,
+            $exportDate,
+            is_countable($rows) ? count($rows) : null
+        );
+
+        return response()->streamDownload(function () use ($rows, $columns, $band) {
+            $handle = fopen('php://output', 'w');
+            // BOM: without it Excel reads the file as ANSI and mangles any
+            // non-ASCII group name.
+            fwrite($handle, "\xEF\xBB\xBF");
+            foreach ($band as $bandRow) {
+                fputcsv($handle, $bandRow);
+            }
+            fputcsv($handle, array_column($columns, 'heading'));
+
+            foreach ($rows as $index => $row) {
+                fputcsv($handle, array_map(
+                    fn (array $col) => sanitize_export_cell($col['value']($row, $index)),
+                    $columns
+                ));
+            }
+
+            fclose($handle);
+        }, $filename.'.csv', [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 
     public function store(MenuGroupRequest $request)
@@ -69,6 +190,10 @@ class MenuGroupController extends Controller
     {
         $this->service->status($id, $request->is_active);
         $this->flushSidebarCaches();
+        // is_active carries the NEW state (the grid's switch sends 1 when it has
+        // just been turned on), so 1 means Activated. The two sibling screens,
+        // Menus and Categories, read it that way; this one was inverted and told
+        // the user the opposite of what it had just written.
         $status = $request->is_active == 1 ? 'Activated' : 'Deactivated';
         return response()->json([
             'success' => true,

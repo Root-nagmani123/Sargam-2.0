@@ -1,0 +1,606 @@
+/* ============================================================================
+   Sidebar Menu Builder — admin index pages
+   ----------------------------------------------------------------------------
+   The `sbm-*` component layer shared by every index screen in this module
+   (Sidebar Categories, Menu Groups, Menus). It implements the "new design"
+   status column + row actions (docs/new-design-index-page.md §3b) and the
+   matching Add/Edit modal (§3c), on top of the `programme-dt-*` chrome in
+   custom.css and the `--ds-*` tokens in sargam-app.css.
+
+   Scoping:
+     .sbm-page   — page root, put it on the container-fluid
+     .sbm-modal  — modal root, put it on .modal-content
+   Both are required so these rules can beat Bootstrap's without !important
+   while still being unable to leak into other modules.
+
+   Load with:
+     <link rel="stylesheet" href="{{ asset('css/sidebar-menu-admin.css') }}?v={{ @filemtime(public_path('css/sidebar-menu-admin.css')) ?: time() }}">
+   ========================================================================= */
+
+/* ── Status column: soft badge (display only) ──
+   The theme ships the *-subtle backgrounds but not the text-*-emphasis
+   colours, so the label would render black. Tint it here. */
+.sbm-page .status-pill {
+    padding: 0.4em 0.85em;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+.sbm-page .status-pill.bg-success-subtle { color: #146c43; }
+.sbm-page .status-pill.bg-danger-subtle  { color: #b02a37; }
+
+/* ── Cell decorations ── */
+/* Attachment cell / modal link — a paperclip beside the stored file name. */
+.sbm-page .sbm-attachment,
+.sbm-modal .sbm-attachment {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    max-width: 190px;
+    color: #004384;
+    font-size: 0.8125rem;
+    text-decoration: none;
+}
+.sbm-page .sbm-attachment span,
+.sbm-modal .sbm-attachment span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.sbm-page .sbm-attachment:hover,
+.sbm-modal .sbm-attachment:hover { text-decoration: underline; }
+
+.sbm-modal .sbm-attachment-current { margin-top: 0.5rem; }
+
+/* Container mode: the destination fields are locked, so dim what is left. */
+.sbm-modal .sbm-attachment-current.sbm-dim {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+.sbm-modal .sbm-container-check .form-check-input {
+    margin-top: 0.2rem;
+}
+
+.sbm-modal .sbm-container-check .form-check-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.sbm-page .sbm-slug {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-radius: var(--ds-radius, 4px);
+    background: var(--ds-surface-2, #f8fafc);
+    font-family: var(--bs-font-monospace, monospace);
+    font-size: 0.8125rem;
+    color: #475467;
+}
+
+.sbm-page .sbm-icon-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-radius: var(--ds-radius, 4px);
+    background: var(--ds-surface-2, #f8fafc);
+    color: #004384;
+}
+.sbm-page .sbm-icon-chip i,
+.sbm-page .sbm-icon-chip .material-symbols-rounded { font-size: 1.05rem; line-height: 1; }
+
+.sbm-page .sbm-order {
+    display: inline-block;
+    min-width: 28px;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--ds-radius, 4px);
+    background: rgba(0, 67, 132, 0.08);
+    color: #004384;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.sbm-page .sbm-muted { color: #98a2b3; user-select: none; }
+
+/* ── Row actions: icon over label ──
+   Each action is an equal-width column holding a fixed-height icon strip above
+   its caption. Equal widths keep the icon row evenly spaced even though "Edit"
+   and "Deactivate" are very different label widths; the fixed strip keeps the
+   glyphs and the switch on one baseline. */
+.sbm-page .sbm-act-group {
+    display: inline-flex;
+    align-items: stretch;   /* equal heights → icon strips stay in line */
+    justify-content: flex-start;
+    gap: 0.25rem;
+}
+
+.sbm-page .sbm-act {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    min-width: 62px;        /* ≈ the widest caption ("Deactivate") */
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+}
+
+.sbm-page .sbm-act__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;           /* one strip for glyphs AND the switch */
+}
+.sbm-page .sbm-act__icon > i {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+/* The switch deliberately has NO .form-check/.form-switch ancestor — that
+   combination pulls the input -2.375rem left (custom.css:107-112) for the
+   switch-beside-label layout and would knock it off-centre here. Pin it anyway. */
+.sbm-page .sbm-act__icon .form-check-input {
+    margin: 0;
+    float: none;
+}
+
+.sbm-page .sbm-act__label { white-space: nowrap; }
+
+.sbm-page .sbm-act--edit { color: #2563eb; }
+.sbm-page .sbm-act--del  { color: var(--bs-danger, #dc3545); }
+.sbm-page .sbm-act--del.is-disabled {
+    color: #98a2b3;
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+.sbm-page .sbm-act--toggle { color: #475467; }
+
+/* The delete <form> is only a wrapper — it must not add a box of its own. */
+.sbm-page .sbm-delete-form {
+    display: flex;
+    margin: 0;
+    padding: 0;
+}
+
+/* Action is the last column and belongs hard against the right edge of the
+   window, not floating mid-table. `width: 1%` + nowrap makes the column
+   shrink-wrap its buttons, so auto table layout hands every spare pixel to the
+   data columns instead and the action stack lands on the right; text-align
+   keeps the header sitting over its content. */
+.sbm-page .programme-dt-table th:last-child,
+.sbm-page .programme-dt-table td:last-child {
+    width: 1%;
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* The group is an inline-flex box, so the cell's text-align already places it.
+   This only bites when the cell is forced wider than its content. */
+.sbm-page .programme-dt-table td:last-child .sbm-act-group {
+    justify-content: flex-end;
+}
+
+/* ── Tab column (Same tab / New tab) ── */
+.sbm-page .sbm-tab {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    border-radius: var(--ds-radius, 4px);
+    background: var(--ds-surface-2, #f8fafc);
+    border: 1px solid var(--ds-line, #e5e7eb);
+    color: #475467;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+.sbm-page .sbm-tab--new {
+    background: rgba(0, 67, 132, 0.08);
+    border-color: rgba(0, 67, 132, 0.18);
+    color: #004384;
+}
+
+/* ── Wide grids (Sidebar Menus: 13 columns) ──
+   .programme-dt-table wraps its 2nd column at 420px, which is right for a
+   Name/Description grid but wrong here — column 2 is Category, a short label.
+   Keep every cell on one line and let .table-responsive scroll instead; the
+   Columns modal is how a user trims the width down. */
+.sbm-page .sbm-table-wide tbody td,
+.sbm-page .sbm-table-wide thead th {
+    white-space: nowrap;
+}
+.sbm-page .sbm-table-wide tbody td:nth-child(2) {
+    max-width: none;
+    white-space: nowrap;
+}
+/* The two long identifier columns may wrap rather than stretch the table. */
+.sbm-page .sbm-table-wide tbody td:nth-child(6),
+.sbm-page .sbm-table-wide tbody td:nth-child(7) {
+    white-space: normal;
+    max-width: 260px;
+}
+
+/* Long routes/file names must wrap inside their own cell, not spill over the
+   next column's content. */
+.sbm-page .sbm-table-wide tbody td:nth-child(6) .sbm-slug,
+.sbm-page .sbm-table-wide tbody td:nth-child(7) .sbm-attachment {
+    display: inline-block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sbm-page .sbm-table-wide tbody td:nth-child(7) .sbm-attachment {
+    display: inline-flex;
+}
+
+.sbm-page .sbm-table-wide tbody td:nth-child(7) .sbm-attachment span {
+    min-width: 0;
+}
+
+/* ── Empty state ── */
+.sbm-page .sbm-empty {
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: var(--ds-ink-muted, #667085);
+}
+.sbm-page .sbm-empty i {
+    font-size: 2.5rem;
+    opacity: 0.35;
+}
+
+/* ============================================================================
+   Add / Edit modal (§3c)
+   One visual language for both modes: a tinted field card holding the labelled
+   controls, a red Cancel and a solid brand submit.
+   ========================================================================= */
+
+.sbm-modal { border-radius: 12px; }
+
+/* modal-dialog-scrollable + a <form> wrapper.
+   ---------------------------------------------------------------------
+   Bootstrap caps .modal-content and lets .modal-body scroll, but it assumes
+   header / body / footer are DIRECT flex children of .modal-content. These
+   modals wrap them in a <form>, so the form is the only flex item: it takes
+   its natural height (871px on Add Menu), overflows the capped content box,
+   and carries the footer with it — on a 800px-tall screen the Cancel /
+   Add Menu buttons sat at y=899, off the bottom of the window with no way to
+   scroll to them.
+
+   Make the form the flex column instead. min-height:0 is the load-bearing
+   part: a flex item defaults to min-height:auto and refuses to shrink below
+   its content, which is exactly what kept the body from scrolling. */
+.sbm-modal > form {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: 100%;
+}
+
+.sbm-modal > form > .sbm-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* Header and footer must not be squeezed by the scrolling body between them. */
+.sbm-modal > form > .sbm-modal-header,
+.sbm-modal > form > .sbm-modal-footer {
+    flex: 0 0 auto;
+}
+
+/* Brand band, per Figma: the header is solid navy with its title, subtitle and
+   close button reversed out of it — the same treatment the Roles module's
+   .rp-modal carries, so the two builders match. The top corners have to be
+   restated here because .modal-content is not overflow-hidden (that would clip
+   the icon-picker dropdown), so a square band would otherwise poke out past
+   the dialog's 12px radius. */
+.sbm-modal .sbm-modal-header {
+    background: #004384;
+    border-bottom: 0;
+    border-radius: 12px 12px 0 0;
+    padding: 1rem 1.25rem;
+    align-items: flex-start;
+}
+.sbm-modal .sbm-modal-header .modal-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+}
+/* Bootstrap's .btn-close is a black SVG data-URI, invisible on navy. Invert it
+   here rather than adding .btn-close-white to the markup, so every modal in
+   the module gets it from the one stylesheet. */
+.sbm-modal .sbm-modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+    opacity: 0.8;
+}
+.sbm-modal .sbm-modal-header .btn-close:hover {
+    opacity: 1;
+}
+/* One line under the title saying which mode you are in — the two modes are
+   otherwise distinguishable only by the submit caption. */
+.sbm-modal .sbm-modal-sub {
+    margin: 2px 0 0;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.sbm-modal .sbm-modal-body { padding: 1.25rem; }
+
+/* Two columns so the form reads as a form and not as a tall single stack.
+   The grid gap owns the spacing — the cells carry no margin of their own, so a
+   field can be moved between rows without leaving a gap behind. */
+.sbm-modal .sbm-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.1rem 1.25rem;
+}
+.sbm-modal .sbm-form-grid > .form-group { margin-bottom: 0; }
+.sbm-modal .sbm-form-grid--full { grid-column: 1 / -1; }
+
+@media (max-width: 575.98px) {
+    .sbm-modal .sbm-form-grid { grid-template-columns: 1fr; }
+}
+
+.sbm-modal .sbm-form-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+.sbm-modal .sbm-req { color: #dc2626; margin-left: 1px; }
+
+.sbm-modal .sbm-control {
+    background-color: #fff;
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--ds-ink, #101828);
+    box-shadow: none;
+}
+.sbm-modal .sbm-control::placeholder { color: #9ca3af; }
+.sbm-modal .sbm-control:focus {
+    border-color: #004384;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
+}
+.sbm-modal .sbm-control[readonly] { background-color: #f2f4f7; color: #475467; }
+
+.sbm-modal .sbm-form-help {
+    margin: 0.375rem 0 0;
+    font-size: 0.75rem;
+    color: var(--ds-ink-muted, #667085);
+}
+
+/* jquery-validate appends its message to .form-group; keep it on its own line
+   under the control rather than inline with the help text. */
+.sbm-modal .sbm-field-card .invalid-feedback { display: block; }
+
+.sbm-modal .sbm-modal-footer {
+    border-top: 0;
+    justify-content: end;
+    gap: 0.75rem;
+    padding: 0.25rem 1.25rem 1.25rem;
+}
+.sbm-modal .sbm-btn-cancel {
+    min-width: 108px;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    background: #fff;
+    color: #dc2626;
+    font-weight: 500;
+}
+.sbm-modal .sbm-btn-cancel:hover {
+    background: #fef2f2;
+    border-color: #f87171;
+}
+.sbm-modal .sbm-btn-submit {
+    min-width: 140px;
+    border: 1px solid #004384;
+    border-radius: 8px;
+    background: #004384;
+    color: #fff;
+    font-weight: 600;
+}
+.sbm-modal .sbm-btn-submit:hover {
+    background: #00356a;
+    border-color: #00356a;
+}
+.sbm-modal .sbm-btn-submit:disabled {
+    background: #004384;
+    border-color: #004384;
+    opacity: 0.65;
+}
+
+/* ============================================================================
+   Choices.js selects inside the modal (Category, Icon)
+   Choices replaces the native <select>, so it needs its own rules to match
+   .sbm-control rather than inheriting them.
+   ========================================================================= */
+
+.sbm-modal .choices { width: 100%; margin-bottom: 0; }
+
+/* ⚠️ Never combine .form-select with .choices__inner — Bootstrap's chevron plus
+   Choices' own arrow renders TWO arrows. Strip the select background image. */
+.sbm-modal .choices .choices__inner,
+.sbm-modal .choices__inner.form-select {
+    background-image: none;
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 38px;
+    padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-radius: 8px;
+    background-color: #fff;
+    font-size: 0.875rem;
+}
+
+.sbm-modal .choices.is-focused .choices__inner,
+.sbm-modal .choices.is-open .choices__inner {
+    border-color: #004384;
+    box-shadow: 0 0 0 0.2rem rgba(0, 67, 132, 0.12);
+}
+
+.sbm-modal .choices.is-invalid .choices__inner {
+    border-color: var(--bs-form-invalid-border-color, #dc3545);
+}
+
+.sbm-modal .choices__list--dropdown {
+    z-index: 2000;
+    border-radius: 8px;
+    margin-top: 2px;
+    border: 1px solid #d7e1ef;
+    overflow: hidden;
+}
+.sbm-modal .choices__list--dropdown .choices__input {
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    margin: 0.5rem;
+    width: calc(100% - 1rem);
+}
+.sbm-modal .choices__list--dropdown .choices__item--choice {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+.sbm-modal .choices__list--dropdown .choices__item--choice.is-highlighted {
+    background-color: #edf4ff;
+    color: #0d47a1;
+}
+
+/* ── Icon picker: glyph + name on one line, live preview beside the field ── */
+.sbm-modal .sbm-icon-select-col { min-width: 12rem; }
+.sbm-modal .sbm-icon-select-col .choices { min-width: 0; }
+
+.sbm-modal .sbm-icon-preview {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-radius: 8px;
+    background: #fff;
+    color: #004384;
+}
+.sbm-modal .sbm-icon-preview > i { font-size: 1.25rem; line-height: 1; }
+.sbm-modal .sbm-icon-preview > i.is-empty { color: #9ca3af; }
+
+.sbm-modal .sbm-icon-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    width: 100%;
+    min-height: 1.5rem;
+}
+.sbm-modal .sbm-icon-option .sbm-icon-glyph {
+    font-size: 1.15rem;
+    line-height: 1.1;
+    color: #004384;
+    width: 1.2rem;
+    text-align: center;
+    flex: 0 0 1.2rem;
+}
+.sbm-modal .sbm-icon-option .sbm-icon-label {
+    font-family: var(--bs-font-sans-serif);
+    font-size: 0.92rem;
+    color: #1f2a37;
+    letter-spacing: 0.01em;
+}
+
+/* ============================================================================
+   Icon picker panel (Sidebar Menus) — a text input with a searchable grid
+   dropping out below it. Distinct from the Choices-based picker above: this one
+   is fed by the cached admin_assets/js/material-symbols-list.js asset.
+   ========================================================================= */
+
+.sbm-modal .sbm-icon-input-group .sbm-icon-preview-addon {
+    width: 42px;
+    padding: 0;
+    justify-content: center;
+    background: #fff;
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-right: 0;
+    border-radius: 8px 0 0 8px;
+}
+.sbm-modal .sbm-icon-input-group .sbm-icon-preview-addon > i {
+    font-size: 20px;
+    line-height: 1;
+    color: #004384;
+}
+.sbm-modal .sbm-icon-input-group .sbm-icon-preview-addon > i.is-empty { color: #9ca3af; }
+.sbm-modal .sbm-icon-input-group .sbm-control {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.sbm-modal .icon-picker-panel {
+    position: absolute;
+    z-index: 1085;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin-top: 2px;
+    background: #fff;
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-radius: 8px;
+    box-shadow: var(--ds-shadow-lg, 0 6px 24px rgba(0, 0, 0, 0.12));
+    padding: 10px;
+    max-height: 300px;
+    overflow: auto;
+}
+.sbm-modal .icon-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 6px;
+}
+.sbm-modal .icon-picker-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 4px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    text-align: center;
+}
+.sbm-modal .icon-picker-cell:hover { background: #f3f4f6; }
+.sbm-modal .icon-picker-cell.active {
+    background: #dbeafe;
+    border-color: #93c5fd;
+}
+.sbm-modal .icon-picker-cell .material-symbols-rounded {
+    font-size: 22px;
+    color: #374151;
+    line-height: 1;
+}
+.sbm-modal .icon-picker-cell small {
+    font-size: 9px;
+    line-height: 1.15;
+    color: var(--ds-ink-muted, #6b7280);
+    word-break: break-word;
+    max-width: 100%;
+}
+
+/* ── Print: the grid only ── */
+@media print {
+    .modern-breadcrumb-wrapper,
+    .sbm-page .programme-dt-toolbar,
+    .sbm-page .sbm-secondary-actions,
+    .sbm-page .programme-dt-footer,
+    .sbm-page .programme-dt-table th:last-child,
+    .sbm-page .programme-dt-table td:last-child { display: none !important; }
+}

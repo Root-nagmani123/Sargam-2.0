@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\{RoleController,SidebarController};
-use App\Models\User;
 use Spatie\Permission\Models\Role;
 use App\Http\Controllers\Admin\{
     PermissionController,
@@ -79,21 +78,20 @@ use App\Http\Controllers\SidebarMenu\{
     SidebarCategoryController,MenuGroupController,MenuController
 };
 
-Route::get('assign-role', function () {
-    $user = User::find(2);
-    $permissions = $user->getAllPermissions();
-    foreach ($permissions as $permission) {
-        echo $permission->name . "<br>";
+// Removed: an unauthenticated `assign-role` route that echoed every permission
+// name held by user 2 to any visitor, and a `test-menus` route that dd()'d the
+// whole resolved sidebar. Both were debug scaffolding outside every auth group,
+// both disclosed the authorisation model to anonymous callers, and nothing in
+// the application referenced either one.
+
+// Clearing every cache is a write, and an anonymous one was a free denial-of-
+// service lever: repeated hits discard the config, route, view and application
+// caches and force a cold rebuild on the next request. Gated like its siblings
+// below, which exist for the same reason - a server with no shell access.
+Route::middleware(['auth'])->get('clear-cache', function () {
+    if (!hasRole('Super Admin')) {
+        abort(403);
     }
-})->name('admin.assign-role');
-
-Route::get('test-menus', function () {
-    
-    $menus = app()->make(\App\Services\SidebarMenu\MenuService::class)->getMenus();
-    dd($menus);
-});
-
-Route::get('clear-cache', function () {
     Artisan::call('cache:clear');
     Artisan::call('config:clear');
     Artisan::call('view:clear');
@@ -139,13 +137,32 @@ Route::post('/login', [LoginController::class, 'authenticate'])->middleware('thr
 
 
 
-Route::middleware(['auth'])->group(function () {
+// Role and permission administration.
+//
+// The WHOLE group is gated, not only the exports. assignPermission() calls
+// Permission::firstOrCreate() and then givePermissionTo() on a role taken
+// straight from the URL, so while this route carried `auth` alone any
+// authenticated account could grant itself any permission - including the ones
+// the export gates in this same group read. A gate on the read path is worth
+// nothing while the write path that fills the permission table is open to
+// everyone that gate excludes.
+//
+// `menu.permission:roles` is the permission the Roles screen itself uses
+// (menus row 157), so whoever can see the screen can work it - and Super Admin
+// passes without holding the row, so this cannot lock out the person who would
+// have to undo it.
+Route::middleware(['auth', 'menu.permission:roles'])->group(function () {
     Route::post('roles/permissions/{id}', [RoleController::class, 'assignPermission'])->name('assign.roles.permissions');
+    Route::get('roles/{id}/permissions/export', [RoleController::class, 'exportPermissions'])->name('roles.permissions.export');
     Route::get('roles/{id}/dashboard', [RoleController::class, 'showDashboard'])->name('roles.dashboard');
+    Route::get('roles/{id}/dashboard/export', [RoleController::class, 'exportDashboardCards'])->name('roles.dashboard.export');
     Route::post('roles/{id}/dashboard', [RoleController::class, 'assignDashboardCard'])->name('assign.roles.dashboard');
     Route::post('dashboard-cards', [RoleController::class, 'storeDashboardCard'])->name('dashboard.cards.store');
     Route::put('dashboard-cards/{id}', [RoleController::class, 'updateDashboardCard'])->name('dashboard.cards.update');
     Route::delete('dashboard-cards/{id}', [RoleController::class, 'destroyDashboardCard'])->name('dashboard.cards.destroy');
+    // Must stay ABOVE the resource: `roles/{role}` would otherwise swallow
+    // /roles/export and hand "export" to show().
+    Route::get('roles/export', [RoleController::class, 'export'])->name('roles.export');
     Route::resource('roles', RoleController::class);
 });
 
@@ -153,23 +170,73 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth'])->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
-        Route::get('users/get-roles', [UserController::class, 'getAllRoles'])
-            ->name('users.getRoles');
-        Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
-        Route::get('roles/create', [RoleController::class, 'create'])->name('roles.create');
-        Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
-        Route::get('roles/{id}/edit', [RoleController::class, 'edit'])->name('roles.edit');
-        Route::put('roles/{id}', [RoleController::class, 'update'])->name('roles.update');
-        Route::delete('roles/{id}', [RoleController::class, 'destroy'])->name('roles.destroy');
+        // User Management. The WHOLE module, not one route of it.
+        //
+        // The previous round gated `users/export/{format}` and left everything
+        // beside it on `auth`. That closed the convenient download and nothing
+        // else: `admin/users` itself accepted an unbounded ?per_page and
+        // returned MORE of the same directory than the export did, and
+        // `users/assign-role-save` let any of 11,213 role-less accounts post one
+        // form to give itself the Super Admin role - which does not merely open
+        // one gate, it bypasses every menu.permission gate in the application,
+        // because Super Admin is admitted before the permission is ever read.
+        //
+        // `users` is the permission the User Management screen itself uses
+        // (menus row 158); Super Admin passes it without holding it.
+        // The same RoleController actions are reachable under /admin as well as
+        // at the un-prefixed names above, and both sets serve the one live Roles
+        // screen. Gating only one set would leave every write on this module
+        // reachable through the other.
+        Route::middleware('menu.permission:roles')->group(function () {
+            Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
+            Route::get('roles/create', [RoleController::class, 'create'])->name('roles.create');
+            Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
+            Route::get('roles/{id}/edit', [RoleController::class, 'edit'])->name('roles.edit');
+            Route::put('roles/{id}', [RoleController::class, 'update'])->name('roles.update');
+            Route::delete('roles/{id}', [RoleController::class, 'destroy'])->name('roles.destroy');
+        });
+
+        Route::middleware('menu.permission:users')->group(function () {
+            Route::get('users/get-roles', [UserController::class, 'getAllRoles'])
+                ->name('users.getRoles');
+
+            // The whole user_credentials directory - user name, name, email,
+            // contact number, type and role - in one request, for 15,108 rows.
+            //
+            // It sits above the resource for consistency with users/get-roles,
+            // which genuinely NEEDS to: that one is a single segment, so
+            // `users/{user}` would swallow it and hand "get-roles" to show().
+            //
+            // This route does not need the position, but what makes it safe is
+            // the whereIn below, NOT its segment count. The resource publishes a
+            // two-segment GET route of its own - `users/{user}/edit` - and
+            // /admin/users/export/edit does match it, resolving to
+            // edit('export'). No declared format collides with the resource,
+            // but only because `edit` is not one of them. Widen the whereIn and
+            // that stops being true.
+            //
+            // The whereIn does not bound /admin/users/export with no format
+            // either: that URL is undeclared, so it falls through to
+            // show('export') and 404s on the model binding. The constraint
+            // applies to {format} on THIS route; it cannot bound a URL that
+            // never reaches this route.
+            //
+            // Both resolutions are pinned by ExportRoutePermissionTest rather
+            // than described here, because the two comments this one replaces
+            // were each wrong about the router.
+            Route::get('users/export/{format}', [UserController::class, 'export'])
+                ->whereIn('format', ['csv', 'xlsx', 'pdf', 'print'])
+                ->name('users.export');
+            Route::resource('users', UserController::class);
+            Route::get('users/assign-role/{id}', [UserController::class, 'assignRole'])->name('users.assignRole');
+            // Writes a ROLE to a USER. Strictly more powerful than the route
+            // that writes a permission to a role, which the previous round
+            // closed - this one can hand out Super Admin.
+            Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
+                ->name('users.assignRoleSave');
+        });
 
         // Route::resource('permissions', PermissionController::class);
-        Route::get('users/export/{format}', [UserController::class, 'export'])
-            ->whereIn('format', ['csv', 'xlsx', 'pdf'])
-            ->name('users.export');
-        Route::resource('users', UserController::class);
-        Route::get('users/assign-role/{id}', [UserController::class, 'assignRole'])->name('users.assignRole');
-        Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
-            ->name('users.assignRoleSave');
 
         Route::post('quick-links', [QuickLinkController::class, 'store'])->name('quick-links.store');
         Route::delete('quick-links/{id}', [QuickLinkController::class, 'destroy'])->name('quick-links.destroy');
@@ -1217,6 +1284,7 @@ Route::middleware(['auth'])->group(function () {
     // Useful Links master
     Route::prefix('admin/setup/useful-links')->name('admin.setup.useful_links.')->controller(UsefulLinksSetupController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/export', 'export')->name('export');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
@@ -1849,13 +1917,38 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
 });
 Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index']);
 
+// Sidebar administration.
+//
+// Each screen's export, status toggle and write verbs now share the one
+// permission that screen is listed under. Gating only the read path left
+// store / update / destroy on the global navigation - and, as of this change, a
+// file upload onto the public disk - open to every authenticated account: a
+// menu every user sees could be created, renamed, re-pointed at an arbitrary
+// URL or deleted by any of them.
 Route::middleware(['auth'])->prefix('sidebar')->name('sidebar.')->group(function () {
-    Route::get('categories/status/{id}', [SidebarCategoryController::class, 'status'])->name('categories.status');
-    Route::resource('categories', SidebarCategoryController::class);
-    Route::get('menu-groups/status/{id}', [MenuGroupController::class, 'status'])->name('menu-groups.status');
-    Route::resource('menu-groups', MenuGroupController::class);
-    Route::get('menus/status/{id}', [MenuController::class, 'status'])->name('menus.status');
-    Route::resource('menus', MenuController::class);
+    Route::middleware('menu.permission:topbar_category')->group(function () {
+        Route::get('categories/status/{id}', [SidebarCategoryController::class, 'status'])->name('categories.status');
+        // Must stay ABOVE the resource: `categories/{category}` would otherwise
+        // swallow /categories/export and hand "export" to show().
+        Route::get('categories/export', [SidebarCategoryController::class, 'export'])->name('categories.export');
+        Route::resource('categories', SidebarCategoryController::class);
+    });
+
+    Route::middleware('menu.permission:sidemenu_groups')->group(function () {
+        Route::get('menu-groups/status/{id}', [MenuGroupController::class, 'status'])->name('menu-groups.status');
+        // Must stay ABOVE the resource: `menu-groups/{menu_group}` would otherwise
+        // swallow /menu-groups/export and hand "export" to show().
+        Route::get('menu-groups/export', [MenuGroupController::class, 'export'])->name('menu-groups.export');
+        Route::resource('menu-groups', MenuGroupController::class);
+    });
+
+    Route::middleware('menu.permission:menus')->group(function () {
+        Route::get('menus/status/{id}', [MenuController::class, 'status'])->name('menus.status');
+        // Must stay ABOVE the resource: `menus/{menu}` would otherwise swallow
+        // /menus/export and hand "export" to show().
+        Route::get('menus/export', [MenuController::class, 'export'])->name('menus.export');
+        Route::resource('menus', MenuController::class);
+    });
     Route::get('groups', [SidebarController::class, 'getGroups'])->name('groups');
     Route::get('menu', [SidebarController::class, 'sidebarMenus'])->name('menu');
     Route::get('getGroups/{category_id}', [SidebarController::class, 'getCategoryGroups'])->name('getGroups');

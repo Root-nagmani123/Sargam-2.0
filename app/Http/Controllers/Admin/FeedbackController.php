@@ -29,6 +29,7 @@ use App\Exports\FeedbackDatabaseExport;
 use App\Services\FacultyFeedbackReportService;
 use App\Http\Controllers\Admin\Concerns\ScopesSessionFeedbackReports;
 use App\Support\FeedbackReportRouteRegistry;
+use App\Support\PdfPageNumbers;
 
 class FeedbackController extends Controller
 {
@@ -1465,7 +1466,12 @@ class FeedbackController extends Controller
                 'defaultFont' => 'Arial',
                 'isHtml5ParserEnabled' => true,
                 'isRemoteEnabled' => true,
-                'isPhpEnabled' => true,
+                // Never true: isPhpEnabled makes the renderer a PHP
+                // execution context for the whole view, so any raw block
+                // that later appears in an export blade would execute.
+                // Page numbers are stamped on the canvas after render
+                // instead - see PdfPageNumbers.
+                'isPhpEnabled' => false,
                 'dpi' => 96,
                 'margin_top' => 15,
                 'margin_right' => 15,
@@ -2226,7 +2232,12 @@ class FeedbackController extends Controller
                     'defaultFont' => 'Arial',
                     'isHtml5ParserEnabled' => true,
                     'isRemoteEnabled' => true,
-                    'isPhpEnabled' => true,
+                    // Never true: isPhpEnabled makes the renderer a PHP
+                    // execution context for the whole view, so any raw
+                    // block that later appears in an export blade would
+                    // execute. Page numbers are stamped on the canvas
+                    // after render instead - see PdfPageNumbers.
+                    'isPhpEnabled' => false,
                     'dpi' => 96,
                     'margin_top' => 15,
                     'margin_right' => 15,
@@ -3539,7 +3550,12 @@ class FeedbackController extends Controller
                 'defaultFont' => 'Arial',
                 'isHtml5ParserEnabled' => true,
                 'isRemoteEnabled' => true,
-                'isPhpEnabled' => true,
+                // Never true: isPhpEnabled makes the renderer a PHP
+                // execution context for the whole view, so any raw block
+                // that later appears in an export blade would execute.
+                // Page numbers are stamped on the canvas after render
+                // instead - see PdfPageNumbers.
+                'isPhpEnabled' => false,
                 'dpi' => 96,
                 'margin_top' => 20,
                 'margin_right' => 10,

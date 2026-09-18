@@ -27,9 +27,11 @@ use App\Models\FacultyMaster;
 use App\Models\Holiday;
 use App\Services\NotificationService;
 use App\Exports\UsersExport;
+use App\Exports\BrandedGridExport;
 use App\Exports\StudentListReportExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Excel as ExcelWriter;
+use App\Support\PdfPageNumbers;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 use Adldap\Laravel\Facades\Adldap;
@@ -75,6 +77,27 @@ class UserController extends Controller
     private const NOTICE_FEED_PER_PAGE = 10;
 
     private const ADMIN_USERS_INDEX_LIST_EPOCH_KEY = 'admin_users_index_list_epoch';
+
+    /**
+     * Rows the PDF export will lay out before it truncates.
+     *
+     * DomPDF builds the whole frame tree in memory: measured on this listing it
+     * peaks at 178 MB for 500 rows and 364 MB for 1,000, and fatals outright at
+     * 1,500 under the 512 MB limit. user_credentials has ~15k rows, so an
+     * uncapped PDF is a guaranteed 500. CSV and XLSX have no such ceiling and
+     * stay complete; the sheet says so when it truncates.
+     */
+    private const ADMIN_USERS_PDF_ROW_CAP = 750;
+
+    /**
+     * Row ceiling for the printable HTML sheet.
+     *
+     * Higher than the PDF's because the browser does the layout rather than
+     * DomPDF, but not absent: uncapped, one request built a 9.6 MB document out
+     * of all ~15k rows, server-side, for any user who asked and as often as they
+     * asked. That is a cost the application pays, not the browser.
+     */
+    private const ADMIN_USERS_PRINT_ROW_CAP = 5000;
 
     /**
      * Human-readable labels for the user_category code stored on user_credentials.
@@ -1919,7 +1942,12 @@ class UserController extends Controller
                     'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
                     'isRemoteEnabled' => true,
-                    'isPhpEnabled' => true,
+                    // Never true: isPhpEnabled makes the renderer a PHP
+                    // execution context for the whole view, so any raw
+                    // block that later appears in an export blade would
+                    // execute. Page numbers are stamped on the canvas
+                    // after render instead - see PdfPageNumbers.
+                    'isPhpEnabled' => false,
                     'dpi' => 96,
                 ]);
 
@@ -4148,9 +4176,45 @@ class UserController extends Controller
         ));
     }
 
+    /**
+     * The page sizes the User Management grid offers, and the only ones it will
+     * serve.
+     *
+     * `(int) $request->input('per_page', 10)` passed straight to paginate() had
+     * no ceiling and no allow-list, so `?per_page=20000` returned all 15,108
+     * rows - 16.4 MB and 2.9 s in one request, carrying 13,625 email addresses
+     * and 11,272 mobile numbers, and more of the directory than the capped
+     * export next to it. That made the export's row cap decorative: the same
+     * actor could ask the index for the rest.
+     *
+     * An allow-list rather than a max(): anything outside the dropdown is a
+     * value the screen never offers, so it falls back to the default instead of
+     * being silently rounded down to a number the user did not choose. The cache
+     * key is built from the resolved value, so an out-of-range request can no
+     * longer mint its own cache entry either.
+     *
+     * The footer's <select> is rendered FROM this list (index() passes it to the
+     * view) rather than hard-coding its own options. When the two were written
+     * out separately they drifted: the select offered 20, which is not on this
+     * list, so choosing it silently served 10 - while 25 and 200 were accepted
+     * here but never offered on screen.
+     *
+     * @var int[]
+     */
+    public const ADMIN_USERS_PER_PAGE_OPTIONS = [10, 20, 25, 50, 100, 200];
+
+    private static function resolveAdminUsersPerPage($raw): int
+    {
+        $value = is_scalar($raw) ? (int) $raw : 0;
+
+        return in_array($value, self::ADMIN_USERS_PER_PAGE_OPTIONS, true)
+            ? $value
+            : self::ADMIN_USERS_PER_PAGE_OPTIONS[0];
+    }
+
     public function index(Request $request)
     {
-        $perPage = (int) $request->input('per_page', 10);
+        $perPage = self::resolveAdminUsersPerPage($request->input('per_page'));
         $search = trim((string) ($request->input('search') ?? ''));
         $user_type = trim((string) $request->input('User_type', ''));
 
@@ -4183,10 +4247,14 @@ class UserController extends Controller
 
         // Live search / pagination: return only the table partial (no full reload).
         if ($request->ajax()) {
-            return view('admin.user_management.users._table', compact('users', 'perPage', 'search', 'user_type'));
+            return view('admin.user_management.users._table', compact('users', 'perPage', 'search', 'user_type') + [
+                'perPageOptions' => self::ADMIN_USERS_PER_PAGE_OPTIONS,
+            ]);
         }
 
-        return view('admin.user_management.users.index', compact('users', 'perPage', 'search', 'user_type'));
+        return view('admin.user_management.users.index', compact('users', 'perPage', 'search', 'user_type') + [
+            'perPageOptions' => self::ADMIN_USERS_PER_PAGE_OPTIONS,
+        ]);
     }
 
     /**
@@ -4275,27 +4343,99 @@ class UserController extends Controller
 
     /**
      * Column definitions available for export, keyed by the toggle key used in
-     * the listing. Each entry maps to a heading and a value resolver.
+     * the listing. Each entry maps to a heading, a value resolver and the print /
+     * PDF column width, so all four formats lay the report out the same way.
      *
-     * @return array<string, array{label: string, value: callable}>
+     * Labels and order mirror _table.blade.php's headers: "User Role" is the
+     * Spatie role, "User Type" is the user_category code — two different things
+     * that the grid used to run under one heading.
+     *
+     * @return array<string, array{label: string, value: callable, width: string, centre: bool}>
      */
     private function adminUsersExportColumns(): array
     {
         return [
-            'username'    => ['label' => 'Username',  'value' => fn ($u) => $u->user_name ?? ''],
-            'name'        => ['label' => 'Name',      'value' => fn ($u) => trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? ''))],
-            'email'       => ['label' => 'Email',     'value' => fn ($u) => $u->email_id ?? ''],
-            'mobile'      => ['label' => 'Mobile',    'value' => fn ($u) => $u->mobile_no ?: '—'],
-            'usertype'    => ['label' => 'User Type', 'value' => fn ($u) => self::userTypeLabel($u->User_type ?? '')],
-            'roles'       => ['label' => 'Roles',     'value' => fn ($u) => $u->roles ?: 'No Role'],
+            'username' => ['label' => 'User Name', 'width' => '13%', 'centre' => false,
+                'value' => fn ($u) => $u->user_name ?? ''],
+            'name' => ['label' => 'Name', 'width' => '19%', 'centre' => false,
+                'value' => fn ($u) => trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? ''))],
+            'email' => ['label' => 'Email', 'width' => '22%', 'centre' => false,
+                'value' => fn ($u) => $u->email_id ?? ''],
+            'mobile' => ['label' => 'Contact Number', 'width' => '12%', 'centre' => true,
+                'value' => fn ($u) => $u->mobile_no ?: '—'],
+            'usertype' => ['label' => 'User Type', 'width' => '11%', 'centre' => true,
+                'value' => fn ($u) => self::userTypeLabel($u->User_type ?? '')],
+            'roles' => ['label' => 'User Role', 'width' => '17%', 'centre' => false,
+                'value' => fn ($u) => $u->roles ?: 'No Role'],
         ];
     }
 
     /**
-     * Export the users listing (csv / xlsx / pdf) honouring the active search,
-     * user-type filter and — where provided — the columns the user has left
-     * visible in the grid.
+     * The applied search / user-type filters, as a line for the report header.
+     *
+     * @return array{0: string|null, 1: string|null}  [plain text, HTML]
      */
+    private function adminUsersFilterLine(string $search, string $userType): array
+    {
+        $plain = [];
+        $html = [];
+
+        if ($userType !== '') {
+            $label = self::userTypeLabel($userType);
+            $plain[] = 'User Type: ' . $label;
+            $html[] = '<strong>User Type:</strong> ' . e($label);
+        }
+        if ($search !== '') {
+            $plain[] = 'Search: ' . $search;
+            $html[] = '<strong>Search:</strong> ' . e($search);
+        }
+
+        return [
+            empty($plain) ? null : implode('  |  ', $plain),
+            empty($html) ? null : implode(' &nbsp;|&nbsp; ', $html),
+        ];
+    }
+
+    /**
+     * Export the users listing — csv / xlsx / pdf / print, all four off ONE query
+     * and ONE column list so they cannot drift apart
+     * (docs/new-design-index-page.md §1).
+     *
+     * Honours the active search and user-type filter and, where provided, the
+     * columns still visible in the grid. Deliberately unpaginated: the grid's
+     * Print and Download used to scrape the rendered <table>, which is one page
+     * of 10 rows, so every export silently truncated to whatever was on screen.
+     */
+    /**
+     * Truncate a rendered export to $cap rows and say so on the sheet.
+     *
+     * One helper for both single-request renderers, so the PDF and the print
+     * sheet cannot end up with different truncation behaviour or a different
+     * wording for it - and so that a format which truncates can never do it
+     * silently. The streaming formats (CSV / XLSX) are deliberately uncapped:
+     * they are the complete list this note points the reader at.
+     *
+     * @param  array<string, mixed>  $reportData
+     * @return array<string, mixed>
+     */
+    private function capUserExportRows(array $reportData, int $cap): array
+    {
+        $total = count($reportData['rows']);
+
+        if ($total <= $cap) {
+            return $reportData;
+        }
+
+        $reportData['note'] = 'Showing the first '
+            . number_format($cap) . ' of '
+            . number_format($total)
+            . ' matching users. Narrow the filters, or use the Excel / CSV download for the complete list.';
+        $reportData['rows'] = array_slice($reportData['rows'], 0, $cap);
+        $reportData['totalRows'] = $total;
+
+        return $reportData;
+    }
+
     public function export(Request $request, string $format)
     {
         $search = trim((string) ($request->input('search') ?? ''));
@@ -4310,40 +4450,133 @@ class UserController extends Controller
             $requested = array_keys($allColumns);
         }
 
-        $headings = array_merge(['S. No.'], array_map(fn ($k) => $allColumns[$k]['label'], $requested));
+        // S. No. is generated by the export itself, so it leads every format.
+        $columns = array_merge(
+            [['label' => 'S. No.', 'width' => '6%', 'centre' => true]],
+            array_map(
+                fn ($key) => [
+                    'label' => $allColumns[$key]['label'],
+                    'width' => $allColumns[$key]['width'],
+                    'centre' => $allColumns[$key]['centre'],
+                ],
+                $requested
+            )
+        );
+        $headings = array_map(fn (array $c) => $c['label'], $columns);
 
+        // cursor(), not get(): the export stays deliberately unpaginated (scraping the
+        // rendered table truncated every download to the 10 rows on screen), but there
+        // is no reason to hold the full hydrated model collection AND the flat $rows
+        // array at the same time. cursor() hydrates one model at a time, so peak memory
+        // is the row array alone rather than both. Keys stay 0-based and sequential, so
+        // the S. No. column below is unaffected.
         $records = $this->adminUsersBaseQuery($search, $user_type)
             ->orderBy('uc.pk')
-            ->get();
+            ->cursor();
 
         $rows = [];
         foreach ($records as $i => $record) {
             $row = [$i + 1];
             foreach ($requested as $key) {
-                $row[] = $allColumns[$key]['value']($record);
+                $row[] = (string) $allColumns[$key]['value']($record);
             }
             $rows[] = $row;
         }
 
-        $timestamp = now()->format('Ymd_His');
-        $fileBase = "users_{$timestamp}";
+        [$filterLine, $filterHtml] = $this->adminUsersFilterLine($search, $user_type);
+        $generatedAt = now()->format('d-m-Y h:i A');
+        $fileBase = 'Users_' . now()->format('YmdHis');
 
-        if ($format === 'pdf') {
-            $pdf = Pdf::loadView('admin.user_management.users.partials.export_pdf', [
-                'headings' => $headings,
-                'rows' => $rows,
-                'generatedAt' => now()->format('d-m-Y H:i'),
-            ])->setPaper('a4', 'landscape');
+        // Print and PDF render the same branded sheet from the same data; only the
+        // renderer differs (a browser that can do @media print vs DomPDF, which
+        // cannot — see the note at the top of each blade).
+        $reportData = [
+            'columns' => $columns,
+            'headings' => $headings,
+            'rows' => $rows,
+            'filterLine' => $filterLine,
+            'filterHtml' => $filterHtml,
+            'exportDate' => $generatedAt,
+        ];
 
-            return $pdf->download("{$fileBase}.pdf");
+        if ($format === 'print') {
+            // Capped, where it used to say "no cap because the browser lays this
+            // out itself". That was true of the BROWSER and missed the server: an
+            // uncapped print of the whole directory is a 9.6 MB HTML document
+            // built, held and written in one request, by any user who asks, as
+            // often as they ask. The cap is higher than the PDF's because a
+            // browser really does handle more layout than DomPDF, and the sheet
+            // says plainly when it has been truncated rather than silently
+            // dropping rows.
+            $reportData = $this->capUserExportRows($reportData, self::ADMIN_USERS_PRINT_ROW_CAP);
+
+            return view('admin.user_management.users.partials.export_print', $reportData);
         }
 
-        $writerType = $format === 'csv' ? ExcelWriter::CSV : ExcelWriter::XLSX;
+        if ($format === 'pdf') {
+            $reportData = $this->capUserExportRows($reportData, self::ADMIN_USERS_PDF_ROW_CAP);
+
+            $pdf = Pdf::loadView('admin.user_management.users.partials.export_pdf', $reportData)
+                ->setPaper('a4', 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    // Never true: isPhpEnabled makes the renderer a PHP
+                    // execution context for the whole view, so any raw block
+                    // that later appears in an export blade would execute.
+                    // Page numbers are stamped on the canvas after render
+                    // instead — see PdfPageNumbers.
+                    'isPhpEnabled' => false,
+                ]);
+
+            return PdfPageNumbers::stamp($pdf, 20)->download("{$fileBase}.pdf");
+        }
+
+        if ($format === 'xlsx') {
+            // BrandedGridExport is what every other module's spreadsheet uses: it
+            // draws the LBSNAA logo over a navy institution band, then a navy
+            // header row over zebra rows with a frozen pane. UsersExport (below)
+            // only writes plain text, which is why this one export arrived with
+            // no logo while Roles / Menus / Topbar Category all had one.
+            //
+            // It resolves each cell through a column's `value` callable, but the
+            // rows here are already flat arrays — so each column just reads its
+            // own slot. `key` doubles as the centred-column marker.
+            $branded = [];
+            $centreKeys = [];
+            foreach ($columns as $index => $col) {
+                $key = 'col'.$index;
+                if (! empty($col['centre'])) {
+                    $centreKeys[] = $key;
+                }
+                $branded[] = [
+                    'key' => $key,
+                    'heading' => $col['label'],
+                    'class' => '',
+                    'value' => static fn ($row) => $row[$index] ?? '',
+                ];
+            }
+
+            return Excel::download(
+                new BrandedGridExport($rows, $branded, 'Users', $generatedAt, $filterLine, $centreKeys),
+                "{$fileBase}.xlsx"
+            );
+        }
+
+        // CSV keeps the plain writer: it is text, so the .xlsx branding would be
+        // dropped anyway. These rows give it the same header band in words.
+        $metaRows = [
+            ['LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION'],
+            ['USERS'],
+            [implode('  |  ', array_filter([$filterLine, 'Generated: ' . $generatedAt]))],
+            ['Total Records: ' . number_format(count($rows))],
+            [],
+        ];
 
         return Excel::download(
-            new UsersExport($headings, $rows),
-            "{$fileBase}.{$format}",
-            $writerType
+            new UsersExport($headings, $rows, $metaRows),
+            "{$fileBase}.csv",
+            ExcelWriter::CSV
         );
     }
 
@@ -4586,18 +4819,118 @@ class UserController extends Controller
         }
     }
 
+    /**
+     * The tables this endpoint may toggle, and the ONE column it may write on each.
+     *
+     * Without this map the endpoint took the table, the column, the id column and the
+     * value straight from the request and handed all four to the query builder, on a
+     * route carrying only `web,auth`. That is an arbitrary-write primitive: any one of
+     * the authenticated accounts could UPDATE any column of any row of any table -
+     * set a password hash, flip a flag on `model_has_roles`, blank a report. The
+     * builder quotes identifiers, so this was never classic SQL injection, which is
+     * probably why it read as harmless; the damage needs no injection.
+     *
+     * Derived by enumerating every caller rather than by judgement: each data-table /
+     * data-column pair rendered anywhere in resources/views or app/ (47 tables, one
+     * status column each), plus `employee_master`, which has no renderer left but is
+     * named in the cache-bump branch below and is kept so an unfound caller cannot be
+     * broken by this change.
+     *
+     * Adding a screen means adding its row here. That is the point: the set of
+     * toggleable state is a decision, not something a request should get to make.
+     */
+    private const TOGGLEABLE = [
+        'appellation_master'                  => 'active_inactive',
+        'building_floor_room_mapping'         => 'active_inactive',
+        'building_master'                     => 'active_inactive',
+        'caste_category_master'               => 'active_inactive',
+        'city_master'                         => 'active_inactive',
+        'class_session_master'                => 'active_inactive',
+        'country_master'                      => 'active_inactive',
+        'course_group_type_master'            => 'active_inactive',
+        'course_master'                       => 'active_inactive',
+        'course_memo_decision_mapp'           => 'active_inactive',
+        'department_master'                   => 'active_inactive',
+        'designation_master'                  => 'active_inactive',
+        'discipline_master'                   => 'active_inactive',
+        'employee_group_master'               => 'active_inactive',
+        'employee_master'                     => 'active_inactive',
+        'employee_type_master'                => 'active_inactive',
+        'faculty_expertise_master'            => 'active_inactive',
+        'faculty_master'                      => 'active_inactive',
+        'faculty_type_master'                 => 'active_inactive',
+        'fc_exemption_master'                 => 'visible',
+        'fc_registration_master'              => 'active_inactive',
+        'floor_master'                        => 'active_inactive',
+        'group_type_master_course_master_map' => 'active_inactive',
+        'hostel_building_floor_mapping'       => 'active_inactive',
+        'hostel_building_master'              => 'active_inactive',
+        'hostel_floor_room_mapping'           => 'active_inactive',
+        'hostel_room_master'                  => 'active_inactive',
+        'issue_category_master'               => 'status',
+        'issue_priority_master'               => 'status',
+        'issue_sub_category_master'           => 'status',
+        'memo_conclusion_master'              => 'active_inactive',
+        'memo_type_master'                    => 'active_inactive',
+        'menu_groups'                         => 'is_active',
+        'menus'                               => 'is_active',
+        'news'                                => 'status',
+        'notices_notification'                => 'active_inactive',
+        'ot_hostel_room_details'              => 'active_inactive',
+        'sec_id_cardno_config_map'            => 'active_inactive',
+        'sec_id_cardno_master'                => 'active_inactive',
+        'sidebar_categories'                  => 'is_active',
+        'state_district_mapping'              => 'active_inactive',
+        'state_master'                        => 'active_inactive',
+        'states'                              => 'status',
+        'stream_master'                       => 'status',
+        'subject_master'                      => 'active_inactive',
+        'subject_module_master'               => 'active_inactive',
+        'user_role_master'                    => 'active_inactive',
+        'venue_master'                        => 'active_inactive',
+    ];
+
+    /** Tables whose primary key is not `pk`. */
+    private const TOGGLE_ID_COLUMN = [
+        'venue_master' => 'venue_id',
+    ];
+
 public function toggleStatus(Request $request)
 {
     try {
-        $idColumn = $request->id_column ?? 'pk';
-        $table = $request->table;
-        $column = $request->column;
-        $id = $request->id;
-        $status = $request->status;
+        $table = (string) $request->input('table');
+        $column = (string) $request->input('column');
+        $idColumn = (string) ($request->input('id_column') ?: 'pk');
+        $id = $request->input('id');
+        $status = $request->input('status');
 
-        DB::table($request->table)
-            ->where($idColumn, $id)
-            ->update([$column => $status]);
+        $allowedColumn = self::TOGGLEABLE[$table] ?? null;
+        $allowedIdColumn = self::TOGGLE_ID_COLUMN[$table] ?? 'pk';
+
+        // Fails closed, and refuses the near-misses too: the right table with the
+        // wrong column, or the right table keyed on a column of the caller's
+        // choosing, are both how this would be turned back into a general write.
+        if ($allowedColumn === null || $column !== $allowedColumn || $idColumn !== $allowedIdColumn) {
+            \Log::warning('Toggle status refused', [
+                'table' => $table,
+                'column' => $column,
+                'id_column' => $idColumn,
+                'user' => optional($request->user())->pk,
+            ]);
+
+            return response()->json(['message' => 'This record cannot be toggled here.'], 422);
+        }
+
+        // A status toggle writes 0 or 1. Anything else is someone else's payload.
+        if (! in_array((string) $status, ['0', '1'], true) || ! is_scalar($id) || (string) $id === '') {
+            return response()->json(['message' => 'Invalid status update.'], 422);
+        }
+
+        // The allow-listed identifiers are written, not the request's - so a
+        // future edit to the checks above cannot leak a raw value into the query.
+        DB::table($table)
+            ->where($allowedIdColumn, $id)
+            ->update([$allowedColumn => (int) $status]);
 
         if ($table === 'employee_type_master') {
             EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
@@ -4685,6 +5018,33 @@ public function assignRoleSave(Request $request)
         'roles'   => 'nullable|array',
         'roles.*' => 'exists:roles,id',
     ]);
+
+    // Privilege-escalation guard. This route is gated on `menu.permission:users`,
+    // which admits Super Admin AND any holder of the `users` permission - and this
+    // PR's own condition-1 migration grants `users` to Training-Induction (10
+    // accounts). syncRoles() below writes whatever role ids are posted, so without
+    // this guard a `users` holder could post its own pk with the Super Admin role id
+    // and become Super Admin - which then bypasses EnsureMenuPermission entirely,
+    // because that middleware admits isSidebarPrivilegedUser() before it checks any
+    // permission. Confirmed by executed probe against the review database before this
+    // guard existed: a Training-Induction account went from 403 to Super Admin in one
+    // request.
+    //
+    // The rule is deliberately narrow: a caller who is not Super Admin may not CHANGE
+    // anyone's Super Admin membership - neither granting it (escalation) nor removing
+    // it (which would let a `users` holder demote every Super Admin and strand the
+    // only accounts able to undo that). Every other role assignment is unchanged.
+    if (! isSidebarPrivilegedUser()) {
+        $target = User::find($request->user_id);
+        $requestedRoleNames = Role::whereIn('id', $request->input('roles', []))->pluck('name')->toArray();
+
+        $wouldHoldSuperAdmin = in_array('Super Admin', $requestedRoleNames, true);
+        $holdsSuperAdmin = $target ? $target->hasRole('Super Admin') : false;
+
+        if ($wouldHoldSuperAdmin !== $holdsSuperAdmin) {
+            abort(403, 'Only a Super Admin may grant or revoke the Super Admin role.');
+        }
+    }
 
     try {
         DB::beginTransaction();
@@ -4826,8 +5186,20 @@ public function uploadPdf(Request $request)
 
             $file = $request->file('file');
 
-            // Allow only PDF
-            if ($file->getClientOriginalExtension() != 'pdf') {
+            // Allow only PDF — checked against the file's CONTENT, not its name.
+            //
+            // The previous check read getClientOriginalExtension(), which the uploader
+            // controls, while store() below names the saved file from guessExtension(),
+            // which it does not. The two disagreeing meant an HTML document uploaded as
+            // "notes.pdf" passed this gate and was then written as <hash>.html onto the
+            // PUBLIC disk, where the browser renders it as markup on our own origin.
+            // Validating the content closes both halves at once.
+            $validator = \Illuminate\Support\Facades\Validator::make(
+                ['file' => $file],
+                ['file' => ['required', 'file', 'mimes:pdf', 'max:20480']]
+            );
+
+            if ($validator->fails()) {
                 return response()->json(['error' => 'Only PDF files allowed'], 422);
             }
 
