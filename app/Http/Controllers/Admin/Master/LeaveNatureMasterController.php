@@ -90,6 +90,10 @@ class LeaveNatureMasterController extends Controller
      * column and value straight from the request and is behind auth only, so
      * any signed-in user can write any column of any table through it. This
      * screen uses its own route instead, matching ExemptionMasterController.
+     *
+     * The id is encrypted, like edit() and destroy(). LeaveNatureMasterDataTable
+     * emits it with encrypt() in the same markup that carries the raw pk as
+     * data-id for client-side row matching; the two must change together.
      */
     public function status(Request $request, $id)
     {
@@ -97,7 +101,7 @@ class LeaveNatureMasterController extends Controller
             'active_inactive' => 'required|in:1,2',
         ]);
 
-        LeaveNatureMaster::findOrFail($id)->update([
+        LeaveNatureMaster::findOrFail($this->decryptId($id))->update([
             'active_inactive' => (int) $request->active_inactive,
         ]);
 
