@@ -108,6 +108,27 @@ count. The same fields remain readable by any authenticated user through the
 ungated grid feed — that was true before this release too, and narrowing it is a
 change to the feed routes with its own decision record.
 
+## 0.3 Release sign-off
+
+Recorded 2026-09-18. The review held this release at *Approve with conditions* on two
+owners who did not exist; both rows are now filled.
+
+| Role | Person | What they own here |
+| --- | --- | --- |
+| Release / deploy owner | Ravi Patel | Section 1 below on every host, the section 3 rollback, and the section 4 checks |
+| Security owner | Ravi Patel | The `directory.export` grant decision, and the dependency advisories in `docs/security-advisories.md` |
+
+The section 1 pre-pull step is **approved and owned**, not executed: approval names who
+is accountable for running it, it does not run it. It is still a manual step on every
+host and the release still aborts half-applied if it is skipped.
+
+One thing above is already out of date in your favour. Section 0.2 says the export gate
+"does not withstand a deliberate authenticated actor", because `POST roles/permissions/{id}`
+was ungated and any account could grant itself the permission. That endpoint is fixed on
+branch `fix/self-grant-permission-chain`, which is deliberately **not** part of this
+release — a repository-wide authorisation change does not belong in a redesign branch.
+When it merges, section 0.2 and the middleware docblock should be revisited together.
+
 ## 1. Before pulling, on every host
 
 This release **untracks** `bootstrap/cache/packages.php` and
