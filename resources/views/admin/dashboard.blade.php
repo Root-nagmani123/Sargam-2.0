@@ -5,7 +5,7 @@
 @section('content')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-calendar.css') }}?v=4">
-<link rel="stylesheet" href="{{ asset('css/dashboard-stat-cards.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('css/dashboard-stat-cards.css') }}?v={{ @filemtime(public_path('css/dashboard-stat-cards.css')) ?: time() }}">
 {{-- filemtime, not a hand-tracked ?v= : this file's manual token has already regressed once
      (v9 -> v7 through a revert), which serves returning users a stale stylesheet. --}}
 <link rel="stylesheet" href="{{ asset('css/dashboard-main.css') }}?v={{ @filemtime(public_path('css/dashboard-main.css')) ?: time() }}">
@@ -500,7 +500,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                             {{-- The title opens the full breakdown: the panel can only
                                  show a total per house, not who it came from. --}}
                             <a href="{{ route('admin.dashboard.house-wise-performance', array_filter(['course' => $houseCourseFilter ?? null])) }}"
-                                class="dashboard-birthdays-panel__title mb-0 h5 text-decoration-none stretched-link-none"
+                                class="dashboard-birthdays-panel__title mb-0 h5 text-decoration-none"
                                 title="Open the full house wise performance breakdown">
                                 House wise Performance
                             </a>
@@ -509,9 +509,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                     {{-- Reloads the dashboard with ?house_course=, so the
                                          panel and the page it links to are computed by the
                                          same code rather than a second AJAX path. --}}
-                                    <select class="form-select form-select-sm" id="housePerformanceCourse"
+                                    <select class="form-select form-select-sm dashboard-house-course" id="housePerformanceCourse"
                                         aria-label="Filter house wise performance by course"
-                                        style="max-width: 13rem;"
                                         onchange="window.location = '{{ route('admin.dashboard') }}' + (this.value ? ('?house_course=' + encodeURIComponent(this.value)) : '') + '#house-wise-performance';">
                                         <option value="">All Courses</option>
                                         @foreach($houseCourses as $pk => $name)

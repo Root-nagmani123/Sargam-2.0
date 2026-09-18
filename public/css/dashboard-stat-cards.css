@@ -199,51 +199,114 @@
     letter-spacing: 0;
 }
 
-/* House wise Performance panel: a compact league table, so the rows are dense
-   and the total sits in a fixed-width column that stays aligned down the list. */
+/* ============================================================
+   House wise Performance panel
+   ------------------------------------------------------------
+   A compact league table: dense rows, one line each, with the
+   figure in a fixed-width column that stays aligned down the
+   list. Built on the --ds-* tokens (docs/design.md, Layer A) —
+   no raw hex, no off-scale spacing — so it re-themes with the
+   rest of the app instead of drifting on its own palette.
+   ============================================================ */
 .dashboard-house-panel__hint {
-    font-size: 0.7rem;
-    color: #9ca3af;
+    font-size: 0.75rem;
+    color: var(--ds-ink-muted);
     white-space: nowrap;
 }
 
-.dashboard-house-list { display: flex; flex-direction: column; gap: 0.35rem; }
+/* The course filter is a compact control, not a full-height input. */
+.dashboard-house-panel .dashboard-house-course {
+    max-width: 13rem;
+    min-height: var(--ds-control-h-sm);
+    border-radius: var(--ds-radius);
+    border-color: var(--ds-line);
+    color: var(--ds-ink);
+}
+
+.dashboard-house-panel .dashboard-house-course:focus {
+    border-color: var(--ds-primary);
+    box-shadow: var(--ds-focus-ring);
+}
+
+.dashboard-house-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-1);
+}
 
 .dashboard-house-item {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    padding: 0.45rem 0.6rem;
-    border: 1px solid #eef0f4;
-    border-radius: 8px;
-    background: #fff;
+    gap: var(--ds-space-2);
+    padding: var(--ds-space-2) var(--ds-space-3);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-2);
+    background: var(--ds-surface);
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+/* Rows are not clickable, so the hover is an aid to reading across a
+   wide row — a tint and a hairline lift, nothing that implies a target. */
+.dashboard-house-item:hover {
+    background: var(--ds-surface-2);
+    box-shadow: var(--ds-shadow-sm);
+}
+
+/* Square chip, not a circular pill: the radius scale in Layer A is
+   deliberately pill-free so ranks, badges and buttons agree. */
 .dashboard-house-rank {
     flex: 0 0 auto;
-    width: 22px;
-    height: 22px;
+    width: 1.5rem;
+    height: 1.5rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    background: rgba(47, 128, 237, 0.12);
-    color: #2f80ed;
-    font-size: 0.7rem;
+    border-radius: var(--ds-radius);
+    background: rgba(var(--bs-primary-rgb, 0, 74, 147), 0.10);
+    color: var(--ds-primary);
+    font-size: 0.75rem;
     font-weight: 700;
+    font-variant-numeric: tabular-nums;
 }
 
-.dashboard-house-name { flex: 1 1 auto; min-width: 0; font-size: 0.875rem; font-weight: 600; color: #111827; }
-.dashboard-house-students { flex: 0 0 auto; font-size: 0.72rem; color: #9ca3af; }
+.dashboard-house-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--ds-ink);
+}
 
+.dashboard-house-students {
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+    color: var(--ds-ink-muted);
+}
+
+/* Marks deducted — a penalty figure, so the brand red rather than a
+   one-off scarlet. tabular-nums keeps 9 and 148 on the same grid. */
 .dashboard-house-total {
     flex: 0 0 auto;
-    min-width: 34px;
+    min-width: 2.25rem;
     text-align: center;
-    padding: 0.15rem 0.45rem;
-    border-radius: 6px;
-    background: rgba(235, 87, 87, 0.12);
-    color: #eb5757;
-    font-size: 0.8rem;
+    padding: var(--ds-space-1) var(--ds-space-2);
+    border-radius: var(--ds-radius);
+    background: rgba(var(--ds-secondary-rgb), 0.10);
+    color: var(--ds-secondary);
+    font-size: 0.8125rem;
     font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Phones: the student count is the first thing to go — the house and
+   its figure are what the panel is for. */
+@media (max-width: 575.98px) {
+    .dashboard-house-item {
+        padding: var(--ds-space-2);
+        gap: var(--ds-space-1);
+    }
+
+    .dashboard-house-students {
+        display: none;
+    }
 }
