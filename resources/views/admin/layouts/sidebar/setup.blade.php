@@ -173,7 +173,7 @@
                     <!-- ---------------------------------- -->
                     <x-menu.fc-sidebar />
 
-                    <!-- Security Management (Vehicle & Visitor Pass) -->
+                    <!-- Security Management (Vehicle Pass) -->
                     <!-- ---------------------------------- -->
                     <!-- Estate Management -->
                     <!-- ---------------------------------- -->
