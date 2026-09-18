@@ -121,14 +121,31 @@
 </style>
 
 <div class="container-fluid hwp-page">
+    @php
+        // The downloads carry whatever the filter is showing, so a shared file
+        // matches the screen it came from.
+        $exportParams = array_filter(['course' => $courseFilter ?? null]);
+    @endphp
+
     <x-breadcrum title="House wise Performance">
-        <div class="d-inline-flex align-items-center gap-2 hwp-noprint">
-            <a href="{{ route('admin.dashboard.house-wise-performance', ['format' => 'excel']) }}"
+        <div class="d-inline-flex align-items-center gap-2 hwp-noprint flex-wrap">
+            @if(($courses ?? collect())->isNotEmpty())
+                <select class="form-select" id="hwpCourse" aria-label="Filter by course" style="max-width: 15rem;"
+                    onchange="window.location = '{{ route('admin.dashboard.house-wise-performance') }}' + (this.value ? ('?course=' + encodeURIComponent(this.value)) : '');">
+                    <option value="">All Courses</option>
+                    @foreach($courses as $pk => $name)
+                        <option value="{{ $pk }}" {{ (string) ($courseFilter ?? '') === (string) $pk ? 'selected' : '' }}>
+                            {{ $name }}
+                        </option>
+                    @endforeach
+                </select>
+            @endif
+            <a href="{{ route('admin.dashboard.house-wise-performance', $exportParams + ['format' => 'excel']) }}"
                 class="btn btn-outline-success d-inline-flex align-items-center gap-2 rounded-2">
                 <i class="bi bi-file-earmark-excel" aria-hidden="true"></i>
                 <span>Excel</span>
             </a>
-            <a href="{{ route('admin.dashboard.house-wise-performance', ['format' => 'pdf']) }}"
+            <a href="{{ route('admin.dashboard.house-wise-performance', $exportParams + ['format' => 'pdf']) }}"
                 class="btn btn-outline-danger d-inline-flex align-items-center gap-2 rounded-2">
                 <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
                 <span>PDF</span>
@@ -140,6 +157,13 @@
             </button>
         </div>
     </x-breadcrum>
+
+    @if(! empty($courseFilter) && ($courses ?? collect())->has($courseFilter))
+        <p class="text-secondary small mb-3">
+            Showing <strong>{{ $courses[$courseFilter] }}</strong> only.
+            <a href="{{ route('admin.dashboard.house-wise-performance') }}">Clear filter</a>
+        </p>
+    @endif
 
     @if($houses->isEmpty())
         <div class="hwp-empty">

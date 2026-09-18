@@ -119,6 +119,17 @@
 }
 .me-course-value { font-size: 1rem; font-weight: 600; color: #003366; }
 
+/* Per-entry download, tucked into the card's top-right. */
+.exemption-item { position: relative; }
+.me-entry-actions {
+    position: absolute;
+    top: .6rem;
+    right: .6rem;
+    display: flex;
+    gap: .35rem;
+}
+.me-entry-actions .btn { padding: .15rem .45rem; line-height: 1.1; }
+
 @media print {
     @page { size: A4 portrait; margin: 12mm 10mm; }
 
@@ -215,7 +226,7 @@
                 <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA">
                 <div class="mph-academy">LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION</div>
                 <div class="mph-place">Mussoorie, Uttarakhand</div>
-                <div class="mph-title">Medical Exemption — Officer Trainee</div>
+                <div class="mph-title">Medical Exemption</div>
                 <div class="mph-meta">
                     {{ $studentData['student_name'] ?? '' }}
                     @if(! empty($studentData['ot_code'])) ({{ $studentData['ot_code'] }}) @endif
@@ -223,19 +234,31 @@
                 </div>
             </div>
 
-            <!-- HEADER -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            {{-- HEADER — screen only. The page title and its strapline are chrome
+                 for the app shell; on a printed or downloaded sheet the letterhead
+                 above already says what the document is. --}}
+            <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
                 <div>
                     <h4 class="mb-1 fw-semibold">Medical Exception OT View</h4>
                     <small class="text-muted">Medical exemption summary and history</small>
                 </div>
 
-                <button type="button"
-                        class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
-                        onclick="window.print()">
-                    <i class="material-icons material-symbols-rounded fs-6">print</i>
-                    Print
-                </button>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="{{ route('medical.exception.ot.view.export', ['format' => 'excel']) }}"
+                        class="btn btn-outline-success btn-sm d-flex align-items-center gap-1">
+                        <i class="bi bi-file-earmark-excel"></i> Excel
+                    </a>
+                    <a href="{{ route('medical.exception.ot.view.export', ['format' => 'pdf']) }}"
+                        class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1">
+                        <i class="bi bi-file-earmark-pdf"></i> PDF
+                    </a>
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
+                            onclick="window.print()">
+                        <i class="material-icons material-symbols-rounded fs-6">print</i>
+                        Print
+                    </button>
+                </div>
             </div>
 
             <div class="section-divider"></div>
@@ -311,6 +334,19 @@
                 @if(isset($studentData['has_exemptions']) && $studentData['has_exemptions'] && count($studentData['exemptions']) > 0)
                     @foreach($studentData['exemptions'] as $exemption)
                         <div class="exemption-item">
+                            {{-- Per-entry download. Screen only: on a printed or
+                                 exported sheet a download button is noise. --}}
+                            <div class="me-entry-actions d-print-none">
+                                <a href="{{ route('medical.exception.ot.view.export', ['format' => 'excel', 'entry' => $loop->index]) }}"
+                                    class="btn btn-sm btn-outline-success" title="Download this entry as Excel">
+                                    <i class="bi bi-file-earmark-excel"></i>
+                                </a>
+                                <a href="{{ route('medical.exception.ot.view.export', ['format' => 'pdf', 'entry' => $loop->index]) }}"
+                                    class="btn btn-sm btn-outline-danger" title="Download this entry as PDF">
+                                    <i class="bi bi-file-earmark-pdf"></i>
+                                </a>
+                            </div>
+
                             @if($showCoursePerEntry)
                                 <h6 class="fw-semibold text-primary mb-3 d-flex align-items-center gap-2">
                                     <i class="material-icons material-symbols-rounded fs-6">school</i>

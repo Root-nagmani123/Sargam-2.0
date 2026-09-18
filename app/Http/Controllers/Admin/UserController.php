@@ -516,9 +516,15 @@ class UserController extends Controller
 
         // House wise Performance panel. Built only when the panel is actually on
         // this dashboard — it is four queries, and no other card needs them.
-        $housePerformance = in_array('widget_house_performance', $enabledWidgetKeys, true)
-            ? $this->houseWisePerformance()
+        $houseOnDashboard = in_array('widget_house_performance', $enabledWidgetKeys, true);
+        // ?house_course= narrows the panel; the select posts back to the dashboard
+        // rather than fetching, so the figure and the page agree without a second
+        // code path computing it.
+        $houseCourseFilter = $request->filled('house_course') ? (int) $request->input('house_course') : null;
+        $housePerformance = $houseOnDashboard
+            ? $this->houseWisePerformance($houseCourseFilter)
             : collect();
+        $houseCourses = $houseOnDashboard ? $this->houseCourseOptions() : collect();
 
         $issueReportModules = \App\Http\Controllers\Admin\IssueReportController::moduleOptions();
 
@@ -580,6 +586,8 @@ class UserController extends Controller
             'cardsToRender',
             'enabledWidgetKeys',
             'housePerformance',
+            'houseCourses',
+            'houseCourseFilter',
             'issueReportModules'
         ));
     }
@@ -740,9 +748,9 @@ class UserController extends Controller
      *
      * @return \Illuminate\Support\Collection<int, array{house: string, total: int, students: int}>
      */
-    private function houseWisePerformance(): \Illuminate\Support\Collection
+    private function houseWisePerformance(?int $courseFilter = null): \Illuminate\Support\Collection
     {
-        ['houses' => $studentsByHouse, 'course_ids' => $currentCourseIds] = $this->houseMemberships();
+        ['houses' => $studentsByHouse, 'course_ids' => $currentCourseIds] = $this->houseMemberships($courseFilter);
 
         if ($studentsByHouse === []) {
             return collect();
@@ -789,9 +797,19 @@ class UserController extends Controller
      *
      * @return array{houses: array<string, array<int, true>>, course_ids: mixed}
      */
-    private function houseMemberships(): array
+    private function houseMemberships(?int $courseFilter = null): array
     {
-        $currentCourseIds = $this->currentCourseIds();
+        $currentCourseIds = collect($this->currentCourseIds())->map(fn ($id) => (int) $id);
+
+        // A course filter narrows the running courses rather than replacing them,
+        // so a finished or switched-off course cannot be reached by passing its id.
+        if ($courseFilter !== null) {
+            $currentCourseIds = $currentCourseIds->filter(fn ($id) => $id === $courseFilter)->values();
+
+            if ($currentCourseIds->isEmpty()) {
+                return ['houses' => [], 'course_ids' => collect([-1])];
+            }
+        }
 
         $houseTypeIds = DB::table('course_group_type_master')
             ->where('active_inactive', 1)
@@ -850,17 +868,54 @@ class UserController extends Controller
      */
     public function houseWisePerformanceDetail(Request $request)
     {
-        $houses = $this->houseWisePerformanceRows();
+        $courseFilter = $request->filled('course') ? (int) $request->input('course') : null;
+        $houses = $this->houseWisePerformanceRows($courseFilter);
 
         $format = strtolower((string) $request->get('format'));
         if ($format === 'excel' || $format === 'pdf') {
-            return $this->exportHouseWisePerformance($houses, $format);
+            return $this->exportHouseWisePerformance($houses, $format, $courseFilter);
         }
 
         return view('admin.dashboard.house_wise_performance', [
             'houses' => $houses,
             'generatedOn' => now(),
+            'courses' => $this->houseCourseOptions(),
+            'courseFilter' => $courseFilter,
         ]);
+    }
+
+    /**
+     * Running courses that actually have a house mapped — the options both the
+     * dashboard card's filter and the page's filter offer. A course with no
+     * house would filter the panel down to nothing, so it is not listed.
+     */
+    private function houseCourseOptions()
+    {
+        $houseTypeIds = DB::table('course_group_type_master')
+            ->where('active_inactive', 1)
+            ->whereRaw('LOWER(type_name) LIKE ?', ['%house%'])
+            ->pluck('pk');
+
+        if ($houseTypeIds->isEmpty()) {
+            return collect();
+        }
+
+        $courseIds = DB::table('group_type_master_course_master_map')
+            ->whereIn('type_name', $houseTypeIds)
+            ->whereIn('course_name', $this->currentCourseIds())
+            ->where('active_inactive', 1)
+            ->whereNotNull('group_name')
+            ->where('group_name', '<>', '')
+            ->distinct()
+            ->pluck('course_name');
+
+        if ($courseIds->isEmpty()) {
+            return collect();
+        }
+
+        return CourseMaster::whereIn('pk', $courseIds)
+            ->orderBy('course_name')
+            ->pluck('course_name', 'pk');
     }
 
     /**
@@ -873,9 +928,9 @@ class UserController extends Controller
      * OtMarksDeductedService never counts an open case, because a mark is only
      * written at conclusion.
      */
-    private function houseWisePerformanceRows(): \Illuminate\Support\Collection
+    private function houseWisePerformanceRows(?int $courseFilter = null): \Illuminate\Support\Collection
     {
-        ['houses' => $studentsByHouse, 'course_ids' => $currentCourseIds] = $this->houseMemberships();
+        ['houses' => $studentsByHouse, 'course_ids' => $currentCourseIds] = $this->houseMemberships($courseFilter);
 
         $studentPks = collect($studentsByHouse)->flatMap(fn ($set) => array_keys($set))->unique()->values()->all();
 
@@ -932,8 +987,12 @@ class UserController extends Controller
      * Excel or PDF of House wise Performance — one flat table, each house's rows
      * followed by its Final Marks line, so the file reads like the page.
      */
-    private function exportHouseWisePerformance(\Illuminate\Support\Collection $houses, string $format)
+    private function exportHouseWisePerformance(\Illuminate\Support\Collection $houses, string $format, ?int $courseFilter = null)
     {
+        $filterLine = $courseFilter
+            ? 'Course: ' . (CourseMaster::where('pk', $courseFilter)->value('course_name') ?: $courseFilter)
+            : '';
+
         $headings = ['House', 'Student Name', 'OT Code', 'Discipline Category', 'Marks'];
         $centreColumns = [2, 4];
 
@@ -964,12 +1023,13 @@ class UserController extends Controller
                 'headings' => $headings,
                 'rows' => $data,
                 'reportTitle' => $title,
+                'filterLine' => $filterLine,
                 'centreColumns' => $centreColumns,
             ])->setPaper('a4', 'portrait')->download($baseName . '.pdf');
         }
 
         return Excel::download(
-            new LbsnaaTableExport($data, $headings, $title, '', $centreColumns),
+            new LbsnaaTableExport($data, $headings, $title, $filterLine, $centreColumns),
             $baseName . '.xlsx'
         );
     }

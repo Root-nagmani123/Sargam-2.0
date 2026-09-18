@@ -491,23 +491,41 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
             @if(in_array('widget_todays_birthdays', $enabledWidgetKeys) || in_array('widget_calendar', $enabledWidgetKeys) || in_array('widget_house_performance', $enabledWidgetKeys))
             <div class="col-auto" style="width: 480px; min-width: 480px;">
                 @if(in_array('widget_house_performance', $enabledWidgetKeys))
-                {{-- House wise Performance: every house on the Course Group Mapping
-                     page, least against it first. The figure is the house's students'
-                     Notice/Memo plus Discipline Memo records. --}}
-                <div class="card dashboard-panel dashboard-house-panel border-0 mb-4">
+                {{-- House wise Performance: every house on the courses running now,
+                     least against it first. The figure is the marks its officer
+                     trainees have lost on closed memos and discipline memos. --}}
+                <div class="card dashboard-panel dashboard-house-panel border-0 mb-4" id="house-wise-performance">
                     <div class="card-header bg-white border-0">
-                        <div class="d-flex align-items-center justify-content-between w-100">
+                        <div class="d-flex align-items-center justify-content-between w-100 gap-2 flex-wrap">
                             {{-- The title opens the full breakdown: the panel can only
                                  show a total per house, not who it came from. --}}
-                            <a href="{{ route('admin.dashboard.house-wise-performance') }}"
+                            <a href="{{ route('admin.dashboard.house-wise-performance', array_filter(['course' => $houseCourseFilter ?? null])) }}"
                                 class="dashboard-birthdays-panel__title mb-0 h5 text-decoration-none stretched-link-none"
                                 title="Open the full house wise performance breakdown">
                                 House wise Performance
                             </a>
-                            <a href="{{ route('admin.dashboard.house-wise-performance') }}"
-                                class="btn btn-sm btn-link text-decoration-none px-1" aria-label="Open house wise performance">
-                                <i class="material-icons material-symbols-rounded align-middle" style="font-size:20px;">chevron_right</i>
-                            </a>
+                            <div class="d-flex align-items-center gap-1 ms-auto">
+                                @if(($houseCourses ?? collect())->isNotEmpty())
+                                    {{-- Reloads the dashboard with ?house_course=, so the
+                                         panel and the page it links to are computed by the
+                                         same code rather than a second AJAX path. --}}
+                                    <select class="form-select form-select-sm" id="housePerformanceCourse"
+                                        aria-label="Filter house wise performance by course"
+                                        style="max-width: 13rem;"
+                                        onchange="window.location = '{{ route('admin.dashboard') }}' + (this.value ? ('?house_course=' + encodeURIComponent(this.value)) : '') + '#house-wise-performance';">
+                                        <option value="">All Courses</option>
+                                        @foreach($houseCourses as $pk => $name)
+                                            <option value="{{ $pk }}" {{ (string) ($houseCourseFilter ?? '') === (string) $pk ? 'selected' : '' }}>
+                                                {{ $name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                @endif
+                                <a href="{{ route('admin.dashboard.house-wise-performance', array_filter(['course' => $houseCourseFilter ?? null])) }}"
+                                    class="btn btn-sm btn-link text-decoration-none px-1" aria-label="Open house wise performance">
+                                    <i class="material-icons material-symbols-rounded align-middle" style="font-size:20px;">chevron_right</i>
+                                </a>
+                            </div>
                         </div>
                         <hr class="dashboard-birthdays-divider mb-0">
                     </div>
