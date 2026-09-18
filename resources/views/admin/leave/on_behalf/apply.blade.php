@@ -46,7 +46,6 @@
 </style>
 
 @php
-    $selectedLeaveType = old('leave_type', $leaveType ?? \App\Models\LeaveApplication::TYPE_STATIONED_LEAVE);
     $selectedCourse = old('course_master_pk', '');
     $selectedStudent = old('student_master_pk', '');
     $fromDateValue = old('from_date', '');
@@ -64,27 +63,12 @@
     </div>
 
     <div class="row g-4 leave-apply-layout">
-        {{-- Aside: PT balance for the selected officer trainee. Hidden until a trainee
-             is chosen and the leave type is PT Exemption, mirroring the OT-side page. --}}
-        <div class="col-12 col-lg-4 order-2 order-lg-1 d-none" id="lob-balance-col">
-            <div class="pt-balance-box">
-                <div class="pt-balance-head">
-                    <i class="material-icons material-symbols-rounded">calendar_month</i>
-                    <span>PT Balance</span>
-                </div>
-                <div class="pt-balance-num" id="lob-balance-remaining">0.0 Days</div>
-                <div class="pt-balance-sub" id="lob-balance-sub">Select an officer trainee</div>
-            </div>
-        </div>
-
         <div class="col-12" id="lob-form-col">
             <div class="card leave-apply-card border-0 shadow-sm rounded-3">
                 <div class="card-body p-3 p-md-4">
                     <form method="POST" action="{{ route('admin.leave-on-behalf.store') }}"
                         enctype="multipart/form-data" id="leave-on-behalf-form">
                         @csrf
-
-                        <input type="hidden" name="leave_type" id="lob_leave_type" value="{{ $selectedLeaveType }}">
 
                         <div class="row g-4">
 
@@ -120,36 +104,35 @@
                                 <div class="form-text">Search by officer trainee name or OT code.</div>
                             </div>
 
-                            {{-- Leave Type --}}
+                            {{-- Leave Type — this page records one type only, so it
+                                 is shown as a fixed value rather than a picker. --}}
                             <div class="col-12 col-md-6">
-                                <label class="leave-grid-label d-block">Leave Type <span class="text-danger">*</span></label>
-                                <div class="leave-type-radios">
-                                    <div class="form-check">
-                                        <input class="form-check-input lob-leave-type" type="radio" name="leave_type_radio"
-                                            id="lob_lt_pt" value="PT_EXEMPTION"
-                                            {{ $selectedLeaveType === 'PT_EXEMPTION' ? 'checked' : '' }}>
-                                        <label class="form-check-label" for="lob_lt_pt">PT Exemption</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input lob-leave-type" type="radio" name="leave_type_radio"
-                                            id="lob_lt_stationed" value="STATIONED_LEAVE"
-                                            {{ $selectedLeaveType === 'STATIONED_LEAVE' ? 'checked' : '' }}>
-                                        <label class="form-check-label" for="lob_lt_stationed">Stationed Leave</label>
-                                    </div>
-                                </div>
+                                <label for="lob_leave_type_display" class="leave-grid-label d-block">Leave Type</label>
+                                <input type="text" id="lob_leave_type_display" class="form-control" readonly value="Leave">
                             </div>
 
-                            {{-- Nature --}}
+                            {{-- Nature — the LEAVE bucket of the Nature Leave Master --}}
                             <div class="col-12 col-md-6 lob-field">
-                                <label for="lob_nature" class="leave-grid-label d-block">Nature for Leave <span class="text-danger">*</span></label>
+                                <label for="lob_nature" class="leave-grid-label d-block">Nature of Leave <span class="text-danger">*</span></label>
                                 <select name="leave_nature_master_pk" id="lob_nature"
-                                    class="form-select @error('leave_nature_master_pk') is-invalid @enderror" required
-                                    data-preselect="{{ old('leave_nature_master_pk', '') }}">
+                                    class="form-select @error('leave_nature_master_pk') is-invalid @enderror" required>
                                     <option value="">Select Nature</option>
+                                    @foreach($natures as $nature)
+                                        <option value="{{ $nature->pk }}"
+                                            {{ (string) old('leave_nature_master_pk') === (string) $nature->pk ? 'selected' : '' }}>
+                                            {{ $nature->nature_name }}
+                                        </option>
+                                    @endforeach
                                 </select>
                                 @error('leave_nature_master_pk')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
+                                @if($natures->isEmpty())
+                                    <div class="text-danger small mt-1">
+                                        No natures are configured under <strong>Leave</strong> yet.
+                                        Add them in Nature Leave Master first.
+                                    </div>
+                                @endif
                             </div>
 
                             {{-- Availability notice for the selected course / leave type --}}
@@ -186,12 +169,12 @@
                                 <div class="form-text">Set a later end date to apply for more than one day.</div>
                             </div>
 
-                            {{-- Time From / Time To — stationed leave only, shown and
-                                 hidden by JS when the leave type changes. --}}
-                            <div class="col-12 col-md-6 lob-time-field">
+                            {{-- Time From / Time To — when the officer trainee leaves the
+                                 station and when they report back. --}}
+                            <div class="col-12 col-md-6">
                                 <label for="time_from" class="leave-grid-label d-block">Time From <span class="text-danger">*</span></label>
                                 <input type="time" name="time_from" id="time_from"
-                                    class="form-control @error('time_from') is-invalid @enderror"
+                                    class="form-control @error('time_from') is-invalid @enderror" required
                                     value="{{ old('time_from', '') }}">
                                 @error('time_from')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
@@ -199,10 +182,10 @@
                                 <div class="form-text">Time the officer trainee leaves the station.</div>
                             </div>
 
-                            <div class="col-12 col-md-6 lob-time-field">
+                            <div class="col-12 col-md-6">
                                 <label for="time_to" class="leave-grid-label d-block">Time To <span class="text-danger">*</span></label>
                                 <input type="time" name="time_to" id="time_to"
-                                    class="form-control @error('time_to') is-invalid @enderror"
+                                    class="form-control @error('time_to') is-invalid @enderror" required
                                     value="{{ old('time_to', '') }}">
                                 @error('time_to')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
@@ -290,7 +273,7 @@
                         </div>
 
                         <div class="leave-actions-end">
-                            <a href="{{ route('admin.leave-on-behalf.create') }}" class="btn btn-cancel-outline">Cancel</a>
+                            <a href="{{ route('admin.leave-on-behalf.index') }}" class="btn btn-cancel-outline">Cancel</a>
                             <button type="submit" class="btn btn-apply" id="lob-submit">Apply Leave</button>
                         </div>
                     </form>
@@ -305,14 +288,13 @@
 {{-- select2.full.min.js is already loaded globally in the admin footer. --}}
 <script>
 $(function () {
-    const NATURES = @json($natures ?? []);
     const studentsUrl = '{{ route('admin.leave-on-behalf.students') }}';
     const contextUrl = '{{ route('admin.leave-on-behalf.context') }}';
     const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'];
     const maxSizeBytes = 5 * 1024 * 1024;
 
     // Latest /context payload for the selected course + officer trainee. Null until
-    // both are chosen; every date/balance/availability rule below reads from it.
+    // both are chosen; the date limits and the availability notice read from it.
     let leaveContext = null;
 
     const $course = $('#lob_course');
@@ -323,21 +305,6 @@ $(function () {
     $course.select2({ width: '100%', dropdownParent: $course.closest('.lob-field'), placeholder: 'Select Course' });
     $student.select2({ width: '100%', dropdownParent: $student.closest('.lob-field'), placeholder: 'Select Course First' });
     $nature.select2({ width: '100%', dropdownParent: $nature.closest('.lob-field'), placeholder: 'Select Nature' });
-
-    function currentLeaveType() {
-        return $('.lob-leave-type:checked').val() || 'STATIONED_LEAVE';
-    }
-
-    /* ── Nature options follow the leave type ── */
-    function renderNatures(preselect) {
-        const list = NATURES[currentLeaveType()] || [];
-        const $opts = $('<div>').append($('<option>').val('').text('Select Nature'));
-        list.forEach(function (n) {
-            $opts.append($('<option>').val(String(n.pk)).text(n.name));
-        });
-        $nature.html($opts.html()).val(preselect && list.some(n => String(n.pk) === String(preselect)) ? String(preselect) : '');
-        $nature.trigger('change.select2');
-    }
 
     /* ── Officer trainee options follow the course ── */
     function setStudents(list, placeholder, preselect) {
@@ -385,27 +352,15 @@ $(function () {
             .fail(function () { leaveContext = null; applyContext(); });
     }
 
-    /* ── Push the loaded context into the balance card, date limits and notices ── */
+    /* ── Push the loaded context into the date limits and the notice ── */
     function applyContext() {
-        const isPt = currentLeaveType() === 'PT_EXEMPTION';
-        const block = leaveContext ? (isPt ? leaveContext.pt_exemption : leaveContext.stationed_leave) : null;
-
-        // PT balance card — PT exemption only, and only once a trainee is selected.
-        const showBalance = isPt && leaveContext && leaveContext.pt_exemption.balance;
-        $('#lob-balance-col').toggleClass('d-none', !showBalance);
-        $('#lob-form-col').toggleClass('col-lg-8', !!showBalance)
-            .toggleClass('order-1', !!showBalance).toggleClass('order-lg-2', !!showBalance);
-        if (showBalance) {
-            const balance = leaveContext.pt_exemption.balance;
-            $('#lob-balance-remaining').text(Number(balance.remaining).toFixed(1) + ' Days');
-            $('#lob-balance-sub').text(leaveContext.student.name + ' · as on ' + balance.as_on);
-        }
+        const block = leaveContext ? leaveContext.leave : null;
 
         // Availability notice + submit gating.
         const blocked = !!(block && !block.configured);
         $('#lob-availability').toggleClass('d-none', !blocked);
         if (blocked) {
-            $('#lob-availability-text').text(block.message || 'This leave type is not configured for the selected course.');
+            $('#lob-availability-text').text(block.message || 'Leave is not configured for the selected course.');
         }
         $('#lob-submit').prop('disabled', blocked);
 
@@ -421,26 +376,8 @@ $(function () {
         updateTotalDays();
     }
 
-    /* ── Time From / Time To belong to stationed leave only ── */
-    function syncTimeFields() {
-        const isStationed = currentLeaveType() === 'STATIONED_LEAVE';
-        $('.lob-time-field').toggleClass('d-none', !isStationed);
-        // Required only while visible — a hidden required input blocks submit
-        // with a validation bubble the user cannot see.
-        $('#time_from, #time_to').prop('required', isStationed);
-        if (!isStationed) {
-            $('#time_from, #time_to').val('');
-        }
-    }
-
     $course.on('change', function () { loadStudents(null); });
     $student.on('change', loadContext);
-    $('.lob-leave-type').on('change', function () {
-        $('#lob_leave_type').val(this.value);
-        renderNatures(null);
-        syncTimeFields();
-        applyContext();
-    });
 
     /* ── Dates ── */
     function syncEndDateMin() {
@@ -561,10 +498,6 @@ $(function () {
     });
 
     /* ── Initial state (also restores selections after a validation error) ── */
-    renderNatures($nature.data('preselect'));
-    syncTimeFields();
-    $('#time_from').val(@json(old('time_from', '')));
-    $('#time_to').val(@json(old('time_to', '')));
     if ($course.val()) {
         loadStudents($student.data('preselect'));
     }

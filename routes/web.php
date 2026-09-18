@@ -900,7 +900,11 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
 
     // Training Section — Apply Leave on Behalf of OT (menu route: admin/leave-on-behalf)
     Route::prefix('admin/leave-on-behalf')->name('admin.leave-on-behalf.')->controller(LeaveOnBehalfController::class)->group(function () {
-        Route::get('/', 'create')->name('create');
+        // The menu points at '/', so the register is the landing page and the
+        // form is reached from its "Apply Leave" button.
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::get('/export', 'export')->name('export');
         Route::post('/store', 'store')->name('store');
         Route::get('/students', 'students')->name('students');
         Route::get('/context', 'context')->name('context');

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\LeaveReportExport;
 use App\Http\Controllers\Controller;
 use App\Models\CourseMaster;
 use App\Models\LeaveApplication;
@@ -9,9 +10,12 @@ use App\Models\LeaveApplicationAttachment;
 use App\Models\LeaveNatureMaster;
 use App\Models\StudentMaster;
 use App\Services\LeaveApplicationService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use Yajra\DataTables\Facades\DataTables;
 
 /**
  * Training Section — apply leave on behalf of an officer trainee.
@@ -19,14 +23,19 @@ use Illuminate\Support\Facades\DB;
  * Same form as the officer trainee's own Apply Leave page, with the course and the
  * officer trainee chosen up front instead of derived from the logged-in account.
  *
+ * One leave type only, shown simply as "Leave" with no type picker. It is stored
+ * as STATIONED_LEAVE so these applications sit alongside the officer trainee's own
+ * everywhere else; what is separate is the Nature list, which comes from the LEAVE
+ * bucket of the Nature Leave Master.
+ *
  * Two deliberate differences from the officer-trainee flow, both because this page
  * records a leave the Course Coordinator has *already* approved offline:
  *   - the application is stored as Approved, so it never re-enters the faculty queue;
  *   - the same-day apply cutoff (PT timing) is not enforced and dates may be backdated
  *     to the start of the course's configured leave window, since the operator is
  *     regularising leave after the fact rather than requesting it.
- * Every other rule — configuration must exist, no overlapping leave, PT balance must
- * cover the request — is applied exactly as on the officer-trainee page.
+ * Every other rule — configuration must exist, no overlapping leave — is applied
+ * exactly as on the officer-trainee page.
  */
 class LeaveOnBehalfController extends Controller
 {
@@ -43,13 +52,198 @@ class LeaveOnBehalfController extends Controller
         });
     }
 
+    /**
+     * The register: every leave this page has recorded, newest first.
+     *
+     * Scoped to applied_by_user_pk — leave an officer trainee applied for
+     * themselves belongs on their own pages, not in the Training Section's
+     * record of what it entered.
+     */
+    public function index(Request $request)
+    {
+        if ($request->ajax()) {
+            return $this->listDatatable($request);
+        }
+
+        return view('admin.leave.on_behalf.index', [
+            'courses' => $this->filterCourses(),
+        ]);
+    }
+
     public function create()
     {
         return view('admin.leave.on_behalf.apply', [
             'courses' => $this->getCourses(),
-            'natures' => $this->getNaturesByType(),
-            'leaveType' => old('leave_type', LeaveApplication::TYPE_STATIONED_LEAVE),
+            'natures' => $this->leaveNatures(),
         ]);
+    }
+
+    protected function baseListQuery(Request $request)
+    {
+        $courseIds = $this->getAllowedCourseIds();
+
+        return LeaveApplication::query()
+            ->with(['student', 'course', 'nature', 'appliedByUser'])
+            ->whereNotNull('applied_by_user_pk')
+            ->when($courseIds !== null, fn ($q) => $q->whereIn('course_master_pk', $courseIds ?: [-1]))
+            ->when($request->filled('course_filter'), fn ($q) => $q->where('course_master_pk', (int) $request->input('course_filter')))
+            ->when($request->filled('from_date'), fn ($q) => $q->whereDate('from_date', '>=', $request->input('from_date')))
+            ->when($request->filled('to_date'), fn ($q) => $q->whereDate('from_date', '<=', $request->input('to_date')))
+            ->orderByDesc('pk');
+    }
+
+    protected function listDatatable(Request $request)
+    {
+        return DataTables::of($this->baseListQuery($request))
+            ->addIndexColumn()
+            // Universal search: OT code / name, course, nature and reason — every
+            // text column the grid actually shows.
+            ->filter(function ($query) use ($request) {
+                $search = $request->input('search.value');
+                if (empty($search)) {
+                    return;
+                }
+
+                $query->where(function ($q) use ($search) {
+                    $q->whereHas('student', function ($qs) use ($search) {
+                        $qs->where('generated_OT_code', 'like', "%{$search}%")
+                            ->orWhere('display_name', 'like', "%{$search}%")
+                            ->orWhere('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%");
+                    })
+                        ->orWhereHas('course', fn ($qc) => $qc->where('course_name', 'like', "%{$search}%"))
+                        ->orWhereHas('nature', fn ($qn) => $qn->where('nature_name', 'like', "%{$search}%"))
+                        ->orWhere('reason', 'like', "%{$search}%");
+                });
+            })
+            ->addColumn('course_name', fn ($row) => e($row->course->course_name ?? '-'))
+            ->addColumn('ot_code', fn ($row) => e($row->student->generated_OT_code ?: '-'))
+            ->addColumn('ot_name', fn ($row) => e($this->studentName($row->student)))
+            ->addColumn('nature_name', fn ($row) => e($row->nature->nature_name ?? '-'))
+            ->addColumn('from_date_display', fn ($row) => $row->from_date?->format('d-m-Y') ?? '-')
+            ->addColumn('to_date_display', fn ($row) => $row->to_date?->format('d-m-Y') ?? '-')
+            ->addColumn('time_from_display', fn ($row) => e($row->time_from_display))
+            ->addColumn('time_to_display', fn ($row) => e($row->time_to_display))
+            ->addColumn('total_days_display', fn ($row) => number_format((float) $row->total_days, 0))
+            ->addColumn('reason_text', fn ($row) => e(\Illuminate\Support\Str::limit($row->reason ?? '-', 80)))
+            ->addColumn('recorded_by', fn ($row) => e($this->recordedByName($row)))
+            ->addColumn('status_badge', fn ($row) => '<span class="badge rounded-1 leave-status leave-status--approved">'
+                . e($row->status_label) . '</span>')
+            ->rawColumns(['status_badge'])
+            ->make(true);
+    }
+
+    /** Who entered the record — the operator's name, not the faculty approver. */
+    protected function recordedByName(LeaveApplication $row): string
+    {
+        $actor = $row->appliedByUser;
+
+        if (! $actor) {
+            return 'Training Section';
+        }
+
+        return trim(implode(' ', array_filter([
+            $actor->first_name ?? '',
+            $actor->last_name ?? '',
+        ]))) ?: ($actor->user_name ?? 'Training Section');
+    }
+
+    /** Courses that actually have a record here — the filter dropdown's options. */
+    protected function filterCourses()
+    {
+        $courseIds = $this->getAllowedCourseIds();
+
+        $ids = LeaveApplication::query()
+            ->whereNotNull('applied_by_user_pk')
+            ->when($courseIds !== null, fn ($q) => $q->whereIn('course_master_pk', $courseIds ?: [-1]))
+            ->distinct()
+            ->pluck('course_master_pk')
+            ->all();
+
+        if ($ids === []) {
+            return collect();
+        }
+
+        return CourseMaster::whereIn('pk', $ids)->orderBy('course_name')->pluck('course_name', 'pk');
+    }
+
+    /**
+     * Excel (.xlsx) or PDF of the register, honouring the same filters. Both
+     * formats render the identical heading/row arrays, so the two downloads can
+     * never disagree about what the list contained.
+     */
+    public function export(Request $request)
+    {
+        $rows = $this->baseListQuery($request)->get();
+
+        $headings = ['S. No.', 'Course Name', 'OT Code', 'OT Name', 'Nature of Leave',
+            'Date From', 'Date To', 'Time From', 'Time To', 'Total Days', 'Reason', 'Recorded By', 'Status'];
+
+        $serial = 1;
+        $data = $rows->map(fn ($row) => [
+            $serial++,
+            $row->course->course_name ?? '-',
+            $row->student->generated_OT_code ?: '-',
+            $this->studentName($row->student),
+            $row->nature->nature_name ?? '-',
+            $row->from_date?->format('d-m-Y') ?? '-',
+            $row->to_date?->format('d-m-Y') ?? '-',
+            $row->time_from_display,
+            $row->time_to_display,
+            number_format((float) $row->total_days, 0),
+            $row->reason ?? '-',
+            $this->recordedByName($row),
+            $row->status_label,
+        ])->values();
+
+        $baseName = 'Leave_On_Behalf_' . now()->format('Ymd_His');
+
+        if (strtolower((string) $request->get('format')) === 'pdf') {
+            @ini_set('memory_limit', '256M');
+            @set_time_limit(120);
+
+            return Pdf::loadView('admin.leave.export.leave_pdf', [
+                'headings' => $headings,
+                'rows' => $data,
+                'reportTitle' => 'Leave Applied on Behalf of OT',
+                'filterLine' => $this->exportFilterLine($request),
+            ])->setPaper('a4', 'landscape')->download($baseName . '.pdf');
+        }
+
+        return Excel::download(
+            new LeaveReportExport($data, $headings, 'Leave On Behalf'),
+            $baseName . '.xlsx'
+        );
+    }
+
+    /** Filters in force, printed on the PDF so a shared copy says what it is. */
+    protected function exportFilterLine(Request $request): string
+    {
+        $parts = [];
+
+        if ($request->filled('course_filter')) {
+            $courseName = CourseMaster::where('pk', (int) $request->input('course_filter'))->value('course_name');
+            if ($courseName) {
+                $parts[] = 'Course: ' . $courseName;
+            }
+        }
+
+        if ($request->filled('from_date') || $request->filled('to_date')) {
+            $parts[] = 'Period: ' . ($request->input('from_date') ?: '…') . ' to ' . ($request->input('to_date') ?: '…');
+        }
+
+        return implode(' | ', $parts);
+    }
+
+    /**
+     * The Nature of Leave options: everything filed under "Leave" in the Nature
+     * Leave Master. This page offers one leave type only, so there is one bucket
+     * and no type switch.
+     */
+    protected function leaveNatures()
+    {
+        return LeaveNatureMaster::ofType(LeaveNatureMaster::TYPE_LEAVE)
+            ->get(['pk', 'nature_name']);
     }
 
     /**
@@ -87,9 +281,9 @@ class LeaveOnBehalfController extends Controller
     }
 
     /**
-     * Per-student leave context for the chosen course: whether each leave type is
-     * configured, the earliest date that configuration covers, and the PT balance.
-     * The form uses it to set the date pickers and show the balance without a reload.
+     * Per-student context for the chosen course: whether leave is configured and
+     * the earliest date that configuration covers, so the form can set its date
+     * pickers and warn without a reload.
      */
     public function context(Request $request)
     {
@@ -107,27 +301,18 @@ class LeaveOnBehalfController extends Controller
             return response()->json(['message' => 'This officer trainee is not enrolled on the selected course.'], 422);
         }
 
-        $gender = $student->gender ?? null;
-        $ptMinDate = $this->leaveService->earliestPtExemptionDate($coursePk, $gender);
-        $stationedMinDate = $this->leaveService->earliestStationedLeaveDate($coursePk);
+        $minDate = $this->leaveService->earliestStationedLeaveDate($coursePk);
 
         return response()->json([
             'student' => [
                 'name' => $this->studentName($student),
                 'ot_code' => $student->generated_OT_code ?: '',
-                'gender' => $gender,
             ],
-            'pt_exemption' => [
-                'configured' => $ptMinDate !== null,
-                'min_date' => $ptMinDate,
-                'message' => $this->ptUnavailableMessage($gender, $ptMinDate),
-                'balance' => $this->leaveService->getPtBalance($studentPk, $coursePk, $gender),
-            ],
-            'stationed_leave' => [
-                'configured' => $stationedMinDate !== null,
-                'min_date' => $stationedMinDate,
-                'message' => $stationedMinDate === null
-                    ? 'Stationed leave is not configured for this course. Configure it under Stationed Leave Master first.'
+            'leave' => [
+                'configured' => $minDate !== null,
+                'min_date' => $minDate,
+                'message' => $minDate === null
+                    ? 'Leave is not configured for this course. Configure it under Stationed Leave Master first.'
                     : null,
             ],
         ]);
@@ -135,19 +320,15 @@ class LeaveOnBehalfController extends Controller
 
     public function store(Request $request)
     {
-        $isStationed = $request->input('leave_type') === LeaveApplication::TYPE_STATIONED_LEAVE;
-
         $validated = $request->validate([
             'course_master_pk' => 'required|exists:course_master,pk',
             'student_master_pk' => 'required|exists:student_master,pk',
-            'leave_type' => 'required|in:PT_EXEMPTION,STATIONED_LEAVE',
             'leave_nature_master_pk' => 'required|exists:leave_nature_master,pk',
             'from_date' => 'required|date',
             'to_date' => 'required|date|after_or_equal:from_date',
-            // Stationed leave records when the trainee leaves the station and
-            // reports back; PT exemption runs for whole PT sessions and has none.
-            'time_from' => [$isStationed ? 'required' : 'nullable', 'regex:/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/'],
-            'time_to' => [$isStationed ? 'required' : 'nullable', 'regex:/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/'],
+            // When the trainee leaves the station and when they report back.
+            'time_from' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/'],
+            'time_to' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/'],
             'reason' => 'required|string|max:2000',
             'contact_number' => ['required', 'string', 'regex:/^[6-9][0-9]{9}$/'],
             'attachments' => 'nullable|array',
@@ -168,7 +349,12 @@ class LeaveOnBehalfController extends Controller
 
         $coursePk = (int) $validated['course_master_pk'];
         $studentPk = (int) $validated['student_master_pk'];
-        $leaveType = $validated['leave_type'];
+
+        // One leave type on this page, shown simply as "Leave". It is stored as
+        // STATIONED_LEAVE so these applications sit alongside the officer
+        // trainee's own in My Leave and the Leave Approval history; only the
+        // Nature list is separate (the LEAVE bucket of the Nature Leave Master).
+        $leaveType = LeaveApplication::TYPE_STATIONED_LEAVE;
 
         $this->assertCourseAllowed($coursePk);
 
@@ -179,17 +365,16 @@ class LeaveOnBehalfController extends Controller
         }
 
         $nature = LeaveNatureMaster::find($validated['leave_nature_master_pk']);
-        if (! $nature || $nature->leave_type !== $leaveType) {
+        if (! $nature || $nature->leave_type !== LeaveNatureMaster::TYPE_LEAVE) {
             return back()->withInput()->withErrors([
-                'leave_nature_master_pk' => 'The selected nature does not belong to the chosen leave type.',
+                'leave_nature_master_pk' => 'Select a nature from the Leave list. '
+                    . 'Natures are maintained under Nature Leave Master.',
             ]);
         }
 
         // Only meaningful on a single-day leave — across days the return time is
         // naturally earlier in the day than the departure time.
-        if ($isStationed
-            && $validated['from_date'] === $validated['to_date']
-            && ! empty($validated['time_from']) && ! empty($validated['time_to'])
+        if ($validated['from_date'] === $validated['to_date']
             && $validated['time_to'] <= $validated['time_from']) {
             return back()->withInput()->withErrors([
                 'time_to' => 'On a single-day leave, time to must be later than time from.',
@@ -197,24 +382,13 @@ class LeaveOnBehalfController extends Controller
         }
 
         $student = StudentMaster::find($studentPk);
-        $gender = $student->gender ?? null;
 
         // Configuration must already cover the leave start date — the same rule the
         // officer-trainee page applies, checked against from_date rather than today.
-        if ($leaveType === LeaveApplication::TYPE_STATIONED_LEAVE
-            && ! $this->leaveService->stationedLeaveConfigured($coursePk, $validated['from_date'])) {
+        if (! $this->leaveService->stationedLeaveConfigured($coursePk, $validated['from_date'])) {
             return back()->withInput()->withErrors([
-                'from_date' => 'Stationed leave is not configured for this course on the selected start date. '
+                'from_date' => 'Leave is not configured for this course on the selected start date. '
                     . 'Configure it under Stationed Leave Master first.',
-            ]);
-        }
-
-        if ($leaveType === LeaveApplication::TYPE_PT_EXEMPTION
-            && ! $this->leaveService->ptExemptionConfigured($coursePk, $gender, $validated['from_date'])) {
-            return back()->withInput()->withErrors([
-                'from_date' => $this->ptGenderProblem($gender)
-                    ?? 'PT exemption is not configured for this course on the selected start date. '
-                        . 'Check the effective-from date under PT Exemption Master.',
             ]);
         }
 
@@ -232,20 +406,9 @@ class LeaveOnBehalfController extends Controller
             return back()->withInput()->withErrors(['from_date' => $e->getMessage()]);
         }
 
-        if ($leaveType === LeaveApplication::TYPE_PT_EXEMPTION) {
-            $balance = $this->leaveService->getPtBalance($studentPk, $coursePk, $gender);
-
-            if ($totalDays > $balance['remaining']) {
-                return back()->withInput()->withErrors([
-                    'to_date' => 'Requested days exceed this officer trainee\'s remaining PT balance ('
-                        . number_format($balance['remaining'], 1) . ' days).',
-                ]);
-            }
-        }
-
         $now = now();
 
-        $application = DB::transaction(function () use ($request, $validated, $coursePk, $studentPk, $leaveType, $totalDays, $now, $isStationed) {
+        $application = DB::transaction(function () use ($request, $validated, $coursePk, $studentPk, $leaveType, $totalDays, $now) {
             $application = LeaveApplication::create([
                 'course_master_pk' => $coursePk,
                 'student_master_pk' => $studentPk,
@@ -253,8 +416,8 @@ class LeaveOnBehalfController extends Controller
                 'leave_nature_master_pk' => $validated['leave_nature_master_pk'],
                 'from_date' => $validated['from_date'],
                 'to_date' => $validated['to_date'],
-                'time_from' => $isStationed ? ($validated['time_from'] ?? null) : null,
-                'time_to' => $isStationed ? ($validated['time_to'] ?? null) : null,
+                'time_from' => $validated['time_from'],
+                'time_to' => $validated['time_to'],
                 'total_days' => $totalDays,
                 'reason' => $validated['reason'],
                 'contact_number' => $validated['contact_number'],
@@ -294,7 +457,7 @@ class LeaveOnBehalfController extends Controller
         $label = $application->leave_type_label;
         $name = $this->studentName($student);
 
-        return redirect()->route('admin.leave-on-behalf.create')->with(
+        return redirect()->route('admin.leave-on-behalf.index')->with(
             'success',
             $label . ' recorded and approved for ' . $name . ' — '
                 . $application->from_date->format('d-m-Y') . ' to ' . $application->to_date->format('d-m-Y')
@@ -302,24 +465,6 @@ class LeaveOnBehalfController extends Controller
         );
     }
 
-    /**
-     * Active leave natures keyed by leave type, so the form can swap the Nature
-     * options client-side when the leave type changes (no page reload needed here,
-     * unlike the officer-trainee page where the type switch re-renders the page).
-     */
-    protected function getNaturesByType(): array
-    {
-        return LeaveNatureMaster::query()
-            ->where('active_inactive', 1)
-            ->orderBy('display_order')
-            ->get()
-            ->groupBy('leave_type')
-            ->map(fn ($group) => $group->map(fn ($nature) => [
-                'pk' => (int) $nature->pk,
-                'name' => $nature->nature_name,
-            ])->values()->all())
-            ->all();
-    }
 
     protected function studentName($student): string
     {
@@ -341,42 +486,6 @@ class LeaveOnBehalfController extends Controller
             ->where('course_master_pk', $coursePk)
             ->where('active_inactive', 1)
             ->exists();
-    }
-
-    /**
-     * PT exemption is allocated per gender, so a student with no usable gender can
-     * never match a configuration. That is a different problem from "not configured"
-     * and needs a different fix, so it gets its own message.
-     */
-    protected function ptGenderProblem(?string $gender): ?string
-    {
-        $normalized = strtolower(trim((string) $gender));
-
-        if (in_array($normalized, ['male', 'm', 'female', 'f'], true)) {
-            return null;
-        }
-
-        return 'PT exemption is allocated by gender, and this officer trainee has no gender recorded. '
-            . 'Update the student record first.';
-    }
-
-    /**
-     * Why PT exemption is unavailable for this student, or null when it is available.
-     */
-    protected function ptUnavailableMessage(?string $gender, ?string $minDate): ?string
-    {
-        $genderProblem = $this->ptGenderProblem($gender);
-
-        if ($genderProblem !== null) {
-            return $genderProblem;
-        }
-
-        if ($minDate === null) {
-            return 'PT exemption is not configured for this course and gender. '
-                . 'Configure it under PT Exemption Master first.';
-        }
-
-        return null;
     }
 
     /**

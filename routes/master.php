@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\Master\{
     HostelFloorMasterController,
     HostelRoomMasterController,
     MedicalCaseMasterController,
+    LeaveNatureMasterController,
 };
 
 Route::prefix('master')->name('master.')->middleware('auth')->group(function () {
@@ -262,6 +263,14 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::get('/datatable', 'datatable')->name('datatable');
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+
+    // Nature Leave Master — the natures each leave form offers
+    Route::prefix('leave-nature-master')->name('leave.nature.master.')->controller(LeaveNatureMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/datatable', 'datatable')->name('datatable');
+        Route::post('/store', 'store')->name('store');
         Route::delete('/delete/{id}', 'delete')->name('delete');
     });
 
