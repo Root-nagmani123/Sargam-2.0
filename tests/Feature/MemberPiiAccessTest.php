@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\DataTables\MemberDataTable;
 use App\Http\Middleware\EnsureMemberPiiAccess;
+use App\Http\Middleware\EnsureMemberRecordAccess;
 use App\Models\EmployeeMaster;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
@@ -305,12 +306,30 @@ class MemberPiiAccessTest extends TestCase
             $this->markTestSkipped('no member rows in the listing');
         }
 
-        $owner = User::query()->whereIn('user_id', $pagePks)->orderBy('pk')->first();
+        // The actor must be one the GATE admits, not merely one whose user_id
+        // happens to sit on the page. Since F-024 those are different sets:
+        // user_id equality is necessary but no longer sufficient, so picking the
+        // first credential whose user_id is on the page would usually pick an
+        // account the gate refuses, every $isOwn below would be false, and the
+        // grant side would go unexercised again - the same vacuity this test was
+        // rewritten once already to avoid.
+        $owner = null;
+
+        foreach (User::query()->whereIn('user_id', $pagePks)->orderBy('pk')->get() as $candidate) {
+            $this->actingAs($candidate);
+            session(['user_roles' => ['FC-Sec-Audit']]);
+
+            if (EnsureMemberRecordAccess::ownedMemberPk() !== null) {
+                $owner = $candidate;
+                break;
+            }
+        }
 
         if (! $owner) {
             $this->markTestSkipped(
-                'no user_credentials row whose user_id is on page one of the listing, '
-                .'so the own-record branch cannot be exercised against this data'
+                'no user_credentials row on page one of the listing can be SHOWN to own its '
+                .'record under the F-024 rule, so the own-record branch cannot be exercised '
+                .'against this data'
             );
         }
 
@@ -321,7 +340,6 @@ class MemberPiiAccessTest extends TestCase
             'this case is meaningless unless the actor is genuinely non-privileged'
         );
 
-        $own = $owner->user_id;
         $rows = $this->listingFeedRows();
 
         if (! $rows) {
@@ -338,8 +356,20 @@ class MemberPiiAccessTest extends TestCase
                 'the feed no longer carries pk, so this test cannot tell the rows apart'
             );
 
-            // The same comparison EnsureMemberRecordAccess::handle() makes.
-            $isOwn = $own !== null && $row['pk'] !== null && (string) $own === (string) $row['pk'];
+            // ASK THE GATE, do not restate it. This line used to re-implement
+            // the comparison under a comment claiming it matched
+            // EnsureMemberRecordAccess::handle(). When F-024 narrowed the real
+            // rule the restatement stayed behind, so this test went on
+            // certifying the OLD behaviour and stayed green while the grid
+            // offered Edit to 359 accounts the gate refuses. An oracle that
+            // restates the rule under test cannot detect a change to it.
+            // PR #309 F-046.
+            //
+            // Cheap despite being per row: ownsMemberRecord() returns false
+            // without touching the database unless the row pk equals the
+            // actor's own user_id, and the one call that does reach the
+            // database is memoised.
+            $isOwn = EnsureMemberRecordAccess::ownsMemberRecord($row['pk']);
             $hasEdit = str_contains((string) $row['actions'], 'mbr-act--edit');
 
             $this->assertSame(
@@ -623,6 +653,164 @@ class MemberPiiAccessTest extends TestCase
         // And the converse, which is why this is not simply auth()->id():
         // entitled accounts all render identically, so they SHOULD share.
         $this->assertSame('entitled', $entitled);
+    }
+
+    /**
+     * F-046, the defect itself: the grid must not offer Edit to an account the
+     * gate refuses.
+     *
+     * The companion test above picks an actor the gate ADMITS, and for such an
+     * actor the old rule and the new one agree - `user_id === pk` is true and
+     * the contact proof is also true - so it cannot detect the drift. It passes
+     * against the pre-fix grid. That is precisely the hole F-046 lived in, and
+     * it is why this test exists separately rather than as another assertion
+     * over there.
+     *
+     * The actor here is the 359-account shape: user_id DOES equal a member pk on
+     * page one, so the old rule offers Edit, and the gate refuses because the
+     * credential cannot prove the record is its own. Old rule and new rule
+     * disagree, so the grid has to pick one, and the route has already picked.
+     */
+    public function test_the_grid_withholds_edit_from_an_account_the_gate_refuses(): void
+    {
+        $this->actAsNonEntitled();
+
+        $pagePks = array_values(array_filter(
+            array_map(fn ($row) => $row['pk'] ?? null, $this->listingFeedRows()),
+            fn ($pk) => $pk !== null
+        ));
+
+        if (! $pagePks) {
+            $this->markTestSkipped('no member rows in the listing');
+        }
+
+        // user_id points at a real row ON THIS PAGE - so the pre-fix rule says
+        // "your own record" - but there is no contact proof, so the gate says no.
+        $target = (string) $pagePks[0];
+        $refused = $this->credentialFor($target, 'E', 'nobody+'.uniqid().'@example.invalid');
+
+        $this->actingAs($refused);
+        session(['user_roles' => ['FC-Sec-Audit']]);
+
+        $this->assertNull(
+            EnsureMemberRecordAccess::ownedMemberPk(),
+            'the fixture meant to be refused is admitted, so this test proves nothing'
+        );
+
+        // The route's answer, established first, so the assertion below is
+        // measured against the gate rather than against this test's opinion.
+        $this->get('/member/edit/'.$target)->assertForbidden();
+
+        $rows = $this->listingFeedRows();
+        $this->assertNotEmpty($rows, 'the refused account got an empty feed');
+
+        $seen = false;
+
+        foreach ($rows as $row) {
+            if ((string) ($row['pk'] ?? '') !== $target) {
+                continue;
+            }
+
+            $seen = true;
+
+            $this->assertStringNotContainsString(
+                'mbr-act--edit',
+                (string) $row['actions'],
+                "the Action column offers Edit on member {$target} to an account that "
+                .'member.record answers with 403 - the screen and the gate disagree'
+            );
+        }
+
+        $this->assertTrue(
+            $seen,
+            "member {$target} was not on the page under test, so the disagreement was never exercised"
+        );
+    }
+
+    /**
+     * F-046, the half that only bites AFTER the grid is corrected.
+     *
+     * The cache identity used to be `own:<user_id>`. That was consistent while
+     * the grid also decided Edit on user_id alone - both wrong together, so the
+     * payload matched the key. The moment the grid asks the real gate, user_id
+     * stops being the decision: 205 user_id values on testsargam6 are held by
+     * more than one credential, and under the F-024 rule 197 of those groups
+     * contain credentials that DISAGREE - one can prove the record is its own,
+     * the other cannot. Keyed on user_id those two share an entry whose payload
+     * differs between them, which is R11-002 all over again.
+     *
+     * So this asserts the property directly, on two credentials constructed to
+     * sit in exactly that position: same user_id, opposite verdicts.
+     */
+    public function test_two_credentials_sharing_a_user_id_but_not_a_verdict_get_different_identities(): void
+    {
+        $member = EmployeeMaster::query()
+            ->whereRaw("TRIM(COALESCE(email, '')) <> ''")
+            ->orderBy('pk')
+            ->first(['pk', 'email']);
+
+        if (! $member) {
+            $this->markTestSkipped('no employee_master row with an email to prove ownership against');
+        }
+
+        // Admitted: user_category 'E' and an email that matches the row.
+        $admitted = $this->credentialFor($member->pk, 'E', $member->email);
+
+        // Refused: the SAME user_id, so the old key would collide, but no
+        // contact proof of any kind - the 327-account shape F-024 found.
+        $refused = $this->credentialFor($member->pk, 'E', 'nobody+'.uniqid().'@example.invalid');
+
+        $this->actingAs($admitted);
+        session(['user_roles' => ['FC-Sec-Audit']]);
+        $this->assertSame(
+            (string) $member->pk,
+            EnsureMemberRecordAccess::ownedMemberPk(),
+            'the fixture meant to be admitted is not admitted, so this test proves nothing'
+        );
+        $admittedIdentity = MemberDataTable::actionColumnCacheIdentity();
+
+        $this->actingAs($refused);
+        session(['user_roles' => ['FC-Sec-Audit']]);
+        $this->assertNull(
+            EnsureMemberRecordAccess::ownedMemberPk(),
+            'the fixture meant to be refused is admitted, so this test proves nothing'
+        );
+        $refusedIdentity = MemberDataTable::actionColumnCacheIdentity();
+
+        $this->assertNotSame(
+            $admittedIdentity,
+            $refusedIdentity,
+            'two credentials with the same user_id but opposite gate verdicts computed the same '
+            .'cache identity, so one is served the other Action column - keyed on user_id this '
+            .'assertion fails, which is the point of it'
+        );
+
+        // And the refused actor shares the one entry every non-owning actor
+        // shares, rather than taking a private copy of an identical payload.
+        $this->assertSame('own:none', $refusedIdentity);
+    }
+
+    /**
+     * A user_credentials row pointing at $memberPk, created inside the test's
+     * own transaction so it never survives the run.
+     */
+    private function credentialFor($memberPk, string $category, string $email): User
+    {
+        $pk = DB::table('user_credentials')->insertGetId([
+            'user_id' => $memberPk,
+            'user_category' => $category,
+            'email_id' => $email,
+            'user_name' => 'pr309-f046-'.uniqid(),
+            'mobile_no' => '',
+        ]);
+
+        $user = User::query()->where('pk', $pk)->first();
+
+        if (! $user) {
+            $this->markTestSkipped('could not create a user_credentials fixture row');
+        }
+
+        return $user;
     }
 
     /** ArrayStore keeps its entries in a protected property; a test may look. */

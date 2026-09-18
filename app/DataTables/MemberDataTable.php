@@ -87,26 +87,32 @@ class MemberDataTable extends DataTable
      * Deliberately not `auth()->id()` for both branches: that would give every
      * administrator a private copy of an identical payload.
      *
-     * WHAT THIS COSTS, because the sentence above only names the saving. The
-     * entitled branch is the small one. The other branch is per-account, and
-     * user_credentials held 15,108 rows on testsargam6 when this was written,
-     * so a non-entitled account now gets its own cache entry for every (page,
-     * length, ordering, search, filter-set) it opens, for the full TTL - 86400s
-     * by default. Most of those entries are byte-identical to their neighbours':
-     * the column varies for a non-entitled actor only on the row it OWNS, and
-     * the listing is ordered by pk descending, so on almost every page there is
-     * no such row and the payload is the same for everybody.
+     * THE KEY IS THE DECISION, NOT THE ACTOR. The non-entitled branch keys on
+     * the pk this actor may actually EDIT - EnsureMemberRecordAccess::
+     * ownedMemberPk() - and not on its raw user_id. The distinction is not
+     * cosmetic, and it is why this method changed:
      *
-     * That waste is accepted deliberately rather than optimised away, because
-     * the alternative is to predict whether the actor's own pk lands in the
-     * window before the query has run, and a key that guesses wrong serves one
-     * account another account's controls - which is the defect this method
-     * exists to fix (PR #309 F-039 / R11-002). Correctness first; the fan-out
-     * is the price. If the cache store cannot carry it, the fix is to render
-     * the Action column client-side from a per-request entitlement blob and
-     * keep it out of the cached payload entirely, NOT to widen this key.
-     * Sizing it needs the live store's memory and eviction policy, which no
-     * review has had - open as PR #309 F-045, owner Release / deploy owner.
+     *   - user_id is not ownership. 205 user_id values on testsargam6 are held
+     *     by MORE THAN ONE credential, and under the F-024 rule 197 of those
+     *     keys carry credentials that DISAGREE - one proves the record is its
+     *     own, the other cannot. Keyed on user_id those 395 credentials shared
+     *     one entry whose payload differs between them, which is R11-002's
+     *     defect re-created: whoever warms the cache decides what the others
+     *     see. Keyed on the decision they land on different entries.
+     *   - It also shrinks the fan-out that was recorded as F-045. Every actor
+     *     who owns nothing - which is every account the gate refuses, 359 of
+     *     the 1,547 that resolve to an employee row, plus the ~13,500 that
+     *     resolve to none - renders an identical column and now shares the
+     *     single 'own:none' entry, instead of taking one apiece for every
+     *     (page, length, ordering, search, filter-set) for the full 86400s TTL.
+     *     The remaining per-account entries belong to accounts that genuinely
+     *     see something nobody else sees.
+     *
+     * Still deliberately not `auth()->id()`: that would give every
+     * administrator a private copy of an identical payload.
+     *
+     * ownedMemberPk() is memoised per request, so asking here and again in
+     * dataTable() costs one query between them, not two. PR #309 F-046, F-047.
      */
     public static function actionColumnCacheIdentity(): string
     {
@@ -114,9 +120,9 @@ class MemberDataTable extends DataTable
             return 'entitled';
         }
 
-        $own = optional(auth()->user())->user_id;
+        $own = \App\Http\Middleware\EnsureMemberRecordAccess::ownedMemberPk();
 
-        return 'own:' . ($own === null ? 'none' : (string) $own);
+        return 'own:' . ($own ?? 'none');
     }
 
     /**
@@ -258,13 +264,22 @@ class MemberDataTable extends DataTable
 
         // Edit is gated by member.record, not by member.pii, and its rule is
         // one step wider: an entitled account reaches every record, everyone
-        // else reaches exactly their own. Resolved here for the same reason as
-        // above - without it the Action column offered an Edit link on every
-        // row and 403'd on all but one, which is the dead button this screen
-        // was built to avoid. Mirrors EnsureMemberRecordAccess::handle():
-        // `!== null` on both sides, then a string compare, because user_id is
-        // nullable and null == null must NOT read as "this is my record".
-        $ownPk = optional(auth()->user())->user_id;
+        // else reaches exactly the one it can be SHOWN to own. Resolved here
+        // for the same reason as above - a link the gate will refuse is a dead
+        // button that reads as a fault rather than as a boundary.
+        //
+        // This CALLS the gate rather than restating it, and that is the whole
+        // point. It used to restate it - `user_id === row pk` - under a comment
+        // claiming it mirrored EnsureMemberRecordAccess::handle(). When F-024
+        // narrowed the real rule to add user_category = 'E' and a contact
+        // proof, the restatement stayed behind and the claim silently became
+        // false: 359 accounts kept an Edit link that answers 403. A copy of an
+        // authorisation rule is a copy that will drift, so there is no longer
+        // one here. PR #309 F-046.
+        //
+        // One call, one memoised query, whichever way it goes - see
+        // EnsureMemberRecordAccess::ownedMemberPk().
+        $ownPk = \App\Http\Middleware\EnsureMemberRecordAccess::ownedMemberPk();
 
         return (new EloquentDataTable($query))
             ->addIndexColumn()
