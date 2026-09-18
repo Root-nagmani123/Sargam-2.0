@@ -25,7 +25,7 @@ class StoreMemberStep5Request extends FormRequest
     {
         return [
             'homeaddress'         => ['nullable', 'string', 'max:255'],
-            'residencenumber'     => ['required', 'numeric', 'digits_between:6,15'],
+            'residencenumber'     => ['nullable', 'numeric', 'digits_between:6,15'],
             // 'miscellaneous'       => ['required', 'string', 'max:255'],
 
             // Validate uploaded image and documents
@@ -37,7 +37,6 @@ class StoreMemberStep5Request extends FormRequest
     public function messages(): array
     {
         return [
-            'residencenumber.required' => 'Residence number is required.',
             'residencenumber.numeric'  => 'Residence number must be a valid number.',
             'residencenumber.digits_between' => 'Residence number must be between 6 and 15 digits.',
             'picture.image'        => 'The uploaded file must be an image.',

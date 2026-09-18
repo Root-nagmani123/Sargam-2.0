@@ -43,7 +43,7 @@ class StoreMemberStep4Request extends FormRequest
             'officialemail'      => ['required', 'email'],
             'mnumber'            => ['required', 'digits_between:10,15'],
             'emergencynumber'    => ['nullable', 'digits_between:10,15'],
-            'landlinenumber'     => ['nullable', 'digits_between:6,15'],
+            'landlinenumber' => ['nullable', 'digits_between:1,15'],
         ];
     }
 
@@ -72,7 +72,7 @@ class StoreMemberStep4Request extends FormRequest
             'mnumber.required'         => 'Mobile number is required.',
             'mnumber.digits_between'   => 'Mobile number must be between 10 to 15 digits.',
             'emergencynumber.digits_between' => 'Emergency contact must be between 10 to 15 digits.',
-            'landlinenumber.digits_between'  => 'Landline number must be between 6 to 15 digits.',
+            'landlinenumber.digits_between' => 'Landline number must be between 1 to 15 digits.',
         ];
     }
 }

@@ -7,7 +7,7 @@
     <div class="col-md-6">
         <div class="mb-3">
 
-            <x-input name="residencenumber" formLabelClass="form-label" label="Residence Number :" id="residencenumber" value="{{ $member->residence_no ?? old('residencenumber') }}" labelRequired="true" />
+            <x-input name="residencenumber" formLabelClass="form-label" label="Residence Number :" id="residencenumber" value="{{ $member->residence_no ?? old('residencenumber') }}" />
 
         </div>
     </div>

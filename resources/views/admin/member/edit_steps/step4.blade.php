@@ -3,11 +3,11 @@
 <div class="row">
     <div class="col-md-6">
         <div class="mb-3">
-            <x-input 
-            name="address" 
-            label="Address :" 
-            formLabelClass="form-label" 
-            formInputClass="form-control" 
+            <x-input
+            name="address"
+            label="Address :"
+            formLabelClass="form-label"
+            formInputClass="form-control"
             value="{{ $member->current_address ?? '' }}"
             labelRequired="true" />
         </div>
@@ -45,7 +45,7 @@
             <x-select name="city" label="City :" formLabelClass="form-label" formSelectClass="form-select" :options="$cityOptions ?? []" :value="$member->city ?? ''" labelRequired="true" />
         </div>
     </div>
-    
+
     {{-- other city name --}}
     <div class="col-md-6 d-none" id="otherCityContainer">
         <div class="mb-3">
@@ -154,7 +154,15 @@
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label" for="landlinenumber">Landline Number :</label>
-            <input type="number" class="form-control only-numbers" id="landlinenumber" name="landlinenumber" value="{{ $member->landline_contact_no ?? '' }}">
+           <input
+            type="text"
+            class="form-control only-numbers"
+            id="landlinenumber"
+            name="landlinenumber"
+            value="{{ $member->landline_contact_no ?? '' }}"
+            inputmode="numeric"
+            maxlength="15"
+        >
         </div>
     </div>
 </div>
