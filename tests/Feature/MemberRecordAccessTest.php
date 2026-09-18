@@ -138,6 +138,208 @@ class MemberRecordAccessTest extends TestCase
     }
 
     /**
+     * A credential whose `user_id` names an employee row belonging to a
+     * DIFFERENT PERSON, chosen by a rule this gate does not use.
+     *
+     * The selection criterion is deliberately independent of the thing under
+     * test: the actor is picked because the credential's name and the employee
+     * row's name share no token at all - the census rule that spelling
+     * variants, initials and a missing middle name cannot explain - while the
+     * gate decides on `user_category` and a contact-detail proof. If the two
+     * agreed by construction the test would be circular and would pass on a
+     * regression.
+     *
+     * @return array{0: User, 1: int}|null
+     */
+    private function credentialNamingSomebodyElse(): ?array
+    {
+        $rows = DB::table('user_credentials as uc')
+            ->join('employee_master as em', 'em.pk', '=', 'uc.user_id')
+            ->select([
+                'uc.pk as cred_pk',
+                'uc.first_name as cred_first',
+                'uc.last_name as cred_last',
+                'em.pk as emp_pk',
+                'em.first_name as emp_first',
+                'em.middle_name as emp_middle',
+                'em.last_name as emp_last',
+            ])
+            ->limit(2000)
+            ->get();
+
+        $tokens = static function (string ...$parts): array {
+            $out = [];
+            foreach ($parts as $p) {
+                foreach (preg_split('/[^a-z]+/', strtolower(trim($p))) as $t) {
+                    if (strlen($t) > 1) {
+                        $out[] = $t;
+                    }
+                }
+            }
+            return $out;
+        };
+
+        foreach ($rows as $r) {
+            $cred = $tokens((string) $r->cred_first, (string) $r->cred_last);
+            $emp = $tokens((string) $r->emp_first, (string) $r->emp_middle, (string) $r->emp_last);
+
+            if (! $cred || ! $emp || array_intersect($cred, $emp)) {
+                continue;
+            }
+
+            $user = User::query()->find($r->cred_pk);
+
+            if ($user) {
+                return [$user, (int) $r->emp_pk];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * F-024: `user_id` is not ownership, and the gate no longer treats it as
+     * ownership.
+     *
+     * The old rule admitted a credential to whatever employee row its `user_id`
+     * named. On testsargam6 that mapping names a different person for 327 of
+     * the 1,547 credentials that resolve to an employee row - every blank
+     * `user_category` credential and the one 'S' credential, none of which
+     * matches its row on email or mobile in any respect, and 311 of which do
+     * not share a name token with it either. Those accounts were not reaching
+     * "their own record". They were reaching a stranger's, with edit rights,
+     * and the self-service redirect sent them there.
+     *
+     * The actor here is chosen by the name rule and asserted against the gate,
+     * which decides on category plus a contact proof - two different criteria,
+     * so a regression to "trust user_id" turns this red.
+     */
+    public function test_a_credential_naming_somebody_elses_record_is_refused(): void
+    {
+        $pair = $this->credentialNamingSomebodyElse();
+
+        if ($pair === null) {
+            $this->markTestSkipped(
+                'no credential on this host whose user_id names an employee row sharing no name '
+                .'token with it - the F-024 population is empty here'
+            );
+        }
+
+        [$actor, $employeePk] = $pair;
+
+        $this->actingAs($actor);
+        session(['user_roles' => ['FC-Sec-Audit']]);
+        $this->assertFalse(
+            isSidebarPrivilegedUser(),
+            'this case is meaningless unless the actor is genuinely non-privileged'
+        );
+
+        $this->get(route('member.edit', ['id' => $employeePk]))
+            ->assertForbidden();
+
+        // The write twin, which is the half that made F-024 more than a read
+        // problem: the same mapping decided who could SAVE the record.
+        $this->assertFalse(
+            \App\Http\Middleware\EnsureMemberRecordAccess::ownsMemberRecord($employeePk),
+            "credential {$actor->pk} is still treated as the owner of employee {$employeePk}, "
+            .'whose name shares no token with it'
+        );
+    }
+
+    /**
+     * The other side of F-024, and the one that decides whether the narrowing
+     * is shippable: the legitimate majority must keep self-service.
+     *
+     * Measured on testsargam6 at the time of the fix: 1,188 of the 1,547
+     * credentials that resolve to an employee row are admitted. This asserts
+     * that the population is not empty - a rule that refuses everybody would
+     * satisfy the test above and be an outage.
+     */
+    public function test_the_narrowing_still_admits_credentials_that_prove_ownership(): void
+    {
+        // Drawn from the employee-credential population, because that is the
+        // only one the rule can admit at all - `user_category = 'E'` is a
+        // precondition, and sampling blank-category rows would only re-assert
+        // the test above. Selecting on the precondition is not circular against
+        // the part under test, which is the contact proof.
+        $candidates = User::query()
+            ->whereNotNull('user_id')
+            ->whereRaw("UPPER(TRIM(COALESCE(user_category,''))) = 'E'")
+            ->limit(400)
+            ->get();
+
+        if ($candidates->isEmpty()) {
+            $this->markTestSkipped('no employee-category credentials on this host');
+        }
+
+        $admitted = 0;
+
+        foreach ($candidates as $candidate) {
+            $this->actingAs($candidate);
+
+            if (\App\Http\Middleware\EnsureMemberRecordAccess::ownsMemberRecord($candidate->user_id)) {
+                $admitted++;
+            }
+        }
+
+        $this->assertGreaterThan(
+            0,
+            $admitted,
+            'the own-record rule admitted none of '.$candidates->count().' employee credentials, '
+            .'so it is an outage rather than a narrowing'
+        );
+    }
+
+    /**
+     * F-041: the SAME method reached through its OTHER route.
+     *
+     * The boundary above is attached to routes, and MemberController is mounted
+     * twice. routes/web.php:1218 puts the same controller behind
+     * admin/setup/member/* with the enclosing `auth` and nothing else, and that
+     * group includes edit/{id} - so before this fix, one non-entitled account
+     * got 403 from member/edit/<pk> and 200 from admin/setup/member/edit/<pk>
+     * on the same member, and the 200 also separated a live pk from an absent
+     * one.
+     *
+     * Nothing leaked, because admin/member/edit.blade.php is a shell that
+     * fetches its fields over the gated edit-step route - but that is a
+     * property of the template, not a control, and the next person to render a
+     * member field into that view would have shipped a disclosure with no test
+     * able to notice.
+     *
+     * Both doors are asserted here on purpose, in one test. Splitting them
+     * invites a later change to fix one and leave the other, which is exactly
+     * the failure being closed.
+     */
+    public function test_both_routes_to_the_edit_method_refuse_another_members_record(): void
+    {
+        $actor = $this->actAsNonEntitled();
+        $other = $this->someoneElsesMemberPk($actor);
+
+        $this->get(route('member.edit', ['id' => $other]))
+            ->assertForbidden();
+
+        $this->get("/admin/setup/member/edit/{$other}")
+            ->assertForbidden();
+    }
+
+    /**
+     * The grant side of the same pair: the mirror route must still serve the
+     * actor its OWN record, or the fix above has broken self-service through a
+     * door somebody may be using.
+     */
+    public function test_the_mirror_route_still_serves_the_actor_its_own_record(): void
+    {
+        $actor = $this->actAsNonEntitled();
+
+        if ($actor->user_id === null || ! EmployeeMaster::query()->where('pk', $actor->user_id)->exists()) {
+            $this->markTestSkipped('the acting credential has no employee_master row of its own');
+        }
+
+        $this->get("/admin/setup/member/edit/{$actor->user_id}")->assertOk();
+    }
+
+    /**
      * And the self-service case still works, which is why this is an
      * object-level check and not the PII gate: member.profile.edit.self sends
      * every user to their own record.

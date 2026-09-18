@@ -86,6 +86,27 @@ class MemberDataTable extends DataTable
      *
      * Deliberately not `auth()->id()` for both branches: that would give every
      * administrator a private copy of an identical payload.
+     *
+     * WHAT THIS COSTS, because the sentence above only names the saving. The
+     * entitled branch is the small one. The other branch is per-account, and
+     * user_credentials held 15,108 rows on testsargam6 when this was written,
+     * so a non-entitled account now gets its own cache entry for every (page,
+     * length, ordering, search, filter-set) it opens, for the full TTL - 86400s
+     * by default. Most of those entries are byte-identical to their neighbours':
+     * the column varies for a non-entitled actor only on the row it OWNS, and
+     * the listing is ordered by pk descending, so on almost every page there is
+     * no such row and the payload is the same for everybody.
+     *
+     * That waste is accepted deliberately rather than optimised away, because
+     * the alternative is to predict whether the actor's own pk lands in the
+     * window before the query has run, and a key that guesses wrong serves one
+     * account another account's controls - which is the defect this method
+     * exists to fix (PR #309 F-039 / R11-002). Correctness first; the fan-out
+     * is the price. If the cache store cannot carry it, the fix is to render
+     * the Action column client-side from a per-request entitlement blob and
+     * keep it out of the cached payload entirely, NOT to widen this key.
+     * Sizing it needs the live store's memory and eviction policy, which no
+     * review has had - open as PR #309 F-045, owner Release / deploy owner.
      */
     public static function actionColumnCacheIdentity(): string
     {
