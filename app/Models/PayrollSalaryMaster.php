@@ -15,13 +15,13 @@ class PayrollSalaryMaster extends Model
 
     protected $primaryKey = 'pk';
 
-    // pk has no AUTO_INCREMENT in this table — callers must assign it (see MemberController::saveStep6PayrollData()).
-    public $incrementing = false;
+    // pk now has AUTO_INCREMENT (see 2026_09_18_000001_add_auto_increment_to_payroll_salary_master_pk) —
+    // Eloquent assigns it; callers must not set 'pk' manually.
+    public $incrementing = true;
 
     public $timestamps = false;
 
     protected $fillable = [
-        'pk',
         'employee_master_pk',
         'salary_grade_pk',
         'employee_category_master_pk',

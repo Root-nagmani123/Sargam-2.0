@@ -67,8 +67,8 @@ class MemberDataTable extends DataTable
                 return '<label class="text-dark">' . $appellationPrefix . $row->first_name . ' ' . $row->middle_name . ' ' . $row->last_name . '</label>';
             })
             ->addColumn('employee_id', fn($row) => '<label class="text-dark">' . $row->emp_id . '</label>')
-            ->addColumn('department', fn($row) => '<label class="text-dark">' . optional($row->department)->department_name . '</label>')
-            ->addColumn('designation', fn($row) => '<label class="text-dark">' . optional($row->designation)->designation_name . '</label>')
+            ->addColumn('department', fn($row) => '<label class="text-dark">' . e(optional($row->department)->department_name) . '</label>')
+            ->addColumn('designation', fn($row) => '<label class="text-dark">' . e(optional($row->designation)->designation_name) . '</label>')
             ->addColumn('mobile_no', fn($row) => '<label class="text-dark">' . $row->mobile . '</label>')
             ->addColumn('email', fn($row) => '<label class="text-dark">' . $row->email . '</label>')
             ->addColumn('actions', function($row) {

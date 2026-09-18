@@ -5,6 +5,7 @@ use App\DataTables\MemberDataTable;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 use App\Http\Requests\Admin\Member\{
     StoreMemberStep1Request,
     StoreMemberStep2Request,
@@ -13,10 +14,11 @@ use App\Http\Requests\Admin\Member\{
     StoreMemberStep5Request,
     StoreMemberStep6Request,
 };
-use App\Models\{EmployeeMaster, EmployeeRoleMapping, UserCredential, City, PayrollSalaryMaster};
+use App\Models\{EmployeeMaster, EmployeeRoleMapping, UserCredential, City, PayrollSalaryMaster, User, UserRoleMaster};
 use App\Exports\MemberExport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\AppellationMaster;
+use Spatie\Permission\Models\Role;
 class MemberController extends Controller
 {
     public function index(MemberDataTable $dataTable)
@@ -140,27 +142,43 @@ class MemberController extends Controller
 
     /**
      * Step 6 ("Employee Grade Pay") does NOT belong on employee_master — it's saved separately
-     * to payroll_salary_master by saveStep6PayrollData(). Every field here is optional, so only
-     * the ones the admin actually filled in are returned (an empty step submits an empty array).
+     * to payroll_salary_master by saveStep6PayrollData().
+     *
+     * If the admin left the entire step untouched, this returns [] and
+     * saveStep6PayrollData() skips writing anything — this table is also read by the Estate
+     * module (house eligibility joins on salary_grade_pk), so a member who never uses this
+     * step should not get an empty payroll row created for them.
+     *
+     * If at least one field was filled in, all five keys are returned together, with any
+     * field the admin explicitly left blank mapped to null rather than dropped — otherwise a
+     * value the admin deliberately cleared would silently keep its old value on update()
+     * instead of being cleared (see PR #319 review, F-010).
      */
     private function mapStep6Data(Request $request): array
     {
-        return array_filter([
+        $raw = [
             'salary_grade_pk' => $request->gradepay,
             'employee_category_master_pk' => $request->employeecategory,
             'basic_pay' => $request->basicpay,
             'bank_name' => $request->bankname,
             'account_no' => $request->accountno,
-        ], fn ($value) => $value !== null && $value !== '');
+        ];
+
+        $hasAnyValue = collect($raw)->contains(fn ($value) => $value !== null && $value !== '');
+
+        if (! $hasAnyValue) {
+            return [];
+        }
+
+        return array_map(fn ($value) => $value === '' ? null : $value, $raw);
     }
 
     /**
      * Upserts payroll_salary_master for the given employee, keyed on employee_master_pk.
-     * Never touches fields the admin left blank — this table is also read by the Estate
-     * module (house eligibility joins on salary_grade_pk), so an existing row's other columns
-     * (net_salary, tds, etc., not exposed on this wizard) must survive untouched.
-     * payroll_salary_master.pk has no AUTO_INCREMENT, so new rows get a manually assigned pk
-     * (max(pk) + 1), matching the convention already used elsewhere in this app for such tables.
+     * Only touches the five columns this wizard owns (see mapStep6Data()) — this table is
+     * also read by the Estate module (house eligibility joins on salary_grade_pk), so an
+     * existing row's other columns (net_salary, tds, etc., not exposed on this wizard) must
+     * survive untouched.
      */
     private function saveStep6PayrollData(int $employeeMasterPk, Request $request): void
     {
@@ -178,9 +196,60 @@ class MemberController extends Controller
         }
 
         PayrollSalaryMaster::create(array_merge($data, [
-            'pk' => (int) (PayrollSalaryMaster::max('pk') ?? 0) + 1,
             'employee_master_pk' => $employeeMasterPk,
         ]));
+    }
+
+    /**
+     * Step 3 ("Role Assignment")'s checkboxes are drawn from user_role_master
+     * (UserRoleMaster::getUserRoleList()), which is a mix of real Spatie roles
+     * (kept in sync with the `roles` table — see
+     * 2026_09_10_000001_sync_user_role_master_with_roles) and plain HR tags
+     * that have no corresponding permission role at all (e.g. "Internal
+     * Faculty", "Staff"). Previously, checking a role here only wrote to
+     * employee_role_mapping and never touched Spatie RBAC, so it looked like
+     * it granted access without actually doing so (PR #319 review, F-007).
+     *
+     * This grants/revokes real Spatie roles for exactly the subset of
+     * user_role_master options that correspond to a real `roles` row — no
+     * more, no less — using $user->syncRoles(), the same mechanism
+     * UserController::assignRoleSave() already uses for the dedicated
+     * Role & Permission > Users screen.
+     *
+     * Deliberately does NOT do a blind syncRoles($selected) with only what
+     * was selected here: any Spatie role the member already has that ISN'T
+     * one of the options this screen offers (e.g. assigned via that other
+     * Users screen) is preserved untouched. This screen only ever controls
+     * the roles it actually shows a checkbox for.
+     */
+    private function syncSpatieRolesFromWizardSelection(int $userCredentialPk, array $selectedUserRoleMasterPks): void
+    {
+        $offeredRoleNames = UserRoleMaster::getUserRoleList()->values()->all();
+        $spatieRoleNamesOffered = Role::whereIn('name', $offeredRoleNames)->pluck('name')->all();
+
+        if (empty($spatieRoleNamesOffered)) {
+            return;
+        }
+
+        $user = User::find($userCredentialPk);
+
+        if (! $user) {
+            return;
+        }
+
+        $selectedNames = UserRoleMaster::whereIn('pk', $selectedUserRoleMasterPks)
+            ->pluck('user_role_display_name')
+            ->all();
+
+        $selectedSpatieRoleNames = array_values(array_intersect($spatieRoleNamesOffered, $selectedNames));
+
+        $currentUnrelatedRoleNames = $user->getRoleNames()
+            ->reject(fn ($name) => in_array($name, $spatieRoleNamesOffered, true))
+            ->all();
+
+        $user->syncRoles(array_merge($currentUnrelatedRoleNames, $selectedSpatieRoleNames));
+
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     /**
@@ -237,7 +306,7 @@ class MemberController extends Controller
     }
 
     /**
-     * Merge rules()/messages() from all 5 step requests into one combined validator,
+     * Merge rules()/messages() from all 6 step requests into one combined validator,
      * since the final submit carries every step's fields at once.
      */
     private function combinedMemberRules(): array
@@ -281,35 +350,43 @@ class MemberController extends Controller
             $additional_doc_upload = $request->file('additionaldocument')->store('members', 'public');
         }
 
-        $employee = EmployeeMaster::create(array_merge(
-            $this->mapStep1Data($request),
-            $this->mapStep2Data($request),
-            $this->mapStep4Data($request),
-            $this->mapStep5Data($request, $profile_picture, $additional_doc_upload)
-        ));
+        // employee_master, payroll_salary_master, user_credentials and the role mappings
+        // are four tables written together for one member — wrapped in a transaction so a
+        // failure partway through (e.g. Step 6 hitting a bad value) rolls back the whole
+        // thing instead of leaving a member with no login credential and no roles.
+        DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload) {
+            $employee = EmployeeMaster::create(array_merge(
+                $this->mapStep1Data($request),
+                $this->mapStep2Data($request),
+                $this->mapStep4Data($request),
+                $this->mapStep5Data($request, $profile_picture, $additional_doc_upload)
+            ));
 
-        $this->saveStep6PayrollData($employee->pk, $request);
+            $this->saveStep6PayrollData($employee->pk, $request);
 
-        $userCredential = UserCredential::create([
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'email_id' => $request->personalemail,
-            'mobile_no' => $request->mnumber,
-            'reg_date' => now(),
-            'user_id' => $employee->pk,
-            'user_name' => $request->userid,
-            'user_category' => 'E'
-        ]);
+            $userCredential = UserCredential::create([
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
+                'email_id' => $request->personalemail,
+                'mobile_no' => $request->mnumber,
+                'reg_date' => now(),
+                'user_id' => $employee->pk,
+                'user_name' => $request->userid,
+                'user_category' => 'E'
+            ]);
 
-        if ($userCredential) {
-            $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
-            foreach ($roles as $role) {
-                EmployeeRoleMapping::create([
-                    'user_credentials_pk' => $userCredential->pk,
-                    'user_role_master_pk' => $role,
-                ]);
+            if ($userCredential) {
+                $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
+                foreach ($roles as $role) {
+                    EmployeeRoleMapping::create([
+                        'user_credentials_pk' => $userCredential->pk,
+                        'user_role_master_pk' => $role,
+                    ]);
+                }
+
+                $this->syncSpatieRolesFromWizardSelection($userCredential->pk, $roles);
             }
-        }
+        });
 
         MemberDataTable::bumpListingCacheEpoch();
 
@@ -336,40 +413,57 @@ class MemberController extends Controller
             $additional_doc_upload = $request->file('additionaldocument')->store('members', 'public');
         }
 
-        EmployeeMaster::find($request->emp_id)->update(array_merge(
-            $this->mapStep1Data($request),
-            $this->mapStep2Data($request),
-            $this->mapStep4Data($request),
-            $this->mapStep5Data($request, $profile_picture, $additional_doc_upload)
-        ));
+        // Same reasoning as store(): one transaction across employee_master,
+        // payroll_salary_master, user_credentials and the role mappings.
+        DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload) {
+            EmployeeMaster::find($request->emp_id)->update(array_merge(
+                $this->mapStep1Data($request),
+                $this->mapStep2Data($request),
+                $this->mapStep4Data($request),
+                $this->mapStep5Data($request, $profile_picture, $additional_doc_upload)
+            ));
 
-        $this->saveStep6PayrollData((int) $request->emp_id, $request);
+            $this->saveStep6PayrollData((int) $request->emp_id, $request);
 
-        UserCredential::updateOrCreate(
-            ['user_id' => $request->emp_id], // Search condition
-            [
-                'first_name'  => $request->first_name,
-                'last_name'   => $request->last_name,
-                'email_id'    => $request->personalemail,
-                'mobile_no'   => $request->mnumber,
-                'user_name'   => $request->userid,
-                'user_category' => 'E'
-            ]
-        );
-        $userCredential = UserCredential::where('user_id', $request->emp_id)->first();
+            UserCredential::updateOrCreate(
+                ['user_id' => $request->emp_id], // Search condition
+                [
+                    'first_name'  => $request->first_name,
+                    'last_name'   => $request->last_name,
+                    'email_id'    => $request->personalemail,
+                    'mobile_no'   => $request->mnumber,
+                    'user_name'   => $request->userid,
+                    'user_category' => 'E'
+                ]
+            );
+            $userCredential = UserCredential::where('user_id', $request->emp_id)->first();
 
-        if ($userCredential) {
-            $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
+            if ($userCredential) {
+                $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
 
-            EmployeeRoleMapping::where('user_credentials_pk', $userCredential->pk)->delete();
+                // Only replace mappings for roles that were actually offered as a
+                // checkbox (getUserRoleList() — active roles only). A member holding a
+                // role that's since been deactivated has no checkbox for it and can't
+                // post it back, so deleting *every* mapping here would silently strip
+                // that role as a side effect of saving unrelated fields (PR #319
+                // review, F-008). Leaving it untouched preserves it until someone
+                // deliberately reassigns the member's roles while it's active again.
+                $offeredRoleIds = \App\Models\UserRoleMaster::getUserRoleList()->keys()->all();
 
-            foreach ($roles as $role) {
-                EmployeeRoleMapping::create([
-                    'user_credentials_pk' => $userCredential->pk,
-                    'user_role_master_pk' => $role,
-                ]);
+                EmployeeRoleMapping::where('user_credentials_pk', $userCredential->pk)
+                    ->whereIn('user_role_master_pk', $offeredRoleIds)
+                    ->delete();
+
+                foreach ($roles as $role) {
+                    EmployeeRoleMapping::create([
+                        'user_credentials_pk' => $userCredential->pk,
+                        'user_role_master_pk' => $role,
+                    ]);
+                }
+
+                $this->syncSpatieRolesFromWizardSelection($userCredential->pk, $roles);
             }
-        }
+        });
 
         MemberDataTable::bumpListingCacheEpoch();
 

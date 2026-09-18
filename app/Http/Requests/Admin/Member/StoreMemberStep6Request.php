@@ -26,7 +26,7 @@ class StoreMemberStep6Request extends FormRequest
         return [
             'gradepay'         => ['nullable', 'exists:salary_grade_master,pk'],
             'employeecategory' => ['nullable', 'exists:employee_category_master,pk'],
-            'basicpay'         => ['nullable', 'integer'],
+            'basicpay'         => ['nullable', 'integer', 'min:0'],
             'bankname'         => ['nullable', 'string', 'max:100'],
             'accountno'        => ['nullable', 'string', 'max:50'],
         ];
@@ -38,6 +38,7 @@ class StoreMemberStep6Request extends FormRequest
             'gradepay.exists'         => 'The selected grade pay is invalid.',
             'employeecategory.exists' => 'The selected employee category is invalid.',
             'basicpay.integer'        => 'Basic pay must be an integer value.',
+            'basicpay.min'            => 'Basic pay cannot be negative.',
             'bankname.max'            => 'Bank name must not exceed 100 characters.',
             'accountno.max'           => 'Account number must not exceed 50 characters.',
         ];

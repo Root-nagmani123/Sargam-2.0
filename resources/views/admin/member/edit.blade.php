@@ -94,7 +94,8 @@
                         }
                         if (stepValidationInFlight) return false;
 
-                        const currentStep = $(`#wizard-p-${currentIndex}`);
+                        const validatingIndex = currentIndex;
+                        const currentStep = $(`#wizard-p-${validatingIndex}`);
                         let stepData = currentStep.find(':input').serialize();
                         stepData += `&emp_id=${employeePK}`;
 
@@ -105,11 +106,18 @@
                         // Runs async so the UI doesn't lock up while waiting on the server;
                         // on success we re-issue "next" ourselves once validation passes.
                         $.ajax({
-                            url: `/member/update-validate-step/${currentIndex + 1}/${employeePK}`,
+                            url: `/member/update-validate-step/${validatingIndex + 1}/${employeePK}`,
                             method: "POST",
                             data: stepData + '&_token={{ csrf_token() }}',
                             success: function (success) {
                                 clearErrors(currentStep);
+                                // If the user has since navigated away from the step that
+                                // was just validated (e.g. clicked Previous while this
+                                // request was in flight), don't pull them back forward
+                                // from wherever they are now.
+                                if (wizard.steps("getCurrentIndex") !== validatingIndex) {
+                                    return;
+                                }
                                 skipNextValidation = true;
                                 wizard.steps("next");
                             },
@@ -141,7 +149,7 @@
                     },
 
                     onFinished: function () {
-                        // All 5 steps' inputs are still in the DOM (jQuery Steps never
+                        // All 6 steps' inputs are still in the DOM (jQuery Steps never
                         // removes them), so this FormData already carries every field from
                         // every step — this is the single point where the record is saved.
                         const formData = new FormData(form[0]);

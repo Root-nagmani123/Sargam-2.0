@@ -89,7 +89,8 @@ $(document).ready(function() {
             }
             if (stepValidationInFlight) return false;
 
-            const currentStep = $(`#wizard-p-${currentIndex}`);
+            const validatingIndex = currentIndex;
+            const currentStep = $(`#wizard-p-${validatingIndex}`);
             let stepData = currentStep.find(':input').serialize();
 
             stepValidationInFlight = true;
@@ -99,11 +100,18 @@ $(document).ready(function() {
             // Runs async so the UI doesn't lock up while waiting on the server;
             // on success we re-issue "next" ourselves once validation passes.
             $.ajax({
-                url: `/member/validate-step/${currentIndex + 1}`,
+                url: `/member/validate-step/${validatingIndex + 1}`,
                 method: "POST",
                 data: stepData + '&_token={{ csrf_token() }}',
                 success: function(response) {
                     clearErrors(currentStep);
+                    // If the user has since navigated away from the step that was
+                    // just validated (e.g. clicked Previous while this request was
+                    // in flight), don't pull them back forward from wherever they
+                    // are now — just record that this step is clean.
+                    if (wizard.steps("getCurrentIndex") !== validatingIndex) {
+                        return;
+                    }
                     skipNextValidation = true;
                     wizard.steps("next");
                 },
@@ -136,7 +144,7 @@ $(document).ready(function() {
         },
 
         onFinished: function() {
-            // All 5 steps' inputs are still in the DOM (jQuery Steps never removes
+            // All 6 steps' inputs are still in the DOM (jQuery Steps never removes
             // them), so this FormData already carries every field from every step —
             // this is the single point where the member is actually created.
             const formData = new FormData(form[0]);
