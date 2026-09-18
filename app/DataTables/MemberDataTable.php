@@ -99,7 +99,7 @@ class MemberDataTable extends DataTable
      *     one entry whose payload differs between them, which is R11-002's
      *     defect re-created: whoever warms the cache decides what the others
      *     see. Keyed on the decision they land on different entries.
-          *   - It also shrinks the fan-out recorded as F-045, and the size of that
+     *   - It also shrinks the fan-out recorded as F-045, and the size of that
      *     reduction is the number whoever closes F-045 has to size against, so
      *     it is quoted with the query that produced it rather than inferred
      *     from this method. MEASURED ON testsargam6 (2026-09-18):
@@ -112,9 +112,20 @@ class MemberDataTable extends DataTable
      *                  shared 'own:none'. Every account keyed on its own user_id
      *                  and took one entry apiece for every (page, length,
      *                  ordering, search, filter-set) for the full 86400s TTL.
-     *       after    'own:none', plus one entry per account the gate ADMITS
-     *                  (<= 1,341 distinct admitted pks; the census in
-     *                  EnsureMemberRecordAccess counts 1,188 admitted accounts).
+     *       after    'own:none', plus one entry per account the gate ADMITS.
+     *                  The gate admits 1,188 credentials - user_category 'E'
+     *                  AND a contact proof, which is the predicate in
+     *                  EnsureMemberRecordAccess::ownsMemberRecord() - and
+     *                  COUNT(DISTINCT user_id) over THAT predicate is also
+     *                  1,188: no two admitted credentials share a pk. So the
+     *                  ceiling is 1,189 entries per (page, length, ordering,
+     *                  search, filter-set).
+     *
+     *                  It is NOT 1,341. That figure is COUNT(DISTINCT
+     *                  user_id) over the 1,547 credentials that merely
+     *                  RESOLVE to an employee_master row - the admitted ones
+     *                  AND the 359 refused - so it is a different population,
+     *                  and sizing against it over-provisions by ~13%.
      *
      *     What collapses onto 'own:none' is every account ownedMemberPk()
      *     resolves to null: the 359 the gate refuses PLUS the 13,561 whose
@@ -124,8 +135,7 @@ class MemberDataTable extends DataTable
      *
      *     Size the store for one key per ADMITTED account. The remaining
      *     per-account entries belong to accounts that genuinely see something
-     *     nobody else sees. PR #309 F-049, F-050.
-
+     *     nobody else sees. PR #309 F-049, F-050, F-051.
      *
      * Still deliberately not `auth()->id()`: that would give every
      * administrator a private copy of an identical payload.
