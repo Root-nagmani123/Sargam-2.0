@@ -451,6 +451,11 @@ body.custom-loaded {
     color: #b42318 !important;
 }
 
+.programme-status-badge--draft {
+    background: #fff4e5 !important;
+    color: #b54708 !important;
+}
+
 .programme-action-group {
     gap: 0.75rem;
 }

@@ -1,7 +1,10 @@
 <?php
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\{
-    LocationController
+    LocationController,
+    ExaminationDriveController,
+    ExaminationDriveComponentMapController,
+    ExaminationDriveFacultyMapController
 };
 use App\Http\Controllers\Admin\Master\{
     FacultyTypeMasterController,
@@ -21,6 +24,9 @@ use App\Http\Controllers\Admin\Master\{
     HostelFloorMasterController,
     HostelRoomMasterController,
     MedicalCaseMasterController,
+    ExaminationTypeMasterController,
+    TermMasterController,
+    ComponentMasterController,
 };
 
 Route::prefix('master')->name('master.')->middleware('auth')->group(function () {
@@ -265,6 +271,46 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::delete('/delete/{id}', 'delete')->name('delete');
     });
 
+    // Examination Type Master
+    Route::prefix('examination-type-master')->name('examination.type.')->controller(ExaminationTypeMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('store', 'store')->name('store');
+        Route::delete('/destroy/{id}', 'destroy')->name('destroy');
+    });
 
+    // Term Master
+    Route::prefix('term-master')->name('term.')->controller(TermMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('store', 'store')->name('store');
+        Route::delete('/destroy/{id}', 'destroy')->name('destroy');
+    });
+
+    // Examination Drive
+    Route::prefix('examination-drive')->name('examination.drive.')->controller(ExaminationDriveController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('get-courses-by-status', 'getCoursesByStatus')->name('get.courses.by.status');
+        Route::get('export', 'export')->name('export');
+        Route::post('store', 'store')->name('store');
+        Route::delete('/destroy/{id}', 'destroy')->name('destroy');
+    });
+
+    // Component Master
+    Route::prefix('component-master')->name('component.')->controller(ComponentMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('store', 'store')->name('store');
+        Route::delete('/destroy/{id}', 'destroy')->name('destroy');
+    });
+
+    // Examination Drive Subject & Component Mapping
+    Route::prefix('examination-drive/{driveId}/components')->name('examination.drive.components.')->controller(ExaminationDriveComponentMapController::class)->group(function () {
+        Route::get('/', 'show')->name('show');
+        Route::post('/', 'store')->name('store');
+    });
+
+    // Examination Drive Faculty Mapping
+    Route::prefix('examination-drive/{driveId}/faculty')->name('examination.drive.faculty.')->controller(ExaminationDriveFacultyMapController::class)->group(function () {
+        Route::get('/', 'show')->name('show');
+        Route::post('/', 'store')->name('store');
+    });
 
 });

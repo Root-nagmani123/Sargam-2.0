@@ -37,6 +37,30 @@
                                                 <span class="hide-menu small small-sm-normal text-nowrap">Stream</span>
                                             </a>
                                         </li>
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('master.examination.type.*') ? 'active' : '' }}"
+                                                href="{{ route('master.examination.type.index') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Examination Type Master</span>
+                                            </a>
+                                        </li>
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('master.term.*') ? 'active' : '' }}"
+                                                href="{{ route('master.term.index') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Term Master</span>
+                                            </a>
+                                        </li>
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('master.examination.drive.*') ? 'active' : '' }}"
+                                                href="{{ route('master.examination.drive.index') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Examination Drive</span>
+                                            </a>
+                                        </li>
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('master.component.*') ? 'active' : '' }}"
+                                                href="{{ route('master.component.index') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Component Master</span>
+                                            </a>
+                                        </li>
                                     </ul>
                                 </li>
                             </ul>
