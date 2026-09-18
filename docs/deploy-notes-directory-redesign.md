@@ -28,14 +28,13 @@ leaving them to be discovered from the diff:
 
 ### 0.1 How the grant in (1) is actually performed
 
-"Grant `directory.export` to a role" is a real remedy, but it is **not something
-an administrator can do from a screen**, and that is worth knowing before the
-incident rather than during it. The Roles → Assign permissions matrix offers
-exactly the permission names that `menus` rows carry, and a menu's
-`permission_name` is `Str::slug($name, '_')` — which cannot produce a dot — so
-`directory.export` never appears on it. The permissions CRUD route is commented
-out. The grant is a database action, performed by the **DBA** at the request of
-the **Engineering lead**:
+"Grant `directory.export` to a role" is a real remedy, but **no screen exists
+whose purpose is granting it**, and that is worth knowing before the incident
+rather than during it. The permissions CRUD route is commented out, and the
+Roles → Assign permissions matrix offers exactly the permission names that
+`menus` rows carry — so a permission reaches an administrator only by being on a
+menu. The recommended grant is a database action, performed by the **DBA** at the
+request of the **Engineering lead**:
 
 ```sql
 INSERT INTO permissions (name, guard_name, created_at, updated_at)
@@ -55,6 +54,31 @@ invalidates it only for writes made through its own model. A hand-written row is
 invisible to it, and worse than invisible: the permission check raises on a name
 the cached collection has never seen. That has already bitten this codebase once
 (PR #309 F-025).
+
+**A second route exists, and it is not the recommended one.** An earlier version
+of this section said `directory.export` "never appears" on the roles screen,
+because a menu's `permission_name` is `Str::slug($name, '_')`. That holds for
+`MenuService::store()`, which overwrites the posted `permission_name` with the
+slug. It does **not** hold for `MenuService::update()`, which computes the slug
+into a local, uses it only to rename the `permissions` row, and then saves the
+request data unmodified — so the menu edit form's free-text `permission_name`
+field is written through verbatim, dot and all. The roles screen then offers that
+value as a checkbox, and ticking it creates the permission and grants it.
+Executed against a live database inside a rolled-back transaction, this is what
+the two methods do with the same posted value:
+
+```
+store()   permission_name posted 'ignored_by_store'  → stored 'zz_review_probe_317'
+update()  permission_name posted 'directory.export'  → stored 'directory.export'
+```
+
+Prefer the SQL above anyway. Using the screen means hijacking an unrelated menu's
+`permission_name`, which leaves that menu pointing at a permission name with no
+`permissions` row behind it — measured in the same probe. You would be repairing
+a second menu's gate in the middle of the incident you are already handling. The
+SQL touches nothing but the rows it names. Recorded as PR #317 **F-011**, with
+`MenuService::update()` itself as **L-9**, owner **Engineering lead** — a separate
+change, not part of this release.
 
 If the capability turns out to be wanted often, the durable fix is a slug-shaped
 name (`directory_export`) plus a guarded migration that ships both the

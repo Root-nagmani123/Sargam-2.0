@@ -89,14 +89,13 @@ use Illuminate\Http\Request;
  * gate to work: the lookup is wrapped because Spatie raises rather than
  * returning false when a permission name has never been defined.
  *
- * HOW THE GRANT IS ACTUALLY PERFORMED - written down because "grant a
- * permission" is not, here, a thing an administrator can do from a screen, and
- * a remedy nobody can find during the incident it was written for is not a
- * remedy. The roles screen offers exactly the names carried by menus rows, and
- * a menu's permission_name is Str::slug($name, '_'), which cannot produce a dot
- * - so `directory.export` can never appear on it - and the permissions CRUD
- * route is commented out. The grant is therefore a database action, by the DBA,
- * on request from the Engineering lead:
+ * HOW THE GRANT IS ACTUALLY PERFORMED - written down because there is no screen
+ * whose purpose is granting this, and a remedy nobody can find during the
+ * incident it was written for is not a remedy. The permissions CRUD route is
+ * commented out, and the Roles -> Assign permissions matrix offers exactly the
+ * names carried by menus rows, so a permission reaches an administrator only by
+ * being on a menu. The recommended grant is therefore a database action, by the
+ * DBA, on request from the Engineering lead:
  *
  *     INSERT INTO permissions (name, guard_name, created_at, updated_at)
  *     VALUES ('directory.export', 'web', NOW(), NOW());
@@ -113,10 +112,32 @@ use Illuminate\Http\Request;
  * collection has never seen. That failure has already been observed on this
  * codebase (PR #309 F-025).
  *
+ * THERE IS A SECOND ROUTE, AND IT IS NOT RECOMMENDED. An earlier version of the
+ * paragraph above said a dotted name "can never appear" on the roles screen,
+ * because a menu's permission_name is Str::slug($name, '_'). That is true of
+ * MenuService::store(), which overwrites whatever permission_name is posted with
+ * the slug. It is NOT true of MenuService::update(), which computes the slug into
+ * a local, uses it only to rename the permissions row, and then passes the
+ * request data to $menu->update($data) unmodified - so the menu edit form's
+ * free-text permission_name field is written through verbatim, dot and all. The
+ * roles screen then renders that value as a checkbox and assignPermission()
+ * creates the permission and grants it. Executed against a live database inside a
+ * rolled-back transaction: store() -> 'zz_review_probe_317', update() with
+ * permission_name='directory.export' -> 'directory.export'. Recorded as PR #317
+ * F-011, with MenuService::update() itself as L-9.
+ *
+ * So the screen route exists. Prefer the SQL above anyway, and the reason is not
+ * taste: reaching the roles screen this way means hijacking an unrelated menu's
+ * permission_name, and that leaves the hijacked menu pointing at a permission
+ * name with no permissions row behind it - measured in the same probe. You would
+ * be repairing a second menu's gate during the incident you are already in. The
+ * SQL touches nothing but the rows it names.
+ *
  * If this capability turns out to be wanted often enough to deserve a toggle,
  * the durable shape is: rename the permission to a slug (`directory_export`),
- * because the roles screen can only ever offer slug-shaped names, and ship a
- * guarded migration that adds BOTH the permissions row and the matching menus
+ * because a slug is what the menu screens produce on their own and so is the
+ * only shape that survives a later menu edit, and ship a guarded migration that
+ * adds BOTH the permissions row and the matching menus
  * capability row, flushing Spatie's cache in up() AND down() for the reason
  * given just above. That is a code change with its own review, not a remedy to
  * reach for mid-incident - which is why the SQL above is here.

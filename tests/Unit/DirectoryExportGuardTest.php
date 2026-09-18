@@ -37,6 +37,12 @@ class DirectoryExportGuardTest extends TestCase
     /** What fetchCappedExportRows() hands the capper: EXPORT_ROW_CAP + 1. */
     private const FETCHED_SLICE = 1501;
 
+    /**
+     * Cited classes that live in a package, not in app/, so the Class::method()
+     * check skips them rather than guess a namespace and fail a correct citation.
+     */
+    private const FRAMEWORK_CLASSES = ['Str', 'DB', 'Log', 'Cache', 'Auth', 'Permission', 'Role', 'Excel'];
+
     /** @return mixed */
     private function invokePrivate(string $method, array $args = [])
     {
@@ -949,12 +955,17 @@ class DirectoryExportGuardTest extends TestCase
     /**
      * F-008: "reversible without a deploy" needs a procedure somebody can follow.
      *
-     * The roles screen offers only the names menus rows carry, and a menu's
-     * permission_name is Str::slug($name, '_'), which cannot contain a dot - so
-     * `directory.export` can never appear on it, and the permissions CRUD route
-     * is commented out. The remedy is real but it is a database action, and a
+     * The roles screen offers only the names menus rows carry, and the
+     * permissions CRUD route is commented out, so no screen exists whose purpose
+     * is granting this. The remedy is real but it is a database action, and a
      * release manager reading "grant the permission" during an incident has to
      * find the how somewhere.
+     *
+     * This docblock used to add "a menu's permission_name is Str::slug($name,
+     * '_'), which cannot contain a dot - so `directory.export` can never appear
+     * on it". That is true of MenuService::store() and false of
+     * MenuService::update(); see PR #317 F-011 and the test below that pins the
+     * difference to source.
      */
     public function test_the_grant_procedure_is_written_down(): void
     {
@@ -993,6 +1004,18 @@ class DirectoryExportGuardTest extends TestCase
      * then a snake_case tail), so any that these two documents name is required
      * to resolve against database/migrations. Prose that only DESCRIBES a
      * pattern names no file and is unaffected.
+     *
+     * SCOPE, stated exactly, because an earlier version of this docblock claimed
+     * the wider job of catching "a confident claim about code somewhere else"
+     * and does not do it (PR #317 F-012). This test guarantees ONE thing: a
+     * migration FILENAME named in these two documents resolves under
+     * database/migrations. It is blind to every claim that names no migration.
+     * Measured against the defect it was written for: at eaa87d1c5 the
+     * middleware's citation returned one hit and the deploy note's equally false
+     * "as the member module now does" returned none, so this check would have
+     * caught half of F-010 and none of F-011. The two tests below cover the
+     * other resolvable forms - Class::method() citations, and the specific
+     * behavioural claim these documents rest on.
      */
     public function test_every_migration_named_in_the_export_docs_exists(): void
     {
@@ -1024,6 +1047,149 @@ class DirectoryExportGuardTest extends TestCase
                     . 'naming a file (PR #317 F-010).'
                 );
             }
+        }
+    }
+
+    /**
+     * F-012: a Class::method() the export docs cite must resolve to real code.
+
+     * The migration check above recognises one syntactic form. This is the next
+     * one these two documents actually use: they explain themselves by pointing
+     * at application methods - MenuService::store(), MenuService::update() - and
+     * a citation of a method that has been renamed or never existed reads
+     * exactly like one that has not.
+     *
+     * Only classes under app/ are resolved. A cited framework class is skipped
+     * by name through FRAMEWORK_CLASSES, because resolving those means guessing
+     * a namespace, and a wrong guess would fail the build over a correct
+     * citation. Adding to that list is a deliberate act, which is the point.
+     */
+    public function test_every_class_method_named_in_the_export_docs_resolves(): void
+    {
+        $sources = [
+            'the middleware' => file_get_contents(app_path('Http/Middleware/EnsureDirectoryExportAccess.php')),
+            'the deploy notes' => file_get_contents(base_path('docs/deploy-notes-directory-redesign.md')),
+        ];
+
+        $pattern = '/\b([A-Z][A-Za-z0-9_]+)::([a-z][A-Za-z0-9_]*)\(\)/';
+
+        // Prove the detector fires before trusting it to find nothing.
+        $this->assertSame(
+            1,
+            preg_match($pattern, 'It is NOT true of MenuService::update(), which'),
+            'the Class::method() detector no longer matches a known citation'
+        );
+
+        $classFiles = [];
+        $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(app_path()));
+        foreach ($files as $file) {
+            if ($file->isFile() && $file->getExtension() === 'php') {
+                $classFiles[$file->getBasename('.php')] = $file->getPathname();
+            }
+        }
+
+        foreach ($sources as $label => $source) {
+            preg_match_all($pattern, $source, $hits, PREG_SET_ORDER);
+
+            foreach ($hits as $hit) {
+                [$citation, $class, $method] = $hit;
+
+                if (in_array($class, self::FRAMEWORK_CLASSES, true)) {
+                    continue;
+                }
+
+                $this->assertArrayHasKey(
+                    $class,
+                    $classFiles,
+                    "{$label} cites {$citation}, but no {$class}.php exists under app/. Either fix the "
+                    . 'citation, or add the class to FRAMEWORK_CLASSES if it belongs to a package (PR #317 F-012).'
+                );
+
+                $this->assertMatchesRegularExpression(
+                    '/function\s+' . preg_quote($method, '/') . '\s*\(/',
+                    file_get_contents($classFiles[$class]),
+                    "{$label} cites {$citation}, but {$class} has no {$method}() method (PR #317 F-012)."
+                );
+            }
+        }
+    }
+
+    /**
+     * F-011: the grant runbook rests on one behavioural claim. Pin it to source.
+
+     * Both documents tell an operator that granting `directory.export` is a DBA
+     * database action and say why the screen route is the worse of the two. That
+     * advice is only honest while MenuService keeps behaving the way they
+     * describe: store() overwrites the posted permission_name with the slug, and
+     * update() does not - it writes the posted value through verbatim, which is
+     * how a dotted name reaches a menus row and then the roles screen at all.
+     *
+     * An earlier version of the same paragraph said the dotted name "can never
+     * appear", which was store()'s behaviour mistaken for the module's. Three
+     * reviews read the sentence and agreed with it, so the guard here is not a
+     * closer reading - it is the assertion.
+     *
+     * WHEN L-9 IS FIXED, THIS TEST GOES RED, AND THAT IS ITS OTHER JOB. Making
+     * update() assign the slug is the right change; it just has to arrive
+     * together with a correction to both documents, because at that moment the
+     * "second route" paragraph they carry stops being true.
+     */
+    public function test_the_documents_describe_menuservice_as_it_actually_behaves(): void
+    {
+        $service = file_get_contents(app_path('Services/SidebarMenu/MenuService.php'));
+
+        $body = function (string $signature) use ($service): string {
+            $start = strpos($service, $signature);
+            $this->assertNotFalse($start, "MenuService no longer declares {$signature}");
+            $rest = substr($service, $start + strlen($signature));
+            $end = strpos($rest, 'public function ');
+
+            return $end === false ? $rest : substr($rest, 0, $end);
+        };
+
+        $this->assertStringContainsString(
+            "\$data['permission_name'] = \$permission",
+            $body('public function store(array $data)'),
+            'MenuService::store() no longer forces the slug, so the documents describing it are now wrong'
+        );
+
+        $this->assertStringNotContainsString(
+            "\$data['permission_name'] =",
+            $body('public function update($id, array $data)'),
+            'MenuService::update() now assigns permission_name - L-9 is fixed. Correct the "second route" '
+            . 'paragraph in EnsureDirectoryExportAccess and in docs/deploy-notes-directory-redesign.md '
+            . 'section 0.1 in the same change, then delete this assertion (PR #317 F-011).'
+        );
+
+        foreach ([
+            'the middleware' => file_get_contents(app_path('Http/Middleware/EnsureDirectoryExportAccess.php')),
+            'the deploy notes' => file_get_contents(base_path('docs/deploy-notes-directory-redesign.md')),
+        ] as $label => $source) {
+            // The impossibility may still be QUOTED - explaining what an earlier
+            // version got wrong is how these documents carry their own history.
+            // It may not be asserted. Every occurrence must sit within reach of
+            // a marker saying it is a former claim.
+            foreach (['can never appear', 'never appears'] as $phrase) {
+                $offset = 0;
+
+                while (($at = strpos($source, $phrase, $offset)) !== false) {
+                    $preceding = substr($source, max(0, $at - 400), min(400, $at));
+
+                    $this->assertMatchesRegularExpression(
+                        '/earlier version|used to|wrongly said/i',
+                        $preceding,
+                        "{$label} states \"{$phrase}\" as fact. MenuService::update() does not honour it, so "
+                        . 'it may only appear marked as a claim an earlier version got wrong (PR #317 F-011).'
+                    );
+
+                    $offset = $at + strlen($phrase);
+                }
+            }
+            $this->assertStringContainsString(
+                'MenuService::update()',
+                $source,
+                "{$label} recommends the SQL grant without naming what makes the screen route possible"
+            );
         }
     }
 
