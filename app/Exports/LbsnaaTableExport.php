@@ -44,7 +44,20 @@ class LbsnaaTableExport implements FromCollection, WithHeadings, WithStyles, Wit
         protected string $filterLine = '',
         /** @var list<int> 0-based column indexes to centre (S.No, dates, counts …) */
         protected array $centreColumns = [],
-        protected ?string $sheetTitle = null
+        protected ?string $sheetTitle = null,
+        /**
+         * 0-based row indexes rendered as a section band — a grouping heading
+         * inside the table, such as a house name. Merged across the sheet.
+         *
+         * @var list<int>
+         */
+        protected array $sectionRows = [],
+        /**
+         * 0-based row indexes rendered as a subtotal / total line.
+         *
+         * @var list<int>
+         */
+        protected array $totalRows = []
     ) {
     }
 
@@ -105,6 +118,34 @@ class LbsnaaTableExport implements FromCollection, WithHeadings, WithStyles, Wit
                 $col = Coordinate::stringFromColumnIndex((int) $index + 1);
                 $sheet->getStyle("{$col}{$firstDataRow}:{$col}{$lastRow}")
                     ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            }
+
+            // Grouping bands: merged across the sheet and filled, so a house (or
+            // whatever the caller is grouping by) reads as a heading rather than
+            // as a data row with four blank cells after it.
+            foreach ($this->sectionRows as $offset) {
+                $r = $firstDataRow + (int) $offset;
+                if ($r > $lastRow) {
+                    continue;
+                }
+                $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
+                $sheet->getStyle("A{$r}:{$lastCol}{$r}")->applyFromArray([
+                    'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'FFFFFF']],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '003366']],
+                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER],
+                ]);
+                $sheet->getRowDimension($r)->setRowHeight(20);
+            }
+
+            foreach ($this->totalRows as $offset) {
+                $r = $firstDataRow + (int) $offset;
+                if ($r > $lastRow) {
+                    continue;
+                }
+                $sheet->getStyle("A{$r}:{$lastCol}{$r}")->applyFromArray([
+                    'font' => ['bold' => true, 'color' => ['rgb' => '003366']],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EEF3FA']],
+                ]);
             }
         }
 

@@ -11,6 +11,9 @@
     $filterLine = $filterLine ?? '';
     $printedOn = $printedOn ?? now()->format('d-m-Y H:i');
     $centreColumns = $centreColumns ?? [];
+    // 0-based row indexes to render as a grouping band / as a total line.
+    $sectionRows = $sectionRows ?? [];
+    $totalRows = $totalRows ?? [];
 
     $columnCount = max(1, count($headings));
 
@@ -165,6 +168,22 @@
         table.data-table td.is-centre { text-align: center; word-break: normal; }
         table.data-table tr { page-break-inside: avoid; }
 
+        /* Grouping band inside the table (a house name, say) and a total line —
+           the same two treatments the on-screen listing uses, so a download
+           reads like the page it came from. */
+        table.data-table tr.is-section td {
+            background: #003366 !important;
+            color: #fff;
+            font-weight: bold;
+            font-size: {{ $headFont }}pt;
+            text-align: left;
+        }
+        table.data-table tr.is-total td {
+            background: #eef3fa !important;
+            color: #003366;
+            font-weight: bold;
+        }
+
         .empty { text-align: center; padding: 16px; color: #667085; font-style: italic; }
 
         .pdf-foot {
@@ -217,11 +236,21 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($rows as $row)
-                    <tr>
-                        @foreach(array_values((array) $row) as $i => $cell)
-                            <td class="{{ in_array($i, $centreColumns, true) ? 'is-centre' : '' }}">{{ $cell }}</td>
-                        @endforeach
+                @foreach($rows as $rowIndex => $row)
+                    @php
+                        $isSection = in_array($rowIndex, $sectionRows, true);
+                        $isTotal = in_array($rowIndex, $totalRows, true);
+                        $cells = array_values((array) $row);
+                    @endphp
+                    <tr class="{{ $isSection ? 'is-section' : ($isTotal ? 'is-total' : '') }}">
+                        @if($isSection)
+                            {{-- A band spans the table; its text lives in the first cell. --}}
+                            <td colspan="{{ $columnCount }}">{{ $cells[0] ?? '' }}</td>
+                        @else
+                            @foreach($cells as $i => $cell)
+                                <td class="{{ in_array($i, $centreColumns, true) ? 'is-centre' : '' }}">{{ $cell }}</td>
+                            @endforeach
+                        @endif
                     </tr>
                 @endforeach
             </tbody>

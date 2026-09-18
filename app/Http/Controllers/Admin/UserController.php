@@ -993,22 +993,44 @@ class UserController extends Controller
             ? 'Course: ' . (CourseMaster::where('pk', $courseFilter)->value('course_name') ?: $courseFilter)
             : '';
 
-        $headings = ['House', 'Student Name', 'OT Code', 'Discipline Category', 'Marks'];
-        $centreColumns = [2, 4];
+        // Same columns and same row order as the page, so a download reads like
+        // the screen it came from: a band per house, one row per deduction, the
+        // trainee's own subtotal where several were added up, then Final Marks.
+        $headings = ['S. No.', 'Student Name', 'OT Code', 'Discipline Category', 'Marks'];
+        $centreColumns = [0, 2, 4];
+        $today = now()->format('d M Y');
 
         $data = collect();
+        $sectionRows = [];
+        $totalRows = [];
+
         foreach ($houses as $house) {
-            foreach ($house['members'] as $member) {
+            $sectionRows[] = $data->count();
+            $data->push([
+                $house['house'] . '  —  ' . $today
+                    . '   (' . $house['student_count'] . ' OT' . ($house['student_count'] == 1 ? '' : 's')
+                    . ', Total Marks Deducted: ' . ($house['total'] + 0) . ')',
+                '', '', '', '',
+            ]);
+
+            foreach ($house['members'] as $index => $member) {
                 foreach ($member['rows'] as $i => $row) {
                     $data->push([
-                        $i === 0 ? $house['house'] : '',
+                        $i === 0 ? $index + 1 : '',
                         $i === 0 ? $member['name'] : '',
                         $i === 0 ? $member['ot_code'] : '',
                         trim($row['category'] . (empty($row['severity']) ? '' : ' (' . $row['severity'] . ')')),
                         $row['marks'] + 0,
                     ]);
                 }
+
+                if ($member['rows']->count() > 1) {
+                    $totalRows[] = $data->count();
+                    $data->push(['', '', '', $member['name'] . ' — Total Marks', $member['total'] + 0]);
+                }
             }
+
+            $totalRows[] = $data->count();
             $data->push(['', '', '', 'Final Marks — ' . $house['house'], $house['total'] + 0]);
         }
 
@@ -1025,11 +1047,13 @@ class UserController extends Controller
                 'reportTitle' => $title,
                 'filterLine' => $filterLine,
                 'centreColumns' => $centreColumns,
+                'sectionRows' => $sectionRows,
+                'totalRows' => $totalRows,
             ])->setPaper('a4', 'portrait')->download($baseName . '.pdf');
         }
 
         return Excel::download(
-            new LbsnaaTableExport($data, $headings, $title, $filterLine, $centreColumns),
+            new LbsnaaTableExport($data, $headings, $title, $filterLine, $centreColumns, null, $sectionRows, $totalRows),
             $baseName . '.xlsx'
         );
     }

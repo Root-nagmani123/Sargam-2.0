@@ -27,16 +27,21 @@
     color: #fff;
 }
 
+/* Explicit white, not inherited: the admin theme sets a dark colour on h1-h6,
+   which wins over the band's colour and left the house name near-invisible
+   against the navy. */
 .hwp-house-name {
     font-size: 1.05rem;
     font-weight: 700;
     margin: 0;
     letter-spacing: .01em;
+    color: #ffffff !important;
 }
 
 .hwp-house-date {
     font-size: .8125rem;
-    opacity: .85;
+    color: #ffffff;
+    opacity: .9;
 }
 
 .hwp-house-meta { margin-left: auto; display: flex; gap: .5rem; flex-wrap: wrap; }
@@ -92,9 +97,13 @@
 }
 .hwp-severity--major { background: #fee2e2; color: #991b1b; }
 
-.hwp-student-total {
+/* A trainee's own subtotal — tinted so it reads as a break between OTs, but
+   kept lighter than the house's Final Marks row so the two are not confused. */
+.hwp-student-total td {
+    background: #eef3fa;
     font-weight: 700;
     color: var(--hwp-navy);
+    border-top: 1px solid #c7d6ea !important;
 }
 
 .hwp-final {
@@ -116,7 +125,9 @@
     .hwp-noprint, .app-sidebar, .app-header, nav, .breadcrumb { display: none !important; }
     .hwp-house { page-break-inside: avoid; border-color: #999; }
     .hwp-house-head { background: #003366 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .hwp-house-name, .hwp-house-date, .hwp-chip { color: #fff !important; }
     .hwp-final { background: #f0f4fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .hwp-student-total td { background: #eef3fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 </style>
 
@@ -214,10 +225,10 @@
                                     {{-- A trainee's own total, where more than one
                                          deduction had to be added up to reach it. --}}
                                     @if($member['rows']->count() > 1)
-                                        <tr>
+                                        <tr class="hwp-student-total">
                                             <td class="hwp-col-no"></td>
-                                            <td colspan="3" class="text-end hwp-student-total">{{ $member['name'] }} — total</td>
-                                            <td class="hwp-col-marks hwp-student-total">{{ $member['total'] + 0 }}</td>
+                                            <td colspan="3" class="text-end">{{ $member['name'] }} — Total Marks</td>
+                                            <td class="hwp-col-marks">{{ $member['total'] + 0 }}</td>
                                         </tr>
                                     @endif
                             @endforeach
