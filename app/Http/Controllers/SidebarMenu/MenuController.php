@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use App\Http\Requests\SidebarMenu\MenuRequest;
 use App\Services\SidebarMenu\MenuService;
 use App\Services\SidebarMenu\MenuGroupService;
+use App\Http\Middleware\EnsureRoleAdministration;
 
 class MenuController extends Controller
 {
@@ -22,6 +23,10 @@ class MenuController extends Controller
 
     public function __construct(MenuService $menuService, MenuGroupService $groupService)
     {
+        // A menus row's permission_name is what the Roles matrix offers, so
+        // editing menus is part of the same administration surface. PR #317 L-9.
+        $this->middleware(EnsureRoleAdministration::class);
+
         $this->menuService = $menuService;
         $this->groupService = $groupService;
     }
