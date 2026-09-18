@@ -79,21 +79,25 @@ use App\Http\Controllers\SidebarMenu\{
     SidebarCategoryController,MenuGroupController,MenuController
 };
 
-Route::get('assign-role', function () {
-    $user = User::find(2);
-    $permissions = $user->getAllPermissions();
-    foreach ($permissions as $permission) {
-        echo $permission->name . "<br>";
+// Removed: two unauthenticated debug routes that sat outside the auth group and
+// disclosed application internals to anybody who knew the path (PR #317 L-1, L-2).
+//
+//   GET assign-role  echoed every permission of the hard-coded User::find(2)
+//   GET test-menus   dd()'d the resolved sidebar menu tree
+//
+// Neither was referenced anywhere: no route('admin.assign-role') call and no link
+// to either path exists in app/, resources/ or public/. Deleted rather than gated,
+// because neither has a caller to keep working.
+
+// Gated, not deleted: this one is plausibly in operational use from a browser on a
+// host with no shell, so it keeps working for the people who have it bookmarked -
+// it just stops being runnable by anyone who finds the path. Same shape as
+// migration-status below, which was already guarded this way.
+Route::middleware(['auth'])->get('clear-cache', function () {
+    if (! hasRole('Super Admin')) {
+        abort(403);
     }
-})->name('admin.assign-role');
 
-Route::get('test-menus', function () {
-    
-    $menus = app()->make(\App\Services\SidebarMenu\MenuService::class)->getMenus();
-    dd($menus);
-});
-
-Route::get('clear-cache', function () {
     Artisan::call('cache:clear');
     Artisan::call('config:clear');
     Artisan::call('view:clear');
