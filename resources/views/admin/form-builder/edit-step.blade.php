@@ -536,7 +536,7 @@
                         @endforeach
                     </select>
                 </div>
-                @include('admin.form-builder._field-form', ['prefix' => 'gf', 'field' => null, 'showTargetTable' => false])
+                @include('admin.form-builder._field-form', ['prefix' => 'gf', 'field' => null, 'showTargetTable' => false, 'showConditional' => true])
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -1011,6 +1011,31 @@ function fcShowModalFrom(sourceId, targetId) {
     }
 }
 
+// Conditional display: the "Depends on field" dropdown lists the OTHER fields of the
+// selected section, so an admin picks a real field_name instead of typing one.
+const FC_GROUP_FIELD_NAMES = @json($step->fieldGroups->mapWithKeys(fn ($g) => [
+    (string) $g->id => $g->groupFields->map(fn ($f) => ['name' => $f->field_name, 'label' => $f->label])->values(),
+]));
+
+function fcPopulateConditionFields(form, groupId, selectedName, selfFieldName) {
+    const select = form.querySelector('.fc-condition-field-select');
+    if (!select) return;
+    const fields = FC_GROUP_FIELD_NAMES[String(groupId)] || [];
+    select.innerHTML = '';
+    const none = document.createElement('option');
+    none.value = '';
+    none.textContent = 'Always show';
+    select.appendChild(none);
+    fields.forEach(function (f) {
+        if (selfFieldName && f.name === selfFieldName) return;   // a field cannot depend on itself
+        const opt = document.createElement('option');
+        opt.value = f.name;
+        opt.textContent = f.label + ' (' + f.name + ')';
+        select.appendChild(opt);
+    });
+    select.value = selectedName || '';
+}
+
 function openAddGroupFieldModal(groupId) {
     const form = document.getElementById('groupFieldForm');
     const groupSelect = document.getElementById('gfGroupSelect');
@@ -1032,6 +1057,7 @@ function openAddGroupFieldModal(groupId) {
         var typeEl = form.querySelector('[name="field_type"]');
         if (typeEl) typeEl.value = 'text';
         setFcChoiceSource(form, 'fixed');
+        fcPopulateConditionFields(form, '', '', '');
         const isActiveEl = form.querySelector('[name="is_active"]');
         if (isActiveEl) isActiveEl.checked = true;
         toggleFcFieldFormSections(form);
@@ -1054,6 +1080,7 @@ function openAddGroupFieldModal(groupId) {
     var typeEl = form.querySelector('[name="field_type"]');
     if (typeEl) typeEl.value = 'text';
     setFcChoiceSource(form, 'fixed');
+    fcPopulateConditionFields(form, selectedGroupId, '', '');
     const isActiveEl = form.querySelector('[name="is_active"]');
     if (isActiveEl) isActiveEl.checked = true;
     toggleFcFieldFormSections(form);
@@ -1117,6 +1144,7 @@ function editGroupField(field) {
     syncOptionsListFromJson(form, field.options_json || '');
     setFcChoiceSource(form, (field.lookup_table && String(field.lookup_table).trim()) ? 'lookup' : 'fixed');
     syncTargetColumnFromFieldName(form);
+    fcPopulateConditionFields(form, field.group_id, field.condition_field, field.field_name);
     form.querySelector('[name="is_required"]').checked = !!field.is_required;
     const isActiveEl = form.querySelector('[name="is_active"]');
     if (isActiveEl) isActiveEl.checked = field.is_active !== false && field.is_active !== 0;
@@ -1169,6 +1197,15 @@ document.querySelectorAll('.btn-edit-group').forEach(function(btn) {
         }
     });
 });
+
+var gfGroupSelectEl = document.getElementById('gfGroupSelect');
+if (gfGroupSelectEl) {
+    gfGroupSelectEl.addEventListener('change', function () {
+        const form = document.getElementById('groupFieldForm');
+        const current = form.querySelector('.fc-condition-field-select');
+        fcPopulateConditionFields(form, this.value, current ? current.value : '', form.querySelector('[name="field_name"]').value);
+    });
+}
 
 var groupFieldForm = document.getElementById('groupFieldForm');
 if (groupFieldForm) {
