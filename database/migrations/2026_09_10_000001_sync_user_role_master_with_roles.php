@@ -1,7 +1,9 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Ensures every role in `roles` (Spatie — managed via Role & Permission >
@@ -11,9 +13,9 @@ use Illuminate\Support\Facades\DB;
  * on a manual data fix being re-run by hand on every environment.
  *
  * IMPORTANT — this only mirrors *names* between the two tables; it does not
- * make Member wizard role selection grant Spatie RBAC (they remain two
- * separate systems — see PR #319 review F-007, still an open product
- * decision as of this migration).
+ * make Member wizard role selection grant Spatie RBAC by itself (see
+ * MemberController::syncSpatieRolesFromWizardSelection() — PR #319 review
+ * F-007/F-018/F-019, which gate and scope that separately).
  *
  * Names are compared after lowercasing, trimming, and collapsing runs of
  * space/hyphen/underscore to a single space, so e.g. "Super Admin" and
@@ -26,9 +28,42 @@ use Illuminate\Support\Facades\DB;
  * something already present, since which of possibly several existing rows
  * was "meant" to be that role isn't safe to guess unsupervised on an
  * environment this migration hasn't been eyeballed against.
+ *
+ * PR #319 review round 2 (F-006 follow-up): the review flagged "Student-OT"
+ * beside "Officer Trainee", and "Internal Faculty"/"Guest Faculty" beside
+ * "Faculty", as looking like semantic near-duplicates this migration should
+ * collapse. Checked against how those names are actually used elsewhere in
+ * this codebase before concluding otherwise:
+ *   - "Student-OT" is never assigned as a Spatie role anywhere (grepped) — it
+ *     is injected into the session only, at login (LoginController,
+ *     Authenticate middleware), per the hasRole() helper's own docblock. It
+ *     is a session-only pseudo-role, unrelated in kind to the real Spatie
+ *     "Officer Trainee" role it superficially resembles.
+ *   - "Internal Faculty" and "Guest Faculty" are each checked via hasRole()
+ *     well over a dozen times across AttendanceController/CalendarController/
+ *     etc., including places that branch on them *separately* from a plain
+ *     hasRole('Faculty') check in the same method (e.g.
+ *     CalendarController.php around lines 2490, 2536 and 2565) — they are
+ *     relied on as distinct categories, not aliases of "Faculty".
+ * Merging any of these would silently change existing authorization behavior
+ * elsewhere in the app, which this migration must not do. Left as separate
+ * rows deliberately, not as an unresolved gap.
+ *
+ * PR #319 review round 2 (F-020): down() used to identify "rows this
+ * migration could have added" by re-deriving the same test up() uses to
+ * decide whether to insert (exact name match + not currently in use) —
+ * which isn't the same question. A row that already had that exact name
+ * *before* up() ever ran (and so was skipped, not inserted) passes that same
+ * test and got deleted anyway; an executed migrate/migrate:rollback cycle
+ * showed exactly this happening to a pre-existing row ("HAC Person"). up()
+ * now records the exact pk of every row it inserts in a small tracking
+ * table, and down() deletes only those recorded pks — never a row it can't
+ * prove it created itself, no matter how closely that row's name matches.
  */
 return new class extends Migration
 {
+    private const LOG_TABLE = 'pr319_role_sync_log';
+
     private function normalize(string $name): string
     {
         $name = mb_strtolower(trim($name));
@@ -50,7 +85,7 @@ return new class extends Migration
             ->flip();
 
         $now = now();
-        $rowsToInsert = [];
+        $insertedPks = [];
 
         foreach ($roleNames as $roleName) {
             $key = $this->normalize($roleName);
@@ -59,52 +94,54 @@ return new class extends Migration
                 continue;
             }
 
-            $rowsToInsert[] = [
+            // insertGetId (rather than a single bulk insert()) so the exact pk
+            // Just-inserted can be recorded below — the only reliable way to tell
+            // this row apart later from a pre-existing row with the same name.
+            $insertedPks[] = DB::table('user_role_master')->insertGetId([
                 'user_role_name' => $roleName,
                 'user_role_display_name' => $roleName,
                 'active_inactive' => 1,
                 'created_date' => $now,
                 'updated_date' => $now,
-            ];
+            ]);
 
             // Guard against the same role appearing twice in `roles` itself.
             $existingActiveNames[$key] = true;
         }
 
-        if (!empty($rowsToInsert)) {
-            DB::table('user_role_master')->insert($rowsToInsert);
+        if (!empty($insertedPks)) {
+            if (!Schema::hasTable(self::LOG_TABLE)) {
+                Schema::create(self::LOG_TABLE, function (Blueprint $table) {
+                    $table->unsignedBigInteger('user_role_master_pk')->primary();
+                });
+            }
+
+            DB::table(self::LOG_TABLE)->insert(
+                array_map(fn ($pk) => ['user_role_master_pk' => $pk], $insertedPks)
+            );
         }
     }
 
     public function down(): void
     {
-        // Best-effort reversal: remove only rows this migration could have
-        // added — an exact display-name match against a role that still
-        // exists in `roles` (this migration always inserts the exact
-        // `roles.name` value, never a normalized form, so an exact match is
-        // the correct test here even though up() uses normalized matching
-        // to decide *whether* to insert) — and only if the row isn't
-        // currently assigned to any member. A row that's in use, or that no
-        // longer matches an existing role, is left in place rather than
-        // guessed at.
-        $roleNames = DB::table('roles')->pluck('name');
-
-        if ($roleNames->isEmpty()) {
+        if (!Schema::hasTable(self::LOG_TABLE)) {
+            // No record of what (if anything) a prior up() inserted — nothing can be
+            // safely reversed, so do nothing rather than guess by name.
             return;
         }
 
-        $candidates = DB::table('user_role_master')
-            ->whereIn('user_role_display_name', $roleNames)
-            ->get(['pk']);
+        $trackedPks = DB::table(self::LOG_TABLE)->pluck('user_role_master_pk');
 
-        foreach ($candidates as $row) {
+        foreach ($trackedPks as $pk) {
             $inUse = DB::table('employee_role_mapping')
-                ->where('user_role_master_pk', $row->pk)
+                ->where('user_role_master_pk', $pk)
                 ->exists();
 
-            if (! $inUse) {
-                DB::table('user_role_master')->where('pk', $row->pk)->delete();
+            if (!$inUse) {
+                DB::table('user_role_master')->where('pk', $pk)->delete();
             }
         }
+
+        Schema::dropIfExists(self::LOG_TABLE);
     }
 };

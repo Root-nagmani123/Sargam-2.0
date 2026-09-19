@@ -201,6 +201,22 @@ class MemberController extends Controller
     }
 
     /**
+     * PR #319 review round 2 (F-018): granting real Spatie roles from this
+     * screen must be restricted to actors who could already grant roles via
+     * Role & Permission > Users (UserController::assignRoleSave() — gated the
+     * same way this codebase gates every other admin-only action, since there
+     * is no `permission:`/`role:` middleware or policy layer in use anywhere
+     * in this app to hook into instead). Every member/* and
+     * admin/setup/member/* route carries only the generic `auth` middleware,
+     * so without this check any authenticated member could grant themselves
+     * roles like "Super Admin" simply by ticking them on their own edit form.
+     */
+    private function actingUserCanManageRbacRoles(): bool
+    {
+        return hasRole('Super Admin') || hasRole('Admin') || hasRole('SuperAdmin') || hasRole('Super-Admin');
+    }
+
+    /**
      * Step 3 ("Role Assignment")'s checkboxes are drawn from user_role_master
      * (UserRoleMaster::getUserRoleList()), which is a mix of real Spatie roles
      * (kept in sync with the `roles` table — see
@@ -216,18 +232,48 @@ class MemberController extends Controller
      * UserController::assignRoleSave() already uses for the dedicated
      * Role & Permission > Users screen.
      *
-     * Deliberately does NOT do a blind syncRoles($selected) with only what
-     * was selected here: any Spatie role the member already has that ISN'T
-     * one of the options this screen offers (e.g. assigned via that other
-     * Users screen) is preserved untouched. This screen only ever controls
-     * the roles it actually shows a checkbox for.
+     * PR #319 review round 2 (F-019): the sync migration now mirrors almost
+     * every real role into user_role_master, so "preserve whatever this
+     * screen doesn't offer" (the v2 approach) preserves almost nothing —
+     * saving a member with only "Doctor" ticked silently stripped every other
+     * Spatie role the member held, including ones granted via the Users
+     * screen. Instead of deriving "preserve" from the *offered* set, this
+     * derives "revoke" from what THIS WIZARD itself previously granted for
+     * this member — read from employee_role_mapping, which only ever holds
+     * rows this screen wrote — via $previouslySelectedUserRoleMasterPks. A
+     * role is only ever removed here if the wizard granted it last time and
+     * it's unchecked now; a role assigned any other way is never touched,
+     * regardless of how many roles this screen happens to offer a checkbox
+     * for.
      */
-    private function syncSpatieRolesFromWizardSelection(int $userCredentialPk, array $selectedUserRoleMasterPks): void
-    {
-        $offeredRoleNames = UserRoleMaster::getUserRoleList()->values()->all();
-        $spatieRoleNamesOffered = Role::whereIn('name', $offeredRoleNames)->pluck('name')->all();
+    private function syncSpatieRolesFromWizardSelection(
+        int $userCredentialPk,
+        array $selectedUserRoleMasterPks,
+        array $previouslySelectedUserRoleMasterPks = []
+    ): void {
+        if (! $this->actingUserCanManageRbacRoles()) {
+            return;
+        }
 
-        if (empty($spatieRoleNamesOffered)) {
+        $spatieRoleNames = Role::pluck('name')->all();
+
+        if (empty($spatieRoleNames)) {
+            return;
+        }
+
+        $newNames = UserRoleMaster::whereIn('pk', $selectedUserRoleMasterPks)
+            ->pluck('user_role_display_name')
+            ->all();
+        $oldNames = empty($previouslySelectedUserRoleMasterPks)
+            ? []
+            : UserRoleMaster::whereIn('pk', $previouslySelectedUserRoleMasterPks)
+                ->pluck('user_role_display_name')
+                ->all();
+
+        $newSpatieRoles = array_values(array_intersect($spatieRoleNames, $newNames));
+        $oldSpatieRoles = array_values(array_intersect($spatieRoleNames, $oldNames));
+
+        if (empty($newSpatieRoles) && empty($oldSpatieRoles)) {
             return;
         }
 
@@ -237,17 +283,18 @@ class MemberController extends Controller
             return;
         }
 
-        $selectedNames = UserRoleMaster::whereIn('pk', $selectedUserRoleMasterPks)
-            ->pluck('user_role_display_name')
-            ->all();
+        $currentRoleNames = $user->getRoleNames()->all();
 
-        $selectedSpatieRoleNames = array_values(array_intersect($spatieRoleNamesOffered, $selectedNames));
+        // Only unchecking a role this same screen previously granted removes it.
+        $toRemove = array_diff($oldSpatieRoles, $newSpatieRoles);
+        $toAdd = array_diff($newSpatieRoles, $currentRoleNames);
 
-        $currentUnrelatedRoleNames = $user->getRoleNames()
-            ->reject(fn ($name) => in_array($name, $spatieRoleNamesOffered, true))
-            ->all();
+        $finalRoleNames = array_values(array_unique(array_merge(
+            array_diff($currentRoleNames, $toRemove),
+            $toAdd
+        )));
 
-        $user->syncRoles(array_merge($currentUnrelatedRoleNames, $selectedSpatieRoleNames));
+        $user->syncRoles($finalRoleNames);
 
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
     }
@@ -354,43 +401,64 @@ class MemberController extends Controller
         // are four tables written together for one member — wrapped in a transaction so a
         // failure partway through (e.g. Step 6 hitting a bad value) rolls back the whole
         // thing instead of leaving a member with no login credential and no roles.
-        DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload) {
-            $employee = EmployeeMaster::create(array_merge(
-                $this->mapStep1Data($request),
-                $this->mapStep2Data($request),
-                $this->mapStep4Data($request),
-                $this->mapStep5Data($request, $profile_picture, $additional_doc_upload)
-            ));
+        try {
+            DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload) {
+                $employee = EmployeeMaster::create(array_merge(
+                    $this->mapStep1Data($request),
+                    $this->mapStep2Data($request),
+                    $this->mapStep4Data($request),
+                    $this->mapStep5Data($request, $profile_picture, $additional_doc_upload)
+                ));
 
-            $this->saveStep6PayrollData($employee->pk, $request);
+                $this->saveStep6PayrollData($employee->pk, $request);
 
-            $userCredential = UserCredential::create([
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
-                'email_id' => $request->personalemail,
-                'mobile_no' => $request->mnumber,
-                'reg_date' => now(),
-                'user_id' => $employee->pk,
-                'user_name' => $request->userid,
-                'user_category' => 'E'
-            ]);
+                $userCredential = UserCredential::create([
+                    'first_name' => $request->first_name,
+                    'last_name' => $request->last_name,
+                    'email_id' => $request->personalemail,
+                    'mobile_no' => $request->mnumber,
+                    'reg_date' => now(),
+                    'user_id' => $employee->pk,
+                    'user_name' => $request->userid,
+                    'user_category' => 'E'
+                ]);
 
-            if ($userCredential) {
-                $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
-                foreach ($roles as $role) {
-                    EmployeeRoleMapping::create([
-                        'user_credentials_pk' => $userCredential->pk,
-                        'user_role_master_pk' => $role,
-                    ]);
+                if ($userCredential) {
+                    $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
+                    foreach ($roles as $role) {
+                        EmployeeRoleMapping::create([
+                            'user_credentials_pk' => $userCredential->pk,
+                            'user_role_master_pk' => $role,
+                        ]);
+                    }
+
+                    $this->syncSpatieRolesFromWizardSelection($userCredential->pk, $roles);
                 }
-
-                $this->syncSpatieRolesFromWizardSelection($userCredential->pk, $roles);
-            }
-        });
+            });
+        } catch (\Throwable $e) {
+            // The upload happens before the transaction opens (the file has to exist on
+            // disk before its path can be written to employee_master), so a rollback here
+            // doesn't clean it up on its own — do it here instead (PR #319 review, F-024).
+            $this->deleteUploadedMemberFiles($profile_picture, $additional_doc_upload);
+            throw $e;
+        }
 
         MemberDataTable::bumpListingCacheEpoch();
 
         return response()->json(['message' => 'Member successfully created']);
+    }
+
+    /**
+     * Best-effort cleanup for files already written to the `public` disk before a
+     * store()/update() transaction that ended up failing (PR #319 review, F-024).
+     */
+    private function deleteUploadedMemberFiles(?string $profilePicture, ?string $additionalDocument): void
+    {
+        foreach ([$profilePicture, $additionalDocument] as $path) {
+            if ($path) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($path);
+            }
+        }
     }
 
     public function update(Request $request) {
@@ -415,7 +483,8 @@ class MemberController extends Controller
 
         // Same reasoning as store(): one transaction across employee_master,
         // payroll_salary_master, user_credentials and the role mappings.
-        DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload) {
+        try {
+            DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload) {
             EmployeeMaster::find($request->emp_id)->update(array_merge(
                 $this->mapStep1Data($request),
                 $this->mapStep2Data($request),
@@ -450,6 +519,15 @@ class MemberController extends Controller
                 // deliberately reassigns the member's roles while it's active again.
                 $offeredRoleIds = \App\Models\UserRoleMaster::getUserRoleList()->keys()->all();
 
+                // Captured before the delete below so syncSpatieRolesFromWizardSelection()
+                // can tell "this wizard granted it last time" apart from "granted some
+                // other way" (PR #319 review, F-019) — employee_role_mapping is the only
+                // durable record of what this screen itself previously selected.
+                $previouslySelectedRoleIds = EmployeeRoleMapping::where('user_credentials_pk', $userCredential->pk)
+                    ->whereIn('user_role_master_pk', $offeredRoleIds)
+                    ->pluck('user_role_master_pk')
+                    ->all();
+
                 EmployeeRoleMapping::where('user_credentials_pk', $userCredential->pk)
                     ->whereIn('user_role_master_pk', $offeredRoleIds)
                     ->delete();
@@ -461,9 +539,13 @@ class MemberController extends Controller
                     ]);
                 }
 
-                $this->syncSpatieRolesFromWizardSelection($userCredential->pk, $roles);
+                $this->syncSpatieRolesFromWizardSelection($userCredential->pk, $roles, $previouslySelectedRoleIds);
             }
-        });
+            });
+        } catch (\Throwable $e) {
+            $this->deleteUploadedMemberFiles($profile_picture, $additional_doc_upload);
+            throw $e;
+        }
 
         MemberDataTable::bumpListingCacheEpoch();
 
@@ -475,7 +557,11 @@ class MemberController extends Controller
         $appellationMasterList = AppellationMaster::where('active_inactive', 1)
             ->pluck('appettation_name', 'pk')
             ->toArray();
-        [$gradePayOptions, $employeeCategoryOptions] = $this->step6DropdownOptions();
+        // Only step 6 ("Employee Grade Pay") actually renders these options — querying
+        // them for every other step was pure overhead (PR #319 review, F-001 residual/F-023).
+        [$gradePayOptions, $employeeCategoryOptions] = ((int) $step === 6)
+            ? $this->step6DropdownOptions()
+            : [[], []];
         return view("admin.member.steps.step{$step}", compact('appellationMasterList', 'gradePayOptions', 'employeeCategoryOptions'));
     }
 
@@ -519,7 +605,9 @@ class MemberController extends Controller
         $appellationMasterList = AppellationMaster::where('active_inactive', 1)
             ->pluck('appettation_name', 'pk')
             ->toArray();
-        [$gradePayOptions, $employeeCategoryOptions] = $this->step6DropdownOptions();
+        [$gradePayOptions, $employeeCategoryOptions] = ((int) $step === 6)
+            ? $this->step6DropdownOptions()
+            : [[], []];
         $payrollSalary = PayrollSalaryMaster::where('employee_master_pk', $id)->first();
         return view("admin.member.edit_steps.step{$step}", compact('member', 'appellationMasterList', 'gradePayOptions', 'employeeCategoryOptions', 'payrollSalary'));
     }
