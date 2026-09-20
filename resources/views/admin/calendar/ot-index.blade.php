@@ -2972,17 +2972,24 @@ class CalendarManager {
         // (revealWeekendsForData below), so a session on the day BEFORE the view opened a
         // weekend column INSIDE it - e.g. the week of Mon 2026-06-29, which has no weekend
         // session, reached back into the Sunday 2026-06-28 class and showed Sat+Sun.
+        // F-021: info.start/info.end arrive ALREADY TRIMMED by hiddenDays, and this feed is
+        // what decides hiddenDays (revealWeekendsForData below) - a closed loop. feedRange()
+        // undoes the trim. It returns null only when there is no usable range at all, and
+        // the range we were given is then used unchanged.
+        const feedRange = this.feedRange(info);
+
         if (info.start) {
-            params.append('start', this.toYmd(info.start));
+            params.append('start', this.toYmd(feedRange ? feedRange.start : info.start));
         }
         if (info.end) {
             // info.end is EXCLUSIVE in FullCalendar, so step back to the last day the user
             // can actually see. toISOString() did this by accident at a positive offset and
             // not at all at a negative one, where it asked for a day beyond the view;
             // doing it explicitly is correct at both. Same shape as openTimetablePdf().
+            // feedRange.end has already had that conversion applied.
             const lastVisibleDay = new Date(info.end);
             lastVisibleDay.setDate(lastVisibleDay.getDate() - 1);
-            params.append('end', this.toYmd(lastVisibleDay));
+            params.append('end', this.toYmd(feedRange ? feedRange.end : lastVisibleDay));
         }
         if (this.selectedCourseId) {
             params.append('course_id', this.selectedCourseId);
@@ -4396,6 +4403,73 @@ async setInternalFaculty(internalFacultyIds) {
 
         // Reload the list view with the new week
         this.loadListView();
+    }
+
+    /**
+     * The range to ask the feed for: the displayed range with FullCalendar's hidden-day
+     * trim UNDONE. Returns { start, end } as local dates, end INCLUSIVE.
+     *
+     * Why this exists (F-021). DateProfileGenerator runs the range through
+     * trimHiddenDays(), which skips hidden days inward from both ends, so what arrives at
+     * fetchEvents() covers only the days that are currently VISIBLE - and this feed is what
+     * revealWeekendsForData() uses to decide which days are visible. In timeGridWeek both
+     * weekend days sit at the EDGES of a one-week range, so while they are hidden they are
+     * never requested, the rule never sees a weekend row, the column never opens, and the
+     * session is not rendered at all. Once shut, the columns could not reopen.
+     *
+     * How the trim is undone WITHOUT asking the calendar: a week or month grid always
+     * renders a whole number of weeks. A span that is not a multiple of 7 is therefore a
+     * range trimHiddenDays() has eaten days off the ends of, and widening to the enclosing
+     * weeks is that trim undone rather than a guess. A span that is already a multiple of 7
+     * is returned exactly as it arrived, so when nothing is hidden this function changes
+     * nothing. Measured against the shipped bundle on 2026-09-20:
+     *
+     *   timeGridWeek  hiddenDays [0,6] -> 2026-09-14..09-18 (span 5)  -> widened to 09-13..09-19
+     *   timeGridWeek  hiddenDays []    -> 2026-09-13..09-19 (span 7)  -> unchanged
+     *   dayGridMonth  hiddenDays [0,6] -> 2026-08-31..10-09 (span 40) -> widened to 08-30..10-10
+     *   dayGridMonth  hiddenDays []    -> 2026-08-30..10-10 (span 42) -> unchanged
+     *
+     * This deliberately does NOT depend on this.calendar: FullCalendar calls the events
+     * function while the Calendar is still being CONSTRUCTED, so on the first fetch of a
+     * page load `this.calendar` is still undefined. A first version of this fix read the
+     * view's untrimmed currentRange, which is correct but unavailable exactly then - so the
+     * first fetch stayed trimmed and the latch survived it. currentRange is still used as a
+     * second opinion when a calendar happens to be there.
+     *
+     * The span >= 5 guard keeps a single-day view - configured under `views`, though not
+     * reachable from this toolbar - from being widened into a whole week.
+     */
+    feedRange(info) {
+        if (!info || !info.start || !info.end) return null;
+
+        const MS_PER_DAY = 24 * 60 * 60 * 1000;
+        const dayOf = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+        let start = dayOf(info.start);
+        let endExclusive = dayOf(info.end);
+
+        // NOTE: the view's untrimmed currentRange is deliberately NOT consulted here.
+        // During navigation this.calendar.view still reports the PREVIOUS period while the
+        // feed for the new one is already being fetched, so unioning with it reached a whole
+        // week backwards - measured: moving to the week of 2026-09-20 requested
+        // 2026-09-13..2026-09-26. That is F-019's defect class returning by another route: a
+        // session in the PRECEDING week would open a weekend column inside this one. The
+        // span rule below needs nothing but the range it was handed.
+
+        const span = Math.round((endExclusive - start) / MS_PER_DAY);
+
+        const end = new Date(endExclusive);
+        end.setDate(end.getDate() - 1);
+
+        if (span >= 5 && span % 7 !== 0) {
+            const firstDay = (this.calendar && typeof this.calendar.getOption === 'function')
+                ? (this.calendar.getOption('firstDay') || 0)
+                : 0;
+            start.setDate(start.getDate() - ((start.getDay() - firstDay + 7) % 7));
+            end.setDate(end.getDate() + ((firstDay + 6 - end.getDay() + 7) % 7));
+        }
+
+        return { start, end };
     }
 
     /** Format a Date as YYYY-MM-DD (local). */
