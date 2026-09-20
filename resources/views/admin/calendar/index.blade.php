@@ -416,6 +416,8 @@ class CalendarManager {
         this.courses = @json($courseMaster);
         this.calendarRequiresCourses = @json($calendarRequiresCourses);
         this.eventsLoaded = false; // Track if events have been loaded initially
+        // Weekend columns of the week grid; recomputed from each week's events
+        this.weekendDisplay = { showSat: false, showSun: false };
         this.eventDetailsCache = new Map();
         this.hoverShowTimer = null;
         this.hoverHideTimer = null;
@@ -754,6 +756,9 @@ class CalendarManager {
             const normalized = filteredData.map(event => this.normalizeEventForTimeGrid(event));
             console.log('Events after filtering:', normalized.length);
             successCallback(normalized);
+            // Decide the weekend columns from the feed we just received:
+            // getEvents() is not populated yet at this point.
+            this.revealWeekendsForData(filteredData);
         })
         .catch(error => {
             console.error('Error fetching events:', error);
@@ -762,22 +767,79 @@ class CalendarManager {
         });
     }
 
+    /**
+     * The weekend rule for this calendar:
+     *   - an event on Sunday   -> show Saturday AND Sunday (never a gap after Friday)
+     *   - an event on Saturday only -> show Saturday, keep Sunday hidden
+     *   - nothing on either    -> Mon-Fri only
+     */
+    resolveWeekendDisplay(hasSat, hasSun) {
+        return { showSat: hasSat || hasSun, showSun: hasSun };
+    }
+
+    /** A holiday entry is not a class, so it never opens a weekend column. */
+    isHolidayEvent(event) {
+        const src = (event && event.extendedProps) ? event.extendedProps : (event || {});
+        const type = (src.type || src.event_type || src.session_type || '').toString().toLowerCase();
+        return type.includes('holiday');
+    }
+
+    /** { showSat, showSun } for a list of events (raw feed rows or FullCalendar events). */
+    weekendDisplayForEvents(events) {
+        const rows = (events || []).filter(e => e && e.start && !this.isHolidayEvent(e));
+        const dayOf = e => (e.start instanceof Date ? e.start : new Date(e.start)).getDay();
+        const hasSat = rows.some(e => dayOf(e) === 6); // 6 = Saturday
+        const hasSun = rows.some(e => dayOf(e) === 0); // 0 = Sunday
+        return this.resolveWeekendDisplay(hasSat, hasSun);
+    }
+
+    /** Push the weekend rule into FullCalendar's hiddenDays, only when it changes. */
+    applyHiddenDays(display) {
+        if (!this.calendar) return;
+        const hidden = [];
+        if (!display.showSun) hidden.push(0);
+        if (!display.showSat) hidden.push(6);
+
+        const current = this.calendar.getOption('hiddenDays') || [];
+        // setOption re-renders (and fires datesSet again), so skip a no-op write.
+        if (JSON.stringify([...hidden].sort()) === JSON.stringify([...current].sort())) return;
+
+        // datesSet/loading fire mid-render; applying on the next tick keeps the
+        // re-render out of the cycle that asked for it.
+        clearTimeout(this.hiddenDaysTimer);
+        this.hiddenDaysTimer = setTimeout(() => {
+            this.calendar.setOption('hiddenDays', hidden);
+        }, 0);
+    }
+
     handleWeekendVisibility(events) {
-        // Wait for calendar to be fully rendered before adjusting days
-        if (!this.calendar || !events || events.length === 0) {
-            // If no events yet, just mark as loaded and don't hide days
-            this.eventsLoaded = true;
-            return;
+        this.revealWeekendsForData(events);
+        this.eventsLoaded = true;
+    }
+
+    /** Weekend columns from a concrete dataset (raw feed objects with a `start`). */
+    revealWeekendsForData(data) {
+        if (!this.calendar) return;
+        try {
+            this.applyHiddenDays(this.weekendDisplayForEvents(data));
+        } catch (error) {
+            console.error('Error revealing weekend columns:', error);
         }
-        
-        // Show full week Mon–Sun, no hidden days
-        setTimeout(() => {
-            this.eventsLoaded = true;
-        }, 50);
     }
 
     updateWeekendVisibility() {
-        // Full week shown — nothing to update
+        if (!this.calendar) return;
+        this.applyHiddenDays(this.weekendDisplayForEvents(this.calendar.getEvents()));
+        this.eventsLoaded = true;
+    }
+
+    /** Column indexes of the week grid (0 = Monday .. 6 = Sunday) that stay visible. */
+    visibleWeekDayIndexes() {
+        const display = this.weekendDisplay || { showSat: false, showSun: false };
+        const indexes = [0, 1, 2, 3, 4]; // Mon-Fri always
+        if (display.showSat) indexes.push(5);
+        if (display.showSun) indexes.push(6);
+        return indexes;
     }
 
     updateCourseHeader() {
@@ -2518,6 +2580,11 @@ async setInternalFaculty(internalFacultyIds) {
                 weekElement.textContent = weekNum;
             }
 
+            // This week's events decide which weekend columns the header, the
+            // body and the day cards render, so resolve them before drawing.
+            const filteredEvents = this.getEventsForWeek(events, this.listViewWeekOffset);
+            this.weekendDisplay = this.weekendDisplayForEvents(filteredEvents);
+
             // Update table header with week dates
             this.updateTableHeader(weekStart);
 
@@ -2525,9 +2592,6 @@ async setInternalFaculty(internalFacultyIds) {
             console.log('List view - Week offset:', this.listViewWeekOffset);
             console.log('Week start:', weekStart);
             console.log('Total events:', events.length);
-
-            // Filter and render events
-            const filteredEvents = this.getEventsForWeek(events, this.listViewWeekOffset);
             console.log('Filtered events for this week:', filteredEvents.length);
             this.renderListView(filteredEvents);
             this.renderWeekCards(events, weekStart);
@@ -2554,8 +2618,15 @@ async setInternalFaculty(internalFacultyIds) {
 
         const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
         const headers = thead.querySelectorAll('th:not(.time-column)');
+        const visibleDays = this.visibleWeekDayIndexes();
 
         headers.forEach((header, index) => {
+            if (!visibleDays.includes(index)) {
+                header.classList.add('d-none');
+                return;
+            }
+            header.classList.remove('d-none');
+
             const date = new Date(weekStart);
             date.setDate(date.getDate() + index);
             const dateStr = date.toLocaleDateString('en-US', {
@@ -2568,11 +2639,13 @@ async setInternalFaculty(internalFacultyIds) {
 
     renderListView(events) {
         const tbody = document.getElementById('timetableBody');
+        const dayKeys = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const visibleDays = this.visibleWeekDayIndexes().map(index => dayKeys[index]);
 
         if (!events.length) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="text-center p-5">
+                    <td colspan="${visibleDays.length + 1}" class="text-center p-5">
                         <div class="empty-state">
                             <i class="bi bi-calendar-x display-5 text-muted mb-3"></i>
                             <p class="text-muted mb-3">No events scheduled</p>
@@ -2591,7 +2664,7 @@ async setInternalFaculty(internalFacultyIds) {
             html += `
                 <tr>
                     <th scope="row" class="time-slot">${time}</th>
-                    ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => `
+                    ${visibleDays.map(day => `
                         <td class="event-cell">
                             ${dayEvents[day] ? this.renderListEvent(dayEvents[day]) : ''}
                         </td>
@@ -2635,7 +2708,8 @@ async setInternalFaculty(internalFacultyIds) {
         });
 
         container.innerHTML = '';
-        days.forEach((label, i) => {
+        this.visibleWeekDayIndexes().forEach(i => {
+            const label = days[i];
             const d = new Date(weekStart);
             d.setDate(d.getDate() + i);
             const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
