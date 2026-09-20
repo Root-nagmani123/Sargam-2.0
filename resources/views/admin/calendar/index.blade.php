@@ -2759,12 +2759,14 @@ async setInternalFaculty(internalFacultyIds) {
         });
 
         // Filter incoming events to week range and allocate to day buckets.
-        // Every key on both sides of this map is built with toYmd (local); deriving one
-        // side from toISOString() (UTC) puts them a day apart at any non-zero offset and
-        // every lookup misses, which reads as "0 events" on every card.
+        // The row's day is resolved with eventLocalDate(), NOT the Date constructor: the feed
+        // sends all-day rows as a bare "YYYY-MM-DD", which `new Date(str)` reads as UTC
+        // midnight. At a negative UTC offset that lands on the previous day, so the row is
+        // filed under the wrong card - and a row on the Monday boundary falls out of the week
+        // entirely. Both sides of this map are then keyed with toYmd (local) from that date.
         (events || []).forEach(evt => {
-            const d = new Date(evt.start);
-            if (isNaN(d)) return;
+            const d = this.eventLocalDate(evt);
+            if (!d) return;
             if (d < weekStart || d >= weekEnd) return;
             const key = this.toYmd(d);
             if (byDay.has(key)) byDay.get(key).events.push(evt);

@@ -51,6 +51,13 @@ const METHODS = [
   "visibleWeekDayIndexes",
   "toYmd",
   "groupEventsByTime",
+  // The RENDERERS, not just the pure helpers. Asserting against a re-implementation of a
+  // renderer proves only that the re-implementation agrees with itself: a defect can sit in
+  // the real function while every scenario passes. These three are the ones that decide
+  // which day a row is drawn on and which columns exist to draw it in.
+  "renderWeekCards",
+  "applyHiddenDays",
+  "revealWeekendsForData",
 ];
 
 /** Lift `name(args) { ... }` out of the template by matching braces. */
@@ -80,6 +87,36 @@ function buildClassSource() {
   // Bound to window on purpose: a bare `class X {}` evaluated by page.evaluate is scoped
   // to that one call and is gone by the next evaluate.
   return `window.WeekendRule = class WeekendRule {\n${body}\n};`;
+}
+
+// The Officer-Trainee calendar carries its own duplicated copy of the date helpers and its
+// own inline weekend rule. It must be lifted from ITS file: asserting against the admin copy
+// proves nothing about it, and the two have already drifted apart once.
+const BLADE_OT = path.join(
+  __dirname, "..", "..", "resources", "views", "admin", "calendar", "ot-index.blade.php"
+);
+
+const OT_METHODS = [
+  "fixCalendarDateTimeString",
+  "extractEventDateYmd",
+  "eventLocalDate",
+  "eventWeekday",
+  // The single shared rule. The OT calendar used to carry three inline copies of this,
+  // which is how one of them kept a UTC date parse after the other two were corrected.
+  "resolveWeekendDisplay",
+  "weekendDisplayForEvents",
+  "hiddenDaysFor",
+  // All three call sites, so a re-duplication is caught by the test below rather than by
+  // the next production incident.
+  "handleWeekendVisibility",
+  "revealWeekendsForData",
+  "updateWeekendVisibility",
+];
+
+function buildOtClassSource() {
+  const blade = fs.readFileSync(BLADE_OT, "utf8");
+  const body = OT_METHODS.map((m) => extractMethod(blade, m)).join("\n\n");
+  return `window.OtWeekendRule = class OtWeekendRule {\n${body}\n};`;
 }
 
 // Monday 2026-09-14 .. Sunday 2026-09-20. 09-19 is a Saturday, 09-20 a Sunday.
@@ -259,29 +296,169 @@ test.describe("admin calendar - weekend columns", () => {
     expect(agree.map((r) => r.column)).toEqual(["Sat", "Sun", "Wed"]);
   });
 
-  test("week-card day keys round-trip through toYmd", async ({ page }) => {
-    // renderWeekCards builds its byDay map and reads it back; both sides must use the
-    // same local format. Deriving one side from toISOString() shifts it by a day at any
-    // non-zero UTC offset and every card then shows the wrong day's events.
-    const mismatches = await page.evaluate(() => {
-      const r = new WeekendRule();
-      const weekStart = new Date(2026, 8, 14);
-      const out = [];
-      for (let i = 0; i < 7; i += 1) {
-        const d = new Date(weekStart);
-        d.setDate(d.getDate() + i);
-        const built = r.toYmd(d);
-        const read = r.toYmd(d);
-        const utc = d.toISOString().split("T")[0];
-        if (built !== read) out.push({ i, built, read });
-        // guard against a regression back to the UTC-derived key
-        if (built !== utc) out.push({ i, note: "local and UTC differ here", built, utc });
+  /**
+   * These two drive the REAL renderers out of the template.
+   *
+   * The previous version of this block compared `r.toYmd(d)` with `r.toYmd(d)` - the same
+   * call - so its assertion was a tautology and could never fail. It named renderWeekCards
+   * in its comment but never invoked it, and renderWeekCards was not in METHODS, so the
+   * whole card-rendering path was unguarded while the suite reported five green scenarios.
+   *
+   * Both run at a NEGATIVE UTC offset on purpose: at Asia/Kolkata a bare "YYYY-MM-DD" read
+   * as UTC midnight still lands on the right local day, so an IST-only assertion passes
+   * against the broken code and guards nothing.
+   */
+  test.describe("the renderers themselves, at a negative UTC offset", () => {
+    test.use({ timezoneId: "America/New_York" });
+
+    // Monday 2026-09-14 .. Sunday 2026-09-20.
+    const WEEK_FEED = [
+      { title: "Mon all-day", start: "2026-09-14" },
+      { title: "Wed timed", start: "2026-09-16T09:00:00" },
+      { title: "Sat all-day", start: "2026-09-19" },
+      { title: "Sun all-day", start: "2026-09-20" },
+    ];
+
+    test("renderWeekCards draws every row on its own local day, and loses none", async ({
+      page,
+    }) => {
+      const placed = await page.evaluate((feed) => {
+        document.body.innerHTML = '<div id="weekCards"><div class="row"></div></div>';
+        const r = new WeekendRule();
+        // Every weekend column open, so a misplacement cannot be masked by a hidden column.
+        r.weekendDisplay = { showSat: true, showSun: true };
+        r.renderWeekCards(feed, new Date(2026, 8, 14));
+
+        // Read back what was actually drawn: card label -> the titles inside that card.
+        return Array.from(document.querySelectorAll("#weekCards .week-day-card")).map((card) => ({
+          label: card.querySelector(".fw-bold").textContent.trim(),
+          badge: card.querySelector(".badge").textContent.trim(),
+          titles: Array.from(card.querySelectorAll(".mini-event")).map((el) =>
+            el.getAttribute("aria-label")
+          ),
+        }));
+      }, WEEK_FEED);
+
+      const dayOf = (title) =>
+        placed.find((c) => c.titles.some((t) => t && t.startsWith(title)));
+
+      // Each row must appear on ITS OWN day. Reading the bare date as UTC midnight shifts
+      // all-day rows one card to the left, and drops the Monday one out of the week entirely.
+      expect(dayOf("Mon all-day"), "Mon all-day row is on no card at all").toBeTruthy();
+      expect(dayOf("Mon all-day").label).toContain("Monday");
+      expect(dayOf("Wed timed").label).toContain("Wednesday");
+      expect(dayOf("Sat all-day").label).toContain("Saturday");
+      expect(dayOf("Sun all-day").label).toContain("Sunday");
+
+      // Nothing may be silently dropped by the week-boundary test.
+      const rendered = placed.flatMap((c) => c.titles).join(" | ");
+      for (const row of WEEK_FEED) {
+        expect(rendered, `row lost by renderWeekCards: ${row.title}`).toContain(row.title);
       }
-      return out;
+
+      // The badge count must agree with the card's own contents.
+      for (const card of placed) {
+        expect(card.badge, `badge vs contents for ${card.label}`).toBe(
+          `${card.titles.length} event${card.titles.length !== 1 ? "s" : ""}`
+        );
+      }
     });
-    // The local/UTC divergence is expected at IST; what must never happen is the map
-    // being built with one format and read with the other. toYmd on both sides is the fix.
-    const roundTripFailures = mismatches.filter((m) => !m.note);
-    expect(roundTripFailures).toEqual([]);
+
+    // The Officer-Trainee calendar keeps its OWN copy of this logic, so a test that reads
+    // index.blade.php cannot guard it. This one is bound to ot-index.blade.php on purpose:
+    // the first version of it extracted the admin copy, which was already correct, and so
+    // passed against the unfixed OT source - the exact defect this file exists to prevent.
+    test("OT revealWeekendsForData never hides a column that carries a row", async ({ page }) => {
+      await page.evaluate(buildOtClassSource());
+      const cases = await page.evaluate(async () => {
+        const run = async (feed) => {
+          const r = new OtWeekendRule();
+          let hidden = [0, 6];
+          r.calendar = {
+            getOption: () => hidden,
+            setOption: (_k, v) => {
+              hidden = v;
+            },
+          };
+          r.revealWeekendsForData(feed);
+          // applyHiddenDays defers the write to the next tick on purpose.
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          return hidden;
+        };
+        return {
+          sundayAllDay: await run([{ title: "Sunday all-day session", start: "2026-09-20" }]),
+          saturdayAllDay: await run([{ title: "Saturday all-day session", start: "2026-09-19" }]),
+          weekdayOnly: await run([{ title: "Wed timed", start: "2026-09-16T09:00:00" }]),
+        };
+      });
+
+      // A Sunday row opens BOTH columns - no gap after Friday.
+      expect(cases.sundayAllDay, "Sunday all-day row: neither column may be hidden").toEqual([]);
+      // A Saturday row opens Saturday only; Sunday (0) stays hidden.
+      expect(cases.saturdayAllDay, "Saturday all-day row: Saturday must be open").toEqual([0]);
+      // Nothing on either: Mon-Fri.
+      expect(cases.weekdayOnly.slice().sort()).toEqual([0, 6]);
+    });
+
+    // The OT calendar decides hiddenDays from three different places. They must all reach
+    // the same answer for the same week, or the columns change depending on which one fired
+    // last - which is exactly the state that let one copy keep a UTC date parse while the
+    // other two were fixed.
+    test("all three OT call sites agree on the same week", async ({ page }) => {
+      await page.evaluate(buildOtClassSource());
+      const answers = await page.evaluate(async () => {
+        const feed = [
+          { title: "Wed timed", start: "2026-09-16T09:00:00" },
+          { title: "Sun all-day", start: "2026-09-20" },
+        ];
+        // FullCalendar hands updateWeekendVisibility() Date objects, not feed strings.
+        const asCalendarEvents = feed.map((e) => ({
+          ...e,
+          start: /T/.test(e.start)
+            ? new Date(e.start)
+            : new Date(...e.start.split("-").map((n, i) => (i === 1 ? +n - 1 : +n))),
+        }));
+
+        const spy = () => {
+          let hidden = [0, 6];
+          return {
+            calendar: { getOption: () => hidden, setOption: (_k, v) => { hidden = v; } },
+            read: () => hidden,
+          };
+        };
+        const settle = () => new Promise((r) => setTimeout(r, 80));
+
+        const a = spy();
+        const r1 = new OtWeekendRule();
+        r1.calendar = a.calendar;
+        r1.handleWeekendVisibility(feed);
+        await settle();
+
+        const b = spy();
+        const r2 = new OtWeekendRule();
+        r2.calendar = b.calendar;
+        r2.revealWeekendsForData(feed);
+        await settle();
+
+        const c = spy();
+        const r3 = new OtWeekendRule();
+        c.calendar.getEvents = () => asCalendarEvents;
+        r3.calendar = c.calendar;
+        r3.updateWeekendVisibility();
+        await settle();
+
+        const sort = (x) => x.slice().sort();
+        return {
+          handleWeekendVisibility: sort(a.read()),
+          revealWeekendsForData: sort(b.read()),
+          updateWeekendVisibility: sort(c.read()),
+        };
+      });
+
+      // A Sunday row opens both columns, so none may be hidden - by any of the three routes.
+      expect(answers.handleWeekendVisibility).toEqual([]);
+      expect(answers.revealWeekendsForData).toEqual(answers.handleWeekendVisibility);
+      expect(answers.updateWeekendVisibility).toEqual(answers.handleWeekendVisibility);
+    });
   });
 });
