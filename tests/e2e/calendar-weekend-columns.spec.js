@@ -60,7 +60,46 @@ const METHODS = [
   "revealWeekendsForData",
 ];
 
-/** Lift `name(args) { ... }` out of the template by matching braces. */
+/**
+ * Index of the closing quote of the string or template literal starting at `start`.
+ * A `${ ... }` hole inside a template may itself contain braces, quotes and further
+ * templates, so it is walked rather than scanned for the next backtick.
+ */
+function skipLiteral(source, start) {
+  const quote = source[start];
+  for (let i = start + 1; i < source.length; i += 1) {
+    const ch = source[i];
+    if (ch === "\\") { i += 1; continue; }
+    if (ch === quote) return i;
+    if (quote === "`" && ch === "$" && source[i + 1] === "{") {
+      let depth = 1;
+      i += 2;
+      for (; i < source.length && depth > 0; i += 1) {
+        const c = source[i];
+        if (c === "\\") { i += 1; continue; }
+        if (c === "'" || c === '"' || c === "`") { i = skipLiteral(source, i); continue; }
+        if (c === "{") depth += 1;
+        else if (c === "}") depth -= 1;
+      }
+      i -= 1;
+    }
+  }
+  return source.length;
+}
+
+/**
+ * Lift `name(args) { ... }` out of the template by matching braces.
+ *
+ * Comments and string/template literals are skipped, because a brace inside one is
+ * punctuation and not structure. Counting them is not hypothetical: a comment in
+ * ot-index.blade.php quoting `forEach(i => {` left the depth permanently one too high,
+ * so extracting renderWeekCards() from that file ran past the end of the method and
+ * returned a fragment that does not parse — with a syntax error that names neither the
+ * comment nor the file.
+ *
+ * Known limit: a regular-expression literal is not tracked, so an unbalanced brace
+ * inside one (`/\}/`) would still be counted. None of the extracted methods contains one.
+ */
 function extractMethod(source, name) {
   const signature = new RegExp(`^[ \\t]*${name}\\s*\\(`, "m");
   const at = source.search(signature);
@@ -72,6 +111,25 @@ function extractMethod(source, name) {
   let depth = 0;
   for (let i = open; i < source.length; i += 1) {
     const ch = source[i];
+    const next = source[i + 1];
+
+    if (ch === "/" && next === "/") {
+      const eol = source.indexOf("\n", i);
+      if (eol === -1) break;
+      i = eol;
+      continue;
+    }
+    if (ch === "/" && next === "*") {
+      const end = source.indexOf("*/", i + 2);
+      if (end === -1) break;
+      i = end + 1;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === "`") {
+      i = skipLiteral(source, i);
+      continue;
+    }
+
     if (ch === "{") depth += 1;
     else if (ch === "}") {
       depth -= 1;
@@ -101,16 +159,29 @@ const OT_METHODS = [
   "extractEventDateYmd",
   "eventLocalDate",
   "eventWeekday",
+  "isAllDayEvent",
+  "eventStartDateTime",
+  "toYmd",
   // The single shared rule. The OT calendar used to carry three inline copies of this,
   // which is how one of them kept a UTC date parse after the other two were corrected.
   "resolveWeekendDisplay",
   "weekendDisplayForEvents",
   "hiddenDaysFor",
-  // All three call sites, so a re-duplication is caught by the test below rather than by
-  // the next production incident.
-  "handleWeekendVisibility",
+  // Both call sites that push the rule into FullCalendar, so a re-duplication is caught by
+  // the test below rather than by the next production incident.
+  //
+  // handleWeekendVisibility() used to be listed here as a third "call site". It never was
+  // one — it had no caller anywhere in the repository — so that third of the assertion
+  // guarded nothing in production. The method is gone; if a lifecycle hook ever needs it
+  // back, add it AND its caller, and restore it to this list.
   "revealWeekendsForData",
   "updateWeekendVisibility",
+  // The OT list view decides its own columns here, separately from the grid above. This is
+  // the function that reads the decision, so this is the one the rule has to be checked at.
+  "computeActiveDays",
+  "groupEventsByTime",
+  // The real renderer, so the all-day label is asserted against what is drawn.
+  "renderWeekCards",
 ];
 
 function buildOtClassSource() {
@@ -400,11 +471,11 @@ test.describe("admin calendar - weekend columns", () => {
       expect(cases.weekdayOnly.slice().sort()).toEqual([0, 6]);
     });
 
-    // The OT calendar decides hiddenDays from three different places. They must all reach
-    // the same answer for the same week, or the columns change depending on which one fired
+    // The OT calendar decides hiddenDays from two different places. They must reach the
+    // same answer for the same week, or the columns change depending on which one fired
     // last - which is exactly the state that let one copy keep a UTC date parse while the
-    // other two were fixed.
-    test("all three OT call sites agree on the same week", async ({ page }) => {
+    // other was fixed.
+    test("both OT call sites agree on the same week", async ({ page }) => {
       await page.evaluate(buildOtClassSource());
       const answers = await page.evaluate(async () => {
         const feed = [
@@ -428,12 +499,6 @@ test.describe("admin calendar - weekend columns", () => {
         };
         const settle = () => new Promise((r) => setTimeout(r, 80));
 
-        const a = spy();
-        const r1 = new OtWeekendRule();
-        r1.calendar = a.calendar;
-        r1.handleWeekendVisibility(feed);
-        await settle();
-
         const b = spy();
         const r2 = new OtWeekendRule();
         r2.calendar = b.calendar;
@@ -449,16 +514,144 @@ test.describe("admin calendar - weekend columns", () => {
 
         const sort = (x) => x.slice().sort();
         return {
-          handleWeekendVisibility: sort(a.read()),
           revealWeekendsForData: sort(b.read()),
           updateWeekendVisibility: sort(c.read()),
         };
       });
 
-      // A Sunday row opens both columns, so none may be hidden - by any of the three routes.
-      expect(answers.handleWeekendVisibility).toEqual([]);
-      expect(answers.revealWeekendsForData).toEqual(answers.handleWeekendVisibility);
-      expect(answers.updateWeekendVisibility).toEqual(answers.handleWeekendVisibility);
+      // A Sunday row opens both columns, so none may be hidden - by either route.
+      expect(answers.revealWeekendsForData).toEqual([]);
+      expect(answers.updateWeekendVisibility).toEqual(answers.revealWeekendsForData);
     });
+
+    /**
+     * The OT LIST VIEW decides its columns in computeActiveDays(), which is a separate
+     * decision from the grid's hiddenDays above and was the last place in that file still
+     * reading a bare feed date through the Date constructor.
+     *
+     * The failure this guards is not a misplaced row but a MISSING one: renderListView()
+     * emits a <td> only for a day in activeDays, so if the column rule resolves a row to a
+     * different weekday than groupEventsByTime() files it under, the row has no cell to be
+     * drawn in and disappears without trace.
+     */
+    test("OT list view: the column rule and the row bucketing agree, so no row is dropped", async ({
+      page,
+    }) => {
+      await page.evaluate(buildOtClassSource());
+      const result = await page.evaluate(() => {
+        const r = new OtWeekendRule();
+        const weekStart = new Date(2026, 8, 14); // Mon 14 Sep 2026, local midnight
+        const feed = [
+          { title: "Wed timed", start: "2026-09-16T09:00:00" },
+          { title: "Sat all-day", start: "2026-09-19" },
+          { title: "Sun all-day", start: "2026-09-20" },
+        ];
+
+        const activeDays = r.computeActiveDays(feed, weekStart);
+        const slots = r.groupEventsByTime(feed);
+
+        // Reproduce renderListView()'s cell emission: only active day columns are drawn.
+        const rendered = [];
+        Object.values(slots).forEach((dayEvents) => {
+          activeDays.forEach((day) => {
+            if (dayEvents[day.short]) dayEvents[day.short].forEach((e) => rendered.push(e.title));
+          });
+        });
+
+        return {
+          columns: activeDays.map((d) => d.short),
+          bucketed: Object.values(slots).flatMap((de) => Object.keys(de)),
+          dropped: feed.map((e) => e.title).filter((t) => !rendered.includes(t)),
+        };
+      });
+
+      expect(
+        result.dropped,
+        `rows lost because computeActiveDays() never opened their column: ${result.dropped.join(", ")}`
+      ).toEqual([]);
+      // Every day a row was filed under must be a day the column rule opened.
+      for (const day of result.bucketed) {
+        expect(result.columns, `row filed under ${day}, which has no column`).toContain(day);
+      }
+      // A Sunday row opens Saturday too - no gap after Friday, the same rule as the grid.
+      expect(result.columns).toEqual(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]);
+    });
+
+    /**
+     * An all-day row must not be labelled with the time its bare date happens to parse to.
+     * groupEventsByTime() was corrected for the time-SLOT label; the per-event chip inside
+     * renderWeekCards() kept the old parse, so the same row carried "All Day" in one place
+     * and "05:30 am" in the other - including in the aria-label read to assistive tech.
+     *
+     * Bound to BOTH files: the chip is duplicated, and a test that reads one proves nothing
+     * about the other.
+     */
+    for (const which of ["admin", "OT"]) {
+      test(`${which} week card labels an all-day row without inventing a clock time`, async ({
+        page,
+      }) => {
+        await page.evaluate(which === "OT" ? buildOtClassSource() : buildClassSource());
+        const card = await page.evaluate((isOt) => {
+          document.body.innerHTML = '<div id="weekCards"><div class="row"></div></div>';
+          const r = isOt ? new OtWeekendRule() : new WeekendRule();
+          // Admin renderWeekCards() consults the weekend rule; OT renders Mon-Sun always.
+          r.weekendDisplay = { showSat: true, showSun: true };
+          const feed = [{ title: "Gandhi Jayanti", start: "2026-09-19", type: "holiday", allDay: true }];
+          r.renderWeekCards(feed, new Date(2026, 8, 14));
+          const chip = document.querySelector("#weekCards .mini-event");
+          const time = chip && chip.querySelector(".mini-time");
+          return {
+            slotLabel: Object.keys(r.groupEventsByTime(feed))[0],
+            chipTime: time ? time.textContent.trim() : "",
+            aria: chip ? chip.getAttribute("aria-label") : null,
+          };
+        }, which === "OT");
+
+        // The label the slot already gets right, for comparison.
+        expect(card.slotLabel).toBe("All Day");
+        // The chip must not contradict it with a fabricated time.
+        expect(card.chipTime, "week-card chip shows a clock time for an all-day row").not.toMatch(
+          /\d{1,2}:\d{2}/
+        );
+        expect(card.aria, "aria-label announces a clock time for an all-day row").not.toMatch(
+          /\d{1,2}:\d{2}/
+        );
+      });
+    }
   });
+});
+
+/**
+ * F-015: both symbols were deleted from index.blade.php in an earlier round and left in
+ * ot-index.blade.php. A grep is the closure evidence the finding asked for, so it is the
+ * assertion here - source-level, not behavioural, because dead code has no behaviour.
+ */
+test("no calendar view keeps the uncalled handleWeekendVisibility() or its dead flag", () => {
+  for (const file of [BLADE, BLADE_OT]) {
+    const source = fs.readFileSync(file, "utf8");
+    expect(source, `${path.basename(file)} still defines handleWeekendVisibility()`).not.toMatch(
+      /^\s*handleWeekendVisibility\s*\(/m
+    );
+    expect(source, `${path.basename(file)} still carries the dead eventsLoaded flag`).not.toContain(
+      "eventsLoaded"
+    );
+  }
+});
+
+/**
+ * F-016: the extractor must survive a comment that quotes unbalanced code. ot-index's
+ * renderWeekCards() carries exactly such a comment, which is what made this necessary.
+ */
+test("extractMethod lifts every listed method from both templates", () => {
+  const cases = [
+    [BLADE, METHODS],
+    [BLADE_OT, OT_METHODS],
+  ];
+  for (const [file, methods] of cases) {
+    const source = fs.readFileSync(file, "utf8");
+    for (const name of methods) {
+      const body = extractMethod(source, name);
+      expect(() => new Function(`return class T {${body}}`)()).not.toThrow();
+    }
+  }
 });
