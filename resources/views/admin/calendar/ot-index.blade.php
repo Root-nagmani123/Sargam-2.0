@@ -2802,7 +2802,6 @@ class CalendarManager {
         this.listViewWeekOffset = 0; // Track week offset for list view
         this.selectedCourseId = null;
         this.courses = @json($courseMaster);
-        this.eventsLoaded = false; // Track if events have been loaded initially
         this.init();
     }
 
@@ -3047,23 +3046,6 @@ class CalendarManager {
         if (!display.showSat) hidden.push(6);
         if (!display.showSun) hidden.push(0);
         return hidden;
-    }
-
-    handleWeekendVisibility(events) {
-        // Wait for calendar to be fully rendered before adjusting days
-        if (!this.calendar || !events || events.length === 0) {
-            // If no events yet, just mark as loaded and don't hide days
-            this.eventsLoaded = true;
-            return;
-        }
-
-        const hiddenDays = this.hiddenDaysFor(this.weekendDisplayForEvents(events));
-
-        // Use setTimeout to ensure calendar is fully rendered
-        setTimeout(() => {
-            this.calendar.setOption('hiddenDays', hiddenDays);
-            this.eventsLoaded = true;
-        }, 50);
     }
 
     // Reveal weekend columns based on a concrete event dataset (raw feed objects
@@ -4596,16 +4578,22 @@ async setInternalFaculty(internalFacultyIds) {
             const target = new Date(ws);
             target.setDate(target.getDate() + offset);
             return (events || []).some(evt => {
-                const d = new Date(evt.start);
-                if (isNaN(d)) return false;
-                return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() === target.getTime();
+                // eventLocalDate(), NOT new Date(evt.start). The feed sends all-day rows as a
+                // bare "YYYY-MM-DD", which the Date constructor reads as UTC midnight - the
+                // previous day at any negative UTC offset. This function decides which day
+                // COLUMNS exist while groupEventsByTime() decides which column a row is filed
+                // under; renderListView() emits a cell only for a day in the list this returns,
+                // so the moment the two resolve a row to different weekdays that row has no
+                // cell to be drawn in and vanishes. Both must read the same local day.
+                const d = this.eventLocalDate(evt);
+                return !!d && d.getTime() === target.getTime();
             });
         };
-        const hasSat = hasEventOnOffset(5);
-        const hasSun = hasEventOnOffset(6);
-        // Sunday event => show Saturday + Sunday; only-Saturday event => Saturday only.
-        if (hasSat || hasSun) days.push({ label: 'Saturday', short: 'Sat', offset: 5 });
-        if (hasSun) days.push({ label: 'Sunday', short: 'Sun', offset: 6 });
+        // The one shared rule, not a fourth private copy of it: a Sunday event opens Saturday
+        // as well, so the week never shows a gap after Friday.
+        const display = this.resolveWeekendDisplay(hasEventOnOffset(5), hasEventOnOffset(6));
+        if (display.showSat) days.push({ label: 'Saturday', short: 'Sat', offset: 5 });
+        if (display.showSun) days.push({ label: 'Sunday', short: 'Sun', offset: 6 });
         return days;
     }
 
@@ -4731,10 +4719,15 @@ async setInternalFaculty(internalFacultyIds) {
         // feature: "never hide data - a weekend column opens if that day has any row, holiday
         // included."
         //
-        // To adopt the rule here instead, replace `days.forEach((label, i) =>` with
-        // `this.visibleWeekDayIndexes().forEach(i => { const label = days[i];` and port
-        // visibleWeekDayIndexes()/weekendDisplayForRendering() from index.blade.php. Do not
-        // do it without deciding the empty-weekend-card question above.
+        // To adopt the rule here instead, iterate visibleWeekDayIndexes() rather than the
+        // whole `days` array, taking each label as days[i], and port visibleWeekDayIndexes()
+        // and weekendDisplayForRendering() from index.blade.php. Do not do it without first
+        // deciding the empty-weekend-card question above.
+        //
+        // Written without quoting the code: an earlier version of this comment quoted a
+        // fragment containing an unmatched brace, and the regression spec lifts methods out
+        // of this file by counting braces - so the quote made renderWeekCards() unliftable.
+        // The extractor now skips comments, but a comment still should not need it to.
         days.forEach((label, i) => {
             const d = new Date(weekStart);
             d.setDate(d.getDate() + i);
@@ -4758,9 +4751,19 @@ async setInternalFaculty(internalFacultyIds) {
                             const title = evt.title || evt.extendedProps?.topic || '';
                             const venue = evt.extendedProps?.vanue || evt.extendedProps?.venue_name || '';
                             const faculty = evt.extendedProps?.faculty_name || '';
-                            const timeTxt = evt.start ? new Date(evt.start).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
+                            // An all-day row carries no time of day. Reading its bare
+                            // "YYYY-MM-DD" through the Date constructor yields UTC midnight,
+                            // which prints as "05:30 am" at IST - a time nobody entered, on a
+                            // row the timetable slot beside it correctly labels "All Day".
+                            const allDay = this.isAllDayEvent(evt);
+                            const timeTxt = !evt.start
+                                ? ''
+                                : allDay
+                                    ? 'All Day'
+                                    : this.eventStartDateTime(evt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                            const timeAria = !timeTxt ? '' : (allDay ? ', all day' : `, at ${timeTxt}`);
                             return `
-                            <div class="mini-event d-flex align-items-center gap-2" role="button" tabindex="0" aria-label="${title}${timeTxt?`, at ${timeTxt}`:''}${venue?`, at ${venue}`:''}">
+                            <div class="mini-event d-flex align-items-center gap-2" role="button" tabindex="0" aria-label="${title}${timeAria}${venue?`, at ${venue}`:''}">
                                 <i class="bi bi-clock text-primary" aria-hidden="true"></i>
                                 <span class="mini-title text-truncate">${title}</span>
                                 ${timeTxt ? `<span class="mini-time text-muted">${timeTxt}</span>` : ''}
@@ -4830,9 +4833,13 @@ async setInternalFaculty(internalFacultyIds) {
             const faculty = ep.faculty_name || '';
             const venue = ep.vanue || ep.venue_name || '';
             const classSession = ep.class_session || ep.class_session_debug || '';
-            const startTime = event.start ? new Date(event.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
-            const endTime = event.end ? new Date(event.end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
-            const timeRange = startTime && endTime ? `${startTime} - ${endTime}` : '';
+            // An all-day row has no time of day: reading its bare "YYYY-MM-DD" through the
+            // Date constructor gives UTC midnight, printed as "05:30 am" at IST. Label it the
+            // way the timetable slot does rather than inventing a range from the parse.
+            const isAllDay = this.isAllDayEvent(event);
+            const startTime = (!isAllDay && event.start) ? this.eventStartDateTime(event).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
+            const endTime = (!isAllDay && event.end) ? new Date(this.fixCalendarDateTimeString(event.end)).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
+            const timeRange = isAllDay ? 'All Day' : (startTime && endTime ? `${startTime} - ${endTime}` : '');
             
             return `
                 <div class="list-event-card p-2 mb-2" data-group="${groupName}">

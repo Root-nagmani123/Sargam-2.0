@@ -855,14 +855,26 @@ class CalendarManager {
         return this.resolveWeekendDisplay(hasSat, hasSun);
     }
 
-    /** The weekend rule, widened so no rendered row can lose its column. */
+    /**
+     * The rule as the LIST VIEW must apply it: every row's day stays visible.
+     *
+     * This is weekendPresenceForEvents() and nothing more, and that is the point. Unioning
+     * it with weekendDisplayForEvents() - as this function used to - cannot change the
+     * answer for any input: the rule reads a subset of the rows presence reads, and
+     * resolveWeekendDisplay() is monotone in both arguments, so the rule can never open a
+     * column presence leaves shut. Checked exhaustively over all 27 feeds of
+     * {absent, class, holiday} on Fri/Sat/Sun: the holiday exclusion changed the answer in
+     * none of them. A union that no input can distinguish from one of its operands is not a
+     * rule, it is decoration that reads like one.
+     *
+     * So the headline rule "a holiday never OPENS a weekend column" governs the FullCalendar
+     * grid - revealWeekendsForData() and updateWeekendVisibility(), which are fed the
+     * holiday-filtered feed from fetchEvents() - and deliberately NOT this path. It cannot
+     * govern this path: the renderers emit cells only for visible days, so a Saturday
+     * carrying only a holiday has to keep its column or the holiday goes with it.
+     */
     weekendDisplayForRendering(events) {
-        const rule = this.weekendDisplayForEvents(events);
-        const present = this.weekendPresenceForEvents(events);
-        return {
-            showSat: rule.showSat || present.showSat,
-            showSun: rule.showSun || present.showSun,
-        };
+        return this.weekendPresenceForEvents(events);
     }
 
     /** Push the weekend rule into FullCalendar's hiddenDays, only when it changes. */
@@ -2641,8 +2653,11 @@ async setInternalFaculty(internalFacultyIds) {
             // body and the day cards render, so resolve them before drawing.
             // The feed reaching the list view is UNFILTERED (fetchEvents strips holidays,
             // this path does not), and the renderers below emit cells only for visible
-            // days — so the rule is widened by what is actually present, or a weekend day
+            // days — so the column is decided by what is actually PRESENT, or a weekend day
             // carrying only a holiday would lose that holiday along with its column.
+            // Note what that means: the "a holiday never opens a weekend column" rule does
+            // NOT apply here, and cannot. It governs the FullCalendar grid, which is fed the
+            // holiday-filtered feed. See weekendDisplayForRendering().
             const filteredEvents = this.getEventsForWeek(events, this.listViewWeekOffset);
             this.weekendDisplay = this.weekendDisplayForRendering(filteredEvents);
 
@@ -2797,9 +2812,19 @@ async setInternalFaculty(internalFacultyIds) {
                             const title = evt.title || evt.extendedProps?.topic || '';
                             const venue = evt.extendedProps?.vanue || evt.extendedProps?.venue_name || '';
                             const faculty = evt.extendedProps?.faculty_name || '';
-                            const timeTxt = evt.start ? new Date(evt.start).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
+                            // An all-day row carries no time of day. Reading its bare
+                            // "YYYY-MM-DD" through the Date constructor yields UTC midnight,
+                            // which prints as "05:30 am" at IST - a time nobody entered, on a
+                            // row the timetable slot beside it correctly labels "All Day".
+                            const allDay = this.isAllDayEvent(evt);
+                            const timeTxt = !evt.start
+                                ? ''
+                                : allDay
+                                    ? 'All Day'
+                                    : this.eventStartDateTime(evt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                            const timeAria = !timeTxt ? '' : (allDay ? ', all day' : `, at ${timeTxt}`);
                             return `
-                            <div class="mini-event d-flex align-items-center gap-2" role="button" tabindex="0" aria-label="${title}${timeTxt?`, at ${timeTxt}`:''}${venue?`, at ${venue}`:''}">
+                            <div class="mini-event d-flex align-items-center gap-2" role="button" tabindex="0" aria-label="${title}${timeAria}${venue?`, at ${venue}`:''}">
                                 <i class="bi bi-clock text-primary" aria-hidden="true"></i>
                                 <span class="mini-title text-truncate">${title}</span>
                                 ${timeTxt ? `<span class="mini-time text-muted">${timeTxt}</span>` : ''}
@@ -2878,9 +2903,13 @@ async setInternalFaculty(internalFacultyIds) {
             const faculty = ep.faculty_name || '';
             const venue = ep.vanue || ep.venue_name || '';
             const classSession = ep.class_session || '';
-            const startTime = event.start ? new Date(event.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
-            const endTime = event.end ? new Date(event.end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
-            const timeRange = startTime && endTime ? `${startTime} - ${endTime}` : '';
+            // An all-day row has no time of day: reading its bare "YYYY-MM-DD" through the
+            // Date constructor gives UTC midnight, printed as "05:30 am" at IST. Label it the
+            // way the timetable slot does rather than inventing a range from the parse.
+            const isAllDay = this.isAllDayEvent(event);
+            const startTime = (!isAllDay && event.start) ? this.eventStartDateTime(event).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
+            const endTime = (!isAllDay && event.end) ? new Date(this.fixCalendarDateTimeString(event.end)).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
+            const timeRange = isAllDay ? 'All Day' : (startTime && endTime ? `${startTime} - ${endTime}` : '');
             
             return `
                 <div class="list-event-card p-2 mb-2 ${isBreak ? 'list-event-break' : ''}" data-group="${groupName}">
