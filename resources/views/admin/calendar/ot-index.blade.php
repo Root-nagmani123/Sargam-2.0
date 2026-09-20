@@ -3023,8 +3023,10 @@ class CalendarManager {
         }
         
         // Sunday event => show Saturday + Sunday; only-Saturday event => Saturday only.
-        const hasSaturdayEvents = events.some(event => new Date(event.start).getDay() === 6); // 6 = Saturday
-        const hasSundayEvents = events.some(event => new Date(event.start).getDay() === 0);   // 0 = Sunday
+        // eventWeekday() parses a bare "YYYY-MM-DD" as a LOCAL day; the Date constructor
+        // reads it as UTC midnight and reports the previous day at a negative UTC offset.
+        const hasSaturdayEvents = events.some(event => this.eventWeekday(event) === 6); // 6 = Saturday
+        const hasSundayEvents = events.some(event => this.eventWeekday(event) === 0);   // 0 = Sunday
 
         const hiddenDays = [];
         if (!(hasSaturdayEvents || hasSundayEvents)) hiddenDays.push(6);
@@ -4384,6 +4386,91 @@ async setInternalFaculty(internalFacultyIds) {
         this.loadListView();
     }
 
+    /** Format a Date as YYYY-MM-DD (local). */
+    toYmd(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    /** Normalise the feed's non-ISO date-time forms to "YYYY-MM-DD" or "YYYY-MM-DDTHH:MM:SS". */
+    fixCalendarDateTimeString(value) {
+        if (!value) return value;
+        const raw = String(value).trim();
+        const broken = raw.match(/^(\d{4}-\d{2}-\d{2})\s+[\d:]+\s*T(\d{2}:\d{2}(?::\d{2})?)/);
+        if (broken) {
+            return `${broken[1]}T${broken[2].length === 5 ? broken[2] + ':00' : broken[2]}`;
+        }
+        const dateOnly = raw.match(/^(\d{4}-\d{2}-\d{2})$/);
+        if (dateOnly) return dateOnly[1];
+        const iso = raw.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2})?)/);
+        if (iso) {
+            return `${iso[1]}T${iso[2].length === 5 ? iso[2] + ':00' : iso[2]}`;
+        }
+        return raw;
+    }
+
+    /** The YYYY-MM-DD part of an event start, or null. */
+    extractEventDateYmd(start) {
+        if (!start) return null;
+        const fixed = this.fixCalendarDateTimeString(start);
+        const match = String(fixed).match(/^(\d{4}-\d{2}-\d{2})/);
+        return match ? match[1] : null;
+    }
+
+    /**
+     * The event's own calendar day as a LOCAL Date at midnight.
+     * The feed sends all-day rows as a bare "YYYY-MM-DD", which `new Date(str)` reads as
+     * UTC midnight - that lands on the previous day at any negative UTC offset, so the row
+     * is filed under the wrong day and can fall into the wrong week.
+     */
+    eventLocalDate(event) {
+        const start = event && event.start;
+        if (!start) return null;
+
+        if (start instanceof Date) {
+            return new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        }
+
+        const ymd = this.extractEventDateYmd(start);
+        if (ymd) {
+            const [y, m, d] = ymd.split('-').map(Number);
+            return new Date(y, m - 1, d);
+        }
+
+        const parsed = new Date(start);
+        return isNaN(parsed)
+            ? null
+            : new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+    }
+
+    /** Local weekday (0 = Sunday .. 6 = Saturday), or NaN when the row has no usable date. */
+    eventWeekday(event) {
+        const date = this.eventLocalDate(event);
+        return date ? date.getDay() : NaN;
+    }
+
+    /** True when the row carries no time of day. */
+    isAllDayEvent(event) {
+        if (!event) return false;
+        if (event.allDay === true) return true;
+        if (event.allDay === false) return false;
+        if (event.full_day == 1) return true;
+
+        const start = event.start;
+        if (!start || start instanceof Date) return false;
+        const fixed = this.fixCalendarDateTimeString(start);
+        return typeof fixed === 'string' && !fixed.includes('T');
+    }
+
+    /** The event's start as a Date, normalising the feed's non-ISO date-time forms. */
+    eventStartDateTime(event) {
+        const start = event && event.start;
+        if (start instanceof Date) return start;
+        return new Date(this.fixCalendarDateTimeString(start));
+    }
+
     getEventsForWeek(events, weekOffset) {
         // Calculate the start date of the week based on offset
         const today = new Date();
@@ -4401,25 +4488,14 @@ async setInternalFaculty(internalFacultyIds) {
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekEnd.getDate() + 6); // Monday to Sunday
 
+        // Compare whole calendar days, parsed as LOCAL days - see eventLocalDate().
+        const startDateObj = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate());
+        const endDateObj = new Date(weekEnd.getFullYear(), weekEnd.getMonth(), weekEnd.getDate());
+
         // Filter events that fall within this week
-        return events.filter(event => {
-            const eventDate = new Date(event.start);
-            const eventDay = eventDate.getDate();
-            const eventMonth = eventDate.getMonth();
-            const eventYear = eventDate.getFullYear();
-
-            const startDay = weekStart.getDate();
-            const startMonth = weekStart.getMonth();
-            const startYear = weekStart.getFullYear();
-
-            const endDay = weekEnd.getDate();
-            const endMonth = weekEnd.getMonth();
-            const endYear = weekEnd.getFullYear();
-
-            // Compare dates properly
-            const eventDateObj = new Date(eventYear, eventMonth, eventDay);
-            const startDateObj = new Date(startYear, startMonth, startDay);
-            const endDateObj = new Date(endYear, endMonth, endDay);
+        return (events || []).filter(event => {
+            const eventDateObj = this.eventLocalDate(event);
+            if (!eventDateObj) return false;
 
             return eventDateObj >= startDateObj && eventDateObj <= endDateObj;
         });
@@ -4600,25 +4676,29 @@ async setInternalFaculty(internalFacultyIds) {
         const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
         const byDay = new Map();
 
-        // Prepare boundaries: Monday start to Sunday end
+        // Prepare boundaries: Monday start to Sunday end.
+        // Compared as whole days, so a Sunday event that carries a time is included - the
+        // old `d > weekEnd` test against Sunday 00:00 excluded every one of them.
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekEnd.getDate() + 6);
+        const weekStartDay = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate());
+        const weekEndDay = new Date(weekEnd.getFullYear(), weekEnd.getMonth(), weekEnd.getDate());
 
         days.forEach((_, i) => {
             const d = new Date(weekStart);
             d.setDate(d.getDate() + i);
-            const key = d.toISOString().split('T')[0];
-            byDay.set(key, { date: d, events: [] });
+            byDay.set(this.toYmd(d), { date: d, events: [] });
         });
 
-        // Filter incoming events to week range and allocate to day buckets
+        // Filter incoming events to week range and allocate to day buckets.
+        // Every key on both sides of this map is built with toYmd (local); deriving one
+        // side from toISOString() (UTC) puts them a day apart at any non-zero offset, and
+        // each card then silently shows the FOLLOWING day's events.
         (events || []).forEach(evt => {
-            const d = new Date(evt.start);
-            if (isNaN(d)) return;
-            if (d < weekStart || d > weekEnd) return;
-            const key = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString?.() ?
-                new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString().split('T')[0] :
-                `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            const d = this.eventLocalDate(evt);
+            if (!d) return;
+            if (d < weekStartDay || d > weekEndDay) return;
+            const key = this.toYmd(d);
             if (byDay.has(key)) byDay.get(key).events.push(evt);
         });
 
@@ -4626,8 +4706,7 @@ async setInternalFaculty(internalFacultyIds) {
         days.forEach((label, i) => {
             const d = new Date(weekStart);
             d.setDate(d.getDate() + i);
-            const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            const info = byDay.get(key) || { date: d, events: [] };
+            const info = byDay.get(this.toYmd(d)) || { date: d, events: [] };
             const count = info.events.length;
 
             const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
@@ -4672,23 +4751,31 @@ async setInternalFaculty(internalFacultyIds) {
         el.innerHTML = `<i class="bi bi-calendar-week me-2" aria-hidden="true"></i>${startStr} – ${endStr}`;
     }
 
+    /** Group events into { timeSlot: { dayName: [events] } } for the weekly timetable. */
     groupEventsByTime(events) {
-        // Implement grouping logic based on your data structure
-        // This is a simplified example
         const groups = {};
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-        events.forEach(event => {
-            const time = event.start ? new Date(event.start).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit'
-            }) : 'All Day';
+        (events || []).forEach(event => {
+            // Local weekday - see eventLocalDate(). Reading a bare date through the Date
+            // constructor files the row under the wrong column at a negative UTC offset.
+            const day = this.eventWeekday(event);
+            if (isNaN(day)) return;
+
+            // `event.start` is always truthy for a real feed row, so the old
+            // `event.start ? <time> : 'All Day'` test could never reach 'All Day'; an
+            // all-day row was labelled with whatever time its bare date parsed to -
+            // "05:30 am" at IST.
+            const time = this.isAllDayEvent(event)
+                ? 'All Day'
+                : this.eventStartDateTime(event).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
 
             if (!groups[time]) groups[time] = {};
 
-            const day = new Date(event.start).getDay();
-            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             const dayName = dayNames[day];
-
             if (!groups[time][dayName]) {
                 groups[time][dayName] = [];
             }
