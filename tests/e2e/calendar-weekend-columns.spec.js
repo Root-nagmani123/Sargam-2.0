@@ -755,7 +755,7 @@ test("extractMethod lifts every listed method from both templates", () => {
  */
 function buildListViewSource(bladePath, className) {
   const blade = fs.readFileSync(bladePath, "utf8");
-  const body = ["loadListView", "toYmd"]
+  const body = ["loadListView", "toYmd", "mondayOf"]
     .map((m) => extractMethod(blade, m))
     .join("\n\n");
   return `window.${className} = class ${className} {\n${body}\n};`;
