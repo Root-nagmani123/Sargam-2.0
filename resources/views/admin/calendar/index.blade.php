@@ -415,9 +415,9 @@ class CalendarManager {
         this.selectedCourseId = null;
         this.courses = @json($courseMaster);
         this.calendarRequiresCourses = @json($calendarRequiresCourses);
-        this.eventsLoaded = false; // Track if events have been loaded initially
         // Weekend columns of the week grid; recomputed from each week's events
         this.weekendDisplay = { showSat: false, showSun: false };
+        this.hiddenDaysTimer = null;
         this.eventDetailsCache = new Map();
         this.hoverShowTimer = null;
         this.hoverHideTimer = null;
@@ -784,13 +784,85 @@ class CalendarManager {
         return type.includes('holiday');
     }
 
+    /**
+     * Local weekday (0 = Sunday .. 6 = Saturday) for a feed row or a FullCalendar event.
+     * The feed sends all-day rows as a bare "YYYY-MM-DD", which the Date constructor reads
+     * as UTC midnight — that lands on the previous day at any negative UTC offset, and
+     * disagrees with FullCalendar, which builds the same event at LOCAL midnight. Parsing
+     * the parts explicitly keeps both paths on the same weekday in every timezone.
+     */
+    eventLocalDate(event) {
+        const start = event && event.start;
+        if (!start) return null;
+
+        if (start instanceof Date) {
+            return new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        }
+
+        const ymd = this.extractEventDateYmd(start);
+        if (ymd) {
+            const [y, m, d] = ymd.split('-').map(Number);
+            return new Date(y, m - 1, d);
+        }
+
+        const parsed = new Date(start);
+        return isNaN(parsed)
+            ? null
+            : new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+    }
+
+    /** Local weekday (0 = Sunday .. 6 = Saturday), or NaN when the row has no usable date. */
+    eventWeekday(event) {
+        const date = this.eventLocalDate(event);
+        return date ? date.getDay() : NaN;
+    }
+
+    /**
+     * True when the row carries no time of day. The feed sends all-day rows as a bare
+     * "YYYY-MM-DD" and timed rows as "YYYY-MM-DDTHH:MM:SS", so the presence of a time
+     * component is what distinguishes them.
+     */
+    isAllDayEvent(event) {
+        if (!event) return false;
+        if (event.allDay === true) return true;
+        if (event.allDay === false) return false;
+        if (event.full_day == 1) return true;
+
+        const start = event.start;
+        if (!start || start instanceof Date) return false;
+        const fixed = this.fixCalendarDateTimeString(start);
+        return typeof fixed === 'string' && !fixed.includes('T');
+    }
+
     /** { showSat, showSun } for a list of events (raw feed rows or FullCalendar events). */
     weekendDisplayForEvents(events) {
         const rows = (events || []).filter(e => e && e.start && !this.isHolidayEvent(e));
-        const dayOf = e => (e.start instanceof Date ? e.start : new Date(e.start)).getDay();
-        const hasSat = rows.some(e => dayOf(e) === 6); // 6 = Saturday
-        const hasSun = rows.some(e => dayOf(e) === 0); // 0 = Sunday
+        const hasSat = rows.some(e => this.eventWeekday(e) === 6); // 6 = Saturday
+        const hasSun = rows.some(e => this.eventWeekday(e) === 0); // 0 = Sunday
         return this.resolveWeekendDisplay(hasSat, hasSun);
+    }
+
+    /**
+     * { showSat, showSun } counting EVERY row, holidays included.
+     * A holiday must not OPEN a weekend column, but it must never be silently swallowed
+     * either: the renderers only emit cells for visible days, so any day carrying a row
+     * has to stay visible or that row disappears with its column.
+     */
+    weekendPresenceForEvents(events) {
+        const rows = (events || []).filter(e => e && e.start);
+        const hasSat = rows.some(e => this.eventWeekday(e) === 6);
+        const hasSun = rows.some(e => this.eventWeekday(e) === 0);
+        return this.resolveWeekendDisplay(hasSat, hasSun);
+    }
+
+    /** The weekend rule, widened so no rendered row can lose its column. */
+    weekendDisplayForRendering(events) {
+        const rule = this.weekendDisplayForEvents(events);
+        const present = this.weekendPresenceForEvents(events);
+        return {
+            showSat: rule.showSat || present.showSat,
+            showSun: rule.showSun || present.showSun,
+        };
     }
 
     /** Push the weekend rule into FullCalendar's hiddenDays, only when it changes. */
@@ -812,11 +884,6 @@ class CalendarManager {
         }, 0);
     }
 
-    handleWeekendVisibility(events) {
-        this.revealWeekendsForData(events);
-        this.eventsLoaded = true;
-    }
-
     /** Weekend columns from a concrete dataset (raw feed objects with a `start`). */
     revealWeekendsForData(data) {
         if (!this.calendar) return;
@@ -830,7 +897,6 @@ class CalendarManager {
     updateWeekendVisibility() {
         if (!this.calendar) return;
         this.applyHiddenDays(this.weekendDisplayForEvents(this.calendar.getEvents()));
-        this.eventsLoaded = true;
     }
 
     /** Column indexes of the week grid (0 = Monday .. 6 = Sunday) that stay visible. */
@@ -2357,25 +2423,16 @@ async setInternalFaculty(internalFacultyIds) {
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekEnd.getDate() + 6); // Monday to Sunday
 
+        // Compare whole calendar days. eventLocalDate() reads a bare "YYYY-MM-DD" as a
+        // LOCAL day; the Date constructor would read it as UTC midnight and shift the row
+        // to the previous day at a negative UTC offset, moving it into the wrong week.
+        const startDateObj = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate());
+        const endDateObj = new Date(weekEnd.getFullYear(), weekEnd.getMonth(), weekEnd.getDate());
+
         // Filter events that fall within this week
-        return events.filter(event => {
-            const eventDate = new Date(event.start);
-            const eventDay = eventDate.getDate();
-            const eventMonth = eventDate.getMonth();
-            const eventYear = eventDate.getFullYear();
-
-            const startDay = weekStart.getDate();
-            const startMonth = weekStart.getMonth();
-            const startYear = weekStart.getFullYear();
-
-            const endDay = weekEnd.getDate();
-            const endMonth = weekEnd.getMonth();
-            const endYear = weekEnd.getFullYear();
-
-            // Compare dates properly
-            const eventDateObj = new Date(eventYear, eventMonth, eventDay);
-            const startDateObj = new Date(startYear, startMonth, startDay);
-            const endDateObj = new Date(endYear, endMonth, endDay);
+        return (events || []).filter(event => {
+            const eventDateObj = this.eventLocalDate(event);
+            if (!eventDateObj) return false;
 
             return eventDateObj >= startDateObj && eventDateObj <= endDateObj;
         });
@@ -2582,8 +2639,12 @@ async setInternalFaculty(internalFacultyIds) {
 
             // This week's events decide which weekend columns the header, the
             // body and the day cards render, so resolve them before drawing.
+            // The feed reaching the list view is UNFILTERED (fetchEvents strips holidays,
+            // this path does not), and the renderers below emit cells only for visible
+            // days — so the rule is widened by what is actually present, or a weekend day
+            // carrying only a holiday would lose that holiday along with its column.
             const filteredEvents = this.getEventsForWeek(events, this.listViewWeekOffset);
-            this.weekendDisplay = this.weekendDisplayForEvents(filteredEvents);
+            this.weekendDisplay = this.weekendDisplayForRendering(filteredEvents);
 
             // Update table header with week dates
             this.updateTableHeader(weekStart);
@@ -2685,25 +2746,27 @@ async setInternalFaculty(internalFacultyIds) {
         const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
         const byDay = new Map();
 
-        // Prepare boundaries: Monday start to Sunday end
+        // Boundaries: Monday 00:00 inclusive to the following Monday 00:00 EXCLUSIVE.
+        // A `weekStart + 6` bound is Sunday 00:00, which excludes every Sunday event
+        // that has a time on it.
         const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 6);
+        weekEnd.setDate(weekEnd.getDate() + 7);
 
         days.forEach((_, i) => {
             const d = new Date(weekStart);
             d.setDate(d.getDate() + i);
-            const key = d.toISOString().split('T')[0];
-            byDay.set(key, { date: d, events: [] });
+            byDay.set(this.toYmd(d), { date: d, events: [] });
         });
 
-        // Filter incoming events to week range and allocate to day buckets
+        // Filter incoming events to week range and allocate to day buckets.
+        // Every key on both sides of this map is built with toYmd (local); deriving one
+        // side from toISOString() (UTC) puts them a day apart at any non-zero offset and
+        // every lookup misses, which reads as "0 events" on every card.
         (events || []).forEach(evt => {
             const d = new Date(evt.start);
             if (isNaN(d)) return;
-            if (d < weekStart || d > weekEnd) return;
-            const key = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString?.() ?
-                new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString().split('T')[0] :
-                `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            if (d < weekStart || d >= weekEnd) return;
+            const key = this.toYmd(d);
             if (byDay.has(key)) byDay.get(key).events.push(evt);
         });
 
@@ -2712,8 +2775,7 @@ async setInternalFaculty(internalFacultyIds) {
             const label = days[i];
             const d = new Date(weekStart);
             d.setDate(d.getDate() + i);
-            const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            const info = byDay.get(key) || { date: d, events: [] };
+            const info = byDay.get(this.toYmd(d)) || { date: d, events: [] };
             const count = info.events.length;
 
             const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
@@ -2758,23 +2820,33 @@ async setInternalFaculty(internalFacultyIds) {
         el.innerHTML = `<i class="bi bi-calendar-week me-2" aria-hidden="true"></i>${startStr} – ${endStr}`;
     }
 
+    /** Group events into { timeSlot: { dayName: [events] } } for the weekly timetable. */
     groupEventsByTime(events) {
-        // Implement grouping logic based on your data structure
-        // This is a simplified example
         const groups = {};
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-        events.forEach(event => {
-            const time = event.start ? new Date(event.start).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit'
-            }) : 'All Day';
+        (events || []).forEach(event => {
+            // eventWeekday() reads a bare "YYYY-MM-DD" as a LOCAL day. Reading it through
+            // the Date constructor gives UTC midnight, which lands on the previous day at
+            // a negative UTC offset and files the row under the wrong column - and under a
+            // different day than the one the weekend rule used to decide the columns.
+            const day = this.eventWeekday(event);
+            if (isNaN(day)) return;
+
+            // `event.start` is always truthy for a real feed row, so the old
+            // `event.start ? <time> : 'All Day'` test could never reach 'All Day'; an
+            // all-day row was labelled with whatever time its bare date happened to parse
+            // to - "05:30 am" at IST.
+            const time = this.isAllDayEvent(event)
+                ? 'All Day'
+                : this.eventStartDateTime(event).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
 
             if (!groups[time]) groups[time] = {};
 
-            const day = new Date(event.start).getDay();
-            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             const dayName = dayNames[day];
-
             if (!groups[time][dayName]) {
                 groups[time][dayName] = [];
             }
@@ -2783,6 +2855,13 @@ async setInternalFaculty(internalFacultyIds) {
         });
 
         return groups;
+    }
+
+    /** The event's start as a Date, normalising the feed's non-ISO date-time forms. */
+    eventStartDateTime(event) {
+        const start = event && event.start;
+        if (start instanceof Date) return start;
+        return new Date(this.fixCalendarDateTimeString(start));
     }
 
     renderListEvent(events) {
