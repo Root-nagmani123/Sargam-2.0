@@ -3014,6 +3014,41 @@ class CalendarManager {
         });
     }
 
+    /**
+     * The weekend rule for this calendar - ONE definition, used by all three call sites
+     * below. It previously existed as three separate inline copies, which is how one of
+     * them kept a UTC date parse after the other two were corrected: a fix applied to the
+     * copies you happen to be looking at is not applied to the rule.
+     *
+     *   - an event on Sunday        -> show Saturday AND Sunday (never a gap after Friday)
+     *   - an event on Saturday only -> show Saturday, keep Sunday hidden
+     *   - nothing on either         -> Mon-Fri only
+     */
+    resolveWeekendDisplay(hasSat, hasSun) {
+        return { showSat: hasSat || hasSun, showSun: hasSun };
+    }
+
+    /**
+     * { showSat, showSun } for a list of rows. Accepts BOTH shapes this file deals in:
+     * raw feed objects, whose `start` is a string, and FullCalendar events, whose `start`
+     * is a Date - eventWeekday() resolves each to the same local weekday.
+     */
+    weekendDisplayForEvents(events) {
+        const rows = (events || []).filter(e => e && e.start);
+        return this.resolveWeekendDisplay(
+            rows.some(e => this.eventWeekday(e) === 6), // 6 = Saturday
+            rows.some(e => this.eventWeekday(e) === 0)  // 0 = Sunday
+        );
+    }
+
+    /** FullCalendar's `hiddenDays` for a resolved display. */
+    hiddenDaysFor(display) {
+        const hidden = [];
+        if (!display.showSat) hidden.push(6);
+        if (!display.showSun) hidden.push(0);
+        return hidden;
+    }
+
     handleWeekendVisibility(events) {
         // Wait for calendar to be fully rendered before adjusting days
         if (!this.calendar || !events || events.length === 0) {
@@ -3021,16 +3056,8 @@ class CalendarManager {
             this.eventsLoaded = true;
             return;
         }
-        
-        // Sunday event => show Saturday + Sunday; only-Saturday event => Saturday only.
-        // eventWeekday() parses a bare "YYYY-MM-DD" as a LOCAL day; the Date constructor
-        // reads it as UTC midnight and reports the previous day at a negative UTC offset.
-        const hasSaturdayEvents = events.some(event => this.eventWeekday(event) === 6); // 6 = Saturday
-        const hasSundayEvents = events.some(event => this.eventWeekday(event) === 0);   // 0 = Sunday
 
-        const hiddenDays = [];
-        if (!(hasSaturdayEvents || hasSundayEvents)) hiddenDays.push(6);
-        if (!hasSundayEvents) hiddenDays.push(0);
+        const hiddenDays = this.hiddenDaysFor(this.weekendDisplayForEvents(events));
 
         // Use setTimeout to ensure calendar is fully rendered
         setTimeout(() => {
@@ -3044,15 +3071,7 @@ class CalendarManager {
     revealWeekendsForData(data) {
         if (!this.calendar) return;
         try {
-            const hasSat = (data || []).some(e => new Date(e.start).getDay() === 6);
-            const hasSun = (data || []).some(e => new Date(e.start).getDay() === 0);
-            // Sunday can only show if Saturday also shows (no gap after Friday):
-            // Sunday event => show Saturday + Sunday; only Saturday event => Saturday only.
-            const showSat = hasSat || hasSun;
-            const showSun = hasSun;
-            const hidden = [];
-            if (!showSat) hidden.push(6);
-            if (!showSun) hidden.push(0);
+            const hidden = this.hiddenDaysFor(this.weekendDisplayForEvents(data));
             const cur = this.calendar.getOption('hiddenDays') || [];
             if (JSON.stringify([...hidden].sort()) !== JSON.stringify([...cur].sort())) {
                 this.calendar.setOption('hiddenDays', hidden);
@@ -3061,20 +3080,18 @@ class CalendarManager {
     }
 
     updateWeekendVisibility() {
-        // Get all events currently in the calendar
-        const events = this.calendar.getEvents();
-        
-        // Sunday event => show Saturday + Sunday; only-Saturday event => Saturday only.
-        const hasSaturdayEvents = events.some(event => new Date(event.start).getDay() === 6);
-        const hasSundayEvents = events.some(event => new Date(event.start).getDay() === 0);
-
-        const newHiddenDays = [];
-        if (!(hasSaturdayEvents || hasSundayEvents)) newHiddenDays.push(6);
-        if (!hasSundayEvents) newHiddenDays.push(0);
+        // Get all events currently in the calendar. Their `start` is a Date rather than a
+        // feed string, which weekendDisplayForEvents() handles - so this call site now uses
+        // the same rule as the other two instead of its own copy.
+        const newHiddenDays = this.hiddenDaysFor(
+            this.weekendDisplayForEvents(this.calendar.getEvents())
+        );
         const currentHiddenDays = this.calendar.getOption('hiddenDays') || [];
-        
-        // Only update if changed to prevent unnecessary re-renders
-        if (JSON.stringify(newHiddenDays.sort()) !== JSON.stringify(currentHiddenDays.sort())) {
+
+        // Only update if changed to prevent unnecessary re-renders. Sort COPIES: Array.sort
+        // mutates, and the un-copied version sorted the array it was about to hand to
+        // setOption.
+        if (JSON.stringify([...newHiddenDays].sort()) !== JSON.stringify([...currentHiddenDays].sort())) {
             this.calendar.setOption('hiddenDays', newHiddenDays);
         }
     }
@@ -4703,6 +4720,21 @@ async setInternalFaculty(internalFacultyIds) {
         });
 
         container.innerHTML = '';
+        // DELIBERATE DIVERGENCE from the admin calendar, recorded so it is not mistaken for
+        // an oversight: the weekend rule above governs the FullCalendar grid only. These week
+        // cards always render Mon-Sun, including empty weekend days.
+        //
+        // The rule exists to close the visual gap between Friday and a weekend session in a
+        // GRID. A card list has no such gap - an empty Saturday card costs a little space and
+        // hides nothing, whereas suppressing it would remove a day the reader can otherwise
+        // confirm is empty. That is the operator's recorded decision of 2026-09-20 on this
+        // feature: "never hide data - a weekend column opens if that day has any row, holiday
+        // included."
+        //
+        // To adopt the rule here instead, replace `days.forEach((label, i) =>` with
+        // `this.visibleWeekDayIndexes().forEach(i => { const label = days[i];` and port
+        // visibleWeekDayIndexes()/weekendDisplayForRendering() from index.blade.php. Do not
+        // do it without deciding the empty-weekend-card question above.
         days.forEach((label, i) => {
             const d = new Date(weekStart);
             d.setDate(d.getDate() + i);
