@@ -718,11 +718,24 @@ class CalendarManager {
         let url = CalendarConfig.api.events;
         const params = new URLSearchParams();
         
+        // LOCAL date strings (toYmd), never toISOString(). At a positive UTC offset - IST
+        // is +05:30 - toISOString() rolls local midnight back to the PREVIOUS day, so the
+        // feed was requested a day early. That was inert while hiddenDays was fixed at
+        // [0,6], but the weekend columns are now decided from this feed
+        // (revealWeekendsForData below), so a session on the day BEFORE the view opened a
+        // weekend column INSIDE it - e.g. the week of Mon 2026-06-29, which has no weekend
+        // session, reached back into the Sunday 2026-06-28 class and showed Sat+Sun.
         if (info.start) {
-            params.append('start', info.start.toISOString().split('T')[0]);
+            params.append('start', this.toYmd(info.start));
         }
         if (info.end) {
-            params.append('end', info.end.toISOString().split('T')[0]);
+            // info.end is EXCLUSIVE in FullCalendar, so step back to the last day the user
+            // can actually see. toISOString() did this by accident at a positive offset and
+            // not at all at a negative one, where it asked for a day beyond the view;
+            // doing it explicitly is correct at both. Same shape as openTimetablePdf().
+            const lastVisibleDay = new Date(info.end);
+            lastVisibleDay.setDate(lastVisibleDay.getDate() - 1);
+            params.append('end', this.toYmd(lastVisibleDay));
         }
         if (this.selectedCourseId) {
             params.append('course_id', this.selectedCourseId);

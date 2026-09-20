@@ -846,3 +846,152 @@ for (const [label, bladePath, className] of [
     });
   }
 }
+
+/**
+ * F-019: the GRID's feed was requested one day early, and this PR made that feed decide the
+ * weekend columns.
+ *
+ * fetchEvents() formatted FullCalendar's range with `info.start.toISOString().split('T')[0]`.
+ * At a POSITIVE UTC offset - IST, +05:30, which is where this runs - a local-midnight Date
+ * serialises to the PREVIOUS day, so the feed was requested from one day before the view.
+ * Before this PR that only over-fetched; `hiddenDays` was the fixed [0,6] and
+ * updateWeekendVisibility() was an empty no-op, so no layout depended on it. Once
+ * revealWeekendsForData(filteredData) began deciding the columns from that same feed, a
+ * session on the day BEFORE the view could open a weekend column INSIDE it.
+ *
+ * Proved against the live schema before the fix: viewing Mon 2026-06-29 .. Sun 2026-07-05
+ * (which has no weekend session at all), the request went out as start=2026-06-28 - a Sunday -
+ * and the endpoint returned the 2026-06-28 class "Inaugration", so the real
+ * weekendDisplayForEvents() answered {showSat:true, showSun:true} instead of
+ * {showSat:false, showSun:false}.
+ *
+ * The end bound is asserted too, and that is not padding. `info.end` is EXCLUSIVE, and the
+ * UTC shift was performing the exclusive->inclusive conversion BY ACCIDENT. A fix that swaps
+ * toYmd() in on both lines without decrementing the end repairs the start and breaks the end
+ * in the same stroke, and only an assertion on both catches that.
+ */
+function buildFetchEventsSource(bladePath, className) {
+  const blade = fs.readFileSync(bladePath, "utf8");
+  const body = ["fetchEvents", "toYmd"]
+    .map((m) => extractMethod(blade, m))
+    .join("\n\n");
+  return `window.${className} = class ${className} {\n${body}\n};`;
+}
+
+/** Run the real fetchEvents() for a view range and return the URL it actually requested. */
+async function requestedRangeFor(page, className, startParts, endParts) {
+  return page.evaluate(
+    async ({ cls, s, e }) => {
+      const requested = [];
+      const errors = [];
+      const realError = console.error;
+      console.error = (...a) => errors.push(a.map(String).join(" "));
+
+      window.CalendarConfig = {
+        api: { events: "https://example.invalid/calendar/full-calendar-details" },
+      };
+      window.fetch = (url) => {
+        requested.push(String(url));
+        return Promise.resolve({ ok: true, json: async () => [] });
+      };
+
+      const inst = Object.create(window[cls].prototype);
+      inst.selectedCourseId = null;
+      // The admin file guards on this before it builds the URL; the OT file has no such guard.
+      inst.calendarRequiresCourses = false;
+      inst.courses = [];
+      // Everything fetchEvents touches after the response. Stubbed so this test is about the
+      // REQUEST and fails for one reason only.
+      inst.normalizeEventForTimeGrid = (x) => x;
+      inst.revealWeekendsForData = () => {};
+      inst.showNotification = () => {};
+
+      // Dates are built from parts, NOT parsed from a string: `new Date("2026-06-29")` is UTC
+      // midnight, which is the very confusion this test exists to pin down. FullCalendar hands
+      // fetchEvents LOCAL midnight.
+      const info = {
+        start: new Date(s[0], s[1], s[2]),
+        end: new Date(e[0], e[1], e[2]),
+      };
+
+      await new Promise((resolve) => {
+        let settled = false;
+        const done = () => { if (!settled) { settled = true; resolve(); } };
+        inst.fetchEvents(info, done, done);
+        setTimeout(done, 1000);
+      });
+
+      console.error = realError;
+      return { requested, errors };
+    },
+    { cls: className, s: startParts, e: endParts }
+  );
+}
+
+for (const [label, bladePath, className] of [
+  ["admin", BLADE, "AdminFetchEvents"],
+  ["OT", BLADE_OT, "OtFetchEvents"],
+]) {
+  test.describe(`${label} fetchEvents asks for the range it is showing`, () => {
+    // IST. The defect is invisible at a negative offset, so a suite that only ever ran in
+    // America/New_York would call this code correct.
+    test.use({ timezoneId: "Asia/Kolkata" });
+
+    test(`${label} fetchEvents requests the displayed range, not one day early (IST)`, async ({
+      page,
+    }) => {
+      await page.setContent("<!doctype html><title>fetch range</title>");
+      await page.evaluate(buildFetchEventsSource(bladePath, className));
+
+      // timeGridWeek on Mon 29 Jun 2026: activeStart = Mon 29 Jun local midnight,
+      // activeEnd = Mon 6 Jul local midnight, EXCLUSIVE.
+      const result = await requestedRangeFor(page, className, [2026, 5, 29], [2026, 6, 6]);
+
+      expect(result.errors, "fetchEvents threw and its catch swallowed it").toEqual([]);
+      expect(result.requested, "fetchEvents did not call fetch exactly once").toHaveLength(1);
+
+      const url = new URL(result.requested[0]);
+      expect(
+        url.searchParams.get("start"),
+        "start is a day early: toISOString() rolls IST local midnight back to the previous day, " +
+          "and that day's sessions now open weekend columns inside a week that has none"
+      ).toBe("2026-06-29");
+      expect(
+        url.searchParams.get("end"),
+        "end must be the last VISIBLE day: info.end is exclusive, so it needs a -1 day, " +
+          "not a raw local format"
+      ).toBe("2026-07-05");
+    });
+
+    test(`${label} fetchEvents formats a month view's range the same way (IST)`, async ({
+      page,
+    }) => {
+      await page.setContent("<!doctype html><title>fetch range</title>");
+      await page.evaluate(buildFetchEventsSource(bladePath, className));
+
+      // dayGridMonth over July 2026: first visible cell Mon 29 Jun, activeEnd Mon 3 Aug.
+      const result = await requestedRangeFor(page, className, [2026, 5, 29], [2026, 7, 3]);
+      const url = new URL(result.requested[0]);
+
+      expect(url.searchParams.get("start")).toBe("2026-06-29");
+      expect(url.searchParams.get("end")).toBe("2026-08-02");
+    });
+  });
+
+  test.describe(`${label} fetchEvents range at a negative UTC offset`, () => {
+    // The same assertions must hold where toISOString() happened to agree, so the fix is not
+    // a positive-offset special case.
+    test.use({ timezoneId: "America/New_York" });
+
+    test(`${label} fetchEvents requests the displayed range (New York)`, async ({ page }) => {
+      await page.setContent("<!doctype html><title>fetch range</title>");
+      await page.evaluate(buildFetchEventsSource(bladePath, className));
+
+      const result = await requestedRangeFor(page, className, [2026, 5, 29], [2026, 6, 6]);
+      const url = new URL(result.requested[0]);
+
+      expect(url.searchParams.get("start")).toBe("2026-06-29");
+      expect(url.searchParams.get("end")).toBe("2026-07-05");
+    });
+  });
+}
