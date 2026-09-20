@@ -50,6 +50,7 @@ const METHODS = [
   "weekendDisplayForRendering",
   "visibleWeekDayIndexes",
   "toYmd",
+  "feedRange",
   "groupEventsByTime",
   // The RENDERERS, not just the pure helpers. Asserting against a re-implementation of a
   // renderer proves only that the re-implementation agrees with itself: a defect can sit in
@@ -872,7 +873,9 @@ for (const [label, bladePath, className] of [
  */
 function buildFetchEventsSource(bladePath, className) {
   const blade = fs.readFileSync(bladePath, "utf8");
-  const body = ["fetchEvents", "toYmd"]
+  // feedRange() is part of fetchEvents' surface since F-021; without it the lifted
+  // fetchEvents throws "this.feedRange is not a function" and the assertions never run.
+  const body = ["fetchEvents", "toYmd", "feedRange"]
     .map((m) => extractMethod(blade, m))
     .join("\n\n");
   return `window.${className} = class ${className} {\n${body}\n};`;
@@ -992,6 +995,175 @@ for (const [label, bladePath, className] of [
 
       expect(url.searchParams.get("start")).toBe("2026-06-29");
       expect(url.searchParams.get("end")).toBe("2026-07-05");
+    });
+  });
+}
+
+/**
+ * F-021: `hiddenDays` trims the range FullCalendar asks the feed for, and this PR makes the
+ * feed decide `hiddenDays`.
+ *
+ * DateProfileGenerator runs the range through trimHiddenDays(), which skips hidden days
+ * inward from both ends. So in timeGridWeek - where both weekend days sit at the EDGES of a
+ * one-week range - the feed is never asked for a Saturday or a Sunday while they are hidden,
+ * revealWeekendsForData() never sees a weekend row, the column never opens, and the session
+ * is not rendered at all. Once shut, the columns could not reopen: a one-way latch.
+ *
+ * These two tests drive the REAL shipped FullCalendar bundle, and that is the point. Every
+ * other test in this file evaluates methods lifted from the template against hand-built
+ * arrays, and NONE of them can observe this defect, because the defect is in the range the
+ * bundle computes before the feed is ever called. A guard for F-021 has to let the bundle
+ * compute that range.
+ */
+const FC_BUNDLE = path.join(
+  __dirname, "..", "..", "public", "admin_assets", "libs", "fullcalendar", "index.global.min.js"
+);
+
+/** Methods each template needs for the feed request itself. */
+const RANGE_METHODS = ["fetchEvents", "toYmd", "feedRange"];
+
+/** Plus everything the weekend decision touches, per template. */
+const LATCH_METHODS = {
+  admin: [
+    "fetchEvents", "toYmd", "feedRange", "revealWeekendsForData", "applyHiddenDays",
+    "weekendDisplayForEvents", "resolveWeekendDisplay", "isHolidayEvent",
+    "eventLocalDate", "eventWeekday", "extractEventDateYmd", "fixCalendarDateTimeString",
+  ],
+  OT: [
+    "fetchEvents", "toYmd", "feedRange", "revealWeekendsForData", "hiddenDaysFor",
+    "weekendDisplayForEvents", "resolveWeekendDisplay",
+    "eventLocalDate", "eventWeekday", "extractEventDateYmd", "fixCalendarDateTimeString",
+  ],
+};
+
+function buildClassFrom(bladePath, className, methods) {
+  const blade = fs.readFileSync(bladePath, "utf8");
+  const body = methods.map((m) => extractMethod(blade, m)).join("\n\n");
+  return `window.${className} = class ${className} {\n${body}\n};`;
+}
+
+for (const [label, bladePath] of [["admin", BLADE], ["OT", BLADE_OT]]) {
+  test.describe(`${label} fetchEvents asks for the whole week, not only the visible days`, () => {
+    test.use({ timezoneId: "Asia/Kolkata" });
+
+    test(`${label} timeGridWeek at hiddenDays [0,6] still requests Saturday and Sunday`, async ({ page }) => {
+      await page.setContent("<!doctype html><title>f021 range</title><div id=\"cal\"></div>");
+      await page.addScriptTag({ path: FC_BUNDLE });
+      await page.evaluate(buildClassFrom(bladePath, "F021Range", RANGE_METHODS));
+
+      const requested = await page.evaluate(() => new Promise((resolve) => {
+        const seen = [];
+        window.CalendarConfig = { api: { events: "https://example.invalid/feed" } };
+        window.fetch = (url) => {
+          seen.push(String(url));
+          return Promise.resolve({ ok: true, json: async () => [] });
+        };
+
+        const inst = Object.create(window.F021Range.prototype);
+        inst.selectedCourseId = null;
+        inst.calendarRequiresCourses = false;
+        inst.courses = [];
+        inst.normalizeEventForTimeGrid = (x) => x;
+        inst.revealWeekendsForData = () => {};
+        inst.showNotification = () => {};
+
+        const cal = new FullCalendar.Calendar(document.getElementById("cal"), {
+          initialView: "timeGridWeek",
+          initialDate: "2026-09-16",   // a Wednesday; its week is Sun 09-13 .. Sat 09-19
+          hiddenDays: [0, 6],          // the calendar's shipped initial state
+          events: (info, ok, fail) => inst.fetchEvents(info, ok, fail),
+        });
+        inst.calendar = cal;
+        cal.render();
+        setTimeout(() => resolve(seen), 400);
+      }));
+
+      expect(requested, "fetchEvents did not reach fetch").not.toHaveLength(0);
+      const url = new URL(requested[0]);
+      expect(
+        url.searchParams.get("start"),
+        "the request starts on Monday: hiddenDays trimmed Sunday out of the range, so the " +
+          "feed can never return a Sunday row and the Sunday column can never open"
+      ).toBe("2026-09-13");
+      expect(
+        url.searchParams.get("end"),
+        "the request ends on Friday: hiddenDays trimmed Saturday out of the range, so the " +
+          "feed can never return a Saturday row and the Saturday column can never open"
+      ).toBe("2026-09-19");
+    });
+
+    test(`${label} a Saturday class opens the weekend column in Week view even when it starts hidden`, async ({ page }) => {
+      await page.setContent("<!doctype html><title>f021 latch</title><div id=\"cal\"></div>");
+      await page.addScriptTag({ path: FC_BUNDLE });
+      await page.evaluate(buildClassFrom(bladePath, "F021Latch", LATCH_METHODS[label]));
+
+      const out = await page.evaluate(() => new Promise((resolve) => {
+        // One Saturday class, and a server that honours the range it is given.
+        const DB = [{
+          id: 1, title: "Saturday makeup class", start: "2026-09-26T10:00:00",
+          end: "2026-09-26T11:00:00", allDay: false, type: "class",
+        }];
+        window.CalendarConfig = { api: { events: "https://example.invalid/feed" } };
+        const requested = [];
+        window.fetch = (url) => {
+          const q = new URL(String(url)).searchParams;
+          const start = q.get("start"), end = q.get("end");
+          requested.push({ start, end });
+          const rows = DB.filter((r) => r.start.slice(0, 10) >= start && r.start.slice(0, 10) <= end);
+          return Promise.resolve({ ok: true, json: async () => rows });
+        };
+
+        const inst = Object.create(window.F021Latch.prototype);
+        inst.selectedCourseId = null;
+        inst.calendarRequiresCourses = false;
+        inst.courses = [];
+        inst.hiddenDaysTimer = null;
+        inst.normalizeEventForTimeGrid = (x) => x;
+        inst.showNotification = () => {};
+
+        const cal = new FullCalendar.Calendar(document.getElementById("cal"), {
+          initialView: "timeGridWeek",
+          initialDate: "2026-09-16",   // the week BEFORE, which has no weekend session
+          hiddenDays: [0, 6],
+          events: (info, ok, fail) => inst.fetchEvents(info, ok, fail),
+        });
+        inst.calendar = cal;
+        cal.render();
+
+        // Navigate to the week that HOLDS the Saturday class.
+        setTimeout(() => {
+          requested.length = 0;   // only the requests for the NAVIGATED week
+          cal.next();
+          setTimeout(() => resolve({
+            hiddenDays: cal.getOption("hiddenDays") || [],
+            rendered: cal.getEvents().length,
+            requestedAfterNav: requested.slice(),
+          }), 600);
+        }, 500);
+      }));
+
+      expect(
+        out.hiddenDays,
+        "Saturday is still hidden in the week that contains a Saturday class - the feed was " +
+          "never asked for that day, so the rule never saw the row. This is the latch."
+      ).not.toContain(6);
+      expect(
+        out.rendered,
+        "the Saturday class was not rendered at all: its column does not exist, so there is " +
+          "nowhere to draw it"
+      ).toBeGreaterThan(0);
+
+      // Undoing the trim must not turn into over-fetching. A request that reaches back into
+      // the PRECEDING week is F-019 again by another route: a session in that week would
+      // open a weekend column inside this one.
+      for (const r of out.requestedAfterNav) {
+        expect(
+          r.start,
+          `the feed for the week of 2026-09-20 reached back to ${r.start} - a session in the ` +
+            "preceding week would open a weekend column inside this one"
+        ).toBe("2026-09-20");
+        expect(r.end).toBe("2026-09-26");
+      }
     });
   });
 }
