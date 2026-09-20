@@ -179,8 +179,10 @@ const OT_METHODS = [
   // The OT list view decides its own columns here, separately from the grid above. This is
   // the function that reads the decision, so this is the one the rule has to be checked at.
   "computeActiveDays",
+  "defaultWeekdays",
   "groupEventsByTime",
-  // The real renderer, so the all-day label is asserted against what is drawn.
+  // The real renderer, so the all-day label and the card set are asserted against what is
+  // actually drawn rather than against a re-implementation.
   "renderWeekCards",
 ];
 
@@ -575,6 +577,80 @@ test.describe("admin calendar - weekend columns", () => {
       }
       // A Sunday row opens Saturday too - no gap after Friday, the same rule as the grid.
       expect(result.columns).toEqual(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]);
+    });
+
+    /**
+     * The OT week cards follow the same weekend rule as the OT table above them.
+     *
+     * Product owner decision, 2026-09-20: adopt the rule on the cards. Until then the cards
+     * rendered Mon–Sun unconditionally while the grid and the table hid empty weekend days,
+     * so one screen showed a Saturday card that the two beside it had already decided was
+     * not worth a column.
+     *
+     * The cards are driven by the SAME computeActiveDays() result the header and the table
+     * use — deliberately not by a second copy of the rule. A second copy is what produced
+     * F-011 and F-013, and a rule that cannot disagree with itself is the only kind that
+     * stays fixed.
+     */
+    test("OT week cards render the same days the OT table does", async ({ page }) => {
+      await page.evaluate(buildOtClassSource());
+      const cases = await page.evaluate(() => {
+        const weekStart = new Date(2026, 8, 14); // Mon 14 Sep 2026
+        const run = (feed) => {
+          document.body.innerHTML = '<div id="weekCards"><div class="row"></div></div>';
+          const r = new OtWeekendRule();
+          const activeDays = r.computeActiveDays(feed, weekStart);
+          r.renderWeekCards(feed, weekStart, activeDays);
+          const labels = Array.from(
+            document.querySelectorAll("#weekCards .week-day-card .fw-bold")
+          ).map((el) => el.textContent.trim().split(" ")[0]);
+          const drawn = Array.from(document.querySelectorAll("#weekCards .mini-event")).map((el) =>
+            el.getAttribute("aria-label")
+          );
+          return {
+            tableColumns: activeDays.map((d) => d.short),
+            cardDays: labels,
+            drawn,
+            dropped: feed.map((e) => e.title).filter((t) => !drawn.some((a) => a && a.startsWith(t))),
+          };
+        };
+        return {
+          weekdayOnly: run([{ title: "Wed class", start: "2026-09-16T09:00:00" }]),
+          saturday: run([
+            { title: "Wed class", start: "2026-09-16T09:00:00" },
+            { title: "Sat session", start: "2026-09-19T10:00:00" },
+          ]),
+          sunday: run([
+            { title: "Wed class", start: "2026-09-16T09:00:00" },
+            { title: "Sun remedial", start: "2026-09-20T09:00:00" },
+          ]),
+        };
+      });
+
+      // Nothing on either weekend day: Mon-Fri, on the cards as well as the table.
+      expect(cases.weekdayOnly.cardDays).toEqual([
+        "Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
+      ]);
+
+      // A Saturday session opens Saturday and leaves Sunday shut.
+      expect(cases.saturday.cardDays).toEqual([
+        "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+      ]);
+
+      // A Sunday session opens both - no gap after Friday.
+      expect(cases.sunday.cardDays).toEqual([
+        "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+      ]);
+
+      // The cards and the table must never disagree about which days exist, and no row may
+      // be lost to a card that was not rendered.
+      const dayOfShort = { Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday",
+                           Fri: "Friday", Sat: "Saturday", Sun: "Sunday" };
+      for (const [name, c] of Object.entries(cases)) {
+        expect(c.cardDays, `cards vs table disagree for: ${name}`)
+          .toEqual(c.tableColumns.map((s) => dayOfShort[s]));
+        expect(c.dropped, `rows lost by renderWeekCards for: ${name}`).toEqual([]);
+      }
     });
 
     /**

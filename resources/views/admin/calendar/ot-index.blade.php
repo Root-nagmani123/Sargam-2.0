@@ -4557,7 +4557,7 @@ async setInternalFaculty(internalFacultyIds) {
             console.log('Filtered events for this week:', filteredEvents.length);
 
             this.renderListView(filteredEvents, activeDays);
-            this.renderWeekCards(events, weekStart);
+            this.renderWeekCards(events, weekStart, activeDays);
             this.updateWeekRangeText(weekStart);
         } catch (error) {
             console.error('Error loading list view:', error);
@@ -4674,7 +4674,7 @@ async setInternalFaculty(internalFacultyIds) {
         this.initializeScrollIndicators();
     }
 
-    renderWeekCards(events, weekStart) {
+    renderWeekCards(events, weekStart, activeDays) {
         const container = document.querySelector('#weekCards .row');
         if (!container) return;
 
@@ -4708,27 +4708,26 @@ async setInternalFaculty(internalFacultyIds) {
         });
 
         container.innerHTML = '';
-        // DELIBERATE DIVERGENCE from the admin calendar, recorded so it is not mistaken for
-        // an oversight: the weekend rule above governs the FullCalendar grid only. These week
-        // cards always render Mon-Sun, including empty weekend days.
+        // The week cards render the SAME days the table above them renders - Product owner
+        // decision of 2026-09-20, adopting the weekend rule here too. Until then the cards
+        // showed Mon-Sun unconditionally while the grid and the table hid empty weekend days,
+        // so one screen offered a Saturday card that the two beside it had already decided was
+        // not worth a column.
         //
-        // The rule exists to close the visual gap between Friday and a weekend session in a
-        // GRID. A card list has no such gap - an empty Saturday card costs a little space and
-        // hides nothing, whereas suppressing it would remove a day the reader can otherwise
-        // confirm is empty. That is the operator's recorded decision of 2026-09-20 on this
-        // feature: "never hide data - a weekend column opens if that day has any row, holiday
-        // included."
+        // `activeDays` is the decision computeActiveDays() already made for the header and the
+        // table, passed in rather than recomputed. That is deliberate: a second copy of this
+        // rule is exactly what produced F-011 and F-013, where one copy kept a UTC date parse
+        // after the others were corrected. A rule that cannot disagree with itself is the only
+        // kind that stays fixed.
         //
-        // To adopt the rule here instead, iterate visibleWeekDayIndexes() rather than the
-        // whole `days` array, taking each label as days[i], and port visibleWeekDayIndexes()
-        // and weekendDisplayForRendering() from index.blade.php. Do not do it without first
-        // deciding the empty-weekend-card question above.
-        //
-        // Written without quoting the code: an earlier version of this comment quoted a
-        // fragment containing an unmatched brace, and the regression spec lifts methods out
-        // of this file by counting braces - so the quote made renderWeekCards() unliftable.
-        // The extractor now skips comments, but a comment still should not need it to.
-        days.forEach((label, i) => {
+        // Omitting the argument renders all seven days, which is what a direct caller with no
+        // week context should get.
+        const cardDays = (activeDays && activeDays.length)
+            ? activeDays.map(day => day.offset)
+            : days.map((_, i) => i);
+
+        cardDays.forEach(i => {
+            const label = days[i];
             const d = new Date(weekStart);
             d.setDate(d.getDate() + i);
             const info = byDay.get(this.toYmd(d)) || { date: d, events: [] };
