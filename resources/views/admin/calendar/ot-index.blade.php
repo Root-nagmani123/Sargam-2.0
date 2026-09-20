@@ -4502,9 +4502,30 @@ async setInternalFaculty(internalFacultyIds) {
 
     async loadListView() {
         try {
-            // Build URL with course filter
+            // Calculate week start date based on offset. This runs BEFORE the fetch, because
+            // the feed has to be requested for the week being DRAWN. With no start/end the
+            // endpoint defaults to the CURRENT CALENDAR MONTH
+            // (CalendarController::fullCalendarDetails), while this view pages by week without
+            // limit - so every week outside that month came back empty, not because it was
+            // empty but because it was never asked for, and the weekend rule then hid Saturday
+            // and Sunday for a week it had no data on.
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            // Monday = 1, Sunday = 0
+            const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            const weekStart = new Date(today.getFullYear(), today.getMonth(), diff);
+            weekStart.setDate(weekStart.getDate() + (this.listViewWeekOffset * 7));
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+
+            // Build URL with the displayed week's bounds and the course filter.
+            // The endpoint also filters END_DATE <= end; no timetable row spans more than one
+            // day (verified 2026-09-20: 0 of 1005 rows have DATE(START_DATE) <> DATE(END_DATE)),
+            // so these bounds cannot drop a row that START_DATE >= start admits.
             let url = CalendarConfig.api.events;
             const params = new URLSearchParams();
+            params.append('start', this.toYmd(weekStart));
+            params.append('end', this.toYmd(weekEnd));
             if (this.selectedCourseId) {
                 params.append('course_id', this.selectedCourseId);
             }
@@ -4519,14 +4540,6 @@ async setInternalFaculty(internalFacultyIds) {
                 }
             });
             const events = await response.json();
-
-            // Calculate week start date based on offset
-            const today = new Date();
-            const dayOfWeek = today.getDay();
-            // Monday = 1, Sunday = 0
-            const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-            const weekStart = new Date(today.getFullYear(), today.getMonth(), diff);
-            weekStart.setDate(weekStart.getDate() + (this.listViewWeekOffset * 7));
 
             // Update week display in header (use same calculation as updateCurrentWeek)
             const date = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate());
