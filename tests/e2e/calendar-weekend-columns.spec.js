@@ -101,7 +101,10 @@ function skipLiteral(source, start) {
  * inside one (`/\}/`) would still be counted. None of the extracted methods contains one.
  */
 function extractMethod(source, name) {
-  const signature = new RegExp(`^[ \\t]*${name}\\s*\\(`, "m");
+  // `async ` may precede the name: loadListView() is declared async, and without this
+  // the extractor reports "method not found" for it - a failure that looks like a missing
+  // method rather than an unsupported declaration form.
+  const signature = new RegExp(`^[ \\t]*(?:async\\s+)?${name}\\s*\\(`, "m");
   const at = source.search(signature);
   if (at === -1) throw new Error(`Method ${name}() not found in ${BLADE}`);
 
@@ -731,3 +734,115 @@ test("extractMethod lifts every listed method from both templates", () => {
     }
   }
 });
+/**
+ * F-018: the list view's weekend columns are decided from the feed it fetched, so the feed
+ * has to cover the week being DRAWN. loadListView() sent only course_id, and the endpoint
+ * defaults a missing range to the CURRENT CALENDAR MONTH
+ * (CalendarController::fullCalendarDetails: Carbon::now()->startOfMonth()/endOfMonth(), then
+ * whereDate('START_DATE','>=',start) and whereDate('END_DATE','<=',end)). Every week the user
+ * can page to outside that month therefore came back empty - not because the week was empty,
+ * but because it was never requested - and weekendDisplayForRendering([]) then hid Saturday
+ * and Sunday for it.
+ *
+ * Proved against the live schema before the fix: with no start/end the endpoint returns
+ * 2026-09-04..2026-09-20; with start=2026-10-12&end=2026-10-18 it returns the Sunday holiday
+ * on 2026-10-18 that the list view could not previously see.
+ *
+ * This asserts the REQUEST, because that is where the defect is. The URL is captured from a
+ * stubbed fetch while the real loadListView() runs, so it cannot pass against a
+ * re-implementation of the method.
+ */
+function buildListViewSource(bladePath, className) {
+  const blade = fs.readFileSync(bladePath, "utf8");
+  const body = ["loadListView", "toYmd"]
+    .map((m) => extractMethod(blade, m))
+    .join("\n\n");
+  return `window.${className} = class ${className} {\n${body}\n};`;
+}
+
+/** Monday of the week `offset` weeks from today, as YYYY-MM-DD, computed in the test. */
+function expectedWeekBounds(offset) {
+  const today = new Date();
+  const dow = today.getDay();
+  const monday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() - dow + (dow === 0 ? -6 : 1)
+  );
+  monday.setDate(monday.getDate() + offset * 7);
+  const sunday = new Date(monday);
+  sunday.setDate(sunday.getDate() + 6);
+  const ymd = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate()
+    ).padStart(2, "0")}`;
+  return { start: ymd(monday), end: ymd(sunday) };
+}
+
+for (const [label, bladePath, className] of [
+  ["admin", BLADE, "AdminListViewFetch"],
+  ["OT", BLADE_OT, "OtListViewFetch"],
+]) {
+  // offset 0 is this week; +6 and -6 are far enough to leave the current calendar month
+  // whatever day the suite runs on, which is the whole point of the finding.
+  for (const offset of [0, 6, -6]) {
+    test(`${label} loadListView requests the displayed week, not the current month (offset ${offset})`, async ({
+      page,
+    }) => {
+      await page.setContent("<!doctype html><title>list view fetch</title>");
+      await page.evaluate(buildListViewSource(bladePath, className));
+
+      const result = await page.evaluate(
+        async ({ cls, weekOffset }) => {
+          const requested = [];
+          const errors = [];
+          const realError = console.error;
+          console.error = (...a) => errors.push(a.map(String).join(" "));
+
+          window.CalendarConfig = {
+            api: { events: "https://example.invalid/calendar/full-calendar-details" },
+          };
+          window.fetch = (url) => {
+            requested.push(String(url));
+            return Promise.resolve({ ok: true, json: async () => [] });
+          };
+          document.getElementById = () => null;
+
+          const inst = Object.create(window[cls].prototype);
+          inst.listViewWeekOffset = weekOffset;
+          inst.selectedCourseId = null;
+          // Everything loadListView calls after the fetch. Stubbed so this test is about the
+          // REQUEST and fails for one reason only.
+          inst.getEventsForWeek = () => [];
+          inst.computeActiveDays = () => [];
+          inst.weekendDisplayForRendering = () => ({ showSat: false, showSun: false });
+          inst.updateTableHeader = () => {};
+          inst.renderListView = () => {};
+          inst.renderWeekCards = () => {};
+          inst.updateWeekRangeText = () => {};
+          inst.updatePortalToolbarTitle = () => {};
+
+          await inst.loadListView();
+          console.error = realError;
+          return { requested, errors };
+        },
+        { cls: className, weekOffset: offset }
+      );
+
+      expect(result.errors, "loadListView threw and its catch swallowed it").toEqual([]);
+      expect(result.requested, "loadListView did not call fetch exactly once").toHaveLength(1);
+
+      const url = new URL(result.requested[0]);
+      const { start, end } = expectedWeekBounds(offset);
+
+      expect(
+        url.searchParams.get("start"),
+        "no start param: the endpoint will default to the current calendar month"
+      ).toBe(start);
+      expect(
+        url.searchParams.get("end"),
+        "no end param: the endpoint will default to the current calendar month"
+      ).toBe(end);
+    });
+  }
+}
