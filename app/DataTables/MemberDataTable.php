@@ -84,6 +84,16 @@ class MemberDataTable extends DataTable
      * one cache entry. For everyone else the output turns on their own pk, so
      * that is the key.
      *
+     * NOT NARROWED FURTHER, deliberately left unresolved rather than assumed:
+     * the non-entitled key fragments on every distinct owned pk, whether or
+     * not that pk's own row can even appear in the current (page, filter-set)
+     * window - an owner scrolled or filtered out of view still gets a private
+     * entry indistinguishable from one whose row is visible. Narrowing to
+     * "owners whose row is inside the current window" would shrink the F-045
+     * fan-out further, at the cost of evaluating the filter predicate per
+     * request to answer the question. PR #309 F-045 recorded this trade and
+     * left the choice to the Engineering lead rather than deciding it here.
+     *
      * Deliberately not `auth()->id()` for both branches: that would give every
      * administrator a private copy of an identical payload.
      *
@@ -112,14 +122,20 @@ class MemberDataTable extends DataTable
      *                  shared 'own:none'. Every account keyed on its own user_id
      *                  and took one entry apiece for every (page, length,
      *                  ordering, search, filter-set) for the full 86400s TTL.
-     *       after    'own:none', plus one entry per account the gate ADMITS.
-     *                  The gate admits 1,188 credentials - user_category 'E'
-     *                  AND a contact proof, which is the predicate in
-     *                  EnsureMemberRecordAccess::ownsMemberRecord() - and
-     *                  COUNT(DISTINCT user_id) over THAT predicate is also
-     *                  1,188: no two admitted credentials share a pk. So the
-     *                  ceiling is 1,189 entries per (page, length, ordering,
-     *                  search, filter-set).
+     *       after    'entitled', plus 'own:none', plus one entry per
+     *                  NON-ENTITLED account the gate ADMITS. The method has
+     *                  three outcomes, not two - an admitted account that is
+     *                  ALSO entitled short-circuits to 'entitled' above and
+     *                  never reaches the 'own:' branch at all. The gate
+     *                  admits 1,188 credentials - user_category 'E' AND a
+     *                  contact proof, which is the predicate in
+     *                  EnsureMemberRecordAccess::ownsMemberRecord() - of
+     *                  which 1 also holds the entitled Spatie role, so the
+     *                  full identity set measures 1 'entitled' + 1,187
+     *                  'own:<pk>' + 1 'own:none' = 1,189 entries per (page,
+     *                  length, ordering, search, filter-set), worst case
+     *                  1,190 if no admitted account is entitled. PR #309
+     *                  F-053.
      *
      *                  It is NOT 1,341. That figure is COUNT(DISTINCT
      *                  user_id) over the 1,547 credentials that merely
