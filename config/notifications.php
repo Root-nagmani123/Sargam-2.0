@@ -203,6 +203,18 @@ return [
         ],
     ],
 
+    // Peer Evaluation Notifications — "you can fill your peer evaluation".
+    // group_id is not a segment of the peer.index URI, so route() appends it as
+    // a query string: /peer-evaluation?group_id=<reference_pk>. That lands the
+    // OT on the very group the notification was raised for, rather than on
+    // whichever group the page would otherwise default to.
+    'peer_evaluation' => [
+        'PeerEvaluation' => [
+            'route' => 'peer.index',
+            'params' => ['group_id' => 'reference_pk'],
+        ],
+    ],
+
     // Default fallback route
     'default' => [
         'route' => 'admin.dashboard',

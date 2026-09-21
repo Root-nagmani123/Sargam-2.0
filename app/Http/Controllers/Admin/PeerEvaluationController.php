@@ -20,6 +20,8 @@ use App\Models\PeerEvent;
 use App\Models\CourseMaster;
 use App\Models\PeerColumn;
 use App\Support\PeerEvaluationForm;
+use App\Services\NotificationService;
+use Illuminate\Support\Facades\Log;
 
 class PeerEvaluationController extends Controller
 {
@@ -199,6 +201,15 @@ class PeerEvaluationController extends Controller
             $group = PeerGroup::findOrFail($id);
             $group->is_form_active = !$group->is_form_active;
             $group->save();
+
+            // Switching the form ON is the moment the group's officer trainees
+            // can actually fill it, so that is when they are told. Switching it
+            // off sends nothing. notifyMembersFormOpen() re-checks the whole
+            // open/closed rule, so a group whose event has not started yet
+            // still stays quiet.
+            if ($group->is_form_active) {
+                $this->notifyMembersFormOpen((int) $group->id);
+            }
 
             return response()->json([
                 'status' => 'success',
@@ -666,6 +677,11 @@ class PeerEvaluationController extends Controller
             );
         }
 
+        // Tell the people just added that they have an evaluation to fill —
+        // but only the ones added, not the whole group, or every existing
+        // member would be pinged again each time one person is added.
+        $this->notifyMembersFormOpen((int) $groupId, array_map('intval', $request->member_pks));
+
         if ($skipped > 0) {
             return back()->with(
                 'error',
@@ -674,6 +690,70 @@ class PeerEvaluationController extends Controller
         }
 
         return back()->with('success', 'Members added to group successfully!');
+    }
+
+    /**
+     * "You can fill your peer evaluation" — sent to a group's officer trainees.
+     *
+     * Only when the form is genuinely open: closedReason() is the same gate the
+     * OT-facing page and store() apply, so nobody is invited to a form that
+     * would turn them away. Notifying is never allowed to break the action that
+     * triggered it — an admin switching a form on must not see a 500 because
+     * the notification table was unhappy.
+     *
+     * @param  list<int>|null  $memberPks  null = every member of the group
+     */
+    private function notifyMembersFormOpen(int $groupId, ?array $memberPks = null): void
+    {
+        try {
+            $group = DB::table('peer_groups')->where('id', $groupId)->first();
+
+            if (! $group || PeerEvaluationForm::closedReason($group) !== null) {
+                return;
+            }
+
+            // receiver_user_id is Auth::user()->user_id, which for an officer
+            // trainee is their student_master.pk — the same value member_pk holds.
+            $receivers = DB::table('peer_group_members')
+                ->where('group_id', $groupId)
+                ->when($memberPks !== null, fn ($q) => $q->whereIn('member_pk', $memberPks ?: [-1]))
+                ->whereNotNull('member_pk')
+                ->distinct()
+                ->pluck('member_pk')
+                ->map(fn ($pk) => (int) $pk)
+                ->filter()
+                ->values()
+                ->all();
+
+            if ($receivers === []) {
+                return;
+            }
+
+            $groupName = trim((string) ($group->group_name ?? '')) ?: 'your group';
+            $eventName = $group->event_id
+                ? DB::table('peer_events')->where('id', $group->event_id)->value('event_name')
+                : null;
+
+            $message = 'The peer evaluation for ' . $groupName
+                . ($eventName ? ' (' . $eventName . ')' : '')
+                . ' is open. You can fill it now.';
+
+            // reference_pk is the group id — config/notifications.php turns it
+            // into /peer-evaluation?group_id=<id>, so the click opens this group.
+            app(NotificationService::class)->createMultiple(
+                $receivers,
+                'peer_evaluation',
+                'PeerEvaluation',
+                $groupId,
+                'Peer Evaluation',
+                $message
+            );
+        } catch (\Throwable $e) {
+            Log::error('Failed to notify peer group members', [
+                'group_id' => $groupId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
