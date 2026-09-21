@@ -681,6 +681,63 @@ class MemberPiiAccessTest extends TestCase
     }
 
     /**
+     * Condition 3 (F-045): the per-actor fan-out is bounded by a short TTL, so
+     * sizing the store stops depending on a population nobody can measure here.
+     *
+     * Asserted on the mapping rather than on a live store, deliberately - there
+     * is no reachable Redis on any host this project has been worked on, which
+     * is the whole reason the condition went five rounds without evidence. What
+     * CAN be pinned is which identities get the short TTL and which keep the
+     * default, and that is the part a future edit could silently get wrong:
+     * widening the short TTL to 'entitled' would throw away the one entry with
+     * real reuse, and narrowing it away from 'own:<pk>' would restore the
+     * unbounded fan-out without anything failing.
+     */
+    public function test_only_the_per_actor_cache_entries_get_the_short_ttl(): void
+    {
+        // The two SHARED identities keep the default TTL - null means "fall
+        // through to MEMBER_DATATABLE_CACHE_SECONDS".
+        $this->assertNull(
+            MemberDataTable::cacheTtlForIdentity('entitled'),
+            "'entitled' is one entry shared by every administrator - capping it throws away the only entry with real reuse"
+        );
+        $this->assertNull(
+            MemberDataTable::cacheTtlForIdentity('own:none'),
+            "'own:none' is one entry shared by every account that owns no record - also high reuse"
+        );
+
+        // Every PER-ACTOR identity is capped. This is the fan-out.
+        $this->assertSame(
+            MemberDataTable::PER_ACTOR_CACHE_SECONDS,
+            MemberDataTable::cacheTtlForIdentity('own:10525'),
+            'a per-actor entry kept the default TTL, which restores the unbounded fan-out condition 3 is about'
+        );
+        $this->assertSame(
+            MemberDataTable::PER_ACTOR_CACHE_SECONDS,
+            MemberDataTable::cacheTtlForIdentity('own:1'),
+            'per-actor TTL must not depend on the pk value'
+        );
+
+        // The cap has to be short enough to matter: the point is that residency
+        // is bounded by concurrency, not by the 86400s default.
+        $this->assertLessThan(
+            3600,
+            MemberDataTable::PER_ACTOR_CACHE_SECONDS,
+            'a per-actor TTL this long stops bounding residency by concurrency, which is what closes condition 3'
+        );
+
+        // And the identity an actually-resolved non-entitled actor computes must
+        // be one the mapping treats as per-actor - otherwise the two halves agree
+        // in the test and disagree in production.
+        $this->actAsNonEntitled();
+        $identity = MemberDataTable::actionColumnCacheIdentity();
+        $this->assertStringStartsWith('own:', $identity);
+        if ($identity !== 'own:none') {
+            $this->assertSame(MemberDataTable::PER_ACTOR_CACHE_SECONDS, MemberDataTable::cacheTtlForIdentity($identity));
+        }
+    }
+
+    /**
      * F-046, the defect itself: the grid must not offer Edit to an account the
      * gate refuses.
      *

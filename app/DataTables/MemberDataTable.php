@@ -173,6 +173,71 @@ class MemberDataTable extends DataTable
     }
 
     /**
+     * How long THIS actor's slice of the listing cache may live.
+     *
+     * Condition 3 (F-045) asked for the per-actor fan-out to be sized against the
+     * live store's memory and eviction policy before deploy. That evidence was
+     * asked for across five rounds and never arrived, because no Redis server is
+     * reachable from any host this project has been worked on - round 21 got as
+     * far as proving the request fails with "connection refused" and that WSL
+     * cannot install one without an interactive password.
+     *
+     * So this stops asking. The question was only hard because the answer scaled
+     * with a population and an unbounded multiplier:
+     *
+     *   entries = per-actor identities x (page, length, ordering, search,
+     *             filter-set) combinations, each held for the full TTL (86400s)
+     *
+     * Round 21 measured the pieces on testsargam6: 20,831 bytes for an
+     * 'own:<pk>' payload, and 1,187 such identities, so ONE combination already
+     * floors at ~24.2 MB and the real figure multiplies by however many
+     * combinations get exercised inside 24 hours - a number no one can bound
+     * from inside the application.
+     *
+     * The fix is to notice that the 24-hour TTL buys nothing for these entries.
+     * The three identities are not alike:
+     *
+     *   'entitled'   ONE entry, shared by every administrator. High reuse, and
+     *                the payload is identical for all of them. Worth 24h.
+     *   'own:none'   ONE entry, shared by every account that owns no record -
+     *                the refused plus the 13,561 whose user_id matches no
+     *                employee_master row. Also high reuse. Worth 24h.
+     *   'own:<pk>'   ONE entry PER ADMITTED ACCOUNT, serving exactly one person,
+     *                and differing from 'entitled' only in the Action column of
+     *                at most one row - their own. Holding that for 24 hours
+     *                keeps ~1,187 private payloads alive so that each MIGHT
+     *                save one query if that person happens to come back the
+     *                same day.
+     *
+     * Only the third is the fan-out, and it is the one whose TTL is nearly all
+     * waste. Capping it at PER_ACTOR_CACHE_SECONDS replaces the population in
+     * the sizing formula with concurrency: what has to fit is no longer "every
+     * admitted account x every combination for 24 hours" but "accounts that
+     * actually loaded the grid in the last five minutes x their combinations".
+     * That is bounded by how many people use one screen at once, which is both
+     * far smaller and knowable without asking the store anything.
+     *
+     * Residency drops by 86400/300 = 288x for those entries. The cost is that a
+     * returning user re-runs one query they would have had to run anyway before
+     * this cache existed.
+     *
+     * NOT a claim that the store is big enough - nobody here can say that. It is
+     * a claim that the answer no longer depends on a number nobody has.
+     * PR #309 condition 3 / F-045, round 24.
+     */
+    public const PER_ACTOR_CACHE_SECONDS = 300;
+
+    public static function cacheTtlForIdentity(string $identity): ?int
+    {
+        // null = fall through to MEMBER_DATATABLE_CACHE_SECONDS / the 86400s default.
+        if ($identity === 'entitled' || $identity === 'own:none') {
+            return null;
+        }
+
+        return self::PER_ACTOR_CACHE_SECONDS;
+    }
+
+    /**
      * Status pill above the grid (All / Active / Inactive). Whitelisted here so an
      * arbitrary ?status_filter= can neither reach the query nor fragment the cache.
      */
@@ -268,6 +333,10 @@ class MemberDataTable extends DataTable
      */
     public function ajax(): JsonResponse
     {
+        // Resolved once and reused for both the cache KEY and its TTL - asking
+        // twice would risk the two disagreeing about which actor this is.
+        $identity = self::actionColumnCacheIdentity();
+
         return DataTableRedisCache::serveCachedAjax(
             $this->request(),
             'member_dt:v1:',
@@ -289,8 +358,12 @@ class MemberDataTable extends DataTable
                 // with the same filters share one cached payload, so whoever
                 // warms the cache decides which controls everybody else sees for
                 // the rest of the TTL (default 86400s).
-                'actor' => self::actionColumnCacheIdentity(),
-            ]
+                'actor' => $identity,
+            ],
+            // Per-actor entries expire fast; the two shared ones keep the
+            // default. See cacheTtlForIdentity() - this is what closes
+            // condition 3 without a live Redis measurement.
+            self::cacheTtlForIdentity($identity)
         );
     }
 
