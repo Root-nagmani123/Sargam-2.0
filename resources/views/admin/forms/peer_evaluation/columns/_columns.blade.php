@@ -71,6 +71,7 @@
                                                     data-max-marks="{{ rtrim(rtrim(number_format((float) $column->max_marks, 2), '0'), '.') }}"
                                                     data-evaluation-type="{{ $column->evaluation_type }}"
                                                     data-group-id="{{ $group->id }}"
+                                                    data-has-remarks="{{ $hasRemarks ? 1 : 0 }}"
                                                     data-buffer-marks="{{ $bufferMarks }}">
                                                 <span class="pe-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
                                                 <span class="pe-act__label">Edit</span>

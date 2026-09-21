@@ -231,15 +231,22 @@ class PeerReflectionFieldController extends Controller
             // The unique rule cannot: neither row is in the table yet, so both
             // would pass and the second insert would be the duplicate.
             'fields.*.field_label' => ['required', 'string', 'max:255', 'distinct:ignore_case', $unique],
-            'course_id' => ['nullable', 'integer', Rule::exists('course_master', 'pk')],
-            'event_id' => ['nullable', 'integer', Rule::exists('peer_events', 'id')],
+            // All three are REQUIRED. A blank select stored NULL, which the OT
+            // form reads as "not restricted at that level" - so a field saved
+            // without picking a group appeared on every form of the course, and
+            // one saved without any scope appeared on every form there is.
+            'course_id' => ['required', 'integer', Rule::exists('course_master', 'pk')],
+            'event_id' => ['required', 'integer', Rule::exists('peer_events', 'id')],
             // Already a peer_groups id by this point - resolveGroupSelection()
             // swapped the posted mapping pk for it.
-            'group_id' => ['nullable', 'integer', Rule::exists('peer_groups', 'id')],
+            'group_id' => ['required', 'integer', Rule::exists('peer_groups', 'id')],
         ], [
             'fields.required' => 'Please add at least one reflection field.',
             'fields.*.field_label.unique' => 'A reflection field with that label already exists for this course / event / group.',
             'fields.*.field_label.distinct' => 'This field name is listed more than once.',
+            'course_id.required' => 'Please pick a course.',
+            'event_id.required' => 'Please pick an event.',
+            'group_id.required' => 'Please pick a group.',
         ], [
             'fields.*.field_label' => 'Field Name',
             'course_id' => 'Course Name',
@@ -352,13 +359,19 @@ class PeerReflectionFieldController extends Controller
 
         $validated = $request->validate([
             'field_label' => ['required', 'string', 'max:255', $unique],
-            'course_id' => ['nullable', 'integer', Rule::exists('course_master', 'pk')],
-            'event_id' => ['nullable', 'integer', Rule::exists('peer_events', 'id')],
+            // Required for the same reason Add requires them - see validatedMany().
+            // Editing is also the way an already-global field gets pulled back to
+            // one group, which is impossible while a blank select is accepted.
+            'course_id' => ['required', 'integer', Rule::exists('course_master', 'pk')],
+            'event_id' => ['required', 'integer', Rule::exists('peer_events', 'id')],
             // Already a peer_groups id by this point - resolveGroupSelection()
             // swapped the posted mapping pk for it.
-            'group_id' => ['nullable', 'integer', Rule::exists('peer_groups', 'id')],
+            'group_id' => ['required', 'integer', Rule::exists('peer_groups', 'id')],
         ], [
             'field_label.unique' => 'A reflection field with that label already exists for this course / event / group.',
+            'course_id.required' => 'Please pick a course.',
+            'event_id.required' => 'Please pick an event.',
+            'group_id.required' => 'Please pick a group.',
         ], [
             'field_label' => 'Field Name',
             'course_id' => 'Course Name',

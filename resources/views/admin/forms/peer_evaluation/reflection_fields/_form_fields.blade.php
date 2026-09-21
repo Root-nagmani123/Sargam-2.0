@@ -11,8 +11,11 @@
      scrolled past it to choose an Event. Event and Group are filled by AJAX
      (PeerReflectionFieldController::options) whenever the level above changes.
 
-     All three scope levels are OPTIONAL: leaving them blank makes the field
-     GLOBAL, i.e. shown on every evaluation form. Only the label is required.
+     All three scope levels are REQUIRED. They used to be optional, and a blank
+     select stored NULL, which the OT form reads as "not restricted at that
+     level" - so the quickest way through this modal (type a label, Save) built
+     a field that appeared on EVERY evaluation form. A scope that broad has to
+     be asked for, not arrived at by leaving a dropdown alone.
 
      All three carry js-prf-select2 so the page script skins them with Select2
      (dropdownParent = the modal, or the search box can't take focus). --}}
@@ -29,9 +32,9 @@
 @endphp
 
 <div class="pe-field mb-3">
-    <label class="pe-form-label" for="{{ $prefix }}CourseId">Course Name</label>
+    <label class="pe-form-label" for="{{ $prefix }}CourseId">Course Name<span class="pe-req">*</span></label>
     <select class="form-select pe-control js-prf-select2 js-prf-course-status"
-            id="{{ $prefix }}CourseId" name="course_id">
+            id="{{ $prefix }}CourseId" name="course_id" required>
         <option value="">Select Course</option>
         @foreach (['active' => 'Active', 'archive' => 'Archived'] as $statusKey => $statusLabel)
             @if ($courseGroups->has($statusKey))
@@ -47,16 +50,16 @@
 </div>
 
 <div class="pe-field mb-3">
-    <label class="pe-form-label" for="{{ $prefix }}EventId">Event Name</label>
-    <select class="form-select pe-control js-prf-select2" id="{{ $prefix }}EventId" name="event_id">
+    <label class="pe-form-label" for="{{ $prefix }}EventId">Event Name<span class="pe-req">*</span></label>
+    <select class="form-select pe-control js-prf-select2" id="{{ $prefix }}EventId" name="event_id" required>
         <option value="">Select Event</option>
     </select>
     <div class="pe-error"></div>
 </div>
 
 <div class="pe-field mb-3">
-    <label class="pe-form-label" for="{{ $prefix }}GroupId">Group Name</label>
-    <select class="form-select pe-control js-prf-select2" id="{{ $prefix }}GroupId" name="group_id">
+    <label class="pe-form-label" for="{{ $prefix }}GroupId">Group Name<span class="pe-req">*</span></label>
+    <select class="form-select pe-control js-prf-select2" id="{{ $prefix }}GroupId" name="group_id" required>
         <option value="">Select Group</option>
     </select>
     <div class="pe-error"></div>

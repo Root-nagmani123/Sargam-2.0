@@ -91,15 +91,17 @@ class PeerEvaluationColumnController extends Controller
         $columns = PeerColumn::query()
             ->where('group_id', $peerGroup->id)
             ->orderBy('id')
-            ->get()
-            ->groupBy('evaluation_type');
+            ->get();
 
         return response()->json([
             'success' => true,
             'html' => view('admin.forms.peer_evaluation.columns._columns', [
                 'group' => $peerGroup,
-                'byType' => $columns,
+                'byType' => $columns->groupBy('evaluation_type'),
                 'types' => PeerColumn::TYPES,
+                // Group-wide, because that is the scope the OT form reads it at:
+                // one column carrying the flag puts Remarks on the whole form.
+                'hasRemarks' => $columns->contains(fn ($column) => (bool) $column->has_remarks),
             ])->render(),
         ]);
     }
@@ -375,17 +377,19 @@ class PeerEvaluationColumnController extends Controller
     {
         $column = PeerColumn::findOrFail($id);
 
-        // Remarks is deliberately NOT editable here. It is set when the column is
-        // created and left alone afterwards; the Edit modal no longer offers it,
-        // so an update must not require it or every Save would 422.
+        // Remarks is editable here, and saved across the whole group below. Leaving
+        // it out of Edit meant a column created with it set put a Remarks column on
+        // the evaluation form that nothing in this screen could take off again.
         $validated = $request->validate([
             'column_name' => ['required', 'string', 'max:255'],
             'max_marks' => ['required', 'numeric', 'min:0.01', 'max:9999.99'],
             'evaluation_type' => ['required', Rule::in(array_keys(PeerColumn::TYPES))],
+            'has_remarks' => ['required', 'boolean'],
         ], [], [
             'column_name' => 'Column Name',
             'max_marks' => 'Max Marks',
             'evaluation_type' => 'Evaluation Type',
+            'has_remarks' => 'Remarks',
         ]);
 
         if ($column->group_id) {
@@ -419,7 +423,19 @@ class PeerEvaluationColumnController extends Controller
         }
 
         try {
-            $column->update($validated);
+            DB::transaction(function () use ($column, $validated) {
+                $column->update($validated);
+
+                // Remarks reads group-wide on the evaluation form - one column
+                // carrying it puts the column on the form - so answering No on one
+                // column while a sibling still says Yes would leave the form
+                // unchanged and read as a save that did nothing.
+                if ($column->group_id) {
+                    PeerColumn::where('group_id', $column->group_id)
+                        ->whereKeyNot($column->id)
+                        ->update(['has_remarks' => (bool) $validated['has_remarks']]);
+                }
+            });
         } catch (\Throwable $e) {
             Log::error('Peer evaluation column update failed', ['id' => $column->id, 'error' => $e->getMessage()]);
 

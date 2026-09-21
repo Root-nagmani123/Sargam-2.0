@@ -257,18 +257,23 @@
                          OT writes one note about the person being evaluated, not
                          one per column, so asking per column offered a choice the
                          evaluation form could never honour. One answer here is
-                         applied to every column in this submit. --}}
+                         applied to every column in this submit.
+
+                         Defaults to No: Yes adds a whole extra column to every
+                         evaluation form the group's columns appear on, and a
+                         default nobody chose is how forms ended up carrying a
+                         Remarks column their admin never asked for. --}}
                     <hr class="my-3">
                     <h6 class="pec-section-title mb-3">Additional Settings</h6>
                     <div class="pe-field mb-1">
                         <span class="pe-form-label d-block">Remarks<span class="pe-req">*</span></span>
                         <div class="d-flex gap-3 pec-radio-row">
                             <label class="d-inline-flex align-items-center gap-2 mb-0">
-                                <input class="form-check-input m-0" type="radio" name="has_remarks" value="1" checked>
+                                <input class="form-check-input m-0" type="radio" name="has_remarks" value="1">
                                 <span>Yes</span>
                             </label>
                             <label class="d-inline-flex align-items-center gap-2 mb-0">
-                                <input class="form-check-input m-0" type="radio" name="has_remarks" value="0">
+                                <input class="form-check-input m-0" type="radio" name="has_remarks" value="0" checked>
                                 <span>No</span>
                             </label>
                         </div>
@@ -324,6 +329,28 @@
                         <div class="pe-error"></div>
                     </div>
 
+                    {{-- Editable here for the same reason Add asks it: the OT form
+                         shows Remarks when ANY column of the group carries the
+                         flag, so a column created with it set turned on a column
+                         the admin could then never turn off. Saved across the
+                         whole group, which is the scope the form reads it at. --}}
+                    <div class="pe-field mb-3">
+                        <span class="pe-form-label d-block">Remarks<span class="pe-req">*</span></span>
+                        <div class="d-flex gap-3 pec-radio-row">
+                            <label class="d-inline-flex align-items-center gap-2 mb-0">
+                                <input class="form-check-input m-0" type="radio" name="has_remarks" value="1">
+                                <span>Yes</span>
+                            </label>
+                            <label class="d-inline-flex align-items-center gap-2 mb-0">
+                                <input class="form-check-input m-0" type="radio" name="has_remarks" value="0">
+                                <span>No</span>
+                            </label>
+                        </div>
+                        <small class="text-body-secondary d-block mt-1">
+                            Applies to the whole group, so every column of this group shares it.
+                        </small>
+                        <div class="pe-error"></div>
+                    </div>
 
                     {{-- Buffer marks belong to the GROUP, so this saves separately -
                          see the submit handler. Only meaningful for Distribute
@@ -938,6 +965,7 @@
             $form.find('[name="column_name"]').val($btn.data('column-name'));
             $form.find('[name="max_marks"]').val($btn.data('max-marks'));
             $form.find('[name="evaluation_type"][value="' + $btn.data('evaluation-type') + '"]').prop('checked', true);
+            $form.find('[name="has_remarks"][value="' + ($btn.data('has-remarks') ? '1' : '0') + '"]').prop('checked', true);
             $form.find('[name="buffer_marks"]').val($btn.data('buffer-marks'));
             toggleBufferField($form);
 
