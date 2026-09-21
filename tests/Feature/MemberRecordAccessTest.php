@@ -138,20 +138,30 @@ class MemberRecordAccessTest extends TestCase
     }
 
     /**
-     * A credential whose `user_id` names an employee row belonging to a
+     * EVERY credential whose `user_id` names an employee row belonging to a
      * DIFFERENT PERSON, chosen by a rule this gate does not use.
      *
      * The selection criterion is deliberately independent of the thing under
-     * test: the actor is picked because the credential's name and the employee
+     * test: a pair is picked because the credential's name and the employee
      * row's name share no token at all - the census rule that spelling
      * variants, initials and a missing middle name cannot explain - while the
      * gate decides on `user_category` and a contact-detail proof. If the two
      * agreed by construction the test would be circular and would pass on a
      * regression.
      *
-     * @return array{0: User, 1: int}|null
+     * ALL matching pairs, not just the first: PR #309 round 21 found that
+     * stopping at the first pair let a second, unrelated instance of the same
+     * failure mode (a dormant setup/reception account, cred pk 2102, coinciding
+     * on a placeholder email with a synthetic 'Super Admin' employee row) sit
+     * unexercised for the whole life of this test - every run picked an
+     * earlier-in-order pair first and never reached it. Fixed in
+     * 2026_09_21_130000_clear_lbs_reception_coincidental_email; this method
+     * changed to iterate so a future instance of either failure mode cannot
+     * hide behind an earlier one again.
+     *
+     * @return array<int, array{0: User, 1: int, 2: int}> list of [actor, employeePk, credPk]
      */
-    private function credentialNamingSomebodyElse(): ?array
+    private function credentialsNamingSomebodyElse(): array
     {
         $rows = DB::table('user_credentials as uc')
             ->join('employee_master as em', 'em.pk', '=', 'uc.user_id')
@@ -179,6 +189,8 @@ class MemberRecordAccessTest extends TestCase
             return $out;
         };
 
+        $pairs = [];
+
         foreach ($rows as $r) {
             $cred = $tokens((string) $r->cred_first, (string) $r->cred_last);
             $emp = $tokens((string) $r->emp_first, (string) $r->emp_middle, (string) $r->emp_last);
@@ -190,11 +202,11 @@ class MemberRecordAccessTest extends TestCase
             $user = User::query()->find($r->cred_pk);
 
             if ($user) {
-                return [$user, (int) $r->emp_pk];
+                $pairs[] = [$user, (int) $r->emp_pk, (int) $r->cred_pk];
             }
         }
 
-        return null;
+        return $pairs;
     }
 
     /**
@@ -210,40 +222,49 @@ class MemberRecordAccessTest extends TestCase
      * "their own record". They were reaching a stranger's, with edit rights,
      * and the self-service redirect sent them there.
      *
-     * The actor here is chosen by the name rule and asserted against the gate,
-     * which decides on category plus a contact proof - two different criteria,
-     * so a regression to "trust user_id" turns this red.
+     * EVERY such pair is asserted, not one representative - see
+     * {@see self::credentialsNamingSomebodyElse()}. The HTTP round trip
+     * (`assertForbidden` against the real route) is only exercised for the
+     * first pair, as an end-to-end smoke test; hitting the route for every
+     * pair would be slow and `ownsMemberRecord()` is what the route itself
+     * decides on, so checking it for all pairs is the part that must not
+     * regress.
      */
     public function test_a_credential_naming_somebody_elses_record_is_refused(): void
     {
-        $pair = $this->credentialNamingSomebodyElse();
+        $pairs = $this->credentialsNamingSomebodyElse();
 
-        if ($pair === null) {
+        if ($pairs === []) {
             $this->markTestSkipped(
                 'no credential on this host whose user_id names an employee row sharing no name '
                 .'token with it - the F-024 population is empty here'
             );
         }
 
-        [$actor, $employeePk] = $pair;
-
-        $this->actingAs($actor);
+        [$firstActor, $firstEmployeePk] = $pairs[0];
+        $this->actingAs($firstActor);
         session(['user_roles' => ['FC-Sec-Audit']]);
         $this->assertFalse(
             isSidebarPrivilegedUser(),
             'this case is meaningless unless the actor is genuinely non-privileged'
         );
-
-        $this->get(route('member.edit', ['id' => $employeePk]))
+        $this->get(route('member.edit', ['id' => $firstEmployeePk]))
             ->assertForbidden();
 
         // The write twin, which is the half that made F-024 more than a read
-        // problem: the same mapping decided who could SAVE the record.
-        $this->assertFalse(
-            \App\Http\Middleware\EnsureMemberRecordAccess::ownsMemberRecord($employeePk),
-            "credential {$actor->pk} is still treated as the owner of employee {$employeePk}, "
-            .'whose name shares no token with it'
-        );
+        // problem: the same mapping decided who could SAVE the record. Checked
+        // for EVERY pair, not just the first that reached the route above.
+        $failures = [];
+        foreach ($pairs as [$actor, $employeePk, $credPk]) {
+            // ownsMemberRecord() reads auth()->user(), so each candidate must
+            // be the acting user at the moment it is checked.
+            $this->actingAs($actor);
+            if (\App\Http\Middleware\EnsureMemberRecordAccess::ownsMemberRecord($employeePk)) {
+                $failures[] = "credential {$credPk} is treated as the owner of employee {$employeePk}, whose name shares no token with it";
+            }
+        }
+
+        $this->assertSame([], $failures, implode('; ', $failures));
     }
 
     /**
