@@ -51,6 +51,12 @@ use App\Http\Controllers\Admin\{
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
+use App\Http\Controllers\Admin\COE\QuestionPaperApprovalController;
+use App\Http\Controllers\Admin\COE\QuestionPaperController;
+use App\Http\Controllers\Admin\COE\QuestionPaperDownloadController;
+use App\Http\Controllers\Admin\COE\QuestionPaperFacultyController;
+use App\Http\Controllers\Admin\COE\QuestionPaperTranslationController;
+use App\Http\Controllers\Admin\COE\QuestionPaperUnfreezeController;
 use App\Http\Controllers\Admin\Master\ExamBuildingMasterController;
 use App\Http\Controllers\Admin\Master\ExamFloorMasterController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
@@ -1048,6 +1054,73 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
         Route::get('edit/{id}', [ExamFloorMasterController::class, 'edit'])->name('edit');
         Route::post('store', [ExamFloorMasterController::class, 'store'])->name('store');
         Route::delete('delete/{id}', [ExamFloorMasterController::class, 'destroy'])->name('delete');
+    });
+
+    /*
+     * COE Examination - question paper files.
+     *
+     * Papers live on a private disk with no public URL; these are the only two
+     * ways to read one, and both check the caller's role and assignment before
+     * serving anything.
+     */
+    Route::prefix('admin/question-paper')->name('coe.question_paper.')->group(function () {
+        // Examination Section: assignment, deadlines and oversight.
+        Route::get('/', [QuestionPaperController::class, 'index'])->name('index');
+        Route::post('sync', [QuestionPaperController::class, 'sync'])->name('sync');
+        Route::post('deadline', [QuestionPaperController::class, 'setDeadline'])->name('deadline');
+
+        Route::get('file/{file}/download', [QuestionPaperDownloadController::class, 'download'])->name('file.download');
+        Route::get('file/{file}/preview', [QuestionPaperDownloadController::class, 'preview'])->name('file.preview');
+
+        // Unfreeze inbox: reopening a frozen paper is an officer's decision.
+        Route::prefix('unfreeze')->name('unfreeze.')->group(function () {
+            Route::get('/', [QuestionPaperUnfreezeController::class, 'index'])->name('index');
+            Route::post('{id}/approve', [QuestionPaperUnfreezeController::class, 'approve'])->name('approve');
+            Route::post('{id}/reject', [QuestionPaperUnfreezeController::class, 'reject'])->name('reject');
+        });
+
+        // Examination Section action: hand a frozen paper to the translators.
+        Route::post('{id}/mark-for-translation', [QuestionPaperTranslationController::class, 'markForTranslation'])
+            ->name('mark_translation');
+
+        // Last in the group: {id} is an encrypted string and would otherwise
+        // swallow the literal segments above.
+        Route::get('{id}', [QuestionPaperController::class, 'show'])->name('show');
+    });
+
+    /*
+     * COE Examination - the Translation Section's own screens. Separate from
+     * the section's paper listing because translators work a queue of assigned
+     * papers, not the drive as a whole.
+     */
+    /*
+     * COE Examination - final approval. The last gate before a paper is locked
+     * for the examination.
+     */
+    Route::prefix('admin/question-paper-approval')->name('coe.approval.')->group(function () {
+        Route::get('/', [QuestionPaperApprovalController::class, 'index'])->name('index');
+        Route::post('{id}/finalize', [QuestionPaperApprovalController::class, 'finalize'])->name('finalize');
+    });
+
+    Route::prefix('admin/question-paper-translation')->name('coe.translation.')->group(function () {
+        Route::get('/', [QuestionPaperTranslationController::class, 'index'])->name('index');
+        Route::post('{id}/upload', [QuestionPaperTranslationController::class, 'upload'])->name('upload');
+        Route::post('{id}/freeze', [QuestionPaperTranslationController::class, 'freeze'])->name('freeze');
+        Route::get('{id}', [QuestionPaperTranslationController::class, 'show'])->name('show');
+    });
+
+    /*
+     * COE Examination - the paper setter's own screens. A separate prefix from
+     * the section's so a faculty member never lands on a listing of papers that
+     * are not theirs; ownership is still checked per paper inside.
+     */
+    Route::prefix('faculty/question-paper')->name('coe.faculty.question_paper.')->group(function () {
+        Route::get('/', [QuestionPaperFacultyController::class, 'index'])->name('index');
+        Route::get('{id}', [QuestionPaperFacultyController::class, 'show'])->name('show');
+        Route::post('{id}/upload', [QuestionPaperFacultyController::class, 'upload'])->name('upload');
+        Route::delete('{id}/file/{fileId}', [QuestionPaperFacultyController::class, 'removeFile'])->name('file.remove');
+        Route::post('{id}/freeze', [QuestionPaperFacultyController::class, 'freeze'])->name('freeze');
+        Route::post('{id}/unfreeze-request', [QuestionPaperFacultyController::class, 'requestUnfreeze'])->name('unfreeze_request');
     });
 
     Route::prefix('admin/discipline')->name('master.discipline.')->group(function () {

@@ -46,6 +46,21 @@ return [
             'visibility' => 'public',
         ],
 
+        /*
+         * COE question papers. A separate disk rather than a folder on 'local'
+         * so the root is stated once here: a question paper reaching a
+         * web-served path before the exam is the failure this module exists to
+         * prevent, and there is deliberately no 'url' key to build one from.
+         * Files are served only through QuestionPaperDownloadController, which
+         * checks the role and the assignment first.
+         */
+        'coe_private' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/coe'),
+            'visibility' => 'private',
+            'throw' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
