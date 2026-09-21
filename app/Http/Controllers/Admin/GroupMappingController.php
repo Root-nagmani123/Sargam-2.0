@@ -9,7 +9,8 @@ use App\Imports\GroupMapping\GroupMappingImport;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use App\Models\{CourseMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap, StudentMasterCourseMap, VenueMaster,FacultyMaster, StudentMaster};
-use App\Exports\GroupMappingExport;
+use App\Exports\GroupMappingListExport;
+use App\Exports\GroupMappingStudentListExport;
 use App\DataTables\GroupMappingDataTable;
 use App\Support\DataTableRedisCache;
 use Carbon\Carbon;
@@ -673,15 +674,23 @@ class GroupMappingController extends Controller
             // Trim all inputs
             $data = array_map('trim', $validated);
 
-            // Lookup: StudentMaster by OT code (case-insensitive)
-            $studentMaster = StudentMaster::whereRaw('LOWER(generated_OT_code) = ?', [strtolower($data['otcode'])])
-                ->select('pk')->first();
-                
+            // Same gap as the AJAX lookup, on a write path: 'exists:course_master,pk'
+            // confirms the course exists, not that this user may add students to it.
+            if (! $this->courseWithinRoleScope($data['course_master_pk'])) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'You do not have access to the selected course.',
+                ], 403);
+            }
+
+            // Lookup: StudentMaster by OT code, scoped to the selected course
+            // (see resolveEnrolledStudent() for why the course scope matters).
+            [$studentMaster, $lookupError] = $this->resolveEnrolledStudent($data['otcode'], $data['course_master_pk']);
 
             if (!$studentMaster) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => "Student not found for OT code: {$data['otcode']}",
+                    'message' => $lookupError,
                 ], 422);
             }
 
@@ -721,21 +730,10 @@ class GroupMappingController extends Controller
                 ], 422);
             }
 
-            // Check if mapping already exists
-            $studentCourseExists = StudentMasterCourseMap::where(
-                        'student_master_pk',
-                        $studentMaster->pk
-                    )
-                    ->where('course_master_pk', $data['course_master_pk'])
-                    ->where('active_inactive', 1)
-                    ->exists();
-
-                if (!$studentCourseExists) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => "Student does not belong to selected course",
-                    ], 422);
-                }
+            // Course-enrollment membership is already guaranteed by the scoped
+            // lookup above (it joins student_master_course__map on this exact
+            // course_master_pk with active_inactive = 1), so no separate check
+            // is needed here.
 
             // Create the mapping (same as Excel import)
             StudentCourseGroupMap::create([
@@ -767,31 +765,307 @@ class GroupMappingController extends Controller
         }
     }
 
+    /**
+     * Resolve a StudentMaster row by OT code, scoped to a specific course via
+     * student_master_course__map. OT codes are NOT unique across the whole
+     * roster — they get reused across different courses/batches — so matching
+     * on OT code alone can silently resolve to a completely different
+     * student's row than the one actually enrolled in the selected course.
+     *
+     * @return array{0: ?StudentMaster, 1: ?string} [student, errorMessage]
+     */
+    /**
+     * The course ids this user may act on, or null when unrestricted.
+     *
+     * get_Role_by_course() returns [] for Admin / Super Admin / PA (no restriction),
+     * [-1] for a non-admin with no mapped courses (see nothing), and a real id list
+     * otherwise. Collapsing the first case to null keeps the two meanings of "empty"
+     * from being confused at the call sites.
+     */
+    private function roleScopedCourseIds(): ?array
+    {
+        $ids = get_Role_by_course();
+
+        return empty($ids) ? null : array_map('intval', $ids);
+    }
 
     /**
-     * Export the student list for group mappings to an Excel file.
+     * Whether $coursePk is inside this user's course scope. Fails closed on a null
+     * or unresolvable course — a mapping we cannot place in a course is not one we
+     * can prove the user is allowed to read.
+     */
+    private function courseWithinRoleScope($coursePk): bool
+    {
+        $scope = $this->roleScopedCourseIds();
+        if ($scope === null) {
+            return true;
+        }
+
+        return $coursePk !== null && in_array((int) $coursePk, $scope, true);
+    }
+
+    private function resolveEnrolledStudent(string $otcode, $coursePk): array
+    {
+        $studentMaster = StudentMaster::query()
+            ->join('student_master_course__map as smcm', 'smcm.student_master_pk', '=', 'student_master.pk')
+            ->whereRaw('LOWER(student_master.generated_OT_code) = ?', [strtolower($otcode)])
+            ->where('smcm.course_master_pk', $coursePk)
+            ->where('smcm.active_inactive', 1)
+            ->select('student_master.pk', 'student_master.display_name')
+            ->first();
+
+        if ($studentMaster) {
+            return [$studentMaster, null];
+        }
+
+        $otCodeExists = StudentMaster::whereRaw('LOWER(generated_OT_code) = ?', [strtolower($otcode)])
+            ->exists();
+
+        return [null, $otCodeExists
+            ? 'Student does not belong to selected course'
+            : "Student not found for OT code: {$otcode}"];
+    }
+
+    /**
+     * AJAX: look up a student's display name by OT code for the given course,
+     * to autofill the (read-only) OT Name field in the Add Student modal.
+     */
+    public function getStudentByOtCode(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'otcode' => 'required|string|max:255',
+                'course_master_pk' => 'required|integer|exists:course_master,pk',
+            ]);
+
+            // exists: proves the course is real, not that this caller may see it.
+            // Without the scope check any authenticated user could resolve OT codes
+            // against courses outside their role.
+            if (! $this->courseWithinRoleScope($validated['course_master_pk'])) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Student not found for this course.',
+                ], 404);
+            }
+
+            [$studentMaster] = $this->resolveEnrolledStudent(
+                trim($validated['otcode']),
+                $validated['course_master_pk']
+            );
+
+            if (!$studentMaster) {
+                // Deliberately NOT resolveEnrolledStudent()'s two-branch message here.
+                // "not on this course" vs "no such OT code" is useful to an admin adding
+                // a student, but on a keystroke-driven lookup it answers a second
+                // question — whether an OT code exists at all — for anyone who asks.
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Student not found for this course.',
+                ], 404);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'name' => $studentMaster->display_name,
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->validator->errors()->first() ?: 'Validation failed.',
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Load one group mapping's report header + its students, shared by the Excel
+     * and PDF student-list downloads so the two can't show different data.
      *
-     * @param \Illuminate\Http\Request $request
+     * The student order is deliberately left as the DB returns it — that is the
+     * order the View-students modal (studentList()) shows, and the report is meant
+     * to mirror the view.
+     *
+     * @param string $id Encrypted group mapping ID
+     * @return array{group: array<string, string>, students: \Illuminate\Support\Collection}
+     */
+    private function studentListReportData(string $id): array
+    {
+        $groupMapping = GroupTypeMasterCourseMasterMap::with(['courseGroup', 'courseGroupType', 'Faculty'])
+            ->findOrFail(decrypt($id));
+
+        // The listing these downloads hang off IS course-scoped — GroupMappingDataTable
+        // and buildExportQuery both filter on get_Role_by_course() — so the export has to
+        // be too. Without this the encrypted id acts as a permanent bearer token: anyone
+        // holding one (a shared link, a browser history entry, an id from before their
+        // role scope was narrowed) gets every student's name, OT code, email and phone.
+        abort_unless(
+            $this->courseWithinRoleScope($groupMapping->courseGroup->pk ?? null),
+            403,
+            'You do not have access to this group mapping.'
+        );
+
+        $students = StudentCourseGroupMap::with('studentsMaster:pk,display_name,generated_OT_code,email,contact_no')
+            ->where('group_type_master_course_master_map_pk', $groupMapping->pk)
+            ->get()
+            ->map(fn ($map) => $map->studentsMaster)
+            ->filter()
+            ->values();
+
+        return [
+            'group' => [
+                'course_name'     => $groupMapping->courseGroup->course_name ?? 'N/A',
+                'course_duration' => $this->courseDurationLabel($groupMapping->courseGroup),
+                'group_type'      => $groupMapping->courseGroupType->type_name ?? 'N/A',
+                'group_name'      => $groupMapping->group_name ?: 'N/A',
+                'faculty'         => $groupMapping->Faculty->full_name ?? 'N/A',
+            ],
+            'students' => $students,
+        ];
+    }
+
+    /**
+     * "01 Jun 2026 to 30 Aug 2026" for the report's highlighted header strip.
+     * Courses predating the start_date column still carry start_year, so fall
+     * back to it the way the other exports do.
+     */
+    private function courseDurationLabel($course): string
+    {
+        if (! $course) {
+            return 'N/A';
+        }
+
+        $startRaw = $course->start_date ?? $course->start_year ?? null;
+        $start = ! empty($startRaw) ? Carbon::parse($startRaw)->format('d M Y') : '';
+        $end = ! empty($course->end_date) ? Carbon::parse($course->end_date)->format('d M Y') : '';
+
+        if ($start && $end) {
+            return $start . ' to ' . $end;
+        }
+
+        return $start ?: ($end ? 'Till ' . $end : 'N/A');
+    }
+
+    /** Download filename stem, e.g. "group-student-list-Alpha-Group-2026-08-18_10-30-00". */
+    private function studentListFileName(array $group, string $extension): string
+    {
+        $slug = \Illuminate\Support\Str::slug($group['group_name'] ?? '') ?: 'group';
+
+        return 'group-student-list-' . $slug . '-' . now()->format('Y-m-d_H-i-s') . '.' . $extension;
+    }
+
+    /**
+     * Download one group mapping's student list as a styled Excel report —
+     * LBSNAA header, highlighted Course Name / Course Duration / Group Type strip,
+     * then the same student columns the View modal shows.
+     *
+     * @param string|null $id Encrypted group mapping ID
      * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\RedirectResponse
      */
     public function exportStudentList($id = null)
     {
+        if (empty($id)) {
+            return redirect()->back()->with('error', 'Group Mapping ID is required.');
+        }
+
         try {
-            // If ID is provided, validate it
-            if ($id) {
-                try {
-                    decrypt($id);
-                } catch (\Exception $e) {
-                    return redirect()->back()->with('error', 'Invalid Group Mapping ID.');
-                }
-            }
-
-            $fileName = 'group-mapping-export-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
-
-            return Excel::download(new GroupMappingExport($id), $fileName);
-
+            ['group' => $group, 'students' => $students] = $this->studentListReportData($id);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            // A 403 from the course-scope check must surface as a 403. The generic
+            // handler below would otherwise rewrite it into "Invalid Group Mapping ID",
+            // which reads as a bad-input problem rather than a refused one.
+            throw $e;
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage())->withInput();
+            return redirect()->back()->with('error', 'Invalid Group Mapping ID.');
+        }
+
+        try {
+            return Excel::download(
+                new GroupMappingStudentListExport($students, $group, now()->format('d-m-Y H:i:s')),
+                $this->studentListFileName($group, 'xlsx')
+            );
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * The same student-list report as a PDF. Columns, headings and cell values all
+     * come from GroupMappingStudentListExport::columnDefs(), so the PDF and the
+     * sheet stay identical in column set, order and wording.
+     *
+     * @param string|null $id Encrypted group mapping ID
+     * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
+     */
+    public function exportStudentListPdf($id = null)
+    {
+        if (empty($id)) {
+            return redirect()->back()->with('error', 'Group Mapping ID is required.');
+        }
+
+        try {
+            ['group' => $group, 'students' => $students] = $this->studentListReportData($id);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            // A 403 from the course-scope check must surface as a 403. The generic
+            // handler below would otherwise rewrite it into "Invalid Group Mapping ID",
+            // which reads as a bad-input problem rather than a refused one.
+            throw $e;
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Invalid Group Mapping ID.');
+        }
+
+        try {
+            @ini_set('memory_limit', '256M');
+            @set_time_limit(120);
+
+            $defs = GroupMappingStudentListExport::columnDefs();
+            $columns = array_map(fn ($key) => [
+                'key'     => $key,
+                'heading' => $defs[$key]['heading'],
+                'class'   => $defs[$key]['pdfClass'],
+            ], array_keys($defs));
+
+            $rows = $students->map(function ($student) use ($defs) {
+                $row = [];
+                foreach ($defs as $key => $def) {
+                    $row[$key] = ($def['value'])($student);
+                }
+
+                return $row;
+            });
+
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.group_mapping.student_list_pdf', [
+                'columns'     => $columns,
+                'rows'        => $rows,
+                'group'       => $group,
+                'printedOn'   => now()->format('d-m-Y H:i'),
+                'reportTitle' => 'Course Group Mapping - Student List',
+                // Data URI only. lbsnaaLogoDataUri() falls back to a remote URL when no
+                // local file matches, and this renderer no longer fetches over the
+                // network — passing that URL would leave the <img> pointing at something
+                // dompdf will not load. The blade guards on an empty value and renders
+                // logo-less, which is the correct outcome for a missing local asset.
+                'logo'        => $this->pdfInlineLogo(),
+            ])
+                ->setPaper('a4', 'portrait')
+                ->setOptions([
+                    'defaultFont'          => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    // Both off deliberately. A report has no reason to execute PHP, and
+                    // isPhpEnabled turns any raw block that later appears in the view into
+                    // server-side code execution on stored data. With the logo inlined
+                    // above, nothing needs fetching over the network either.
+                    'isRemoteEnabled'      => false,
+                    'isPhpEnabled'         => false,
+                    'dpi'                  => 96,
+                ]);
+
+            return $pdf->download($this->studentListFileName($group, 'pdf'));
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
         }
     }
 
@@ -921,40 +1195,61 @@ class GroupMappingController extends Controller
         return $definitions;
     }
 
+    /**
+     * "Status: Active  |  Course: …  |  Group Type: …" — the applied-filter summary
+     * both downloads print, built once here so the sheet and the PDF can't word it
+     * differently.
+     */
+    private function exportFilterLine(Request $request, string $statusFilter, string $searchValue): string
+    {
+        $parts = ['Status: ' . ($statusFilter === 'archive' ? 'Archived' : 'Active')];
+
+        $courseFilter = $request->input('course_filter');
+        if ($courseFilter && ($label = optional(CourseMaster::find($courseFilter))->course_name)) {
+            $parts[] = 'Course: ' . $label;
+        }
+
+        $groupTypeFilter = $request->input('group_type_filter');
+        if ($groupTypeFilter && ($label = optional(CourseGroupTypeMaster::find($groupTypeFilter))->type_name)) {
+            $parts[] = 'Group Type: ' . $label;
+        }
+
+        $facultyFilter = $request->input('faculty_filter');
+        if ($facultyFilter && ($label = optional(FacultyMaster::find($facultyFilter))->full_name)) {
+            $parts[] = 'Faculty: ' . $label;
+        }
+
+        if ($searchValue !== '') {
+            $parts[] = 'Search: "' . $searchValue . '"';
+        }
+
+        return implode('  |  ', $parts);
+    }
+
+    /**
+     * Download the listing as a styled Excel report. Named "csv" for the route/JS
+     * that predate it, but it emits .xlsx — a CSV is plain text and cannot carry
+     * the LBSNAA logo, title and filter header the PDF shows.
+     */
     public function downloadCsv(Request $request)
     {
-        $statusFilter = '';
-        $searchValue  = '';
-        $rows = $this->buildExportQuery($request, $statusFilter, $searchValue)->get();
+        try {
+            $statusFilter = '';
+            $searchValue  = '';
+            $rows = $this->buildExportQuery($request, $statusFilter, $searchValue)->get();
 
-        $columns = $this->resolveExportColumns($request);
-        $filename = 'course-group-mapping-' . now()->format('Y-m-d_H-i-s') . '.csv';
-
-        $headers = [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-        ];
-
-        $callback = function () use ($rows, $columns) {
-            $out = fopen('php://output', 'w');
-            // UTF-8 BOM so Excel renders names with diacritics correctly.
-            fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, array_column($columns, 'title'));
-
-            $serial = 1;
-            foreach ($rows as $row) {
-                $line = [];
-                foreach ($columns as $column) {
-                    $line[] = ($column['value'])($row, $serial);
-                }
-                fputcsv($out, $line);
-                $serial++;
-            }
-
-            fclose($out);
-        };
-
-        return response()->streamDownload($callback, $filename, $headers);
+            return Excel::download(
+                new GroupMappingListExport(
+                    $rows,
+                    $this->resolveExportColumns($request),
+                    $this->exportFilterLine($request, $statusFilter, $searchValue),
+                    Carbon::now()->format('d M Y, h:i A')
+                ),
+                'course-group-mapping-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+            );
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
     }
 
     public function downloadPdf(Request $request)
@@ -963,15 +1258,6 @@ class GroupMappingController extends Controller
             $statusFilter = '';
             $searchValue  = '';
             $rows = $this->buildExportQuery($request, $statusFilter, $searchValue)->get();
-
-            $courseFilter    = $request->input('course_filter');
-            $groupTypeFilter = $request->input('group_type_filter');
-            $facultyFilter   = $request->input('faculty_filter');
-
-            $statusLabel = $statusFilter === 'archive' ? 'Archived' : 'Active';
-            $courseLabel = $courseFilter ? (optional(CourseMaster::find($courseFilter))->course_name ?? '') : '';
-            $groupTypeLabel = $groupTypeFilter ? (optional(CourseGroupTypeMaster::find($groupTypeFilter))->type_name ?? '') : '';
-            $facultyLabel = $facultyFilter ? (optional(FacultyMaster::find($facultyFilter))->full_name ?? '') : '';
 
             // Honour the on-screen "Columns" selection; spread widths proportionally.
             $columns = $this->resolveExportColumns($request);
@@ -982,16 +1268,13 @@ class GroupMappingController extends Controller
             }, $columns);
 
             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.group_mapping.pdf', [
-                'rows'           => $rows,
-                'columns'        => $columns,
-                'statusLabel'    => $statusLabel,
-                'courseLabel'    => $courseLabel,
-                'groupTypeLabel' => $groupTypeLabel,
-                'facultyLabel'   => $facultyLabel,
-                'searchValue'    => $searchValue,
-                'generatedAt'    => Carbon::now()->format('d M Y, h:i A'),
-                'emblemSrc'      => $this->indiaEmblemDataUri(),
-                'lbsnaaLogoSrc'  => $this->lbsnaaLogoDataUri(),
+                'rows'          => $rows,
+                'columns'       => $columns,
+                // Same line the Excel sheet prints — see exportFilterLine().
+                'filterLine'    => $this->exportFilterLine($request, $statusFilter, $searchValue),
+                'generatedAt'   => Carbon::now()->format('d M Y, h:i A'),
+                'emblemSrc'     => $this->indiaEmblemDataUri(),
+                'lbsnaaLogoSrc' => $this->lbsnaaLogoDataUri(),
             ])
                 ->setPaper('a4', 'landscape')
                 ->setOptions([
@@ -1160,18 +1443,39 @@ class GroupMappingController extends Controller
         return (int) $faculty->employee_master_pk;
     }
 
+    /**
+     * DomPDF embeds JPEG itself, but needs the GD extension to rasterise PNG and
+     * SVG. On a PHP build without GD (some XAMPP installs ship without it) a PNG
+     * logo aborts the ENTIRE download with "The PHP GD extension is required" —
+     * so treat those sources as unavailable and let the header render logo-less
+     * rather than fail. Both PDF blades guard their <img> tags on an empty src.
+     */
+    private function pdfImageIsRenderable(string $path): bool
+    {
+        return extension_loaded('gd')
+            || in_array(strtolower(pathinfo($path, PATHINFO_EXTENSION)), ['jpg', 'jpeg'], true);
+    }
+
     private function indiaEmblemDataUri(): string
     {
         foreach ([
             public_path('admin_assets/images/logos/ashoka.png'),
             public_path('images/ashoka.png'),
         ] as $path) {
+            if (! $this->pdfImageIsRenderable($path)) {
+                continue;
+            }
             if (is_file($path) && is_readable($path)) {
                 $raw = @file_get_contents($path);
                 if ($raw !== false) {
                     return 'data:image/png;base64,' . base64_encode($raw);
                 }
             }
+        }
+
+        // The remote fallback is a PNG too — nothing usable left without GD.
+        if (! extension_loaded('gd')) {
+            return '';
         }
 
         $url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
@@ -1186,6 +1490,21 @@ class GroupMappingController extends Controller
         return $url;
     }
 
+    /**
+     * The LBSNAA logo for a renderer that does not fetch remote URLs.
+     *
+     * lbsnaaLogoDataUri() ends in a remote https fallback, which is fine for the older
+     * landscape export that still allows remote fetches but useless once isRemoteEnabled
+     * is off. Returning an empty string instead lets the blade's `@if($logo)` guard drop
+     * the <img> entirely rather than emit one dompdf will refuse to load.
+     */
+    private function pdfInlineLogo(): string
+    {
+        $logo = $this->lbsnaaLogoDataUri();
+
+        return str_starts_with($logo, 'data:') ? $logo : '';
+    }
+
     private function lbsnaaLogoDataUri(): string
     {
         foreach ([
@@ -1195,6 +1514,9 @@ class GroupMappingController extends Controller
             public_path('admin_assets/images/logos/logo.png'),
             public_path('admin_assets/images/logos/logo.svg'),
         ] as $path) {
+            if (! $this->pdfImageIsRenderable($path)) {
+                continue;
+            }
             if (is_file($path) && is_readable($path)) {
                 $raw = @file_get_contents($path);
                 if ($raw !== false) {
@@ -1209,6 +1531,9 @@ class GroupMappingController extends Controller
             }
         }
 
-        return 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
+        // The remote fallback is a PNG — unusable on a PHP build without GD.
+        return extension_loaded('gd')
+            ? 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png'
+            : '';
     }
 }
