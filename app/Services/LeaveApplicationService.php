@@ -144,6 +144,16 @@ class LeaveApplicationService
     /**
      * PT exemption days already used or pending by a student within the calendar
      * month containing the given date (excludes the application being edited, if any).
+     *
+     * Correct only while leave is one day at a time. The sum takes each overlapping
+     * application's whole total_days, not the portion falling inside this month, so a
+     * row spanning a month boundary would be counted at full length against both
+     * months. LeaveApplicationController::saveApplication() rejects multi-day
+     * applications, which is what keeps such a row from existing.
+     *
+     * If that restriction is ever lifted, this must sum only the days inside
+     * [$monthStart, $monthEnd] — per-day rows, or a clamped day-count expression —
+     * before the cap can be trusted.
      */
     public function getPtMonthlyUsage(
         int $studentPk,

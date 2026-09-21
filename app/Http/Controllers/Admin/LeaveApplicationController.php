@@ -171,6 +171,16 @@ class LeaveApplicationController extends Controller
             'attachments.*.file.mimes' => 'Allowed file types: PDF, JPG, JPEG, PNG, DOC, DOCX.',
         ]);
 
+        // Leave is deliberately one day at a time (requirement OT-PT, commit 24d7ee80): a
+        // trainee files a separate application per day and each is approved on its own.
+        // The apply screen already enforces this on the client — to_date is readonly and
+        // mirrors from_date — so reaching this branch means the form was bypassed.
+        //
+        // LOAD-BEARING for the monthly PT-exemption cap below. getPtMonthlyUsage() sums
+        // each overlapping application's whole total_days, which double-counts any leave
+        // straddling a month boundary. This guard is what stops such a row being created.
+        // Before relaxing it, fix that query to count only the days falling inside the
+        // month being checked.
         if (! Carbon::parse($validated['from_date'])->isSameDay(Carbon::parse($validated['to_date']))) {
             return back()->withInput()->withErrors([
                 'to_date' => 'Leave can only be applied for one day at a time. Please submit a separate application for additional days.',
