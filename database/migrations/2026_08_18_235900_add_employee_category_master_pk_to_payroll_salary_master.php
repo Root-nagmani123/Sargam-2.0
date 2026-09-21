@@ -25,7 +25,12 @@ return new class extends Migration
         }
 
         Schema::table('payroll_salary_master', function (Blueprint $table) {
-            $table->integer('employee_category_master_pk')->nullable()->after('salary_grade_pk');
+            // Matches employee_category_master.pk (bigIncrements — BIGINT UNSIGNED).
+            // A plain signed integer() here would work today (the referenced
+            // table only ever holds small positive ids) but silently diverges
+            // from the key it points at (PR #319 review, F-034); widening
+            // costs nothing since no FK constraint exists to complain either way.
+            $table->unsignedBigInteger('employee_category_master_pk')->nullable()->after('salary_grade_pk');
         });
     }
 
