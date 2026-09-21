@@ -202,18 +202,31 @@ class MemberController extends Controller
 
     /**
      * PR #319 review round 2 (F-018): granting real Spatie roles from this
-     * screen must be restricted to actors who could already grant roles via
-     * Role & Permission > Users (UserController::assignRoleSave() — gated the
-     * same way this codebase gates every other admin-only action, since there
-     * is no `permission:`/`role:` middleware or policy layer in use anywhere
-     * in this app to hook into instead). Every member/* and
+     * screen must be restricted to actors already privileged enough to grant
+     * roles elsewhere. Gated using the `hasRole('Super Admin')` convention
+     * already used throughout this codebase for admin-only checks, since
+     * there is no `permission:`/`role:` middleware or policy layer in use
+     * anywhere in this app to hook into instead. Every member/* and
      * admin/setup/member/* route carries only the generic `auth` middleware,
      * so without this check any authenticated member could grant themselves
      * roles like "Super Admin" simply by ticking them on their own edit form.
+     *
+     * PR #319 review round 4 (F-028): UserController::assignRoleSave() — the
+     * dedicated Role & Permission > Users screen this method's docblock below
+     * points to as "the same mechanism" — had no authorization check of its
+     * own at all until this same round, meaning it was not actually a valid
+     * precedent for "already gated" when this method was first written. It
+     * now carries the equivalent `hasRole('Super Admin')` gate directly.
      */
     private function actingUserCanManageRbacRoles(): bool
     {
-        return hasRole('Super Admin') || hasRole('Admin') || hasRole('SuperAdmin') || hasRole('Super-Admin');
+        // hasRole('Super Admin') already checks both 'Super Admin' and 'SuperAdmin'
+        // internally (see app/helpers.php). 'Admin' and 'Super-Admin' were dropped
+        // (PR #319 review, F-029): neither is aliased by hasRole(), so both were
+        // permanently false against the real `roles` table, but would have silently
+        // widened this gate's authority the moment either name was ever created for
+        // an unrelated purpose — several existing roles already contain "Admin".
+        return hasRole('Super Admin');
     }
 
     /**

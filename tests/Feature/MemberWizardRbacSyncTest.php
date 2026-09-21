@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UserRoleMaster;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use ReflectionMethod;
 use Tests\TestCase;
 
@@ -126,5 +127,87 @@ class MemberWizardRbacSyncTest extends TestCase
         $target->refresh();
         $this->assertFalse($target->hasRole('Doctor'));
         $this->assertTrue($target->hasRole('FC-Sec-Audit'));
+    }
+
+    /**
+     * F-018, end-to-end through the real route/middleware/controller stack — not just the
+     * private method — reproducing the exact scenario an independent re-review demonstrated
+     * against the pre-fix code: an authenticated account holding zero Spatie roles posts to
+     * POST member/update for its own employee record with userrole[] set to a role's
+     * user_role_master pk, and must NOT come out holding that role.
+     */
+    public function test_http_post_by_zero_role_actor_does_not_self_grant_a_role(): void
+    {
+        $employeePk = DB::table('employee_master')->insertGetId([
+            'first_name' => 'Attacker',
+            'last_name' => 'Self',
+        ]);
+
+        $attackerCredPk = DB::table('user_credentials')->insertGetId([
+            'user_name' => 'rbac_http_attacker_' . uniqid(),
+            'user_id' => $employeePk,
+            'first_name' => 'Attacker',
+            'last_name' => 'Self',
+            'user_category' => 'E',
+        ]);
+
+        $attacker = User::find($attackerCredPk);
+        $this->assertSame([], $attacker->getRoleNames()->all(), 'Fixture assumption: attacker starts with zero Spatie roles.');
+
+        $trainingInductionPk = UserRoleMaster::where('user_role_display_name', 'Training-Induction')->value('pk');
+        $this->assertNotNull($trainingInductionPk, 'Fixture assumption: a "Training-Induction" user_role_master row must exist.');
+
+        $countryPk = DB::table('country_master')->value('pk');
+        $statePk = DB::table('state_master')->value('pk');
+        $departmentPk = DB::table('department_master')->where('pk', '>', 0)->value('pk');
+        $designationPk = DB::table('designation_master')->value('pk');
+        $groupPk = DB::table('employee_group_master')->value('pk');
+        $employeeTypePk = DB::table('employee_type_master')->value('pk');
+        $castePk = DB::table('caste_category_master')->where('active_inactive', 1)->value('pk');
+
+        $payload = [
+            'emp_id' => $employeePk,
+            // Step 1
+            'first_name' => 'Attacker',
+            'last_name' => 'Self',
+            'father_husband_name' => 'Father Name',
+            'marital_status' => 'Unmarried',
+            'gender' => 'Male',
+            'caste_category' => $castePk,
+            'date_of_birth' => '1990-01-01',
+            // Step 2
+            'type' => $employeeTypePk,
+            'id' => 'ATTACK-001',
+            'group' => $groupPk,
+            'designation' => $designationPk,
+            'userid' => 'rbac_http_attacker_uid_' . uniqid(),
+            'section' => $departmentPk,
+            // Step 3 — the actual attack payload
+            'userrole' => [$trainingInductionPk],
+            // Step 4
+            'address' => 'Some Address',
+            'country' => $countryPk,
+            'state' => $statePk,
+            'city' => 'Some City',
+            'postal' => '110001',
+            'permanentaddress' => 'Some Address',
+            'permanentcountry' => $countryPk,
+            'permanentstate' => $statePk,
+            'permanentcity' => 'Some City',
+            'permanentpostal' => '110001',
+            'personalemail' => 'attacker_' . uniqid() . '@example.com',
+            'officialemail' => 'attacker_official_' . uniqid() . '@example.com',
+            'mnumber' => '9999999999',
+        ];
+
+        $response = $this->actingAs($attacker)->post(route('member.update'), $payload);
+
+        $response->assertStatus(200);
+
+        $attacker->refresh();
+        $this->assertFalse(
+            $attacker->hasRole('Training-Induction'),
+            'A zero-role actor must not be able to grant themselves a Spatie role via the Member wizard (F-018).'
+        );
     }
 }

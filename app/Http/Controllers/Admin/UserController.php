@@ -4680,6 +4680,13 @@ public function getAllRoles()
 
 public function assignRoleSave(Request $request)
 {
+    // Route carries only `auth` (no permission gate), so without this check any
+    // authenticated account could POST its own user_id with roles=[<Super Admin's
+    // id>] and grant itself the highest role in the application (PR #319 review,
+    // F-028). Same admin-role convention already used throughout this codebase
+    // (see MemberController::actingUserCanManageRbacRoles()).
+    abort_unless(hasRole('Super Admin'), 403);
+
     $request->validate([
         'user_id' => 'required|integer|exists:user_credentials,pk',
         'roles'   => 'nullable|array',
