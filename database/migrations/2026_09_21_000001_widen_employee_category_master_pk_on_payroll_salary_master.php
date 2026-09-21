@@ -27,7 +27,18 @@ return new class extends Migration
                AND COLUMN_NAME = 'employee_category_master_pk'"
         );
 
-        return $column && strtolower($column->COLUMN_TYPE) === 'bigint(20) unsigned';
+        if (!$column) {
+            return false;
+        }
+
+        // MySQL 8.0.19+ omits the integer display width from COLUMN_TYPE once a
+        // column is created/altered without one explicitly requested, reporting
+        // "bigint unsigned" rather than "bigint(20) unsigned" (PR #319 review,
+        // F-035). Matching by substring instead of the exact literal keeps this
+        // guard version-independent.
+        $type = strtolower($column->COLUMN_TYPE);
+
+        return str_starts_with($type, 'bigint') && str_contains($type, 'unsigned');
     }
 
     public function up(): void
