@@ -15,6 +15,18 @@
 # pre-reconciliation baseline exactly.
 includes:
     - vendor/larastan/larastan/extension.neon
+    # The errors that already existed when this codebase was first analysed
+    # (PR #309 round 24). Parked, NOT fixed and NOT ignored: each is listed
+    # individually with its message and count, so anything NEW still fails the
+    # run while the backlog stays visible and countable. Round 23 measured this
+    # set at 667 and triaged the 5 that touch PR #309's own files - all Larastan
+    # relation-existence false positives on relations that demonstrably exist as
+    # methods on the model, plus hits on lines outside the PR's diff hunks.
+    #
+    # To work the backlog down: delete a block from phpstan-baseline.neon, fix
+    # what it was hiding, re-run. Do NOT regenerate the whole baseline to make a
+    # new error go away - that is how a gate becomes decoration.
+    - phpstan-baseline.neon
 
 parameters:
     # Deliberately the lowest useful level. This codebase has never been
