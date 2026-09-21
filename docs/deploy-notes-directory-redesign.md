@@ -101,6 +101,23 @@ and untouched by this release**; it defeats every permission-based gate in the
 application and is tracked as its own change (PR #317 F-007 / L-8), owner
 **Security owner**, escalating to the **Engineering lead**.
 
+There is a second and wider bypass, recorded here because this section is where a
+reader learns what bounds the download, and leaving it out would make that bound
+look tighter than it is. `GET /feedback/student-feedback-url` carries the `web`
+middleware group and nothing else — read from `php artisan route:list`, not from
+the routes file by eye — and `CalendarController::studentFeedback_url()` takes a
+`username` query parameter, looks it up with `User::where('user_name', ...)` and
+calls `Auth::login()` on whatever row comes back, with no check on the caller and
+no restriction on which account may be assumed. So the roster download does not
+require an authenticated actor at all: it requires a `user_name`. That endpoint is
+**pre-existing and untouched by this release** — it is present at the merge base
+`bacac0bd3`, this release's only additions to `routes/web.php` are lines 209 and
+211–224, and `CalendarController` is not among the 22 changed files. It is **not
+fixed**, it is not scheduled here, and it is raised in the PR #317 fix record of
+2026-09-21 for the review register to carry an id. Read it as the outer bound on
+everything this section says: the permission self-grant above is the narrower of
+the two paths to the same file.
+
 What this release does achieve is still worth having, and is what the post-deploy
 checks verify: the roster file is out of casual reach, and every download that is
 served writes an audit line naming the actor, the IP, the filters and the row
@@ -115,9 +132,19 @@ owners who did not exist; both rows are now filled.
 
 The security paragraph at the end of this section was **rewritten on 2026-09-21** because
 the version signed off on 2026-09-18 told its reader the section 0.2 limitation was already
-remedied, and it is not (PR #317 F-013). The owners and the pre-pull acceptance below are
-unchanged; the risk paragraph is not, so the sign-off needs re-taking against the text as it
-now stands.
+remedied, and it is not (PR #317 F-013). Section 0.2 was widened on the same date to record a
+second, unauthenticated path to the same download. The owners and the pre-pull acceptance
+below are unchanged.
+
+**Sign-off re-taken 2026-09-21** by the Release / deploy owner (Ravi Patel), in session,
+against this text as it stands at commit `44a188dc5`'s successor — that is, including both
+bypass paths in section 0.2 and the two risk paragraphs below. What was accepted, stated so
+that a later reader does not have to infer it: this release ships an export gate that keeps
+the roster file out of casual reach and writes an audit line for every download served, and
+that does **not** withstand an authenticated account which self-grants `directory.export`,
+nor an unauthenticated actor who knows a `user_name`. Both paths are pre-existing, neither is
+closed by this release, and the decision was to ship on that basis rather than hold. The
+earlier 2026-09-18 acceptance is superseded by this one and is retained above as history.
 
 | Role | Person | What they own here |
 | --- | --- | --- |
@@ -136,7 +163,16 @@ check that a non-Super-Admin is refused the CSV will pass, and it proves that th
 refuses an account which has **not** granted itself the permission — not that no account
 can obtain one.
 
-A remedy for that endpoint has been written and is **not part of this release**. It is
+**And the permission is the narrower of the two paths.** Section 0.2 also records an
+unauthenticated route that returns a session as any named user, which reaches the same
+download without the permission and without a login. It is pre-existing, untouched by this
+release, and unfixed. You are signing off a release whose export gate is real and worth
+having against casual access, and which does not withstand either an authenticated actor
+who self-grants or an unauthenticated one who knows a `user_name`. That is the premise; if
+it is not acceptable, the answer is to hold the release, not to soften this paragraph.
+
+A remedy for `POST roles/permissions/{id}` — the first of the two paths, not the
+unauthenticated one — has been written and is **not part of this release**. It is
 tracked as **PR #317 F-007 / L-8**, owner **Security owner**, and it ships as its own change
 because a repository-wide authorisation fix does not belong in a redesign branch. It is
 deliberately cited here by finding id rather than by branch name: a branch stops resolving
@@ -144,6 +180,9 @@ the moment it is merged or deleted, which is the same defect as naming a migrati
 not in the tree (PR #317 F-010). Nothing in this release depends on it landing first. When
 it does land, section 0.2 and the `EnsureDirectoryExportAccess` docblock are revisited
 together, and the accuracy of this paragraph is what tells you they still need it.
+
+**No remedy has been written for the unauthenticated route.** Nothing in this release, and
+nothing on any branch this release can see, closes it.
 
 ## 1. Before pulling, on every host
 
