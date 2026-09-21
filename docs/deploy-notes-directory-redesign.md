@@ -184,6 +184,68 @@ together, and the accuracy of this paragraph is what tells you they still need i
 **No remedy has been written for the unauthenticated route.** Nothing in this release, and
 nothing on any branch this release can see, closes it.
 
+### 0.4 What the merge into main resolves, and why
+
+This release was written when main sat at `bacac0bd3`. While it was in review main moved
+on, and it did something that matters here: it made **this release's exact change, then
+reverted it**. So the merge does not apply cleanly, and the resolution is a decision rather
+than a formality. It is recorded here because sections 1, 2 and 3 below are built on the
+outcome, and a reader who resolves it the other way will follow a procedure that no longer
+describes their tree. Raised as PR #317 **F-016**.
+
+What the two sides did, read from the commits rather than from either branch's summary:
+
+| Commit | On | What it did |
+| --- | --- | --- |
+| `7c302997a` | main | Untracked the two manifests — the same change as this release. Its message records the reason: the committed manifest listed 22 packages, two of them absent from vendor/, and **every artisan command died** with `Class "Livewire\LivewireServiceProvider" not found` |
+| `c9fd46e73` | main | **Reverted that**, four hours later. The message records no reason |
+| `adb068731` | main | Took the opposite route instead: keep the manifests tracked, hand-edit them, and add a blanket `bootstrap/` ignore |
+
+**The decision: untracking stands, and the revert is overridden.** The grounds are the ones
+`7c302997a` already established and `c9fd46e73` does not answer — these files are build
+output; `composer.json` regenerates them on every install through its `post-autoload-dump`
+hook; Laravel rebuilds them on boot when absent; and Laravel ships a `bootstrap/cache`
+keeper for exactly this purpose. The alternative is a manifest hand-edited to match one
+machine's vendor directory, which is the condition that produced the outage in the first
+place. **This is an engineering decision that overrides another branch's revert, so it is
+the Engineering lead's to ratify, not the merge resolver's** — it is written down here so
+that ratification has something to point at.
+
+Three conflicts, and how each was taken:
+
+| Path | Conflict | Resolution |
+| --- | --- | --- |
+| `bootstrap/cache/packages.php` | modify/delete | **Deleted.** Note that git leaves the *other* side in the tree by default, so this one has to be taken deliberately |
+| `bootstrap/cache/services.php` | modify/delete | **Deleted**, same |
+| `.gitignore` | content | Both sides kept — main's Playwright artifact entries and this release's two explicit cache entries — **except** main's blanket `bootstrap/`, which is deliberately dropped |
+
+The blanket `bootstrap/` is dropped because it is wider than its intent: it covers
+`bootstrap/app.php` and `bootstrap/providers.php`, which are source, and it covers the
+keeper this release tracks on purpose. Tracked files ignore `.gitignore`, so nothing breaks
+today — it is a trap laid for whoever next deletes and re-adds one of those files. The two
+explicit entries say the same thing exactly.
+
+**Sections 1, 2 and 3 below are unchanged and remain accurate after this merge** — that is
+the point of resolving it this way, and it was verified on the merged tree rather than
+assumed:
+
+- `php artisan --version` prints **Laravel Framework 9.52.22**, exit 0, on a merged tree
+  whose `bootstrap/cache` holds only the keeper — so section 2's precondition holds and the
+  manifests really are rebuilt on boot.
+- `php artisan package:discover` completes and regenerates both files, and `git status`
+  then reports nothing — so the ignore rule covers the regenerated output, which is what
+  makes section 1's pre-pull step safe to run repeatedly.
+- The suite is **281 tests, 1436 assertions, 0 failures** on the merged tree, identical to
+  this release before the merge.
+
+Section 1 applies to more hosts after this merge, not fewer: a host currently tracking
+main's hand-edited manifests meets the same refusal on the way in, for the same reason.
+
+**The section 0.3 sign-off does not carry this.** It was taken against a text that did not
+describe a merge resolution, and sections 1 and 3 are the ones it assigns to the Release /
+deploy owner, so **it needs re-taking against this text**. That has not happened; nothing in
+this section should be read as a substitute for it.
+
 ## 1. Before pulling, on every host
 
 This release **untracks** `bootstrap/cache/packages.php` and
