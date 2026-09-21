@@ -268,9 +268,7 @@ body.custom-loaded {
 #centcomColumnToggleGrid .colvis-item:hover,
 #issueMgmtColumnToggleGrid .colvis-item:hover,
 #escalationColumnToggleGrid .colvis-item:hover,
-#facultyColumnToggleGrid .colvis-item:hover,
-#dirOtColumnToggleGrid .colvis-item:hover,
-#lbsnaaColumnToggleGrid .colvis-item:hover {
+#facultyColumnToggleGrid .colvis-item:hover {
     border-color: #004a93 !important;
     background-color: rgba(0, 74, 147, 0.04);
 }

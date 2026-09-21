@@ -1313,4 +1313,202 @@ class DirectoryExportGuardTest extends TestCase
             'both the print view and the PDF view must receive the note'
         );
     }
+    /**
+     * F-013: a sentence these documents put in quotation marks and attribute to
+     * one of their own sections has to be in that section.
+     *
+     * Section 0.3 quoted section 0.2 as saying the export gate "does not
+     * withstand a deliberate authenticated actor". Section 0.2 says something
+     * stronger and less hedged - that any authenticated account can self-grant
+     * the permission in a single request - and the invented paraphrase softened a
+     * live exposure in the one section whose job is to record a human accepting
+     * it. Quotation marks are what make this mechanical: a reader trusts them to
+     * mean the words were copied, so they can be checked as if they were.
+     *
+     * SCOPE, stated exactly, per the lesson of F-012. This guarantees ONE thing:
+     * a double-quoted run of 20+ characters appearing within 120 characters after
+     * a "section N.N" reference occurs verbatim in that section's body. It is
+     * blind to a misattributed paraphrase carrying no quotation marks, to a
+     * quotation of any document other than this one, and to a quotation that
+     * names no section.
+     */
+    public function test_no_quoted_sentence_is_attributed_to_a_section_that_does_not_contain_it(): void
+    {
+        $notes = str_replace("\r\n", "\n", file_get_contents(base_path('docs/deploy-notes-directory-redesign.md')));
+
+        // Split the document into its numbered sections, so a quotation is
+        // tested against the body it names rather than against the whole file.
+        preg_match_all(
+            '/^#{2,4}\s+(\d+(?:\.\d+)*)\.?\s+[^\n]*$/m',
+            $notes,
+            $heads,
+            PREG_OFFSET_CAPTURE | PREG_SET_ORDER
+        );
+        $this->assertNotEmpty($heads, 'the deploy notes no longer carry numbered sections');
+
+        $bodies = [];
+        foreach ($heads as $i => $head) {
+            $start = $head[0][1];
+            $end = isset($heads[$i + 1]) ? $heads[$i + 1][0][1] : strlen($notes);
+            $bodies[$head[1][0]] = substr($notes, $start, $end - $start);
+        }
+
+        $pattern = '/[Ss]ection\s+(\d+(?:\.\d+)+)(.{0,120}?)"([^"\n]{20,})"/s';
+
+        // Prove the detector fires before trusting it to find nothing.
+        $this->assertSame(
+            1,
+            preg_match($pattern, 'Section 0.2 says the gate "does not withstand a deliberate actor", because'),
+            'the attributed-quotation detector no longer matches a known citation'
+        );
+
+        preg_match_all($pattern, $notes, $hits, PREG_SET_ORDER);
+
+        foreach ($hits as $hit) {
+            $section = $hit[1];
+            $quoted = $hit[3];
+
+            $this->assertArrayHasKey(
+                $section,
+                $bodies,
+                "the deploy notes quote a section {$section} the document does not contain (PR #317 F-013)."
+            );
+
+            // Line wrapping belongs to the document, not to the quotation.
+            $haystack = preg_replace('/\s+/', ' ', $bodies[$section]);
+            $needle = preg_replace('/\s+/', ' ', $quoted);
+
+            $this->assertStringContainsString(
+                $needle,
+                $haystack,
+                "the deploy notes attribute \"{$needle}\" to section {$section}, which does not contain those "
+                . 'words. Quote what the section says, or drop the quotation marks (PR #317 F-013).'
+            );
+        }
+    }
+
+    /**
+     * F-013: a git branch is not a durable citation.
+     *
+     * The release sign-off credited a remedy to a branch while telling its reader
+     * the risk was "already out of date in your favour". The branch was not an
+     * ancestor of the head being signed off, so the reassurance was false for the
+     * release it appeared in - and a branch name stops resolving for everyone the
+     * moment it is merged or deleted, which is F-010's defect in a form none of
+     * the three detectors above can see.
+     *
+     * There is deliberately no escape hatch for a marked citation, and that is
+     * the difference between this check and the one it replaces. The paragraph
+     * F-013 was raised against DID say the branch was "deliberately not part of
+     * this release" - two sentences after telling the reader the risk was already
+     * remedied - so a detector that accepted a disclaimer nearby would have gone
+     * green on the exact text it exists to catch. Cite the finding id instead: it
+     * resolves in the review record for as long as the record exists, which a
+     * branch name does not.
+     *
+     * SCOPE, stated exactly. A backticked token containing a slash is looked up
+     * as a git ref. If it resolves in THIS clone, it must be reachable from HEAD.
+     * The check is blind where git is unavailable, where this is not a checkout,
+     * and where the named branch was never fetched locally - there the token is
+     * indistinguishable from a path and passes. It guards against citing a branch
+     * that is present and unmerged; it is not a proof that every ref named
+     * anywhere resolves.
+     */
+    public function test_every_git_ref_named_in_the_export_docs_is_reachable_or_marked_unshipped(): void
+    {
+        $git = static function (array $args): array {
+            $cmd = 'git -C ' . escapeshellarg(base_path());
+            foreach ($args as $arg) {
+                $cmd .= ' ' . escapeshellarg($arg);
+            }
+            $out = [];
+            $code = 0;
+            exec($cmd . ' 2>' . (DIRECTORY_SEPARATOR === '\\' ? 'NUL' : '/dev/null'), $out, $code);
+
+            return [$code, trim(implode("\n", $out))];
+        };
+
+        [$inRepo] = $git(['rev-parse', '--is-inside-work-tree']);
+        if ($inRepo !== 0) {
+            $this->markTestSkipped('not a git checkout, so a ref cannot be resolved here');
+        }
+
+        $sources = [
+            'the middleware' => file_get_contents(app_path('Http/Middleware/EnsureDirectoryExportAccess.php')),
+            'the deploy notes' => file_get_contents(base_path('docs/deploy-notes-directory-redesign.md')),
+        ];
+
+        foreach ($sources as $label => $source) {
+            $source = str_replace("\r\n", "\n", $source);
+
+            preg_match_all(
+                '/`([A-Za-z0-9][A-Za-z0-9._\/-]*\/[A-Za-z0-9._\/-]+)`/',
+                $source,
+                $hits,
+                PREG_OFFSET_CAPTURE | PREG_SET_ORDER
+            );
+
+            foreach ($hits as $hit) {
+                $token = $hit[1][0];
+
+                // A path in the working tree is a path, not a ref, even where
+                // git would happily resolve the name.
+                if (file_exists(base_path($token))) {
+                    continue;
+                }
+
+                [$resolved] = $git(['rev-parse', '--verify', '--quiet', $token . '^{commit}']);
+                if ($resolved !== 0) {
+                    continue;
+                }
+
+                [$ancestor] = $git(['merge-base', '--is-ancestor', $token, 'HEAD']);
+
+                $this->assertSame(
+                    0,
+                    $ancestor,
+                    "{$label} cites the git ref `{$token}`, which is not reachable from HEAD - so whatever it "
+                    . 'credits is not in this release. Cite the finding id or a tracked issue instead: a branch '
+                    . 'name stops resolving for everyone once it is merged or deleted (PR #317 F-013).'
+                );
+            }
+        }
+
+        // Reaching here with no unmerged ref cited is the pass.
+        $this->addToAssertionCount(1);
+    }
+
+    /**
+     * F-014: a section numbered 0.3 has to be marked up as a child of 0.
+     *
+     * The release sign-off was added as `##` beside `### 0.1` and `### 0.2`, so
+     * in any rendered view or generated contents it sat level with "0." and "1.",
+     * and section 0 appeared to end at 0.2. The sign-off is the section a release
+     * manager goes looking for, and it was the one detached from its parent.
+     *
+     * The rule is mechanical: heading depth is the number of dot-separated
+     * segments in the section's own number, plus one.
+     */
+    public function test_the_deploy_notes_heading_levels_match_their_numbering(): void
+    {
+        $notes = str_replace("\r\n", "\n", file_get_contents(base_path('docs/deploy-notes-directory-redesign.md')));
+
+        preg_match_all('/^(#{1,6})\s+(\d+(?:\.\d+)*)\.?\s+([^\n]*)$/m', $notes, $hits, PREG_SET_ORDER);
+
+        $this->assertNotEmpty($hits, 'the deploy notes no longer carry numbered sections');
+
+        foreach ($hits as $hit) {
+            $hashes = $hit[1];
+            $number = $hit[2];
+            $title = $hit[3];
+
+            $this->assertSame(
+                substr_count($number, '.') + 2,
+                strlen($hashes),
+                "\"{$number} {$title}\" is numbered "
+                . (substr_count($number, '.') === 0 ? 'a top-level section' : 'a subsection')
+                . ' but is marked up as a level-' . strlen($hashes) . ' heading (PR #317 F-014).'
+            );
+        }
+    }
 }

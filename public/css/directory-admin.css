@@ -251,3 +251,15 @@
         width: 100%;
     }
 }
+
+/* Columns panel hover.
+   These two grids are styled by public/css/custom.css alongside every other
+   programme-dt Columns panel, but that rule paints the border #004a93 - the
+   navy this page's own borders no longer use. The hover lives here instead so
+   the panel matches the card and filter borders a few pixels away, and so the
+   legacy navy elsewhere in custom.css stays out of this change (PR #317 F-015). */
+#dirOtColumnToggleGrid .colvis-item:hover,
+#lbsnaaColumnToggleGrid .colvis-item:hover {
+    border-color: var(--ds-primary, #004384) !important;
+    background-color: rgba(0, 67, 132, 0.04);
+}

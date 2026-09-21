@@ -108,10 +108,16 @@ count. The same fields remain readable by any authenticated user through the
 ungated grid feed — that was true before this release too, and narrowing it is a
 change to the feed routes with its own decision record.
 
-## 0.3 Release sign-off
+### 0.3 Release sign-off
 
 Recorded 2026-09-18. The review held this release at *Approve with conditions* on two
 owners who did not exist; both rows are now filled.
+
+The security paragraph at the end of this section was **rewritten on 2026-09-21** because
+the version signed off on 2026-09-18 told its reader the section 0.2 limitation was already
+remedied, and it is not (PR #317 F-013). The owners and the pre-pull acceptance below are
+unchanged; the risk paragraph is not, so the sign-off needs re-taking against the text as it
+now stands.
 
 | Role | Person | What they own here |
 | --- | --- | --- |
@@ -122,12 +128,22 @@ The section 1 pre-pull step is **approved and owned**, not executed: approval na
 is accountable for running it, it does not run it. It is still a manual step on every
 host and the release still aborts half-applied if it is skipped.
 
-One thing above is already out of date in your favour. Section 0.2 says the export gate
-"does not withstand a deliberate authenticated actor", because `POST roles/permissions/{id}`
-was ungated and any account could grant itself the permission. That endpoint is fixed on
-branch `fix/self-grant-permission-chain`, which is deliberately **not** part of this
-release — a repository-wide authorisation change does not belong in a redesign branch.
-When it merges, section 0.2 and the middleware docblock should be revisited together.
+**Section 0.2 is accurate for this release, and stays accurate after it merges.** Sign
+this release off on that basis. At the head being signed off, `POST roles/permissions/{id}`
+is still reachable with `auth` and nothing else, so any account that can log in can hand
+itself `directory.export` in a single request and then download either roster. The section 4
+check that a non-Super-Admin is refused the CSV will pass, and it proves that the gate
+refuses an account which has **not** granted itself the permission — not that no account
+can obtain one.
+
+A remedy for that endpoint has been written and is **not part of this release**. It is
+tracked as **PR #317 F-007 / L-8**, owner **Security owner**, and it ships as its own change
+because a repository-wide authorisation fix does not belong in a redesign branch. It is
+deliberately cited here by finding id rather than by branch name: a branch stops resolving
+the moment it is merged or deleted, which is the same defect as naming a migration that is
+not in the tree (PR #317 F-010). Nothing in this release depends on it landing first. When
+it does land, section 0.2 and the `EnsureDirectoryExportAccess` docblock are revisited
+together, and the accuracy of this paragraph is what tells you they still need it.
 
 ## 1. Before pulling, on every host
 
