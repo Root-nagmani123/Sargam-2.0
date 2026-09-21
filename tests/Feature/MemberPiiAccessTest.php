@@ -5,11 +5,14 @@ namespace Tests\Feature;
 use App\DataTables\MemberDataTable;
 use App\Http\Middleware\EnsureMemberPiiAccess;
 use App\Http\Middleware\EnsureMemberRecordAccess;
+use App\Models\CasteCategoryMaster;
 use App\Models\EmployeeMaster;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /**
@@ -193,6 +196,28 @@ class MemberPiiAccessTest extends TestCase
         $this->get(route($name, $params))->assertOk();
     }
 
+    /**
+     * F-002: show() hands out the same full-profile payload as printMember(),
+     * which logs; show() shipped without a matching call. An audit trail with
+     * a silent gap in it is worse than none, because it looks complete.
+     */
+    public function test_show_writes_an_audit_line_for_an_entitled_account(): void
+    {
+        $this->actAsSuperAdmin();
+
+        $memberPk = $this->anyMemberPk();
+
+        $lines = [];
+        Log::listen(function ($e) use (&$lines) {
+            $lines[] = $e->message;
+        });
+
+        $this->get(route('member.show', ['id' => encrypt($memberPk)]))->assertOk();
+
+        $this->assertContains('member.pii.show', $lines,
+            'show() must write a member.pii.show audit line, same as printMember().');
+    }
+
     /** The listing itself is deliberately NOT gated - the narrowing is the egress, not the screen. */
     public function test_the_member_listing_stays_open_to_an_ordinary_account(): void
     {
@@ -220,12 +245,12 @@ class MemberPiiAccessTest extends TestCase
         $this->actAsNonEntitled();
         $this->get(route('member.export', ['format' => 'csv']))->assertForbidden();
 
-        $permission = \Spatie\Permission\Models\Permission::findOrCreate(
+        $permission = Permission::findOrCreate(
             EnsureMemberPiiAccess::PII_PERMISSION,
             'web'
         );
         $user->givePermissionTo($permission);
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $this->actingAs($user->fresh());
         session(['user_roles' => ['FC-Sec-Audit']]);
@@ -944,7 +969,7 @@ class MemberPiiAccessTest extends TestCase
         $role = DB::table('user_role_master')->value('pk');
         // The rule is Rule::in(GetSeatName()), which lists ACTIVE rows only, so
         // the first row of the table is not necessarily a legal value.
-        $caste = \App\Models\CasteCategoryMaster::GetSeatName()->keys()->first();
+        $caste = CasteCategoryMaster::GetSeatName()->keys()->first();
         $appellation = DB::table('appellation_master')->where('active_inactive', 1)->value('pk');
 
         $location = DB::table('employee_master')

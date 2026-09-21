@@ -1,26 +1,39 @@
 <?php
+
 namespace App\Http\Controllers\Admin;
 
 use App\DataTables\MemberDataTable;
+use App\Exports\MemberExport;
 use App\Http\Controllers\Concerns\ExportsBrandedGrid;
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\EnsureMemberPiiAccess;
+use App\Http\Middleware\EnsureMemberRecordAccess;
+use App\Http\Requests\Admin\Member\StoreMemberStep1Request;
+use App\Http\Requests\Admin\Member\StoreMemberStep2Request;
+use App\Http\Requests\Admin\Member\StoreMemberStep3Request;
+use App\Http\Requests\Admin\Member\StoreMemberStep4Request;
+use App\Http\Requests\Admin\Member\StoreMemberStep5Request;
+use App\Models\AppellationMaster;
+use App\Models\City;
+use App\Models\Country;
+use App\Models\DepartmentMaster;
+use App\Models\District;
+use App\Models\EmployeeGroupMaster;
+use App\Models\EmployeeMaster;
+use App\Models\EmployeeRoleMapping;
+use App\Models\EmployeeTypeMaster;
+use App\Models\State;
+use App\Models\UserCredential;
+use App\Support\LogSafe;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use App\Http\Requests\Admin\Member\{
-    StoreMemberStep1Request,
-    StoreMemberStep2Request,
-    StoreMemberStep3Request,
-    StoreMemberStep4Request,
-    StoreMemberStep5Request,
-};
-use App\Models\{EmployeeMaster, EmployeeRoleMapping, UserCredential, City,
-    EmployeeTypeMaster, EmployeeGroupMaster, DepartmentMaster};
-use App\Exports\MemberExport;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Models\AppellationMaster;
+
 class MemberController extends Controller
 {
     use ExportsBrandedGrid;
@@ -37,7 +50,7 @@ class MemberController extends Controller
      * masters carry retired entries, and a dropdown that offers 71 departments
      * where 40 can never match is a filter that mostly returns nothing.
      *
-     * @return array{employeeTypes: \Illuminate\Support\Collection, employeeGroups: \Illuminate\Support\Collection, departments: \Illuminate\Support\Collection}
+     * @return array{employeeTypes: Collection, employeeGroups: Collection, departments: Collection}
      */
     private function listingFilterOptions(): array
     {
@@ -126,17 +139,17 @@ class MemberController extends Controller
             'landline_contact_no' => $request->landlinenumber,
         ];
 
-        if (!empty($request->other_city)) {
+        if (! empty($request->other_city)) {
             $otherCity = City::firstOrCreate(
                 [
                     'country_master_pk' => $request->country,
                     'state_master_pk' => $request->state,
                     'district_master_pk' => $request->district,
                     'city_name' => $request->other_city,
-                    'active_inactive' => 1
+                    'active_inactive' => 1,
                 ],
                 [
-                    'active_inactive' => 1
+                    'active_inactive' => 1,
                 ]
             );
             $address['city'] = $otherCity->pk;
@@ -144,17 +157,17 @@ class MemberController extends Controller
             $address['city'] = $request->city;
         }
 
-        if (!empty($request->permanent_other_city)) {
+        if (! empty($request->permanent_other_city)) {
             $permanentOtherCity = City::firstOrCreate(
                 [
                     'country_master_pk' => $request->permanentcountry,
                     'state_master_pk' => $request->permanentstate,
                     'district_master_pk' => $request->permanentdistrict,
                     'city_name' => $request->permanent_other_city,
-                    'active_inactive' => 1
+                    'active_inactive' => 1,
                 ],
                 [
-                    'active_inactive' => 1
+                    'active_inactive' => 1,
                 ]
             );
             $address['pcity'] = $permanentOtherCity->pk;
@@ -185,7 +198,7 @@ class MemberController extends Controller
     {
         $validatorClass = "App\\Http\\Requests\\Admin\\Member\\StoreMemberStep{$step}Request";
 
-        if (!class_exists($validatorClass)) {
+        if (! class_exists($validatorClass)) {
             return response()->json(['error' => 'Invalid step'], 400);
         }
 
@@ -220,7 +233,7 @@ class MemberController extends Controller
 
         if ($validator->fails()) {
             return response()->json([
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -254,12 +267,12 @@ class MemberController extends Controller
      */
     private function authorizeMemberRecord($memberPk): void
     {
-        if (\App\Http\Middleware\EnsureMemberPiiAccess::grantsAccess()) {
+        if (EnsureMemberPiiAccess::grantsAccess()) {
             return;
         }
 
         abort_unless(
-            \App\Http\Middleware\EnsureMemberRecordAccess::ownsMemberRecord($memberPk),
+            EnsureMemberRecordAccess::ownsMemberRecord($memberPk),
             403,
             'You do not have access to this member record.'
         );
@@ -278,7 +291,7 @@ class MemberController extends Controller
         $rules = [];
         $messages = [];
         foreach ($requestClasses as $requestClass) {
-            $instance = new $requestClass();
+            $instance = new $requestClass;
             $rules = array_merge($rules, $instance->rules());
             $messages = array_merge($messages, $instance->messages());
         }
@@ -347,7 +360,7 @@ class MemberController extends Controller
                 'reg_date' => now(),
                 'user_id' => $employee->pk,
                 'user_name' => $request->userid,
-                'user_category' => 'E'
+                'user_category' => 'E',
             ]);
 
             if ($userCredential) {
@@ -381,7 +394,8 @@ class MemberController extends Controller
         return response()->json(['message' => 'Member successfully created']);
     }
 
-    public function update(Request $request) {
+    public function update(Request $request)
+    {
 
         // The write twin of the edit wizard. `member.update` takes the member's
         // pk from the BODY rather than the route, so the member.record
@@ -418,12 +432,12 @@ class MemberController extends Controller
         UserCredential::updateOrCreate(
             ['user_id' => $request->emp_id], // Search condition
             [
-                'first_name'  => $request->first_name,
-                'last_name'   => $request->last_name,
-                'email_id'    => $request->personalemail,
-                'mobile_no'   => $request->mnumber,
-                'user_name'   => $request->userid,
-                'user_category' => 'E'
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
+                'email_id' => $request->personalemail,
+                'mobile_no' => $request->mnumber,
+                'user_name' => $request->userid,
+                'user_category' => 'E',
             ]
         );
         $userCredential = UserCredential::where('user_id', $request->emp_id)->first();
@@ -451,6 +465,7 @@ class MemberController extends Controller
         $appellationMasterList = AppellationMaster::where('active_inactive', 1)
             ->pluck('appettation_name', 'pk')
             ->toArray();
+
         return view("admin.member.steps.step{$step}", compact('appellationMasterList'));
     }
 
@@ -459,11 +474,13 @@ class MemberController extends Controller
         // Same reason as printMember(): a tampered id is a 404, not a 500.
         try {
             $memberPk = decrypt($id);
-        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+        } catch (DecryptException $e) {
             abort(404);
         }
 
         $member = EmployeeMaster::with('appellationMaster')->findOrFail($memberPk);
+
+        $this->logMemberPii('show', ['member_pk' => $member->pk]);
 
         return view('admin.member.show', [
             'member' => $member,
@@ -495,7 +512,7 @@ class MemberController extends Controller
                 'Date of Birth' => $member->dob,
                 'Gender' => EmployeeMaster::gender[$member->gender] ?? null,
                 'Marital Status' => EmployeeMaster::maritalStatus[$member->marital_status] ?? null,
-                'Height (Without Shoes)' => filled($member->height) ? $member->height . ' cm' : null,
+                'Height (Without Shoes)' => filled($member->height) ? $member->height.' cm' : null,
             ],
             'Employment Details' => [
                 'Employee ID' => $member->emp_id,
@@ -514,9 +531,9 @@ class MemberController extends Controller
                 'Residence Number' => $member->residence_no,
             ],
             'Address' => [
-                'Country' => optional(\App\Models\Country::find($member->country_master_pk))->country_name,
-                'State' => optional(\App\Models\State::find($member->state_master_pk))->state_name,
-                'District' => optional(\App\Models\District::find($member->state_district_mapping_pk))->district_name,
+                'Country' => optional(Country::find($member->country_master_pk))->country_name,
+                'State' => optional(State::find($member->state_master_pk))->state_name,
+                'District' => optional(District::find($member->state_district_mapping_pk))->district_name,
                 'City' => optional(City::find($member->city))->city_name,
                 'Postal Code' => $member->zipcode,
                 '__wide' => true,
@@ -543,7 +560,7 @@ class MemberController extends Controller
         // logged as a server fault. A tampered id is a missing page.
         try {
             $memberPk = decrypt($id);
-        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+        } catch (DecryptException $e) {
             abort(404);
         }
 
@@ -592,31 +609,36 @@ class MemberController extends Controller
      * which is cheaper and keeps the 403 uniform; this is defence in depth, not
      * a replacement.
      */
-    public function edit($id) {
-        $this->authorizeMemberRecord($id);
-        $member = EmployeeMaster::findOrFail($id);
-        $appellationMasterList = AppellationMaster::where('active_inactive', 1)
-            ->pluck('appettation_name', 'pk')
-            ->toArray();
-        return view('admin.member.edit', compact('member', 'appellationMasterList'));
-    }
-
-    public function editProfile($id) {
-        $this->authorizeMemberRecord($id);
-        $member = EmployeeMaster::findOrFail($id);
-        $appellationMasterList = AppellationMaster::where('active_inactive', 1)
-            ->pluck('appettation_name', 'pk')
-            ->toArray();
-        return view('admin.member.edit_profile', compact('member', 'appellationMasterList'));
-    }
-
-    function editStep($step, $id)
+    public function edit($id)
     {
         $this->authorizeMemberRecord($id);
         $member = EmployeeMaster::findOrFail($id);
         $appellationMasterList = AppellationMaster::where('active_inactive', 1)
             ->pluck('appettation_name', 'pk')
             ->toArray();
+
+        return view('admin.member.edit', compact('member', 'appellationMasterList'));
+    }
+
+    public function editProfile($id)
+    {
+        $this->authorizeMemberRecord($id);
+        $member = EmployeeMaster::findOrFail($id);
+        $appellationMasterList = AppellationMaster::where('active_inactive', 1)
+            ->pluck('appettation_name', 'pk')
+            ->toArray();
+
+        return view('admin.member.edit_profile', compact('member', 'appellationMasterList'));
+    }
+
+    public function editStep($step, $id)
+    {
+        $this->authorizeMemberRecord($id);
+        $member = EmployeeMaster::findOrFail($id);
+        $appellationMasterList = AppellationMaster::where('active_inactive', 1)
+            ->pluck('appettation_name', 'pk')
+            ->toArray();
+
         return view("admin.member.edit_steps.step{$step}", compact('member', 'appellationMasterList'));
     }
 
@@ -628,11 +650,10 @@ class MemberController extends Controller
         // whichever pk it is handed.
         $this->authorizeMemberRecord($id);
 
-
         $request->merge(['emp_id' => $id]);
 
         $validatorClass = "App\\Http\\Requests\\Admin\\Member\\StoreMemberStep{$step}Request";
-        if (!class_exists($validatorClass)) {
+        if (! class_exists($validatorClass)) {
             return response()->json(['error' => 'Invalid step'], 400);
         }
 
@@ -674,6 +695,7 @@ class MemberController extends Controller
             'message' => "Step $step validated.",
         ], 200);
     }
+
     /**
      * The listing's export columns - deliberately the same nine the grid shows,
      * in the same order, so a downloaded report can be reconciled against the
@@ -749,7 +771,7 @@ class MemberController extends Controller
 
     /**
      * Member listing -> CSV / Excel / PDF / Print, all through
-     * {@see \App\Http\Controllers\Concerns\ExportsBrandedGrid}.
+     * {@see ExportsBrandedGrid}.
      *
      * The four run off one query and one column list, and honour whatever the
      * grid is showing: the search box and the Columns modal, plus a
@@ -777,7 +799,7 @@ class MemberController extends Controller
         // the search box used to close this record and open a second, forged
         // one naming any actor, format and row count. An audit line that the
         // audited person can write is worse than none, because it is believed.
-        Log::info('member.pii.' . $action, \App\Support\LogSafe::context(array_merge([
+        Log::info('member.pii.'.$action, LogSafe::context(array_merge([
             // user_credentials is keyed on `pk`, so auth()->id() is that pk.
             'user_pk' => auth()->id(),
             'ip' => request()->ip(),
@@ -807,14 +829,14 @@ class MemberController extends Controller
         // named on the sheet, not just applied to it — a report that silently
         // omits 1,700 rows is indistinguishable from a broken one.
         $filterParts = array_filter([
-            $filters['status'] !== '' ? 'Status: ' . ucfirst($filters['status']) : null,
+            $filters['status'] !== '' ? 'Status: '.ucfirst($filters['status']) : null,
             // `!== null`, not truthiness: a filter on pk 0 is applied to the
             // rows, so it has to be named on the sheet too, or the export claims
             // to be unfiltered while showing a subset.
-            $filters['type'] !== null ? 'Type: ' . (optional(EmployeeTypeMaster::find($filters['type']))->category_type_name ?? $filters['type']) : null,
-            $filters['group'] !== null ? 'Group: ' . (optional(EmployeeGroupMaster::find($filters['group']))->emp_group_name ?? $filters['group']) : null,
-            $filters['department'] !== null ? 'Department: ' . (optional(DepartmentMaster::find($filters['department']))->department_name ?? $filters['department']) : null,
-            $search !== '' ? 'Search: ' . $search : null,
+            $filters['type'] !== null ? 'Type: '.(optional(EmployeeTypeMaster::find($filters['type']))->category_type_name ?? $filters['type']) : null,
+            $filters['group'] !== null ? 'Group: '.(optional(EmployeeGroupMaster::find($filters['group']))->emp_group_name ?? $filters['group']) : null,
+            $filters['department'] !== null ? 'Department: '.(optional(DepartmentMaster::find($filters['department']))->department_name ?? $filters['department']) : null,
+            $search !== '' ? 'Search: '.$search : null,
         ]);
 
         $this->logMemberPii('export', [
@@ -864,6 +886,7 @@ class MemberController extends Controller
     public function excelExport(Request $request)
     {
         $fileName = 'members-'.date('d-m-Y').'.xlsx';
+
         return Excel::download(new MemberExport, $fileName);
     }
 
@@ -899,19 +922,19 @@ class MemberController extends Controller
                     'success' => true,
                     'message' => "Status updated to {$statusLabel}.",
                     'status' => $newStatus,
-                    'statusLabel' => $statusLabel
+                    'statusLabel' => $statusLabel,
                 ], 200);
             }
 
             // Redirect with success message for non-AJAX requests
             return redirect()->route('member.index')->with('success', "Status updated to {$statusLabel}.");
         } catch (\Exception $e) {
-            $errorMessage = 'Error toggling status: ' . $e->getMessage();
+            $errorMessage = 'Error toggling status: '.$e->getMessage();
 
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $errorMessage
+                    'message' => $errorMessage,
                 ], 500);
             }
 
@@ -931,6 +954,7 @@ class MemberController extends Controller
                 if (request()->ajax()) {
                     return response()->json(['success' => false, 'message' => $message], 422);
                 }
+
                 return redirect()->route('member.index')->with('error', $message);
             }
 
@@ -959,12 +983,14 @@ class MemberController extends Controller
             if (request()->ajax()) {
                 return response()->json(['success' => true, 'message' => $message]);
             }
+
             return redirect()->route('member.index')->with('success', $message);
         } catch (\Exception $e) {
-            $message = 'Error deleting member: ' . $e->getMessage();
+            $message = 'Error deleting member: '.$e->getMessage();
             if (request()->ajax()) {
                 return response()->json(['success' => false, 'message' => $message], 500);
             }
+
             return redirect()->route('member.index')->with('error', $message);
         }
     }

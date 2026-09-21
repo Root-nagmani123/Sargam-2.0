@@ -77,24 +77,29 @@ use Illuminate\Http\Request;
  * exclude_from_admin = 1, so it changes no administrator's sidebar — it exists
  * to make the capability grantable and auditable, not to add a screen.
  *
- * WHAT THIS PERMISSION IS NOT - it is not, today, a boundary, and the sentence
- * that used to stand here ("nothing holds this permission, so behaviour is
- * exactly Super Admin only until somebody grants it") described the contents of
- * a table rather than a control. Who may grant it is the missing half: POST
- * roles/permissions/{id} carries `auth` and nothing else, and
- * RoleController::assignPermission() firstOrCreate()s whatever permission name
- * it is handed and gives it to the role named in the URL, with no check on the
- * caller. So an account this gate refuses can grant itself the permission this
- * gate honours and come back through the front door - executed end to end and
- * recorded as PR #309 F-027, with the ungated endpoint itself as the root cause
- * (PR #317 L-8), owner Engineering lead. Fixing that endpoint is a separate
- * change: it defeats every permission-based gate in this application, not only
- * this one, and it must not be smuggled into a redesign branch.
+ * WHAT THIS PERMISSION WAS NOT, UNTIL THIS PR - who may grant it used to be the
+ * missing half: POST roles/permissions/{id} carried `auth` and nothing else,
+ * and RoleController::assignPermission() firstOrCreate()d whatever permission
+ * name it was handed and gave it to the role named in the URL, with no check
+ * on the caller. So an account this gate refuses could grant itself the
+ * permission this gate honours and come back through the front door -
+ * executed end to end and recorded as PR #309 F-027 (PR #317 L-8), owner
+ * Engineering lead.
+ *
+ * CLOSED BY THIS PR: EnsureRoleAdmin::class is now registered in
+ * RoleController::__construct() (not only on a route group) for store,
+ * update, destroy, assignPermission, assignDashboardCard,
+ * storeDashboardCard, updateDashboardCard and destroyDashboardCard, because
+ * this controller is mounted TWICE - `roles/*` and a second, hand-written
+ * `admin/roles/*` block - and constructor middleware is the one place that
+ * covers both. assignPermission() now requires the same Super Admin /
+ * grantable-permission decision this gate itself uses, so the self-grant path
+ * F-027 described no longer reaches this permission, or any other.
  *
  * Read this gate, then, as what it demonstrably is: it removes a bulk personal
- * data egress from casual reach and puts an audit line on every served
- * download. It does not withstand a deliberate authenticated actor until L-8 is
- * closed.
+ * data egress from casual reach, puts an audit line on every served download,
+ * and - as of this PR - the one path that used to let a refused account grant
+ * itself back in is gated too.
  *
  * WHY THE LOOKUP BELOW IS WRAPPED - and it is not the reason this comment used
  * to give. A permission name that does not exist does NOT raise: Spatie's
@@ -155,7 +160,7 @@ class EnsureMemberPiiAccess
      */
     public static function grantsAccess(): bool
     {
-        return isSidebarPrivilegedUser() || (new self())->holdsPiiPermission();
+        return isSidebarPrivilegedUser() || (new self)->holdsPiiPermission();
     }
 
     private function holdsPiiPermission(): bool
