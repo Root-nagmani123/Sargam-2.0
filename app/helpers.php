@@ -872,6 +872,118 @@ function isSidebarPrivilegedUser(): bool
 }
 
 /**
+ * Does the current user pass a `menu.permission:<name>` gate?
+ *
+ * This is the SINGLE definition of that question. `EnsureMenuPermission` gates routes
+ * with it and the sidebar decides whether to draw the link with it, so a screen can
+ * never be advertised to someone the route will refuse.
+ *
+ * That divergence was real, not hypothetical: `setup_activities.blade.php` gated the
+ * User Management block on five ROLE names while the routes gated on the `users` and
+ * `roles` PERMISSIONS. Review finding F-017 — a populated role was shown "Roles" and
+ * "User Permissions" and got 403 on both. Three of those five role names
+ * ('Admin', 'Training-MCTP', 'IST') do not exist in this database at all, so the same
+ * 403 was waiting for whoever created one of them next.
+ *
+ * Holding ANY of the listed permissions passes, matching the middleware's variadic
+ * contract. Super Admin passes without holding any, which is why this is not `can:`
+ * — see the note on EnsureMenuPermission.
+ */
+/**
+ * A PDF-safe <img src> for a local image, as a base64 data URI.
+ *
+ * Returns the first readable candidate under public/, or '' - NEVER a remote URL.
+ * That last part is the point. dompdf renders server-side, so an http(s) src makes the
+ * SERVER fetch it while building the document: a third-party outage becomes a broken
+ * export, a slow response becomes a slow one, and the fetch is what forces
+ * isRemoteEnabled to stay on across every export in this application.
+ *
+ * Review finding F-027. Before this, the mess PDF exports resolved the national emblem
+ * by calling https://upload.wikimedia.org/... on EVERY render (Http::timeout(20)), and
+ * handed dompdf the raw URL when that call failed.
+ *
+ * @param  string[]  $relativePaths  candidates relative to public/, best first
+ */
+function pdf_local_image_data_uri(array $relativePaths): string
+{
+    foreach ($relativePaths as $relative) {
+        $path = public_path($relative);
+
+        if (! is_file($path) || ! is_readable($path)) {
+            continue;
+        }
+
+        $raw = @file_get_contents($path);
+
+        if ($raw === false || $raw === '') {
+            continue;
+        }
+
+        $mime = match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
+            'png' => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'webp' => 'image/webp',
+            'gif' => 'image/gif',
+            'svg' => 'image/svg+xml',
+            default => 'image/png',
+        };
+
+        return 'data:' . $mime . ';base64,' . base64_encode($raw);
+    }
+
+    return '';
+}
+
+/** The national emblem for a PDF header. Local only. See pdf_local_image_data_uri(). */
+function pdf_emblem_src(): string
+{
+    return pdf_local_image_data_uri([
+        'admin_assets/images/logos/ashoka.png',
+        'images/ashoka.png',
+    ]);
+}
+
+/**
+ * The LBSNAA header logo for a PDF. Local only.
+ *
+ * admin_assets/images/logos/logo.png first: it is the local copy of the very file the
+ * old remote fallback fetched (/admin_assets/images/logo.png) and is a third the size
+ * of images/lbsnaa_logo.jpg, which every render would otherwise embed.
+ */
+function pdf_lbsnaa_logo_src(): string
+{
+    return pdf_local_image_data_uri([
+        'admin_assets/images/logos/logo.png',
+        'admin_assets/images/logos/logo_new.png',
+        'images/lbsnaa_logo.jpg',
+        'images/lbsnaa_logo.png',
+    ]);
+}
+
+function hasMenuPermission(string ...$permissions): bool
+{
+    if (isSidebarPrivilegedUser()) {
+        return true;
+    }
+
+    $user = \Illuminate\Support\Facades\Auth::user();
+
+    if (! $user || empty($permissions)) {
+        return false;
+    }
+
+    $held = $user->getAllPermissions()->pluck('name');
+
+    foreach ($permissions as $permission) {
+        if ($held->contains($permission)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
  * Estate authority: can manage all estate records (Estate Admin role or Super Admin).
  * DB role names: 'Estate Admin' (id:8), 'Super Admin' (id:1).
  */

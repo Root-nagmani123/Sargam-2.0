@@ -9,7 +9,14 @@ use App\Services\RoleService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
+use App\Models\SidebarMenu\SidebarCategory;
+use App\Models\DashboardCard;
+use App\Exports\BrandedGridExport;
+use App\Support\ExportCsvHeader;
+use App\Support\PdfPageNumbers;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
 
 class RoleController extends Controller
 {
@@ -278,6 +285,72 @@ class RoleController extends Controller
                 'success' => false,
                 'message' => 'Permission missing',
             ]);
+        }
+
+        // Only a name this application actually has a screen for, or one that is
+        // already a permission. firstOrCreate() on its own accepted ANY string and
+        // minted a permission row for it, so a single request could invent a
+        // permission and attach it to any role by id - and the typos already in the
+        // table ('dashbaord', 'faculty_test', and 46 more with no menus row behind
+        // them) are what that looks like after a few years.
+        //
+        // Existing names stay writable, including the orphans: this endpoint is the
+        // only way to revoke them, and refusing those would strand them granted.
+        // What is refused is INVENTING a name that no menus row defines.
+        $existing = Permission::where('name', $permission)->where('guard_name', 'web')->first();
+
+        if (! $existing) {
+            $definedByAScreen = \Illuminate\Support\Facades\DB::table('menus')
+                ->where('permission_name', $permission)
+                ->exists();
+
+            if (! $definedByAScreen) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unknown permission.',
+                ], 422);
+            }
+        }
+
+        // Privilege-amplification guard. This route is gated on `menu.permission:roles`,
+        // which admits Super Admin AND any holder of the `roles` permission — and this
+        // PR's own condition-1 migration grants `roles` to Training-Induction (10
+        // accounts). The check above constrains WHICH names may be written; it says
+        // nothing about who may write them, so a `roles` holder could grant its own
+        // role any permission in the table and walk through the gate it was excluded
+        // from. Confirmed by executed probe against the review database: an account
+        // holding only Training-Induction went 403 -> 200 on `/sidebar/menus` in one
+        // request by granting itself `menus`.
+        //
+        // This is the same shape as the assignRoleSave() guard (review finding F-023):
+        // the route gate answered "may this caller use this screen" and nothing
+        // answered "may this caller hand out THIS". The rule is deliberately narrow:
+        //
+        //   - the Super Admin role's permission set is not editable by anyone else, and
+        //   - a caller may only grant or revoke a permission it already holds itself,
+        //     so administering permissions can spread authority sideways but never
+        //     amplify it.
+        //
+        // Revoking is covered as well as granting: a permission the caller does not
+        // hold is not theirs to strip from another role either. Super Admin is exempt
+        // from both rules, so the orphaned names this endpoint exists to clean up stay
+        // revocable by the people who would do it.
+        if (! isSidebarPrivilegedUser()) {
+            $actor = Auth::user();
+
+            if ($role->name === 'Super Admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only a Super Admin may change the Super Admin role.',
+                ], 403);
+            }
+
+            if (! $actor || ! $actor->getAllPermissions()->pluck('name')->contains($permission)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You may only assign a permission you hold yourself.',
+                ], 403);
+            }
         }
 
         Permission::firstOrCreate([

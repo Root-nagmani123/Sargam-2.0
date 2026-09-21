@@ -98,7 +98,7 @@ class StudentImportController extends Controller
             ->setOptions([
                 'defaultFont' => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => true,
+                'isRemoteEnabled' => false,
                 'dpi' => 96,
             ]);
 

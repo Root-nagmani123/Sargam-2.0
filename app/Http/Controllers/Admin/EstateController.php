@@ -10251,11 +10251,8 @@ class EstateController extends Controller
             }
         }
 
-        $officialPng = 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
-        $embedded = $this->estatePdfTryHttpToDataUri($officialPng, 'image/png');
-        if ($embedded !== null) {
-            return $embedded;
-        }
+        // F-027: local assets only. This used to fetch a remote image while dompdf was
+        // building the document, then hand dompdf the raw URL when that call failed.
 
         foreach ([
             public_path('admin_assets/images/logos/logo.svg'),
@@ -10267,7 +10264,7 @@ class EstateController extends Controller
             }
         }
 
-        return $officialPng;
+        return pdf_lbsnaa_logo_src();
     }
 
     private function estatePdfTryFileToDataUri(string $path): ?string
@@ -10291,22 +10288,6 @@ class EstateController extends Controller
         return 'data:'.$mime.';base64,'.base64_encode($raw);
     }
 
-    private function estatePdfTryHttpToDataUri(string $url, string $mime): ?string
-    {
-        try {
-            $response = Http::timeout(20)->connectTimeout(8)->get($url);
-            if ($response->successful()) {
-                $body = $response->body();
-                if ($body !== '' && strlen($body) > 100) {
-                    return 'data:'.$mime.';base64,'.base64_encode($body);
-                }
-            }
-        } catch (\Throwable $e) {
-            // Dompdf will not reliably load remote URLs; caller falls back.
-        }
-
-        return null;
-    }
 
     /**
      * Estate Bill Report for Print - filters (month, year, employee type, employee) and single bill.

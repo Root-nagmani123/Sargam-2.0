@@ -501,7 +501,7 @@ class FeedbackController extends Controller
                 ->setOptions([
                     'defaultFont' => 'sans-serif',
                     'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled' => true,
+                    'isRemoteEnabled' => false,
                     'dpi' => 96,
                     'margin_top' => 8,
                     'margin_right' => 8,
@@ -1464,8 +1464,13 @@ class FeedbackController extends Controller
             ->setOptions([
                 'defaultFont' => 'Arial',
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => true,
-                'isPhpEnabled' => true,
+                'isRemoteEnabled' => false,
+                // Never true: isPhpEnabled makes the renderer a PHP
+                // execution context for the whole view, so any raw block
+                // that later appears in an export blade would execute.
+                // Page numbers are stamped on the canvas after render
+                // instead - see PdfPageNumbers.
+                'isPhpEnabled' => false,
                 'dpi' => 96,
                 'margin_top' => 15,
                 'margin_right' => 15,
@@ -2225,8 +2230,13 @@ class FeedbackController extends Controller
                 ->setOptions([
                     'defaultFont' => 'Arial',
                     'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled' => true,
-                    'isPhpEnabled' => true,
+                    'isRemoteEnabled' => false,
+                    // Never true: isPhpEnabled makes the renderer a PHP
+                    // execution context for the whole view, so any raw
+                    // block that later appears in an export blade would
+                    // execute. Page numbers are stamped on the canvas
+                    // after render instead - see PdfPageNumbers.
+                    'isPhpEnabled' => false,
                     'dpi' => 96,
                     'margin_top' => 15,
                     'margin_right' => 15,
@@ -3538,8 +3548,13 @@ class FeedbackController extends Controller
             ->setOptions([
                 'defaultFont' => 'Arial',
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => true,
-                'isPhpEnabled' => true,
+                'isRemoteEnabled' => false,
+                // Never true: isPhpEnabled makes the renderer a PHP
+                // execution context for the whole view, so any raw block
+                // that later appears in an export blade would execute.
+                // Page numbers are stamped on the canvas after render
+                // instead - see PdfPageNumbers.
+                'isPhpEnabled' => false,
                 'dpi' => 96,
                 'margin_top' => 20,
                 'margin_right' => 10,
@@ -4072,7 +4087,7 @@ class FeedbackController extends Controller
                 ->setOptions([
                     'defaultFont' => 'sans-serif',
                     'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled' => true,
+                    'isRemoteEnabled' => false,
                     'dpi' => 96,
                     'margin_top' => 8,
                     'margin_right' => 8,

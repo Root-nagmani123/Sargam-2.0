@@ -137,7 +137,7 @@ class FcActivityMedicalController extends Controller
             ->setOptions([
                 'defaultFont' => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => true,
+                'isRemoteEnabled' => false,
                 'dpi' => 96,
             ]);
 
@@ -276,16 +276,9 @@ class FcActivityMedicalController extends Controller
             }
         }
 
-        $url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
-        try {
-            $response = \Illuminate\Support\Facades\Http::timeout(15)->connectTimeout(6)->get($url);
-            if ($response->successful() && strlen($response->body()) > 100) {
-                return 'data:image/png;base64,'.base64_encode($response->body());
-            }
-        } catch (\Throwable $e) {
-        }
-
-        return $url;
+        // F-027: local assets only. This used to fetch a remote image while dompdf was
+        // building the document, then hand dompdf the raw URL when that call failed.
+        return pdf_emblem_src();
     }
 
     private function medicalExportLogoDataUri(): string

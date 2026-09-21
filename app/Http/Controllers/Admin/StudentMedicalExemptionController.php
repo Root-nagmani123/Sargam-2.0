@@ -947,8 +947,13 @@ class StudentMedicalExemptionController extends Controller
                 ->setOptions([
                     'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled' => true,
-                    'isPhpEnabled' => true,
+                    'isRemoteEnabled' => false,
+                    // Never true: isPhpEnabled makes the renderer a PHP
+                    // execution context for the whole view, so any raw
+                    // block that later appears in an export blade would
+                    // execute. Page numbers are stamped on the canvas
+                    // after render instead - see PdfPageNumbers.
+                    'isPhpEnabled' => false,
                     'dpi' => 96,
                 ]);
 

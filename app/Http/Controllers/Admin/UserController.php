@@ -1920,8 +1920,13 @@ class UserController extends Controller
                 ->setOptions([
                     'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled' => true,
-                    'isPhpEnabled' => true,
+                    'isRemoteEnabled' => false,
+                    // Never true: isPhpEnabled makes the renderer a PHP
+                    // execution context for the whole view, so any raw
+                    // block that later appears in an export blade would
+                    // execute. Page numbers are stamped on the canvas
+                    // after render instead - see PdfPageNumbers.
+                    'isPhpEnabled' => false,
                     'dpi' => 96,
                 ]);
 
@@ -4823,31 +4828,17 @@ class UserController extends Controller
             app(PermissionRegistrar::class)->forgetCachedPermissions();
             self::bumpAdminUsersIndexCacheEpoch();
 
-            // Send notification to the user if roles were assigned
-            if (! empty($assignedRoleNames)) {
-                try {
-                    // Get user_id from user_credentials table
-                    $userCredential = \DB::table('user_credentials')
-                        ->where('pk', $userId)
-                        ->first();
-
-                    if ($userCredential && $userCredential->user_id) {
-                        $notificationService = app(NotificationService::class);
-                        $roleNames = implode(', ', $assignedRoleNames);
-                        $notificationService->create(
-                            (int) $userCredential->user_id,
-                            'role_assignment',
-                            'Role Assignment',
-                            $userId,
-                            'Role Assigned',
-                            "You have been assigned the following role(s): {$roleNames}."
-                        );
-                    }
-                } catch (\Exception $e) {
-                    // Log error but don't fail the request
-                    \Log::error('Failed to send role assignment notification: '.$e->getMessage());
-                }
-            }
+        // A role-assignment notification block stood here and had never fired: it was
+        // guarded by `if (!empty($assignedRoleNames))` and read `$userId`, and neither
+        // variable is ever assigned in this method — the names belong to the older
+        // employee_role_mapping implementation still commented out below. empty() on an
+        // undefined variable is true and raises no warning, so the guard was silently
+        // false on every call and the block was unreachable. Identical at the merge-base.
+        //
+        // Removed rather than repaired: switching on notifications that have never been
+        // sent is a behaviour change, and this is a permissions PR. If the notification
+        // is wanted, it belongs in its own change, with $user and $roleNames (which DO
+        // exist here) and a test.
 
             return redirect()->route('admin.users.index')
                 ->with('success', 'Roles assigned successfully.');
