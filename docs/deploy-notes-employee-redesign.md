@@ -45,7 +45,7 @@ explain:
 | Count | `user_category` | Which credentials |
 | --- | --- | --- |
 | **317** | blank | no `user_category` recorded on the credential |
-| **9** | `E` | `user_credentials` pks 1778, 1800, 1382, 1633, 1748, 2102, 1871, 1397, 2528 |
+| **9** | `E` | `user_credentials` pks 1778, 1800, 1382, 1633, 1748, 2102, 1871, 1397, 2528 — **six of these (1778, 1800, 1382, 1633, 1748, 1871) were repaired by migration `2026_09_21_120000` and no longer mismatch; 2102's coincidental email was cleared by `2026_09_21_130000`. Only 1397 and 2528 remain, and 2528 is `Active_inactive` = 0. Figures in this row describe the state the rule was designed against (2026-09-18), not the state after deploy — see §0.3.** |
 
 For reference, and so the two figures above can be told apart from any others in
 circulation: the looser rules give **349** pairs under an exact first-plus-last
@@ -161,17 +161,62 @@ would be one an attacker satisfies by editing their own credential.
 
 **Who is affected on the day:**
 
-- **1,188 accounts** — unchanged, self-service works exactly as before.
+> **Re-measured 2026-09-21 (round 24), after the condition-5 repair migrations
+> ran.** The figures in this section moved, and the ones that moved most are the
+> ones a deployer acts on. The census above (2026-09-18) is left as written
+> because it is what the rule was designed against; the numbers below are the
+> ones that describe deploy day.
+
+- **1,198 accounts** — unchanged, self-service works exactly as before. Up from
+  1,188: migration `2026_09_21_120000` repaired 11 accounts whose `user_id`
+  pointed at the wrong `employee_master` row.
 - **327 accounts** (blank / `S` category) — now get **403** on the profile they
   used to reach. They have lost nothing of their own; they have stopped seeing
   somebody else's personal data.
-- **32 employee accounts** — these are the ones to expect a ticket from. Their
-  `user_category` is `E`, so they are probably looking at their own record, but
-  their credential's email and mobile match it in neither field, so the
-  application cannot tell them apart from the 327. **The remedy is a data fix,
-  not a code change:** correct `user_credentials.email_id` or `mobile_no` to
-  match the employee row, and access returns on the next request. Do not widen
-  the rule in code to accommodate them.
+- **8 employee accounts** — these are the ones to expect a ticket from, and
+  **this is the figure that replaces the 32 quoted here before the repair.**
+  Their `user_category` is `E`, so they are probably looking at their own
+  record, but their credential's email and mobile match it in neither field, so
+  the application cannot tell them apart from the 327. **The remedy is a data
+  fix, not a code change:** correct `user_credentials.email_id` or `mobile_no`
+  to match the employee row, and access returns on the next request. Do not
+  widen the rule in code to accommodate them.
+- **14 further employee accounts** are also refused but are **`Active_inactive`
+  = 0** — they cannot log in at all, so they will not generate a ticket and do
+  not need a data fix before deploy.
+
+  On testsargam6 the 8 active ones are `user_credentials` pks **1397, 1632,
+  1729, 1776, 2091, 2098, 2154, 3070** — two of which (**1397**, **2098**) were
+  deliberately left refused by the condition-5 repair because their identity
+  could not be confirmed, and are still awaiting a DBA decision. **Re-derive
+  this set on the target host rather than trusting those pks** — they are
+  testsargam6 pks, and the repair migration changes which accounts are in the
+  set:
+
+  ```sql
+  SELECT uc.pk, uc.Active_inactive
+  FROM user_credentials uc
+  JOIN employee_master em ON em.pk = uc.user_id
+  WHERE UPPER(TRIM(uc.user_category)) = 'E'
+    AND uc.Active_inactive = 1
+    AND NOT (
+      (LOWER(TRIM(COALESCE(uc.email_id,''))) COLLATE utf8mb4_unicode_ci
+         = LOWER(TRIM(COALESCE(em.email,''))) COLLATE utf8mb4_unicode_ci
+       AND TRIM(COALESCE(em.email,'')) <> '')
+      OR (LOWER(TRIM(COALESCE(uc.email_id,''))) COLLATE utf8mb4_unicode_ci
+         = LOWER(TRIM(COALESCE(em.officalemail,''))) COLLATE utf8mb4_unicode_ci
+       AND TRIM(COALESCE(em.officalemail,'')) <> '')
+      OR (TRIM(COALESCE(uc.mobile_no,'')) COLLATE utf8mb4_unicode_ci
+         = TRIM(COALESCE(em.mobile,'')) COLLATE utf8mb4_unicode_ci
+       AND CHAR_LENGTH(TRIM(COALESCE(uc.mobile_no,''))) >= 10)
+    );
+  ```
+
+  **The `COLLATE` clauses are not decoration.** `user_credentials` and
+  `employee_master` do not share a collation on this server
+  (`utf8mb4_0900_ai_ci` vs `utf8mb4_unicode_ci`); without them MySQL raises
+  *"Illegal mix of collations"* (error 1267) and the query fails outright rather
+  than returning a wrong answer. Verified by running it both ways, 2026-09-21.
 
 Report any such ticket to the **Engineering lead** with the credential pk, and
 to the **DBA** alongside the F-024/F-029 question of whether the underlying
@@ -415,26 +460,41 @@ button (it raises "Unknown column 'pk'" and the switch reverts).
   and confirm the record shown is **yours**. If it is somebody else's, that is
   PR #309 F-024 in the wild: stop and tell the Engineering lead, because the same
   account can also save that record.
-- **Then run that same check again as one of these nine accounts, whose
-  `user_category` *is* `E`** — `user_credentials` pks **1778, 1800, 1382, 1633,
-  1748, 2102, 1871, 1397, 2528** on testsargam6 (re-identify them on the target
-  host with the no-shared-token rule in §0 before trusting these pks). Each
-  one's `user_id` names a different *named* employee, so each of the nine must
-  show somebody else's record. Report it the same way.
+- **Then run that same check again as an account whose `user_category` *is*
+  `E`, and which the gate still refuses.**
+
+  > **Rewritten 2026-09-21 (round 24). This step used to name nine fixed pks —
+  > 1778, 1800, 1382, 1633, 1748, 2102, 1871, 1397, 2528 — and tell you that
+  > "each of the nine must show somebody else's record." After the condition-5
+  > repair migrations, that instruction is wrong for **six** of the nine: pks
+  > 1778, 1800, 1382, 1633, 1748 and 1871 were repaired and now correctly show
+  > their **own** record. A deployer following the old text would have seen six
+  > accounts "fail" the check by passing it, and reported a defect that had just
+  > been fixed. Of the remaining three, **two are `Active_inactive` = 0** and
+  > cannot be logged into at all, leaving exactly one (pk 1397) that could still
+  > perform the check as written. Verified against testsargam6 2026-09-21.
+
+  Do not use a frozen pk list for this. Derive the set on the host you are
+  deploying to, with the query in §0.3 above, and pick any account it returns.
+  Each one's `user_id` points at an `employee_master` row it cannot prove it
+  owns, so **it must not be able to open or save that record** — the gate must
+  refuse it. Report it the same way if it does not.
 
   This second check is not a duplicate of the first. **`user_category` is
   necessary but not sufficient.** Narrowing the rule to `user_category = 'E'` —
   the obvious reading of F-024, and the one the first check on its own would
-  encourage — closes the 317 blank-category cases and leaves these nine open,
-  and the first check *cannot* detect them, because it uses an account whose
-  category is not `E`. A fix for F-024 that filters on category alone is not a
-  fix; a name- or ownership-based check is required on top of it. Worth telling
-  the DBA when you report it: six of the nine land on an `employee_master` row
-  whose name belongs to *another* credential in the same set, and the set closes
-  on itself — which reads as a block of `user_id` values written misaligned
-  rather than as a category being conflated. The other three match nothing
-  inside the set. Stated by pk and never by name on purpose: this repository is
-  public, see PR #309 F-031.
+  encourage — closes the blank-category cases and leaves these open, and the
+  first check *cannot* detect them, because it uses an account whose category is
+  not `E`. A fix for F-024 that filters on category alone is not a fix; a
+  contact-proof check is required on top of it.
+
+  The original block of nine was a set of `user_id` values written misaligned —
+  each landing on an `employee_master` row belonging to *another* credential in
+  the same set, the set closing on itself — rather than a category being
+  conflated. **Six of those were repaired by migration
+  `2026_09_21_120000`**, which is why this step no longer names them. Stated by
+  pk and never by name on purpose: this repository is public, see PR #309 F-031
+  and F-059.
 - **Self-service still works for an account that can prove ownership.** Sign in
   as an employee account whose `user_credentials.email_id` matches its
   `employee_master` row, open **My Profile**, and confirm the record is theirs.
@@ -442,10 +502,12 @@ button (it raises "Unknown column 'pk'" and the switch reverts).
   employee_master em ON em.pk = uc.user_id WHERE UPPER(TRIM(uc.user_category)) =
   'E' AND (LOWER(TRIM(uc.email_id)) = LOWER(TRIM(em.email)) OR
   LOWER(TRIM(uc.email_id)) = LOWER(TRIM(em.officalemail)))` — on the review
-  database that is 1,179, and with the mobile fallback 1,188. A number near zero
-  on the target host means the contact data does not line up there and §0.3 will
-  lock out far more than 32 people: **stop and tell the Engineering lead before
-  announcing the release.**
+  database that is 1,179 before the condition-5 repair and **1,198 with the
+  mobile fallback after it** (re-measured 2026-09-21; it was 1,188 before the
+  repair). A number near zero on the target host means the contact data does not
+  line up there and §0.3 will lock out far more than the **8** active accounts
+  it locks out here: **stop and tell the Engineering lead before announcing the
+  release.**
 - **And a blank-category account no longer reaches a stranger's record.** Sign
   in as an account whose `user_category` is blank, open **My Profile**, and
   confirm **403** — not somebody else's name. Before this release it showed one.
