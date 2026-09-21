@@ -3,22 +3,18 @@
 # Supplied for PR #309 condition 6, which asks for this file or a recorded
 # decision not to have one.
 #
-# READ THIS BEFORE EXPECTING IT TO RUN. The analyser itself is NOT installed:
-# neither phpstan/phpstan nor larastan/larastan appears in composer.json's
-# require-dev, and neither is present in vendor/. This file therefore makes the
-# gate CONFIGURED, not RUNNABLE. Installing it is a human decision because this
-# checkout's vendor/ is ahead of composer.lock, so a plain `composer install`
-# or `composer update` here would move a large number of unrelated packages.
-#
-#   composer require --dev larastan/larastan --no-update
-#   # then install deliberately, on a branch, and diff vendor/ before trusting it
-#
-# Once larastan IS installed, uncomment the includes below - without them
-# PHPStan does not understand facades, Eloquent magic or the container, and
-# level 1 will report hundreds of false positives on this codebase.
-#
-# includes:
-#     - vendor/larastan/larastan/extension.neon
+# RUNNABLE as of PR #309 round 21. phpstan/phpstan and larastan/larastan are
+# now in composer.json's require-dev and in vendor/ - closing the gap this
+# file used to describe. Getting here required reconciling composer.lock with
+# an already-ahead vendor/ (see the round-21 report section for the dry-run
+# evidence and what it actually touched: one superseded transitive dependency
+# dropped, ~40 patch/minor bumps, yajra/laravel-datatables-buttons and -html
+# made direct requirements since they were only reachable through a
+# never-installed yajra/laravel-datatables-export before). Full suite
+# reproduced at 344/2,087/0 failures after the reconciliation, matching the
+# pre-reconciliation baseline exactly.
+includes:
+    - vendor/larastan/larastan/extension.neon
 
 parameters:
     # Deliberately the lowest useful level. This codebase has never been
