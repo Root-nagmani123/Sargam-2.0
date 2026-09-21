@@ -225,7 +225,7 @@ class EnsureMemberRecordAccess
         // the code does - green, on an authorisation path. If you write that
         // test, drop the entry between the requests with
         // app()->forgetInstance(<the key built on the next line>). PR #309 F-048.
-        $memo = 'member.ownership.' . $user->pk . ':' . $requestedPk;
+        $memo = 'member.ownership.'.$user->pk.':'.$requestedPk;
 
         if (app()->bound($memo)) {
             return app()->make($memo);
@@ -237,15 +237,15 @@ class EnsureMemberRecordAccess
             ->where(function ($q) {
                 $q->where(function ($e) {
                     $e->whereRaw("TRIM(uc.email_id) COLLATE utf8mb4_unicode_ci <> '' COLLATE utf8mb4_unicode_ci")
-                      ->where(function ($m) {
-                          $m->whereRaw('LOWER(TRIM(uc.email_id)) COLLATE utf8mb4_unicode_ci = LOWER(TRIM(em.email)) COLLATE utf8mb4_unicode_ci')
-                            ->orWhereRaw('LOWER(TRIM(uc.email_id)) COLLATE utf8mb4_unicode_ci = LOWER(TRIM(em.officalemail)) COLLATE utf8mb4_unicode_ci');
-                      });
+                        ->where(function ($m) {
+                            $m->whereRaw('LOWER(TRIM(uc.email_id)) COLLATE utf8mb4_unicode_ci = LOWER(TRIM(em.email)) COLLATE utf8mb4_unicode_ci')
+                                ->orWhereRaw('LOWER(TRIM(uc.email_id)) COLLATE utf8mb4_unicode_ci = LOWER(TRIM(em.officalemail)) COLLATE utf8mb4_unicode_ci');
+                        });
                 })->orWhere(function ($m) {
                     // Ten digits minimum: two blank or truncated numbers must
                     // not be able to match each other.
                     $m->whereRaw('CHAR_LENGTH(TRIM(uc.mobile_no)) >= 10')
-                      ->whereRaw('TRIM(uc.mobile_no) COLLATE utf8mb4_unicode_ci = TRIM(em.mobile) COLLATE utf8mb4_unicode_ci');
+                        ->whereRaw('TRIM(uc.mobile_no) COLLATE utf8mb4_unicode_ci = TRIM(em.mobile) COLLATE utf8mb4_unicode_ci');
                 });
             })
             ->exists());

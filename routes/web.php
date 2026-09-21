@@ -1,95 +1,87 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\AttendanceController;
+use App\Http\Controllers\Admin\BirthdayWishController;
+use App\Http\Controllers\Admin\CalendarController;
+use App\Http\Controllers\Admin\CourseAttendanceNoticeMapController;
+use App\Http\Controllers\Admin\CourseController;
+use App\Http\Controllers\Admin\CourseMemoDecisionMappController;
+use App\Http\Controllers\Admin\CourseRepositoryController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DirectoryController;
+use App\Http\Controllers\Admin\DuplicateIDCardRequestController;
+use App\Http\Controllers\Admin\EmployeeIDCardRequestController;
+use App\Http\Controllers\Admin\Estate\EligibilityCriteriaController;
+use App\Http\Controllers\Admin\Estate\EstateBlockController;
+use App\Http\Controllers\Admin\Estate\EstateCampusController;
+use App\Http\Controllers\Admin\Estate\EstateElectricSlabController;
+use App\Http\Controllers\Admin\Estate\PayScaleController;
+use App\Http\Controllers\Admin\Estate\UnitSubTypeController;
+use App\Http\Controllers\Admin\Estate\UnitTypeController;
+use App\Http\Controllers\Admin\EstateController;
+use App\Http\Controllers\Admin\ExemptionMasterController;
+use App\Http\Controllers\Admin\FacultyController;
+use App\Http\Controllers\Admin\FacultyLeaveApprovalController;
+use App\Http\Controllers\Admin\FacultyMDOEscortExceptionViewController;
+use App\Http\Controllers\Admin\FacultyNoticeMemoViewController;
+use App\Http\Controllers\Admin\FamilyIDCardRequestController;
+use App\Http\Controllers\Admin\FeedbackController;
+use App\Http\Controllers\Admin\GroupMappingController;
+use App\Http\Controllers\Admin\HostelBuildingFloorMappingController;
+use App\Http\Controllers\Admin\HostelBuildingFloorRoomMappingController;
+use App\Http\Controllers\Admin\IssueManagement\IssueCategoryController;
+use App\Http\Controllers\Admin\IssueManagement\IssueEscalationMatrixController;
+use App\Http\Controllers\Admin\IssueManagement\IssueManagementController;
+use App\Http\Controllers\Admin\IssueManagement\IssuePriorityController;
+use App\Http\Controllers\Admin\IssueManagement\IssueSubCategoryController;
+use App\Http\Controllers\Admin\LeaveApplicationController;
+use App\Http\Controllers\Admin\Master\AppellationMasterController;
+use App\Http\Controllers\Admin\Master\DisciplineMasterController;
+use App\Http\Controllers\Admin\MDOEscrotExemptionController;
+use App\Http\Controllers\Admin\MedicalExceptionFacultyViewController;
+use App\Http\Controllers\Admin\MedicalExceptionOTViewController;
+use App\Http\Controllers\Admin\MedicalExemptionReportController;
+use App\Http\Controllers\Admin\MemberController;
+use App\Http\Controllers\Admin\MemoDisciplineController;
+use App\Http\Controllers\Admin\MemoNoticeController;
+use App\Http\Controllers\Admin\NoticeNotificationController;
+use App\Http\Controllers\Admin\NotificationController;
+use App\Http\Controllers\Admin\OTMDOEscrotExemptionController;
+use App\Http\Controllers\Admin\OTNoticeMemoViewController;
+use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\QuickLinkController;
+use App\Http\Controllers\Admin\StationedLeaveMasterController;
+use App\Http\Controllers\Admin\StreamController;
+use App\Http\Controllers\Admin\StudentMedicalExemptionController;
+use App\Http\Controllers\Admin\SubjectMasterController;
+use App\Http\Controllers\Admin\SubjectModuleController;
+use App\Http\Controllers\Admin\TimetableReportController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\VenueMasterController;
+use App\Http\Controllers\Admin\WhosWhoController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SidebarController;
+use App\Http\Controllers\SidebarMenu\MenuController;
+use App\Http\Controllers\SidebarMenu\MenuGroupController;
+use App\Http\Controllers\SidebarMenu\SidebarCategoryController;
+use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\{RoleController,SidebarController};
-use App\Models\User;
+use Illuminate\Support\Facades\Route;
 use Spatie\Permission\Models\Role;
-use App\Http\Controllers\Admin\{
-    PermissionController,
-    UserController,
-    MemberController,
-    CourseController,
-    FacultyController,
-    StreamController,
-    SubjectModuleController,
-    SubjectMasterController,
-    VenueMasterController,
-    GroupMappingController,
-    CalendarController,
-    MDOEscrotExemptionController,
-    AttendanceController,
-    StudentMedicalExemptionController,
-    MedicalExemptionReportController,
-    CourseMemoDecisionMappController,
-    CourseAttendanceNoticeMapController,
-    HostelBuildingFloorMappingController,
-    HostelBuildingFloorRoomMappingController,
-    NoticeNotificationController,
-    MedicalExceptionFacultyViewController,
-    MedicalExceptionOTViewController,
-    OTMDOEscrotExemptionController,
-    FacultyMDOEscortExceptionViewController,
-    OTNoticeMemoViewController,
-    FacultyNoticeMemoViewController,
-    NotificationController,
-    MemoDisciplineController,
-    DashboardController,
-    DirectoryController,
-    CourseRepositoryController,
-    WhosWhoController,
-    EstateController,
-    QuickLinkController,
-    TimetableReportController,
-    ExemptionMasterController,
-    StationedLeaveMasterController,
-    LeaveApplicationController,
-    FacultyLeaveApprovalController,
-};
-use App\Http\Controllers\Dashboard\Calendar1Controller;
-use App\Http\Controllers\Admin\MemoNoticeController;
-use App\Http\Controllers\Admin\Master\DisciplineMasterController;
-use App\Http\Controllers\Admin\Master\AppellationMasterController;
-use App\Http\Controllers\Admin\FeedbackController;
-use App\Http\Controllers\Admin\Estate\{
-    EstateCampusController,
-    EstateElectricSlabController,
-    UnitTypeController,
-    UnitSubTypeController,
-    EstateBlockController,
-    PayScaleController,
-    EligibilityCriteriaController,
-};
-use App\Http\Controllers\Admin\IssueManagement\{
-    IssueManagementController,
-    IssueCategoryController,
-    IssueSubCategoryController,
-    IssueEscalationMatrixController,
-    IssuePriorityController,
-};
-use App\Http\Controllers\Admin\EmployeeIDCardRequestController;
-use App\Http\Controllers\Admin\DuplicateIDCardRequestController;
-use App\Http\Controllers\Admin\FamilyIDCardRequestController;
-use App\Http\Controllers\Admin\BirthdayWishController;
-
-use App\Http\Controllers\SidebarMenu\{
-    SidebarCategoryController,MenuGroupController,MenuController
-};
 
 Route::get('assign-role', function () {
     $user = User::find(2);
     $permissions = $user->getAllPermissions();
     foreach ($permissions as $permission) {
-        echo $permission->name . "<br>";
+        echo $permission->name.'<br>';
     }
 })->name('admin.assign-role');
 
 Route::get('test-menus', function () {
-    
-    $menus = app()->make(\App\Services\SidebarMenu\MenuService::class)->getMenus();
+
+    $menus = app()->make(MenuService::class)->getMenus();
     dd($menus);
 });
 
@@ -99,6 +91,7 @@ Route::get('clear-cache', function () {
     Artisan::call('view:clear');
     Artisan::call('route:clear');
     Artisan::call('optimize:clear');
+
     return redirect()->back()->with('success', 'Cache cleared successfully');
 });
 
@@ -106,21 +99,23 @@ Route::get('clear-cache', function () {
 // Check this BEFORE run-migrations — migrate runs everything pending, not just
 // whichever one you're chasing, and some pending migrations may not be reversible.
 Route::middleware(['auth'])->get('migration-status', function () {
-    if (!hasRole('Super Admin')) {
+    if (! hasRole('Super Admin')) {
         abort(403);
     }
     Artisan::call('migrate:status');
-    return '<pre>' . e(Artisan::output()) . '</pre>';
+
+    return '<pre>'.e(Artisan::output()).'</pre>';
 })->name('migration.status');
 
 // Run pending DB migrations from a server with no shell/SSH access (e.g. preprod).
 // Gated to authenticated Super Admins only — this alters the schema.
 Route::middleware(['auth'])->get('run-migrations', function () {
-    if (!hasRole('Super Admin')) {
+    if (! hasRole('Super Admin')) {
         abort(403);
     }
     Artisan::call('migrate', ['--force' => true]);
-    return '<pre>' . e(Artisan::output()) . '</pre>';
+
+    return '<pre>'.e(Artisan::output()).'</pre>';
 })->name('run.migrations');
 // Authentication Routes
 Auth::routes(['verify' => true, 'register' => false]);
@@ -130,14 +125,13 @@ Route::get('/logout', function () {
     Auth::logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
+
     return redirect('/');
 })->name('get.logout');
 
 // Public Routes
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'authenticate'])->middleware('throttle:login')->name('post_login');
-
-
 
 Route::middleware(['auth'])->group(function () {
     // Reads stay open to anyone who can already reach the screen; gating them
@@ -197,9 +191,8 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('quick-links/{id}', [QuickLinkController::class, 'destroy'])->name('quick-links.destroy');
     });
 
-
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('admin.dashboard');
-    Route::get('/admin/navigation-error', [\App\Http\Controllers\Admin\NavigationErrorController::class, 'show'])
+    Route::get('/admin/navigation-error', [NavigationErrorController::class, 'show'])
         ->name('admin.navigation.error');
     Route::get('/dashboard/feed', [UserController::class, 'dashboardFeed'])->name('admin.dashboard.feed');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
@@ -207,26 +200,26 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/students/export/{format}', [UserController::class, 'studentListExport'])->name('admin.dashboard.students.export');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
-    Route::post('/dashboard/report-issue', [\App\Http\Controllers\Admin\IssueReportController::class, 'store'])->middleware('throttle:10,1')->name('admin.dashboard.report-issue');
+    Route::post('/dashboard/report-issue', [IssueReportController::class, 'store'])->middleware('throttle:10,1')->name('admin.dashboard.report-issue');
     // Admin console for issues submitted via the dashboard "Report Issue" launcher
     // index() keeps its own in-body redirect for non-privileged users (unchanged UX);
     // every other admin action is destructive/PII-bearing and is gated by 'issue.reports.admin'.
-    Route::get('/issue-reports', [\App\Http\Controllers\Admin\IssueReportController::class, 'index'])->name('admin.issue-reports.index');
+    Route::get('/issue-reports', [IssueReportController::class, 'index'])->name('admin.issue-reports.index');
     Route::middleware(['issue.reports.admin'])->group(function () {
-        Route::get('/issue-reports/filter-options', [\App\Http\Controllers\Admin\IssueReportController::class, 'filterOptions'])->name('admin.issue-reports.filter-options');
-        Route::get('/issue-reports/export', [\App\Http\Controllers\Admin\IssueReportController::class, 'export'])->name('admin.issue-reports.export');
-        Route::get('/issue-reports/export-excel', [\App\Http\Controllers\Admin\IssueReportController::class, 'exportExcel'])->name('admin.issue-reports.export-excel');
-        Route::get('/issue-reports/{id}', [\App\Http\Controllers\Admin\IssueReportController::class, 'show'])->whereNumber('id')->name('admin.issue-reports.show');
-        Route::post('/issue-reports/{id}/status', [\App\Http\Controllers\Admin\IssueReportController::class, 'updateStatus'])->whereNumber('id')->name('admin.issue-reports.status');
-        Route::delete('/issue-reports/{id}', [\App\Http\Controllers\Admin\IssueReportController::class, 'destroy'])->whereNumber('id')->name('admin.issue-reports.destroy');
+        Route::get('/issue-reports/filter-options', [IssueReportController::class, 'filterOptions'])->name('admin.issue-reports.filter-options');
+        Route::get('/issue-reports/export', [IssueReportController::class, 'export'])->name('admin.issue-reports.export');
+        Route::get('/issue-reports/export-excel', [IssueReportController::class, 'exportExcel'])->name('admin.issue-reports.export-excel');
+        Route::get('/issue-reports/{id}', [IssueReportController::class, 'show'])->whereNumber('id')->name('admin.issue-reports.show');
+        Route::post('/issue-reports/{id}/status', [IssueReportController::class, 'updateStatus'])->whereNumber('id')->name('admin.issue-reports.status');
+        Route::delete('/issue-reports/{id}', [IssueReportController::class, 'destroy'])->whereNumber('id')->name('admin.issue-reports.destroy');
     });
     // User-facing: only the current user's own reported issues
-    Route::get('/my-reported-issues', [\App\Http\Controllers\Admin\IssueReportController::class, 'myIssues'])->name('my.issue-reports.index');
-    Route::get('/my-reported-issues/filter-options', [\App\Http\Controllers\Admin\IssueReportController::class, 'myFilterOptions'])->name('my.issue-reports.filter-options');
-    Route::get('/my-reported-issues/export', [\App\Http\Controllers\Admin\IssueReportController::class, 'myExport'])->name('my.issue-reports.export');
-    Route::get('/my-reported-issues/export-excel', [\App\Http\Controllers\Admin\IssueReportController::class, 'myExportExcel'])->name('my.issue-reports.export-excel');
+    Route::get('/my-reported-issues', [IssueReportController::class, 'myIssues'])->name('my.issue-reports.index');
+    Route::get('/my-reported-issues/filter-options', [IssueReportController::class, 'myFilterOptions'])->name('my.issue-reports.filter-options');
+    Route::get('/my-reported-issues/export', [IssueReportController::class, 'myExport'])->name('my.issue-reports.export');
+    Route::get('/my-reported-issues/export-excel', [IssueReportController::class, 'myExportExcel'])->name('my.issue-reports.export-excel');
     // Shared: attachment download, gated in-body to the admin or the issue's own reporter
-    Route::get('/issue-reports/{id}/attachment', [\App\Http\Controllers\Admin\IssueReportController::class, 'attachment'])->whereNumber('id')->name('issue-reports.attachment');
+    Route::get('/issue-reports/{id}/attachment', [IssueReportController::class, 'attachment'])->whereNumber('id')->name('issue-reports.attachment');
     Route::get('/directory/lbsnaa', [DirectoryController::class, 'lbsnaa'])->name('admin.directory.lbsnaa');
     Route::get('/directory/ot', [DirectoryController::class, 'ot'])->name('admin.directory.ot');
 
@@ -243,8 +236,8 @@ Route::middleware(['auth'])->group(function () {
             return redirect()->route('admin.dashboard-statistics.charts');
         })->name('index');
 
-        Route::get('/charts', function (\Illuminate\Http\Request $request) {
-            $courses = \App\Models\CourseMaster::query()
+        Route::get('/charts', function (Request $request) {
+            $courses = CourseMaster::query()
                 ->where('active_inactive', 1)
                 ->orderBy('course_name')
                 ->get(['pk', 'course_name']);
@@ -254,10 +247,10 @@ Route::middleware(['auth'])->group(function () {
             $coursePk = (int) $request->query('course_master_pk', 0);
 
             if ($coursePk > 0) {
-                $course = \App\Models\CourseMaster::query()->where('pk', $coursePk)->first();
+                $course = CourseMaster::query()->where('pk', $coursePk)->first();
 
                 if ($course) {
-                    $students = \Illuminate\Support\Facades\DB::table('student_master_course__map as smcm')
+                    $students = Illuminate\Support\Facades\DB::table('student_master_course__map as smcm')
                         ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
                         ->leftJoin('stream_master as stm', 'stm.pk', '=', 'sm.highest_stream_pk')
                         ->leftJoin('cadre_master as cm', 'cm.pk', '=', 'sm.cadre_master_pk')
@@ -271,31 +264,51 @@ Route::middleware(['auth'])->group(function () {
                             'sm.dob',
                             'stm.stream_name',
                             'st.state_name',
-                            \Illuminate\Support\Facades\DB::raw("COALESCE(cm.cadre_name, 'Unknown') as cadre_name"),
-                            \Illuminate\Support\Facades\DB::raw("'Unknown' as social_group"),
+                            Illuminate\Support\Facades\DB::raw("COALESCE(cm.cadre_name, 'Unknown') as cadre_name"),
+                            Illuminate\Support\Facades\DB::raw("'Unknown' as social_group"),
                         ])
                         ->get();
 
                     $normalizeGender = function ($raw) {
                         $v = strtolower(trim((string) $raw));
-                        if ($v === '' || $v === 'null') return 'Unknown';
-                        if (in_array($v, ['1', 'm', 'male'])) return 'Male';
-                        if (in_array($v, ['2', 'f', 'female'])) return 'Female';
-                        if ($v === 'other' || $v === '3') return 'Other';
+                        if ($v === '' || $v === 'null') {
+                            return 'Unknown';
+                        }
+                        if (in_array($v, ['1', 'm', 'male'])) {
+                            return 'Male';
+                        }
+                        if (in_array($v, ['2', 'f', 'female'])) {
+                            return 'Female';
+                        }
+                        if ($v === 'other' || $v === '3') {
+                            return 'Other';
+                        }
+
                         return ucfirst($v);
                     };
 
                     $ageBucket = function ($dob) {
-                        if (!$dob) return 'Unknown';
-                        try {
-                            $age = \Carbon\Carbon::parse($dob)->age;
-                        } catch (\Throwable $e) {
+                        if (! $dob) {
                             return 'Unknown';
                         }
-                        if ($age < 25) return '<25';
-                        if ($age <= 30) return '25-30';
-                        if ($age <= 35) return '31-35';
-                        if ($age <= 40) return '36-40';
+                        try {
+                            $age = Carbon::parse($dob)->age;
+                        } catch (Throwable $e) {
+                            return 'Unknown';
+                        }
+                        if ($age < 25) {
+                            return '<25';
+                        }
+                        if ($age <= 30) {
+                            return '25-30';
+                        }
+                        if ($age <= 35) {
+                            return '31-35';
+                        }
+                        if ($age <= 40) {
+                            return '36-40';
+                        }
+
                         return '40+';
                     };
 
@@ -346,10 +359,14 @@ Route::middleware(['auth'])->group(function () {
                     $ageOrder = ['<25', '25-30', '31-35', '36-40', '40+', 'Unknown'];
                     $orderedAge = [];
                     foreach ($ageOrder as $label) {
-                        if (isset($ageCounts[$label])) $orderedAge[$label] = $ageCounts[$label];
+                        if (isset($ageCounts[$label])) {
+                            $orderedAge[$label] = $ageCounts[$label];
+                        }
                     }
                     foreach ($ageCounts as $label => $v) {
-                        if (!isset($orderedAge[$label])) $orderedAge[$label] = $v;
+                        if (! isset($orderedAge[$label])) {
+                            $orderedAge[$label] = $v;
+                        }
                     }
                     $ageCounts = $orderedAge;
 
@@ -368,13 +385,13 @@ Route::middleware(['auth'])->group(function () {
                         ],
                         'social_groups' => [
                             'categories' => array_keys($socialCounts),
-                            'female' => array_values(array_map(fn($r) => $r['Female'] ?? 0, $socialCounts)),
-                            'male' => array_values(array_map(fn($r) => $r['Male'] ?? 0, $socialCounts)),
+                            'female' => array_values(array_map(fn ($r) => $r['Female'] ?? 0, $socialCounts)),
+                            'male' => array_values(array_map(fn ($r) => $r['Male'] ?? 0, $socialCounts)),
                         ],
                         'age' => [
                             'categories' => array_keys($ageCounts),
-                            'female' => array_values(array_map(fn($r) => $r['Female'] ?? 0, $ageCounts)),
-                            'male' => array_values(array_map(fn($r) => $r['Male'] ?? 0, $ageCounts)),
+                            'female' => array_values(array_map(fn ($r) => $r['Female'] ?? 0, $ageCounts)),
+                            'male' => array_values(array_map(fn ($r) => $r['Male'] ?? 0, $ageCounts)),
                         ],
                         'stream' => [
                             'categories' => array_keys($streamCounts),
@@ -382,8 +399,8 @@ Route::middleware(['auth'])->group(function () {
                         ],
                         'cadre' => [
                             'categories' => array_keys($cadreCounts),
-                            'female' => array_values(array_map(fn($r) => $r['Female'] ?? 0, $cadreCounts)),
-                            'male' => array_values(array_map(fn($r) => $r['Male'] ?? 0, $cadreCounts)),
+                            'female' => array_values(array_map(fn ($r) => $r['Female'] ?? 0, $cadreCounts)),
+                            'male' => array_values(array_map(fn ($r) => $r['Male'] ?? 0, $cadreCounts)),
                         ],
                         'domicile' => [
                             'categories' => array_keys($domicileCounts),
@@ -465,14 +482,14 @@ Route::middleware(['auth'])->group(function () {
     // Faculty Routes
     Route::prefix('faculty')->name('faculty.')->controller(FacultyController::class)->group(function () {
 
-        Route::get('/',  'index')->name('index');
-        Route::get('create',  'create')->name('create');
-        Route::post('store',  'store')->name('store');
-        Route::get('edit/{id}',  'edit')->name('edit');
-        Route::post('update',  'update')->name('update');
-        Route::get('show/{id}',  'show')->name('show');
-        Route::delete('delete/{id}',  'destroy')->name('destroy');
-        Route::get('excel-export',  'excelExportFaculty')->name('excel.export');
+        Route::get('/', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('store', 'store')->name('store');
+        Route::get('edit/{id}', 'edit')->name('edit');
+        Route::post('update', 'update')->name('update');
+        Route::get('show/{id}', 'show')->name('show');
+        Route::delete('delete/{id}', 'destroy')->name('destroy');
+        Route::get('excel-export', 'excelExportFaculty')->name('excel.export');
         Route::post('check-unique', 'checkUnique')->name('checkUnique');
         Route::get('search-first-name', 'searchFirstName')->name('searchFirstName');
         Route::get('check-firstname', 'checkFirstName')->name('checkFirstName');
@@ -520,16 +537,11 @@ Route::middleware(['auth'])->group(function () {
 
     // subject route
 
-
     Route::resource('stream', StreamController::class);
     Route::resource('subject-module', SubjectModuleController::class);
     Route::resource('Venue-Master', VenueMasterController::class);
 
-
     Route::post('/admin/toggle-status', [UserController::class, 'toggleStatus'])->name('admin.toggleStatus');
-
-
-
 
     // curriculum route
     Route::prefix('curriculum')->name('curriculum.')->group(function () {
@@ -669,7 +681,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('delete/{id}', 'delete')->name('delete');
     });
 
-    //feedback route
+    // feedback route
     Route::prefix('feedback')->name('feedback.')->group(function () {
         Route::get('/', [FeedbackController::class, 'facultyPortalIndex'])->name('get.feedbackList');
         Route::post('/data', [FeedbackController::class, 'facultyPortalData'])->name('portal.data');
@@ -681,10 +693,10 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Faculty session feedback reports (same reports as admin, scoped to faculty courses)
-    Route::middleware([\App\Http\Middleware\EnsureFacultyPortalUser::class])
+    Route::middleware([EnsureFacultyPortalUser::class])
         ->prefix('faculty/session-feedback')
         ->name('faculty.session_feedback.')
-        ->controller(\App\Http\Controllers\Faculty\SessionFeedbackReportController::class)
+        ->controller(SessionFeedbackReportController::class)
         ->group(function () {
             Route::get('/details', 'details')->name('details');
             Route::get('/details/grouped', 'detailsGrouped')->name('details.grouped');
@@ -730,7 +742,7 @@ Route::middleware(['auth'])->group(function () {
     // Ye routes Route::middleware(['auth'])->group() ke andar chalne chahiye.
 
     // Vehicle Type Master Routes
-    Route::prefix('security/vehicle-type')->name('admin.security.vehicle_type.')->controller(\App\Http\Controllers\Admin\Security\VehicleTypeController::class)->group(function () {
+    Route::prefix('security/vehicle-type')->name('admin.security.vehicle_type.')->controller(VehicleTypeController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
@@ -741,7 +753,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Vehicle Pass Configuration Routes
-    Route::prefix('security/vehicle-pass-config')->name('admin.security.vehicle_pass_config.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassConfigController::class)->group(function () {
+    Route::prefix('security/vehicle-pass-config')->name('admin.security.vehicle_pass_config.')->controller(VehiclePassConfigController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
@@ -752,7 +764,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Vehicle Pass Application Routes
-    Route::prefix('security/vehicle-pass')->name('admin.security.vehicle_pass.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassController::class)->group(function () {
+    Route::prefix('security/vehicle-pass')->name('admin.security.vehicle_pass.')->controller(VehiclePassController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/export', 'export')->name('export');
         Route::get('/create', 'create')->name('create');
@@ -765,7 +777,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Duplicate Vehicle Pass Application Routes
-    Route::prefix('security/duplicate-vehicle-pass')->name('admin.security.duplicate_vehicle_pass.')->controller(\App\Http\Controllers\Admin\Security\DuplicateVehiclePassController::class)->group(function () {
+    Route::prefix('security/duplicate-vehicle-pass')->name('admin.security.duplicate_vehicle_pass.')->controller(DuplicateVehiclePassController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
@@ -777,7 +789,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Vehicle Pass Approval Routes
-    Route::prefix('security/vehicle-pass-approval')->name('admin.security.vehicle_pass_approval.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassApprovalController::class)->group(function () {
+    Route::prefix('security/vehicle-pass-approval')->name('admin.security.vehicle_pass_approval.')->controller(VehiclePassApprovalController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/all', 'allApplications')->name('all');
         Route::get('/show/{id}', 'show')->name('show');
@@ -785,25 +797,25 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/reject/{id}', 'reject')->name('reject');
     });
 
-// Employee ID Card Approval Routes (Approval I & II)
-Route::prefix('security/employee-idcard-approval')->name('admin.security.employee_idcard_approval.')->controller(\App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController::class)->group(function () {
-    Route::get('/approval1', 'approval1')->name('approval1');
-    Route::get('/approval2', 'approval2')->name('approval2');
-    Route::get('/approval3', 'approval3')->name('approval3');
-    Route::get('/all', 'all')->name('all');
-    Route::get('/show/{id}', 'show')->name('show');
-    Route::get('/export', 'export')->name('export');
-    Route::post('/approve1/{id}', 'approve1')->name('approve1');
-    Route::post('/approve2/{id}', 'approve2')->name('approve2');
-    Route::post('/approve3/{id}', 'approve3')->name('approve3');
-    Route::post('/reject1/{id}', 'reject1')->name('reject1');
-    Route::post('/reject2/{id}', 'reject2')->name('reject2');
-    Route::post('/reject3/{id}', 'reject3')->name('reject3');
-    Route::post('/mark-generated/{id}', 'markGenerated')->name('markGenerated');
-});
+    // Employee ID Card Approval Routes (Approval I & II)
+    Route::prefix('security/employee-idcard-approval')->name('admin.security.employee_idcard_approval.')->controller(EmployeeIDCardApprovalController::class)->group(function () {
+        Route::get('/approval1', 'approval1')->name('approval1');
+        Route::get('/approval2', 'approval2')->name('approval2');
+        Route::get('/approval3', 'approval3')->name('approval3');
+        Route::get('/all', 'all')->name('all');
+        Route::get('/show/{id}', 'show')->name('show');
+        Route::get('/export', 'export')->name('export');
+        Route::post('/approve1/{id}', 'approve1')->name('approve1');
+        Route::post('/approve2/{id}', 'approve2')->name('approve2');
+        Route::post('/approve3/{id}', 'approve3')->name('approve3');
+        Route::post('/reject1/{id}', 'reject1')->name('reject1');
+        Route::post('/reject2/{id}', 'reject2')->name('reject2');
+        Route::post('/reject3/{id}', 'reject3')->name('reject3');
+        Route::post('/mark-generated/{id}', 'markGenerated')->name('markGenerated');
+    });
 
     // ID Card - Card Type Master (sec_id_cardno_master)
-    Route::prefix('security/idcard-card-type')->name('admin.security.idcard_card_type.')->controller(\App\Http\Controllers\Admin\Security\CardTypeMasterController::class)->group(function () {
+    Route::prefix('security/idcard-card-type')->name('admin.security.idcard_card_type.')->controller(CardTypeMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
@@ -814,7 +826,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     });
 
     // ID Card - Sub Type & Mapping Master (sec_id_cardno_config_map)
-    Route::prefix('security/idcard-sub-type')->name('admin.security.idcard_sub_type.')->controller(\App\Http\Controllers\Admin\Security\CardSubTypeMasterController::class)->group(function () {
+    Route::prefix('security/idcard-sub-type')->name('admin.security.idcard_sub_type.')->controller(CardSubTypeMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
@@ -824,7 +836,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     });
 
     // Family ID Card Approval Routes
-    Route::prefix('security/family-idcard-approval')->name('admin.security.family_idcard_approval.')->controller(\App\Http\Controllers\Admin\Security\FamilyIDCardApprovalController::class)->group(function () {
+    Route::prefix('security/family-idcard-approval')->name('admin.security.family_idcard_approval.')->controller(FamilyIDCardApprovalController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/all', 'all')->name('all');
         Route::get('/show/{id}', 'show')->name('show');
@@ -889,7 +901,6 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     // ============================================
     // End Security-related Admin Routes
     // ============================================
-
 
     // Attendance Routes
     Route::prefix('attendance')->name('attendance.')->controller(AttendanceController::class)->group(function () {
@@ -1078,16 +1089,15 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     Route::get('/attendance_send_notice/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'view_all_notice_list'])->name('attendance.send_notice');
     Route::post('/notice_direct_save', [CourseAttendanceNoticeMapController::class, 'notice_direct_save'])->name('notice.direct.save');
 
+    // Appellation Master
 
-     // Appellation Master
-
-Route::prefix('admin/appellation')->name('master.appellation.')->middleware('auth')->group(function () {
-    Route::get('/', [AppellationMasterController::class, 'index'])->name('index');
-    Route::get('create', [AppellationMasterController::class, 'create'])->name('create');
-    Route::get('edit/{id}', [AppellationMasterController::class, 'edit'])->name('edit');
-    Route::post('store', [AppellationMasterController::class, 'store'])->name('store');
-    Route::delete('delete/{id}', [AppellationMasterController::class, 'destroy'])->name('delete');
-});
+    Route::prefix('admin/appellation')->name('master.appellation.')->middleware('auth')->group(function () {
+        Route::get('/', [AppellationMasterController::class, 'index'])->name('index');
+        Route::get('create', [AppellationMasterController::class, 'create'])->name('create');
+        Route::get('edit/{id}', [AppellationMasterController::class, 'edit'])->name('edit');
+        Route::post('store', [AppellationMasterController::class, 'store'])->name('store');
+        Route::delete('delete/{id}', [AppellationMasterController::class, 'destroy'])->name('delete');
+    });
 
     Route::prefix('admin/discipline')->name('master.discipline.')->group(function () {
         Route::get('/', [DisciplineMasterController::class, 'index'])->name('index');
@@ -1120,12 +1130,9 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
 
         Route::post('/memo-discipline-conversation-store', [MemoDisciplineController::class, 'memoDisciplineConversationStore'])->name('conversation.store');
 
-
         Route::get('/memo-discipline-show/{id}', [MemoDisciplineController::class, 'memo_show'])->name('memo.show');
         Route::get('/messages/{id}', [MemoDisciplineController::class, 'getNewMessages'])->name('getNewMessages');
     });
-
-
 
     Route::get('/user/chat', function () {
         return view('admin.courseAttendanceNoticeMap.chat');
@@ -1156,8 +1163,6 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
     });
 });
 
-
-
 // //fc front page route
 Route::get('/fc-front', function () {
     return view('fc.front_page');
@@ -1170,7 +1175,7 @@ Route::get('/fc-front', function () {
 // table. Nothing linked to it (no Blade, no controller, no `menus` row), so it served
 // only to render a fabricated disciplinary document at a live URL.
 
-//route for admin notice/ memo conversation
+// route for admin notice/ memo conversation
 // Route::get('/admin/memo-notice', function () {
 //     return view('admin.courseAttendanceNoticeMap.memo_notice'); // or any other view you want to show
 // })->name('admin.courseAttendanceNoticeMap.memo_notice');
@@ -1189,16 +1194,45 @@ Route::prefix('admin')->group(function () {
     Route::post('/memo-notice/{pk}/status/{status}', [MemoNoticeController::class, 'changeStatus'])->name('admin.memo-notice.status');
 });
 
-
 // setup route
 
-use App\Http\Controllers\Admin\Setup\EmployeeTypeController;
-use App\Http\Controllers\Admin\Setup\EmployeeGroupController;
+use App\Http\Controllers\Admin\IssueReportController;
+use App\Http\Controllers\Admin\NavigationErrorController;
+use App\Http\Controllers\Admin\Security\CardSubTypeMasterController;
+use App\Http\Controllers\Admin\Security\CardTypeMasterController;
+use App\Http\Controllers\Admin\Security\DuplicateVehiclePassController;
+use App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController;
+use App\Http\Controllers\Admin\Security\FamilyIDCardApprovalController;
+use App\Http\Controllers\Admin\Security\VehiclePassApprovalController;
+use App\Http\Controllers\Admin\Security\VehiclePassConfigController;
+use App\Http\Controllers\Admin\Security\VehiclePassController;
+use App\Http\Controllers\Admin\Security\VehicleTypeController;
+use App\Http\Controllers\Admin\Setup\CasteCategoryController;
 use App\Http\Controllers\Admin\Setup\DepartmentMasterSetupController;
 use App\Http\Controllers\Admin\Setup\DesignationMasterSetupController;
-use App\Http\Controllers\Admin\Setup\CasteCategoryController;
+use App\Http\Controllers\Admin\Setup\EmployeeGroupController;
+use App\Http\Controllers\Admin\Setup\EmployeeTypeController;
 use App\Http\Controllers\Admin\Setup\QuickLinksSetupController;
 use App\Http\Controllers\Admin\Setup\UsefulLinksSetupController;
+use App\Http\Controllers\Faculty\SessionFeedbackReportController;
+use App\Http\Controllers\LogController;
+use App\Http\Controllers\Mess\ClientTypeController;
+use App\Http\Controllers\Mess\ItemCategoryController;
+use App\Http\Controllers\Mess\ItemSubcategoryController;
+use App\Http\Controllers\Mess\KitchenIssueController;
+use App\Http\Controllers\Mess\ProcessMessBillsEmployeeController;
+use App\Http\Controllers\Mess\PurchaseOrderController;
+use App\Http\Controllers\Mess\ReportController;
+use App\Http\Controllers\Mess\SellingVoucherDateRangeController;
+use App\Http\Controllers\Mess\StoreAllocationController;
+use App\Http\Controllers\Mess\StoreController;
+use App\Http\Controllers\Mess\SubStoreController;
+use App\Http\Controllers\Mess\VendorController;
+use App\Http\Middleware\EnsureFacultyPortalUser;
+use App\Models\CourseMaster;
+use App\Services\SidebarMenu\MenuService;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 // Setup -> Employee Type (moved to controller with modal CRUD)
 Route::middleware(['auth'])->group(function () {
@@ -1282,8 +1316,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/bulk-reorder', 'bulkReorder')->name('bulk-reorder');
     });
 
-
-    /// Faculty Dashboard Route
+    // / Faculty Dashboard Route
     Route::get('/faculty_dashboard', function () {
         return view('faculty.dashboard');
     })->name('faculty.dashboard');
@@ -1303,17 +1336,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/panels', 'panels')->name('panels');
     });
 
-    //change password work here
+    // change password work here
     Route::get('/change_password', [UserController::class, 'change_password'])->name('admin.password.change_password');
 
     Route::post('/submit_change_password', [UserController::class, 'submit_change_password'])->name('admin.password.submit_change_password');
-
-
-
-
-
-
-
 
     // Report walal route
 
@@ -1321,30 +1347,30 @@ Route::middleware(['auth'])->group(function () {
         $courseType = request('course_type', 'current');
         $data_course_id = get_Role_by_course();
 
-        $programsQuery = \DB::table('course_master')
+        $programsQuery = DB::table('course_master')
             ->select('pk as id', 'course_name', 'active_inactive', 'end_date');
 
         if ($courseType === 'current') {
             $programsQuery->where('active_inactive', 1)
-                ->whereDate('end_date', '>=', \Carbon\Carbon::today());
+                ->whereDate('end_date', '>=', Carbon::today());
         } else {
             $programsQuery->where(function ($q) {
                 $q->where('active_inactive', 0)
-                    ->orWhereDate('end_date', '<', \Carbon\Carbon::today());
+                    ->orWhereDate('end_date', '<', Carbon::today());
             });
         }
 
-        if (!empty($data_course_id)) {
+        if (! empty($data_course_id)) {
             $programsQuery->whereIn('pk', $data_course_id);
         }
 
         $programs = $programsQuery->orderBy('course_name')->pluck('course_name', 'id');
 
         // Auto-select the latest active course (by end_date desc)
-        $currentProgram = \DB::table('course_master')
+        $currentProgram = DB::table('course_master')
             ->where('active_inactive', 1)
-            ->whereDate('end_date', '>=', \Carbon\Carbon::today())
-            ->when(!empty($data_course_id), fn($q) => $q->whereIn('pk', $data_course_id))
+            ->whereDate('end_date', '>=', Carbon::today())
+            ->when(! empty($data_course_id), fn ($q) => $q->whereIn('pk', $data_course_id))
             ->orderBy('end_date', 'desc')
             ->value('pk');
 
@@ -1379,7 +1405,7 @@ Route::middleware(['auth'])->group(function () {
     //      return view('admin.dashboard.inhouse_faculty');
     //  })->name('admin.dashboard.inhouse_faculty');
     // });
-    //course repository AJAX routes (MUST be before resource route)
+    // course repository AJAX routes (MUST be before resource route)
     Route::get('course-repository/courses', [CourseRepositoryController::class, 'getCourses'])->name('course-repository.courses');
     Route::get('course-repository/subjects/{coursePk}', [CourseRepositoryController::class, 'getSubjectsByCourse'])->name('course-repository.subjects');
     Route::get('course-repository/topics/{subjectPk}', [CourseRepositoryController::class, 'getTopicsBySubject'])->name('course-repository.topics');
@@ -1413,15 +1439,12 @@ Route::middleware(['auth'])->group(function () {
     // AJAX endpoints for course repository
     Route::get('course-repository/ministries-by-sector', [CourseRepositoryController::class, 'getMynostriesBySector'])->name('course-repository.ministries-by-sector');
 
-    //course repository resource routes (MUST be after AJAX routes)
+    // course repository resource routes (MUST be after AJAX routes)
     Route::resource('course-repository', CourseRepositoryController::class, [
-        'parameters' => ['course-repository' => 'pk']
+        'parameters' => ['course-repository' => 'pk'],
     ]);
 
     // upload document route
-
-
-
 
     // User view routes
     Route::get('/course-repository-user', [CourseRepositoryController::class, 'userIndex'])->name('admin.course-repository.user.index');
@@ -1475,7 +1498,6 @@ Route::get('/feedback/student-feedback-url', [CalendarController::class, 'studen
 // Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
 //     ->name('admin.feedback.export.excel');
 
-
 Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
     // Pending Feedback Routes
     Route::get('/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])
@@ -1508,7 +1530,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         ->name('feedback.print');
 });
 
-//feedback count wise summary
+// feedback count wise summary
 
 Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
     // Pending Feedback Summary Routes
@@ -1600,82 +1622,82 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
 // Mess Management (auth required — layout assumes logged-in user)
 Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(function () {
     // Master Data
-    Route::resource('vendors', \App\Http\Controllers\Mess\VendorController::class)->except(['show']);
-    Route::resource('itemcategories', \App\Http\Controllers\Mess\ItemCategoryController::class)->except(['show']);
-    Route::resource('itemsubcategories', \App\Http\Controllers\Mess\ItemSubcategoryController::class)->except(['show']);
-    Route::resource('storeallocations', \App\Http\Controllers\Mess\StoreAllocationController::class)->only(['index', 'store']);
-    Route::get('storeallocations/{id}/edit', [\App\Http\Controllers\Mess\StoreAllocationController::class, 'edit'])->name('storeallocations.edit');
-    Route::put('storeallocations/{id}', [\App\Http\Controllers\Mess\StoreAllocationController::class, 'update'])->name('storeallocations.update');
-    Route::delete('storeallocations/{id}', [\App\Http\Controllers\Mess\StoreAllocationController::class, 'destroy'])->name('storeallocations.destroy');
+    Route::resource('vendors', VendorController::class)->except(['show']);
+    Route::resource('itemcategories', ItemCategoryController::class)->except(['show']);
+    Route::resource('itemsubcategories', ItemSubcategoryController::class)->except(['show']);
+    Route::resource('storeallocations', StoreAllocationController::class)->only(['index', 'store']);
+    Route::get('storeallocations/{id}/edit', [StoreAllocationController::class, 'edit'])->name('storeallocations.edit');
+    Route::put('storeallocations/{id}', [StoreAllocationController::class, 'update'])->name('storeallocations.update');
+    Route::delete('storeallocations/{id}', [StoreAllocationController::class, 'destroy'])->name('storeallocations.destroy');
 
     // Store Management
-    Route::resource('stores', \App\Http\Controllers\Mess\StoreController::class)->except(['show']);
+    Route::resource('stores', StoreController::class)->except(['show']);
 
-    Route::resource('sub-stores', \App\Http\Controllers\Mess\SubStoreController::class)->except(['show']);
+    Route::resource('sub-stores', SubStoreController::class)->except(['show']);
 
-    Route::resource('client-types', \App\Http\Controllers\Mess\ClientTypeController::class)->except(['show']);
+    Route::resource('client-types', ClientTypeController::class)->except(['show']);
 
     // Purchase Order Management
-    Route::resource('purchaseorders', \App\Http\Controllers\Mess\PurchaseOrderController::class)->except(['edit', 'update', 'destroy']);
-    Route::get('purchaseorders/{id}/edit', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'edit'])->name('purchaseorders.edit');
-    Route::put('purchaseorders/{id}', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'update'])->name('purchaseorders.update');
-    Route::delete('purchaseorders/{id}', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'destroy'])->name('purchaseorders.destroy');
-    Route::post('purchaseorders/{id}/approve', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'approve'])->name('purchaseorders.approve');
-    Route::post('purchaseorders/{id}/reject', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'reject'])->name('purchaseorders.reject');
-    Route::get('purchaseorders/vendor/{vendorId}/items', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'getVendorItems'])->name('purchaseorders.vendor.items');
+    Route::resource('purchaseorders', PurchaseOrderController::class)->except(['edit', 'update', 'destroy']);
+    Route::get('purchaseorders/{id}/edit', [PurchaseOrderController::class, 'edit'])->name('purchaseorders.edit');
+    Route::put('purchaseorders/{id}', [PurchaseOrderController::class, 'update'])->name('purchaseorders.update');
+    Route::delete('purchaseorders/{id}', [PurchaseOrderController::class, 'destroy'])->name('purchaseorders.destroy');
+    Route::post('purchaseorders/{id}/approve', [PurchaseOrderController::class, 'approve'])->name('purchaseorders.approve');
+    Route::post('purchaseorders/{id}/reject', [PurchaseOrderController::class, 'reject'])->name('purchaseorders.reject');
+    Route::get('purchaseorders/vendor/{vendorId}/items', [PurchaseOrderController::class, 'getVendorItems'])->name('purchaseorders.vendor.items');
 
     // Material Management (formerly Kitchen Issue)
-    Route::get('material-management/students-by-course/{course_pk}', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getStudentsByCourse'])->name('material-management.students-by-course');
-    Route::get('material-management/buyer-names', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getBuyerNames'])->name('material-management.buyer-names');
-    Route::get('material-management/store/{storeIdentifier}/items', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getStoreItems'])->name('material-management.store.items');
-    Route::get('material-management/selling-vouchers/datatable', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'sellingVouchersDatatable'])->name('material-management.selling-vouchers-datatable');
-    Route::resource('material-management', \App\Http\Controllers\Mess\KitchenIssueController::class);
-    Route::get('material-management/{id}/return', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'returnData'])->name('material-management.return');
-    Route::put('material-management/{id}/return', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'updateReturn'])->name('material-management.update-return');
-    Route::get('material-management/records/ajax', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getKitchenIssueRecords'])->name('material-management.records');
+    Route::get('material-management/students-by-course/{course_pk}', [KitchenIssueController::class, 'getStudentsByCourse'])->name('material-management.students-by-course');
+    Route::get('material-management/buyer-names', [KitchenIssueController::class, 'getBuyerNames'])->name('material-management.buyer-names');
+    Route::get('material-management/store/{storeIdentifier}/items', [KitchenIssueController::class, 'getStoreItems'])->name('material-management.store.items');
+    Route::get('material-management/selling-vouchers/datatable', [KitchenIssueController::class, 'sellingVouchersDatatable'])->name('material-management.selling-vouchers-datatable');
+    Route::resource('material-management', KitchenIssueController::class);
+    Route::get('material-management/{id}/return', [KitchenIssueController::class, 'returnData'])->name('material-management.return');
+    Route::put('material-management/{id}/return', [KitchenIssueController::class, 'updateReturn'])->name('material-management.update-return');
+    Route::get('material-management/records/ajax', [KitchenIssueController::class, 'getKitchenIssueRecords'])->name('material-management.records');
 
     // Selling Voucher with Date Range (standalone module - design like Selling Voucher, data separate)
-    Route::get('selling-voucher-date-range/students-by-course/{course_pk}', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'getStudentsByCourse'])->name('selling-voucher-date-range.students-by-course');
-    Route::get('selling-voucher-date-range/buyer-names', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'getBuyerNames'])->name('selling-voucher-date-range.buyer-names');
-    Route::get('selling-voucher-date-range/filter-buyer-names', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'filterBuyerNames'])->name('selling-voucher-date-range.filter-buyer-names');
-    Route::get('selling-voucher-date-range/store/{storeIdentifier}/items', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'getStoreItems'])->name('selling-voucher-date-range.store.items');
-    Route::get('selling-voucher-date-range/datatable', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'datatable'])->name('selling-voucher-date-range.datatable');
-    Route::resource('selling-voucher-date-range', \App\Http\Controllers\Mess\SellingVoucherDateRangeController::class);
-    Route::get('selling-voucher-date-range/{id}/return', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'returnData'])->name('selling-voucher-date-range.return');
-    Route::put('selling-voucher-date-range/{id}/return', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'updateReturn'])->name('selling-voucher-date-range.update-return');
+    Route::get('selling-voucher-date-range/students-by-course/{course_pk}', [SellingVoucherDateRangeController::class, 'getStudentsByCourse'])->name('selling-voucher-date-range.students-by-course');
+    Route::get('selling-voucher-date-range/buyer-names', [SellingVoucherDateRangeController::class, 'getBuyerNames'])->name('selling-voucher-date-range.buyer-names');
+    Route::get('selling-voucher-date-range/filter-buyer-names', [SellingVoucherDateRangeController::class, 'filterBuyerNames'])->name('selling-voucher-date-range.filter-buyer-names');
+    Route::get('selling-voucher-date-range/store/{storeIdentifier}/items', [SellingVoucherDateRangeController::class, 'getStoreItems'])->name('selling-voucher-date-range.store.items');
+    Route::get('selling-voucher-date-range/datatable', [SellingVoucherDateRangeController::class, 'datatable'])->name('selling-voucher-date-range.datatable');
+    Route::resource('selling-voucher-date-range', SellingVoucherDateRangeController::class);
+    Route::get('selling-voucher-date-range/{id}/return', [SellingVoucherDateRangeController::class, 'returnData'])->name('selling-voucher-date-range.return');
+    Route::put('selling-voucher-date-range/{id}/return', [SellingVoucherDateRangeController::class, 'updateReturn'])->name('selling-voucher-date-range.update-return');
 
     // Billing & Finance
-    Route::get('my-bills', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'myBillsIndex'])->name('my-bills.index');
-    Route::get('process-mess-bills-employee', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'index'])->name('process-mess-bills-employee.index');
-    Route::get('process-mess-bills-employee/modal-data', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'modalData'])->name('process-mess-bills-employee.modal-data');
-    Route::get('process-mess-bills-employee/{id}/payment-details', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'paymentDetails'])->name('process-mess-bills-employee.payment-details');
-    Route::post('process-mess-bills-employee/{id}/generate-invoice', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'generateInvoice'])->name('process-mess-bills-employee.generate-invoice');
-    Route::post('process-mess-bills-employee/{id}/generate-payment', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'generatePayment'])->name('process-mess-bills-employee.generate-payment');
-    Route::get('process-mess-bills-employee/{id}/print-receipt', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'printReceipt'])->name('process-mess-bills-employee.print-receipt');
-    Route::get('process-mess-bills-employee/export', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'export'])->name('process-mess-bills-employee.export');
+    Route::get('my-bills', [ProcessMessBillsEmployeeController::class, 'myBillsIndex'])->name('my-bills.index');
+    Route::get('process-mess-bills-employee', [ProcessMessBillsEmployeeController::class, 'index'])->name('process-mess-bills-employee.index');
+    Route::get('process-mess-bills-employee/modal-data', [ProcessMessBillsEmployeeController::class, 'modalData'])->name('process-mess-bills-employee.modal-data');
+    Route::get('process-mess-bills-employee/{id}/payment-details', [ProcessMessBillsEmployeeController::class, 'paymentDetails'])->name('process-mess-bills-employee.payment-details');
+    Route::post('process-mess-bills-employee/{id}/generate-invoice', [ProcessMessBillsEmployeeController::class, 'generateInvoice'])->name('process-mess-bills-employee.generate-invoice');
+    Route::post('process-mess-bills-employee/{id}/generate-payment', [ProcessMessBillsEmployeeController::class, 'generatePayment'])->name('process-mess-bills-employee.generate-payment');
+    Route::get('process-mess-bills-employee/{id}/print-receipt', [ProcessMessBillsEmployeeController::class, 'printReceipt'])->name('process-mess-bills-employee.print-receipt');
+    Route::get('process-mess-bills-employee/export', [ProcessMessBillsEmployeeController::class, 'export'])->name('process-mess-bills-employee.export');
 
     // Reports
     Route::prefix('reports')->name('reports.')->group(function () {
-        Route::get('stock-purchase-details', [\App\Http\Controllers\Mess\ReportController::class, 'stockPurchaseDetails'])->name('stock-purchase-details');
-        Route::get('stock-purchase-details/export', [\App\Http\Controllers\Mess\ReportController::class, 'stockPurchaseDetailsExcel'])->name('stock-purchase-details.excel');
-        Route::get('stock-purchase-details/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'stockPurchaseDetailsPdf'])->name('stock-purchase-details.pdf');
-        Route::get('stock-summary', [\App\Http\Controllers\Mess\ReportController::class, 'stockSummary'])->name('stock-summary');
-        Route::get('stock-summary/export', [\App\Http\Controllers\Mess\ReportController::class, 'stockSummaryExcel'])->name('stock-summary.excel');
-        Route::get('stock-summary/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'stockSummaryPdf'])->name('stock-summary.pdf');
-        Route::get('category-wise-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlip'])->name('category-wise-print-slip');
-        Route::get('category-wise-print-slip/course-buyers/{course_pk}', [\App\Http\Controllers\Mess\ReportController::class, 'getCourseBuyerNamesByCourse'])->name('category-wise-print-slip.course-buyers');
-        Route::get('category-wise-print-slip/buyers', [\App\Http\Controllers\Mess\ReportController::class, 'getBuyerNamesForReportFilters'])->name('category-wise-print-slip.buyers');
-        Route::get('category-wise-print-slip/export', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlipExcel'])->name('category-wise-print-slip.excel');
-        Route::get('category-wise-print-slip/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlipPdf'])->name('category-wise-print-slip.pdf');
-        Route::get('category-wise-print-slip/print', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlipPrint'])->name('category-wise-print-slip.print');
-        Route::get('stock-balance-till-date', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDate'])->name('stock-balance-till-date');
-        Route::get('stock-balance-till-date/export', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDateExcel'])->name('stock-balance-till-date.excel');
-        Route::get('stock-balance-till-date/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDatePdf'])->name('stock-balance-till-date.pdf');
-        Route::get('purchase-sale-quantity', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseSaleQuantityReport'])->name('purchase-sale-quantity');
-        Route::get('purchase-sale-quantity/export', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseSaleQuantityExcel'])->name('purchase-sale-quantity.excel');
-        Route::get('purchase-sale-quantity/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseSaleQuantityPdf'])->name('purchase-sale-quantity.pdf');
-        Route::get('low-stock', [\App\Http\Controllers\Mess\ReportController::class, 'lowStockReport'])->name('low-stock');
-        Route::get('low-stock/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'lowStockPdf'])->name('low-stock.pdf');
+        Route::get('stock-purchase-details', [ReportController::class, 'stockPurchaseDetails'])->name('stock-purchase-details');
+        Route::get('stock-purchase-details/export', [ReportController::class, 'stockPurchaseDetailsExcel'])->name('stock-purchase-details.excel');
+        Route::get('stock-purchase-details/export-pdf', [ReportController::class, 'stockPurchaseDetailsPdf'])->name('stock-purchase-details.pdf');
+        Route::get('stock-summary', [ReportController::class, 'stockSummary'])->name('stock-summary');
+        Route::get('stock-summary/export', [ReportController::class, 'stockSummaryExcel'])->name('stock-summary.excel');
+        Route::get('stock-summary/export-pdf', [ReportController::class, 'stockSummaryPdf'])->name('stock-summary.pdf');
+        Route::get('category-wise-print-slip', [ReportController::class, 'categoryWisePrintSlip'])->name('category-wise-print-slip');
+        Route::get('category-wise-print-slip/course-buyers/{course_pk}', [ReportController::class, 'getCourseBuyerNamesByCourse'])->name('category-wise-print-slip.course-buyers');
+        Route::get('category-wise-print-slip/buyers', [ReportController::class, 'getBuyerNamesForReportFilters'])->name('category-wise-print-slip.buyers');
+        Route::get('category-wise-print-slip/export', [ReportController::class, 'categoryWisePrintSlipExcel'])->name('category-wise-print-slip.excel');
+        Route::get('category-wise-print-slip/export-pdf', [ReportController::class, 'categoryWisePrintSlipPdf'])->name('category-wise-print-slip.pdf');
+        Route::get('category-wise-print-slip/print', [ReportController::class, 'categoryWisePrintSlipPrint'])->name('category-wise-print-slip.print');
+        Route::get('stock-balance-till-date', [ReportController::class, 'stockBalanceTillDate'])->name('stock-balance-till-date');
+        Route::get('stock-balance-till-date/export', [ReportController::class, 'stockBalanceTillDateExcel'])->name('stock-balance-till-date.excel');
+        Route::get('stock-balance-till-date/export-pdf', [ReportController::class, 'stockBalanceTillDatePdf'])->name('stock-balance-till-date.pdf');
+        Route::get('purchase-sale-quantity', [ReportController::class, 'purchaseSaleQuantityReport'])->name('purchase-sale-quantity');
+        Route::get('purchase-sale-quantity/export', [ReportController::class, 'purchaseSaleQuantityExcel'])->name('purchase-sale-quantity.excel');
+        Route::get('purchase-sale-quantity/export-pdf', [ReportController::class, 'purchaseSaleQuantityPdf'])->name('purchase-sale-quantity.pdf');
+        Route::get('low-stock', [ReportController::class, 'lowStockReport'])->name('low-stock');
+        Route::get('low-stock/export-pdf', [ReportController::class, 'lowStockPdf'])->name('low-stock.pdf');
     });
 });
 
@@ -1766,14 +1788,12 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     Route::get('update-meter-reading/unit-sub-types', [EstateController::class, 'getMeterReadingUnitSubTypes'])->name('update-meter-reading.unit-sub-types');
     Route::post('update-meter-reading/store', [EstateController::class, 'storeMeterReadings'])->name('update-meter-reading.store');
 
-
     Route::get('update-meter-reading-of-other', [EstateController::class, 'updateMeterReadingOfOther'])->name('update-meter-reading-of-other');
     Route::get('update-meter-reading-of-other/list', [EstateController::class, 'getMeterReadingListOther'])->name('update-meter-reading-of-other.list');
     Route::get('update-meter-reading-of-other/meter-reading-dates', [EstateController::class, 'getMeterReadingDatesOther'])->name('update-meter-reading-of-other.meter-reading-dates');
     Route::get('update-meter-reading-of-other/blocks', [EstateController::class, 'getMeterReadingBlocksOther'])->name('update-meter-reading-of-other.blocks');
     Route::get('update-meter-reading-of-other/unit-sub-types', [EstateController::class, 'getMeterReadingUnitSubTypesOther'])->name('update-meter-reading-of-other.unit-sub-types');
     Route::post('update-meter-reading-of-other/store', [EstateController::class, 'storeMeterReadingsOther'])->name('update-meter-reading-of-other.store');
-
 
     Route::get('update-meter-no', [EstateController::class, 'updateMeterNo'])->name('update-meter-no');
     Route::get('update-meter-no/list', [EstateController::class, 'getUpdateMeterNoList'])->name('update-meter-no.list');
@@ -1904,7 +1924,7 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
         Route::get('migration-report/filter-options', [EstateController::class, 'getEstateMigrationReportFilterOptions'])->name('migration-report.filter-options');
     });
 });
-Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index']);
+Route::get('/view-logs', [LogController::class, 'index']);
 
 Route::middleware(['auth'])->prefix('sidebar')->name('sidebar.')->group(function () {
     Route::get('categories/status/{id}', [SidebarCategoryController::class, 'status'])->name('categories.status');

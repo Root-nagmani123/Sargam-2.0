@@ -5,6 +5,7 @@ namespace App\Http\Requests\Admin\Member;
 use App\Models\EmployeeMaster;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Unique;
 
 class StoreMemberStep2Request extends FormRequest
 {
@@ -33,7 +34,7 @@ class StoreMemberStep2Request extends FormRequest
             'id' => array_merge(['required', 'string', 'max:50'], $this->employeeIdUniqueness($empID)),
             'group' => 'required', // |exists:employee_groups,id
             'designation' => 'required', // |exists:designations,id
-            'userid'     => array_merge(
+            'userid' => array_merge(
                 ['required', 'string', 'max:50'],
                 [$this->userNameUniqueness($empID)]
             ),
@@ -61,7 +62,7 @@ class StoreMemberStep2Request extends FormRequest
      * created - and the create path additionally re-checks under a row lock
      * inside the insert transaction.
      *
-     * @return array<int, \Illuminate\Validation\Rules\Unique>
+     * @return array<int, Unique>
      */
     private function employeeIdUniqueness(string $empID): array
     {
@@ -97,7 +98,7 @@ class StoreMemberStep2Request extends FormRequest
      * integer column, which MySQL evaluates by casting '' to 0. The ignore is
      * therefore added only when there is a key to ignore.
      */
-    private function userNameUniqueness(string $empID): \Illuminate\Validation\Rules\Unique
+    private function userNameUniqueness(string $empID): Unique
     {
         $rule = Rule::unique('user_credentials', 'user_name');
 
@@ -113,21 +114,21 @@ class StoreMemberStep2Request extends FormRequest
         return [
             'type.required' => 'Please select employee type',
             'type.exists' => 'Selected employee type is invalid',
-            
+
             'id.required' => 'Employee ID is required',
             'id.max' => 'Employee ID must not exceed 50 characters',
             'id.unique' => 'This employee ID already exists',
-            
+
             'group.required' => 'Please select employee group',
             'group.exists' => 'Selected employee group is invalid',
-            
+
             'designation.required' => 'Please select designation',
             'designation.exists' => 'Selected designation is invalid',
-            
+
             'userid.required' => 'User ID is required',
             'userid.max' => 'User ID must not exceed 50 characters',
             'userid.unique' => 'This user ID already exists',
-            
+
             'section.required' => 'Please select department',
             'section.exists' => 'Selected department is invalid',
         ];

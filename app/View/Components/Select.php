@@ -2,20 +2,29 @@
 
 namespace App\View\Components;
 
+use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 
 class Select extends Component
 {
-    
     public $name;
+
     public $label;
+
     public $options;
+
     public $value;
+
     public $required;
+
     public $formLabelClass;
+
     public $formSelectClass;
+
     public $multiple;
+
     public $labelRequired;
+
     public $id;
 
     /** Caption of the empty first option, e.g. "Select Employee Type". */
@@ -44,7 +53,7 @@ class Select extends Component
     /**
      * Get the view / contents that represent the component.
      *
-     * @return \Illuminate\Contracts\View\View|\Closure|string
+     * @return View|\Closure|string
      */
     public function render()
     {

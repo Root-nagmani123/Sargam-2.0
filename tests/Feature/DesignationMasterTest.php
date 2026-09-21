@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\DesignationMaster;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Tests\TestCase;
 
 /**
@@ -33,11 +35,11 @@ class DesignationMasterTest extends TestCase
     {
         $base = $response->baseResponse;
 
-        if ($base instanceof \Symfony\Component\HttpFoundation\BinaryFileResponse) {
+        if ($base instanceof BinaryFileResponse) {
             return (string) file_get_contents($base->getFile()->getPathname());
         }
 
-        if ($base instanceof \Symfony\Component\HttpFoundation\StreamedResponse) {
+        if ($base instanceof StreamedResponse) {
             return $response->streamedContent();
         }
 
@@ -94,7 +96,7 @@ class DesignationMasterTest extends TestCase
 
         $json = $this->actingAs($this->actor())
             ->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
-            ->getJson('/master/designation?' . http_build_query([
+            ->getJson('/master/designation?'.http_build_query([
                 'draw' => 1, 'start' => 0, 'length' => 10, 'columns' => $columns, 'order' => [],
                 'search' => ['value' => '', 'regex' => 'false'],
             ]))
@@ -146,7 +148,7 @@ class DesignationMasterTest extends TestCase
         $filtered = $this->bytes($this->fetch('/master/designation/export/csv?q=zzzznotadesig'));
         $this->assertStringContainsString('Search: zzzznotadesig', $filtered);
 
-        fwrite(STDERR, 'csv rows: ' . (count($lines) - 6) . "\n");
+        fwrite(STDERR, 'csv rows: '.(count($lines) - 6)."\n");
     }
 
     public function test_unknown_format_is_rejected(): void
@@ -167,7 +169,7 @@ class DesignationMasterTest extends TestCase
         DB::beginTransaction();
 
         try {
-            $name = 'Gate Desig ' . substr(uniqid(), -6);
+            $name = 'Gate Desig '.substr(uniqid(), -6);
 
             $created = $this->actingAs($user)
                 ->withHeaders(['X-Requested-With' => 'XMLHttpRequest', 'Accept' => 'application/json'])
@@ -186,7 +188,7 @@ class DesignationMasterTest extends TestCase
                 ->assertJsonValidationErrors('designation_name');
 
             // Update through the same route, scoped by the encrypted pk.
-            $renamed = 'Gate Desig ' . substr(uniqid(), -6);
+            $renamed = 'Gate Desig '.substr(uniqid(), -6);
             $this->actingAs($user)
                 ->withHeaders(['X-Requested-With' => 'XMLHttpRequest', 'Accept' => 'application/json'])
                 ->postJson('/master/designation/store', [

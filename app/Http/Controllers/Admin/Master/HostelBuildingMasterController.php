@@ -2,50 +2,54 @@
 
 namespace App\Http\Controllers\Admin\Master;
 
+use App\DataTables\Master\BuildingMasterDataTable;
+use App\Exports\BuildingMasterExport;
 use App\Http\Controllers\Controller;
+use App\Models\BuildingMaster;
+// use App\Models\HostelBuildingMaster;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use App\DataTables\Master\BuildingMasterDataTable;
-// use App\Models\HostelBuildingMaster;
-use App\Models\BuildingMaster;
-use App\Exports\BuildingMasterExport;
-use Maatwebsite\Excel\Facades\Excel;
 
 class HostelBuildingMasterController extends Controller
 {
     protected $buildingType;
-    public function __construct(){
+
+    public function __construct()
+    {
         $this->buildingType = BuildingMaster::$buildingType;
     }
-    public function index(BuildingMasterDataTable $dataTable){
+
+    public function index(BuildingMasterDataTable $dataTable)
+    {
         return $dataTable->render('admin.master.hostel_building.index', ['buildingType' => $this->buildingType]);
     }
 
-    public function create(){
+    public function create()
+    {
         return view('admin.master.hostel_building.create', ['buildingType' => $this->buildingType]);
     }
 
-    public function store(Request $request){
+    public function store(Request $request)
+    {
 
         $request->validate([
-            'building_name'  => 'required|string|max:255|unique:building_master,building_name,' . ($request->pk ? decrypt($request->pk) : 'null').',pk',
-            'no_of_floors'   => 'required|integer|min:0',
-            'no_of_rooms'    => 'required|integer|min:0',
+            'building_name' => 'required|string|max:255|unique:building_master,building_name,'.($request->pk ? decrypt($request->pk) : 'null').',pk',
+            'no_of_floors' => 'required|integer|min:0',
+            'no_of_rooms' => 'required|integer|min:0',
             // building_master.building_type is an ENUM, not a varchar: a value
             // outside the list passes a plain string rule and is then rejected by
             // MySQL (error 1265 under STRICT_TRANS_TABLES), surfacing as a 500
             // instead of a 422. Validate against the same list the form offers,
             // so the column's domain is enforced where the error is reportable.
-            'building_type'  => ['required', 'string', Rule::in(array_keys($this->buildingType))],
+            'building_type' => ['required', 'string', Rule::in(array_keys($this->buildingType))],
         ]);
 
-        if($request->pk) {
+        if ($request->pk) {
             $message = 'Building updated successfully.';
             $buildingMaster = BuildingMaster::findOrFail(decrypt($request->pk));
-        }
-        else {
+        } else {
             $message = 'Building created successfully.';
-            $buildingMaster = new BuildingMaster();
+            $buildingMaster = new BuildingMaster;
         }
         $buildingMaster->building_name = $request->building_name;
         $buildingMaster->no_of_floors = $request->no_of_floors;
@@ -66,24 +70,29 @@ class HostelBuildingMasterController extends Controller
         return redirect()->route('master.hostel.building.index')->with('success', $message);
     }
 
-    public function edit($id){
+    public function edit($id)
+    {
         $id = decrypt($id);
         $hostelBuildingMaster = BuildingMaster::findOrFail($id);
+
         return view('admin.master.hostel_building.create', compact('hostelBuildingMaster'), ['buildingType' => $this->buildingType]);
     }
 
-    public function export() {
+    public function export()
+    {
         try {
-            return \Excel::download(new \App\Exports\BuildingMasterExport, 'building_master.xlsx');
+            return \Excel::download(new BuildingMasterExport, 'building_master.xlsx');
         } catch (\Exception $e) {
-            return redirect()->route('master.hostel.building.index')->with('error', 'Error exporting data: ' . $e->getMessage());
+            return redirect()->route('master.hostel.building.index')->with('error', 'Error exporting data: '.$e->getMessage());
         }
     }
 
-    function destroy($id){
+    public function destroy($id)
+    {
         $id = decrypt($id);
         $buildingMaster = BuildingMaster::findOrFail($id);
         $buildingMaster->delete();
+
         return redirect()->route('master.hostel.building.index')->with('success', 'Building deleted successfully.');
     }
 }

@@ -2,13 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Concerns\ExportsBrandedGrid;
+use App\Models\EmployeeTypeMaster;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Tests\TestCase;
 
 /**
  * Employee Type Master: the modernised listing chrome and its four exports.
  * Mirrors MemberExportFormatsTest — both now run through
- * {@see \App\Http\Controllers\Concerns\ExportsBrandedGrid}, so this also guards
+ * {@see ExportsBrandedGrid}, so this also guards
  * the shared trait against a second consumer breaking the first.
  */
 class EmployeeTypeMasterTest extends TestCase
@@ -32,11 +37,11 @@ class EmployeeTypeMasterTest extends TestCase
     {
         $base = $response->baseResponse;
 
-        if ($base instanceof \Symfony\Component\HttpFoundation\BinaryFileResponse) {
+        if ($base instanceof BinaryFileResponse) {
             return (string) file_get_contents($base->getFile()->getPathname());
         }
 
-        if ($base instanceof \Symfony\Component\HttpFoundation\StreamedResponse) {
+        if ($base instanceof StreamedResponse) {
             return $response->streamedContent();
         }
 
@@ -71,7 +76,7 @@ class EmployeeTypeMasterTest extends TestCase
         $this->assertStringNotContainsString('float-end gap-2', $html);
         $this->assertStringNotContainsString('"dom":"frtip"', $html);
 
-        fwrite(STDERR, "\nindex OK (" . strlen($html) . " bytes)\n");
+        fwrite(STDERR, "\nindex OK (".strlen($html)." bytes)\n");
     }
 
     public function test_grid_feed_renders_badge_and_action_stack(): void
@@ -89,7 +94,7 @@ class EmployeeTypeMasterTest extends TestCase
 
         $json = $this->actingAs($this->actor())
             ->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
-            ->getJson('/master/employee-type?' . http_build_query([
+            ->getJson('/master/employee-type?'.http_build_query([
                 'draw' => 1, 'start' => 0, 'length' => 10, 'columns' => $columns, 'order' => [],
                 'search' => ['value' => '', 'regex' => 'false'],
             ]))
@@ -144,7 +149,7 @@ class EmployeeTypeMasterTest extends TestCase
         $excel = $this->fetch('/master/employee-type/export/excel')->assertOk();
         $this->assertStringStartsWith('PK', $this->bytes($excel));
 
-        fwrite(STDERR, 'csv rows: ' . (count($lines) - 6) . "\n");
+        fwrite(STDERR, 'csv rows: '.(count($lines) - 6)."\n");
     }
 
     public function test_search_and_hidden_columns_reach_the_exports(): void
@@ -177,10 +182,10 @@ class EmployeeTypeMasterTest extends TestCase
     {
         $user = $this->actor();
 
-        \Illuminate\Support\Facades\DB::beginTransaction();
+        DB::beginTransaction();
 
         try {
-            $name = 'Gate Probe Type ' . uniqid();
+            $name = 'Gate Probe Type '.uniqid();
 
             // Create
             $created = $this->actingAs($user)
@@ -190,7 +195,7 @@ class EmployeeTypeMasterTest extends TestCase
             $created->assertOk()->assertJson(['status' => true]);
             $this->assertStringContainsString('created', strtolower($created->json('message')));
 
-            $row = \App\Models\EmployeeTypeMaster::where('category_type_name', $name)->first();
+            $row = EmployeeTypeMaster::where('category_type_name', $name)->first();
             $this->assertNotNull($row, 'the row was not written');
 
             // Duplicate name -> 422 with the field keyed error the modal renders
@@ -201,7 +206,7 @@ class EmployeeTypeMasterTest extends TestCase
                 ->assertJsonValidationErrors('employee_type_name');
 
             // Update through the same route, scoped by the encrypted pk
-            $renamed = $name . ' (edited)';
+            $renamed = $name.' (edited)';
             $updated = $this->actingAs($user)
                 ->withHeaders(['X-Requested-With' => 'XMLHttpRequest', 'Accept' => 'application/json'])
                 ->postJson('/master/employee-type/store', [
@@ -243,16 +248,16 @@ class EmployeeTypeMasterTest extends TestCase
                     'employee_type_name' => str_repeat('y', 50),
                 ]);
             $atLimit->assertOk()->assertJson(['status' => true]);
-            \App\Models\EmployeeTypeMaster::where('category_type_name', str_repeat('y', 50))->delete();
+            EmployeeTypeMaster::where('category_type_name', str_repeat('y', 50))->delete();
 
             fwrite(STDERR, "modal create/update/duplicate all answered in JSON\n");
         } finally {
-            \Illuminate\Support\Facades\DB::rollBack();
+            DB::rollBack();
         }
 
         $this->assertSame(
             0,
-            \App\Models\EmployeeTypeMaster::where('category_type_name', 'like', 'Gate Probe Type %')->count(),
+            EmployeeTypeMaster::where('category_type_name', 'like', 'Gate Probe Type %')->count(),
             'the test left rows behind'
         );
     }
@@ -260,15 +265,15 @@ class EmployeeTypeMasterTest extends TestCase
     /** The standalone create page still posts normally and still redirects. */
     public function test_non_ajax_post_still_redirects(): void
     {
-        \Illuminate\Support\Facades\DB::beginTransaction();
+        DB::beginTransaction();
 
         try {
             $this->actingAs($this->actor())
-                ->post('/master/employee-type/store', ['pk' => '', 'employee_type_name' => 'Gate Probe Plain ' . uniqid()])
+                ->post('/master/employee-type/store', ['pk' => '', 'employee_type_name' => 'Gate Probe Plain '.uniqid()])
                 ->assertRedirect(route('master.employee.type.index'))
                 ->assertSessionHas('success');
         } finally {
-            \Illuminate\Support\Facades\DB::rollBack();
+            DB::rollBack();
         }
     }
 }

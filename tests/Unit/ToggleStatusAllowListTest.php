@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Http\Controllers\Admin\UserController;
 use Illuminate\Contracts\Auth\Authenticatable;
 use ReflectionClass;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 /**
@@ -56,6 +57,7 @@ class ToggleStatusAllowListTest extends TestCase
 
             if (! in_array($column, $allowed[$table]['columns'] ?? [], true)) {
                 $missing[] = "{$table}.{$column} ({$where})";
+
                 continue;
             }
 
@@ -185,11 +187,9 @@ class ToggleStatusAllowListTest extends TestCase
      * @var array<string, string> repository-relative path => why it is exempt
      */
     private const NOT_REGISTERED_BY_DESIGN = [
-        'resources/views/admin/security/vehicle_pass_config/index.blade.php' =>
-            'carries data-url and its own in-page handler, and posts to '
+        'resources/views/admin/security/vehicle_pass_config/index.blade.php' => 'carries data-url and its own in-page handler, and posts to '
             .'admin.security.vehicle_pass_config.toggle.status, not to this endpoint',
-        'resources/views/admin/security/vehicle_type/index.blade.php' =>
-            'carries data-url and its own in-page handler, and posts to '
+        'resources/views/admin/security/vehicle_type/index.blade.php' => 'carries data-url and its own in-page handler, and posts to '
             .'admin.security.vehicle_type.toggle.status, not to this endpoint',
     ];
 
@@ -235,10 +235,10 @@ class ToggleStatusAllowListTest extends TestCase
         $this->assertSame(
             [],
             $unreadable,
-            "shared-class toggles the allow-list scan cannot read - register them, or add them to "
-            ."NOT_REGISTERED_BY_DESIGN with the reason:
-".implode("
-", $unreadable)
+            'shared-class toggles the allow-list scan cannot read - register them, or add them to '
+            .'NOT_REGISTERED_BY_DESIGN with the reason:
+'.implode('
+', $unreadable)
         );
     }
 
@@ -401,7 +401,7 @@ class ToggleStatusAllowListTest extends TestCase
         try {
             $this->post(route('admin.toggleStatus'), $payload);
             $this->fail('the endpoint must refuse '.json_encode($payload));
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+        } catch (HttpException $e) {
             $this->assertSame($expected, $e->getStatusCode());
         }
     }

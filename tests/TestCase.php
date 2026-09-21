@@ -35,7 +35,7 @@ abstract class TestCase extends BaseTestCase
 
         self::$targetDatabaseChecked = true;
 
-        $database = (string) config('database.connections.' . config('database.default') . '.database');
+        $database = (string) config('database.connections.'.config('database.default').'.database');
 
         if ($database === '' || $database === ':memory:') {
             return;
@@ -45,8 +45,8 @@ abstract class TestCase extends BaseTestCase
             && $database !== env('SARGAM_ALLOW_TESTS_ON')) {
             $this->fail(
                 "Refusing to run the test suite against '{$database}': the name looks like a shared "
-                . "environment and these tests write rows. Point DB_DATABASE at a development copy, "
-                . "or set SARGAM_ALLOW_TESTS_ON={$database} if that really is what you want."
+                .'environment and these tests write rows. Point DB_DATABASE at a development copy, '
+                ."or set SARGAM_ALLOW_TESTS_ON={$database} if that really is what you want."
             );
         }
     }

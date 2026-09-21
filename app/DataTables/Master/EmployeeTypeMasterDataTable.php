@@ -4,13 +4,13 @@ namespace App\DataTables\Master;
 
 use App\Models\EmployeeTypeMaster;
 use App\Support\DataTableRedisCache;
+use App\Support\RedisBackedCache;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
-use Yajra\DataTables\Html\Editor\Editor;
-use Yajra\DataTables\Html\Editor\Fields;
 use Yajra\DataTables\Services\DataTable;
 
 class EmployeeTypeMasterDataTable extends DataTable
@@ -23,7 +23,7 @@ class EmployeeTypeMasterDataTable extends DataTable
     }
 
     /**
-     * Server-side JSON. .env: EMPLOYEE_TYPE_MASTER_DATATABLE_CACHE_*; store via {@see \App\Support\RedisBackedCache} through {@see DataTableRedisCache}.
+     * Server-side JSON. .env: EMPLOYEE_TYPE_MASTER_DATATABLE_CACHE_*; store via {@see RedisBackedCache} through {@see DataTableRedisCache}.
      */
     public function ajax(): JsonResponse
     {
@@ -43,8 +43,7 @@ class EmployeeTypeMasterDataTable extends DataTable
     /**
      * Build DataTable class.
      *
-     * @param QueryBuilder $query Results from query() method.
-     * @return \Yajra\DataTables\EloquentDataTable
+     * @param  QueryBuilder  $query  Results from query() method.
      */
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
@@ -56,10 +55,10 @@ class EmployeeTypeMasterDataTable extends DataTable
             ->addColumn('status', function ($row) {
                 $isActive = (int) $row->active_inactive === 1;
 
-                return '<span class="status-pill badge rounded-1 ' . ($isActive ? 'bg-success-subtle' : 'bg-danger-subtle') . '"'
-                    . ' data-order="' . (int) $isActive . '">'
-                    . ($isActive ? 'Active' : 'Inactive')
-                    . '</span>';
+                return '<span class="status-pill badge rounded-1 '.($isActive ? 'bg-success-subtle' : 'bg-danger-subtle').'"'
+                    .' data-order="'.(int) $isActive.'">'
+                    .($isActive ? 'Active' : 'Inactive')
+                    .'</span>';
             })
             ->addColumn('action', function ($row) {
                 $isActive = (int) $row->active_inactive === 1;
@@ -78,18 +77,18 @@ class EmployeeTypeMasterDataTable extends DataTable
                 return '
                 <div class="mst-act-group" role="group" aria-label="Row actions">
                     <button type="button" class="mst-act mst-act--edit etm-edit-btn" title="Edit"
-                        data-id="' . e(encrypt($row->pk)) . '"
-                        data-name="' . e((string) $row->category_type_name) . '">
+                        data-id="'.e(encrypt($row->pk)).'"
+                        data-name="'.e((string) $row->category_type_name).'">
                         <span class="mst-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
                         <span class="mst-act__label">Edit</span>
                     </button>
-                    <label class="mst-act mst-act--toggle" title="' . $toggleLabel . ' employee type">
+                    <label class="mst-act mst-act--toggle" title="'.$toggleLabel.' employee type">
                         <span class="mst-act__icon">
                             <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                 data-table="employee_type_master" data-column="active_inactive"
-                                data-id="' . (int) $row->pk . '" ' . $checked . '>
+                                data-id="'.(int) $row->pk.'" '.$checked.'>
                         </span>
-                        <span class="mst-act__label">' . $toggleLabel . '</span>
+                        <span class="mst-act__label">'.$toggleLabel.'</span>
                     </label>
                 </div>';
             })
@@ -102,9 +101,6 @@ class EmployeeTypeMasterDataTable extends DataTable
 
     /**
      * Get query source of dataTable.
-     *
-     * @param \App\Models\EmployeeTypeMaster $model
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function query(EmployeeTypeMaster $model): QueryBuilder
     {
@@ -113,8 +109,6 @@ class EmployeeTypeMasterDataTable extends DataTable
 
     /**
      * Optional method if you want to use html builder.
-     *
-     * @return \Yajra\DataTables\Html\Builder
      */
     public function html(): HtmlBuilder
     {
@@ -158,8 +152,6 @@ class EmployeeTypeMasterDataTable extends DataTable
 
     /**
      * Get the dataTable columns definition.
-     *
-     * @return array
      */
     public function getColumns(): array
     {
@@ -177,11 +169,9 @@ class EmployeeTypeMasterDataTable extends DataTable
 
     /**
      * Get filename for export.
-     *
-     * @return string
      */
     protected function filename(): string
     {
-        return 'EmployeeTypeMaster_' . date('YmdHis');
+        return 'EmployeeTypeMaster_'.date('YmdHis');
     }
 }

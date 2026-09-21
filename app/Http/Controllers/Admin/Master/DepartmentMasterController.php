@@ -2,31 +2,32 @@
 
 namespace App\Http\Controllers\Admin\Master;
 
+use App\DataTables\Master\DepartmentMasterDataTable;
 use App\Http\Controllers\Concerns\ExportsBrandedGrid;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\DataTables\Master\DepartmentMasterDataTable;
 use App\Models\DepartmentMaster;
+use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-
 
 class DepartmentMasterController extends Controller
 {
     use ExportsBrandedGrid;
 
-    function index()
+    public function index()
     {
         $departmentMaster = new DepartmentMasterDataTable;
+
         return $departmentMaster->render('admin.master.department.index');
         // return view('admin.master.department.index');
     }
-    function create()
+
+    public function create()
     {
         return view('admin.master.department.create');
     }
-    function store(Request $request)
-    {
 
+    public function store(Request $request)
+    {
 
         $id = $request->pk ? decrypt($request->pk) : null;
 
@@ -42,9 +43,9 @@ class DepartmentMasterController extends Controller
 
         $request->validate($rules);
 
-        $department = $id ? DepartmentMaster::find($id) : new DepartmentMaster();
+        $department = $id ? DepartmentMaster::find($id) : new DepartmentMaster;
 
-        if ($id && !$department) {
+        if ($id && ! $department) {
             return redirect()->back()->with('error', 'Department not found.');
         }
 
@@ -117,7 +118,7 @@ class DepartmentMasterController extends Controller
             'DepartmentMaster',
             $rows,
             $this->resolveExportColumns($this->exportColumnDefs(), $request),
-            $search !== '' ? 'Search: ' . $search : null,
+            $search !== '' ? 'Search: '.$search : null,
             [
                 'emptyText' => 'No departments to export',
                 'centeredKeys' => ['sno', 'status'],
@@ -128,16 +129,19 @@ class DepartmentMasterController extends Controller
             ]
         );
     }
-    function edit($id)
+
+    public function edit($id)
     {
         try {
             $departmentMaster = DepartmentMaster::find(decrypt($id));
+
             return view('admin.master.department.create', compact('departmentMaster'));
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Failed to edit department: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to edit department: '.$e->getMessage());
         }
     }
-    function delete($id)
+
+    public function delete($id)
     {
         // Logic to delete department by ID
         return redirect()->route('master.department.index')->with('success', 'Department deleted successfully.');

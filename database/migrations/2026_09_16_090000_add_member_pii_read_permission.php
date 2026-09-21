@@ -4,6 +4,7 @@ use App\Http\Middleware\EnsureMemberPiiAccess;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Spatie\Permission\PermissionRegistrar;
 
 /**
  * Make the member personal-data capability grantable.
@@ -164,8 +165,8 @@ return new class extends Migration
     private function flushPermissionCache(): void
     {
         try {
-            app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
-        } catch (\Throwable $e) {
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
+        } catch (Throwable $e) {
             // No cache to reach, or the package is not booted: nothing to do.
         }
     }

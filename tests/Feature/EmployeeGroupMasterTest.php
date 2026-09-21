@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\EmployeeGroupMaster;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Tests\TestCase;
 
 /**
@@ -33,11 +35,11 @@ class EmployeeGroupMasterTest extends TestCase
     {
         $base = $response->baseResponse;
 
-        if ($base instanceof \Symfony\Component\HttpFoundation\BinaryFileResponse) {
+        if ($base instanceof BinaryFileResponse) {
             return (string) file_get_contents($base->getFile()->getPathname());
         }
 
-        if ($base instanceof \Symfony\Component\HttpFoundation\StreamedResponse) {
+        if ($base instanceof StreamedResponse) {
             return $response->streamedContent();
         }
 
@@ -90,7 +92,7 @@ class EmployeeGroupMasterTest extends TestCase
 
         $json = $this->actingAs($this->actor())
             ->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
-            ->getJson('/master/employee-group?' . http_build_query([
+            ->getJson('/master/employee-group?'.http_build_query([
                 'draw' => 1, 'start' => 0, 'length' => 10, 'columns' => $columns, 'order' => [],
                 'search' => ['value' => '', 'regex' => 'false'],
             ]))
@@ -142,7 +144,7 @@ class EmployeeGroupMasterTest extends TestCase
         $filtered = $this->bytes($this->fetch('/master/employee-group/export/csv?q=zzzznotagroup'));
         $this->assertStringContainsString('Search: zzzznotagroup', $filtered);
 
-        fwrite(STDERR, 'csv rows: ' . (count($lines) - 6) . "\n");
+        fwrite(STDERR, 'csv rows: '.(count($lines) - 6)."\n");
     }
 
     public function test_unknown_format_is_rejected(): void
@@ -163,7 +165,7 @@ class EmployeeGroupMasterTest extends TestCase
         DB::beginTransaction();
 
         try {
-            $name = 'Gate Grp ' . substr(uniqid(), -6);
+            $name = 'Gate Grp '.substr(uniqid(), -6);
 
             $created = $this->actingAs($user)
                 ->withHeaders(['X-Requested-With' => 'XMLHttpRequest', 'Accept' => 'application/json'])
@@ -182,7 +184,7 @@ class EmployeeGroupMasterTest extends TestCase
                 ->assertJsonValidationErrors('emp_group_name');
 
             // Update through the same route, scoped by the encrypted pk.
-            $renamed = 'Gate Grp ' . substr(uniqid(), -6);
+            $renamed = 'Gate Grp '.substr(uniqid(), -6);
             $this->actingAs($user)
                 ->withHeaders(['X-Requested-With' => 'XMLHttpRequest', 'Accept' => 'application/json'])
                 ->postJson('/master/employee-group/store', [

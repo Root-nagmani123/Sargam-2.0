@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Admin\Master;
 
+use App\DataTables\Master\CasteCategoryMasterDataTable;
 use App\Http\Controllers\Concerns\ExportsBrandedGrid;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\DataTables\Master\CasteCategoryMasterDataTable;
 use App\Models\CasteCategoryMaster;
+use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class CasteCategoryMasterController extends Controller
@@ -15,8 +15,9 @@ class CasteCategoryMasterController extends Controller
 
     public function index()
     {
-        return (new CasteCategoryMasterDataTable())->render('admin.master.caste_category.index');
+        return (new CasteCategoryMasterDataTable)->render('admin.master.caste_category.index');
     }
+
     public function create()
     {
         return view('admin.master.caste_category.create');
@@ -39,14 +40,14 @@ class CasteCategoryMasterController extends Controller
                 'string',
                 'max:30',
                 Rule::unique('caste_category_master', 'Seat_name_hindi')->ignore($id, 'pk'),
-            ]
+            ],
         ];
 
         $request->validate($rules);
 
-        $casteCategory = $id ? CasteCategoryMaster::find($id) : new CasteCategoryMaster();
+        $casteCategory = $id ? CasteCategoryMaster::find($id) : new CasteCategoryMaster;
 
-        if ($id && !$casteCategory) {
+        if ($id && ! $casteCategory) {
             return redirect()->back()->with('error', 'Caste Category not found.');
         }
 
@@ -126,7 +127,7 @@ class CasteCategoryMasterController extends Controller
             'CasteMaster',
             $rows,
             $this->resolveExportColumns($this->exportColumnDefs(), $request),
-            $search !== '' ? 'Search: ' . $search : null,
+            $search !== '' ? 'Search: '.$search : null,
             [
                 'emptyText' => 'No caste categories to export',
                 'centeredKeys' => ['sno', 'status'],
@@ -143,9 +144,11 @@ class CasteCategoryMasterController extends Controller
             ]
         );
     }
+
     public function edit($id)
     {
         $casteCategory = CasteCategoryMaster::findOrFail(decrypt($id));
+
         return view('admin.master.caste_category.create', compact('casteCategory'));
     }
 

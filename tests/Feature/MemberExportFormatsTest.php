@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Tests\TestCase;
 
 /**
@@ -56,11 +58,11 @@ class MemberExportFormatsTest extends TestCase
     {
         $base = $response->baseResponse;
 
-        if ($base instanceof \Symfony\Component\HttpFoundation\BinaryFileResponse) {
+        if ($base instanceof BinaryFileResponse) {
             return (string) file_get_contents($base->getFile()->getPathname());
         }
 
-        if ($base instanceof \Symfony\Component\HttpFoundation\StreamedResponse) {
+        if ($base instanceof StreamedResponse) {
             return $response->streamedContent();
         }
 
@@ -96,7 +98,7 @@ class MemberExportFormatsTest extends TestCase
         // literal, so adding a column can't make this silently assert on Email.
         $this->assertContains($first[array_search('Status', $heading, true)], ['Active', 'Inactive']);
 
-        fwrite(STDERR, "\ncsv rows: " . (count($lines) - 6) . ", heading: " . implode(' | ', $heading) . "\n");
+        fwrite(STDERR, "\ncsv rows: ".(count($lines) - 6).', heading: '.implode(' | ', $heading)."\n");
     }
 
     public function test_status_filter_and_search_reach_every_format(): void

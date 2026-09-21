@@ -60,7 +60,7 @@ class HeaderOwnershipMemoTest extends TestCase
         if (! $user) {
             $this->markTestSkipped(
                 'no credential with user_category E and a user_id - the join would never run, '
-                . 'so this measurement would pass vacuously'
+                .'so this measurement would pass vacuously'
             );
         }
 
@@ -93,12 +93,12 @@ class HeaderOwnershipMemoTest extends TestCase
         // short-circuited and the test below would prove nothing.
         $this->assertSame(1, $afterFirst,
             'the ownership join did not run on the first ask - this actor never reaches it, '
-            . 'so the memoisation measurement would be vacuous');
+            .'so the memoisation measurement would be vacuous');
 
         $this->assertSame(1, $afterSix,
             "six asks produced {$afterSix} ownership joins; the per-request memo is not holding");
 
-        fwrite(STDERR, "ownership join: 1 query for 6 asks (verdict: " . var_export($first, true) . ")\n");
+        fwrite(STDERR, 'ownership join: 1 query for 6 asks (verdict: '.var_export($first, true).")\n");
     }
 
     public function test_rendering_an_admin_page_costs_at_most_one_ownership_join(): void
@@ -124,9 +124,9 @@ class HeaderOwnershipMemoTest extends TestCase
         $response->assertOk();
 
         $this->assertLessThanOrEqual(1, count($joins),
-            'a single admin page render performed ' . count($joins)
-            . ' ownership joins; the header guard is not memoised');
+            'a single admin page render performed '.count($joins)
+            .' ownership joins; the header guard is not memoised');
 
-        fwrite(STDERR, 'admin page render: ' . count($joins) . " ownership join(s)\n");
+        fwrite(STDERR, 'admin page render: '.count($joins)." ownership join(s)\n");
     }
 }

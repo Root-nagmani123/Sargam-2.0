@@ -25,7 +25,7 @@ class LogSafe
 
     /**
      * @param  mixed  $value  request-derived value bound for a log context
-     * @return mixed          strings are stripped of control characters; other scalars pass through
+     * @return mixed strings are stripped of control characters; other scalars pass through
      */
     public static function text($value)
     {
@@ -57,7 +57,7 @@ class LogSafe
         $clean = trim((string) $clean);
 
         return mb_strlen($clean) > self::MAX_LENGTH
-            ? mb_substr($clean, 0, self::MAX_LENGTH) . '…'
+            ? mb_substr($clean, 0, self::MAX_LENGTH).'…'
             : $clean;
     }
 

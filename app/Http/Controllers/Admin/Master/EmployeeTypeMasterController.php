@@ -2,28 +2,31 @@
 
 namespace App\Http\Controllers\Admin\Master;
 
+use App\DataTables\Master\EmployeeTypeMasterDataTable;
 use App\Http\Controllers\Concerns\ExportsBrandedGrid;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\DataTables\Master\EmployeeTypeMasterDataTable;
 use App\Models\EmployeeTypeMaster;
+use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class EmployeeTypeMasterController extends Controller
 {
     use ExportsBrandedGrid;
 
-    function index()
+    public function index()
     {
         $employeeTypeMaster = new EmployeeTypeMasterDataTable;
+
         return $employeeTypeMaster->render('admin.master.employee_type.index');
         // return view('admin.master.employee_type.index');
     }
-    function create()
+
+    public function create()
     {
         return view('admin.master.employee_type.create');
     }
-    function store(Request $request)
+
+    public function store(Request $request)
     {
 
         $id = $request->pk ? decrypt($request->pk) : null;
@@ -40,12 +43,12 @@ class EmployeeTypeMasterController extends Controller
 
         $request->validate($rules);
 
-        $employeeType = $id ? EmployeeTypeMaster::find($id) : new EmployeeTypeMaster();
+        $employeeType = $id ? EmployeeTypeMaster::find($id) : new EmployeeTypeMaster;
 
-        if ($id && !$employeeType) {
+        if ($id && ! $employeeType) {
             return redirect()->back()->with('error', 'Employee Type not found.');
         }
-        
+
         $employeeType->category_type_name = $request->employee_type_name;
         $employeeType->save();
 
@@ -66,6 +69,7 @@ class EmployeeTypeMasterController extends Controller
         return redirect()->route('master.employee.type.index')->with('success', $message);
 
     }
+
     /**
      * The listing's export columns — the same three the grid shows (the Action
      * cell has no export column), so a download reconciles against the screen.
@@ -116,7 +120,7 @@ class EmployeeTypeMasterController extends Controller
             'EmployeeTypeMaster',
             $rows,
             $this->resolveExportColumns($this->exportColumnDefs(), $request),
-            $search !== '' ? 'Search: ' . $search : null,
+            $search !== '' ? 'Search: '.$search : null,
             [
                 'emptyText' => 'No employee types to export',
                 'centeredKeys' => ['sno', 'status'],
@@ -128,14 +132,14 @@ class EmployeeTypeMasterController extends Controller
         );
     }
 
-    function edit($id)
+    public function edit($id)
     {
         try {
             $employeeTypeMaster = EmployeeTypeMaster::find(decrypt($id));
-            
+
             return view('admin.master.employee_type.create', compact('employeeTypeMaster'));
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Failed to edit employee type: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to edit employee type: '.$e->getMessage());
         }
     }
     // function delete($id)

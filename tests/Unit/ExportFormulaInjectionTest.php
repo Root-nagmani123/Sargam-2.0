@@ -6,6 +6,7 @@ use App\Exports\BrandedGridExport;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Cell\Cell;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Tests\TestCase;
@@ -37,7 +38,7 @@ use Tests\TestCase;
 class ExportFormulaInjectionTest extends TestCase
 {
     /** Build a one-column workbook carrying $storedValue and read it back. */
-    private function cellFor(string $storedValue): \PhpOffice\PhpSpreadsheet\Cell\Cell
+    private function cellFor(string $storedValue): Cell
     {
         $export = new BrandedGridExport(
             'Members',
@@ -46,7 +47,7 @@ class ExportFormulaInjectionTest extends TestCase
             '01-01-2026 10:00 AM'
         );
 
-        $path = tempnam(sys_get_temp_dir(), 'bge') . '.xlsx';
+        $path = tempnam(sys_get_temp_dir(), 'bge').'.xlsx';
         file_put_contents($path, Excel::raw($export, ExcelFormat::XLSX));
 
         try {
@@ -63,7 +64,7 @@ class ExportFormulaInjectionTest extends TestCase
             @unlink($path);
         }
 
-        $this->fail('The stored value did not appear in the workbook: ' . $storedValue);
+        $this->fail('The stored value did not appear in the workbook: '.$storedValue);
     }
 
     /** @dataProvider dangerousPrefixes */
@@ -81,8 +82,8 @@ class ExportFormulaInjectionTest extends TestCase
     {
         return [
             'equals' => ['=HYPERLINK("http://evil","Dept")'],
-            'plus'   => ['+1+1'],
-            'at'     => ['@SUM(A1)'],
+            'plus' => ['+1+1'],
+            'at' => ['@SUM(A1)'],
             'mobile' => ['+91 9876543210'],
         ];
     }
@@ -128,7 +129,7 @@ class ExportFormulaInjectionTest extends TestCase
             '01-01-2026 10:00 AM'
         );
 
-        $path = tempnam(sys_get_temp_dir(), 'bge') . '.xlsx';
+        $path = tempnam(sys_get_temp_dir(), 'bge').'.xlsx';
         file_put_contents($path, Excel::raw($export, ExcelFormat::XLSX));
 
         try {

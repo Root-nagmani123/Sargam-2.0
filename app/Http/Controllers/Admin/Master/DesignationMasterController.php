@@ -2,29 +2,32 @@
 
 namespace App\Http\Controllers\Admin\Master;
 
+use App\DataTables\Master\DesignationMasterDataTable;
 use App\Http\Controllers\Concerns\ExportsBrandedGrid;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\DesignationMaster;
-use App\DataTables\Master\DesignationMasterDataTable;
-use Illuminate\Validation\Rule; 
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+
 class DesignationMasterController extends Controller
 {
     use ExportsBrandedGrid;
 
-    function index()
+    public function index()
     {
         $designationMaster = new DesignationMasterDataTable;
+
         return $designationMaster->render('admin.master.designation.index');
         // return view('admin.master.designation.index');
     }
-    function create()
+
+    public function create()
     {
         return view('admin.master.designation.create');
     }
-    function store(Request $request)
-    {
 
+    public function store(Request $request)
+    {
 
         $id = $request->pk ? decrypt($request->pk) : null;
 
@@ -40,9 +43,9 @@ class DesignationMasterController extends Controller
 
         $request->validate($rules);
 
-        $designation = $id ? DesignationMaster::find($id) : new DesignationMaster();
+        $designation = $id ? DesignationMaster::find($id) : new DesignationMaster;
 
-        if ($id && !$designation) {
+        if ($id && ! $designation) {
             return redirect()->back()->with('error', 'Designation not found.');
         }
 
@@ -111,7 +114,7 @@ class DesignationMasterController extends Controller
             'DesignationMaster',
             $rows,
             $this->resolveExportColumns($this->exportColumnDefs(), $request),
-            $search !== '' ? 'Search: ' . $search : null,
+            $search !== '' ? 'Search: '.$search : null,
             [
                 'emptyText' => 'No designations to export',
                 'centeredKeys' => ['sno', 'status'],
@@ -122,14 +125,15 @@ class DesignationMasterController extends Controller
             ]
         );
     }
-    function edit($id)
+
+    public function edit($id)
     {
         try {
             $designationMaster = DesignationMaster::find(decrypt($id));
+
             return view('admin.master.designation.create', compact('designationMaster'));
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Failed to edit designation: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to edit designation: '.$e->getMessage());
         }
     }
-    
 }

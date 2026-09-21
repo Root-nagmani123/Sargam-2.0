@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Admin\Master;
 
+use App\DataTables\Master\EmployeeGroupMasterDataTable;
 use App\Http\Controllers\Concerns\ExportsBrandedGrid;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\DataTables\Master\EmployeeGroupMasterDataTable;
 use App\Models\EmployeeGroupMaster;
+use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class EmployeeGroupMasterController extends Controller
@@ -15,8 +15,9 @@ class EmployeeGroupMasterController extends Controller
 
     public function index()
     {
-        return (new EmployeeGroupMasterDataTable())->render('admin.master.employee_group.index');
+        return (new EmployeeGroupMasterDataTable)->render('admin.master.employee_group.index');
     }
+
     public function create()
     {
         return view('admin.master.employee_group.create');
@@ -44,7 +45,7 @@ class EmployeeGroupMasterController extends Controller
             ],
         ], [], ['emp_group_name' => 'employee group name']);
 
-        $employeeGroup = $id ? EmployeeGroupMaster::find($id) : new EmployeeGroupMaster();
+        $employeeGroup = $id ? EmployeeGroupMaster::find($id) : new EmployeeGroupMaster;
 
         if ($id && ! $employeeGroup) {
             return redirect()->back()->with('error', 'Employee Group not found.');
@@ -118,7 +119,7 @@ class EmployeeGroupMasterController extends Controller
             'EmployeeGroupMaster',
             $rows,
             $this->resolveExportColumns($this->exportColumnDefs(), $request),
-            $search !== '' ? 'Search: ' . $search : null,
+            $search !== '' ? 'Search: '.$search : null,
             [
                 'emptyText' => 'No employee groups to export',
                 'centeredKeys' => ['sno', 'status'],
@@ -129,9 +130,11 @@ class EmployeeGroupMasterController extends Controller
             ]
         );
     }
+
     public function edit($id)
     {
         $employeeGroupMaster = EmployeeGroupMaster::findOrFail(decrypt($id));
+
         // dd($employeeGroupMaster);
         return view('admin.master.employee_group.create', compact('employeeGroupMaster'));
     }
@@ -141,6 +144,5 @@ class EmployeeGroupMasterController extends Controller
      * renamed-away `group_name` field. store() already handles
      * update-by-id for this screen.
      */
-
 
 }

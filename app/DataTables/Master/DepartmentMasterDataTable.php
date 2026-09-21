@@ -3,13 +3,12 @@
 namespace App\DataTables\Master;
 
 use App\Models\DepartmentMaster;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Button;
 use Yajra\DataTables\Html\Column;
-use Yajra\DataTables\Html\Editor\Editor;
-use Yajra\DataTables\Html\Editor\Fields;
 use Yajra\DataTables\Services\DataTable;
 
 class DepartmentMasterDataTable extends DataTable
@@ -17,23 +16,22 @@ class DepartmentMasterDataTable extends DataTable
     /**
      * Build DataTable class.
      *
-     * @param QueryBuilder $query Results from query() method.
-     * @return \Yajra\DataTables\EloquentDataTable
+     * @param  QueryBuilder  $query  Results from query() method.
      */
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->addColumn('department_name', fn($row) => $row->department_name ?? '-')
+            ->addColumn('department_name', fn ($row) => $row->department_name ?? '-')
             // Status: soft badge, display only. data-order lets a client-side
             // sort order by state (docs/new-design-index-page.md 3b).
             ->addColumn('status', function ($row) {
                 $isActive = (int) $row->active_inactive === 1;
 
-                return '<span class="status-pill badge rounded-1 ' . ($isActive ? 'bg-success-subtle' : 'bg-danger-subtle') . '"'
-                    . ' data-order="' . (int) $isActive . '">'
-                    . ($isActive ? 'Active' : 'Inactive')
-                    . '</span>';
+                return '<span class="status-pill badge rounded-1 '.($isActive ? 'bg-success-subtle' : 'bg-danger-subtle').'"'
+                    .' data-order="'.(int) $isActive.'">'
+                    .($isActive ? 'Active' : 'Inactive')
+                    .'</span>';
             })
             ->addColumn('action', function ($row) {
                 $isActive = (int) $row->active_inactive === 1;
@@ -52,18 +50,18 @@ class DepartmentMasterDataTable extends DataTable
                 return '
                 <div class="mst-act-group" role="group" aria-label="Row actions">
                     <button type="button" class="mst-act mst-act--edit dpm-edit-btn" title="Edit"
-                        data-id="' . e(encrypt($row->pk)) . '"
-                        data-name="' . e((string) $row->department_name) . '">
+                        data-id="'.e(encrypt($row->pk)).'"
+                        data-name="'.e((string) $row->department_name).'">
                         <span class="mst-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
                         <span class="mst-act__label">Edit</span>
                     </button>
-                    <label class="mst-act mst-act--toggle" title="' . $toggleLabel . ' department">
+                    <label class="mst-act mst-act--toggle" title="'.$toggleLabel.' department">
                         <span class="mst-act__icon">
                             <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                 data-table="department_master" data-column="active_inactive"
-                                data-id="' . (int) $row->pk . '" ' . $checked . '>
+                                data-id="'.(int) $row->pk.'" '.$checked.'>
                         </span>
-                        <span class="mst-act__label">' . $toggleLabel . '</span>
+                        <span class="mst-act__label">'.$toggleLabel.'</span>
                     </label>
                 </div>';
             })
@@ -76,9 +74,6 @@ class DepartmentMasterDataTable extends DataTable
 
     /**
      * Get query source of dataTable.
-     *
-     * @param \App\Models\DepartmentMaster $model
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function query(DepartmentMaster $model): QueryBuilder
     {
@@ -87,8 +82,6 @@ class DepartmentMasterDataTable extends DataTable
 
     /**
      * Optional method if you want to use html builder.
-     *
-     * @return \Yajra\DataTables\Html\Builder
      */
     public function html(): HtmlBuilder
     {
@@ -135,10 +128,9 @@ class DepartmentMasterDataTable extends DataTable
                 ],
             ]);
     }
+
     /**
      * Get the dataTable columns definition.
-     *
-     * @return array
      */
     public function getColumns(): array
     {
@@ -156,11 +148,9 @@ class DepartmentMasterDataTable extends DataTable
 
     /**
      * Get filename for export.
-     *
-     * @return string
      */
     protected function filename(): string
     {
-        return 'DepartmentMaster_' . date('YmdHis');
+        return 'DepartmentMaster_'.date('YmdHis');
     }
 }

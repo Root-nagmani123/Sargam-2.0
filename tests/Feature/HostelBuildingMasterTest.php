@@ -51,13 +51,13 @@ class HostelBuildingMasterTest extends TestCase
         DB::beginTransaction();
 
         try {
-            $name = 'Gate Probe Building ' . uniqid();
+            $name = 'Gate Probe Building '.uniqid();
 
             // The defect: this used to pass validation and 500 at the INSERT.
             $this->submit($user, [
                 'building_name' => $name,
-                'no_of_floors'  => 1,
-                'no_of_rooms'   => 1,
+                'no_of_floors' => 1,
+                'no_of_rooms' => 1,
                 'building_type' => 'Warehouse',
             ])
                 ->assertStatus(422)
@@ -91,12 +91,12 @@ class HostelBuildingMasterTest extends TestCase
             $this->assertNotEmpty($types, 'BuildingMaster::$buildingType is empty');
 
             foreach ($types as $i => $type) {
-                $name = 'Gate Probe Building ' . uniqid() . ' ' . $i;
+                $name = 'Gate Probe Building '.uniqid().' '.$i;
 
                 $this->submit($user, [
                     'building_name' => $name,
-                    'no_of_floors'  => 1,
-                    'no_of_rooms'   => 1,
+                    'no_of_floors' => 1,
+                    'no_of_rooms' => 1,
                     'building_type' => $type,
                 ])->assertOk()->assertJson(['status' => 'success']);
 
@@ -105,7 +105,7 @@ class HostelBuildingMasterTest extends TestCase
                 $this->assertSame($type, $row->building_type);
             }
 
-            fwrite(STDERR, 'all ' . count($types) . " offered building types accepted\n");
+            fwrite(STDERR, 'all '.count($types)." offered building types accepted\n");
         } finally {
             DB::rollBack();
         }
@@ -140,9 +140,9 @@ class HostelBuildingMasterTest extends TestCase
             $dbValues,
             $offered,
             'BuildingMaster::$buildingType has drifted from the column definition — '
-            . 'the form would offer a value the column rejects, or hide one it allows'
+            .'the form would offer a value the column rejects, or hide one it allows'
         );
 
-        fwrite(STDERR, 'enum matches offered list: ' . implode(', ', $dbValues) . "\n");
+        fwrite(STDERR, 'enum matches offered list: '.implode(', ', $dbValues)."\n");
     }
 }

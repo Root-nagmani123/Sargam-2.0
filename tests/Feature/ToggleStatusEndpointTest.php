@@ -121,11 +121,11 @@ class ToggleStatusEndpointTest extends TestCase
 
         $this->actingAs($this->toggleUser())
             ->post(route('admin.toggleStatus'), [
-                'table'     => 'venue_master',
-                'column'    => 'active_inactive',
+                'table' => 'venue_master',
+                'column' => 'active_inactive',
                 'id_column' => 'venue_id',
-                'id'        => $row->venue_id,
-                'status'    => $target,
+                'id' => $row->venue_id,
+                'status' => $target,
             ])
             ->assertOk();
 
@@ -154,11 +154,11 @@ class ToggleStatusEndpointTest extends TestCase
 
         $this->actingAs($this->toggleUser())
             ->post(route('admin.toggleStatus'), [
-                'table'     => 'department_master',
-                'column'    => 'active_inactive',
+                'table' => 'department_master',
+                'column' => 'active_inactive',
                 'id_column' => 'department_name',
-                'id'        => $row->pk,
-                'status'    => $before === 1 ? 0 : 1,
+                'id' => $row->pk,
+                'status' => $before === 1 ? 0 : 1,
             ])
             ->assertForbidden();
 
@@ -208,9 +208,9 @@ class ToggleStatusEndpointTest extends TestCase
 
         $this->actingAs($actor)
             ->post('/admin/toggle-status', [
-                'table'  => $table,
+                'table' => $table,
                 'column' => $column,
-                'id'     => $row->pk,
+                'id' => $row->pk,
                 'status' => (int) $before === 1 ? 0 : 1,
             ])
             ->assertForbidden();
@@ -225,11 +225,11 @@ class ToggleStatusEndpointTest extends TestCase
     public static function privilegedTables(): array
     {
         return [
-            'roles'        => ['user_role_master', 'active_inactive'],
-            'FC register'  => ['fc_registration_master', 'active_inactive'],
+            'roles' => ['user_role_master', 'active_inactive'],
+            'FC register' => ['fc_registration_master', 'active_inactive'],
             'FC exemption' => ['fc_exemption_master', 'visible'],
-            'news'         => ['news', 'status'],
-            'notices'      => ['notices_notification', 'active_inactive'],
+            'news' => ['news', 'status'],
+            'notices' => ['notices_notification', 'active_inactive'],
         ];
     }
 
@@ -247,9 +247,9 @@ class ToggleStatusEndpointTest extends TestCase
         $this->withSession(['user_roles' => ['Admin']])
             ->actingAs($this->toggleUser())
             ->post('/admin/toggle-status', [
-                'table'  => 'user_role_master',
+                'table' => 'user_role_master',
                 'column' => 'active_inactive',
-                'id'     => $row->pk,
+                'id' => $row->pk,
                 'status' => $target,
             ])
             ->assertOk();

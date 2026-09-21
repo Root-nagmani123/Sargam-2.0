@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\CasteCategoryMaster;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Tests\TestCase;
 
 /**
@@ -33,11 +35,11 @@ class CasteCategoryMasterTest extends TestCase
     {
         $base = $response->baseResponse;
 
-        if ($base instanceof \Symfony\Component\HttpFoundation\BinaryFileResponse) {
+        if ($base instanceof BinaryFileResponse) {
             return (string) file_get_contents($base->getFile()->getPathname());
         }
 
-        if ($base instanceof \Symfony\Component\HttpFoundation\StreamedResponse) {
+        if ($base instanceof StreamedResponse) {
             return $response->streamedContent();
         }
 
@@ -90,7 +92,7 @@ class CasteCategoryMasterTest extends TestCase
 
         $json = $this->actingAs($this->actor())
             ->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
-            ->getJson('/master/caste-category?' . http_build_query([
+            ->getJson('/master/caste-category?'.http_build_query([
                 'draw' => 1, 'start' => 0, 'length' => 10, 'columns' => $columns, 'order' => [],
                 'search' => ['value' => '', 'regex' => 'false'],
             ]))
@@ -142,7 +144,7 @@ class CasteCategoryMasterTest extends TestCase
         $filtered = $this->bytes($this->fetch('/master/caste-category/export/csv?q=zzzznotacaste'));
         $this->assertStringContainsString('Search: zzzznotacaste', $filtered);
 
-        fwrite(STDERR, 'csv rows: ' . (count($lines) - 6) . "\n");
+        fwrite(STDERR, 'csv rows: '.(count($lines) - 6)."\n");
     }
 
     public function test_unknown_format_is_rejected(): void
@@ -163,11 +165,11 @@ class CasteCategoryMasterTest extends TestCase
         DB::beginTransaction();
 
         try {
-            $name = 'Gate Caste ' . substr(uniqid(), -6);
+            $name = 'Gate Caste '.substr(uniqid(), -6);
 
             $created = $this->actingAs($user)
                 ->withHeaders(['X-Requested-With' => 'XMLHttpRequest', 'Accept' => 'application/json'])
-                ->postJson('/master/caste-category/store', ['pk' => '', 'Seat_name' => $name, 'Seat_name_hindi' => $name . ' HI']);
+                ->postJson('/master/caste-category/store', ['pk' => '', 'Seat_name' => $name, 'Seat_name_hindi' => $name.' HI']);
 
             $created->assertOk()->assertJson(['status' => true]);
 
@@ -177,16 +179,16 @@ class CasteCategoryMasterTest extends TestCase
             // Duplicate -> 422 keyed to the field the modal renders errors against.
             $this->actingAs($user)
                 ->withHeaders(['X-Requested-With' => 'XMLHttpRequest', 'Accept' => 'application/json'])
-                ->postJson('/master/caste-category/store', ['pk' => '', 'Seat_name' => $name, 'Seat_name_hindi' => $name . ' HI'])
+                ->postJson('/master/caste-category/store', ['pk' => '', 'Seat_name' => $name, 'Seat_name_hindi' => $name.' HI'])
                 ->assertStatus(422)
                 ->assertJsonValidationErrors('Seat_name');
 
             // Update through the same route, scoped by the encrypted pk.
-            $renamed = 'Gate Caste ' . substr(uniqid(), -6);
+            $renamed = 'Gate Caste '.substr(uniqid(), -6);
             $this->actingAs($user)
                 ->withHeaders(['X-Requested-With' => 'XMLHttpRequest', 'Accept' => 'application/json'])
                 ->postJson('/master/caste-category/store', [
-                    'pk' => encrypt($row->pk), 'Seat_name' => $renamed, 'Seat_name_hindi' => $renamed . ' HI',
+                    'pk' => encrypt($row->pk), 'Seat_name' => $renamed, 'Seat_name_hindi' => $renamed.' HI',
                 ])
                 ->assertOk()
                 ->assertJson(['status' => true]);

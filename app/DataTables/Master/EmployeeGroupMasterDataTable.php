@@ -3,13 +3,12 @@
 namespace App\DataTables\Master;
 
 use App\Models\EmployeeGroupMaster;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Button;
 use Yajra\DataTables\Html\Column;
-use Yajra\DataTables\Html\Editor\Editor;
-use Yajra\DataTables\Html\Editor\Fields;
 use Yajra\DataTables\Services\DataTable;
 
 class EmployeeGroupMasterDataTable extends DataTable
@@ -17,8 +16,7 @@ class EmployeeGroupMasterDataTable extends DataTable
     /**
      * Build DataTable class.
      *
-     * @param QueryBuilder $query Results from query() method.
-     * @return \Yajra\DataTables\EloquentDataTable
+     * @param  QueryBuilder  $query  Results from query() method.
      */
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
@@ -30,10 +28,10 @@ class EmployeeGroupMasterDataTable extends DataTable
             ->addColumn('status', function ($row) {
                 $isActive = (int) $row->active_inactive === 1;
 
-                return '<span class="status-pill badge rounded-1 ' . ($isActive ? 'bg-success-subtle' : 'bg-danger-subtle') . '"'
-                    . ' data-order="' . (int) $isActive . '">'
-                    . ($isActive ? 'Active' : 'Inactive')
-                    . '</span>';
+                return '<span class="status-pill badge rounded-1 '.($isActive ? 'bg-success-subtle' : 'bg-danger-subtle').'"'
+                    .' data-order="'.(int) $isActive.'">'
+                    .($isActive ? 'Active' : 'Inactive')
+                    .'</span>';
             })
             ->addColumn('action', function ($row) {
                 $isActive = (int) $row->active_inactive === 1;
@@ -52,18 +50,18 @@ class EmployeeGroupMasterDataTable extends DataTable
                 return '
                 <div class="mst-act-group" role="group" aria-label="Row actions">
                     <button type="button" class="mst-act mst-act--edit egm-edit-btn" title="Edit"
-                        data-id="' . e(encrypt($row->pk)) . '"
-                        data-name="' . e((string) $row->emp_group_name) . '">
+                        data-id="'.e(encrypt($row->pk)).'"
+                        data-name="'.e((string) $row->emp_group_name).'">
                         <span class="mst-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
                         <span class="mst-act__label">Edit</span>
                     </button>
-                    <label class="mst-act mst-act--toggle" title="' . $toggleLabel . ' employee group">
+                    <label class="mst-act mst-act--toggle" title="'.$toggleLabel.' employee group">
                         <span class="mst-act__icon">
                             <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                 data-table="employee_group_master" data-column="active_inactive"
-                                data-id="' . (int) $row->pk . '" ' . $checked . '>
+                                data-id="'.(int) $row->pk.'" '.$checked.'>
                         </span>
-                        <span class="mst-act__label">' . $toggleLabel . '</span>
+                        <span class="mst-act__label">'.$toggleLabel.'</span>
                     </label>
                 </div>';
             })
@@ -76,9 +74,6 @@ class EmployeeGroupMasterDataTable extends DataTable
 
     /**
      * Get query source of dataTable.
-     *
-     * @param \App\Models\EmployeeGroupMaster $model
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function query(EmployeeGroupMaster $model): QueryBuilder
     {
@@ -87,8 +82,6 @@ class EmployeeGroupMasterDataTable extends DataTable
 
     /**
      * Optional method if you want to use html builder.
-     *
-     * @return \Yajra\DataTables\Html\Builder
      */
     public function html(): HtmlBuilder
     {
@@ -137,8 +130,6 @@ class EmployeeGroupMasterDataTable extends DataTable
 
     /**
      * Get the dataTable columns definition.
-     *
-     * @return array
      */
     public function getColumns(): array
     {
@@ -156,11 +147,9 @@ class EmployeeGroupMasterDataTable extends DataTable
 
     /**
      * Get filename for export.
-     *
-     * @return string
      */
     protected function filename(): string
     {
-        return 'EmployeeGroupMaster_' . date('YmdHis');
+        return 'EmployeeGroupMaster_'.date('YmdHis');
     }
 }

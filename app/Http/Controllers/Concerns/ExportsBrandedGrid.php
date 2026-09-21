@@ -73,8 +73,8 @@ trait ExportsBrandedGrid
     /**
      * Build the response for one of the four formats.
      *
-     * @param  string  $format    csv|excel|pdf|print (already validated by the caller)
-     * @param  string  $title     report name, e.g. "Members"
+     * @param  string  $format  csv|excel|pdf|print (already validated by the caller)
+     * @param  string  $title  report name, e.g. "Members"
      * @param  string  $fileBase  filename stem, e.g. "Members" -> Members_20260816102233.csv
      * @param  array<string, array{heading:string, class:string, value:callable}>  $columns
      * @param  array{columnStyles?:string, emptyText?:string, centeredKeys?:list<string>, textKeys?:list<string>, pdfEngine?:'dompdf'|'mpdf'}  $options
@@ -118,7 +118,7 @@ trait ExportsBrandedGrid
                     $options['centeredKeys'] ?? [],
                     $options['textKeys'] ?? []
                 ),
-                $fileBase . '_' . $stamp . '.xlsx'
+                $fileBase.'_'.$stamp.'.xlsx'
             );
         }
 
@@ -128,8 +128,8 @@ trait ExportsBrandedGrid
             $total = $rows->count();
             $capped = $total > $this->pdfRowCap;
             $note = $capped
-                ? 'Showing the first ' . number_format($this->pdfRowCap) . ' of ' . number_format($total)
-                    . ' records. Use the CSV or Excel download for the complete list.'
+                ? 'Showing the first '.number_format($this->pdfRowCap).' of '.number_format($total)
+                    .' records. Use the CSV or Excel download for the complete list.'
                 : null;
 
             $engine = ($options['pdfEngine'] ?? 'dompdf') === 'mpdf' ? 'mpdf' : 'dompdf';
@@ -148,7 +148,7 @@ trait ExportsBrandedGrid
             ];
 
             if ($engine === 'mpdf') {
-                return $this->brandedGridMpdf($viewData, $fileBase . '_' . $stamp . '.pdf');
+                return $this->brandedGridMpdf($viewData, $fileBase.'_'.$stamp.'.pdf');
             }
 
             $pdf = Pdf::loadView('admin.exports.branded_pdf', $viewData)
@@ -168,7 +168,7 @@ trait ExportsBrandedGrid
             $pdf->render();
             $this->stampPdfPageNumbers($pdf->getDomPDF());
 
-            return $pdf->download($fileBase . '_' . $stamp . '.pdf');
+            return $pdf->download($fileBase.'_'.$stamp.'.pdf');
         }
 
         $header = array_values(array_map(fn ($col) => $col['heading'], $columns));
@@ -196,7 +196,7 @@ trait ExportsBrandedGrid
             }
 
             fclose($handle);
-        }, $fileBase . '_' . $stamp . '.csv', [
+        }, $fileBase.'_'.$stamp.'.csv', [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
@@ -300,14 +300,14 @@ trait ExportsBrandedGrid
         // cannot run that, so it sets the same footer here instead.
         $mpdf->SetHTMLFooter(
             '<div style="text-align:right; font-family:sans-serif; font-size:7pt; color:#6b7280;">'
-            . 'Page {PAGENO} of {nbpg}</div>'
+            .'Page {PAGENO} of {nbpg}</div>'
         );
 
         $mpdf->WriteHTML(view('admin.exports.branded_pdf', $viewData)->render());
 
         return response($mpdf->Output('', Destination::STRING_RETURN), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 }

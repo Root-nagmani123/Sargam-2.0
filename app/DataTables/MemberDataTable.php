@@ -2,6 +2,9 @@
 
 namespace App\DataTables;
 
+use App\Http\Middleware\EnsureMemberPiiAccess;
+use App\Http\Middleware\EnsureMemberRecordAccess;
+use App\Models\EmployeeMaster;
 use App\Support\DataTableRedisCache;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
@@ -9,10 +12,7 @@ use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Button;
 use Yajra\DataTables\Html\Column;
-use Yajra\DataTables\Html\Editor\Editor;
-use Yajra\DataTables\Html\Editor\Fields;
 use Yajra\DataTables\Services\DataTable;
-use App\Models\EmployeeMaster;
 
 class MemberDataTable extends DataTable
 {
@@ -163,13 +163,13 @@ class MemberDataTable extends DataTable
      */
     public static function actionColumnCacheIdentity(): string
     {
-        if (\App\Http\Middleware\EnsureMemberPiiAccess::grantsAccess()) {
+        if (EnsureMemberPiiAccess::grantsAccess()) {
             return 'entitled';
         }
 
-        $own = \App\Http\Middleware\EnsureMemberRecordAccess::ownedMemberPk();
+        $own = EnsureMemberRecordAccess::ownedMemberPk();
 
-        return 'own:' . ($own ?? 'none');
+        return 'own:'.($own ?? 'none');
     }
 
     /**
@@ -297,8 +297,7 @@ class MemberDataTable extends DataTable
     /**
      * Build DataTable class.
      *
-     * @param QueryBuilder $query Results from query() method.
-     * @return \Yajra\DataTables\EloquentDataTable
+     * @param  QueryBuilder  $query  Results from query() method.
      */
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
@@ -307,7 +306,7 @@ class MemberDataTable extends DataTable
         // gate will refuse is a button that reports a permission error instead
         // of doing anything. Same decision the middleware makes, from the same
         // method, so the screen and the gate cannot drift apart.
-        $mayReadPii = \App\Http\Middleware\EnsureMemberPiiAccess::grantsAccess();
+        $mayReadPii = EnsureMemberPiiAccess::grantsAccess();
 
         // Edit is gated by member.record, not by member.pii, and its rule is
         // one step wider: an entitled account reaches every record, everyone
@@ -326,7 +325,7 @@ class MemberDataTable extends DataTable
         //
         // One call, one memoised query, whichever way it goes - see
         // EnsureMemberRecordAccess::ownedMemberPk().
-        $ownPk = \App\Http\Middleware\EnsureMemberRecordAccess::ownedMemberPk();
+        $ownPk = EnsureMemberRecordAccess::ownedMemberPk();
 
         return (new EloquentDataTable($query))
             ->addIndexColumn()
@@ -383,7 +382,7 @@ class MemberDataTable extends DataTable
                                 <span class="mbr-act__label">Delete</span>
                            </span>'
                         : '<button type="button" class="mbr-act mbr-act--del member-delete-btn"
-                                data-delete-url="' . e($deleteUrl) . '" title="Delete member">
+                                data-delete-url="'.e($deleteUrl).'" title="Delete member">
                                 <span class="mbr-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>
                                 <span class="mbr-act__label">Delete</span>
                            </button>';
@@ -392,23 +391,23 @@ class MemberDataTable extends DataTable
                 // Same gate as Delete: the status switch POSTs to
                 // member.toggle-status, which member.pii now refuses.
                 $toggle = $mayReadPii
-                    ? '<label class="mbr-act mbr-act--toggle" title="' . $toggleLabel . ' member">
+                    ? '<label class="mbr-act mbr-act--toggle" title="'.$toggleLabel.' member">
                         <span class="mbr-act__icon">
                             <input class="form-check-input plain-status-toggle member-status-toggle" type="checkbox"
-                                role="switch" data-id="' . (int) $row->pk . '" ' . $checked . '>
+                                role="switch" data-id="'.(int) $row->pk.'" '.$checked.'>
                         </span>
-                        <span class="mbr-act__label">' . $toggleLabel . '</span>
+                        <span class="mbr-act__label">'.$toggleLabel.'</span>
                     </label>'
                     : '';
 
                 // Personal-data reads: rendered only for an account the gate
                 // admits. See App\Http\Middleware\EnsureMemberPiiAccess.
                 $piiActions = $mayReadPii
-                    ? '<a href="' . e($viewUrl) . '" class="mbr-act mbr-act--view" title="View member">
+                    ? '<a href="'.e($viewUrl).'" class="mbr-act mbr-act--view" title="View member">
                         <span class="mbr-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span>
                         <span class="mbr-act__label">View</span>
                     </a>
-                    <a href="' . e($printUrl) . '" class="mbr-act mbr-act--print" target="_blank" rel="noopener"
+                    <a href="'.e($printUrl).'" class="mbr-act mbr-act--print" target="_blank" rel="noopener"
                         title="Print this member\'s details">
                         <span class="mbr-act__icon"><i class="bi bi-printer" aria-hidden="true"></i></span>
                         <span class="mbr-act__label">Print</span>
@@ -418,23 +417,23 @@ class MemberDataTable extends DataTable
                 // Same treatment as View and Print: rendered only for an
                 // account member.record will admit to THIS row.
                 $edit = $mayEdit
-                    ? '<a href="' . e($editUrl) . '" class="mbr-act mbr-act--edit" title="Edit member">
+                    ? '<a href="'.e($editUrl).'" class="mbr-act mbr-act--edit" title="Edit member">
                         <span class="mbr-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
                         <span class="mbr-act__label">Edit</span>
                     </a>'
                     : '';
 
                 return '<div class="mbr-act-group" role="group" aria-label="Row actions">
-                    ' . $edit . '
-                    ' . $piiActions . '
-                    ' . $toggle . '
-                    ' . $delete . '
+                    '.$edit.'
+                    '.$piiActions.'
+                    '.$toggle.'
+                    '.$delete.'
                 </div>';
             })
             ->filterColumn('employee_name', function ($query, $keyword) {
                 $query->where('first_name', 'like', "%{$keyword}%")
-                      ->orWhere('middle_name', 'like', "%{$keyword}%")
-                      ->orWhere('last_name', 'like', "%{$keyword}%");
+                    ->orWhere('middle_name', 'like', "%{$keyword}%")
+                    ->orWhere('last_name', 'like', "%{$keyword}%");
             })
             ->filterColumn('mobile_no', function ($query, $keyword) {
                 $query->where('mobile', 'like', "%{$keyword}%");
@@ -446,14 +445,14 @@ class MemberDataTable extends DataTable
             ->addColumn('status', function ($row) {
                 $isActive = (int) $row->status === 1;
 
-                return '<span class="status-pill badge rounded-1 ' . ($isActive ? 'bg-success-subtle' : 'bg-danger-subtle') . '">'
-                    . ($isActive ? 'Active' : 'Inactive')
-                    . '</span>';
+                return '<span class="status-pill badge rounded-1 '.($isActive ? 'bg-success-subtle' : 'bg-danger-subtle').'">'
+                    .($isActive ? 'Active' : 'Inactive')
+                    .'</span>';
             })
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
 
-                if (!empty($searchValue)) {
+                if (! empty($searchValue)) {
                     $query->where(function ($subQuery) use ($searchValue) {
                         $subQuery->where('first_name', 'like', "%{$searchValue}%")
                             ->orWhere('middle_name', 'like', "%{$searchValue}%")
@@ -465,7 +464,6 @@ class MemberDataTable extends DataTable
             }, true)
             ->rawColumns(['actions', 'status']);
     }
-
 
     public function query(EmployeeMaster $model): QueryBuilder
     {
@@ -488,58 +486,57 @@ class MemberDataTable extends DataTable
     public function html(): HtmlBuilder
     {
         return $this->builder()
-                    ->setTableId('member-table')
-                    ->columns($this->getColumns())
-                    ->minifiedAjax()
+            ->setTableId('member-table')
+            ->columns($this->getColumns())
+            ->minifiedAjax()
                     // ->dom('Bfrtip')
                     // ->orderBy(1)
-                    ->selectStyleSingle()
+            ->selectStyleSingle()
                     // Responsive is loaded globally and would collapse the Actions
                     // column into a "+" detail row on a normal 1440px screen. The
                     // programme-dt chrome scrolls inside .table-responsive instead.
-                    ->responsive(false)
+            ->responsive(false)
                     // No `dom` here on purpose: this grid uses the shared programme-dt
                     // chrome, and public/js/datatable-global-ui.js relocates the search
                     // box / pagination / count into the #memberDtSearch and
                     // #memberDtFooter slots declared in admin/member/index.blade.php.
-                    ->parameters([
-                        'responsive' => false,
-                        'autoWidth' => false,
-                        'order' => [],
-                        'ordering' => true,
-                        'searching' => true,
-                        'lengthChange' => true,
-                        'pageLength' => 10,
-                        'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
-                        'language' => [
-                            'search' => '',
-                            'searchPlaceholder' => 'Search',
-                            'emptyTable' => 'No members found.',
-                            'zeroRecords' => 'No matching members found.',
-                            'lengthMenu' => 'Showing _MENU_',
-                            'info' => 'of _TOTAL_ items',
-                            'infoEmpty' => 'of 0 items',
-                            'infoFiltered' => 'of _MAX_ items',
-                            'paginate' => [
-                                'previous' => '&lsaquo;',
-                                'next' => '&rsaquo;',
-                            ],
-                        ],
-                    ])
-                    ->buttons([
-                        Button::make('excel'),
-                        Button::make('csv'),
-                        Button::make('pdf'),
-                        Button::make('print'),
-                        [
-                            'text' => 'Reload',
-                            'action' => 'function ( e, dt, node, config ) {
+            ->parameters([
+                'responsive' => false,
+                'autoWidth' => false,
+                'order' => [],
+                'ordering' => true,
+                'searching' => true,
+                'lengthChange' => true,
+                'pageLength' => 10,
+                'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+                'language' => [
+                    'search' => '',
+                    'searchPlaceholder' => 'Search',
+                    'emptyTable' => 'No members found.',
+                    'zeroRecords' => 'No matching members found.',
+                    'lengthMenu' => 'Showing _MENU_',
+                    'info' => 'of _TOTAL_ items',
+                    'infoEmpty' => 'of 0 items',
+                    'infoFiltered' => 'of _MAX_ items',
+                    'paginate' => [
+                        'previous' => '&lsaquo;',
+                        'next' => '&rsaquo;',
+                    ],
+                ],
+            ])
+            ->buttons([
+                Button::make('excel'),
+                Button::make('csv'),
+                Button::make('pdf'),
+                Button::make('print'),
+                [
+                    'text' => 'Reload',
+                    'action' => 'function ( e, dt, node, config ) {
                                 dt.ajax.reload();
-                            }'
-                        ]
-                    ]);
+                            }',
+                ],
+            ]);
     }
-
 
     public function getColumns(): array
     {
@@ -563,11 +560,9 @@ class MemberDataTable extends DataTable
 
     /**
      * Get filename for export.
-     *
-     * @return string
      */
     protected function filename(): string
     {
-        return 'Member_' . date('YmdHis');
+        return 'Member_'.date('YmdHis');
     }
 }

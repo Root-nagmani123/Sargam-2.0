@@ -3,9 +3,17 @@
 namespace Tests\Feature;
 
 use App\Http\Middleware\EnsureMemberPiiAccess;
+use App\Http\Middleware\EnsureMemberRecordAccess;
+use App\Models\CasteCategoryMaster;
 use App\Models\EmployeeMaster;
+use App\Models\SidebarMenu\SidebarCategory;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /**
@@ -186,6 +194,7 @@ class MemberRecordAccessTest extends TestCase
                     }
                 }
             }
+
             return $out;
         };
 
@@ -259,7 +268,7 @@ class MemberRecordAccessTest extends TestCase
             // ownsMemberRecord() reads auth()->user(), so each candidate must
             // be the acting user at the moment it is checked.
             $this->actingAs($actor);
-            if (\App\Http\Middleware\EnsureMemberRecordAccess::ownsMemberRecord($employeePk)) {
+            if (EnsureMemberRecordAccess::ownsMemberRecord($employeePk)) {
                 $failures[] = "credential {$credPk} is treated as the owner of employee {$employeePk}, whose name shares no token with it";
             }
         }
@@ -298,7 +307,7 @@ class MemberRecordAccessTest extends TestCase
         foreach ($candidates as $candidate) {
             $this->actingAs($candidate);
 
-            if (\App\Http\Middleware\EnsureMemberRecordAccess::ownsMemberRecord($candidate->user_id)) {
+            if (EnsureMemberRecordAccess::ownsMemberRecord($candidate->user_id)) {
                 $admitted++;
             }
         }
@@ -544,7 +553,7 @@ class MemberRecordAccessTest extends TestCase
 
         $this->assertSame(
             $permission,
-            \Illuminate\Support\Str::slug($permission, '_'),
+            Str::slug($permission, '_'),
             'a permission name that does not round-trip through Str::slug cannot be granted from the roles screen'
         );
     }
@@ -615,14 +624,14 @@ class MemberRecordAccessTest extends TestCase
     public function test_the_permission_can_be_granted_once_the_migration_has_run(): void
     {
         $permission = EnsureMemberPiiAccess::PII_PERMISSION;
-        $registrar = app(\Spatie\Permission\PermissionRegistrar::class);
+        $registrar = app(PermissionRegistrar::class);
 
         $this->actAsSuperAdmin();
 
         DB::table('menus')->where('permission_name', $permission)->delete();
         DB::table('permissions')->where('name', $permission)->delete();
 
-        $role = \Spatie\Permission\Models\Role::query()->orderBy('id')->first();
+        $role = Role::query()->orderBy('id')->first();
 
         if (! $role) {
             $this->markTestSkipped('no role to grant the permission to');
@@ -674,7 +683,7 @@ class MemberRecordAccessTest extends TestCase
     /** Walks the exact relation RoleController::show() hands the matrix blade. */
     private function permissionAppearsOnTheRoleScreen(string $permission): bool
     {
-        foreach (\App\Models\SidebarMenu\SidebarCategory::with('groups.menus')->get() as $category) {
+        foreach (SidebarCategory::with('groups.menus')->get() as $category) {
             foreach ($category->groups as $group) {
                 foreach ($group->menus as $menu) {
                     if ($menu->permission_name === $permission) {
@@ -707,11 +716,11 @@ class MemberRecordAccessTest extends TestCase
             $this->markTestSkipped('no employee_master row carries an emp_id to collide with');
         }
 
-        $disk = \Illuminate\Support\Facades\Storage::disk('public');
+        $disk = Storage::disk('public');
         $before = $disk->exists('members') ? $disk->files('members') : [];
 
         $payload = array_merge($this->newMemberPayload(), ['id' => $taken]);
-        $payload['picture'] = \Illuminate\Http\UploadedFile::fake()->image('probe.png', 8, 8);
+        $payload['picture'] = UploadedFile::fake()->image('probe.png', 8, 8);
 
         $this->post(route('member.store'), $payload)->assertStatus(422);
 
@@ -740,7 +749,7 @@ class MemberRecordAccessTest extends TestCase
         $designation = DB::table('designation_master')->value('pk');
         $department = DB::table('department_master')->value('pk');
         $role = DB::table('user_role_master')->value('pk');
-        $caste = \App\Models\CasteCategoryMaster::GetSeatName()->keys()->first();
+        $caste = CasteCategoryMaster::GetSeatName()->keys()->first();
 
         $location = DB::table('employee_master')
             ->select('country_master_pk', 'state_master_pk', 'state_district_mapping_pk', 'city')

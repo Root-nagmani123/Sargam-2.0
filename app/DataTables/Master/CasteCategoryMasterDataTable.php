@@ -27,10 +27,10 @@ class CasteCategoryMasterDataTable extends DataTable
             ->addColumn('status', function ($row) {
                 $isActive = (int) $row->active_inactive === 1;
 
-                return '<span class="status-pill badge rounded-1 ' . ($isActive ? 'bg-success-subtle' : 'bg-danger-subtle') . '"'
-                    . ' data-order="' . (int) $isActive . '">'
-                    . ($isActive ? 'Active' : 'Inactive')
-                    . '</span>';
+                return '<span class="status-pill badge rounded-1 '.($isActive ? 'bg-success-subtle' : 'bg-danger-subtle').'"'
+                    .' data-order="'.(int) $isActive.'">'
+                    .($isActive ? 'Active' : 'Inactive')
+                    .'</span>';
             })
             ->addColumn('action', function ($row) {
                 $isActive = (int) $row->active_inactive === 1;
@@ -49,19 +49,19 @@ class CasteCategoryMasterDataTable extends DataTable
                 return '
                 <div class="mst-act-group" role="group" aria-label="Row actions">
                     <button type="button" class="mst-act mst-act--edit cst-edit-btn" title="Edit"
-                        data-id="' . e(encrypt($row->pk)) . '"
-                        data-name="' . e((string) $row->Seat_name) . '"
-                        data-name-hindi="' . e((string) $row->Seat_name_hindi) . '">
+                        data-id="'.e(encrypt($row->pk)).'"
+                        data-name="'.e((string) $row->Seat_name).'"
+                        data-name-hindi="'.e((string) $row->Seat_name_hindi).'">
                         <span class="mst-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
                         <span class="mst-act__label">Edit</span>
                     </button>
-                    <label class="mst-act mst-act--toggle" title="' . $toggleLabel . ' caste category">
+                    <label class="mst-act mst-act--toggle" title="'.$toggleLabel.' caste category">
                         <span class="mst-act__icon">
                             <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                 data-table="caste_category_master" data-column="active_inactive"
-                                data-id="' . (int) $row->pk . '" ' . $checked . '>
+                                data-id="'.(int) $row->pk.'" '.$checked.'>
                         </span>
-                        <span class="mst-act__label">' . $toggleLabel . '</span>
+                        <span class="mst-act__label">'.$toggleLabel.'</span>
                     </label>
                 </div>';
             })
@@ -154,6 +154,6 @@ class CasteCategoryMasterDataTable extends DataTable
      */
     protected function filename(): string
     {
-        return 'CasteCategoryMaster_' . date('YmdHis');
+        return 'CasteCategoryMaster_'.date('YmdHis');
     }
 }
