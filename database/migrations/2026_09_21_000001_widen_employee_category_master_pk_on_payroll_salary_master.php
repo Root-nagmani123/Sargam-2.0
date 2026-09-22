@@ -19,6 +19,16 @@ use Illuminate\Support\Facades\Schema;
  */
 return new class extends Migration
 {
+    /**
+     * PR #319 review round 7 (F-035): this guard used to compare COLUMN_TYPE against the
+     * literal 'bigint(20) unsigned'. MySQL 8.0.19+ dropped the integer display width, so
+     * an already-widened column reports 'bigint unsigned' and the comparison never matched
+     * — the short-circuit this method exists to provide could not fire, and up() re-issued
+     * its ALTER on every migrate. Verified against the live engine (8.0.46) by running the
+     * guard twice around an ALTER. Matching on the two parts that actually carry meaning —
+     * the base type and the signedness — is correct on both the pre-8.0.19 spelling
+     * ('bigint(20) unsigned') and the current one ('bigint unsigned').
+     */
     private function isAlreadyWidened(): bool
     {
         $column = DB::selectOne(
@@ -27,7 +37,13 @@ return new class extends Migration
                AND COLUMN_NAME = 'employee_category_master_pk'"
         );
 
-        return $column && strtolower($column->COLUMN_TYPE) === 'bigint(20) unsigned';
+        if (! $column) {
+            return false;
+        }
+
+        $type = strtolower((string) $column->COLUMN_TYPE);
+
+        return str_starts_with($type, 'bigint') && str_contains($type, 'unsigned');
     }
 
     public function up(): void

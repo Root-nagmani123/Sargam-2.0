@@ -4705,28 +4705,38 @@ public function assignRoleSave(Request $request)
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
         self::bumpAdminUsersIndexCacheEpoch();
 
-        // Send notification to the user if roles were assigned
+        // Send notification to the user if roles were assigned.
+        // $assignedRoleNames and $userCredentialPk are bound from the values this method
+        // actually computed above. They were previously referenced without ever being
+        // assigned, so empty() on an undefined variable made this block permanently
+        // unreachable and no role assignment has ever notified its user (PR #319 review,
+        // F-031). $assignedRoleList is a separate variable rather than reusing $roleNames,
+        // so the array this method synced with is never clobbered by its display string.
+        $assignedRoleNames = $roleNames;
+        $userCredentialPk = (int) $request->user_id;
+
         if (!empty($assignedRoleNames)) {
             try {
                 // Get user_id from user_credentials table
-                $userCredential = \DB::table('user_credentials')
-                    ->where('pk', $userId)
+                $userCredential = DB::table('user_credentials')
+                    ->where('pk', $userCredentialPk)
                     ->first();
 
                 if ($userCredential && $userCredential->user_id) {
                     $notificationService = app(NotificationService::class);
-                    $roleNames = implode(', ', $assignedRoleNames);
+                    $assignedRoleList = implode(', ', $assignedRoleNames);
                     $notificationService->create(
-                        (int)$userCredential->user_id,
+                        (int) $userCredential->user_id,
                         'role_assignment',
                         'Role Assignment',
-                        $userId,
+                        $userCredentialPk,
                         'Role Assigned',
-                        "You have been assigned the following role(s): {$roleNames}."
+                        "You have been assigned the following role(s): {$assignedRoleList}."
                     );
                 }
-            } catch (\Exception $e) {
-                // Log error but don't fail the request
+            } catch (\Throwable $e) {
+                // Log error but don't fail the request. \Log (root-namespace alias) rather
+                // than Log:: — this class does not import the Log facade.
                 \Log::error('Failed to send role assignment notification: ' . $e->getMessage());
             }
         }
