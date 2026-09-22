@@ -32,7 +32,11 @@ class StoreMemberStep6Request extends FormRequest
             // below the signed-INT range the column currently allows, so a mistyped extra
             // digit is rejected at the form instead of being stored. The integer-vs-
             // decimal(15,2) half of F-009 is a domain decision and is NOT made here.
-            'basicpay'         => ['nullable', 'integer', 'min:0', 'max:10000000'],
+            // numeric, not integer: basic pay may carry paise, and the column is now
+            // decimal(15,2) to match every other money column on payroll_salary_master
+            // (PR #319 review, F-009). min:0 rejects a negative; the ceiling is far above
+            // any monthly basic pay here, so a mistyped extra digit is caught at the form.
+            'basicpay'         => ['nullable', 'numeric', 'min:0', 'max:10000000'],
             'bankname'         => ['nullable', 'string', 'max:100'],
             'accountno'        => ['nullable', 'string', 'max:50'],
         ];
@@ -43,7 +47,7 @@ class StoreMemberStep6Request extends FormRequest
         return [
             'gradepay.exists'         => 'The selected grade pay is invalid.',
             'employeecategory.exists' => 'The selected employee category is invalid.',
-            'basicpay.integer'        => 'Basic pay must be an integer value.',
+            'basicpay.numeric'        => 'Basic pay must be a valid amount.',
             'basicpay.min'            => 'Basic pay cannot be negative.',
             'basicpay.max'            => 'Basic pay must not exceed 1,00,00,000.',
             'bankname.max'            => 'Bank name must not exceed 100 characters.',

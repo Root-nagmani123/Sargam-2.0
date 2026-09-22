@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\Admin\Member\{
     StoreMemberStep1Request,
     StoreMemberStep2Request,
@@ -188,16 +189,15 @@ class MemberController extends Controller
             return;
         }
 
-        $payroll = PayrollSalaryMaster::where('employee_master_pk', $employeeMasterPk)->first();
-
-        if ($payroll) {
-            $payroll->update($data);
-            return;
-        }
-
-        PayrollSalaryMaster::create(array_merge($data, [
-            'employee_master_pk' => $employeeMasterPk,
-        ]));
+        // updateOrCreate rather than first()-then-update-or-create: the two-statement
+        // form is a read-then-write with no lock, so two concurrent saves for the same
+        // employee could both read "no row" and both insert (independent review of
+        // PR #319, F-006). The unique index added by 2026_09_22_000002 is what actually
+        // enforces one payroll row per employee; this is the matching code shape.
+        PayrollSalaryMaster::updateOrCreate(
+            ['employee_master_pk' => $employeeMasterPk],
+            $data
+        );
     }
 
     /**
@@ -218,6 +218,75 @@ class MemberController extends Controller
      * precedent for "already gated" when this method was first written. It
      * now carries the equivalent `hasRole('Super Admin')` gate directly.
      */
+    /**
+     * Whether the acting user may administer OTHER members through this wizard.
+     *
+     * Every member/* and admin/setup/member/* route carries only the generic `auth`
+     * middleware — there is no permission:/role: middleware or policy layer in this
+     * app to hook into — so without a check in the controller any authenticated
+     * account could post an arbitrary emp_id and rewrite another employee's record.
+     * That was demonstrated end to end: a zero-role account posted member/update for
+     * a different employee and got HTTP 200 back with the victim's name changed.
+     *
+     * Gated on the same hasRole('Super Admin') convention the rest of this codebase
+     * uses for admin-only actions. Checked against the live data before choosing it:
+     * every member/employee permission row (employee, employee_master, member_index,
+     * employee_type, employee_group) is held by Super Admin and by no other role, so
+     * this matches the access model the permission table already describes rather
+     * than narrowing it.
+     */
+    private function actingUserCanManageMembers(): bool
+    {
+        return hasRole('Super Admin');
+    }
+
+    /**
+     * Authorise a write against one member record.
+     *
+     * Super Admin may write any member. Any other authenticated user may write only
+     * their OWN employee record — the header's "Edit Profile" link posts to this same
+     * member.update endpoint with emp_id carried in a hidden input, so the id is
+     * attacker-controlled and must be verified server-side rather than trusted.
+     *
+     * user_credentials.user_id holds employee_master.pk (store() writes
+     * 'user_id' => $employee->pk), which is why that is the column compared here.
+     */
+    private function authorizeMemberWrite($employeeMasterPk): void
+    {
+        if ($this->actingUserCanManageMembers()) {
+            return;
+        }
+
+        $ownEmployeePk = Auth::user()->user_id ?? null;
+
+        abort_unless(
+            $ownEmployeePk !== null && (int) $ownEmployeePk === (int) $employeeMasterPk,
+            403
+        );
+    }
+
+    /**
+     * Whether this credential row is the only one for its employee.
+     *
+     * Returns false when the employee owns two or more user_credentials rows, because
+     * ->first() then picked one of them arbitrarily and there is no way to tell from
+     * here which login the administrator intended. Reconciling the duplicates is a DBA
+     * task; until it is done, this is the condition that keeps RBAC off the wrong row.
+     */
+    private function memberCredentialIsUnambiguous(int $userCredentialPk): bool
+    {
+        $employeeMasterPk = UserCredential::where('pk', $userCredentialPk)->value('user_id');
+
+        // No employee link means no user_id lookup happened, so nothing was resolved
+        // ambiguously — the caller was handed this exact credential row. Only a row
+        // reached THROUGH user_id can be the wrong one of several.
+        if ($employeeMasterPk === null) {
+            return true;
+        }
+
+        return UserCredential::where('user_id', $employeeMasterPk)->count() === 1;
+    }
+
     private function actingUserCanManageRbacRoles(): bool
     {
         // hasRole('Super Admin') already checks both 'Super Admin' and 'SuperAdmin'
@@ -287,6 +356,22 @@ class MemberController extends Controller
         $oldSpatieRoles = array_values(array_intersect($spatieRoleNames, $oldNames));
 
         if (empty($newSpatieRoles) && empty($oldSpatieRoles)) {
+            return;
+        }
+
+        // user_credentials.user_id is NOT unique — it carries only the non-unique index
+        // idx_user_id, and on the live data 611 user_id values are held by more than one
+        // row, 207 of them belonging to a real employee_master record, spanning 1223
+        // credential rows of which 603 already hold at least one Spatie role. The caller
+        // resolves the member's login with ->first(), so for those members it hands over
+        // an arbitrary one of several. Granting or revoking real permissions on a login
+        // the administrator did not mean to touch is worse than not acting: refuse, and
+        // leave a trace naming the member so it can be reconciled.
+        if (! $this->memberCredentialIsUnambiguous($userCredentialPk)) {
+            \Log::warning('Member wizard: skipped Spatie role sync — employee has more than one user_credentials row.', [
+                'user_credentials_pk' => $userCredentialPk,
+            ]);
+
             return;
         }
 
@@ -393,6 +478,10 @@ class MemberController extends Controller
 
     public function store(Request $request)
     {
+        // Creating a member is never a self-service action — there is no "own record" to
+        // scope it to — so this is admin-only, unlike update().
+        abort_unless($this->actingUserCanManageMembers(), 403);
+
         [$rules, $messages] = $this->combinedMemberRules();
 
         $validator = Validator::make($request->all(), $rules, $messages);
@@ -476,6 +565,24 @@ class MemberController extends Controller
 
     public function update(Request $request) {
 
+        // emp_id arrives in the request body (a hidden input on both the wizard and the
+        // self-service profile form) and was previously neither validated nor authorised,
+        // so any authenticated account could rewrite any employee's record. Validated
+        // first so an unknown id is a 422 rather than a fatal on find()->update(), then
+        // authorised so a non-admin can only write their own record.
+        $validator = Validator::make(
+            $request->all(),
+            ['emp_id' => ['required', 'integer', 'exists:employee_master,pk']],
+            ['emp_id.required' => 'The member to update was not identified.',
+             'emp_id.exists'   => 'The member to update does not exist.']
+        );
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $this->authorizeMemberWrite($request->emp_id);
+
         [$rules, $messages] = $this->combinedMemberRules();
 
         $validator = Validator::make($request->all(), $rules, $messages);
@@ -518,9 +625,24 @@ class MemberController extends Controller
                     'user_category' => 'E'
                 ]
             );
-            $userCredential = UserCredential::where('user_id', $request->emp_id)->first();
+            // orderBy('pk') so that, for the 207 employees who hold more than one
+            // user_credentials row, this at least resolves to the SAME row on every save
+            // instead of whichever one the storage engine happened to return. It does not
+            // make the choice correct — syncSpatieRolesFromWizardSelection() refuses to
+            // touch RBAC for an ambiguous member for exactly that reason.
+            $userCredential = UserCredential::where('user_id', $request->emp_id)
+                ->orderBy('pk')
+                ->first();
 
-            if ($userCredential) {
+            // Role mappings are only rewritten by an actor entitled to manage roles.
+            // employee_role_mapping is what the edit form pre-checks Step 3 from, and what
+            // syncSpatieRolesFromWizardSelection() reads back as "this wizard granted it
+            // last time" — so an unprivileged write here is not a cosmetic tag, it is
+            // state a later privileged save converts into a real Spatie grant. Demonstrated
+            // end to end: an attacker-seeded mapping row became a live Spatie role the next
+            // time a Super Admin saved that member for an unrelated reason. Skipping the
+            // block leaves existing mappings untouched rather than clearing them.
+            if ($userCredential && $this->actingUserCanManageRbacRoles()) {
                 $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
 
                 // Only replace mappings for roles that were actually offered as a
@@ -681,6 +803,10 @@ class MemberController extends Controller
 
     public function toggleStatus(Request $request, $id)
     {
+        // Activating or deactivating a member is an administrative action on someone
+        // else's record, so it is admin-only rather than self-scoped.
+        abort_unless($this->actingUserCanManageMembers(), 403);
+
         try {
             // Find the member
             $member = EmployeeMaster::findOrFail($id);
@@ -725,6 +851,9 @@ class MemberController extends Controller
 
     public function destroy($id)
     {
+        // Deleting a member is administrative, never self-service.
+        abort_unless($this->actingUserCanManageMembers(), 403);
+
         try {
             $memberId = decrypt($id);
             $member = EmployeeMaster::findOrFail($memberId);
