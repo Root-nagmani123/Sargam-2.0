@@ -1466,7 +1466,8 @@ class CalendarController extends Controller
                 'timetable.break_type',
                 'timetable.break_start_time',
                 'timetable.break_end_time',
-                'venue_master.venue_name as venue_name'
+                'venue_master.venue_name as venue_name',
+                'venue_master.venue_short_name as venue_short_name'
             )
             ->orderBy('timetable.START_DATE')
             ->orderBy('timetable.class_session')
@@ -1583,7 +1584,8 @@ class CalendarController extends Controller
                 'timetable.break_type',
                 'timetable.break_start_time',
                 'timetable.break_end_time',
-                'venue_master.venue_name as venue_name'
+                'venue_master.venue_name as venue_name',
+                'venue_master.venue_short_name as venue_short_name'
             )
             ->distinct()
             ->orderBy('timetable.START_DATE')
@@ -1709,7 +1711,8 @@ class CalendarController extends Controller
                 'timetable.break_type',
                 'timetable.break_start_time',
                 'timetable.break_end_time',
-                'venue_master.venue_name as venue_name'
+                'venue_master.venue_name as venue_name',
+                'venue_master.venue_short_name as venue_short_name'
             )
             ->orderBy('timetable.START_DATE')
             ->get();
@@ -1805,6 +1808,7 @@ class CalendarController extends Controller
     private function buildWeeksGrid($events, Carbon $rangeStart, Carbon $rangeEnd, $course = null): array
     {
         $groupMeta   = $this->timetableGroupMeta($events);
+        $groupAxis   = $this->timetableGroupAxis($groupMeta);
         $facultyMeta = $this->timetableFacultyMeta($events);
         $courseNames = $this->timetableCourseNames($events);
 
@@ -1862,6 +1866,18 @@ class CalendarController extends Controller
                 [$groupIds, $wholeCohort] = $this->timetableRowGroups($r, $groupMeta);
                 $faculty = $this->timetableRowFaculty($r, $facultyMeta);
 
+                // The GROUP rows this session's band should offer: the axis of
+                // every type it names, plus its own groups, so a group whose
+                // type cannot be resolved still gets a row of its own rather
+                // than dropping the session off the sheet.
+                $axisIds = $groupIds;
+                foreach ($this->timetableGroupIds($r) as $gid) {
+                    foreach ($groupAxis[$gid] ?? [] as $sibling) {
+                        $axisIds[] = $sibling;
+                    }
+                }
+                $axisIds = array_values(array_unique($axisIds));
+
                 $slot = trim((string) $r->class_session);
                 [$sFrom, $sTo] = $this->splitSessionTime($slot);
                 $sStart = $this->parseToMinutes($sFrom);
@@ -1875,7 +1891,14 @@ class CalendarController extends Controller
                     'isBreak'     => false,
                     'course'      => $courseNames[(int) ($r->course_master_pk ?? 0)] ?? '',
                     'groups'      => $groupIds,
-                    'groupNames'  => $this->timetableGroupNames($groupIds, $groupMeta),
+                    'groupIds'    => $this->timetableGroupIds($r),
+                    'axis'        => $axisIds,
+                    // Every group named on the row, "Full Group" included. The
+                    // kept ids above have it stripped out because a whole-cohort
+                    // session spans all the group sub-rows - but the sheet still
+                    // has to say who the session is for, and the calendar's own
+                    // event detail names it the same way.
+                    'groupNames'  => $this->timetableGroupNames($this->timetableGroupIds($r), $groupMeta),
                     'wholeCohort' => $wholeCohort,
                 ];
 
@@ -1901,6 +1924,8 @@ class CalendarController extends Controller
                         'isBreak'     => true,
                         'course'      => '',
                         'groups'      => [],
+                        'groupIds'    => [],
+                        'axis'        => [],
                         'groupNames'  => '',
                         'wholeCohort' => true,
                         'time'        => $bk['time'],
@@ -1917,18 +1942,22 @@ class CalendarController extends Controller
             $bandCount = max(0, count($bs) - 1);
 
             // ---- Which groups split each time band ----
-            // A band is split only when the sessions inside it name more than
-            // one group and the split stays small enough to read.
+            // The axis is the course's own groups, not the ones a session
+            // happens to single out: the printed sheet lists A and B down the
+            // left and lets a session for everybody span both rows. A band is
+            // split whenever the sessions in it belong to a type offering two
+            // to four groups - past that, one sub-row each is unreadable and
+            // the band stays single, naming the group inside the cell instead.
             $bandGroups = [];
             for ($i = 0; $i < $bandCount; $i++) {
                 $seen = [];
                 foreach ($days as $day) {
                     foreach ($itemsByDay[$day['key']] as $it) {
-                        if ($it['wholeCohort'] || empty($it['groups'])) {
+                        if (!empty($it['isBreak']) || empty($it['axis'])) {
                             continue;
                         }
                         if ($it['start'] < $bs[$i + 1] && $it['end'] > $bs[$i]) {
-                            foreach ($it['groups'] as $gid) {
+                            foreach ($it['axis'] as $gid) {
                                 $seen[$gid] = true;
                             }
                         }
@@ -1942,31 +1971,55 @@ class CalendarController extends Controller
                     );
                 });
 
-                // Splitting only earns its keep when some session in the band
-                // covers part of the cohort. If every session names all of the
-                // band's groups the sub-rows would carry identical cells.
-                $splits = false;
-                foreach ($days as $day) {
-                    foreach ($itemsByDay[$day['key']] as $it) {
-                        if ($it['wholeCohort'] || empty($it['groups'])) {
-                            continue;
-                        }
-                        if ($it['start'] < $bs[$i + 1] && $it['end'] > $bs[$i]
-                            && count($it['groups']) < count($ids)) {
-                            $splits = true;
-                            break 2;
-                        }
-                    }
-                }
-
-                $bandGroups[$i] = ($splits && count($ids) >= 2 && count($ids) <= self::TT_MAX_GROUP_ROWS)
+                $bandGroups[$i] = (count($ids) >= 2 && count($ids) <= self::TT_MAX_GROUP_ROWS)
                     ? $ids
                     : [];
             }
 
+            // ---- What an unsplit band puts in the GROUP column ----
+            // A band nobody splits still has to say who it is for. Where every
+            // session in it names the same group - "Full Group" for most of this
+            // database - that name goes in the GROUP column, as on the issued
+            // sheet where the column is filled on every row. Only a band whose
+            // sessions disagree (a dozen parallel language classes) leaves the
+            // column blank and names the groups inside the cells instead.
+            $bandSolo = [];
+            for ($i = 0; $i < $bandCount; $i++) {
+                $bandSolo[$i] = '';
+                if (!empty($bandGroups[$i])) {
+                    continue;
+                }
+                // Compared by printed label, not by pk: two courses on one sheet
+                // each carry their own "Full Group" row, and the column should
+                // still read "Full Group" rather than fall back to the cells.
+                $labels = [];
+                foreach ($days as $day) {
+                    foreach ($itemsByDay[$day['key']] as $it) {
+                        if (!empty($it['isBreak']) || empty($it['groupIds'])) {
+                            continue;
+                        }
+                        if ($it['start'] < $bs[$i + 1] && $it['end'] > $bs[$i]) {
+                            $own = [];
+                            foreach ($it['groupIds'] as $gid) {
+                                $label = $this->timetableGroupLabel($gid, $groupMeta);
+                                if ($label !== '') {
+                                    $own[] = $label;
+                                }
+                            }
+                            sort($own);
+                            $labels[implode(' / ', $own)] = true;
+                        }
+                    }
+                }
+                unset($labels['']);
+                if (count($labels) === 1) {
+                    $bandSolo[$i] = array_key_first($labels);
+                }
+            }
+
             $showGroupCol = false;
-            foreach ($bandGroups as $g) {
-                if (!empty($g)) {
+            foreach ($bandGroups as $i => $g) {
+                if (!empty($g) || $bandSolo[$i] !== '') {
                     $showGroupCol = true;
                     break;
                 }
@@ -2040,7 +2093,9 @@ class CalendarController extends Controller
                         // that belongs to one group. Where the band is not
                         // split - the usual case, and every untimed row - the
                         // groups are printed inside the cell instead, or the
-                        // sheet says nothing at all about who the session is for.
+                        // sheet says nothing at all about who the session is
+                        // for. Only a cell the GROUP column already labels
+                        // stays quiet, so it cannot contradict that label.
                         $cellGrid[$day['key']][$a]['events'][] = [
                             'topic'      => $it['topic'],
                             'faculty'    => $it['faculty'],
@@ -2049,7 +2104,8 @@ class CalendarController extends Controller
                             'isBreak'    => $it['isBreak'],
                             'course'     => $it['course'],
                             'time'       => $it['time'],
-                            'groupNames' => ($subRows[$a]['group'] === null && !$it['wholeCohort'])
+                            'groupNames' => ($subRows[$a]['group'] === null
+                                    && ($bandSolo[$subRows[$a]['band']] ?? '') === '')
                                 ? $it['groupNames'] : '',
                         ];
                         if ($span > $cellGrid[$day['key']][$a]['rowspan']) {
@@ -2101,21 +2157,29 @@ class CalendarController extends Controller
                 }
             }
 
-            // ---- Drop sub-rows nothing occupies ----
+            // ---- Drop bands nothing occupies ----
             // A gap between two sessions otherwise prints as an empty band. A
             // row crossed by a rowspan always has a 'skip' cell, so dropping
             // only all-'show'-and-empty rows never breaks the spans above.
-            $keep = [];
+            //
+            // The decision is per band, not per sub-row: a band that runs at
+            // all prints its whole GROUP axis, so a band where A has a session
+            // and B has none still shows B's row, empty. Dropping it would
+            // leave the sheet saying B does not exist at that hour.
+            $bandUsed = [];
             for ($s = 0; $s < $subCount; $s++) {
-                $used = false;
                 foreach ($days as $day) {
                     $c = $cellGrid[$day['key']][$s];
                     if ($c['state'] === 'skip' || !empty($c['events'])) {
-                        $used = true;
+                        $bandUsed[$subRows[$s]['band']] = true;
                         break;
                     }
                 }
-                if ($used) {
+            }
+
+            $keep = [];
+            for ($s = 0; $s < $subCount; $s++) {
+                if (!empty($bandUsed[$subRows[$s]['band']])) {
                     $keep[] = $s;
                 }
             }
@@ -2234,10 +2298,13 @@ class CalendarController extends Controller
                     // emitted their own GROUP cell: every day column on those
                     // rows shifted one to the right and the last day fell off
                     // the sheet.
-                    'timeColspan' => ($showGroupCol && $sr['group'] === null) ? 2 : 1,
+                    // TIME swallows GROUP only when the column has nothing
+                    // to show for this band.
+                    'timeColspan' => ($showGroupCol && $sr['group'] === null
+                                         && ($bandSolo[$b] ?? '') === '') ? 2 : 1,
                     'from'        => $this->fmtMinutes($bs[$b]),
                     'to'          => $this->fmtMinutes($bs[$b + 1]),
-                    'groupLabel'  => $sr['groupLabel'],
+                    'groupLabel'  => $sr['group'] !== null ? $sr['groupLabel'] : ($bandSolo[$b] ?? ''),
                     'cells'       => $cells,
                 ];
             }
@@ -2305,7 +2372,7 @@ class CalendarController extends Controller
                             'isBreak'    => false,
                             'course'     => $it['course'],
                             'time'       => $it['time'],
-                            'groupNames' => $it['wholeCohort'] ? '' : $it['groupNames'],
+                            'groupNames' => $it['groupNames'],
                         ];
                     }
                     $cells[$day['key']] = [
@@ -2327,6 +2394,41 @@ class CalendarController extends Controller
                 ];
             }
 
+            // ---- VENUES line ----
+            // The issued sheet closes the grid with one row naming where each
+            // group sits - "VENUES: Full Group: VH, Group-A: VH, Group B: TH" -
+            // using venue_master.venue_short_name. A group is listed against the
+            // venue most of its sessions run in.
+            $venueTally = [];
+            foreach ($weekEvents as $r) {
+                $short = trim((string) ($r->venue_short_name ?? '')) ?: trim((string) ($r->venue_name ?? ''));
+                if ($short === '') {
+                    continue;
+                }
+                foreach ($this->timetableGroupIds($r) as $gid) {
+                    $name = trim((string) ($groupMeta[$gid]->group_name ?? ''));
+                    if ($name === '') {
+                        continue;
+                    }
+                    $venueTally[$name][$short] = ($venueTally[$name][$short] ?? 0) + 1;
+                }
+            }
+
+            $venueParts = [];
+            if ($venueTally) {
+                // "Full Group" leads, as on the issued sheet; the rest follow in
+                // the order the GROUP column would print them.
+                uksort($venueTally, function ($a, $b) {
+                    $fa = strtolower($a) === 'full group';
+                    $fb = strtolower($b) === 'full group';
+                    return $fa === $fb ? strnatcasecmp($a, $b) : ($fa ? -1 : 1);
+                });
+                foreach ($venueTally as $name => $counts) {
+                    arsort($counts);
+                    $venueParts[] = $name . ': ' . array_key_first($counts);
+                }
+            }
+
             $weekNumber = $cursor->isoWeek;
             if ($course && !empty($course->start_year)) {
                 $courseMonday = Carbon::parse($course->start_year)->startOfWeek(Carbon::MONDAY);
@@ -2342,6 +2444,7 @@ class CalendarController extends Controller
                 'weekNumber'   => $weekNumber,
                 'rangeLabel'   => $rangeLabel,
                 'showGroupCol' => $showGroupCol,
+                'venueLine'    => $venueParts ? implode(', ', $venueParts) : '',
                 'days'         => $days,
                 'rows'         => $rows,
                 '_hasEvents'   => $weekEvents->isNotEmpty(),
@@ -2453,10 +2556,88 @@ class CalendarController extends Controller
         return DB::table('group_type_master_course_master_map as m')
             ->leftJoin('course_group_type_master as t', 't.pk', '=', 'm.type_name')
             ->whereIn('m.pk', array_keys($ids))
-            ->select('m.pk', 'm.group_name', 't.type_name as type_label')
+            ->select('m.pk', 'm.group_name', 'm.type_name as type_pk', 'm.course_name as course_pk', 't.type_name as type_label')
             ->get()
             ->keyBy('pk')
             ->all();
+    }
+
+    /**
+     * The GROUP axis each group belongs to: gid => the sibling groups that share
+     * its type and course, whole-cohort rows removed.
+     *
+     * The printed sheet runs TIME x GROUP down the left and lists the course's
+     * groups - "A" and "B" - whether or not any one session singles one out; a
+     * session for everybody simply spans both rows. Those groups cannot be read
+     * off the sessions, because a whole-cohort session is stored against the
+     * *"Full Group"* row of its type rather than against A and B: in this
+     * database courses 61 and 63 both carry Lecture Group = A / B / Full Group
+     * and not one session names A or B. So the axis comes from the type the
+     * session's own group belongs to.
+     *
+     * $groupMeta gains the sibling rows on the way past - the GROUP column has
+     * to label a group no session mentions.
+     */
+    private function timetableGroupAxis(array &$groupMeta): array
+    {
+        $sets    = [];
+        $types   = [];
+        $courses = [];
+        foreach ($groupMeta as $g) {
+            $type   = (string) ($g->type_pk ?? '');
+            $course = (string) ($g->course_pk ?? '');
+            if ($type === '' || $course === '') {
+                continue;
+            }
+            $sets[$type . '|' . $course] = true;
+            $types[$type]     = true;
+            $courses[$course] = true;
+        }
+        if (!$sets) {
+            return [];
+        }
+
+        // Selected on the two indexed columns and paired up in PHP: a where on
+        // concat(type, course) would match the exact sets but scan the table.
+        $rows = DB::table('group_type_master_course_master_map as m')
+            ->leftJoin('course_group_type_master as t', 't.pk', '=', 'm.type_name')
+            ->whereIn('m.type_name', array_keys($types))
+            ->whereIn('m.course_name', array_keys($courses))
+            ->select('m.pk', 'm.group_name', 'm.type_name as type_pk', 'm.course_name as course_pk', 't.type_name as type_label')
+            ->get();
+
+        $bySet = [];
+        foreach ($rows as $row) {
+            $key = $row->type_pk . '|' . $row->course_pk;
+            if (!isset($sets[$key])) {
+                continue;
+            }
+            $bySet[$key][] = $row;
+            if (!isset($groupMeta[(int) $row->pk])) {
+                $groupMeta[(int) $row->pk] = $row;
+            }
+        }
+
+        $axis = [];
+        foreach ($bySet as $key => $members) {
+            usort($members, static fn ($a, $b) => strnatcasecmp((string) $a->group_name, (string) $b->group_name));
+
+            $named = [];
+            foreach ($members as $member) {
+                $name = strtolower(trim((string) $member->group_name));
+                $type = strtolower(trim((string) $member->type_label));
+                if ($name === 'full group' || $type === 'full group') {
+                    continue;   // "everybody" is not a row of its own
+                }
+                $named[] = (int) $member->pk;
+            }
+
+            foreach ($members as $member) {
+                $axis[(int) $member->pk] = $named;
+            }
+        }
+
+        return $axis;
     }
 
     /** Decode a timetable row's group_name JSON column into integer group pks. */
@@ -2502,8 +2683,14 @@ class CalendarController extends Controller
         return [$kept, $whole];
     }
 
-    /** Longest group label the narrow GROUP column can hold. */
-    private const TT_GROUP_LABEL_MAX = 8;
+    /**
+     * Longest group label the narrow GROUP column can hold. Names that carry no
+     * token to reduce to - house names such as "Stok Kangri" and
+     * "Kangchendjunga" - wrap inside the column at the smaller .long size
+     * rather than being cut; eight characters cut both of those down to
+     * something the reader cannot tell apart from its neighbours.
+     */
+    private const TT_GROUP_LABEL_MAX = 16;
 
     /**
      * Printed label for a group. GROUP is a single-letter column on the issued
@@ -2519,8 +2706,10 @@ class CalendarController extends Controller
             return '';
         }
 
-        // "Group 1" / "Track A" / "Batch 2" -> the token alone.
-        if (preg_match('/^(?:group|track|batch)\s*[-_ ]?\s*(\S{1,4})$/i', $name, $m)) {
+        // "Group 1" / "Track A" / "Batch 2" / "Group No.01" -> the token alone.
+        // The "No." matters: without it the three groups of an Ice breaking
+        // type all cut down to the same "Group No" and the column says nothing.
+        if (preg_match('/^(?:group|track|batch)\s*(?:no\.?|#)?\s*[-_ .]?\s*(\S{1,4})$/i', $name, $m)) {
             return strtoupper($m[1]);
         }
 

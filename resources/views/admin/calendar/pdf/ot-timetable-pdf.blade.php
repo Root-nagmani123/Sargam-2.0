@@ -31,15 +31,18 @@
         .hdr td { vertical-align: middle; padding: 0; }
         .hdr .logo-l { width: 110px; text-align: left; }
         .hdr .logo-r { width: 110px; text-align: right; }
-        .hdr .logo-l img { height: 76pt; width: auto; }
+        .hdr .logo-l img { height: 74.25pt; width: auto; }
         .hdr .logo-r img { width: 94pt; height: auto; }
         .hdr .mid { text-align: center; padding: 0 4pt; }
 
-        .inst-hi-img { height: 17pt; width: auto; }
+        /* The issued sheet prints the Devanagari title 309px wide; this artwork
+           has a slightly different aspect, so the width is matched and the height
+           lands 2px short of its 21px. */
+        .inst-hi-img { height: 16.6pt; width: auto; }
         .inst-en     { font-weight: bold; margin-top: 6pt; }
         .course-line { font-weight: bold; margin-top: 6pt; }
         .course-dates{ font-weight: bold; margin-top: 6pt; }
-        .week-line   { margin-top: 3pt; }
+        .week-line   { font-weight: bold; margin-top: 6pt; }
 
         /* ===== Grid ===== */
         table.grid {
@@ -49,6 +52,11 @@
         table.grid th, table.grid td {
             border: 0.5pt solid #000; vertical-align: middle; text-align: center;
         }
+
+        /* The issued sheet prints "GROUP" 47px wide in a 56px column; at the
+           11pt body size it comes out 52px, overflowing a cell DomPDF does not
+           clip. 10pt reproduces the 47px exactly. */
+        table.grid thead th.grp-h { font-size: 10pt; }
 
         /* Header and break bands share the one accent the sheet uses. */
         table.grid thead th {
@@ -68,21 +76,28 @@
 
         /* One session inside a day cell. The sheet sets the topic plain, the
            session taker bold in brackets, and the coordinator's initials
-           plain beneath. */
+           plain beneath.
+
+           The two gaps are measured off the issued sheet, where they are whole
+           blank lines: on its 17px line the taker sits 52px below the topic and
+           the initials 34px below the taker - two blank lines and one, against
+           this 12.76pt line. */
         .cell + .cell { margin-top: 9pt; }
-        .cell .fac  { font-weight: bold; margin-top: 11pt; }
-        .cell .ini  { margin-top: 7pt; }
+        .cell .fac  { font-weight: bold; margin-top: 26.25pt; }
+        .cell .ini  { margin-top: 12.75pt; }
 
         /* Which groups the session is for, where the GROUP column does not
-           already say so. Set apart from the topic above it without competing
-           with the bold session taker below. */
-        .cell .grp-line { font-size: 8pt; font-style: italic; margin-top: 3pt; }
+           already say so. Set inline after the topic rather than on a line of
+           its own: nearly every session names a group, and a line each would
+           add an inch to a full sheet and push it onto a second page - where
+           DomPDF cannot carry a rowspan over and the columns come apart. */
+        .cell .grp-line { font-size: 8pt; font-style: italic; }
 
         td.day.dense                { font-size: 9pt; }
         td.day.dense .cell + .cell  { margin-top: 4pt; }
         td.day.dense .cell .fac     { margin-top: 0; }
         td.day.dense .cell .ini     { margin-top: 0; }
-        td.day.dense .cell .grp-line{ margin-top: 0; font-size: 7pt; }
+        td.day.dense .cell .grp-line{ font-size: 7pt; }
 
         /* DomPDF cannot break a cell across pages, so a band running a dozen
            parallel classes at one hour has to be squeezed onto the page it
@@ -90,8 +105,17 @@
         td.day.denser               { font-size: 7.5pt; }
         td.day.denser .cell + .cell { margin-top: 2.5pt; }
 
+        /* The two rows that close the issued sheet: both sit inside the
+           grid, left-aligned and smaller than a session, and the notes keep
+           their numbering on separate lines. */
+        table.grid td.venues    { text-align: left; padding: 2pt 4pt; font-size: 9pt; font-weight: bold; }
+        table.grid td.note-cell { text-align: left; padding: 2pt 4pt; font-size: 9pt; font-weight: bold; }
+        /* Hanging indents, so a note that wraps keeps its text clear of the
+           numbering - the first line hangs by the width of "Note: 1. ". */
+        table.grid td.note-cell .note-line      { padding-left: 14pt; text-indent: -14pt; }
+        table.grid td.note-cell .note-line.lead { padding-left: 40pt; text-indent: -40pt; }
+
         .empty { text-align: center; padding: 28pt; }
-        .note  { margin-top: 5pt; }
         .pto   { text-align: right; font-weight: bold; margin-top: 4pt; }
     </style>
 </head>
@@ -103,6 +127,11 @@
     @foreach($weeks as $week)
         @php
             $dayCount = max(1, count($week['days']));
+            // Measured off the issued sheet: on its 770px table TIME is 62px
+            // (8.05%) and GROUP 56px (7.27%). The lead is fixed, so a week
+            // carrying the weekend narrows the day columns and leaves TIME able
+            // to hold "0940 to 1040". The issued sheet lets its five day columns
+            // vary (123-138px, auto-fitted); they are set equal here.
             $lead     = $week['showGroupCol'] ? 15.4 : 8.1;   // TIME (+ GROUP) %
             $dayWidth = round((100 - $lead) / $dayCount, 3);
         @endphp
@@ -134,7 +163,7 @@
                 <thead>
                     <tr>
                         <th style="width: 8.1%;">TIME</th>
-                        @if($week['showGroupCol'])<th style="width: 7.3%;">GROUP</th>@endif
+                        @if($week['showGroupCol'])<th class="grp-h" style="width: 7.3%;">GROUP</th>@endif
                         @foreach($week['days'] as $day)
                             <th style="width: {{ $dayWidth }}%;">{{ $day['dayName'] }}<br>{{ $day['label'] }}</th>
                         @endforeach
@@ -172,12 +201,9 @@
                                     <td class="day @if($n > 8) dense denser @elseif($n > 2) dense @endif" rowspan="{{ $c['rowspan'] }}">
                                         @foreach($c['events'] as $ev)
                                             <div class="cell">
-                                                <div>{{ $ev['topic'] }}</div>
+                                                <div>{{ $ev['topic'] }}@if(!empty($ev['groupNames']))<span class="grp-line"> [{{ $ev['groupNames'] }}]</span>@endif</div>
                                                 @if($multiCourse && !empty($ev['course']))
                                                     <div>{{ $ev['course'] }}</div>
-                                                @endif
-                                                @if(!empty($ev['groupNames']))
-                                                    <div class="grp-line">{{ $ev['groupNames'] }}</div>
                                                 @endif
                                                 @if(!empty($ev['faculty']))
                                                     {{-- One pair of brackets per session taker. --}}
@@ -197,12 +223,31 @@
                             @endif
                         </tr>
                     @endforeach
+
+                    {{-- The issued sheet closes the grid with these two rows,
+                         inside its border and full width: where each group sits,
+                         then the week's notes. --}}
+                    @php $cols = 1 + ($week['showGroupCol'] ? 1 : 0) + count($week['days']); @endphp
+                    @if(!empty($week['venueLine']))
+                        <tr><td class="venues" colspan="{{ $cols }}"><b>VENUES:</b> {{ $week['venueLine'] }}</td></tr>
+                    @endif
+                    @if(!empty($footerNote))
+                        <tr>
+                            <td class="note-cell" colspan="{{ $cols }}">
+                                @php
+                                    // One <div> per note, so a numbered list keeps
+                                    // its hanging indent instead of running on.
+                                    $notes = preg_split('/\r\n|\r|\n/', trim($footerNote));
+                                    $notes = array_values(array_filter(array_map('trim', $notes), static fn ($n) => $n !== ''));
+                                @endphp
+                                @foreach($notes as $i => $noteLine)
+                                    <div class="note-line @if($i === 0)lead @endif">@if($i === 0)Note: @endif{{ $noteLine }}</div>
+                                @endforeach
+                            </td>
+                        </tr>
+                    @endif
                 </tbody>
             </table>
-
-            @if(!empty($footerNote))
-                <div class="note"><b>Note:</b> {{ $footerNote }}</div>
-            @endif
             @if(!$loop->last)
                 <div class="pto">P.T.O.</div>
             @endif

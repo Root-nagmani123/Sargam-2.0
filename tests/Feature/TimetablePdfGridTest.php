@@ -51,14 +51,33 @@ class TimetablePdfGridTest extends TestCase
 {
     use DatabaseTransactions;
 
-    /** Fixture ids, high enough not to collide with real rows. */
-    private const COURSE_PK    = 90100001;
-    private const TYPE_PK      = 90100002;
-    private const GROUP_A_PK   = 90100003;
-    private const GROUP_B_PK   = 90100004;
-    private const GROUP_NONE_PK = 90100005;   // a group row with no name
-    private const FACULTY_1_PK = 90100006;
-    private const FACULTY_2_PK = 90100007;
+    /**
+     * Fixture ids, high enough not to collide with real rows.
+     *
+     * The group rows mirror how a course really carries them: a group belongs
+     * to a type AND a course, and the groups sharing a (type, course) are the
+     * GROUP axis the sheet prints. Three types, each a different shape:
+     *
+     *   Lecture Group -> A, B, Full Group   (an axis of two, plus "everybody")
+     *   Seminar       -> Workshop Group     (one group: no axis to draw)
+     *   Language      -> "" , Z             (an axis led by a group with no name)
+     */
+    private const COURSE_PK        = 90100001;
+    private const TYPE_LECTURE_PK  = 90100002;
+    private const TYPE_SEMINAR_PK  = 90100009;
+    private const TYPE_LANGUAGE_PK = 90100010;
+    private const GROUP_A_PK       = 90100003;
+    private const GROUP_B_PK       = 90100004;
+    private const GROUP_NONE_PK    = 90100005;   // a group row with no name
+    private const GROUP_Z_PK       = 90100011;   // its only sibling
+    private const GROUP_SOLO_PK    = 90100012;   // the only group of its type
+    private const GROUP_FULL_PK    = 90100008;   // the course's whole-cohort group
+    private const GROUP_FULL_2_PK  = 90100016;   // a second course's, same name
+    private const TYPE_ICE_PK      = 90100013;
+    private const GROUP_N1_PK      = 90100014;
+    private const GROUP_N2_PK      = 90100015;
+    private const FACULTY_1_PK     = 90100006;
+    private const FACULTY_2_PK     = 90100007;
 
     protected function setUp(): void
     {
@@ -74,14 +93,19 @@ class TimetablePdfGridTest extends TestCase
         ]);
 
         DB::table('course_group_type_master')->insert([
-            'pk'        => self::TYPE_PK,
-            'type_name' => 'Lecture Group',
+            ['pk' => self::TYPE_LECTURE_PK,  'type_name' => 'Lecture Group'],
+            ['pk' => self::TYPE_SEMINAR_PK,  'type_name' => 'Seminar'],
+            ['pk' => self::TYPE_LANGUAGE_PK, 'type_name' => 'Language Group'],
         ]);
 
+        // type_name and course_name hold the type pk and the course pk, not names.
         DB::table('group_type_master_course_master_map')->insert([
-            ['pk' => self::GROUP_A_PK,    'type_name' => self::TYPE_PK, 'group_name' => 'Group A'],
-            ['pk' => self::GROUP_B_PK,    'type_name' => self::TYPE_PK, 'group_name' => 'Group B'],
-            ['pk' => self::GROUP_NONE_PK, 'type_name' => self::TYPE_PK, 'group_name' => ''],
+            ['pk' => self::GROUP_A_PK,    'type_name' => self::TYPE_LECTURE_PK,  'course_name' => self::COURSE_PK, 'group_name' => 'Group A'],
+            ['pk' => self::GROUP_B_PK,    'type_name' => self::TYPE_LECTURE_PK,  'course_name' => self::COURSE_PK, 'group_name' => 'Group B'],
+            ['pk' => self::GROUP_FULL_PK, 'type_name' => self::TYPE_LECTURE_PK,  'course_name' => self::COURSE_PK, 'group_name' => 'Full Group'],
+            ['pk' => self::GROUP_SOLO_PK, 'type_name' => self::TYPE_SEMINAR_PK,  'course_name' => self::COURSE_PK, 'group_name' => 'Workshop Group'],
+            ['pk' => self::GROUP_NONE_PK, 'type_name' => self::TYPE_LANGUAGE_PK, 'course_name' => self::COURSE_PK, 'group_name' => ''],
+            ['pk' => self::GROUP_Z_PK,    'type_name' => self::TYPE_LANGUAGE_PK, 'course_name' => self::COURSE_PK, 'group_name' => 'Z'],
         ]);
 
         $faculty = [
@@ -113,6 +137,7 @@ class TimetablePdfGridTest extends TestCase
             'break_start_time' => null,
             'break_end_time'   => null,
             'venue_name'       => 'Main Hall',
+            'venue_short_name' => 'MH',
         ], $attrs);
     }
 
@@ -266,17 +291,132 @@ class TimetablePdfGridTest extends TestCase
         $this->assertSame(['Asha Sharma'], $cells[0]['faculty']);
     }
 
-    /** Defect 2: with no GROUP column, the cell itself names the cohort. */
-    public function test_a_cell_names_its_groups_when_the_group_column_is_not_drawn(): void
+    /**
+     * Defect 2, the reported shape: the GROUP column lists the course's groups
+     * down the left even though no session singles one of them out, and the
+     * session for everybody spans them all.
+     *
+     * Every session in this database is stored against its type's "Full Group"
+     * row - not one names A or B - so an axis read off the sessions is always
+     * empty and the column never appeared.
+     */
+    public function test_the_group_column_lists_the_courses_groups_and_a_whole_cohort_session_spans_them(): void
     {
         $weeks = $this->buildWeeks([
-            $this->event(['group_name' => json_encode([self::GROUP_A_PK])]),
+            $this->event([
+                'group_name'    => json_encode([self::GROUP_FULL_PK]),
+                'subject_topic' => 'Combating Drug Menace',
+            ]),
         ], '2026-01-19', '2026-01-25');
 
-        $this->assertFalse($weeks[0]['showGroupCol'], 'one group alone must not open the GROUP column');
+        $this->assertTrue($weeks[0]['showGroupCol'], 'the course has A and B, so the sheet has a GROUP column');
 
-        $cells = $this->cells($weeks[0]);
-        $this->assertSame('Group A', $cells[0]['groupNames']);
+        $rows = array_values(array_filter($weeks[0]['rows'], static fn ($r) => $r['type'] === 'row'));
+        $this->assertSame(['A', 'B'], array_column($rows, 'groupLabel'), 'GROUP is a one-letter column: "Group A" prints as "A"');
+
+        // One cell, spanning both group rows, printed on the first of them.
+        $monday = 1;
+        $this->assertSame(2, $rows[0]['cells'][$monday]['rowspan']);
+        $this->assertSame('Combating Drug Menace', $rows[0]['cells'][$monday]['events'][0]['topic']);
+        $this->assertSame('skip', $rows[1]['cells'][$monday]['state']);
+
+        $this->assertGridIsSquare($weeks[0]);
+    }
+
+    /** A session singling out one group takes that group's row alone. */
+    public function test_a_session_for_one_group_takes_only_that_row(): void
+    {
+        $weeks = $this->buildWeeks([
+            $this->event(['group_name' => json_encode([self::GROUP_A_PK]), 'subject_topic' => 'A stream']),
+        ], '2026-01-19', '2026-01-25');
+
+        $rows   = array_values(array_filter($weeks[0]['rows'], static fn ($r) => $r['type'] === 'row'));
+        $monday = 1;
+
+        $this->assertSame(['A', 'B'], array_column($rows, 'groupLabel'), 'GROUP is a one-letter column: "Group A" prints as "A"');
+        $this->assertSame('A stream', $rows[0]['cells'][$monday]['events'][0]['topic']);
+        $this->assertSame(1, $rows[0]['cells'][$monday]['rowspan']);
+        $this->assertSame([], $rows[1]['cells'][$monday]['events'], 'Group B has no session at this hour');
+    }
+
+    /**
+     * GROUP is a narrow column, so a group's label is cut down to the token
+     * that tells it from its siblings. "Group No.01" and "Group No.02" both cut
+     * to "Group No" unless the number is what survives, and a column reading
+     * the same on every row tells the reader nothing.
+     */
+    public function test_numbered_groups_keep_their_number_in_the_group_column(): void
+    {
+        DB::table('course_group_type_master')->insert([
+            'pk' => self::TYPE_ICE_PK, 'type_name' => 'Ice breaking',
+        ]);
+        DB::table('group_type_master_course_master_map')->insert([
+            ['pk' => self::GROUP_N1_PK, 'type_name' => self::TYPE_ICE_PK, 'course_name' => self::COURSE_PK, 'group_name' => 'Group No.01'],
+            ['pk' => self::GROUP_N2_PK, 'type_name' => self::TYPE_ICE_PK, 'course_name' => self::COURSE_PK, 'group_name' => 'Group No.02'],
+        ]);
+
+        $weeks = $this->buildWeeks([
+            $this->event(['group_name' => json_encode([self::GROUP_N1_PK])]),
+        ], '2026-01-19', '2026-01-25');
+
+        $rows = array_values(array_filter($weeks[0]['rows'], static fn ($r) => $r['type'] === 'row'));
+
+        $this->assertSame(['01', '02'], array_column($rows, 'groupLabel'));
+    }
+
+    /**
+     * A band with nothing to split still fills the GROUP column: every session
+     * in it names the same group, so that name goes in the column rather than
+     * the TIME cell swallowing it. This is most of the sheet - four fifths of
+     * the sessions in this database are one group ("Full Group") all week.
+     */
+    public function test_an_unsplit_band_puts_its_group_in_the_group_column(): void
+    {
+        $weeks = $this->buildWeeks([
+            $this->event(['group_name' => json_encode([self::GROUP_SOLO_PK])]),
+        ], '2026-01-19', '2026-01-25');
+
+        $this->assertTrue($weeks[0]['showGroupCol'], 'the group has to be visible somewhere');
+
+        $rows = array_values(array_filter($weeks[0]['rows'], static fn ($r) => $r['type'] === 'row'));
+        $this->assertSame('Workshop Group', $rows[0]['groupLabel']);
+        $this->assertSame(1, $rows[0]['timeColspan'], 'TIME must not swallow a GROUP cell that has content');
+        $this->assertSame('', $this->cells($weeks[0])[0]['groupNames'], 'the column says it, so the cell should not');
+        $this->assertGridIsSquare($weeks[0]);
+    }
+
+    /**
+     * Past TT_MAX_GROUP_ROWS - the week of eighteen parallel language classes -
+     * one sub-row each is unreadable, so the band stays single, the column goes
+     * blank and the cells name their own groups instead.
+     */
+    public function test_a_band_with_too_many_groups_names_them_in_the_cells(): void
+    {
+        $events = [];
+        foreach (range(1, 5) as $n) {
+            $pk = 90100020 + $n;
+            DB::table('group_type_master_course_master_map')->insert([
+                'pk' => $pk, 'type_name' => self::TYPE_LANGUAGE_PK,
+                'course_name' => self::COURSE_PK, 'group_name' => 'Language ' . $n,
+            ]);
+            $events[] = $this->event([
+                'group_name'    => json_encode([$pk]),
+                'subject_topic' => 'Class ' . $n,
+            ]);
+        }
+
+        $weeks = $this->buildWeeks($events, '2026-01-19', '2026-01-25');
+        $rows  = array_values(array_filter($weeks[0]['rows'], static fn ($r) => $r['type'] === 'row'));
+
+        $this->assertCount(1, $rows, 'seven groups must not become seven sub-rows');
+        $this->assertSame('', $rows[0]['groupLabel']);
+
+        $byTopic = [];
+        foreach ($this->cells($weeks[0]) as $cell) {
+            $byTopic[$cell['topic']] = $cell['groupNames'];
+        }
+        $this->assertSame('Language 1', $byTopic['Class 1']);
+        $this->assertSame('Language 5', $byTopic['Class 5']);
     }
 
     /** ...and stays quiet where the GROUP column already says it. */
@@ -302,12 +442,89 @@ class TimetablePdfGridTest extends TestCase
         }
     }
 
-    /** A session for the whole cohort names no group at all. */
-    public function test_a_whole_cohort_session_names_no_group(): void
+    /**
+     * Where the course offers nothing to split - a type holding only its
+     * whole-cohort row - "Full Group" is still the answer to who the session is
+     * for, and the GROUP column says it. Four fifths of the sessions in this
+     * database are stored that way, and they used to say nothing at all.
+     */
+    public function test_a_whole_cohort_session_still_names_its_group(): void
+    {
+        DB::table('group_type_master_course_master_map')
+            ->whereIn('pk', [self::GROUP_A_PK, self::GROUP_B_PK])
+            ->delete();
+
+        $weeks = $this->buildWeeks([
+            $this->event(['group_name' => json_encode([self::GROUP_FULL_PK])]),
+        ], '2026-01-19', '2026-01-25');
+
+        $rows = array_values(array_filter($weeks[0]['rows'], static fn ($r) => $r['type'] === 'row'));
+
+        $this->assertTrue($weeks[0]['showGroupCol']);
+        $this->assertSame('Full Group', $rows[0]['groupLabel']);
+    }
+
+    /**
+     * Two courses on one sheet each carry their own "Full Group" row, with
+     * different pks. The column compares what it would print, so it still reads
+     * "Full Group" instead of giving up and falling back to the cells.
+     */
+    public function test_two_courses_groups_of_the_same_name_read_as_one_label(): void
+    {
+        DB::table('group_type_master_course_master_map')->insert([
+            'pk' => self::GROUP_FULL_2_PK, 'type_name' => self::TYPE_SEMINAR_PK,
+            'course_name' => self::COURSE_PK + 1, 'group_name' => 'Workshop Group',
+        ]);
+
+        $weeks = $this->buildWeeks([
+            $this->event(['group_name' => json_encode([self::GROUP_SOLO_PK])]),
+            $this->event(['group_name' => json_encode([self::GROUP_FULL_2_PK]),
+                          'course_master_pk' => self::COURSE_PK + 1, 'START_DATE' => '2026-01-20']),
+        ], '2026-01-19', '2026-01-25');
+
+        $rows = array_values(array_filter($weeks[0]['rows'], static fn ($r) => $r['type'] === 'row'));
+        $this->assertSame('Workshop Group', $rows[0]['groupLabel']);
+    }
+
+    /** A session assigned no group at all still has nothing to say. */
+    public function test_a_session_with_no_group_names_none(): void
     {
         $weeks = $this->buildWeeks([$this->event([])], '2026-01-19', '2026-01-25');
 
         $this->assertSame('', $this->cells($weeks[0])[0]['groupNames']);
+    }
+
+    /**
+     * The issued sheet closes its grid with one row saying where each group
+     * sits, by venue abbreviation, with the whole cohort first.
+     */
+    public function test_the_venues_row_names_a_venue_for_each_group(): void
+    {
+        $weeks = $this->buildWeeks([
+            $this->event([
+                'group_name'       => json_encode([self::GROUP_A_PK]),
+                'venue_short_name' => 'TH',
+                'subject_topic'    => 'A stream',
+            ]),
+            $this->event([
+                'class_session'    => '11:00 AM - 12:00 PM',
+                'group_name'       => json_encode([self::GROUP_FULL_PK]),
+                'venue_short_name' => 'VH',
+                'subject_topic'    => 'Everyone',
+            ]),
+        ], '2026-01-19', '2026-01-25');
+
+        $this->assertSame('Full Group: VH, Group A: TH', $weeks[0]['venueLine']);
+    }
+
+    /** A week whose sessions record no venue prints no VENUES row at all. */
+    public function test_no_venues_row_without_venue_data(): void
+    {
+        $weeks = $this->buildWeeks([
+            $this->event(['venue_short_name' => '', 'venue_name' => '']),
+        ], '2026-01-19', '2026-01-25');
+
+        $this->assertSame('', $weeks[0]['venueLine']);
     }
 
     /** Defect 4: the header names the course even with no ?course_id. */
