@@ -736,7 +736,12 @@
                     const formData = new FormData(form[0]);
                     formData.set('emp_id', employeePK);
 
-                    await $.ajax({
+                    // PR #319 review round 3 (R-001). The response used to be discarded
+                    // here as well. For an ordinary employee no warning can fire — the
+                    // role sync and the payroll write are both admin-only — but an
+                    // administrator editing their OWN profile reaches this same handler,
+                    // and their save can be partially refused just like the wizard's.
+                    const res = await $.ajax({
                         url: "{{ route('member.update') }}",
                         method: "POST",
                         data: formData,
@@ -744,7 +749,14 @@
                         processData: false
                     });
 
-                    toastr.success("Profile updated successfully!");
+                    const warning = res && res.warning;
+
+                    if (warning) {
+                        alert("Profile updated, but not everything was saved:\n\n" + warning);
+                    } else {
+                        toastr.success("Profile updated successfully!");
+                    }
+
                     window.location.href = "{{ Auth::user()->user_id ? route('member.profile.edit', Auth::user()->user_id) : url('/dashboard') }}";
                 } catch (e) {
                     const status = e.status;

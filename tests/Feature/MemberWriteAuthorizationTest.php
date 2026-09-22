@@ -284,14 +284,24 @@ class MemberWriteAuthorizationTest extends TestCase
      */
     public function test_the_wizard_view_renders_the_warning_rather_than_discarding_it(): void
     {
-        foreach (['edit', 'create'] as $view) {
+        // All THREE views that post to member.update / member.store. edit_profile was
+        // missed on the first pass of this fix: an ordinary employee can never trigger a
+        // warning there (the role sync and the payroll write are both admin-only), but an
+        // administrator editing their own profile reaches the same handler and can.
+        $handlers = [
+            'edit'         => '/success:\s*function\s*\(\s*res\s*\)/',
+            'create'       => '/success:\s*function\s*\(\s*res\s*\)/',
+            'edit_profile' => '/const\s+res\s*=\s*await\s+\$\.ajax/',
+        ];
+
+        foreach ($handlers as $view => $receivesResponse) {
             $source = file_get_contents(resource_path("views/admin/member/{$view}.blade.php"));
 
             $this->assertMatchesRegularExpression(
-                '/success:\s*function\s*\(\s*res\s*\)/',
+                $receivesResponse,
                 $source,
-                "{$view}.blade.php must receive the response in its success handler — taking no "
-                . 'argument is what silently dropped the warning.'
+                "{$view}.blade.php must receive the response — discarding it is what silently "
+                . 'dropped the warning.'
             );
             $this->assertStringContainsString(
                 'res.warning',
