@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use App\Http\Requests\Admin\Member\{
     StoreMemberStep1Request,
     StoreMemberStep2Request,
@@ -215,7 +217,7 @@ class MemberController extends Controller
         // The correct deploy order is still migrate-then-deploy; this guard bounds the
         // damage if that order is not held, it does not replace it.
         if (! $this->step6SchemaIsReady()) {
-            \Log::warning('Member wizard: Step 6 payroll data skipped — the step-6 schema is not present on this environment. Run php artisan migrate.', [
+            Log::warning('Member wizard: Step 6 payroll data skipped — the step-6 schema is not present on this environment. Run php artisan migrate.', [
                 'employee_master_pk' => $employeeMasterPk,
             ]);
 
@@ -255,9 +257,9 @@ class MemberController extends Controller
             return $ready;
         }
 
-        return $ready = \Schema::hasTable('employee_category_master')
-            && \Schema::hasColumn('payroll_salary_master', 'basic_pay')
-            && \Schema::hasColumn('payroll_salary_master', 'employee_category_master_pk');
+        return $ready = Schema::hasTable('employee_category_master')
+            && Schema::hasColumn('payroll_salary_master', 'basic_pay')
+            && Schema::hasColumn('payroll_salary_master', 'employee_category_master_pk');
     }
 
     /**
@@ -433,7 +435,7 @@ class MemberController extends Controller
         // happened, for a measured 207 employees. The refusal is now returned to the
         // caller so the response can say so out loud.
         if (! $this->memberCredentialIsUnambiguous($userCredentialPk)) {
-            \Log::warning('Member wizard: skipped Spatie role sync — employee has more than one user_credentials row.', [
+            Log::warning('Member wizard: skipped Spatie role sync — employee has more than one user_credentials row.', [
                 'user_credentials_pk' => $userCredentialPk,
             ]);
 
@@ -864,7 +866,7 @@ class MemberController extends Controller
         // degradation instead of a broken screen — and keeps the failure contained to
         // Step 6 rather than to the wizard.
         if (! $this->step6SchemaIsReady()) {
-            \Log::warning('Member wizard: Step 6 dropdowns are empty — the step-6 schema is not present on this environment. Run php artisan migrate.');
+            Log::warning('Member wizard: Step 6 dropdowns are empty — the step-6 schema is not present on this environment. Run php artisan migrate.');
 
             return [[], []];
         }

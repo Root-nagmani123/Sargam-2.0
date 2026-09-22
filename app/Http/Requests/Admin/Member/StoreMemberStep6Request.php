@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin\Member;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Schema;
 
 class StoreMemberStep6Request extends FormRequest
 {
@@ -30,7 +31,19 @@ class StoreMemberStep6Request extends FormRequest
         // where code is deployed ahead of `php artisan migrate`. When the table is
         // absent the field is dropped from the payload by the controller anyway
         // (MemberController::step6SchemaIsReady()), so validating it buys nothing.
-        $employeeCategoryRule = \Schema::hasTable('employee_category_master')
+        //
+        // Memoised per request. rules() is called once per step-validation AJAX call and
+        // again when combinedMemberRules() merges all six step requests on save, so an
+        // unmemoised Schema::hasTable() here is several information_schema round trips
+        // per wizard run — the request-path schema introspection AUTO-07 exists to flag,
+        // and it fired on this exact line before the static was added.
+        static $employeeCategoryTableExists = null;
+
+        if ($employeeCategoryTableExists === null) {
+            $employeeCategoryTableExists = Schema::hasTable('employee_category_master');
+        }
+
+        $employeeCategoryRule = $employeeCategoryTableExists
             ? ['nullable', 'exists:employee_category_master,pk']
             : ['nullable'];
 
