@@ -57,17 +57,18 @@
 
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
                     <h6 class="pe-preview-heading mb-0">Evaluation Form</h6>
-                    {{-- Live, not disabled: it is the one control on this page that
-                         has something to show, and it behaves exactly like the OT
-                         form's own toggle. Rendered only when a criterion on this
-                         form asks for remarks, same gate the real form applies. --}}
-                    @if($allowsRemarks)
-                    <label class="d-inline-flex align-items-center gap-2 mb-0 pe-preview-remarks">
-                        <input type="checkbox" class="form-check-input m-0" id="pePreviewRemarksToggle">
-                        <span>Remarks</span>
-                    </label>
-                    @endif
                 </div>
+
+                {{-- Said outright rather than papered over with a stand-in "Score"
+                     column: no criterion is scoped to this course/event/group, so
+                     the OT form renders names and no score boxes at all, and a
+                     preview that invented one showed a form nobody is served. --}}
+                @if($columns->isEmpty())
+                    <p class="text-body-secondary mb-3">
+                        No evaluation criteria apply to this scope, so the form would show no score
+                        columns. Add them on Manage Evaluation Columns.
+                    </p>
+                @endif
 
                 <div class="programme-dt-panel mb-4">
                     <div class="table-responsive">
@@ -82,13 +83,11 @@
                                          the OT form caps on that, so printing
                                          "(1-10)" against a column capped at 5 was a
                                          preview of a form that does not exist. --}}
-                                    @forelse($columns as $column)
+                                    @foreach($columns as $column)
                                         <th scope="col">{{ $column->column_name }} (0-{{ rtrim(rtrim(number_format((float) ($column->max_marks ?? 10), 2, '.', ''), '0'), '.') }})</th>
-                                    @empty
-                                        <th scope="col">Score</th>
-                                    @endforelse
+                                    @endforeach
                                     @if($allowsRemarks)
-                                        <th scope="col" class="pe-preview-remarks-col d-none">Remarks</th>
+                                        <th scope="col" class="pe-preview-remarks-col">Remarks</th>
                                     @endif
                                 </tr>
                             </thead>
@@ -100,21 +99,16 @@
                                             <div class="pe-preview-member">{{ $member->first_name ?: 'Unnamed' }}</div>
                                             <div class="pe-preview-otcode">- {{ $member->ot_code ?: 'No OT code' }}</div>
                                         </td>
-                                        @forelse($columns as $column)
+                                        @foreach($columns as $column)
                                             <td>
                                                 <input type="number" class="form-control pe-preview-score"
                                                        value="0.00" step="0.01" min="0"
                                                        max="{{ $column->max_marks ?? 10 }}" disabled
                                                        aria-label="{{ $column->column_name }} for {{ $member->first_name }}">
                                             </td>
-                                        @empty
-                                            <td>
-                                                <input type="number" class="form-control pe-preview-score"
-                                                       value="0.00" step="0.01" disabled aria-label="Score">
-                                            </td>
-                                        @endforelse
+                                        @endforeach
                                         @if($allowsRemarks)
-                                            <td class="pe-preview-remarks-col d-none">
+                                            <td class="pe-preview-remarks-col">
                                                 <textarea class="form-control pe-control" rows="2" disabled
                                                           placeholder="Optional note about {{ $member->first_name }}"
                                                           aria-label="Remarks for {{ $member->first_name }}"></textarea>
@@ -123,7 +117,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="{{ 2 + max(1, $columns->count()) + ($allowsRemarks ? 1 : 0) }}" class="text-center py-4 text-body-secondary">
+                                        <td colspan="{{ 2 + $columns->count() + ($allowsRemarks ? 1 : 0) }}" class="text-center py-4 text-body-secondary">
                                             @if(! $groupId)
                                                 Pick a group to preview its members — this scope has no group set.
                                             @else
@@ -174,20 +168,4 @@
     </div>
 </div>
 
-@if($allowsRemarks)
-    <script>
-        /* Same behaviour as the OT form's own Remarks toggle: the cells are
-           <th>/<td>, so one class keeps the header and the body in step. */
-        (function () {
-            var toggle = document.getElementById('pePreviewRemarksToggle');
-            if (!toggle) { return; }
-
-            toggle.addEventListener('change', function () {
-                document.querySelectorAll('.pe-preview-remarks-col').forEach(function (cell) {
-                    cell.classList.toggle('d-none', !toggle.checked);
-                });
-            });
-        })();
-    </script>
-@endif
 @endsection
