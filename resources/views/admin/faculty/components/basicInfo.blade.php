@@ -114,6 +114,20 @@
                     />
                 </div>
             </div>
+            {{-- Printed beside the session taker on the weekly timetable, e.g.
+                 "(MK)". Curated, not derived from the name. --}}
+            <div class="col-md-3">
+                <div class="mb-3">
+                    <x-input
+                        name="abbreviation"
+                        label="Abbreviation :"
+                        placeholder="e.g. MK"
+                        formLabelClass="form-label"
+                        maxlength="12"
+                        value="{{ $faculty->abbreviation }}"
+                    />
+                </div>
+            </div>
     <div class="col-md-6">
         <div class="mb-3">
 

@@ -101,6 +101,8 @@ class FacultyController extends Controller
                     ($request->middlename ? $request->middlename . ' ' : '') .
                     $request->lastname
                 ),
+                // Curated initials for the printed weekly timetable.
+                'abbreviation' => $request->abbreviation ?: null,
                 'gender' => $request->gender,
                 'landline_no' => $request->landline,
                 'mobile_no' => $request->mobile,
@@ -635,6 +637,8 @@ class FacultyController extends Controller
                     ($request->middlename ? $request->middlename . ' ' : '') .
                     $request->lastname
                 ),
+                // Curated initials for the printed weekly timetable.
+                'abbreviation'  => $request->abbreviation ?: null,
                 'gender'        => $request->gender,
                 'landline_no'   => $request->landline,
                 'mobile_no'        => $request->mobile,

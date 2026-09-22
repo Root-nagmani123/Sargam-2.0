@@ -1,176 +1,177 @@
+{{--
+    Printed weekly timetable.
+
+    Laid out to match the academy's issued sheet: Legal portrait, black rules on
+    white, pale-olive header and break bands, and a TIME x GROUP axis down the
+    left. Geometry and colours were measured off the issued PDF - see the
+    comments on the individual rules before changing them.
+
+    Shared by CalendarController::downloadTimetablePdf(), otDownloadPdf() and
+    weeklyTimetablePdf(); all three feed it buildWeeksGrid() output.
+--}}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <title>Time Table</title>
     <style>
-        * { font-family: 'DejaVu Sans', sans-serif; }
-        @page { margin: 16px 14px 26px 14px; }
-        body { margin: 0; color: #1f2937; font-size: 8px; }
+        /* Legal portrait, 18pt side margins: the issued sheet's table is
+           770px wide on an 816px page at 96dpi. */
+        @page { margin: 27pt 18pt 20pt 18pt; }
 
-        /* ===== Header ===== */
-        .hdr { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-        .hdr td { vertical-align: middle; }
-        .hdr .logo { width: 70px; text-align: center; }
-        .hdr .logo img { max-height: 48px; max-width: 66px; }
-        .hdr .center { text-align: center; padding: 0 6px; }
-        /* Devanagari title is a pre-shaped image — DomPDF/GD can't shape Indic text. */
-        .inst-hi-img { height: 13px; width: auto; margin-bottom: 1px; }
-        .inst-en { font-size: 12px; font-weight: bold; color: #102a43; line-height: 1.25; margin-top: 1px; }
-        .course-line { font-size: 9px; font-weight: bold; color: #243b53; margin-top: 3px; }
-        .course-dates { font-size: 8.5px; color: #486581; margin-top: 1px; }
+        /* Helvetica matches Arial's metrics, which the issued sheet is set in.
+           DejaVu is far wider and would reflow every cell. The Devanagari
+           title is a pre-shaped image, so no Indic-capable font is needed. */
+        * { font-family: Helvetica, Arial, sans-serif; }
 
-        /* ===== Info row (Venue | Time table | Week) ===== */
-        .ttl-row { width: 100%; border-collapse: collapse; margin: 8px 0 6px; }
-        .ttl-row td { font-size: 10px; color: #102a43; vertical-align: middle; }
-        .ttl-row .left { text-align: left; font-weight: bold; }
-        .ttl-row .ttl {
-            text-align: center; font-size: 15px; font-weight: bold; font-style: italic;
-            font-family: 'DejaVu Serif', serif;
-        }
-        .ttl-row .right { text-align: right; font-weight: bold; }
-        .ttl-row .right .wk-range { font-weight: normal; font-size: 7.5px; color: #486581; }
+        body { margin: 0; color: #000; font-size: 11pt; line-height: 1.16; }
+
+        /* ===== Academy header ===== */
+        .hdr { width: 100%; border-collapse: collapse; }
+        .hdr td { vertical-align: middle; padding: 0; }
+        .hdr .logo-l { width: 110px; text-align: left; }
+        .hdr .logo-r { width: 110px; text-align: right; }
+        .hdr .logo-l img { height: 76pt; width: auto; }
+        .hdr .logo-r img { width: 94pt; height: auto; }
+        .hdr .mid { text-align: center; padding: 0 4pt; }
+
+        .inst-hi-img { height: 17pt; width: auto; }
+        .inst-en     { font-weight: bold; margin-top: 6pt; }
+        .course-line { font-weight: bold; margin-top: 6pt; }
+        .course-dates{ font-weight: bold; margin-top: 6pt; }
+        .week-line   { margin-top: 3pt; }
 
         /* ===== Grid ===== */
-        table.grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        table.grid th, table.grid td { border: 0.8px solid #8fa3bd; vertical-align: middle; }
+        table.grid {
+            width: 100%; border-collapse: collapse; table-layout: fixed;
+            margin-top: 3pt;
+        }
+        table.grid th, table.grid td {
+            border: 0.5pt solid #000; vertical-align: middle; text-align: center;
+        }
+
+        /* Header and break bands share the one accent the sheet uses. */
         table.grid thead th {
-            background: #2f5496; color: #ffffff; text-align: center;
-            font-size: 7.5px; font-weight: bold; line-height: 1.35; padding: 5px 2px;
-            border-color: #2f5496;
+            background: #EAF1DD; font-weight: bold; padding: 2pt 2pt;
         }
-        table.grid thead th .dt { font-weight: normal; font-size: 7px; }
-        table.grid .time-col { width: 42px; }
-        table.grid td.time {
-            text-align: center;
-            font-weight: bold; font-size: 7.5px; line-height: 1.5;
-            vertical-align: middle; padding: 5px 2px; background: #eef2f8; color: #1f3864;
-        }
-        table.grid td.time .to { font-weight: normal; font-size: 7px; color: #5b6b85; }
-        table.grid td.day { padding: 5px 3px; font-size: 7px; line-height: 1.3; text-align: center; vertical-align: middle; }
-        table.grid td.is-break { background: #dfe7f3; }
-
-        /* Merged break band (Tea Break / Lunch). */
-        table.grid td.break {
-            text-align: center; font-weight: bold; font-style: italic; font-size: 8.5px;
-            color: #1f3864; background: #dfe7f3; letter-spacing: .3px;
+        td.band {
+            background: #EAF1DD; font-weight: bold; padding: 9pt 3pt;
         }
 
-        .cell { margin-bottom: 5px; }
-        .cell:last-child { margin-bottom: 0; }
-        .cell-topic { font-weight: bold; color: #102a43; }
-        .cell-course { color: #2a6f97; font-style: italic; margin-top: 1px; }
-        .cell-fac { color: #243b53; margin-top: 1px; }
-        .cell-ven { color: #627d98; margin-top: 1px; }
-        .cell-time { color: #2a6f97; font-weight: bold; margin-top: 1px; }
-        .cell.is-break .cell-topic { font-weight: bold; font-style: italic; color: #1f3864; }
-        .cell.is-break .cell-time { color: #1f3864; font-weight: normal; }
+        td.time { padding: 3pt 1pt; }
+        td.grp  { padding: 3pt 1pt; word-wrap: break-word; }
+        td.grp.long { font-size: 7pt; line-height: 1.1; }
+        td.day  { padding: 4pt 3pt; }
 
-        .empty { text-align: center; padding: 28px; color: #6b7280; font-size: 11px; }
-        .note {
-            margin-top: 6px; font-size: 7.5px; color: #334155;
-            border: 1px solid #c9d6e3; background: #f8fafc; padding: 4px 6px; border-radius: 3px;
-        }
-        .note b { color: #102a43; }
-        .pto { text-align: right; font-size: 9px; font-weight: bold; margin-top: 4px; letter-spacing: .5px; }
+        /* One session inside a day cell. The sheet sets the topic plain, the
+           session taker bold in brackets, and the coordinator's initials
+           plain beneath. */
+        .cell + .cell { margin-top: 9pt; }
+        .cell .fac  { font-weight: bold; margin-top: 11pt; }
+        .cell .ini  { margin-top: 7pt; }
+
+        td.day.dense                { font-size: 9pt; }
+        td.day.dense .cell + .cell  { margin-top: 4pt; }
+        td.day.dense .cell .fac     { margin-top: 0; }
+        td.day.dense .cell .ini     { margin-top: 0; }
+
+        /* DomPDF cannot break a cell across pages, so a band running a dozen
+           parallel classes at one hour has to be squeezed onto the page it
+           starts on or its closing rule falls off the sheet. */
+        td.day.denser               { font-size: 7.5pt; }
+        td.day.denser .cell + .cell { margin-top: 2.5pt; }
+
+        .empty { text-align: center; padding: 28pt; }
+        .note  { margin-top: 5pt; }
+        .pto   { text-align: right; font-weight: bold; margin-top: 4pt; }
     </style>
 </head>
 <body>
-
-    {{-- Page numbers drawn on every page (reliable DomPDF method; needs isPhpEnabled). --}}
-    <script type="text/php">
-        if (isset($pdf)) {
-            $text = "Page {PAGE_NUM} of {PAGE_COUNT}";
-            $size = 7;
-            $font = $fontMetrics->getFont("DejaVu Sans", "normal");
-            $w    = $fontMetrics->getTextWidth($text, $font, $size);
-            $pdf->page_text($pdf->get_width() - $w - 14, $pdf->get_height() - 16, $text, $font, $size, array(0.4, 0.4, 0.4));
-        }
-    </script>
 
 @if(count($weeks) === 0)
     <div class="empty">No sessions scheduled for this period.</div>
 @else
     @foreach($weeks as $week)
-        <div class="week-section" @if(!$loop->first) style="page-break-before: always;" @endif>
+        @php
+            $dayCount = max(1, count($week['days']));
+            $lead     = $week['showGroupCol'] ? 15.4 : 8.1;   // TIME (+ GROUP) %
+            $dayWidth = round((100 - $lead) / $dayCount, 3);
+        @endphp
+        <div @if(!$loop->first) style="page-break-before: always;" @endif>
 
-            {{-- Institution header --}}
             <table class="hdr">
                 <tr>
-                    <td class="logo">@if($logoLeft)<img src="{{ $logoLeft }}" alt="">@endif</td>
-                    <td class="center">
+                    <td class="logo-l">@if($logoLeft)<img src="{{ $logoLeft }}" alt="">@endif</td>
+                    <td class="mid">
                         @if($titleHindi)<img class="inst-hi-img" src="{{ $titleHindi }}" alt="">@endif
                         <div class="inst-en">Lal Bahadur Shastri National Academy of Administration, Mussoorie</div>
                         @if($course && $course->course_name)
-                            <div class="course-line">{{ $course->course_name }}@if(!empty($course->couse_short_name)) ({{ $course->couse_short_name }})@endif</div>
+                            <div class="course-line">
+                                {{ $course->course_name }}@if(!empty($course->couse_short_name) && $course->couse_short_name !== $course->course_name) ({{ $course->couse_short_name }})@endif
+                            </div>
                         @endif
                         @if($courseDuration)
                             <div class="course-dates">({{ $courseDuration }})</div>
                         @endif
+                        <div class="week-line">Time Table: Week-{{ str_pad((string) $week['weekNumber'], 2, '0', STR_PAD_LEFT) }}</div>
                     </td>
-                    <td class="logo">@if($logoRight)<img src="{{ $logoRight }}" alt="">@endif</td>
+                    <td class="logo-r">@if($logoRight)<img src="{{ $logoRight }}" alt="">@endif</td>
                 </tr>
             </table>
 
-            {{-- Venue | Time table | Week --}}
-            <table class="ttl-row">
-                <tr>
-                    <td class="left" style="width: 33%;">@if($primaryVenue)Venue: {{ $primaryVenue }}@endif</td>
-                    <td class="ttl" style="width: 34%;">Time table</td>
-                    <td class="right" style="width: 33%;">
-                        Week: {{ str_pad((string) $week['weekNumber'], 2, '0', STR_PAD_LEFT) }}
-                        @if(!empty($week['rangeLabel']))
-                            <br><span class="wk-range">{{ $week['rangeLabel'] }}</span>
-                        @endif
-                    </td>
-                </tr>
-            </table>
-
-            {{-- Weekly grid --}}
             <table class="grid">
+                {{-- Widths ride on the header cells: DomPDF ignores
+                     <colgroup> widths but honours these. --}}
                 <thead>
                     <tr>
-                        <th class="time-col">Time</th>
+                        <th style="width: 8.1%;">TIME</th>
+                        @if($week['showGroupCol'])<th style="width: 7.3%;">GROUP</th>@endif
                         @foreach($week['days'] as $day)
-                            <th>{{ $day['dayName'] }}<br><span class="dt">{{ $day['label'] }}</span></th>
+                            <th style="width: {{ $dayWidth }}%;">{{ $day['dayName'] }}<br>{{ $day['label'] }}</th>
                         @endforeach
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($week['rows'] as $row)
                         <tr>
-                            <td class="time">
-                                @if($row['isBand'])
-                                    {{ $row['from'] }}@if(!empty($row['to']))-{{ $row['to'] }}@endif
-                                @elseif(!empty($row['to']))
-                                    {{ $row['from'] }}<br><span class="to">to</span><br>{{ $row['to'] }}
-                                @else
-                                    {{ $row['from'] }}
-                                @endif
-                            </td>
-
-                            @if($row['isBand'])
-                                {{-- Single full-width band for Tea Break / Lunch rows --}}
-                                <td class="break" colspan="{{ count($week['days']) }}">{{ $row['bandTopic'] }}</td>
+                            @if($row['type'] === 'band')
+                                {{-- A break band covers TIME, GROUP and every day column
+                                     still open at this row; days held by a rowspan from
+                                     above keep their own cell, so the band stops short. --}}
+                                @foreach($row['segments'] as $seg)
+                                    <td class="band" colspan="{{ $seg['colspan'] }}">{{ $seg['label'] }}</td>
+                                @endforeach
                             @else
+                                @if($row['showTime'])
+                                    <td class="time" rowspan="{{ $row['timeRowspan'] }}" colspan="{{ $row['timeColspan'] }}">
+                                        @if($row['to'] !== '')
+                                            {{ $row['from'] }}<br>to<br>{{ $row['to'] }}
+                                        @else
+                                            {{ $row['from'] }}
+                                        @endif
+                                    </td>
+                                @endif
+
+                                @if($week['showGroupCol'] && $row['timeColspan'] === 1)
+                                    <td class="grp @if(mb_strlen($row['groupLabel']) > 3) long @endif">{{ $row['groupLabel'] }}</td>
+                                @endif
+
                                 @foreach($week['days'] as $day)
                                     @php $c = $row['cells'][$day['key']]; @endphp
                                     @continue($c['state'] === 'skip')
-                                    <td class="day {{ !empty($c['isBreak']) ? 'is-break' : '' }}" rowspan="{{ $c['rowspan'] }}">
+                                    @php $n = count($c['events']); @endphp
+                                    <td class="day @if($n > 8) dense denser @elseif($n > 2) dense @endif" rowspan="{{ $c['rowspan'] }}">
                                         @foreach($c['events'] as $ev)
-                                            <div class="cell {{ $ev['isBreak'] ? 'is-break' : '' }}">
-                                                <div class="cell-topic">{{ $ev['topic'] }}</div>
+                                            <div class="cell">
+                                                <div>{{ $ev['topic'] }}</div>
                                                 @if($multiCourse && !empty($ev['course']))
-                                                    <div class="cell-course">{{ $ev['course'] }}</div>
+                                                    <div>{{ $ev['course'] }}</div>
                                                 @endif
                                                 @if(!empty($ev['faculty']))
-                                                    <div class="cell-fac">[{{ $ev['faculty'] }}]</div>
+                                                    <div class="fac">({{ $ev['faculty'] }})</div>
                                                 @endif
-                                                @if(!empty($ev['venue']))
-                                                    <div class="cell-ven">({{ $ev['venue'] }})</div>
-                                                @endif
-                                                @if(!empty($ev['time']))
-                                                    <div class="cell-time">({{ $ev['time'] }})</div>
+                                                @if(!empty($ev['initials']))
+                                                    <div class="ini">({{ $ev['initials'] }})</div>
                                                 @endif
                                             </div>
                                         @endforeach
@@ -185,7 +186,9 @@
             @if(!empty($footerNote))
                 <div class="note"><b>Note:</b> {{ $footerNote }}</div>
             @endif
-            <div class="pto">P.T.O.</div>
+            @if(!$loop->last)
+                <div class="pto">P.T.O.</div>
+            @endif
         </div>
     @endforeach
 @endif
