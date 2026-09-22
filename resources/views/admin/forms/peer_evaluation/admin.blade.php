@@ -404,7 +404,7 @@
                     const originalState = !isChecked;
                     checkbox.prop('disabled', true);
 
-                    $.post('/admin/peer/group/toggle-form/' + id, {
+                    $.post('{{ route('admin.peer.group.toggleForm', ['id' => '__ID__']) }}'.replace('__ID__', id), {
                             _token: '{{ csrf_token() }}',
                             is_form_active: isChecked
                         })

@@ -199,90 +199,143 @@ class PeerReflectionFieldController extends Controller
     // ==================== CRUD ====================
 
     /**
-     * Add takes a LIST of labels, Edit takes one.
+     * Add takes a LIST of labels ACROSS a LIST of groups; Edit takes one of each.
      *
-     * A form normally needs several reflection questions and they all share one
-     * Course / Event / Group, so the scope is validated once here and every label
-     * is checked against it. Scope handling is the same pipeline validated() uses:
-     * resolve the group first, blank selects become NULL, then assert the three
-     * levels agree.
+     * A form normally needs several reflection questions, and the same questions
+     * normally have to go on every group of an event - so both are lists, and the
+     * scope above them (Course / Event) is picked once for all of them. Adding a
+     * group at a time was this modal filled N times over.
      *
-     * @return array{scope: array<string, int|null>, labels: array<int, string>}
+     * The groups posted are Course Group Mapping pks; link() turns each into the
+     * peer_groups row the fields are actually stored against. course_id and
+     * event_id on each row then come from the GROUP rather than from the form -
+     * the selects are only a picker - which is also what makes the duplicate-label
+     * check below compare against the scope that really gets written.
+     *
+     * @return array{groups: array<int, PeerGroup>, labels: array<int, string>}
      */
     private function validatedMany(Request $request): array
     {
-        // Before the uniqueness rule, which scopes on group_id and so has to
-        // compare against the id that gets stored - not the mapping pk posted.
-        $this->resolveGroupSelection($request);
-
-        $unique = Rule::unique('peer_reflection_fields', 'field_label')
-            ->where(function ($query) use ($request) {
-                foreach (['course_id', 'event_id', 'group_id'] as $column) {
-                    $value = $request->input($column);
-                    filled($value) ? $query->where($column, $value) : $query->whereNull($column);
-                }
-
-                return $query;
-            });
-
         $validated = $request->validate([
             'fields' => ['required', 'array', 'min:1'],
             // distinct catches the same label typed into two rows of ONE submit.
-            // The unique rule cannot: neither row is in the table yet, so both
-            // would pass and the second insert would be the duplicate.
-            'fields.*.field_label' => ['required', 'string', 'max:255', 'distinct:ignore_case', $unique],
-            // All three are REQUIRED. A blank select stored NULL, which the OT
-            // form reads as "not restricted at that level" - so a field saved
-            // without picking a group appeared on every form of the course, and
-            // one saved without any scope appeared on every form there is.
+            // Labels already in the table are caught by assertLabelsAreFree(),
+            // once per group - a Rule::unique here could only scope to one.
+            'fields.*.field_label' => ['required', 'string', 'max:255', 'distinct:ignore_case'],
+            // All three levels are REQUIRED. A blank select stored NULL, which the
+            // OT form reads as "not restricted at that level" - so a field saved
+            // without picking a group appeared on every form of the course, and one
+            // saved without any scope appeared on every form there is.
             'course_id' => ['required', 'integer', Rule::exists('course_master', 'pk')],
             'event_id' => ['required', 'integer', Rule::exists('peer_events', 'id')],
-            // Already a peer_groups id by this point - resolveGroupSelection()
-            // swapped the posted mapping pk for it.
-            'group_id' => ['required', 'integer', Rule::exists('peer_groups', 'id')],
+            // Course Group Mapping pks, not peer_groups ids - linked below.
+            'group_ids' => ['required', 'array', 'min:1'],
+            'group_ids.*' => ['integer', Rule::exists(PeerGroupSource::TABLE, 'pk')],
         ], [
             'fields.required' => 'Please add at least one reflection field.',
-            'fields.*.field_label.unique' => 'A reflection field with that label already exists for this course / event / group.',
             'fields.*.field_label.distinct' => 'This field name is listed more than once.',
             'course_id.required' => 'Please pick a course.',
             'event_id.required' => 'Please pick an event.',
-            'group_id.required' => 'Please pick a group.',
+            'group_ids.required' => 'Please pick at least one group.',
+            'group_ids.*.exists' => 'One of the selected groups no longer exists.',
         ], [
             'fields.*.field_label' => 'Field Name',
             'course_id' => 'Course Name',
             'event_id' => 'Event Name',
-            'group_id' => 'Group Name',
+            'group_ids' => 'Group Name',
+            'group_ids.*' => 'Group Name',
         ]);
 
-        // Blank selects arrive as '' - store NULL so "global" is a real NULL and
-        // the unique rule above lines up with what is in the table.
-        $scope = [];
+        // group_id is left out on purpose: link() creates each peer_groups row FOR
+        // the submitted event, so a group can no longer disagree with it.
+        $this->assertScopeIsConsistent([
+            'course_id' => (int) $validated['course_id'],
+            'event_id' => (int) $validated['event_id'],
+            'group_id' => null,
+        ]);
 
-        foreach (['course_id', 'event_id', 'group_id'] as $column) {
-            $scope[$column] = filled($validated[$column] ?? null) ? (int) $validated[$column] : null;
+        $labels = array_map(static fn ($row) => trim($row['field_label']), $validated['fields']);
+
+        // The same group twice would write every label twice, and then trip the
+        // duplicate check against rows this very request had just inserted.
+        $groups = [];
+
+        foreach (array_values(array_unique($validated['group_ids'])) as $mapPk) {
+            $group = PeerGroupSource::link($validated['event_id'], $mapPk);
+
+            if (! $group) {
+                throw ValidationException::withMessages([
+                    'group_ids' => 'One of those groups could not be linked. Please pick another.',
+                ]);
+            }
+
+            $groups[] = $group;
         }
 
-        $this->assertScopeIsConsistent($scope);
+        // Every group is checked before a single row is written: a clash on the
+        // last group must not leave the first ones already holding new fields.
+        foreach ($groups as $group) {
+            $this->assertLabelsAreFree($group, $labels);
+        }
 
-        return [
-            'scope' => $scope,
-            'labels' => array_map(static fn ($row) => trim($row['field_label']), $validated['fields']),
-        ];
+        return ['groups' => $groups, 'labels' => $labels];
+    }
+
+    /**
+     * Refuse a label the group already has.
+     *
+     * Scoped on the exact (course, event, group) triple the row would be written
+     * with, so the same question can still be asked on another group or another
+     * event. Reported against the row that clashed - "fields.2.field_label" is the
+     * slot the Add modal shows a message in - rather than against the form as a
+     * whole, and the group is named because one submit now covers several.
+     *
+     * @param  array<int, string>  $labels
+     */
+    private function assertLabelsAreFree(PeerGroup $group, array $labels): void
+    {
+        $existing = PeerReflectionField::query()
+            ->where('course_id', $group->course_id)
+            ->where('event_id', $group->event_id)
+            ->where('group_id', $group->id)
+            ->pluck('field_label')
+            ->map(fn ($label) => mb_strtolower(trim((string) $label)))
+            ->all();
+
+        foreach ($labels as $index => $label) {
+            if (! in_array(mb_strtolower($label), $existing, true)) {
+                continue;
+            }
+
+            throw ValidationException::withMessages([
+                "fields.{$index}.field_label" => sprintf(
+                    'The group "%s" already has a reflection field called "%s".',
+                    $group->group_name,
+                    $label
+                ),
+            ]);
+        }
     }
 
     public function store(Request $request)
     {
-        ['scope' => $scope, 'labels' => $labels] = $this->validatedMany($request);
+        ['groups' => $groups, 'labels' => $labels] = $this->validatedMany($request);
 
         try {
             // All or nothing. A partial insert would leave the admin working out
-            // which of the labels still on screen had already been saved.
-            DB::transaction(function () use ($scope, $labels) {
-                foreach ($labels as $label) {
-                    PeerReflectionField::create($scope + [
-                        'field_label' => $label,
-                        'is_active' => true,
-                    ]);
+            // which of the labels still on screen had already been saved - and to
+            // which of the groups.
+            DB::transaction(function () use ($groups, $labels) {
+                foreach ($groups as $group) {
+                    foreach ($labels as $label) {
+                        PeerReflectionField::create([
+                            'course_id' => $group->course_id,
+                            'event_id' => $group->event_id,
+                            'group_id' => $group->id,
+                            'field_label' => $label,
+                            'is_active' => true,
+                        ]);
+                    }
                 }
             });
         } catch (\Throwable $e) {
@@ -291,9 +344,21 @@ class PeerReflectionFieldController extends Controller
             return $this->fail($request, 'Could not add the reflection fields. Please try again.');
         }
 
-        return $this->ok($request, count($labels) === 1
-            ? 'Reflection field added successfully.'
-            : count($labels).' reflection fields added successfully.');
+        return $this->ok($request, $this->addedMessage(count($labels), count($groups)));
+    }
+
+    /** "2 reflection fields added across 3 groups.", and the singular variants. */
+    private function addedMessage(int $fields, int $groups): string
+    {
+        if ($groups === 1) {
+            return $fields === 1
+                ? 'Reflection field added successfully.'
+                : "{$fields} reflection fields added successfully.";
+        }
+
+        $noun = $fields === 1 ? 'reflection field' : 'reflection fields';
+
+        return "{$fields} {$noun} added across {$groups} groups.";
     }
 
     public function update(Request $request, $id)
@@ -520,6 +585,11 @@ class PeerReflectionFieldController extends Controller
             'columns' => $columns,
             'members' => $members,
             'allowsRemarks' => $allowsRemarks,
+            // The group row itself, for the score caps: under Distribute Marks a
+            // box is capped by the group's pool rather than by the column's own Max
+            // Marks, and a preview that shows a different cap from the real form is
+            // not a preview.
+            'group' => $group,
             'courseId' => $courseId,
             'eventId' => $eventId,
             'groupId' => $group->id ?? null,

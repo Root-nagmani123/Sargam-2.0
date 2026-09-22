@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\PeerColumn;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -123,14 +124,17 @@ final class PeerEvaluationForm
             return 'The evaluation form for this group is not open yet.';
         }
 
+        // No event, or an event that has since been deleted: there is no window to
+        // check, but the form still has to have something on it - so these fall
+        // through to the criteria check rather than reporting "open" outright.
         if (blank($group->event_id)) {
-            return null;
+            return self::noCriteriaReason($group);
         }
 
         $event = DB::table('peer_events')->where('id', $group->event_id)->first();
 
         if (! $event) {
-            return null;
+            return self::noCriteriaReason($group);
         }
 
         if (! $event->is_active) {
@@ -149,7 +153,63 @@ final class PeerEvaluationForm
             return 'This evaluation closed on ' . Carbon::parse($event->end_date)->format('d/m/Y') . '.';
         }
 
+        return self::noCriteriaReason($group);
+    }
+
+    /**
+     * Closed because there is nothing to score.
+     *
+     * Deactivating a group's last column on Manage Evaluation Columns used to
+     * leave the OT looking at a live form: the grid still listed every peer, the
+     * reflection questions still rendered, and Submit still posted - it just had
+     * no criteria on it. A form with nothing to score is not an evaluation, so
+     * the criteria are part of "is this open" exactly as the dates are, and
+     * store() refuses it for the same reason the form is read-only.
+     *
+     * Checked last: when the window has not opened yet, "opens on 12/10/2026" is
+     * the more useful sentence, and an admin still setting the form up is the
+     * normal reason for it to be empty at that point.
+     */
+    private static function noCriteriaReason(object $group): ?string
+    {
+        if (self::columnsFor($group)->isEmpty()) {
+            return 'This evaluation form has no active criteria yet.';
+        }
+
         return null;
+    }
+
+    /**
+     * The cap on one score box: what this evaluator may put against one peer for
+     * one criterion.
+     *
+     * Rate Peers caps every box at the criterion's own Max Marks. Distribute
+     * Marks does not work that way - there the evaluator shares out ONE
+     * group-level pool (peer_groups.buffer_marks) across their peers - so capping
+     * each box at the column's Max Marks stopped an OT giving a larger share to
+     * one peer while the pool still had marks left in it. The pool is the cap;
+     * store() checks the TOTAL handed out against the same figure.
+     *
+     * A group with no pool set falls back to the column's own max, so a
+     * half-configured group still renders something an OT can fill.
+     */
+    public static function cellMax(object $column, ?object $group): float
+    {
+        $columnMax = (float) ($column->max_marks ?? ($group->max_marks ?? 10));
+
+        if (($column->evaluation_type ?? null) !== PeerColumn::TYPE_DISTRIBUTE_MARKS) {
+            return $columnMax;
+        }
+
+        $pool = self::poolFor($group);
+
+        return $pool > 0 ? $pool : $columnMax;
+    }
+
+    /** One evaluator's Distribute Marks pool for a group; 0 when none is set. */
+    public static function poolFor(?object $group): float
+    {
+        return (float) ($group->buffer_marks ?? 0);
     }
 
     /** Groups the user belongs to, newest event first, whether open or not. */

@@ -72,6 +72,24 @@
                 @if ($selectedGroupId && count($members) > 0)
                     @php
                         $selectedGroup = $groups->where('id', $selectedGroupId)->first();
+
+                        // The cap on one box, per criterion, from the same call
+                        // store() validates with: Rate Peers caps on the column's
+                        // own Max Marks, Distribute Marks on the group's pool -
+                        // there the marks come out of one shared budget, so a box
+                        // held to the column max stopped an OT giving a bigger
+                        // share to one peer while the pool still had marks in it.
+                        $cellMax = $columns->mapWithKeys(fn ($column) => [
+                            $column->id => \App\Support\PeerEvaluationForm::cellMax($column, $selectedGroup),
+                        ]);
+                        $pool = \App\Support\PeerEvaluationForm::poolFor($selectedGroup);
+                        $distributeColumns = $columns->where(
+                            'evaluation_type',
+                            \App\Models\PeerColumn::TYPE_DISTRIBUTE_MARKS
+                        );
+                        // "10.00" -> "10", "7.50" -> "7.5". Marks are decimals but
+                        // read as counts.
+                        $trim = fn ($value) => rtrim(rtrim(number_format((float) $value, 2, '.', ''), '0'), '.');
                     @endphp
                     <form method="POST" action="{{ route('peer.store') }}" id="evaluationForm">
                         @csrf
@@ -98,6 +116,28 @@
                                 </div>
                             </div>
                             <div class="card-body p-0">
+                                {{-- Distribute Marks is ONE pool shared out across
+                                     the whole group, not a scale applied to each
+                                     peer - so who gets nothing is part of the
+                                     answer, and how much is left matters while you
+                                     type. Without this the OT learned they were
+                                     over the pool only by submitting and being
+                                     turned away by store(), which checks the very
+                                     same total. --}}
+                                @if ($distributeColumns->isNotEmpty() && $pool > 0)
+                                    <div class="alert alert-info border-0 rounded-3 mx-4 mt-4 mb-0 d-flex flex-wrap align-items-center gap-2"
+                                         id="peerPoolBanner" data-pool="{{ $trim($pool) }}" role="status">
+                                        <i class="material-icons material-symbols-rounded" style="font-size: 1.25rem;">savings</i>
+                                        <span>
+                                            Share out up to <strong>{{ $trim($pool) }}</strong> marks in total across your peers.
+                                        </span>
+                                        <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill ms-auto">
+                                            Given <strong id="peerPoolUsed">0</strong> &middot;
+                                            Remaining <strong id="peerPoolLeft">{{ $trim($pool) }}</strong>
+                                        </span>
+                                    </div>
+                                @endif
+
                                 {{-- Table Section --}}
                                 <div class="table-responsive">
                                     <table class="table table-hover align-middle mb-0">
@@ -110,7 +150,7 @@
                                                     <th class="fw-semibold text-uppercase small text-muted border-0 py-3 text-center">
                                                         <div class="d-flex flex-column align-items-center">
                                                             <span class="mb-1">{{ $column->column_name }}</span>
-                                                            <small class="text-muted fw-normal">(0-{{ $column->max_marks ?? ($selectedGroup->max_marks ?? 10) }})</small>
+                                                            <small class="text-muted fw-normal">(0-{{ $trim($cellMax[$column->id]) }})</small>
                                                         </div>
                                                     </th>
                                                 @endforeach
@@ -153,18 +193,19 @@
                                                     @foreach ($columns as $column)
                                                         <td class="text-center">
                                                             <div class="score-input-wrapper">
-                                                                {{-- The COLUMN's own max wins over the group's:
-                                                                     Manage Evaluation Columns gives each column its
-                                                                     own Max Marks, and the group value is only the
-                                                                     default a new column starts from. --}}
+                                                                {{-- Rate Peers caps on the COLUMN's own Max Marks;
+                                                                     Distribute Marks caps on the group's pool -
+                                                                     PeerEvaluationForm::cellMax() decides which, and
+                                                                     store() validates the box with the same call. --}}
                                                                 {{-- min="0": store() accepts 0..max, and the box
                                                                      defaults to 0, so min="1" made every untouched
                                                                      score fail the browser's own validation. --}}
                                                                 <input type="number"
                                                                     min="0"
-                                                                    max="{{ $column->max_marks ?? ($selectedGroup->max_marks ?? 10) }}"
+                                                                    max="{{ $trim($cellMax[$column->id]) }}"
                                                                     step="any"
                                                                     name="scores[{{ $member->id }}][{{ $column->id }}]"
+                                                                    data-evaluation-type="{{ $column->evaluation_type }}"
                                                                     class="form-control form-control-lg text-center score-input fw-bold border-2"
                                                                     value="{{ old("scores.{$member->id}.{$column->id}", $answers['scores'][$member->id][$column->id] ?? 0) }}"
                                                                     required
@@ -274,22 +315,74 @@
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
+        // 0 is a score, and marks are decimals.
+        //
+        // This read the box with parseInt and forced anything under 1 back up to
+        // 1, so an OT could not give a peer nothing and 7.5 silently became 7.
+        // Under Distribute Marks that made the form unfillable: the pool only
+        // stretches so far, so most peers legitimately get 0 - and the submit
+        // handler below then refused to post while any box still held one.
         function validateScore(input) {
-            let maxMarks = parseInt(input.getAttribute('max')) || 10;
-            let value = parseInt(input.value);
-            
-            if (isNaN(value) || value < 1) {
-                input.value = 1;
-                showScoreFeedback(input, 'error');
-            } else if (value > maxMarks) {
-                input.value = maxMarks;
+            const parsedMax = parseFloat(input.getAttribute('max'));
+            const maxMarks = isNaN(parsedMax) ? 10 : parsedMax;
+            const raw = String(input.value).trim();
+
+            if (raw === '') {
+                // Left empty rather than filled in for them: the value must not
+                // jump back under the cursor of someone retyping a score. The
+                // submit handler is what reports a box still blank at the end.
                 showScoreFeedback(input, 'error');
             } else {
-                showScoreFeedback(input, 'success');
+                const value = parseFloat(raw);
+
+                if (isNaN(value) || value < 0) {
+                    input.value = 0;
+                    showScoreFeedback(input, 'error');
+                } else if (value > maxMarks) {
+                    input.value = maxMarks;
+                    showScoreFeedback(input, 'error');
+                } else {
+                    showScoreFeedback(input, 'success');
+                }
             }
-            
+
             // Update visual state
             updateInputState(input);
+            updatePool();
+        }
+
+        /**
+         * The Distribute Marks pool, counted as it is spent.
+         *
+         * Only the distribute boxes count towards it - a Rate Peers score is not
+         * money out of the same purse. store() checks the same total server-side;
+         * this is so the OT can see it before being turned away.
+         *
+         * @return {number} marks still to hand out (negative = over the pool)
+         */
+        function updatePool() {
+            const banner = document.getElementById('peerPoolBanner');
+            if (!banner) { return 0; }
+
+            const pool = parseFloat(banner.dataset.pool) || 0;
+            let used = 0;
+
+            document.querySelectorAll('.score-input[data-evaluation-type="distribute_marks"]').forEach(input => {
+                const value = parseFloat(input.value);
+                if (!isNaN(value)) { used += value; }
+            });
+
+            // Marks are decimals, so the running total picks up float noise
+            // (0.1 + 0.2). Rounded to the 2dp the scores themselves are stored at.
+            const round = (n) => Math.round(n * 100) / 100;
+            const left = round(pool - used);
+
+            document.getElementById('peerPoolUsed').textContent = round(used);
+            document.getElementById('peerPoolLeft').textContent = left;
+            banner.classList.toggle('alert-danger', left < 0);
+            banner.classList.toggle('alert-info', left >= 0);
+
+            return left;
         }
 
         function showScoreFeedback(input, type) {
@@ -310,8 +403,9 @@
         }
 
         function updateInputState(input) {
-            const value = parseInt(input.value) || 0;
-            const maxMarks = parseInt(input.getAttribute('max')) || 10;
+            const value = parseFloat(input.value) || 0;
+            const parsedMax = parseFloat(input.getAttribute('max'));
+            const maxMarks = isNaN(parsedMax) || parsedMax <= 0 ? 10 : parsedMax;
             
             // Remove all state classes
             input.classList.remove('score-low', 'score-medium', 'score-high');
@@ -378,31 +472,54 @@
                 input.addEventListener('blur', function() {
                     validateScore(this);
                 });
-                
+
                 // Initialize state
                 updateInputState(input);
             });
+
+            // The pool starts out reflecting whatever was saved last time, not 0 -
+            // the boxes reopen filled in with the previous submission.
+            updatePool();
 
             // Form submission handling with better UX
             const evaluationForm = document.getElementById('evaluationForm');
             if (evaluationForm) {
                 evaluationForm.addEventListener('submit', function(e) {
+                    // EMPTY, not "under 1". 0 is a score an OT is entitled to give,
+                    // and under Distribute Marks most peers may well get one - the
+                    // pool only stretches so far. Treating 0 as unfilled meant the
+                    // form could not be submitted at all unless every peer got at
+                    // least 1, which the pool often cannot pay for.
                     const scoreInputs = this.querySelectorAll('.score-input');
                     const emptyScores = Array.from(scoreInputs).filter(input => {
-                        const value = parseInt(input.value);
-                        return isNaN(value) || value < 1;
+                        return String(input.value).trim() === '' || isNaN(parseFloat(input.value));
                     });
 
                     if (emptyScores.length > 0) {
                         e.preventDefault();
                         showNotification(`Please fill all ${emptyScores.length} empty score field(s) before submitting.`, 'warning');
-                        
+
                         // Highlight empty fields
                         emptyScores.forEach(input => {
                             input.classList.add('is-invalid');
-                            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         });
-                        
+                        emptyScores[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                        return false;
+                    }
+
+                    // Over the Distribute Marks pool: store() refuses this and sends
+                    // the whole form back, so it is worth catching here - the OT can
+                    // see which boxes to take marks off while they are still looking
+                    // at them.
+                    const remaining = updatePool();
+
+                    if (remaining < 0) {
+                        e.preventDefault();
+                        showNotification(`You have handed out ${Math.abs(remaining)} marks more than this group's pool. Take some back before submitting.`, 'warning');
+                        document.getElementById('peerPoolBanner')
+                            .scrollIntoView({ behavior: 'smooth', block: 'center' });
+
                         return false;
                     }
 

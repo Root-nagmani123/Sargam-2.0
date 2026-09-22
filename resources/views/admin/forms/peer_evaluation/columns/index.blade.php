@@ -431,6 +431,7 @@
     var UPDATE_URL = @json(route('admin.peer.columns.update', ['id' => '__ID__']));
     var DESTROY_URL = @json(route('admin.peer.columns.destroy', ['id' => '__ID__']));
     var BUFFER_URL = @json(route('admin.peer.columns.buffer', ['group' => '__ID__']));
+    var FORM_TOGGLE_URL = @json(route('admin.peer.group.toggleForm', ['id' => '__ID__']));
     var CSRF = @json(csrf_token());
     // Same labels the server uses, so the "already uses X" notice reads the way the
     // 422 for the same rule would.
@@ -796,6 +797,48 @@
                 ? $(this)
                 : $('.pec-toggle-group[data-group-id="' + $(this).data('group-id') + '"]');
             toggleGroup($btn);
+        });
+
+        /* The group's Form Status switch - the admin's master control over the
+           OT-facing form. Everything else on this screen decides what is ON the
+           form; this decides whether there is one at all.
+
+           Posts the state it was moved TO rather than asking the server to flip
+           whatever it finds, so a double click cannot land on the opposite of what
+           the switch is showing. On failure the switch goes back, because the only
+           truthful thing to show is what the server still holds. */
+        $(document).on('change', '.pec-form-toggle', function () {
+            var $toggle = $(this);
+            var groupId = $toggle.data('group-id');
+            var wanted = $toggle.is(':checked');
+
+            $toggle.prop('disabled', true);
+
+            $.post(FORM_TOGGLE_URL.replace('__ID__', groupId), {
+                _token: CSRF,
+                is_form_active: wanted ? 1 : 0
+            }, null, 'json')
+                .done(function (res) {
+                    if (!res || res.status !== 'success') {
+                        $toggle.prop('checked', !wanted);
+                        notifyError((res && res.message) || 'Could not change the form status.');
+                        return;
+                    }
+
+                    var open = !!res.is_form_active;
+                    $toggle.prop('checked', open);
+                    $toggle.siblings('.status-pill')
+                        .toggleClass('bg-success-subtle', open)
+                        .toggleClass('bg-danger-subtle', !open)
+                        .text(open ? 'Active' : 'Inactive');
+                    toast(res.message || (open ? 'Evaluation form opened.' : 'Evaluation form closed.'));
+                })
+                .fail(function (xhr) {
+                    $toggle.prop('checked', !wanted);
+                    notifyError((xhr.responseJSON && xhr.responseJSON.message) ||
+                        'Could not change the form status.');
+                })
+                .always(function () { $toggle.prop('disabled', false); });
         });
 
         /* Rate Peers / Distribute Marks tabs inside a group. */

@@ -385,8 +385,11 @@ Route::get('admin/peer/group/{group}/submissions', [PeerEvaluationController::cl
 Route::get('admin/peer/export/{groupId}', [PeerEvaluationController::class, 'exportSubmissions'])
     ->name('admin.peer.export');
 
-// web.php
-Route::post('admin/peer/group/toggle-form/{id}', [PeerEvaluationController::class, 'toggleForm'])->name('admin.peer.group.toggleForm');
+// admin.peer.group.toggleForm was declared here pointing at a @toggleForm that
+// has never existed on the controller. It only ever resolved because the real
+// route below registers the same POST uri and wins the lookup - the name was a
+// trap for anyone calling route('admin.peer.group.toggleForm'). The name now
+// lives on the working route.
 
 // Reflection Fields lived here (add / toggle / delete), duplicated verbatim
 // further down this file. Both sets are gone: the editor they served was removed
@@ -433,7 +436,10 @@ Route::get('/admin/peer/events/{courseId}', [PeerEvaluationController::class, 'g
 
 // Groups with course/event (updated hierarchy)
 Route::post('/admin/peer/group/add', [PeerEvaluationController::class, 'addGroup'])->name('admin.peer.group.add');
-Route::post('/admin/peer/group/toggle-form/{id}', [PeerEvaluationController::class, 'toggleFormStatus']);
+// The admin's master switch over an OT-facing form: the group row on Manage
+// Evaluation Columns and the Status switch on Manage Groups both post here.
+Route::post('/admin/peer/group/toggle-form/{id}', [PeerEvaluationController::class, 'toggleFormStatus'])
+    ->name('admin.peer.group.toggleForm');
 Route::post('/admin/peer/group/delete/{id}', [PeerEvaluationController::class, 'deleteGroup']);
 
 // Max marks

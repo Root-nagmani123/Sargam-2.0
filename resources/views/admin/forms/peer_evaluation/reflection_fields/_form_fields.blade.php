@@ -57,13 +57,34 @@
     <div class="pe-error"></div>
 </div>
 
-<div class="pe-field mb-3">
-    <label class="pe-form-label" for="{{ $prefix }}GroupId">Group Name<span class="pe-req">*</span></label>
-    <select class="form-select pe-control js-prf-select2" id="{{ $prefix }}GroupId" name="group_id" required>
-        <option value="">Select Group</option>
-    </select>
-    <div class="pe-error"></div>
-</div>
+{{-- Add takes MANY groups, Edit takes one.
+
+     The same reflection questions normally have to go on every group of an
+     event, and one group at a time is this modal filled N times over - the same
+     reason Manage Evaluation Columns takes a list of groups. Edit stays single:
+     a stored field IS one row, scoped to one group.
+
+     No empty placeholder <option> on the multi-select - it would be offered as a
+     pickable value - so the placeholder travels in data-placeholder, which the
+     page script hands to Select2. --}}
+@if ($multiple ?? false)
+    <div class="pe-field mb-3">
+        <label class="pe-form-label" for="{{ $prefix }}GroupId">Group Name<span class="pe-req">*</span></label>
+        <select class="form-select pe-control js-prf-select2" id="{{ $prefix }}GroupId"
+                name="group_ids[]" data-placeholder="Select Groups" multiple required>
+        </select>
+        <div class="pe-form-hint">Pick one or more groups. Every field below is added to each of them.</div>
+        <div class="pe-error"></div>
+    </div>
+@else
+    <div class="pe-field mb-3">
+        <label class="pe-form-label" for="{{ $prefix }}GroupId">Group Name<span class="pe-req">*</span></label>
+        <select class="form-select pe-control js-prf-select2" id="{{ $prefix }}GroupId" name="group_id" required>
+            <option value="">Select Group</option>
+        </select>
+        <div class="pe-error"></div>
+    </div>
+@endif
 
 {{-- Add takes MANY fields, Edit takes one.
 

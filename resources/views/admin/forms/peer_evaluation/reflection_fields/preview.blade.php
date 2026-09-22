@@ -15,6 +15,17 @@
         'event_id'  => $eventId,
         'group_id'  => $groupId,
     ]);
+
+    // "10.00" -> "10", "7.50" -> "7.5", the same way the OT form prints a cap.
+    $trim = fn ($value) => rtrim(rtrim(number_format((float) $value, 2, '.', ''), '0'), '.');
+
+    // Distribute Marks shares ONE group-level pool out across the peers, so the
+    // OT's form carries a running total of it. Previewing the caps without saying
+    // where they come from reads like every box is worth that much on its own.
+    $pool = \App\Support\PeerEvaluationForm::poolFor($group);
+    $hasDistribute = $columns->contains(
+        fn ($column) => $column->evaluation_type === \App\Models\PeerColumn::TYPE_DISTRIBUTE_MARKS
+    );
 @endphp
 <div class="container-fluid pe-page pe-preview-page">
     <x-breadcrum :title="'Full Form Preview'"
@@ -66,7 +77,16 @@
                 @if($columns->isEmpty())
                     <p class="text-body-secondary mb-3">
                         No evaluation criteria apply to this scope, so the form would show no score
-                        columns. Add them on Manage Evaluation Columns.
+                        columns - which closes the form: an OT opening it is told the evaluation has
+                        no active criteria yet. Add them on Manage Evaluation Columns.
+                    </p>
+                @endif
+
+                @if($hasDistribute && $pool > 0)
+                    <p class="text-body-secondary mb-3">
+                        Distribute Marks: each OT shares out up to <strong>{{ $trim($pool) }}</strong>
+                        marks in total across their peers, and the form counts down what is left as
+                        they type. The cap above each box is that pool, not a per-criterion scale.
                     </p>
                 @endif
 
@@ -84,7 +104,7 @@
                                          "(1-10)" against a column capped at 5 was a
                                          preview of a form that does not exist. --}}
                                     @foreach($columns as $column)
-                                        <th scope="col">{{ $column->column_name }} (0-{{ rtrim(rtrim(number_format((float) ($column->max_marks ?? 10), 2, '.', ''), '0'), '.') }})</th>
+                                        <th scope="col">{{ $column->column_name }} (0-{{ $trim(\App\Support\PeerEvaluationForm::cellMax($column, $group)) }})</th>
                                     @endforeach
                                     @if($allowsRemarks)
                                         <th scope="col" class="pe-preview-remarks-col">Remarks</th>
@@ -103,7 +123,7 @@
                                             <td>
                                                 <input type="number" class="form-control pe-preview-score"
                                                        value="0.00" step="0.01" min="0"
-                                                       max="{{ $column->max_marks ?? 10 }}" disabled
+                                                       max="{{ $trim(\App\Support\PeerEvaluationForm::cellMax($column, $group)) }}" disabled
                                                        aria-label="{{ $column->column_name }} for {{ $member->first_name }}">
                                             </td>
                                         @endforeach

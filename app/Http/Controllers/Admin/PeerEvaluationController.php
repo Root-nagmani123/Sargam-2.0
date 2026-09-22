@@ -192,13 +192,26 @@ class PeerEvaluationController extends Controller
     }
 
     /**
-     * Toggle form active status
+     * Open or close one group's evaluation form.
+     *
+     * This is the admin's master switch over the OT-facing form: off, and nobody
+     * in the group can fill or submit it, whatever criteria it carries. It is
+     * driven from the group row on Manage Evaluation Columns and from the legacy
+     * Manage Groups screen.
      */
-    public function toggleFormStatus($id)
+    public function toggleFormStatus(Request $request, $id)
     {
         try {
             $group = PeerGroup::findOrFail($id);
-            $group->is_form_active = !$group->is_form_active;
+
+            // The switch says which way it was moved, so honour that and only fall
+            // back to flipping when a caller sends nothing. Two admins on the
+            // screen at once - or one double click - then both settle on the state
+            // the switch is actually showing, instead of on whichever request
+            // happened to land second.
+            $group->is_form_active = $request->has('is_form_active')
+                ? $request->boolean('is_form_active')
+                : ! $group->is_form_active;
             $group->save();
 
             // Switching the form ON is the moment the group's officer trainees
@@ -212,7 +225,10 @@ class PeerEvaluationController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'is_form_active' => $group->is_form_active
+                'is_form_active' => $group->is_form_active,
+                'message' => $group->is_form_active
+                    ? 'Evaluation form opened for ' . $group->group_name . '.'
+                    : 'Evaluation form closed for ' . $group->group_name . '.',
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -347,9 +363,11 @@ class PeerEvaluationController extends Controller
                 }
 
                 $score = (float) $score;
-                // The column's own cap wins; the group value is only the default
-                // a new column starts from. Same rule the form renders with.
-                $max = (float) ($column->max_marks ?? $group->max_marks ?? 10);
+                // Rate Peers caps on the column's own Max Marks; Distribute Marks
+                // caps on the group's pool instead, because there the marks come
+                // out of one shared budget rather than a per-criterion scale. Same
+                // rule - the same call - the form renders the box with.
+                $max = PeerEvaluationForm::cellMax($column, $group);
 
                 if ($score < 0 || $score > $max) {
                     return back()->withInput()->with('error', sprintf(
@@ -369,8 +387,9 @@ class PeerEvaluationController extends Controller
 
         // buffer_marks is one pool per evaluator across the group's "Distribute
         // Marks" criteria, so it can only be checked once the whole submission is
-        // known - not per box as it is typed.
-        $buffer = (float) ($group->buffer_marks ?? 0);
+        // known - not per box as it is typed. cellMax() has already held each box
+        // to the pool; this is what stops the boxes ADDING UP to more than it.
+        $buffer = PeerEvaluationForm::poolFor($group);
 
         if ($buffer > 0 && $distributed > $buffer) {
             return back()->withInput()->with('error', sprintf(

@@ -345,7 +345,9 @@
             if ($sel.data('select2')) { return; }
             var opts = {
                 width: '100%',
-                placeholder: $sel.find('option:first').text() || 'Select',
+                // data-placeholder first: the multi-select group picker carries no
+                // empty placeholder <option> to read the text off.
+                placeholder: $sel.data('placeholder') || $sel.find('option:first').text() || 'Select',
                 allowClear: !$sel.prop('required')
             };
             if ($parent && $parent.length) { opts.dropdownParent = $parent; }
@@ -389,6 +391,20 @@
 
     /* ── Dependent dropdowns ───────────────────────────────────────── */
 
+    // Add posts group_ids[] (many groups, one set of fields written to each),
+    // Edit posts group_id (a stored field is one row, scoped to one group), and
+    // the Course / Event handlers below are shared by the two modals.
+    function groupSelect($form) {
+        return $form.find('[name="group_id"], [name="group_ids[]"]');
+    }
+
+    // A multi-select with nothing picked answers [] - which is truthy - so "has
+    // this got a value" cannot be a plain !$sel.val() test.
+    function hasValue($sel) {
+        var value = $sel.val();
+        return $.isArray(value) ? value.length > 0 : !!value;
+    }
+
     // Rebuild $event (and optionally $group) for the given course/event.
     // res.events / res.groups are ordered LISTS of {id, name} - see
     // PeerReflectionFieldController::options() for why they aren't maps.
@@ -412,12 +428,23 @@
         });
     }
 
+    // Keyed on the option's VALUE, not on its position: the multi-select group
+    // picker has no empty placeholder <option>, so ":not(:first)" would have kept
+    // a real group on every rebuild.
     function fill($sel, list, keep) {
-        $sel.find('option:not(:first)').remove();
+        $sel.find('option').filter(function () { return this.value !== ''; }).remove();
         $.each(list, function (i, item) {
             $sel.append($('<option>', { value: item.id, text: item.name }));
         });
-        $sel.val(keep && $sel.find('option[value="' + keep + '"]').length ? keep : '');
+
+        // Only re-select what the rebuilt list still offers. `keep` is one id for
+        // the single selects and may be a list for the multi one.
+        var wanted = $.isArray(keep) ? keep : (keep ? [keep] : []);
+        var kept = $.grep(wanted, function (value) {
+            return $sel.find('option[value="' + value + '"]').length > 0;
+        });
+
+        $sel.val($sel.prop('multiple') ? kept : (kept[0] || ''));
         // Select2 re-reads <option>s live, but its rendered selection only
         // refreshes on this event.
         $sel.trigger('change.select2');
@@ -474,14 +501,17 @@
                 return;
             }
 
-            var $field = $form.find('[name="' + field + '"]');
+            // Laravel names array fields "group_ids" or "group_ids.0"; the control
+            // itself is named "group_ids[]". Try both shapes.
+            var base = field.replace(/\.\d+$/, '');
+            var $field = $form.find('[name="' + base + '"], [name="' + base + '[]"]').first();
             $field.addClass('is-invalid');
-            $field.closest('.pe-field').find('.pe-error').addClass('is-shown').text(msg);
+            $field.closest('.pe-field').find('.pe-error').first().addClass('is-shown').text(msg);
         });
     }
     function syncPlaceholderState($form) {
         $form.find('select.pe-control').each(function () {
-            $(this).toggleClass('pe-placeholder', !$(this).val());
+            $(this).toggleClass('pe-placeholder', !hasValue($(this)));
         });
     }
 
@@ -606,7 +636,7 @@
             loadOptions({
                 courseId: $(this).val(),
                 $event: $form.find('select[name="event_id"]'),
-                $group: $form.find('select[name="group_id"]')
+                $group: groupSelect($form)
             }).always(function () { syncPlaceholderState($form); });
         });
 
@@ -615,12 +645,12 @@
             loadOptions({
                 courseId: $form.find('select[name="course_id"]').val(),
                 eventId: $(this).val(),
-                $group: $form.find('select[name="group_id"]')
+                $group: groupSelect($form)
             }).always(function () { syncPlaceholderState($form); });
         });
 
         $('#prfAddForm, #prfEditForm').on('change', 'select.pe-control', function () {
-            $(this).toggleClass('pe-placeholder', !$(this).val());
+            $(this).toggleClass('pe-placeholder', !hasValue($(this)));
         });
 
         /* Add */
@@ -638,7 +668,7 @@
             loadOptions({
                 courseId: course, eventId: event,
                 $event: $form.find('[name="event_id"]'), keepEvent: event,
-                $group: $form.find('[name="group_id"]')
+                $group: groupSelect($form)
             }).always(function () {
                 syncPlaceholderState($form);
                 refreshSelect2($form);

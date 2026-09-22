@@ -131,6 +131,23 @@ final class PeerGroupSource
         $group->is_active = true;
         $group->max_marks = $group->max_marks ?? 10;
         $group->buffer_marks = $group->buffer_marks ?? 100;
+
+        // A group opens its form when it is FIRST created. peer_groups defaults
+        // is_form_active to 0, and this is the only path that creates a group now -
+        // Manage Events, Manage Evaluation Columns and Manage Reflection Fields all
+        // come through here - so every group arrived with the OT form switched off
+        // and nothing but the legacy Manage Groups screen could switch it on. The
+        // OT was told "The evaluation form for this group is not open yet" about a
+        // group nobody had knowingly closed.
+        //
+        // The event's own status and its start/end dates are the real window (see
+        // PeerEvaluationForm::closedReason); is_form_active is the manual override
+        // on top of it. Guarded on `exists` so a later link() - adding columns to a
+        // group that already has some - never reopens a form an admin has closed.
+        if (! $group->exists) {
+            $group->is_form_active = true;
+        }
+
         $group->save();
 
         self::syncMembers($group);
