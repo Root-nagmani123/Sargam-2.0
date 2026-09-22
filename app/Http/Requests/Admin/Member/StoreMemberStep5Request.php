@@ -41,9 +41,9 @@ class StoreMemberStep5Request extends FormRequest
             'residencenumber.digits_between' => 'Residence number must be between 6 and 15 digits.',
             'picture.image'        => 'The uploaded file must be an image.',
             'picture.mimes'        => 'Picture must be a file of type: jpg, jpeg, png.',
-            'picture.max'          => 'Picture size must not exceed 2MB.',
-            'additionaldocument.mimes' => 'Document must be of type: pdf, doc, docx, jpg, jpeg, or png.',
-            'additionaldocument.max'   => 'Document size must not exceed 4MB.',
+            'picture.max'          => 'Picture size must not exceed 500KB.',
+            'additionaldocument.mimes' => 'Document must be of type: pdf, jpg, jpeg, or png.',
+            'additionaldocument.max'   => 'Document size must not exceed 1MB.',
         ];
     }
 }
