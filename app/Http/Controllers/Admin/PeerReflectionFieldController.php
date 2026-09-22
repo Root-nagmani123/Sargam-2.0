@@ -502,6 +502,15 @@ class PeerReflectionFieldController extends Controller
 
         $fields = PeerEvaluationForm::reflectionFieldsFor($scope);
         $columns = PeerEvaluationForm::columnsFor($scope);
+        // TEMPORARY DIAGNOSTIC - remove once the "extra columns" report is settled.
+        \Illuminate\Support\Facades\Log::debug('PEER PREVIEW PROBE', [
+            'url' => $request->fullUrl(),
+            'query' => $request->query(),
+            'resolved_group' => $group ? ['id' => $group->id, 'course_id' => $group->course_id, 'event_id' => $group->event_id] : null,
+            'columns' => $columns->map(fn ($c) => $c->id . ':' . $c->column_name . ' (c=' . $c->course_id . ' e=' . $c->event_id . ' g=' . ($c->group_id ?? 'NULL') . ')')->all(),
+            'fields' => $fields->pluck('field_label')->all(),
+        ]);
+
 
         // No self-exclusion here: an admin previewing the form is not one of the
         // OTs, so every member of the group is listed.
