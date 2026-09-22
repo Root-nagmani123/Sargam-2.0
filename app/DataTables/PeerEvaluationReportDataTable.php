@@ -17,9 +17,9 @@ use Yajra\DataTables\Services\DataTable;
  * Peer Evaluation -> Evaluation Reports.
  *
  * One row per evaluated OT (a peer_group_members row). The score columns are
- * DYNAMIC - one per visible peer_columns row - so they are built once from
- * criteria() and used by both html() and dataTable(). See the note on criteria()
- * about why that list is not narrowed by the current filter.
+ * DYNAMIC - one per criterion NAME in the scope on screen - so they are built once
+ * from criteria() and used by both html() and dataTable(). See the note on
+ * criteria() for how that list is narrowed and why the page reload makes it safe.
  *
  * Every number is an AVERAGE of the scores the OT RECEIVED (peer_scores rows
  * where member_id = this OT). Scores are ints 1..10, so the averages stay on that
@@ -28,27 +28,126 @@ use Yajra\DataTables\Services\DataTable;
  */
 class PeerEvaluationReportDataTable extends DataTable
 {
-    /** Cache so criteria() isn't queried twice per request. */
-    private static $criteriaCache = null;
+    /** Cache, keyed by filter signature, so criteria() isn't queried twice per request. */
+    private static $criteriaCache = [];
 
     /**
-     * The criteria columns, in a fixed order.
+     * The criteria columns for the scope on screen, in a fixed order.
      *
-     * Deliberately NOT scoped to the current course/event filter: DataTables
-     * renders its column config server-side once, and every later filter change is
-     * an AJAX reload against that same config. A criteria list that changed with
-     * the filter would leave the header and the payload disagreeing. An OT whose
-     * group doesn't use a given criterion simply shows a dash.
+     * A criterion belongs to ONE group (Manage Evaluation Columns requires a group
+     * on every save), so an unnarrowed list put every group's - and every event's -
+     * criteria on one header: the columns of groups the filtered rows don't even
+     * belong to, each showing nothing but dashes. The list is therefore built from
+     * the same groups the rows come from, via groupsInScope().
+     *
+     * Doing that is only safe because the filter row RELOADS the page
+     * (reports/index.blade.php) instead of AJAX-reloading, and the feed resends the
+     * same *_filter values, so html() and dataTable() build one identical list.
+     * Change the filters to AJAX-reload and the header would freeze while the
+     * payload moved - that is the trap this note used to describe.
+     *
+     * @param  array<string, mixed>|null  $filters  the grid's filters; the request's when null
+     * @return \Illuminate\Support\Collection<int, object{id:int, ids:array, column_name:string, max_marks:mixed, evaluation_type:string}>
+     */
+    public static function criteria(?array $filters = null)
+    {
+        $filters = $filters ?? [
+            'course' => request('course_filter'),
+            'event' => request('event_filter'),
+            'group' => request('group_filter'),
+            'status' => PeerCourseStatusScope::normalise(request('status_filter', 'active')),
+        ];
+
+        $key = implode('|', [
+            $filters['course'] ?? '',
+            $filters['event'] ?? '',
+            $filters['group'] ?? '',
+            $filters['status'] ?? '',
+        ]);
+
+        if (! array_key_exists($key, self::$criteriaCache)) {
+            $rows = PeerColumn::query()
+                ->visible()
+                ->whereIn('group_id', self::groupsInScope($filters))
+                ->orderBy('id')
+                ->get();
+
+            // One grid column per criterion NAME, not per row. Manage Evaluation
+            // Columns adds a criterion to several groups at once and writes one
+            // peer_columns row per group, so "Teamwork" on three groups became
+            // three identical headings, each filled only for its own group's OTs
+            // and dashed everywhere else. An OT sits in exactly one group, so
+            // averaging across the sibling ids collapses to that OT's own row:
+            // same number, no repeat.
+            self::$criteriaCache[$key] = $rows
+                ->groupBy(fn ($column) => mb_strtolower(trim((string) $column->column_name)))
+                ->map(fn ($set) => (object) [
+                    'id' => $set->first()->id,
+                    'ids' => $set->pluck('id')->all(),
+                    'column_name' => $set->first()->column_name,
+                    'max_marks' => $set->first()->max_marks,
+                    'evaluation_type' => $set->first()->evaluation_type,
+                ])
+                ->values();
+        }
+
+        return self::$criteriaCache[$key];
+    }
+
+    /**
+     * The criteria one OT was evaluated on: their own group's, nothing else.
+     *
+     * The detail report used the grid's list, which meant an OT's page carried a
+     * column for every criterion in the system - other events, other courses -
+     * with a dash in each.
      *
      * @return \Illuminate\Support\Collection<int, PeerColumn>
      */
-    public static function criteria()
+    public static function criteriaForGroup($groupId)
     {
-        if (self::$criteriaCache === null) {
-            self::$criteriaCache = PeerColumn::query()->visible()->orderBy('id')->get();
+        return PeerColumn::query()
+            ->visible()
+            ->where('group_id', $groupId)
+            ->orderBy('id')
+            ->get();
+    }
+
+    /**
+     * The peer_groups the grid's rows can come from, as a sub-select.
+     *
+     * Deliberately the same four conditions baseQuery() puts on the rows - pills,
+     * course, event, group link, role scope - so a criteria column can never
+     * describe a group the grid is not showing.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return \Illuminate\Database\Query\Builder
+     */
+    private static function groupsInScope(array $filters)
+    {
+        $groups = DB::table('peer_groups')->select('peer_groups.id');
+
+        PeerCourseStatusScope::forRelated($groups, $filters['status'] ?? null, 'peer_groups.course_id');
+
+        if (filled($filters['course'] ?? null)) {
+            $groups->where('peer_groups.course_id', $filters['course']);
+        }
+        if (filled($filters['event'] ?? null)) {
+            $groups->where('peer_groups.event_id', $filters['event']);
+        }
+        // The picker lists Course Group Mapping rows, so match the link - the same
+        // column baseQuery() filters the rows on.
+        if (filled($filters['group'] ?? null)) {
+            $groups->where('peer_groups.group_map_pk', $filters['group']);
         }
 
-        return self::$criteriaCache;
+        // [] means "no restriction" and [-1] means "nothing" - never feed [] to
+        // whereIn. Same contract as get_Role_by_course() everywhere else.
+        $allowed = get_Role_by_course();
+        if (! empty($allowed)) {
+            $groups->whereIn('peer_groups.course_id', $allowed);
+        }
+
+        return $groups;
     }
 
     public function dataTable(QueryBuilder $query): EloquentDataTable
@@ -191,13 +290,15 @@ class PeerEvaluationReportDataTable extends DataTable
             'has_submitted'
         );
 
-        foreach (self::criteria() as $criterion) {
+        foreach (self::criteria($filters) as $criterion) {
             $query->selectSub(
                 DB::table('peer_scores')
                     ->selectRaw('AVG(score)')
                     ->whereColumn('peer_scores.member_id', 'peer_group_members.id')
                     ->whereColumn('peer_scores.group_id', 'peer_group_members.group_id')
-                    ->where('peer_scores.column_id', $criterion->id),
+                    // Every id that shares this criterion's name; the group_id
+                    // match above keeps an OT on their own group's row.
+                    ->whereIn('peer_scores.column_id', $criterion->ids),
                 'crit_' . $criterion->id
             );
         }

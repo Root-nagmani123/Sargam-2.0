@@ -236,7 +236,10 @@ class PeerEvaluationReportController extends Controller
             ->where('peer_group_members.id', $memberId)
             ->firstOrFail();
 
-        $criteria = PeerEvaluationReportDataTable::criteria();
+        // This OT's own group's criteria, not the grid's list: an OT is scored on
+        // the columns of the group they are in, so anything else could only render
+        // as a dash - and did, one per criterion in the system.
+        $criteria = PeerEvaluationReportDataTable::criteriaForGroup($member->group_id);
 
         // Every score this OT received, keyed evaluator -> criterion.
         $scores = DB::table('peer_scores')
