@@ -457,7 +457,18 @@ class MemberController extends Controller
             . 'is not grantable from the Member wizard. It is assigned from Role & Permission > Users. '
             . 'The rest of the member record was saved.';
 
-        if (empty($newSpatieRoles) && empty($oldSpatieRoles)) {
+        // A blocked option that was ticked before and is not now. The block filters these
+        // out of BOTH sets above, so unticking one is a no-op — correct, but it has to
+        // announce itself, and the check needs the member's CURRENT roles to know whether
+        // it mattered. That is why this cannot short-circuit below on empty role sets:
+        // when the only thing the administrator changed was a blocked option, both sets
+        // are empty and the early return would swallow the warning.
+        $blockedUnticked = array_diff(
+            $this->blockedRoleSelections($oldNames, $spatieRoleNames),
+            $blockedSelections
+        );
+
+        if (empty($newSpatieRoles) && empty($oldSpatieRoles) && $blockedUnticked === []) {
             return $blockedWarning;
         }
 
@@ -492,6 +503,33 @@ class MemberController extends Controller
         }
 
         $currentRoleNames = $user->getRoleNames()->all();
+
+        // The block is symmetric by construction: resolveSpatieRoleNames() filters
+        // blocked roles out of BOTH the new and the old selection, so a blocked role can
+        // never enter $toAdd and never enter $toRemove. Refusing to revoke is the right
+        // half of "this screen does not manage Super Admin" — but doing it silently is
+        // the same defect as refusing to grant silently. An administrator who UNTICKS a
+        // blocked role a member actually holds sees success and the role stays.
+        //
+        // Only warn when it would have mattered: the option was ticked before, is not
+        // now, and the member really does still hold the role. Warning on every save of
+        // a Super Admin would be noise. ($blockedUnticked was computed above, before the
+        // early return, so this case can actually be reached.)
+        $stillHeld = [];
+
+        foreach ($blockedUnticked as $displayName) {
+            foreach ($currentRoleNames as $held) {
+                if ($this->normalizeRoleName($held) === $this->normalizeRoleName($displayName)) {
+                    $stillHeld[] = $displayName;
+                }
+            }
+        }
+
+        if ($stillHeld !== []) {
+            $blockedWarning = trim(($blockedWarning ?? '') . ' '
+                . implode(', ', array_unique($stillHeld)) . ' was NOT removed: that role is not '
+                . 'managed from the Member wizard. Remove it from Role & Permission > Users.');
+        }
 
         // Only unchecking a role this same screen previously granted removes it.
         $toRemove = array_diff($oldSpatieRoles, $newSpatieRoles);

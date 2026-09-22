@@ -375,4 +375,74 @@ class MemberWizardRbacSyncTest extends TestCase
         $target->refresh();
         $this->assertFalse($target->hasRole('Super Admin'), 'And it still must not be granted.');
     }
+
+    /**
+     * The block is symmetric — the wizard cannot revoke Super Admin either — and that
+     * half was silent until round 4 found it. An administrator who UNTICKS the option on
+     * a member who really holds the role saw "Member updated successfully!" while the
+     * role stayed. Refusing is right; refusing quietly is the same defect as F-005.
+     *
+     * Note this case could not even be reached at first: with the blocked role filtered
+     * out of both the old and the new set, both were empty and the method short-circuited
+     * before it ever looked at what the member holds.
+     */
+    public function test_unticking_a_blocked_role_the_member_holds_says_it_was_not_removed(): void
+    {
+        $admin = $this->makeTestUser('sa_admin4');
+        $admin->assignRole('Super Admin');
+        $target = $this->makeTestUser('sa_target4');
+
+        // The member already holds it — e.g. assigned from Role & Permission > Users.
+        $target->assignRole('Super Admin');
+
+        $optionPk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'Super-Admin',
+            'user_role_display_name' => 'Super-Admin',
+            'active_inactive'        => 1,
+        ]);
+
+        Auth::login($admin);
+
+        $controller = new MemberController();
+        $method = new ReflectionMethod($controller, 'syncSpatieRolesFromWizardSelection');
+        $method->setAccessible(true);
+
+        // Previously ticked, now unticked.
+        $warning = $method->invoke($controller, $target->pk, [], [$optionPk]);
+
+        $target->refresh();
+        $this->assertTrue(
+            $target->hasRole('Super Admin'),
+            'The wizard must not revoke Super Admin — that is done from Role & Permission > Users.'
+        );
+        $this->assertNotNull($warning, 'And it must say so rather than reporting plain success.');
+        $this->assertStringContainsString('was NOT removed', $warning);
+    }
+
+    /**
+     * The noise guard on that warning: a member who does NOT hold the blocked role must
+     * not be told anything when the option is unticked, or every save of every member
+     * would carry a warning about a role they never had.
+     */
+    public function test_unticking_a_blocked_role_the_member_does_not_hold_is_silent(): void
+    {
+        $admin = $this->makeTestUser('sa_admin5');
+        $admin->assignRole('Super Admin');
+        $target = $this->makeTestUser('sa_target5');   // holds nothing
+
+        $optionPk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'Super-Admin',
+            'user_role_display_name' => 'Super-Admin',
+            'active_inactive'        => 1,
+        ]);
+
+        Auth::login($admin);
+
+        $controller = new MemberController();
+        $method = new ReflectionMethod($controller, 'syncSpatieRolesFromWizardSelection');
+        $method->setAccessible(true);
+        $warning = $method->invoke($controller, $target->pk, [], [$optionPk]);
+
+        $this->assertNull($warning, 'Nothing was lost, so nothing should be reported.');
+    }
 }
