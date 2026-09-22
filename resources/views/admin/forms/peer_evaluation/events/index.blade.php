@@ -256,7 +256,7 @@
     // Positional, and '' marks a column the export doesn't carry (S. No. is
     // regenerated server-side; Action is chrome). Adding a table column means
     // editing this array too.
-    var EXPORT_COLUMN_KEYS = ['sno', 'course_name', 'event_name', 'created_date', 'start_date', 'end_date', ''];
+    var EXPORT_COLUMN_KEYS = ['sno', 'course_name', 'event_name', 'created_date', 'start_date', 'end_date', 'status', ''];
 
     var dt = null;
     var currentStatus = @json($statusFilter);
@@ -697,6 +697,17 @@
                 $ok.prop('disabled', false);
                 pendingDeleteId = null;
             });
+        });
+
+        /* The status switch is driven entirely by the global handler in
+           admin_assets/js/custom.js (SweetAlert confirm -> POST admin/toggle-status),
+           so there is no toggle JS here - only the redraw, because the badge and the
+           switch live in different columns and hand-mirroring them would drift.
+           ~600ms: custom.js reloads on its own timer too. */
+        $(document).ajaxSuccess(function (event, xhr, settings) {
+            var url = (settings && settings.url) ? settings.url : '';
+            if (url.indexOf('toggle-status') === -1 && url.indexOf('toggleStatus') === -1) { return; }
+            setTimeout(function () { if (dt) { dt.ajax.reload(null, false); } }, 600);
         });
     });
 })(jQuery);

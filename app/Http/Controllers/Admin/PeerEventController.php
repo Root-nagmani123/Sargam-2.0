@@ -367,6 +367,13 @@ class PeerEventController extends Controller
                 'class' => 'col-date',
                 'value' => fn ($row) => $date($row->end_date),
             ],
+            // The event's own on/off flag, the one the grid's switch writes - not
+            // the Active / Archived pills, which describe the course.
+            'status' => [
+                'heading' => 'Status',
+                'class' => 'col-status',
+                'value' => fn ($row) => $row->is_active ? 'Active' : 'Inactive',
+            ],
         ];
     }
 

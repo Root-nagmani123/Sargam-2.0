@@ -9,10 +9,12 @@
     @include('admin.issue_management.partials.export_print_styles')
     <style>
         /* Column widths are the only per-report part of the table. */
-        .col-sno    { width: 7%;  text-align: center; }
-        .col-course { width: 25%; }
-        .col-event  { width: 27%; }
-        .col-date   { width: 13.6%; text-align: center; }
+        /* Re-balanced when the Status column arrived; the seven add up to 100%. */
+        .col-sno    { width: 6%;  text-align: center; }
+        .col-course { width: 21%; }
+        .col-event  { width: 23%; }
+        .col-date   { width: 12.5%; text-align: center; }
+        .col-status { width: 12.5%; text-align: center; }
     </style>
 </head>
 <body onload="window.print();">

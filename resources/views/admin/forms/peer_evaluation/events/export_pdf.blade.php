@@ -61,10 +61,12 @@
         table.data-table tbody tr:nth-child(even) { background: #f4f7fb; }
 
         /* DomPDF ignores <colgroup> widths — they have to sit on the cells. */
-        .col-sno    { width: 7%;  text-align: center; }
-        .col-course { width: 25%; }
-        .col-event  { width: 27%; }
-        .col-date   { width: 13.6%; text-align: center; }
+        /* Re-balanced when the Status column arrived; the seven add up to 100%. */
+        .col-sno    { width: 6%;  text-align: center; }
+        .col-course { width: 21%; }
+        .col-event  { width: 23%; }
+        .col-date   { width: 12.5%; text-align: center; }
+        .col-status { width: 12.5%; text-align: center; }
 
         .empty { text-align: center; padding: 16px; color: #6b7280; }
         .foot  { margin-top: 8px; text-align: center; font-size: 7px; color: #6b7280; }

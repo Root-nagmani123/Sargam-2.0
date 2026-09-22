@@ -35,6 +35,17 @@ class PeerEventDataTable extends DataTable
             ->addColumn('created_date', fn ($row) => optional($row->created_at)->format(self::DISPLAY_DATE) ?: '-')
             ->addColumn('start_date_fmt', fn ($row) => optional($row->start_date)->format(self::DISPLAY_DATE) ?: '-')
             ->addColumn('end_date_fmt', fn ($row) => optional($row->end_date)->format(self::DISPLAY_DATE) ?: '-')
+            ->addColumn('status', function ($row) {
+                // Display only; the switch that changes it lives in the Action
+                // column, same as Manage Reflection Fields. This is the EVENT's own
+                // on/off flag - distinct from the Active / Archived pills above the
+                // grid, which describe the COURSE the event belongs to.
+                $active = (bool) $row->is_active;
+
+                return '<span class="status-pill badge rounded-1 ' . ($active ? 'bg-success-subtle' : 'bg-danger-subtle') . '">'
+                    . ($active ? 'Active' : 'Inactive')
+                    . '</span>';
+            })
             ->addColumn('action', function ($row) {
                 // Everything the Edit modal needs travels on the button, so opening
                 // it costs no extra request.
@@ -70,7 +81,28 @@ class PeerEventDataTable extends DataTable
                         . '</button>';
                 }
 
-                return '<div class="pe-act-group" role="group" aria-label="Row actions">' . $edit . $delete . '</div>';
+                // Driven by the global .status-toggle handler (admin_assets/js/custom.js
+                // via routes.toggleStatus, loaded in admin/layouts/footer.blade.php):
+                // SweetAlert confirm -> POST admin/toggle-status, no page JS beyond the
+                // redraw hook in the blade. peer_events keys on `id`, not `pk`, hence
+                // data-id_column. No .form-check/.form-switch wrapper - that pulls the
+                // input -2.375rem left (custom.css:107-112) and knocks it off centre
+                // above its caption. The caption names the ACTION, not the state; the
+                // state is already shown one column over.
+                $active = (bool) $row->is_active;
+
+                $toggle = '<label class="pe-act pe-act--toggle">'
+                    . '<span class="pe-act__icon">'
+                    . '<input class="form-check-input status-toggle" type="checkbox" role="switch"'
+                    . ' data-table="peer_events" data-column="is_active"'
+                    . ' data-id_column="id" data-id="' . (int) $row->id . '"'
+                    . ($active ? ' checked' : '') . '>'
+                    . '</span>'
+                    . '<span class="pe-act__label">' . ($active ? 'Deactivate' : 'Activate') . '</span>'
+                    . '</label>';
+
+                return '<div class="pe-act-group pe-act-group--wide" role="group" aria-label="Row actions">'
+                    . $edit . $toggle . $delete . '</div>';
             })
             ->filterColumn('course_name', function ($query, $keyword) {
                 $query->where('course_master.course_name', 'like', "%{$keyword}%");
@@ -94,6 +126,7 @@ class PeerEventDataTable extends DataTable
             ->orderColumn('created_date', 'peer_events.created_at $1')
             ->orderColumn('start_date_fmt', 'peer_events.start_date $1')
             ->orderColumn('end_date_fmt', 'peer_events.end_date $1')
+            ->orderColumn('status', 'peer_events.is_active $1')
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
 
@@ -107,7 +140,7 @@ class PeerEventDataTable extends DataTable
                     });
                 }
             }, true)
-            ->rawColumns(['action'])
+            ->rawColumns(['status', 'action'])
             ->setRowId('id');
     }
 
@@ -158,6 +191,7 @@ class PeerEventDataTable extends DataTable
                 'peer_events.start_date',
                 'peer_events.end_date',
                 'peer_events.description',
+                'peer_events.is_active',
                 'peer_events.created_at',
                 'course_master.course_name as course_name',
             ])
@@ -191,7 +225,12 @@ class PeerEventDataTable extends DataTable
             ->minifiedAjax()
             ->selectStyleSingle()
             ->parameters([
-                'responsive' => true,
+                // Responsive OFF since the Status column and the switch landed: with
+                // eight columns and a three-action row group the table is wider than
+                // the card, and Responsive "solves" that by collapsing the LAST column
+                // into a child row - hiding Edit / the switch / Delete behind an
+                // expander. The panel's .table-responsive wrapper scrolls instead.
+                'responsive' => false,
                 'scrollX' => false,
                 'autoWidth' => false,
                 'ordering' => true,
@@ -226,6 +265,7 @@ class PeerEventDataTable extends DataTable
             Column::make('created_date')->title('Event Created Date')->orderable(true)->searchable(true)->addClass('text-center'),
             Column::make('start_date_fmt')->title('Start Date')->orderable(true)->searchable(true)->addClass('text-center'),
             Column::make('end_date_fmt')->title('End Date')->orderable(true)->searchable(true)->addClass('text-center'),
+            Column::computed('status')->title('Status')->orderable(true)->searchable(false)->addClass('text-center'),
             Column::computed('action')->title('Action')->orderable(false)->searchable(false)->addClass('text-center'),
         ];
     }
