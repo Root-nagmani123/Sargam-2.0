@@ -47,7 +47,13 @@ class StoreMemberStep4Request extends FormRequest
             'officialemail'      => ['required', 'email'],
             'mnumber'            => ['required', 'digits_between:10,15'],
             'emergencynumber'    => ['nullable', 'digits_between:10,15'],
-            'landlinenumber' => ['nullable', 'digits_between:1,15'],
+            // PR #319 review round 2 (F-009). The requested change was to accept landline
+            // numbers shorter than 10 digits; the floor was moved all the way to 1, which
+            // accepts "7" as a landline number. The field is already nullable, so a floor
+            // of 1 does no work at all — anyone with nothing to enter leaves it blank.
+            // 5 is the shortest string that is plausibly a real number here (internal
+            // extensions) while still rejecting an obvious typo or a stray keypress.
+            'landlinenumber' => ['nullable', 'digits_between:5,15'],
         ];
     }
 
@@ -80,7 +86,7 @@ class StoreMemberStep4Request extends FormRequest
             'mnumber.required'         => 'Mobile number is required.',
             'mnumber.digits_between'   => 'Mobile number must be between 10 to 15 digits.',
             'emergencynumber.digits_between' => 'Emergency contact must be between 10 to 15 digits.',
-            'landlinenumber.digits_between' => 'Landline number must be between 1 to 15 digits.',
+            'landlinenumber.digits_between' => 'Landline number must be between 5 to 15 digits.',
         ];
     }
 }

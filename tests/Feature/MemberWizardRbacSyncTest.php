@@ -210,4 +210,75 @@ class MemberWizardRbacSyncTest extends TestCase
             'A zero-role actor must not be able to grant themselves a Spatie role via the Member wizard (F-018).'
         );
     }
+
+    /**
+     * F-005: a wizard option whose name differs from the real role only by a separator
+     * must still grant that role.
+     *
+     * The sync migration deduplicates user_role_master against `roles` on a NORMALISED
+     * key (lowercase, trim, /[\s_-]+/ collapsed), while this method used to link the two
+     * with array_intersect — an exact string comparison. So `roles` holding "Super Admin"
+     * against user_role_master holding "Super-Admin" meant the migration inserted nothing
+     * and the intersect matched nothing: ticking the box wrote an employee_role_mapping
+     * row, reported success, and granted no permission. Measured against live data after
+     * the migration had run, exactly two options were dead this way — "Super-Admin" and
+     * "Mess-Admin" — one of them the highest-privilege role in the system.
+     *
+     * The option row is created here rather than assumed, so the test states its own
+     * premise instead of depending on which spelling a given environment happens to hold.
+     */
+    public function test_a_separator_variant_option_still_grants_its_real_role(): void
+    {
+        $admin = $this->makeTestUser('sepadmin');
+        $admin->assignRole('Super Admin');
+        $target = $this->makeTestUser('septarget');
+
+        $realRoleName = 'Mess Admin';
+        $this->assertTrue(
+            DB::table('roles')->where('name', $realRoleName)->exists(),
+            'Fixture assumption: a "' . $realRoleName . '" Spatie role must exist.'
+        );
+
+        // The same role, spelled with a hyphen — the shape the live user_role_master holds.
+        $variantPk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'Mess-Admin',
+            'user_role_display_name' => 'Mess-Admin',
+            'active_inactive'        => 1,
+        ]);
+
+        Auth::login($admin);
+        $this->invokeSync($target, [$variantPk]);
+
+        $target->refresh();
+        $this->assertTrue(
+            $target->hasRole($realRoleName),
+            'Ticking "Mess-Admin" must grant the real "Mess Admin" role — an option that grants '
+            . 'nothing is indistinguishable from a working grant (F-005).'
+        );
+    }
+
+    /**
+     * The other half of F-005: normalising must not start matching roles that are
+     * genuinely different. "Training-Induction" and "Training MCTP Admin" normalise to
+     * different keys and must stay distinct, so the fix cannot be a loose substring match.
+     */
+    public function test_normalisation_does_not_conflate_genuinely_different_roles(): void
+    {
+        $admin = $this->makeTestUser('sepadmin2');
+        $admin->assignRole('Super Admin');
+        $target = $this->makeTestUser('septarget2');
+
+        $inductionPk = UserRoleMaster::where('user_role_display_name', 'Training-Induction')->value('pk');
+        $this->assertNotNull($inductionPk, 'Fixture assumption: a "Training-Induction" option must exist.');
+
+        Auth::login($admin);
+        $this->invokeSync($target, [$inductionPk]);
+
+        $target->refresh();
+        $this->assertTrue($target->hasRole('Training-Induction'), 'The ticked role must be granted.');
+        $this->assertFalse(
+            $target->hasRole('Training MCTP Admin'),
+            'Normalising separators must not conflate two distinct roles.'
+        );
+    }
 }

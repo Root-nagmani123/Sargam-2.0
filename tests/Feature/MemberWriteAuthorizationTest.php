@@ -223,4 +223,49 @@ class MemberWriteAuthorizationTest extends TestCase
             'No role may be granted while the employee has more than one credential row.'
         );
     }
+
+    /**
+     * F-002 residual: the refusal above must be VISIBLE.
+     *
+     * Refusing to sync was the right call — granting real permissions to an arbitrarily
+     * chosen one of several logins is worse than not acting. But it was done silently:
+     * the administrator ticked a role, got "Member successfully updated", and nothing had
+     * happened, for a measured 207 employees on the live data. A refusal nobody is told
+     * about is indistinguishable from success, which is the same failure shape as F-005.
+     */
+    public function test_an_ambiguous_member_save_tells_the_administrator_roles_were_not_changed(): void
+    {
+        $employeePk = $this->makeEmployee();
+
+        // Two logins for one employee — the condition that makes the target ambiguous.
+        foreach (['dup_a_', 'dup_b_'] as $prefix) {
+            DB::table('user_credentials')->insertGetId([
+                'user_name' => $prefix . uniqid(), 'user_id' => $employeePk,
+                'first_name' => 'Dup', 'last_name' => 'Login', 'user_category' => 'E',
+            ]);
+        }
+
+        $admin = $this->makeZeroRoleActor($this->makeEmployee());
+        $admin->assignRole('Super Admin');
+
+        $grantable = UserRoleMaster::whereIn(
+            'user_role_display_name',
+            DB::table('roles')->pluck('name')
+        )->value('pk');
+        $this->assertNotNull($grantable, 'Fixture assumption: a user_role_master row matching a real Spatie role exists.');
+
+        $response = $this->actingAs($admin)->post(
+            route('member.update'),
+            $this->memberPayload($employeePk, ['userrole' => [$grantable]])
+        );
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure(['message', 'warning']);
+
+        $this->assertStringContainsString(
+            'Role permissions were NOT changed',
+            $response->json('warning'),
+            'An administrator whose role change was refused must be told, not shown plain success.'
+        );
+    }
 }

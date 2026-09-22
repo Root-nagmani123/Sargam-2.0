@@ -7,6 +7,7 @@ use App\Models\PayrollSalaryMaster;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use ReflectionMethod;
@@ -88,6 +89,26 @@ class MemberWizardStep6RegressionTest extends TestCase
         ]);
     }
 
+    /**
+     * Log in an actor entitled to administer members, and return them.
+     *
+     * PR #319 review round 2 (F-011): saveStep6PayrollData() is now gated on
+     * actingUserCanManageMembers(), because update() deliberately lets a non-admin write
+     * their OWN record and payroll must not travel through that lane. The tests below
+     * exercise the wizard as an administrator uses it, so they have to establish one —
+     * before this gate existed they passed with no actor at all, which is precisely the
+     * hole the gate closes.
+     */
+    private function makeAdminActor(string $suffix): User
+    {
+        $admin = $this->makeActor('admin_' . $suffix);
+        $admin->assignRole('Super Admin');
+
+        Auth::login($admin);
+
+        return $admin;
+    }
+
     /** Build a Request the way the controller receives one, for the private step-6 helpers. */
     private function step6Request(array $fields): Request
     {
@@ -163,6 +184,7 @@ class MemberWizardStep6RegressionTest extends TestCase
     public function test_saving_step6_creates_a_payroll_row_with_a_database_assigned_pk(): void
     {
         $this->requireStep6Schema();
+        $this->makeAdminActor('pk');
 
         $employeePk = $this->makeEmployee();
 
@@ -193,6 +215,7 @@ class MemberWizardStep6RegressionTest extends TestCase
     public function test_two_payroll_rows_created_in_succession_get_distinct_keys(): void
     {
         $this->requireStep6Schema();
+        $this->makeAdminActor('keys');
 
         $firstPk = $this->makeEmployee();
         $secondPk = $this->makeEmployee();
@@ -265,6 +288,7 @@ class MemberWizardStep6RegressionTest extends TestCase
     public function test_clearing_a_saved_step6_field_clears_it_in_the_database(): void
     {
         $this->requireStep6Schema();
+        $this->makeAdminActor('clear');
 
         $employeePk = $this->makeEmployee();
 
@@ -288,5 +312,81 @@ class MemberWizardStep6RegressionTest extends TestCase
 
         $this->assertNull($row->bank_name, 'A cleared field must be NULL, not its previous value.');
         $this->assertSame(42000, (int) $row->basic_pay, 'An untouched field must keep its value.');
+    }
+
+    /**
+     * F-011, the denied case — the half that matters.
+     *
+     * update() deliberately permits a non-admin to write their OWN employee record so the
+     * self-service profile form keeps working. That lane was gated against role mappings
+     * and not against payroll, so an ordinary employee could POST gradepay/basicpay for
+     * their own emp_id and have it stored: an executed probe wrote basic_pay = 999999.99
+     * and salary_grade_pk = the highest grade in salary_grade_master, on the table the
+     * Estate module joins for house eligibility.
+     *
+     * Asserted through the real HTTP endpoint rather than the private method, because the
+     * point is that the request is ACCEPTED (the member's own non-payroll fields do save)
+     * while the payroll write is refused — a method-level test could not tell those apart.
+     */
+    public function test_a_zero_role_actor_cannot_write_their_own_payroll_through_the_wizard(): void
+    {
+        $this->requireStep6Schema();
+
+        $employeePk = $this->makeEmployee();
+
+        $actor = $this->makeActor('selfpay');
+        $actor->user_id = $employeePk;   // links the login to its own employee record
+        $actor->save();
+
+        $this->assertSame([], $actor->getRoleNames()->all(), 'Fixture assumption: the actor holds no Spatie roles.');
+
+        $topGradePk = DB::table('salary_grade_master')->orderByDesc('pk')->value('pk');
+
+        $response = $this->actingAs($actor)->post(route('member.update'), [
+            'emp_id'              => $employeePk,
+            'first_name'          => 'Selfpay',
+            'last_name'           => 'Fixture',
+            'father_husband_name' => 'Father Name',
+            'marital_status'      => 'Unmarried',
+            'gender'              => 'Male',
+            'caste_category'      => DB::table('caste_category_master')->where('active_inactive', 1)->value('pk'),
+            'date_of_birth'       => '1990-01-01',
+            'type'                => DB::table('employee_type_master')->value('pk'),
+            'id'                  => 'SELFPAY-' . substr(uniqid(), -6),
+            'group'               => DB::table('employee_group_master')->value('pk'),
+            'designation'         => DB::table('designation_master')->value('pk'),
+            'userid'              => 'selfpay_uid_' . uniqid(),
+            'section'             => DB::table('department_master')->where('pk', '>', 0)->value('pk'),
+            // Required by StoreMemberStep3Request. The actor holds no roles, so the
+            // mapping block is skipped anyway (F-001) — included only to reach the
+            // payroll write this test is actually about.
+            'userrole'            => [\App\Models\UserRoleMaster::getUserRoleList()->keys()->first()],
+            'address'             => 'Some Address',
+            'country'             => DB::table('country_master')->value('pk'),
+            'state'               => DB::table('state_master')->value('pk'),
+            'city'                => 'Some City',
+            'postal'              => '110001',
+            'permanentaddress'    => 'Some Address',
+            'permanentcountry'    => DB::table('country_master')->value('pk'),
+            'permanentstate'      => DB::table('state_master')->value('pk'),
+            'permanentcity'       => 'Some City',
+            'permanentpostal'     => '110001',
+            'personalemail'       => 'selfpay_' . uniqid() . '@example.com',
+            'officialemail'       => 'selfpay_off_' . uniqid() . '@example.com',
+            'mnumber'             => '9999999999',
+            // The payroll fields the actor must not be able to set for themselves.
+            'gradepay'            => $topGradePk,
+            'basicpay'            => 999999.99,
+            'bankname'            => 'Self Serve Bank',
+            'accountno'           => '99999',
+        ]);
+
+        // The save itself is allowed — this is the actor's own record.
+        $response->assertStatus(200);
+
+        $this->assertNull(
+            PayrollSalaryMaster::where('employee_master_pk', $employeePk)->first(),
+            'A zero-role actor must not be able to write their own payroll row through the member wizard.'
+        );
     }
 }

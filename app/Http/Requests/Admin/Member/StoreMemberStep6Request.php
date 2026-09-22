@@ -23,9 +23,20 @@ class StoreMemberStep6Request extends FormRequest
      */
     public function rules()
     {
+        // PR #319 review round 2 (F-003). employee_category_master is created by a
+        // migration this same PR ships. An exists: rule against a table that does not
+        // exist yet raises SQLSTATE 42S02 from inside the validator, which is a 500 on
+        // the whole member save rather than a field-level error — on an environment
+        // where code is deployed ahead of `php artisan migrate`. When the table is
+        // absent the field is dropped from the payload by the controller anyway
+        // (MemberController::step6SchemaIsReady()), so validating it buys nothing.
+        $employeeCategoryRule = \Schema::hasTable('employee_category_master')
+            ? ['nullable', 'exists:employee_category_master,pk']
+            : ['nullable'];
+
         return [
             'gradepay'         => ['nullable', 'exists:salary_grade_master,pk'],
-            'employeecategory' => ['nullable', 'exists:employee_category_master,pk'],
+            'employeecategory' => $employeeCategoryRule,
             // PR #319 review F-009 asked for min:0 "and a sane maximum ... regardless" of
             // how the open precision question is settled. min:0 shipped in round 2; the
             // ceiling did not. 1,00,00,000 is far above any monthly basic pay here and far
