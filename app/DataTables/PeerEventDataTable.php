@@ -47,6 +47,9 @@ class PeerEventDataTable extends DataTable
                     . '</span>';
             })
             ->addColumn('action', function ($row) {
+                // Read once: both the Delete guard below and the switch depend on it.
+                $active = (bool) $row->is_active;
+
                 // Everything the Edit modal needs travels on the button, so opening
                 // it costs no extra request.
                 $edit = '<button type="button" class="pe-act pe-act--edit pe-edit-btn"'
@@ -60,12 +63,24 @@ class PeerEventDataTable extends DataTable
                     . '<span class="pe-act__label">Edit</span>'
                     . '</button>';
 
-                // Mirror PeerEventController::destroy()'s own refusal: an event that
-                // still owns groups cannot be deleted, so render a disabled control
-                // rather than a red button that always fails.
+                // Mirror PeerEventController::destroy()'s own refusals rather than
+                // rendering a red button that always fails. Two of them, in the same
+                // order the controller applies:
+                //   1. a LIVE event is not deletable - deactivate it first, which is
+                //      what the switch beside this button is for;
+                //   2. an event that still owns groups is not deletable at all,
+                //      because nothing would clean up its groups, their members and
+                //      the scores hanging off them.
                 $groupCount = (int) ($row->groups_count ?? 0);
 
-                if ($groupCount > 0) {
+                if ($active) {
+                    $delete = '<span class="pe-act pe-act--del is-disabled"'
+                        . ' title="Deactivate this event first, then it can be deleted."'
+                        . ' aria-disabled="true">'
+                        . '<span class="pe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
+                        . '<span class="pe-act__label">Delete</span>'
+                        . '</span>';
+                } elseif ($groupCount > 0) {
                     $delete = '<span class="pe-act pe-act--del is-disabled"'
                         . ' title="This event has ' . $groupCount . ' group(s). Remove them first."'
                         . ' aria-disabled="true">'
@@ -89,8 +104,6 @@ class PeerEventDataTable extends DataTable
                 // input -2.375rem left (custom.css:107-112) and knocks it off centre
                 // above its caption. The caption names the ACTION, not the state; the
                 // state is already shown one column over.
-                $active = (bool) $row->is_active;
-
                 $toggle = '<label class="pe-act pe-act--toggle">'
                     . '<span class="pe-act__icon">'
                     . '<input class="form-check-input status-toggle" type="checkbox" role="switch"'

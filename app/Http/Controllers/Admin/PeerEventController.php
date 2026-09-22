@@ -205,8 +205,19 @@ class PeerEventController extends Controller
     {
         $event = PeerEvent::withCount('groups')->findOrFail($id);
 
-        // The grid renders Delete disabled in this state; re-check here because
-        // the grid's copy can be stale and the route is reachable on its own.
+        // The grid renders Delete disabled in both these states; re-check here
+        // because the grid's copy can be stale and the route is reachable on its
+        // own. A live event goes first: deactivating is the step the admin is being
+        // asked to take, and saying so beats naming the groups they would then have
+        // to remove anyway.
+        if ($event->is_active) {
+            return $this->fail(
+                $request,
+                'This event is still active. Deactivate it first, then it can be deleted.',
+                409
+            );
+        }
+
         if ($event->groups_count > 0) {
             return $this->fail(
                 $request,
