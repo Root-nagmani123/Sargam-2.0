@@ -26,6 +26,36 @@ class PeerEventDataTable extends DataTable
     /** d/m/Y matches the design; DB dates are Y-m-d. */
     private const DISPLAY_DATE = 'd/m/Y';
 
+    /**
+     * Per-row counts the Delete control reads.
+     *
+     * `submissions_count` is the guard: scores, remarks and reflection answers live
+     * in three separate tables and ANY of them means an OT has already worked under
+     * this event, so they are summed rather than checked one at a time. The other
+     * three are what the confirm dialog itemises before the cascade runs.
+     *
+     * One definition, used by the grid and re-derived by
+     * PeerEventController::destroy() - the button and the route must agree on what
+     * "has submissions" means, or the grid would offer a delete the route refuses.
+     */
+    public static function countSubqueries(): string
+    {
+        return '(SELECT COUNT(*) FROM peer_scores ps'
+            . ' JOIN peer_groups g1 ON g1.id = ps.group_id WHERE g1.event_id = peer_events.id)'
+            . ' + (SELECT COUNT(*) FROM peer_evaluation_remarks pr'
+            . ' JOIN peer_groups g2 ON g2.id = pr.group_id WHERE g2.event_id = peer_events.id)'
+            . ' + (SELECT COUNT(*) FROM reflection_responses rr'
+            . ' JOIN peer_groups g3 ON g3.id = rr.group_id WHERE g3.event_id = peer_events.id)'
+            . ' AS submissions_count,'
+            . ' (SELECT COUNT(*) FROM peer_group_members pm'
+            . ' JOIN peer_groups g4 ON g4.id = pm.group_id WHERE g4.event_id = peer_events.id)'
+            . ' AS members_count,'
+            . ' (SELECT COUNT(*) FROM peer_columns pc WHERE pc.event_id = peer_events.id)'
+            . ' AS columns_count,'
+            . ' (SELECT COUNT(*) FROM peer_reflection_fields pf WHERE pf.event_id = peer_events.id)'
+            . ' AS fields_count';
+    }
+
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
@@ -68,10 +98,14 @@ class PeerEventDataTable extends DataTable
                 // order the controller applies:
                 //   1. a LIVE event is not deletable - deactivate it first, which is
                 //      what the switch beside this button is for;
-                //   2. an event that still owns groups is not deletable at all,
-                //      because nothing would clean up its groups, their members and
-                //      the scores hanging off them.
+                //   2. an event an OT has already evaluated under is not deletable
+                //      either, because the delete takes its groups and their members
+                //      with it and those submissions would go too.
+                // Its groups do NOT block it: nothing outside the event owns them, so
+                // they are removed along with it. The counts ride on the button so the
+                // confirm dialog can say exactly what goes.
                 $groupCount = (int) ($row->groups_count ?? 0);
+                $submissions = (int) ($row->submissions_count ?? 0);
 
                 if ($active) {
                     $delete = '<span class="pe-act pe-act--del is-disabled"'
@@ -80,9 +114,10 @@ class PeerEventDataTable extends DataTable
                         . '<span class="pe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
                         . '<span class="pe-act__label">Delete</span>'
                         . '</span>';
-                } elseif ($groupCount > 0) {
+                } elseif ($submissions > 0) {
                     $delete = '<span class="pe-act pe-act--del is-disabled"'
-                        . ' title="This event has ' . $groupCount . ' group(s). Remove them first."'
+                        . ' title="' . $submissions . ' evaluation entr' . ($submissions === 1 ? 'y has' : 'ies have')
+                        . ' already been submitted under this event, so it can no longer be deleted."'
                         . ' aria-disabled="true">'
                         . '<span class="pe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
                         . '<span class="pe-act__label">Delete</span>'
@@ -90,7 +125,11 @@ class PeerEventDataTable extends DataTable
                 } else {
                     $delete = '<button type="button" class="pe-act pe-act--del pe-delete-btn"'
                         . ' data-id="' . (int) $row->id . '"'
-                        . ' data-event-name="' . e((string) $row->event_name) . '">'
+                        . ' data-event-name="' . e((string) $row->event_name) . '"'
+                        . ' data-groups="' . $groupCount . '"'
+                        . ' data-members="' . (int) ($row->members_count ?? 0) . '"'
+                        . ' data-columns="' . (int) ($row->columns_count ?? 0) . '"'
+                        . ' data-fields="' . (int) ($row->fields_count ?? 0) . '">'
                         . '<span class="pe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
                         . '<span class="pe-act__label">Delete</span>'
                         . '</button>';
@@ -209,6 +248,11 @@ class PeerEventDataTable extends DataTable
                 'course_master.course_name as course_name',
             ])
             ->withCount('groups');
+
+        // What a delete would take with it, and what blocks it. Correlated
+        // subqueries rather than joins: the grid pages ten rows at a time, and
+        // joining peer_group_members would multiply each event row out.
+        $query->selectRaw(self::countSubqueries());
 
         self::applyStatusScope($query, $status);
 

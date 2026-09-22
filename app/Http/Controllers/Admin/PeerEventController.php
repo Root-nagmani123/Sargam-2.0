@@ -11,6 +11,7 @@ use App\Support\PeerCourseStatusScope;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
@@ -201,15 +202,28 @@ class PeerEventController extends Controller
         return $this->ok($request, 'Event updated successfully.');
     }
 
+    /**
+     * Delete an event and the scaffolding that exists only for it.
+     *
+     * Two refusals, the same two the grid renders the button disabled for, and
+     * re-checked here because the grid's copy of a row can be stale and the route
+     * is reachable on its own:
+     *   1. the event is still active - deactivating is the step being asked for,
+     *      and saying so beats naming what would then have to be removed;
+     *   2. an OT has already submitted under it - a score, a remark or a reflection
+     *      answer. The delete takes the groups with it, so those submissions would
+     *      go too, and evaluations people actually gave are not ours to discard.
+     *
+     * Its groups no longer block it. peer_groups rows are created for an event by
+     * PeerGroupSource::link() and nothing outside that event refers to them, so
+     * leaving them behind would only orphan rows the grid can no longer reach.
+     * The group MAPPINGS they were linked from (group_type_master_course_master_map)
+     * are untouched - those belong to Course Group Mapping, not here.
+     */
     public function destroy(Request $request, $id)
     {
-        $event = PeerEvent::withCount('groups')->findOrFail($id);
+        $event = PeerEvent::findOrFail($id);
 
-        // The grid renders Delete disabled in both these states; re-check here
-        // because the grid's copy can be stale and the route is reachable on its
-        // own. A live event goes first: deactivating is the step the admin is being
-        // asked to take, and saying so beats naming the groups they would then have
-        // to remove anyway.
         if ($event->is_active) {
             return $this->fail(
                 $request,
@@ -218,16 +232,55 @@ class PeerEventController extends Controller
             );
         }
 
-        if ($event->groups_count > 0) {
+        $groupIds = DB::table('peer_groups')->where('event_id', $event->id)->pluck('id');
+
+        // Counted here rather than trusted from the request: the button was
+        // rendered when the page loaded, and an OT can submit in between.
+        $submissions = $this->submissionCount($groupIds);
+
+        if ($submissions > 0) {
             return $this->fail(
                 $request,
-                'This event has ' . $event->groups_count . ' group(s) attached. Remove them before deleting the event.',
+                $submissions . ' evaluation ' . ($submissions === 1 ? 'entry has' : 'entries have')
+                    . ' already been submitted under this event, so it can no longer be deleted.',
                 409
             );
         }
 
         try {
-            $event->delete();
+            DB::transaction(function () use ($event, $groupIds) {
+                // Re-read inside the transaction: the count above is only as fresh
+                // as the moment it ran, and this is the last point at which a
+                // submission can still be saved.
+                if ($this->submissionCount($groupIds) > 0) {
+                    throw new \RuntimeException('submissions appeared during delete');
+                }
+
+                if ($groupIds->isNotEmpty()) {
+                    DB::table('peer_group_members')->whereIn('group_id', $groupIds)->delete();
+                }
+
+                // Scoped by event OR by one of its groups: a column or field can
+                // carry either, and a row scoped to a group of this event is just
+                // as unreachable once the event is gone.
+                foreach (['peer_columns', 'peer_reflection_fields'] as $table) {
+                    DB::table($table)
+                        ->where(function ($query) use ($event, $groupIds) {
+                            $query->where('event_id', $event->id);
+
+                            if ($groupIds->isNotEmpty()) {
+                                $query->orWhereIn('group_id', $groupIds);
+                            }
+                        })
+                        ->delete();
+                }
+
+                if ($groupIds->isNotEmpty()) {
+                    DB::table('peer_groups')->whereIn('id', $groupIds)->delete();
+                }
+
+                $event->delete();
+            });
         } catch (\Throwable $e) {
             Log::error('Peer event delete failed', ['id' => $event->id, 'error' => $e->getMessage()]);
 
@@ -235,6 +288,24 @@ class PeerEventController extends Controller
         }
 
         return $this->ok($request, 'Event deleted successfully.');
+    }
+
+    /**
+     * Work an OT has actually submitted under a set of groups.
+     *
+     * Three tables, because a score, a remark and a reflection answer are stored
+     * separately and any one of them counts. Mirrors
+     * PeerEventDataTable::countSubqueries(), which is what disables the button.
+     */
+    private function submissionCount($groupIds): int
+    {
+        if ($groupIds->isEmpty()) {
+            return 0;
+        }
+
+        return (int) DB::table('peer_scores')->whereIn('group_id', $groupIds)->count()
+            + (int) DB::table('peer_evaluation_remarks')->whereIn('group_id', $groupIds)->count()
+            + (int) DB::table('reflection_responses')->whereIn('group_id', $groupIds)->count();
     }
 
     /**

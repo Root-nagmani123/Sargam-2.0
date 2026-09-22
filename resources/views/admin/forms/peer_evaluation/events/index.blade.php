@@ -661,12 +661,32 @@
         /* Delete */
         var pendingDeleteId = null;
 
+        /* The confirm itemises what the delete takes with the event - its groups,
+           their members, its evaluation columns and reflection fields - because
+           those go silently otherwise and there is no undo. The counts come from
+           the row, so they describe THIS event rather than a generic warning.
+           Nothing is listed when a count is zero. */
+        function deleteImpact($btn) {
+            var parts = [];
+            [['groups', 'group'], ['members', 'group member'],
+             ['columns', 'evaluation column'], ['fields', 'reflection field']]
+                .forEach(function (pair) {
+                    var n = parseInt($btn.data(pair[0]), 10) || 0;
+                    if (n > 0) { parts.push(n + ' ' + pair[1] + (n === 1 ? '' : 's')); }
+                });
+
+            if (!parts.length) { return ''; }
+            if (parts.length > 1) { parts[parts.length - 1] = 'and ' + parts[parts.length - 1]; }
+
+            return ' Its ' + parts.join(parts.length > 2 ? ', ' : ' ') + ' will be removed with it.';
+        }
+
         $(document).on('click', '.pe-delete-btn', function () {
             var $btn = $(this);
             pendingDeleteId = $btn.data('id');
             $('#peDeleteMessage').text(
                 'Are you sure you want to delete ' + ($btn.data('event-name') || 'this event') +
-                '? This action can\'t be undone.'
+                '?' + deleteImpact($btn) + ' This action can\'t be undone.'
             );
             bootstrap.Modal.getOrCreateInstance(document.getElementById('peDeleteModal')).show();
         });
