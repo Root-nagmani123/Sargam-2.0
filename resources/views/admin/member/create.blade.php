@@ -155,9 +155,23 @@ $(document).ready(function() {
                 data: formData,
                 contentType: false,
                 processData: false,
-                success: function() {
+                // PR #319 review round 3 (R-001/R-003). Took no argument and discarded the
+                // response, so a partial refusal — Step 6 skipped because its schema is
+                // missing — was reported as plain success and the data was lost silently.
+                success: function(res) {
                     formIsDirty = false;
-                    toastr.success("Member created successfully!");
+
+                    const warning = res && res.warning;
+
+                    if (!warning) {
+                        toastr.success("Member created successfully!");
+                        window.location.href = "/member";
+                        return;
+                    }
+
+                    // alert(), not a toast: a toast vanishes on its own and this says part
+                    // of the save did not happen, which has to be acknowledged.
+                    alert("Member created, but not everything was saved:\n\n" + warning);
                     window.location.href = "/member";
                 },
                 error: function(xhr) {

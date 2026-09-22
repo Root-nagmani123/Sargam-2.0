@@ -161,9 +161,30 @@
                             data: formData,
                             contentType: false,
                             processData: false,
-                            success: function () {
+                            // PR #319 review round 3 (R-001). This handler took no argument
+                            // and showed a hardcoded success string, so the `warning` the
+                            // server returns when it refuses PART of the save — RBAC for an
+                            // employee with more than one login (207 of them on live data),
+                            // or Step 6 when its schema is missing — never reached anyone.
+                            // The administrator saw "Member updated successfully!" while no
+                            // role had been changed. A warning that exists only in the
+                            // response body is not a fix, so it is rendered here and the
+                            // redirect waits until it has been read.
+                            success: function (res) {
                                 formIsDirty = false;
-                                alert("Member updated successfully!");
+
+                                const warning = res && res.warning;
+
+                                if (!warning) {
+                                    alert("Member updated successfully!");
+                                    window.location.href = "/member";
+                                    return;
+                                }
+
+                                // Deliberately alert() rather than a toast: the toast
+                                // disappears on its own and this says a role was NOT
+                                // granted, which the administrator has to acknowledge.
+                                alert("Member updated, but not everything was saved:\n\n" + warning);
                                 window.location.href = "/member";
                             },
                             error: function (xhr) {

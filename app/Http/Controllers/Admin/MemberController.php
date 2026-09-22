@@ -183,7 +183,7 @@ class MemberController extends Controller
      * existing row's other columns (net_salary, tds, etc., not exposed on this wizard) must
      * survive untouched.
      */
-    private function saveStep6PayrollData(int $employeeMasterPk, Request $request): void
+    private function saveStep6PayrollData(int $employeeMasterPk, Request $request): ?string
     {
         // PR #319 review round 2 (F-011). update() deliberately permits a non-admin to
         // write their OWN employee record, so the self-service profile form keeps
@@ -202,7 +202,7 @@ class MemberController extends Controller
         // (salary_grade_pk, basic_pay, employee_category_master_pk) — that is a product
         // decision and is deliberately not made here.
         if (! $this->actingUserCanManageMembers()) {
-            return;
+            return null;
         }
 
         // PR #319 review round 2 (F-003). The code below depends on schema this PR also
@@ -216,18 +216,30 @@ class MemberController extends Controller
         //
         // The correct deploy order is still migrate-then-deploy; this guard bounds the
         // damage if that order is not held, it does not replace it.
+        //
+        // PR #319 review round 3 (R-003): the refusal used to be silent — an
+        // administrator who filled Step 6 during a deploy window got "success" and lost
+        // the data, which is the same defect shape R-001 records for the ambiguous
+        // credential branch. Both refusals now return their reason to the caller.
         if (! $this->step6SchemaIsReady()) {
             Log::warning('Member wizard: Step 6 payroll data skipped — the step-6 schema is not present on this environment. Run php artisan migrate.', [
                 'employee_master_pk' => $employeeMasterPk,
             ]);
 
-            return;
+            if ($this->mapStep6Data($request) === []) {
+                // Nothing was entered on Step 6, so nothing was lost — no need to alarm.
+                return null;
+            }
+
+            return 'Employee Grade Pay (Step 6) was NOT saved: this environment is missing the '
+                . 'payroll schema that step needs. The rest of the member record was saved. '
+                . 'Ask the release owner to run the pending database migrations.';
         }
 
         $data = $this->mapStep6Data($request);
 
         if (empty($data)) {
-            return;
+            return null;
         }
 
         // updateOrCreate rather than first()-then-update-or-create: the two-statement
@@ -239,6 +251,8 @@ class MemberController extends Controller
             ['employee_master_pk' => $employeeMasterPk],
             $data
         );
+
+        return null;
     }
 
     /**
@@ -248,6 +262,15 @@ class MemberController extends Controller
      * request-path call, and AUTO-07 exists precisely to stop information_schema reads
      * happening per row. Three objects are checked because three separate migrations
      * supply them, and a half-applied deploy can leave any subset present.
+     *
+     * PR #319 review round 3 (R-004) — the assumption this static encodes, stated so a
+     * later reader does not have to infer it: the cache is per PROCESS, not per request.
+     * Under PHP-FPM (how this application is deployed) a process serves one request at a
+     * time, so the two are the same thing and this is correct. Under a long-running
+     * worker — Laravel Octane, or a queue worker doing member writes — the answer would
+     * outlive the migration that changes it, and a freshly-migrated environment would
+     * keep reporting the schema as absent until the worker restarted. If Octane is ever
+     * adopted, move this to a request-scoped container binding.
      */
     private function step6SchemaIsReady(): bool
     {
@@ -417,8 +440,25 @@ class MemberController extends Controller
         $newSpatieRoles = $this->resolveSpatieRoleNames($newNames, $spatieRoleNames);
         $oldSpatieRoles = $this->resolveSpatieRoleNames($oldNames, $spatieRoleNames);
 
+        // PR #319 review round 3, R-002 follow-through. Blocking Super Admin at
+        // resolveSpatieRoleNames() re-created, for that one option, exactly the defect
+        // F-005 was raised about: tick the box, see "success", get no permission, with
+        // nothing to distinguish that from a working grant. The block is deliberate this
+        // time, so the administrator is told instead of left to discover it.
+        //
+        // The employee_role_mapping row is still written by the caller — the option can
+        // legitimately be an HR tag as well as an RBAC name, and this method has no
+        // business deciding that. Only the RBAC half is refused, and only that is
+        // reported.
+        $blockedSelections = $this->blockedRoleSelections($newNames, $spatieRoleNames);
+
+        $blockedWarning = $blockedSelections === [] ? null
+            : 'No permissions were granted for ' . implode(', ', $blockedSelections) . ': that role '
+            . 'is not grantable from the Member wizard. It is assigned from Role & Permission > Users. '
+            . 'The rest of the member record was saved.';
+
         if (empty($newSpatieRoles) && empty($oldSpatieRoles)) {
-            return null;
+            return $blockedWarning;
         }
 
         // user_credentials.user_id is NOT unique — it carries only the non-unique index
@@ -441,13 +481,14 @@ class MemberController extends Controller
 
             return 'Role permissions were NOT changed: this employee has more than one login account, '
                 . 'so the wizard cannot tell which one you meant. The rest of the member record was saved. '
-                . 'Ask the DBA to reconcile the duplicate user_credentials rows for this employee.';
+                . 'Ask the DBA to reconcile the duplicate user_credentials rows for this employee.'
+                . ($blockedWarning ? ' ' . $blockedWarning : '');
         }
 
         $user = User::find($userCredentialPk);
 
         if (! $user) {
-            return null;
+            return $blockedWarning;
         }
 
         $currentRoleNames = $user->getRoleNames()->all();
@@ -465,7 +506,7 @@ class MemberController extends Controller
 
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
 
-        return null;
+        return $blockedWarning;
     }
 
     /**
@@ -492,6 +533,10 @@ class MemberController extends Controller
         $byNormalisedName = [];
 
         foreach ($spatieRoleNames as $spatieRoleName) {
+            if ($this->roleIsNotGrantableFromThisScreen($spatieRoleName)) {
+                continue;
+            }
+
             $byNormalisedName[$this->normalizeRoleName($spatieRoleName)] = $spatieRoleName;
         }
 
@@ -506,6 +551,63 @@ class MemberController extends Controller
         }
 
         return array_values(array_unique($resolved));
+    }
+
+    /**
+     * Roles this screen must never grant or revoke, whatever the checkboxes say.
+     *
+     * PR #319 review round 3 (R-002). Correcting the F-005 name mismatch had a side
+     * effect nobody asked for: it widened what this screen can grant from 19 roles to
+     * 21, and the two it added were "Mess Admin" (17 permissions) and "Super Admin"
+     * (171 permissions, the highest privilege in the application). Before the fix,
+     * ticking "Super-Admin" wrote an employee_role_mapping row and granted nothing —
+     * a bug, but one that happened to keep the Member wizard from minting Super Admins.
+     *
+     * Decision taken by the Engineering lead on 2026-09-22: it must not. Super Admin is
+     * granted from Role & Permission > Users, which is the screen built for it and
+     * carries its own abort_unless(hasRole('Super Admin')) gate. Nobody loses the
+     * ability to grant it; it stops being a checkbox on a screen where 33 of the other
+     * 34 options are plain HR tags and nothing distinguishes the two kinds.
+     *
+     * Matched on the NORMALISED name, so "Super-Admin", "super admin" and "SuperAdmin"
+     * are all covered — the exact-string comparison this list replaces is the very bug
+     * that created the problem.
+     */
+    /**
+     * Which of the ticked options name a role this screen refuses to grant.
+     *
+     * Returns the option's own spelling (what the administrator actually clicked), not
+     * the canonical `roles` name, so the message names the checkbox they can see.
+     */
+    private function blockedRoleSelections(array $displayNames, array $spatieRoleNames): array
+    {
+        $blockedKeys = [];
+
+        foreach ($spatieRoleNames as $spatieRoleName) {
+            if ($this->roleIsNotGrantableFromThisScreen($spatieRoleName)) {
+                $blockedKeys[$this->normalizeRoleName($spatieRoleName)] = true;
+            }
+        }
+
+        $hits = [];
+
+        foreach ($displayNames as $displayName) {
+            if (isset($blockedKeys[$this->normalizeRoleName($displayName)])) {
+                $hits[] = $displayName;
+            }
+        }
+
+        return array_values(array_unique($hits));
+    }
+
+    private function roleIsNotGrantableFromThisScreen(string $spatieRoleName): bool
+    {
+        $blocked = array_map(
+            fn ($name) => $this->normalizeRoleName($name),
+            ['Super Admin']
+        );
+
+        return in_array($this->normalizeRoleName($spatieRoleName), $blocked, true);
     }
 
     /**
@@ -624,8 +726,15 @@ class MemberController extends Controller
         // are four tables written together for one member — wrapped in a transaction so a
         // failure partway through (e.g. Step 6 hitting a bad value) rolls back the whole
         // thing instead of leaving a member with no login credential and no roles.
+        // Same reasoning as update(): a refusal inside the save has to reach the response
+        // rather than be swallowed (PR #319 review round 3, R-003). On this path only the
+        // missing-schema refusal can fire — a member being created cannot yet have two
+        // logins, and store() is admin-only — but it is collected the same way so the two
+        // paths cannot drift.
+        $saveWarnings = [];
+
         try {
-            DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload) {
+            DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload, &$saveWarnings) {
                 $employee = EmployeeMaster::create(array_merge(
                     $this->mapStep1Data($request),
                     $this->mapStep2Data($request),
@@ -633,7 +742,7 @@ class MemberController extends Controller
                     $this->mapStep5Data($request, $profile_picture, $additional_doc_upload)
                 ));
 
-                $this->saveStep6PayrollData($employee->pk, $request);
+                $saveWarnings[] = $this->saveStep6PayrollData($employee->pk, $request);
 
                 $userCredential = UserCredential::create([
                     'first_name' => $request->first_name,
@@ -667,6 +776,16 @@ class MemberController extends Controller
         }
 
         MemberDataTable::bumpListingCacheEpoch();
+
+        $saveWarnings = array_values(array_filter($saveWarnings));
+
+        if ($saveWarnings !== []) {
+            return response()->json([
+                'message'  => 'Member successfully created',
+                'warning'  => implode(' ', $saveWarnings),
+                'warnings' => $saveWarnings,
+            ]);
+        }
 
         return response()->json(['message' => 'Member successfully created']);
     }
@@ -724,12 +843,16 @@ class MemberController extends Controller
 
         // Set inside the transaction, read after it. Bound by reference so the refusal
         // reason survives back out to the response (PR #319 review round 2, F-002).
-        $rbacWarning = null;
+        // PR #319 review round 3 (R-001/R-003): a save can now refuse more than one thing
+        // — RBAC for an ambiguous member, and Step 6 when its schema is missing — so the
+        // reasons are collected rather than overwritten, and every one of them reaches
+        // the response.
+        $saveWarnings = [];
 
         // Same reasoning as store(): one transaction across employee_master,
         // payroll_salary_master, user_credentials and the role mappings.
         try {
-            DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload, &$rbacWarning) {
+            DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload, &$saveWarnings) {
             EmployeeMaster::find($request->emp_id)->update(array_merge(
                 $this->mapStep1Data($request),
                 $this->mapStep2Data($request),
@@ -737,7 +860,7 @@ class MemberController extends Controller
                 $this->mapStep5Data($request, $profile_picture, $additional_doc_upload)
             ));
 
-            $this->saveStep6PayrollData((int) $request->emp_id, $request);
+            $saveWarnings[] = $this->saveStep6PayrollData((int) $request->emp_id, $request);
 
             // PR #319 review round 2 (F-002 residual). This was
             // UserCredential::updateOrCreate(['user_id' => $emp_id], ...) followed by a
@@ -816,7 +939,7 @@ class MemberController extends Controller
                     ]);
                 }
 
-                $rbacWarning = $this->syncSpatieRolesFromWizardSelection($userCredential->pk, $roles, $previouslySelectedRoleIds);
+                $saveWarnings[] = $this->syncSpatieRolesFromWizardSelection($userCredential->pk, $roles, $previouslySelectedRoleIds);
             }
             });
         } catch (\Throwable $e) {
@@ -826,13 +949,19 @@ class MemberController extends Controller
 
         MemberDataTable::bumpListingCacheEpoch();
 
-        // PR #319 review round 2 (F-002 residual): when the role sync refuses because the
-        // employee owns more than one login, say so. Reporting plain success while
-        // silently doing nothing is what made this defect invisible to administrators.
-        if ($rbacWarning !== null) {
+        // PR #319 review round 2 (F-002 residual) and round 3 (R-001/R-003): when part of
+        // the save is refused — RBAC for an employee with more than one login, or Step 6
+        // on an environment missing its schema — say so. Reporting plain success while
+        // silently doing nothing is what made those defects invisible to administrators.
+        // The wizard's success handler renders this (edit.blade.php); a warning that only
+        // exists in the response body is not a fix.
+        $saveWarnings = array_values(array_filter($saveWarnings));
+
+        if ($saveWarnings !== []) {
             return response()->json([
-                'message' => 'Member successfully updated',
-                'warning' => $rbacWarning,
+                'message'  => 'Member successfully updated',
+                'warning'  => implode(' ', $saveWarnings),
+                'warnings' => $saveWarnings,
             ]);
         }
 

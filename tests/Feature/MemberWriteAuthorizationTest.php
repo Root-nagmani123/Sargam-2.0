@@ -268,4 +268,36 @@ class MemberWriteAuthorizationTest extends TestCase
             'An administrator whose role change was refused must be told, not shown plain success.'
         );
     }
+
+    /**
+     * R-001: the warning has to be RENDERED, not merely returned.
+     *
+     * Round 3 found that the previous fix stopped at the JSON response. The wizard's
+     * success handler took no argument, discarded the body and showed a hardcoded
+     * "Member updated successfully!", so for the 207 employees with duplicate logins the
+     * administrator still saw plain success. A warning that only exists in the response
+     * body is not a fix, so the view is asserted here alongside the controller.
+     *
+     * This is a source assertion rather than a browser test because there is no JS test
+     * harness in this repository; it pins the two properties that regressed — the handler
+     * receives the response, and it branches on `warning`.
+     */
+    public function test_the_wizard_view_renders_the_warning_rather_than_discarding_it(): void
+    {
+        foreach (['edit', 'create'] as $view) {
+            $source = file_get_contents(resource_path("views/admin/member/{$view}.blade.php"));
+
+            $this->assertMatchesRegularExpression(
+                '/success:\s*function\s*\(\s*res\s*\)/',
+                $source,
+                "{$view}.blade.php must receive the response in its success handler — taking no "
+                . 'argument is what silently dropped the warning.'
+            );
+            $this->assertStringContainsString(
+                'res.warning',
+                $source,
+                "{$view}.blade.php must branch on the response's warning field."
+            );
+        }
+    }
 }

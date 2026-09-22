@@ -281,4 +281,98 @@ class MemberWizardRbacSyncTest extends TestCase
             'Normalising separators must not conflate two distinct roles.'
         );
     }
+
+    /**
+     * R-002: the Member wizard must not grant Super Admin, whatever the checkbox says.
+     *
+     * Correcting the F-005 name mismatch widened what this screen can grant from 19 roles
+     * to 21, and one of the two it added was Super Admin — 171 permissions, the highest
+     * privilege in the application. The old bug had accidentally prevented that. The
+     * Engineering lead's decision (2026-09-22) is that Super Admin is granted only from
+     * Role & Permission > Users, so the wizard refuses it explicitly rather than relying
+     * on a name mismatch to do it by accident.
+     *
+     * Note the actor here IS a Super Admin — so this is not testing the F-018 gate. It is
+     * testing that even a fully privileged actor cannot mint one from THIS screen.
+     */
+    public function test_the_wizard_cannot_grant_super_admin_even_for_an_admin_actor(): void
+    {
+        $admin = $this->makeTestUser('sa_admin');
+        $admin->assignRole('Super Admin');
+        $target = $this->makeTestUser('sa_target');
+
+        // The option as the live data spells it: hyphenated in user_role_master, spaced
+        // in `roles`. Created here so the test states its own premise.
+        $optionPk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'Super-Admin',
+            'user_role_display_name' => 'Super-Admin',
+            'active_inactive'        => 1,
+        ]);
+
+        Auth::login($admin);
+        $this->invokeSync($target, [$optionPk]);
+
+        $target->refresh();
+        $this->assertFalse(
+            $target->hasRole('Super Admin'),
+            'The Member wizard must never grant Super Admin — it is granted from Role & Permission > Users.'
+        );
+        $this->assertSame([], $target->getRoleNames()->all(), 'No role at all should have been granted.');
+    }
+
+    /**
+     * The other side of R-002: blocking Super Admin must not block anything else. A
+     * deny-list that over-matches would silently break the 20 roles this screen is
+     * supposed to grant, which is the same silent-failure shape F-005 was about.
+     */
+    public function test_blocking_super_admin_does_not_block_other_roles(): void
+    {
+        $admin = $this->makeTestUser('sa_admin2');
+        $admin->assignRole('Super Admin');
+        $target = $this->makeTestUser('sa_target2');
+
+        $doctorPk = UserRoleMaster::where('user_role_display_name', 'Doctor')->value('pk');
+        $this->assertNotNull($doctorPk, 'Fixture assumption: a "Doctor" option must exist.');
+
+        Auth::login($admin);
+        $this->invokeSync($target, [$doctorPk]);
+
+        $target->refresh();
+        $this->assertTrue($target->hasRole('Doctor'), 'An ordinary role must still be grantable.');
+    }
+
+    /**
+     * R-002 follow-through: blocking Super Admin must not re-create F-005.
+     *
+     * Refusing to grant it is correct, but refusing SILENTLY would put that one option
+     * back into exactly the state F-005 was raised about — tick the box, see "Member
+     * updated successfully!", get no permission, with nothing to tell that apart from a
+     * working grant. The refusal has to announce itself.
+     */
+    public function test_ticking_a_blocked_role_tells_the_administrator_why_nothing_was_granted(): void
+    {
+        $admin = $this->makeTestUser('sa_admin3');
+        $admin->assignRole('Super Admin');
+        $target = $this->makeTestUser('sa_target3');
+
+        $optionPk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'Super-Admin',
+            'user_role_display_name' => 'Super-Admin',
+            'active_inactive'        => 1,
+        ]);
+
+        Auth::login($admin);
+
+        $controller = new MemberController();
+        $method = new ReflectionMethod($controller, 'syncSpatieRolesFromWizardSelection');
+        $method->setAccessible(true);
+        $warning = $method->invoke($controller, $target->pk, [$optionPk], []);
+
+        $this->assertNotNull($warning, 'A refused role must return a reason, not null.');
+        $this->assertStringContainsString('Super-Admin', $warning, 'The message must name the option that was clicked.');
+        $this->assertStringContainsString('Role & Permission', $warning, 'The message must say where the role IS granted.');
+
+        $target->refresh();
+        $this->assertFalse($target->hasRole('Super Admin'), 'And it still must not be granted.');
+    }
 }
