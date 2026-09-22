@@ -1455,6 +1455,7 @@ class CalendarController extends Controller
             ->whereDate('timetable.START_DATE', '>=', $rangeStartDate->toDateString())
             ->whereDate('timetable.START_DATE', '<=', $rangeEndDate->toDateString())
             ->select(
+                'timetable.course_master_pk',
                 'timetable.subject_topic',
                 'timetable.class_session',
                 'timetable.START_DATE',
@@ -1471,16 +1472,13 @@ class CalendarController extends Controller
             ->orderBy('timetable.class_session')
             ->get();
 
-        $course = $courseId
-            ? DB::table('course_master')->where('pk', $courseId)->first()
-            : null;
-
-        $courseStartDate = ($course && !empty($course->start_year))
-            ? Carbon::parse($course->start_year)->format('jS F, Y') : '';
-        $courseEndDate = ($course && !empty($course->end_date))
-            ? Carbon::parse($course->end_date)->format('jS F, Y') : '';
-        $courseDuration = ($courseStartDate && $courseEndDate)
-            ? $courseStartDate . ' to ' . $courseEndDate : '';
+        // Header course: the filter when there is one, otherwise derived from
+        // the sessions themselves - see timetableCourseContext().
+        $courseCtx       = $this->timetableCourseContext($events, $courseId);
+        $course          = $courseCtx['course'];
+        $courseStartDate = $courseCtx['startDate'];
+        $courseEndDate   = $courseCtx['endDate'];
+        $courseDuration  = $courseCtx['duration'];
 
         $toDataUri = function (string $path): string {
             if (!extension_loaded('gd') || !is_file($path)) return '';
@@ -1511,7 +1509,7 @@ class CalendarController extends Controller
             'courseStartDate'=> $courseStartDate,
             'courseEndDate'  => $courseEndDate,
             'courseDuration' => $courseDuration,
-            'multiCourse'    => is_null($courseId),
+            'multiCourse'    => $courseCtx['multiCourse'],
             'primaryVenue'   => $primaryVenue,
             'footerNote'     => '',
             'studentName'    => hasRole('Student-OT') ? (auth()->user()->user_name ?? null) : null,
@@ -1574,6 +1572,7 @@ class CalendarController extends Controller
             ->whereDate('timetable.START_DATE', '<=', $rangeEndDate->toDateString())
             ->select(
                 'timetable.pk',
+                'timetable.course_master_pk',
                 'timetable.subject_topic',
                 'timetable.class_session',
                 'timetable.START_DATE',
@@ -1591,16 +1590,13 @@ class CalendarController extends Controller
             ->orderBy('timetable.class_session')
             ->get();
 
-        $course = $courseId
-            ? DB::table('course_master')->where('pk', $courseId)->first()
-            : null;
-
-        $courseStartDate = ($course && !empty($course->start_year))
-            ? Carbon::parse($course->start_year)->format('jS F, Y') : '';
-        $courseEndDate = ($course && !empty($course->end_date))
-            ? Carbon::parse($course->end_date)->format('jS F, Y') : '';
-        $courseDuration = ($courseStartDate && $courseEndDate)
-            ? $courseStartDate . ' to ' . $courseEndDate : '';
+        // Header course: the filter when there is one, otherwise derived from
+        // the sessions themselves - see timetableCourseContext().
+        $courseCtx       = $this->timetableCourseContext($events, $courseId);
+        $course          = $courseCtx['course'];
+        $courseStartDate = $courseCtx['startDate'];
+        $courseEndDate   = $courseCtx['endDate'];
+        $courseDuration  = $courseCtx['duration'];
 
         $toDataUri = function (string $path): string {
             if (!extension_loaded('gd') || !is_file($path)) return '';
@@ -1631,7 +1627,7 @@ class CalendarController extends Controller
             'courseStartDate'=> $courseStartDate,
             'courseEndDate'  => $courseEndDate,
             'courseDuration' => $courseDuration,
-            'multiCourse'    => is_null($courseId),
+            'multiCourse'    => $courseCtx['multiCourse'],
             'primaryVenue'   => $primaryVenue,
             'footerNote'     => '',
             'studentName'    => auth()->user()->user_name ?? null,
@@ -1702,6 +1698,7 @@ class CalendarController extends Controller
             })
             ->select(
                 'timetable.pk',
+                'timetable.course_master_pk',
                 'timetable.subject_topic',
                 'timetable.class_session',
                 'timetable.START_DATE',
@@ -1717,16 +1714,14 @@ class CalendarController extends Controller
             ->orderBy('timetable.START_DATE')
             ->get();
 
-        // Programme details from the course.
-        $course = $courseId ? DB::table('course_master')->where('pk', $courseId)->first() : null;
-        $multiCourse = is_null($courseId);
-
-        $courseStartDate = ($course && !empty($course->start_year))
-            ? Carbon::parse($course->start_year)->format('jS F, Y') : '';
-        $courseEndDate = ($course && !empty($course->end_date))
-            ? Carbon::parse($course->end_date)->format('jS F, Y') : '';
-        $courseDuration = ($courseStartDate && $courseEndDate)
-            ? $courseStartDate . ' to ' . $courseEndDate : '';
+        // Programme details: the filter when there is one, otherwise derived
+        // from the week's own sessions - see timetableCourseContext().
+        $courseCtx       = $this->timetableCourseContext($weekRows, $courseId);
+        $course          = $courseCtx['course'];
+        $multiCourse     = $courseCtx['multiCourse'];
+        $courseStartDate = $courseCtx['startDate'];
+        $courseEndDate   = $courseCtx['endDate'];
+        $courseDuration  = $courseCtx['duration'];
 
         // Most common venue across the week.
         $primaryVenue = '';
@@ -1811,6 +1806,7 @@ class CalendarController extends Controller
     {
         $groupMeta   = $this->timetableGroupMeta($events);
         $facultyMeta = $this->timetableFacultyMeta($events);
+        $courseNames = $this->timetableCourseNames($events);
 
         $weeks  = [];
         $cursor = $rangeStart->copy()->startOfWeek(Carbon::MONDAY);
@@ -1873,12 +1869,13 @@ class CalendarController extends Controller
 
                 $session = [
                     'topic'       => trim((string) $r->subject_topic) ?: 'Session',
-                    'faculty'     => $faculty['names'],
+                    'faculty'     => $faculty['list'],
                     'initials'    => $faculty['initials'],
                     'venue'       => trim((string) ($r->venue_name ?? '')),
                     'isBreak'     => false,
-                    'course'      => '',
+                    'course'      => $courseNames[(int) ($r->course_master_pk ?? 0)] ?? '',
                     'groups'      => $groupIds,
+                    'groupNames'  => $this->timetableGroupNames($groupIds, $groupMeta),
                     'wholeCohort' => $wholeCohort,
                 ];
 
@@ -1898,12 +1895,13 @@ class CalendarController extends Controller
                 if ($bk) {
                     $itemsByDay[$dow][] = [
                         'topic'       => $bk['topic'],
-                        'faculty'     => '',
+                        'faculty'     => [],
                         'initials'    => '',
                         'venue'       => '',
                         'isBreak'     => true,
                         'course'      => '',
                         'groups'      => [],
+                        'groupNames'  => '',
                         'wholeCohort' => true,
                         'time'        => $bk['time'],
                         'start'       => $bk['start'],
@@ -2038,14 +2036,21 @@ class CalendarController extends Controller
                         $a = $run[0];
                         $z = $run[1];
                         $span = $z - $a + 1;
+                        // The GROUP column names the cohort only on a sub-row
+                        // that belongs to one group. Where the band is not
+                        // split - the usual case, and every untimed row - the
+                        // groups are printed inside the cell instead, or the
+                        // sheet says nothing at all about who the session is for.
                         $cellGrid[$day['key']][$a]['events'][] = [
-                            'topic'     => $it['topic'],
-                            'faculty'   => $it['faculty'],
-                            'initials'  => $it['initials'],
-                            'venue'     => $it['venue'],
-                            'isBreak'   => $it['isBreak'],
-                            'course'    => $it['course'],
-                            'time'      => $it['time'],
+                            'topic'      => $it['topic'],
+                            'faculty'    => $it['faculty'],
+                            'initials'   => $it['initials'],
+                            'venue'      => $it['venue'],
+                            'isBreak'    => $it['isBreak'],
+                            'course'     => $it['course'],
+                            'time'       => $it['time'],
+                            'groupNames' => ($subRows[$a]['group'] === null && !$it['wholeCohort'])
+                                ? $it['groupNames'] : '',
                         ];
                         if ($span > $cellGrid[$day['key']][$a]['rowspan']) {
                             $cellGrid[$day['key']][$a]['rowspan'] = $span;
@@ -2057,6 +2062,42 @@ class CalendarController extends Controller
                             $cellGrid[$day['key']][$k]['state'] = 'skip';
                         }
                     }
+                }
+
+                // ---- Make the column cover its sub-rows exactly once ----
+                // Two sessions overlapping in one day - a long one from 1000 and
+                // a second starting at 1100 - leave the column inconsistent: the
+                // later one writes its events into a cell the earlier one's
+                // rowspan already hides, and marks rows 'skip' that no cell
+                // spans. A row with such a hole prints one cell short, so every
+                // day column after it slides left and the last one falls off the
+                // sheet. Re-walk the column so each run has exactly one printed
+                // cell, carrying the events of everything inside it.
+                $pending = 0;
+                $holder  = null;
+                for ($s = 0; $s < $subCount; $s++) {
+                    if ($pending > 0) {
+                        if ($holder !== null && !empty($cellGrid[$day['key']][$s]['events'])) {
+                            foreach ($cellGrid[$day['key']][$s]['events'] as $ev) {
+                                $cellGrid[$day['key']][$holder]['events'][] = $ev;
+                            }
+                            $cellGrid[$day['key']][$s]['events'] = [];
+                            if (!empty($cellGrid[$day['key']][$s]['isBreak'])) {
+                                $cellGrid[$day['key']][$holder]['isBreak'] = true;
+                            }
+                        }
+                        $cellGrid[$day['key']][$s]['state'] = 'skip';
+                        $pending--;
+                        continue;
+                    }
+
+                    $cellGrid[$day['key']][$s]['state']   = 'show';
+                    $cellGrid[$day['key']][$s]['rowspan'] = max(
+                        1,
+                        min($cellGrid[$day['key']][$s]['rowspan'], $subCount - $s)
+                    );
+                    $pending = $cellGrid[$day['key']][$s]['rowspan'] - 1;
+                    $holder  = $s;
                 }
             }
 
@@ -2103,12 +2144,22 @@ class CalendarController extends Controller
                 $openDays = [];
                 $allBreak = true;
                 $anyBreak = false;
+                // A band cell is one row tall. Where a break runs past this
+                // sub-row - another day's session boundary falling inside the
+                // break splits it across two - the flat band would print only
+                // the first row while the rows below stayed marked skip with
+                // nothing spanning them, and that hole slides the day columns
+                // of every later row. Such a break prints as ordinary cells.
+                $oneRowDeep = true;
                 foreach ($days as $day) {
                     $c = $cellGrid[$day['key']][$s];
                     if ($c['state'] === 'skip') {
                         continue;
                     }
                     $openDays[] = $day['key'];
+                    if ($c['rowspan'] > 1) {
+                        $oneRowDeep = false;
+                    }
                     // A day with nothing scheduled at break time is still on
                     // break, so it joins the band rather than vetoing it.
                     foreach ($c['events'] as $ev) {
@@ -2120,7 +2171,7 @@ class CalendarController extends Controller
                     }
                 }
 
-                if ($allBreak && $anyBreak && !empty($openDays)) {
+                if ($allBreak && $anyBreak && $oneRowDeep && !empty($openDays)) {
                     $label = '';
                     foreach ($days as $day) {
                         $c = $cellGrid[$day['key']][$s];
@@ -2171,14 +2222,51 @@ class CalendarController extends Controller
 
                 $rows[] = [
                     'type'        => 'row',
+                    'band'        => $b,
                     'showTime'    => ($firstKeptOfBand[$b] ?? null) === $s,
                     'timeRowspan' => $keptPerBand[$b] ?? 1,
-                    'timeColspan' => ($showGroupCol && $sr['groupLabel'] === '') ? 2 : 1,
+                    // TIME swallows the GROUP column only on a band that is not
+                    // split by group at all - which is 'group' being null, not
+                    // the label being blank. A band whose first group has no
+                    // name in group_type_master_course_master_map prints a blank
+                    // label, and reading that as "no GROUP column here" gave the
+                    // TIME cell colspan 2 while the sub-rows it spans each still
+                    // emitted their own GROUP cell: every day column on those
+                    // rows shifted one to the right and the last day fell off
+                    // the sheet.
+                    'timeColspan' => ($showGroupCol && $sr['group'] === null) ? 2 : 1,
                     'from'        => $this->fmtMinutes($bs[$b]),
                     'to'          => $this->fmtMinutes($bs[$b + 1]),
                     'groupLabel'  => $sr['groupLabel'],
                     'cells'       => $cells,
                 ];
+            }
+
+            // ---- Re-seat each band's TIME cell ----
+            // firstKeptOfBand / keptPerBand count sub-rows, but a sub-row that
+            // turned out to be a break band prints as one full-width cell and
+            // carries no TIME. When that was the band's first sub-row the TIME
+            // cell disappeared and every row left in the band printed one cell
+            // short, sliding its day columns left. Now that the row types are
+            // known, the cell goes on the band's first printed row and spans
+            // exactly the rows that remain.
+            $bandFirstRow = [];
+            $bandRowCount = [];
+            foreach ($rows as $i => $r) {
+                if ($r['type'] !== 'row' || !isset($r['band'])) {
+                    continue;
+                }
+                $bandRowCount[$r['band']] = ($bandRowCount[$r['band']] ?? 0) + 1;
+                if (!isset($bandFirstRow[$r['band']])) {
+                    $bandFirstRow[$r['band']] = $i;
+                }
+            }
+            foreach ($rows as $i => $r) {
+                if ($r['type'] !== 'row' || !isset($r['band'])) {
+                    continue;
+                }
+                $rows[$i]['showTime']    = $bandFirstRow[$r['band']] === $i;
+                $rows[$i]['timeRowspan'] = $bandRowCount[$r['band']];
             }
 
             // ---- Untimed (shift-based) sessions as a trailing row ----
@@ -2190,18 +2278,34 @@ class CalendarController extends Controller
                 }
             }
             if ($hasUntimed) {
+                // These rows have no boundaries to label the TIME cell with.
+                // Where they all carry the same slot text ("Full Day", a shift
+                // name) that text is the honest label; a mixed row leaves the
+                // cell blank rather than claiming one session's hours for all.
+                $untimedLabels = [];
+                foreach ($days as $day) {
+                    foreach ($untimedByDay[$day['key']] as $it) {
+                        $lbl = trim((string) ($it['time'] ?? ''));
+                        if ($lbl !== '') {
+                            $untimedLabels[$lbl] = true;
+                        }
+                    }
+                }
+                $untimedLabel = count($untimedLabels) === 1 ? array_key_first($untimedLabels) : '';
+
                 $cells = [];
                 foreach ($days as $day) {
                     $evs = [];
                     foreach ($untimedByDay[$day['key']] as $it) {
                         $evs[] = [
-                            'topic'     => $it['topic'],
-                            'faculty'   => $it['faculty'],
-                            'initials'  => $it['initials'],
-                            'venue'     => $it['venue'],
-                            'isBreak'   => false,
-                            'course'    => $it['course'],
-                            'time'      => $it['time'],
+                            'topic'      => $it['topic'],
+                            'faculty'    => $it['faculty'],
+                            'initials'   => $it['initials'],
+                            'venue'      => $it['venue'],
+                            'isBreak'    => false,
+                            'course'     => $it['course'],
+                            'time'       => $it['time'],
+                            'groupNames' => $it['wholeCohort'] ? '' : $it['groupNames'],
                         ];
                     }
                     $cells[$day['key']] = [
@@ -2216,7 +2320,7 @@ class CalendarController extends Controller
                     'showTime'    => true,
                     'timeRowspan' => 1,
                     'timeColspan' => $showGroupCol ? 2 : 1,
-                    'from'        => '',
+                    'from'        => $untimedLabel,
                     'to'          => '',
                     'groupLabel'  => '',
                     'cells'       => $cells,
@@ -2258,6 +2362,75 @@ class CalendarController extends Controller
         unset($week);
 
         return $weeks;
+    }
+
+    /**
+     * Short course name per course pk, for the cell line a multi-course sheet
+     * prints under the topic. The short name is used where there is one - the
+     * full course name does not fit a day column.
+     */
+    private function timetableCourseNames($events): array
+    {
+        $ids = [];
+        foreach ($events as $e) {
+            $cid = (int) ($e->course_master_pk ?? 0);
+            if ($cid) {
+                $ids[$cid] = true;
+            }
+        }
+        if (!$ids) {
+            return [];
+        }
+
+        $names = [];
+        foreach (DB::table('course_master')->whereIn('pk', array_keys($ids))->get(['pk', 'course_name', 'couse_short_name']) as $c) {
+            $names[(int) $c->pk] = trim((string) ($c->couse_short_name ?: $c->course_name));
+        }
+
+        return $names;
+    }
+
+    /**
+     * Course the printed header names, with its dates already formatted.
+     *
+     * An explicit ?course_id wins. With no filter the sheet used to print no
+     * course at all, even when every session on it belonged to one course - so
+     * the course is derived from the sessions themselves, and only a period
+     * genuinely spanning several courses falls back to naming the course per
+     * cell (multiCourse).
+     *
+     * Shared by downloadTimetablePdf(), otDownloadPdf() and weeklyTimetablePdf().
+     */
+    private function timetableCourseContext($events, $courseId): array
+    {
+        $course = $courseId
+            ? DB::table('course_master')->where('pk', $courseId)->first()
+            : null;
+
+        $courseIds = [];
+        foreach ($events as $e) {
+            $cid = (int) ($e->course_master_pk ?? 0);
+            if ($cid) {
+                $courseIds[$cid] = true;
+            }
+        }
+
+        if (!$course && count($courseIds) === 1) {
+            $course = DB::table('course_master')->where('pk', array_key_first($courseIds))->first();
+        }
+
+        $startDate = ($course && !empty($course->start_year))
+            ? Carbon::parse($course->start_year)->format('jS F, Y') : '';
+        $endDate = ($course && !empty($course->end_date))
+            ? Carbon::parse($course->end_date)->format('jS F, Y') : '';
+
+        return [
+            'course'      => $course,
+            'startDate'   => $startDate,
+            'endDate'     => $endDate,
+            'duration'    => ($startDate && $endDate) ? $startDate . ' to ' . $endDate : '',
+            'multiCourse' => !$courseId && count($courseIds) > 1,
+        ];
     }
 
     /**
@@ -2375,16 +2548,32 @@ class CalendarController extends Controller
         return implode(', ', $names);
     }
 
+    /**
+     * A row's faculty_master as a list of pks. Most rows hold a JSON array,
+     * older ones a bare pk ("17") - which json_decode() returns as an int, so
+     * an is_array() check alone drops those rows' faculty from the sheet even
+     * though the calendar itself shows them (see resolveEventFaculty()).
+     */
+    private function timetableFacultyIds($row): array
+    {
+        $raw = trim((string) ($row->faculty_master ?? ''));
+        if ($raw === '') {
+            return [];
+        }
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            $decoded = [$decoded === null ? $raw : $decoded];
+        }
+        return array_values(array_filter(array_map('intval', $decoded)));
+    }
+
     /** faculty_master rows for every faculty named by the given events. */
     private function timetableFacultyMeta($events): array
     {
         $ids = [];
         foreach ($events as $e) {
-            $fm = json_decode((string) ($e->faculty_master ?? ''), true);
-            if (is_array($fm)) {
-                foreach ($fm as $f) {
-                    $ids[(int) $f] = true;
-                }
+            foreach ($this->timetableFacultyIds($e) as $f) {
+                $ids[$f] = true;
             }
             $fd = json_decode((string) ($e->faculty_details ?? ''), true);
             if (is_array($fd)) {
@@ -2435,13 +2624,9 @@ class CalendarController extends Controller
         }
 
         if (!$teaching && !$admin) {
-            $ids = json_decode((string) ($row->faculty_master ?? ''), true);
-            if (is_array($ids)) {
-                foreach ($ids as $id) {
-                    $pk = (int) $id;
-                    if (!empty($facultyMeta[$pk])) {
-                        $teaching[] = trim((string) ($facultyMeta[$pk]->full_name ?? ''));
-                    }
+            foreach ($this->timetableFacultyIds($row) as $pk) {
+                if (!empty($facultyMeta[$pk])) {
+                    $teaching[] = trim((string) ($facultyMeta[$pk]->full_name ?? ''));
                 }
             }
         }
@@ -2457,8 +2642,14 @@ class CalendarController extends Controller
             }
         }
 
+        // 'list' keeps the takers separate: the sheet brackets each one on its
+        // own - "(A K Sharma) (D Mahesh Kumar)" - rather than running them
+        // together inside a single pair of brackets.
+        $names = array_values(array_filter(array_unique($teaching), static fn ($n) => $n !== ''));
+
         return [
-            'names'    => implode(', ', array_unique($teaching)),
+            'list'     => $names,
+            'names'    => implode(', ', $names),
             'initials' => implode(', ', array_unique($initials)),
         ];
     }
@@ -2609,7 +2800,12 @@ class CalendarController extends Controller
 
     private function splitSessionTime(string $slot): array
     {
-        $parts = preg_split('/\s*[-–—]\s*/', trim($slot), 2);
+        // Two separators are in the data: older rows carry "03:30 PM - 04:30 PM",
+        // the event form writes "15:00 to 15:55" (the calendar feed's SQL splits
+        // on ' to ' for the same reason). A slot whose two ends cannot both be
+        // read is treated as untimed and prints with an empty TIME cell, so the
+        // word form has to be understood here too.
+        $parts = preg_split('/\s*(?:[-–—]|\bto\b)\s*/iu', trim($slot), 2);
         $from  = trim($parts[0] ?? $slot);
         $to    = trim($parts[1] ?? '');
         return [$from, $to];

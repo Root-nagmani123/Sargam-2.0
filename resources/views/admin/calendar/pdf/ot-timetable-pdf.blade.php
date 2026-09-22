@@ -61,7 +61,10 @@
         td.time { padding: 3pt 1pt; }
         td.grp  { padding: 3pt 1pt; word-wrap: break-word; }
         td.grp.long { font-size: 7pt; line-height: 1.1; }
-        td.day  { padding: 4pt 3pt; }
+        /* break-word keeps a long single-token name - "(AAKANKSHA
+           KULSHRESTHA)" in a narrow column - inside its own cell. Without it
+           DomPDF paints the overflow straight over the neighbouring day. */
+        td.day  { padding: 4pt 3pt; word-wrap: break-word; }
 
         /* One session inside a day cell. The sheet sets the topic plain, the
            session taker bold in brackets, and the coordinator's initials
@@ -70,10 +73,16 @@
         .cell .fac  { font-weight: bold; margin-top: 11pt; }
         .cell .ini  { margin-top: 7pt; }
 
+        /* Which groups the session is for, where the GROUP column does not
+           already say so. Set apart from the topic above it without competing
+           with the bold session taker below. */
+        .cell .grp-line { font-size: 8pt; font-style: italic; margin-top: 3pt; }
+
         td.day.dense                { font-size: 9pt; }
         td.day.dense .cell + .cell  { margin-top: 4pt; }
         td.day.dense .cell .fac     { margin-top: 0; }
         td.day.dense .cell .ini     { margin-top: 0; }
+        td.day.dense .cell .grp-line{ margin-top: 0; font-size: 7pt; }
 
         /* DomPDF cannot break a cell across pages, so a band running a dozen
            parallel classes at one hour has to be squeezed onto the page it
@@ -167,8 +176,16 @@
                                                 @if($multiCourse && !empty($ev['course']))
                                                     <div>{{ $ev['course'] }}</div>
                                                 @endif
+                                                @if(!empty($ev['groupNames']))
+                                                    <div class="grp-line">{{ $ev['groupNames'] }}</div>
+                                                @endif
                                                 @if(!empty($ev['faculty']))
-                                                    <div class="fac">({{ $ev['faculty'] }})</div>
+                                                    {{-- One pair of brackets per session taker. --}}
+                                                    <div class="fac">
+                                                        @foreach((array) $ev['faculty'] as $facName)
+                                                            <div>({{ $facName }})</div>
+                                                        @endforeach
+                                                    </div>
                                                 @endif
                                                 @if(!empty($ev['initials']))
                                                     <div class="ini">({{ $ev['initials'] }})</div>
