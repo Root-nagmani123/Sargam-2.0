@@ -136,6 +136,16 @@ remedied, and it is not (PR #317 F-013). Section 0.2 was widened on the same dat
 second, unauthenticated path to the same download. The owners and the pre-pull acceptance
 below are unchanged.
 
+**Sign-off re-taken 2026-09-23** by the Release / deploy owner (Ravi Patel), in session,
+against this document as committed on that date — the commit whose parent is `2f61777f2`,
+the merge into main. It therefore covers section 0.4 (the merge resolution and its
+ratification), sections 1, 2 and 3 as they stand after that merge, and both bypass paths in
+section 0.2. What was accepted is unchanged in substance from the 2026-09-21 entry below: the
+export gate does **not** withstand an authenticated account which self-grants
+`directory.export`, nor an unauthenticated actor who knows a `user_name`; both are
+pre-existing and neither is closed by this release. It supersedes the 2026-09-21 entry,
+which is retained below as history.
+
 **Sign-off re-taken 2026-09-21** by the Release / deploy owner (Ravi Patel), in session,
 against this text as it stands at commit `44a188dc5`'s successor — that is, including both
 bypass paths in section 0.2 and the two risk paragraphs below. What was accepted, stated so
@@ -235,16 +245,56 @@ assumed:
 - `php artisan package:discover` completes and regenerates both files, and `git status`
   then reports nothing — so the ignore rule covers the regenerated output, which is what
   makes section 1's pre-pull step safe to run repeatedly.
-- The suite is **281 tests, 1436 assertions, 0 failures** on the merged tree, identical to
-  this release before the merge.
+- The suite is **281 tests, 0 failures** on the merged tree, identical to this release
+  before the merge (1,437 assertions at the merge commit; an earlier revision of this line
+  said 1,436, one short of what an independent run measured).
 
 Section 1 applies to more hosts after this merge, not fewer: a host currently tracking
 main's hand-edited manifests meets the same refusal on the way in, for the same reason.
 
-**The section 0.3 sign-off does not carry this.** It was taken against a text that did not
-describe a merge resolution, and sections 1 and 3 are the ones it assigns to the Release /
-deploy owner, so **it needs re-taking against this text**. That has not happened; nothing in
-this section should be read as a substitute for it.
+**Ratified 2026-09-23** by the Engineering lead (Ravi Patel), in session: untracking the
+two manifests stands, and it overrides main's revert `c9fd46e73`. The ratification rests
+on the grounds above; the revert's own reason is still unrecorded, so if one surfaces later
+it is weighed against these grounds, not assumed to outrank them.
+
+**The section 0.3 sign-off now carries this.** The 2026-09-21 sign-off was taken against a
+text that did not describe a merge resolution, so it was re-taken on 2026-09-23 against
+this section as ratified — see section 0.3.
+
+### 0.5 An index for the OT roster feed — DBA, optional, not part of this release
+
+The OT grid, its count and its export all read `student_master_course__map` filtered by
+course. That table has no index beyond its primary key, and this release moves the query
+from once per page load onto every grid draw (PR #317 F-002). It is not a merge condition:
+at today's volume the scan is cheap. The statement is written down here so the DBA has it
+ready, rather than as a schema change hidden inside a redesign branch.
+
+Measured 2026-09-23 on testsargam6, against the largest course (456 officer trainees). The
+index was built on a session-only `TEMPORARY` copy of the table, so the shared schema was
+not touched:
+
+| | Access to the map table | Rows examined | Time |
+| --- | --- | --- | --- |
+| Today | full scan, no key | 3,796 | 9.3 ms |
+| With the index below | `ref` on the new index | 456 | 1.7 ms |
+
+```sql
+-- apply. ALGORITHM/LOCK make MySQL refuse rather than block writes if it cannot build
+-- the index online, so a refusal here means: reschedule into a quiet window.
+ALTER TABLE student_master_course__map
+    ADD INDEX idx_smcm_course_active_student (course_master_pk, active_inactive, student_master_pk),
+    ALGORITHM=INPLACE, LOCK=NONE;
+
+-- rollback
+ALTER TABLE student_master_course__map DROP INDEX idx_smcm_course_active_student;
+```
+
+The index and its rollback were executed on the temporary copy without the
+`ALGORITHM`/`LOCK` clause, because a `TEMPORARY` table only supports a copying rebuild —
+so whether the live table accepts the online form (MySQL 8.0.46, InnoDB) is **not yet
+verified**; the clause exists so that finding out is safe. The leading columns match the query's
+`course_master_pk = ?` and `active_inactive = 1`; the trailing `student_master_pk` lets the
+join to `student_master` read from the index. Owner: **DBA**.
 
 ## 1. Before pulling, on every host
 

@@ -20,6 +20,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use ReflectionClass;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\Process\Process;
 use Tests\TestCase;
 
 /**
@@ -1416,16 +1417,14 @@ class DirectoryExportGuardTest extends TestCase
      */
     public function test_every_git_ref_named_in_the_export_docs_is_reachable_or_marked_unshipped(): void
     {
+        // An argument array, not a command string: Process hands it to the OS
+        // without a shell, so no token read from a document can ever be parsed
+        // as shell syntax, escaped or not (PR #317 SAST-03).
         $git = static function (array $args): array {
-            $cmd = 'git -C ' . escapeshellarg(base_path());
-            foreach ($args as $arg) {
-                $cmd .= ' ' . escapeshellarg($arg);
-            }
-            $out = [];
-            $code = 0;
-            exec($cmd . ' 2>' . (DIRECTORY_SEPARATOR === '\\' ? 'NUL' : '/dev/null'), $out, $code);
+            $process = new Process(array_merge(['git', '-C', base_path()], $args));
+            $process->run();
 
-            return [$code, trim(implode("\n", $out))];
+            return [$process->getExitCode() ?? 1, trim($process->getOutput())];
         };
 
         [$inRepo] = $git(['rev-parse', '--is-inside-work-tree']);
