@@ -774,6 +774,33 @@
 .pec-page .pec-type-tabs { display: inline-flex; }
 .pec-page .pec-type-tabs .programme-status-pill { font-size: 0.8125rem; }
 
+/* ── Add-columns modal: the scroll container ──
+
+   #pecAddModal wraps its .modal-body AND its .modal-footer inside the <form>,
+   so the body is not a direct flex child of .modal-content and Bootstrap's
+   `modal-dialog-scrollable` cannot do its job: nothing scrolls, and
+   .modal-content (overflow:hidden) just clips the tail of the form away. One
+   column card still fits; add a second or third and the footer - the "Add
+   Column" submit button - is cut off the bottom with no way to reach it.
+   Making the form the flex column restores the intent: the body scrolls, the
+   footer stays pinned. Same fix as the memo / notice modals in
+   notice-memo-discipline.css. */
+.modal-dialog-scrollable .modal-content.pe-modal > form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+.modal-dialog-scrollable .modal-content.pe-modal > form > .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+.modal-dialog-scrollable .modal-content.pe-modal > form > .modal-footer {
+    flex-shrink: 0;
+}
+
 /* ── Add-columns modal: repeatable cards ── */
 
 .pec-page-modal .pec-section-title,

@@ -960,6 +960,16 @@
             // late: the state is already gone.
             $('#pecColumnsContainer').append($clone);
             syncColumnCards();
+
+            // The modal body is the scroll container, so a card appended past
+            // the fold - and the + button on it - is out of sight until you
+            // scroll. Bring it up and put the caret in it, which is where the
+            // next thing typed is meant to go anyway.
+            var newCard = $clone.get(0);
+            if (newCard && newCard.scrollIntoView) {
+                newCard.scrollIntoView({ block: 'nearest' });
+            }
+            $clone.find('.pec-name').trigger('focus');
         });
 
         $('#pecColumnsContainer').on('click', '.pec-card-btn--remove', function () {
