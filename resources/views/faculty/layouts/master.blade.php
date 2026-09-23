@@ -427,7 +427,11 @@
         @include('faculty.layouts.sidebar')
         <div class="page-wrapper">
             @include('faculty.layouts.header')
-            @include('admin.layouts.aside')
+            {{-- @include('admin.layouts.aside') removed: that view was deleted in
+                 21682a447 ("responsiveness"), which folded its 764 lines into
+                 admin/layouts/header.blade.php (+744) but did not update this
+                 layout, so every faculty page died with "View [admin.layouts.aside]
+                 not found". --}}
             <div class="body-wrapper">
                 <!-- Tab Content Container -->
                 <div class="tab-content" id="mainNavbarContent">
