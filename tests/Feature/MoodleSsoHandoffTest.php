@@ -1,0 +1,112 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\User;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\TestCase;
+
+/**
+ * Pins the two Moodle SSO entry points, which sit outside the auth group and log
+ * the caller in as whoever the request names (PR #317 L-10).
+ *
+ * Every refusal is asserted as "nobody is logged in", not as a status code:
+ * studentFacultyFeedback() wraps its abort(403) in a catch-all that redirects
+ * back, so the status is not what protects anyone - Auth::login() not running is.
+ */
+class MoodleSsoHandoffTest extends TestCase
+{
+    use DatabaseTransactions;
+
+    private const KEY = '0123456789abcdef';
+    private const IV = 'fedcba9876543210';
+
+    private function anyUser(): User
+    {
+        // Both routes trim the decrypted name, as they always have, so a user_name
+        // stored with surrounding whitespace (78 rows on testsargam6) can never match.
+        $user = User::query()
+            ->whereNotNull('user_name')
+            ->where('user_name', '!=', '')
+            ->whereRaw('user_name = TRIM(user_name)')
+            ->first();
+        if (!$user) {
+            $this->markTestSkipped('no user with a user_name in this database');
+        }
+
+        return $user;
+    }
+
+    private function token(string $username, string $key, string $iv): string
+    {
+        return base64_encode(openssl_encrypt($username, 'AES-128-CBC', $key, 0, $iv));
+    }
+
+    private function configureKey(?string $key, ?string $iv): void
+    {
+        config(['services.moodle.key' => $key, 'services.moodle.iv' => $iv]);
+    }
+
+    public function test_a_plaintext_username_logs_nobody_in(): void
+    {
+        $this->configureKey(self::KEY, self::IV);
+        $user = $this->anyUser();
+
+        $this->get('/feedback/student-feedback-url?username=' . urlencode($user->user_name))
+            ->assertForbidden();
+
+        $this->assertGuest();
+    }
+
+    public function test_a_valid_token_logs_in_the_user_it_names(): void
+    {
+        $this->configureKey(self::KEY, self::IV);
+        $user = $this->anyUser();
+
+        $this->get('/feedback/student-feedback-url?token=' . urlencode($this->token($user->user_name, self::KEY, self::IV)))
+            ->assertRedirect(route('feedback.get.studentFeedbackUrl'));
+
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_a_token_under_the_wrong_key_logs_nobody_in(): void
+    {
+        $this->configureKey(self::KEY, self::IV);
+        $user = $this->anyUser();
+        $forged = $this->token($user->user_name, 'attacker-key-000', self::IV);
+
+        $this->get('/feedback/student-feedback-url?token=' . urlencode($forged))->assertForbidden();
+        $this->assertGuest();
+
+        $this->get('/student-faculty-feedback?token=' . urlencode($forged));
+        $this->assertGuest();
+    }
+
+    /**
+     * With MOODLE_SHARED_KEY / MOODLE_SHARED_IV unset, openssl_decrypt() treats the
+     * null key and IV as zero bytes, so a token anyone can mint used to decrypt.
+     */
+    public function test_an_unset_key_refuses_a_zero_key_forgery_on_the_feedback_url(): void
+    {
+        $this->configureKey(null, null);
+        $user = $this->anyUser();
+        $forged = $this->token($user->user_name, '', str_repeat("\0", 16));
+
+        $this->get('/feedback/student-feedback-url?token=' . urlencode($forged))->assertForbidden();
+        $this->assertGuest();
+    }
+
+    /**
+     * Separate from the test above so this route is exercised even when that one
+     * fails first. Before the fix this route logged the forger in.
+     */
+    public function test_an_unset_key_refuses_a_zero_key_forgery_on_the_faculty_feedback_route(): void
+    {
+        $this->configureKey(null, null);
+        $user = $this->anyUser();
+        $forged = $this->token($user->user_name, '', str_repeat("\0", 16));
+
+        $this->get('/student-faculty-feedback?token=' . urlencode($forged));
+        $this->assertGuest();
+    }
+}

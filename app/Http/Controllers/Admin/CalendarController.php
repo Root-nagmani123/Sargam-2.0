@@ -2774,22 +2774,13 @@ class CalendarController extends Controller
             }
 
             // ================= TOKEN AUTH =================
-            $key = config('services.moodle.key');
-            $iv  = config('services.moodle.iv');
+            $username = $this->moodleTokenUsername((string) $request->token);
 
-            $username = openssl_decrypt(
-                base64_decode($request->token),
-                'AES-128-CBC',
-                $key,
-                0,
-                $iv
-            );
-
-            if (!$username) {
+            if ($username === null) {
                 abort(403, 'Invalid token');
             }
 
-            $user = User::where('user_name', trim($username))->firstOrFail();
+            $user = User::where('user_name', $username)->firstOrFail();
             Auth::login($user);
 
             $student_pk = auth()->user()->user_id;
@@ -2937,25 +2928,56 @@ class CalendarController extends Controller
         }
     }
 
+    /**
+     * The user_name carried by a Moodle SSO token, or null if the token cannot
+     * be trusted. Both SSO routes sit outside the auth group and log the caller
+     * in as whoever this returns, so every doubt resolves to null.
+     *
+     * Fails closed when MOODLE_SHARED_KEY / MOODLE_SHARED_IV are unset: with a
+     * null key and IV openssl_decrypt() silently uses all-zero bytes, so anyone
+     * could encrypt any user_name themselves and be logged in as that user.
+     */
+    private function moodleTokenUsername(string $token): ?string
+    {
+        $key = (string) config('services.moodle.key');
+        $iv  = (string) config('services.moodle.iv');
+
+        if ($key === '' || $iv === '' || $token === '') {
+            return null;
+        }
+
+        $username = openssl_decrypt(base64_decode($token), 'AES-128-CBC', $key, 0, $iv);
+        $username = is_string($username) ? trim($username) : '';
+
+        return $username === '' ? null : $username;
+    }
+
  /**
   * Student session-feedback listing, doubling as the SSO entry point.
   *
-  * An external site (e.g. Moodle) redirects here with ?username=<user_name>.
-  * On that first hop we log the user in, stash the username in the session,
-  * then redirect back to this same route WITHOUT the query string so the
-  * username never lingers in the address bar. The clean follow-up request is
-  * authenticated (via the session) and renders the listing.
+  * An external site (Moodle) redirects here with ?token=<encrypted user_name>,
+  * the same token studentFacultyFeedback() accepts. On that first hop we log
+  * the user in, stash the username in the session, then redirect back to this
+  * same route WITHOUT the query string so the token never lingers in the
+  * address bar. The clean follow-up request is authenticated (via the session)
+  * and renders the listing.
   *
-  * SECURITY: the username arrives in plaintext, so anyone can impersonate any
-  * user simply by editing the query string. This is intentional for now per
-  * request. Before exposing this beyond a trusted/internal redirect, switch to
-  * an encrypted token like studentFacultyFeedback() does.
+  * A plaintext ?username= is refused: it let anyone become any user by editing
+  * the query string (PR #317 L-10).
   */
  public function studentFeedback_url(Request $request)
   {
-        // SSO hop: ?username=<user_name> present → log in, stash, strip the query.
         if ($request->filled('username')) {
-            $username = trim((string) $request->query('username'));
+            abort(403, 'Plaintext username is not accepted; send an encrypted token');
+        }
+
+        // SSO hop: ?token=<encrypted user_name> present → log in, stash, strip the query.
+        if ($request->filled('token')) {
+            $username = $this->moodleTokenUsername((string) $request->query('token'));
+
+            if ($username === null) {
+                abort(403, 'Invalid token');
+            }
 
             $user = User::where('user_name', $username)->firstOrFail();
             Auth::login($user);
