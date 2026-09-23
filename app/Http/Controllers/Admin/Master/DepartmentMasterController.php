@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\DataTables\Master\DepartmentMasterDataTable;
 use App\Models\DepartmentMaster;
 use Illuminate\Validation\Rule;
+use App\DataTables\MemberDataTable;
 
 
 class DepartmentMasterController extends Controller
@@ -46,6 +47,11 @@ class DepartmentMasterController extends Controller
 
         $department->department_name = $request->department_name;
         $department->save();
+
+        // The Member listing renders/caches this department's name (see F-011/F-021,
+        // PR #319 review) — this controller is a second, separately-routed write path
+        // to department_master alongside the Setup one, so it needs the same bump.
+        MemberDataTable::bumpListingCacheEpoch();
 
         $message = $id ? 'Department updated successfully.' : 'Department created successfully.';
 

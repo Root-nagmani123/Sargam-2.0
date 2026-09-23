@@ -149,7 +149,14 @@
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label" for="landlinenumber">Landline Number :</label>
-            <input type="number" class="form-control only-numbers" id="landlinenumber" name="landlinenumber">
+            <input
+                type="text"
+                class="form-control only-numbers"
+                id="landlinenumber"
+                name="landlinenumber"
+                inputmode="numeric"
+                maxlength="15"
+            >
         </div>
     </div>
 </div>

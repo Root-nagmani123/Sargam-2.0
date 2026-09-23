@@ -30,7 +30,7 @@ class StoreMemberStep1Request extends FormRequest
         return [
             'first_name' => 'required|string|max:100|regex:/^[A-Za-z\s]+$/',
             'middle_name' => 'nullable|string|max:100|regex:/^[A-Za-z\s]+$/',
-            'last_name' => 'required|string|max:100|regex:/^[A-Za-z\s]+$/',
+            'last_name' => 'nullable|string|max:100|regex:/^[A-Za-z\s]+$/',
             'father_husband_name' => 'required|string|max:100|regex:/^[A-Za-z\s]+$/',
             'marital_status' => [
                 'required',
@@ -61,7 +61,6 @@ class StoreMemberStep1Request extends FormRequest
             'first_name.regex' => 'The first name must contain only letters and spaces.',
             'middle_name.regex' => 'The middle name must contain only letters and spaces.',
             'middle_name.max' => 'The middle name may not be greater than 100 characters.',
-            'last_name.required' => 'The last name field is required.',
             'last_name.regex' => 'The last name must contain only letters and spaces.',
             'last_name.max' => 'The last name may not be greater than 100 characters.',
             'father_husband_name.required' => 'Father/Husband name is required.',

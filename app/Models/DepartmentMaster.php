@@ -20,7 +20,7 @@ class DepartmentMaster extends Model
     }
     public static function getDepartmentList()
     {
-        $departmentList = self::active()->select('pk', 'department_name')->get();
+        $departmentList = self::active()->select('pk', 'department_name')->orderBy('department_name')->get();
         return $departmentList->toArray();
     }
 }
