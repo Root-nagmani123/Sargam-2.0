@@ -13,9 +13,14 @@ use Illuminate\Console\Command;
  * moment — correctly. Without this command the window would then open on its
  * start date in silence and the OTs would never hear about it.
  *
- * Safe to run as often as you like: the notifier sends one notification per
- * officer trainee per group and skips anyone already told, so a daily run over
- * a window that stays open for a fortnight does not ping anybody again.
+ * Safe to run as often as you like: an officer trainee is told when their view
+ * of a group CHANGES, so a daily run over a window that stays open for a
+ * fortnight does not ping anybody again - while a form that was closed and
+ * reopened is announced afresh.
+ *
+ * Openings only. A closure is announced by the admin action that causes one
+ * (PeerEvaluationNotifier::announceGroup), never swept up here: a nightly pass
+ * over historical groups would announce every window that has ever ended.
  */
 class NotifyOpenPeerEvaluations extends Command
 {

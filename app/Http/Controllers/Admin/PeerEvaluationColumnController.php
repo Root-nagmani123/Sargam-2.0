@@ -9,6 +9,7 @@ use App\Models\CourseMaster;
 use App\Models\PeerColumn;
 use App\Models\PeerEvent;
 use App\Models\PeerGroup;
+use App\Services\Peer\PeerEvaluationNotifier;
 use App\Support\PeerCourseStatusScope;
 use App\Support\PeerGroupSource;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -344,7 +345,14 @@ class PeerEvaluationColumnController extends Controller
                     }
                 }
 
-                return ['columns' => $count, 'groups' => count($groups)];
+                return [
+                    'columns' => $count,
+                    'groups' => count($groups),
+                    // For the notification below, which has to happen after the
+                    // transaction commits - there is no telling an OT a form is
+                    // open on the strength of rows that might still roll back.
+                    'ids' => array_map(static fn ($group) => (int) $group->id, $groups),
+                ];
             });
         } catch (ValidationException $e) {
             // The transaction has already rolled back. Let the 422 through rather
@@ -354,6 +362,15 @@ class PeerEvaluationColumnController extends Controller
             Log::error('Peer evaluation column create failed', ['error' => $e->getMessage()]);
 
             return $this->fail($request, 'Could not add the columns. Please try again.');
+        }
+
+        // Criteria are the last thing a form needs to become fillable, so adding
+        // them is usually the moment a peer evaluation starts existing for the
+        // officer trainees in it - and the moment the members linked in above
+        // hear about it. announceGroup() re-checks the open/closed rule, so if
+        // the event has not started this tells them they are on it instead.
+        foreach ($created['ids'] as $groupId) {
+            app(PeerEvaluationNotifier::class)->announceGroup($groupId);
         }
 
         return $this->ok($request, $this->addedMessage($created['columns'], $created['groups']));

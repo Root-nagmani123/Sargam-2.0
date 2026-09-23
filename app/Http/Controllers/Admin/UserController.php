@@ -4642,6 +4642,23 @@ public function toggleStatus(Request $request)
             IssuePriorityController::bumpIndexListCacheEpoch();
         }
 
+        /* Peer Evaluation's other two master switches arrive here: the Active
+           switch on Manage Events, and a criterion's own switch on Manage
+           Evaluation Columns. Both decide whether an officer trainee can fill a
+           form - an inactive event closes every group under it, and switching off
+           the last criterion leaves a form with nothing to score - so the groups
+           affected announce their new state, exactly as the form switch does. */
+        if ($table === 'peer_events' && $column === 'is_active') {
+            $this->announcePeerGroups(
+                DB::table('peer_groups')->where('event_id', $id)->pluck('id')
+            );
+        }
+        if ($table === 'peer_columns' && $column === 'is_visible') {
+            $this->announcePeerGroups(
+                DB::table('peer_columns')->where('id', $id)->pluck('group_id')
+            );
+        }
+
         $newState = ((int) $status === 1) ? 'Active' : 'Inactive';
         session()->flash('success', "Status updated to {$newState}.");
 
@@ -4654,6 +4671,25 @@ public function toggleStatus(Request $request)
         return response()->json([
             'message' => 'Failed to update status: ' . $e->getMessage(),
         ], 500);
+    }
+}
+
+/**
+ * Tell the officer trainees of these peer groups where their form now stands.
+ *
+ * The notifier works out what changed and who has not heard it yet, and swallows
+ * its own failures - a toggle must not 500 because a notification did.
+ *
+ * @param  \Illuminate\Support\Collection<int, mixed>  $groupIds
+ */
+private function announcePeerGroups($groupIds): void
+{
+    $notifier = app(\App\Services\Peer\PeerEvaluationNotifier::class);
+
+    foreach ($groupIds as $groupId) {
+        if ($groupId) {
+            $notifier->announceGroup((int) $groupId);
+        }
     }
 }
 public function assignRole($id)

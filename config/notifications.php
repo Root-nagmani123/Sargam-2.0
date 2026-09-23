@@ -215,6 +215,24 @@ return [
         ],
     ],
 
+    // "You have been added to this evaluation" and "it has been closed" land on
+    // the same page as the open notice. Both are about a form the OT cannot fill
+    // yet (or any more), and peer.index says which of the two it is, in the
+    // group's own words - see PeerEvaluationForm::closedReason.
+    'peer_evaluation_assigned' => [
+        'PeerEvaluation' => [
+            'route' => 'peer.index',
+            'params' => ['group_id' => 'reference_pk'],
+        ],
+    ],
+
+    'peer_evaluation_closed' => [
+        'PeerEvaluation' => [
+            'route' => 'peer.index',
+            'params' => ['group_id' => 'reference_pk'],
+        ],
+    ],
+
     // Default fallback route
     'default' => [
         'route' => 'admin.dashboard',

@@ -214,14 +214,13 @@ class PeerEvaluationController extends Controller
                 : ! $group->is_form_active;
             $group->save();
 
-            // Switching the form ON is the moment the group's officer trainees
-            // can actually fill it, so that is when they are told. Switching it
-            // off sends nothing. The notifier re-checks the whole open/closed
-            // rule, so a group whose event has not started yet stays quiet here
-            // — peer:notify-open-evaluations picks it up on the day it opens.
-            if ($group->is_form_active) {
-                app(PeerEvaluationNotifier::class)->notifyOpenGroup((int) $group->id);
-            }
+            // Both ways: switching the form ON is the moment the group's officer
+            // trainees can fill it, and switching it OFF takes a form they were
+            // told to fill away from them. The notifier re-checks the whole
+            // open/closed rule and only tells people whose view of it changed, so
+            // a group whose event has not started yet stays quiet here —
+            // peer:notify-open-evaluations picks it up on the day it opens.
+            app(PeerEvaluationNotifier::class)->announceGroup((int) $group->id);
 
             return response()->json([
                 'status' => 'success',
@@ -695,11 +694,12 @@ class PeerEvaluationController extends Controller
             );
         }
 
-        // Tell the people just added that they have an evaluation to fill —
-        // but only the ones added, not the whole group, or every existing
-        // member would be pinged again each time one person is added.
+        // Tell the people just added — but only them, not the whole group, or
+        // every existing member would be pinged again each time one person is
+        // added. They get "you can fill it now" if the form is open and "you have
+        // been added, it opens on <date>" if it is not; announceGroup() decides.
         app(PeerEvaluationNotifier::class)
-            ->notifyOpenGroup((int) $groupId, array_map('intval', $request->member_pks));
+            ->announceGroup((int) $groupId, array_map('intval', $request->member_pks));
 
         if ($skipped > 0) {
             return back()->with(

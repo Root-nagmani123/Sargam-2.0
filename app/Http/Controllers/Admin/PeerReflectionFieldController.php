@@ -11,6 +11,7 @@ use App\Models\PeerEvent;
 use App\Models\PeerGroup;
 use App\Models\PeerGroupMember;
 use App\Models\PeerReflectionField;
+use App\Services\Peer\PeerEvaluationNotifier;
 use App\Support\PeerCourseStatusScope;
 use App\Support\PeerEvaluationForm;
 use App\Support\PeerGroupSource;
@@ -342,6 +343,14 @@ class PeerReflectionFieldController extends Controller
             Log::error('Peer reflection field create failed', ['error' => $e->getMessage()]);
 
             return $this->fail($request, 'Could not add the reflection fields. Please try again.');
+        }
+
+        // A reflection field can be what creates the group (link() runs during
+        // validation), so this is a place a peer evaluation starts existing for
+        // the OTs in it. Reflection fields alone never open a form - criteria do
+        // that - so in practice this tells them they are on one.
+        foreach ($groups as $group) {
+            app(PeerEvaluationNotifier::class)->announceGroup((int) $group->id);
         }
 
         return $this->ok($request, $this->addedMessage(count($labels), count($groups)));
