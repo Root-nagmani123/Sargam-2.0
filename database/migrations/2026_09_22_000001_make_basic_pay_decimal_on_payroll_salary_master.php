@@ -14,10 +14,16 @@ use Illuminate\Support\Facades\Schema;
  * table is read by the Estate module for house eligibility, so a figure that silently
  * disagrees with the employee's letter is a data problem, not a cosmetic one.
  *
- * Decision recorded: basic pay MAY carry paise, so the column matches its siblings'
- * precision. decimal(15,2) rather than double(15,2) — same precision and range, but
- * exact rather than binary floating point, which is the correct choice for money and
- * does not change how the column is read.
+ * The column is widened to match its siblings' precision so that it can represent
+ * whatever the domain turns out to require. decimal(15,2) rather than double(15,2) —
+ * same precision and range, but exact rather than binary floating point, which is the
+ * correct choice for money and does not change how the column is read.
+ *
+ * This is NOT a recorded domain decision that basic pay carries paise; the Product
+ * owner's confirmation is still owed. An earlier version of this docblock said
+ * "Decision recorded", which the independent review raised as F-040. Widening is the
+ * safe move either way: decimal(15,2) holds every value a signed INT could, so no
+ * answer to the domain question makes this migration wrong.
  *
  * Widening only: decimal(15,2) holds every value a signed INT could. The sibling
  * migration 2026_08_19_000001 is corrected for environments where it has not run yet;

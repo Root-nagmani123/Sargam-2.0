@@ -50,16 +50,21 @@ class StoreMemberStep6Request extends FormRequest
         return [
             'gradepay'         => ['nullable', 'exists:salary_grade_master,pk'],
             'employeecategory' => $employeeCategoryRule,
-            // PR #319 review F-009 asked for min:0 "and a sane maximum ... regardless" of
-            // how the open precision question is settled. min:0 shipped in round 2; the
-            // ceiling did not. 1,00,00,000 is far above any monthly basic pay here and far
-            // below the signed-INT range the column currently allows, so a mistyped extra
-            // digit is rejected at the form instead of being stored. The integer-vs-
-            // decimal(15,2) half of F-009 is a domain decision and is NOT made here.
-            // numeric, not integer: basic pay may carry paise, and the column is now
-            // decimal(15,2) to match every other money column on payroll_salary_master
-            // (PR #319 review, F-009). min:0 rejects a negative; the ceiling is far above
-            // any monthly basic pay here, so a mistyped extra digit is caught at the form.
+            // basic_pay is decimal(15,2), matching every other money column on
+            // payroll_salary_master, so `numeric` rather than `integer`: the column can
+            // hold paise and the rule must not reject what the column accepts. min:0
+            // rejects a negative; 1,00,00,000 is far above any monthly basic pay here, so
+            // a mistyped extra digit is caught at the form instead of stored.
+            //
+            // Whether basic pay is ever fractional IN PRACTICE is a domain question and
+            // is still open — the Product owner's confirmation is owed. Decimal holds
+            // every integer, so neither answer produces a wrong stored value; if pay is
+            // integral-only the residual is just that the form accepts paise.
+            //
+            // (An earlier version of this block carried two contradictory comments, one
+            // saying the precision question was NOT settled here and one describing it as
+            // settled. The independent review raised that as F-040; the stale half is
+            // removed rather than reconciled, because only this reading is true.)
             'basicpay'         => ['nullable', 'numeric', 'min:0', 'max:10000000'],
             'bankname'         => ['nullable', 'string', 'max:100'],
             'accountno'        => ['nullable', 'string', 'max:50'],

@@ -315,6 +315,92 @@ class MemberWizardStep6RegressionTest extends TestCase
     }
 
     /**
+     * F-037: Step 6 must read and write the payroll row an employee ACTUALLY has.
+     *
+     * payroll_salary_master.employee_master_pk does not hold employee_master.pk on real
+     * data — it holds pk_old. Measured on the live database: of 892 payroll rows, 876
+     * match a pk_old and 0 match a pk, and the two ranges do not overlap. The Estate
+     * module says so in its own code (EstateController::estateEmployeePkColumn() returns
+     * 'pk_old', and the comment above its payroll join spells out why), and Estate is what
+     * reads this table for house eligibility.
+     *
+     * So Step 6, keying by pk, showed a blank grade for every existing employee and wrote
+     * an orphan row Estate would never find. This test builds the real shape — an employee
+     * with a pk_old and a payroll row keyed by it — and asserts the wizard finds that row
+     * rather than creating a second one.
+     */
+    public function test_step6_reads_and_writes_the_payroll_row_keyed_by_the_legacy_employee_key(): void
+    {
+        $this->requireStep6Schema();
+
+        if (! Schema::hasColumn('employee_master', 'pk_old')) {
+            $this->markTestSkipped('employee_master.pk_old does not exist on this environment.');
+        }
+
+        $this->makeAdminActor('pkold');
+
+        $employeePk = $this->makeEmployee();
+        $legacyKey  = 900000000 + $employeePk;          // outside the pk range, like the real data
+        DB::table('employee_master')->where('pk', $employeePk)->update(['pk_old' => $legacyKey]);
+
+        // The employee's existing payroll row, keyed the way every live row is keyed.
+        DB::table('payroll_salary_master')->insert([
+            'employee_master_pk' => $legacyKey,
+            'salary_grade_pk'    => DB::table('salary_grade_master')->value('pk'),
+            'bank_name'          => 'Legacy Bank',
+        ]);
+
+        $before = DB::table('payroll_salary_master')->where('employee_master_pk', $legacyKey)->count();
+        $this->assertSame(1, $before, 'Fixture assumption: exactly one payroll row, keyed by pk_old.');
+
+        $this->invokePrivate('saveStep6PayrollData', [
+            $employeePk,
+            $this->step6Request(['bankname' => 'Updated Bank', 'basicpay' => 51000]),
+        ]);
+
+        // The existing row was updated, not shadowed by a new pk-keyed orphan.
+        $this->assertSame(
+            1,
+            DB::table('payroll_salary_master')->where('employee_master_pk', $legacyKey)->count(),
+            'The employee must still have exactly one payroll row.'
+        );
+        $this->assertSame(
+            0,
+            DB::table('payroll_salary_master')->where('employee_master_pk', $employeePk)->count(),
+            'Keying by the raw pk creates an orphan row the Estate module cannot read.'
+        );
+        $this->assertSame(
+            'Updated Bank',
+            DB::table('payroll_salary_master')->where('employee_master_pk', $legacyKey)->value('bank_name'),
+            'The save must land on the row Estate joins to.'
+        );
+    }
+
+    /**
+     * The other half of F-037: an employee with no legacy key must still work. A resolver
+     * that returned NULL or blew up for them would break member creation, since every
+     * member this wizard creates has pk_old NULL.
+     */
+    public function test_step6_falls_back_to_the_primary_key_when_there_is_no_legacy_key(): void
+    {
+        $this->requireStep6Schema();
+        $this->makeAdminActor('nopkold');
+
+        $employeePk = $this->makeEmployee();   // pk_old is NULL for a freshly created row
+
+        $this->invokePrivate('saveStep6PayrollData', [
+            $employeePk,
+            $this->step6Request(['bankname' => 'New Member Bank', 'basicpay' => 42000]),
+        ]);
+
+        $this->assertSame(
+            'New Member Bank',
+            DB::table('payroll_salary_master')->where('employee_master_pk', $employeePk)->value('bank_name'),
+            'An employee with no pk_old must have their payroll row keyed by pk.'
+        );
+    }
+
+    /**
      * F-011, the denied case — the half that matters.
      *
      * update() deliberately permits a non-admin to write their OWN employee record so the

@@ -22,6 +22,27 @@ use App\Exports\MemberExport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\AppellationMaster;
 use Spatie\Permission\Models\Role;
+/**
+ * NOTE ON THE "PR #319 review, F-0xx" CITATIONS IN THIS FILE.
+ *
+ * Two separate reviews of PR #319 exist, and their finding numbers COLLIDE. A comment
+ * here reading "PR #319 review, F-006" therefore points at two different defects
+ * depending on which report the reader is holding. Raised by the independent review as
+ * F-040; recorded here rather than left for the next reader to trip over.
+ *
+ *   - The long-running series (rounds 1-9, F-001..F-040) is the one kept in the review
+ *     workspace. Its F-001 is the missing employee_category_master table, its F-006 the
+ *     role-sync near-duplicates. Citations naming a round ("round 4 (F-028)") and all of
+ *     F-012..F-040 belong to it.
+ *   - A second, shorter review run during development used its own F-001..F-011 plus
+ *     R-001..R-004. Its F-001 is the confused-deputy RBAC escalation, its F-006 the
+ *     payroll read-then-write. Every "R-00x" citation is unambiguously from this one.
+ *
+ * Where the two cannot be told apart from the ID alone, the surrounding comment states
+ * the defect in words — read that, not the number. Neither report is authority for what
+ * this code does: the comments below are descriptions to verify, not evidence
+ * (agent-operating-rules.md 9.3 rank 1).
+ */
 class MemberController extends Controller
 {
     public function index(MemberDataTable $dataTable)
@@ -247,12 +268,51 @@ class MemberController extends Controller
         // employee could both read "no row" and both insert (independent review of
         // PR #319, F-006). The unique index added by 2026_09_22_000002 is what actually
         // enforces one payroll row per employee; this is the matching code shape.
+        // Keyed through payrollEmployeeKey(), not by the raw employee_master.pk — see that
+        // method. Keying by pk matched no existing row on any measured environment
+        // (F-037), so every save created an orphan the Estate module could not read.
         PayrollSalaryMaster::updateOrCreate(
-            ['employee_master_pk' => $employeeMasterPk],
+            ['employee_master_pk' => $this->payrollEmployeeKey($employeeMasterPk)],
             $data
         );
 
         return null;
+    }
+
+    /**
+     * The key `payroll_salary_master.employee_master_pk` actually holds for an employee.
+     *
+     * Independent review of PR #319, F-037. Despite its name, that column does NOT hold
+     * employee_master.pk on this data. Measured on saragam_live: of 892 payroll rows,
+     * 876 match an employee_master.pk_old and **0** match a pk, and the two ranges do not
+     * overlap (payroll keys run from 1,001,235,060 upward; employee pks are 10001-11838).
+     * employee_master.pk_old is populated on 1826 of 1831 rows and equals pk on none.
+     *
+     * This is not a guess about intent — the downstream consumer says so in its own code.
+     * EstateController::estateEmployeePkColumn() returns 'pk_old' whenever that column
+     * exists, and the comment above its payroll join reads "payroll_salary_master may
+     * still reference employee_master.pk_old, so we keep a separate column for joins"
+     * (EstateController.php:939). Estate joins this table for house eligibility.
+     *
+     * So Step 6, keying by pk, read nothing for every existing employee and wrote an
+     * orphan row Estate would never find. This resolver mirrors Estate's convention.
+     *
+     * RESIDUAL, deliberately not decided here: 5 employees on this database have a NULL
+     * pk_old (the newest rows, and any member this wizard creates). For them there is no
+     * legacy key, so their payroll row is keyed by pk — which Estate's pk_old join will
+     * not match. Whether those employees should get a pk_old, or Estate should widen its
+     * join, is an Estate/payroll domain decision and is raised as a human action rather
+     * than settled in this controller.
+     */
+    private function payrollEmployeeKey(int $employeeMasterPk): int
+    {
+        if (! Schema::hasColumn('employee_master', 'pk_old')) {
+            return $employeeMasterPk;
+        }
+
+        $pkOld = EmployeeMaster::where('pk', $employeeMasterPk)->value('pk_old');
+
+        return ($pkOld === null || (int) $pkOld === 0) ? $employeeMasterPk : (int) $pkOld;
     }
 
     /**
@@ -342,10 +402,28 @@ class MemberController extends Controller
             return;
         }
 
-        $ownEmployeePk = Auth::user()->user_id ?? null;
+        $actor = Auth::user();
+
+        // Independent review of PR #319, F-038. The previous version compared
+        // Auth::user()->user_id to emp_id and stopped there. That treats user_id as an
+        // employee_master.pk for EVERY login, and it is not one: user_id is scoped per
+        // user_category. Measured on this database, 328 logins that are NOT employee
+        // accounts (327 NULL-category, 1 'S') carry a user_id equal to some unrelated
+        // employee's pk — so each of them passed the "it's my own record" test for a
+        // stranger. Reproduced end to end on testsargam6 by the independent reviewer: a
+        // trainee login renamed employee 11056, and another rewrote employee 11058's own
+        // user_credentials row.
+        //
+        // The category check is what makes user_id mean "employee_master.pk" — store()
+        // creates employee logins with user_category 'E' and 'user_id' => $employee->pk,
+        // so that is the only category in which the two are the same namespace.
+        $isEmployeeLogin = ($actor->user_category ?? null) === 'E';
+        $ownEmployeePk = $actor->user_id ?? null;
 
         abort_unless(
-            $ownEmployeePk !== null && (int) $ownEmployeePk === (int) $employeeMasterPk,
+            $isEmployeeLogin
+                && $ownEmployeePk !== null
+                && (int) $ownEmployeePk === (int) $employeeMasterPk,
             403
         );
     }
@@ -601,15 +679,22 @@ class MemberController extends Controller
      * ticking "Super-Admin" wrote an employee_role_mapping row and granted nothing —
      * a bug, but one that happened to keep the Member wizard from minting Super Admins.
      *
-     * Decision taken by the Engineering lead on 2026-09-22: it must not. Super Admin is
-     * granted from Role & Permission > Users, which is the screen built for it and
-     * carries its own abort_unless(hasRole('Super Admin')) gate. Nobody loses the
-     * ability to grant it; it stops being a checkbox on a screen where 33 of the other
-     * 34 options are plain HR tags and nothing distinguishes the two kinds.
+     * It must not. Super Admin is granted from Role & Permission > Users, which is the
+     * screen built for it and carries its own abort_unless(hasRole('Super Admin')) gate.
+     * Nobody loses the ability to grant it; it stops being a checkbox on a screen where
+     * almost every other option is a plain HR tag with nothing to distinguish the two.
      *
-     * Matched on the NORMALISED name, so "Super-Admin", "super admin" and "SuperAdmin"
-     * are all covered — the exact-string comparison this list replaces is the very bug
-     * that created the problem.
+     * This choice was made during development and is NOT a recorded decision of the
+     * Engineering lead — an earlier version of this comment claimed it was, which the
+     * independent review raised as F-040. If the wizard IS meant to grant Super Admin,
+     * remove it from the list below; that reversal is one line.
+     *
+     * Matched on a SEPARATOR-FREE key, not the normalised name. normalizeRoleName()
+     * collapses separators to a single space, so it maps "Super-Admin" to "super admin"
+     * but "SuperAdmin" to "superadmin" — meaning the concatenated spelling slipped the
+     * block while this docblock claimed it was covered (F-039). app/helpers.php's
+     * hasRole() already treats "SuperAdmin" and "Super Admin" as the same role, so a
+     * Spatie role under that spelling is a real possibility, not a hypothetical.
      */
     /**
      * Which of the ticked options name a role this screen refuses to grant.
@@ -619,18 +704,22 @@ class MemberController extends Controller
      */
     private function blockedRoleSelections(array $displayNames, array $spatieRoleNames): array
     {
+        // blockedRoleKey(), matching roleIsNotGrantableFromThisScreen(). If this used
+        // normalizeRoleName() instead, a ticked "SuperAdmin" option would be refused the
+        // grant and produce NO warning — silently dead, which is the F-005 shape the
+        // warning exists to prevent.
         $blockedKeys = [];
 
         foreach ($spatieRoleNames as $spatieRoleName) {
             if ($this->roleIsNotGrantableFromThisScreen($spatieRoleName)) {
-                $blockedKeys[$this->normalizeRoleName($spatieRoleName)] = true;
+                $blockedKeys[$this->blockedRoleKey($spatieRoleName)] = true;
             }
         }
 
         $hits = [];
 
         foreach ($displayNames as $displayName) {
-            if (isset($blockedKeys[$this->normalizeRoleName($displayName)])) {
+            if (isset($blockedKeys[$this->blockedRoleKey($displayName)])) {
                 $hits[] = $displayName;
             }
         }
@@ -641,11 +730,29 @@ class MemberController extends Controller
     private function roleIsNotGrantableFromThisScreen(string $spatieRoleName): bool
     {
         $blocked = array_map(
-            fn ($name) => $this->normalizeRoleName($name),
+            fn ($name) => $this->blockedRoleKey($name),
             ['Super Admin']
         );
 
-        return in_array($this->normalizeRoleName($spatieRoleName), $blocked, true);
+        return in_array($this->blockedRoleKey($spatieRoleName), $blocked, true);
+    }
+
+    /**
+     * Comparison key for the block list: lowercase with every separator REMOVED.
+     *
+     * Deliberately not normalizeRoleName(), which collapses separators to a single space
+     * and so distinguishes "Super Admin"/"Super-Admin" (both "super admin") from
+     * "SuperAdmin" ("superadmin"). That gap let the concatenated spelling through the
+     * block (F-039). Dropping separators entirely makes all three the same key.
+     *
+     * This is the right rule for a deny-list and the wrong one for the grant lookup:
+     * resolveSpatieRoleNames() must keep using normalizeRoleName(), because that mirrors
+     * the sync migration's own normalize() and a looser key there would start conflating
+     * genuinely different roles. A deny-list may over-match safely; a grant map may not.
+     */
+    private function blockedRoleKey(string $name): string
+    {
+        return preg_replace('/[\s_-]+/', '', mb_strtolower(trim($name)));
     }
 
     /**
@@ -916,22 +1023,44 @@ class MemberController extends Controller
             // user_credentials.user_id can do that, which needs the DBA to reconcile the
             // duplicates first — which is why syncSpatieRolesFromWizardSelection() refuses
             // to touch RBAC for an ambiguous member and now says so in the response.
+            // Independent review of PR #319, F-038 (second half). An administrator may
+            // rewrite the member's login; a self-service actor may only touch their OWN
+            // credential row, and may not rename the login at all.
+            //
+            // Two things were wrong before. The row was always resolved by
+            // where('user_id', emp_id)->first(), so a self-service save wrote to whichever
+            // row that lookup returned rather than to the actor's own — on the measured
+            // data that is a DIFFERENT person's login for the colliding accounts. And
+            // user_name was always in the payload, so the same save could rename a login.
+            // Both were demonstrated: a trainee rewrote employee 11058's user_name and
+            // email_id to attacker-chosen values.
+            $actingAsAdmin = $this->actingUserCanManageMembers();
+
             $credentialAttributes = [
-                'first_name'    => $request->first_name,
-                'last_name'     => $request->last_name,
-                'email_id'      => $request->personalemail,
-                'mobile_no'     => $request->mnumber,
-                'user_name'     => $request->userid,
-                'user_category' => 'E',
+                'first_name' => $request->first_name,
+                'last_name'  => $request->last_name,
+                'email_id'   => $request->personalemail,
+                'mobile_no'  => $request->mnumber,
             ];
 
-            $userCredential = UserCredential::where('user_id', $request->emp_id)
-                ->orderBy('pk')
-                ->first();
+            if ($actingAsAdmin) {
+                // Only an administrator may set the login name or (re)assert the category.
+                $credentialAttributes['user_name']     = $request->userid;
+                $credentialAttributes['user_category'] = 'E';
+
+                $userCredential = UserCredential::where('user_id', $request->emp_id)
+                    ->orderBy('pk')
+                    ->first();
+            } else {
+                // Self-service: the actor's own row, by primary key. authorizeMemberWrite()
+                // has already established that this actor is an 'E' login whose user_id is
+                // this employee, so there is no lookup to get wrong.
+                $userCredential = UserCredential::find(Auth::id());
+            }
 
             if ($userCredential) {
                 $userCredential->update($credentialAttributes);
-            } else {
+            } elseif ($actingAsAdmin) {
                 $userCredential = UserCredential::create(
                     $credentialAttributes + ['user_id' => $request->emp_id]
                 );
@@ -1075,7 +1204,9 @@ class MemberController extends Controller
         [$gradePayOptions, $employeeCategoryOptions] = ((int) $step === 6)
             ? $this->step6DropdownOptions()
             : [[], []];
-        $payrollSalary = PayrollSalaryMaster::where('employee_master_pk', $id)->first();
+        // Same key as the write path (F-037). Reading by the raw pk showed a blank grade
+        // for every existing employee, because no live payroll row is keyed that way.
+        $payrollSalary = PayrollSalaryMaster::where('employee_master_pk', $this->payrollEmployeeKey((int) $id))->first();
         return view("admin.member.edit_steps.step{$step}", compact('member', 'appellationMasterList', 'gradePayOptions', 'employeeCategoryOptions', 'payrollSalary'));
     }
 

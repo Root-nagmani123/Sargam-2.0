@@ -270,6 +270,80 @@ class MemberWriteAuthorizationTest extends TestCase
     }
 
     /**
+     * F-038, the denied case that the previous fixture could not express.
+     *
+     * authorizeMemberWrite() compared Auth::user()->user_id to emp_id and stopped there,
+     * which treats user_id as an employee_master.pk for EVERY login. It is scoped per
+     * user_category: measured on the live data, 328 logins that are NOT employee accounts
+     * carry a user_id equal to some unrelated employee's pk, so each of them passed the
+     * "my own record" test for a stranger. The independent review reproduced it — a
+     * trainee login renamed employee 11056, and another rewrote employee 11058's own
+     * credential row.
+     *
+     * The earlier tests in this file could not catch it: their actor fixtures are built
+     * as category 'E' with user_id = their own employee, which is exactly the case where
+     * the old and new predicates agree.
+     */
+    public function test_a_non_employee_login_cannot_write_the_employee_whose_pk_matches_its_user_id(): void
+    {
+        $victimPk = $this->makeEmployee('Victim');
+
+        // A trainee-style login: NULL category, and a user_id that happens to equal an
+        // unrelated employee's primary key. This is the real shape on the live data.
+        $attackerPk = DB::table('user_credentials')->insertGetId([
+            'user_name'     => 'collide_' . uniqid(),
+            'user_id'       => $victimPk,
+            'first_name'    => 'Trainee',
+            'user_category' => null,
+        ]);
+
+        $attacker = User::find($attackerPk);
+        $this->assertSame([], $attacker->getRoleNames()->all(), 'Fixture assumption: the actor holds no Spatie roles.');
+
+        $response = $this->actingAs($attacker)->post(
+            route('member.update'),
+            $this->memberPayload($victimPk, ['first_name' => 'Hijacked'])
+        );
+
+        $response->assertForbidden();
+
+        $this->assertSame(
+            'Victim',
+            DB::table('employee_master')->where('pk', $victimPk)->value('first_name'),
+            'A login whose user_id merely collides with an employee pk must not be able to rewrite that employee.'
+        );
+    }
+
+    /**
+     * F-038, second half: a self-service save must not rename the login, and must touch
+     * only the actor's OWN credential row.
+     *
+     * update() resolved the row with where('user_id', emp_id)->orderBy('pk')->first() and
+     * always carried user_name in the payload, so a self-service save could rewrite a
+     * different person's login name and email.
+     */
+    public function test_a_self_service_save_cannot_change_the_login_name(): void
+    {
+        $employeePk = $this->makeEmployee('Selfsvc');
+        $actor = $this->makeZeroRoleActor($employeePk);
+
+        $originalUserName = $actor->user_name;
+
+        $response = $this->actingAs($actor)->post(
+            route('member.update'),
+            $this->memberPayload($employeePk, ['userid' => 'renamed_by_self_' . uniqid()])
+        );
+
+        $response->assertStatus(200);   // the actor's own record — the save itself is allowed
+
+        $this->assertSame(
+            $originalUserName,
+            DB::table('user_credentials')->where('pk', $actor->pk)->value('user_name'),
+            'A self-service save must not rename the login.'
+        );
+    }
+
+    /**
      * R-001: the warning has to be RENDERED, not merely returned.
      *
      * Round 3 found that the previous fix stopped at the JSON response. The wizard's
