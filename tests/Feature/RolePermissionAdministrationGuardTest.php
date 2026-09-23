@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Services\SidebarMenu\MenuService;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -29,6 +30,11 @@ use Tests\TestCase;
  */
 class RolePermissionAdministrationGuardTest extends TestCase
 {
+    // Every test here posts to endpoints that WRITE when the guard is missing. Without
+    // this, running the file against unfixed code (the red half of red/green) granted
+    // directory.export to a real role in the shared database, and nothing rolled it back.
+    use DatabaseTransactions;
+
     /** Routes that must refuse an ordinary authenticated user, on BOTH mounts. */
     private const GUARDED_GET_ROUTES = [
         'roles.index',
