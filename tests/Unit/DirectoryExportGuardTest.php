@@ -1417,9 +1417,11 @@ class DirectoryExportGuardTest extends TestCase
      */
     public function test_every_git_ref_named_in_the_export_docs_is_reachable_or_marked_unshipped(): void
     {
-        // An argument array, not a command string: Process hands it to the OS
-        // without a shell, so no token read from a document can ever be parsed
-        // as shell syntax, escaped or not (PR #317 SAST-03).
+        // An argument array, not a hand-built command string: Process escapes each
+        // element for the platform's shell (/bin/sh, or cmd.exe on Windows) before
+        // running it, so the quoting is the library's job rather than ours. The
+        // tokens reaching it are also limited to [A-Za-z0-9._/-] by the regex below
+        // (PR #317 SAST-03, F-017).
         $git = static function (array $args): array {
             $process = new Process(array_merge(['git', '-C', base_path()], $args));
             $process->run();
