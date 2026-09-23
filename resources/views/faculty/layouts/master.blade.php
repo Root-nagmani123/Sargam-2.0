@@ -4,10 +4,12 @@
 <head>
     @include('admin.layouts.pre_header')
     <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
-    {{-- Deliberately NOT a @section: nothing yields 'css', and the directive opened an
+    {{-- Deliberately NOT a @section. This was an unclosed @section('css'): it opened an
      output buffer that was never closed, so every page built on this layout leaked
-     one buffer level. The styles below are emitted inline, which is where they
-     already ended up. --}}
+     one buffer level. A child page's own @section('css') is still emitted, by the
+     @yield('css') at the end of admin.layouts.pre_header (included above) - keep
+     that yield. The styles below are emitted inline, which is where they already
+     ended up. --}}
     <style>
     .nav-item .tab-item .active {
         background-color: #bbd9f7;

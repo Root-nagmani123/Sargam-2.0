@@ -86,6 +86,9 @@
         </div>
     </div>
 </div>
+    </main>
+</div>
+</div>
 
 @include('admin.course-repository.user.partials.assets')
 @endsection

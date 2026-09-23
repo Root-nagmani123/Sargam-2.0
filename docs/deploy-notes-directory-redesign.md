@@ -290,8 +290,21 @@ would also run every other pending migration on the host:
 ```bash
 php artisan migrate:status | grep 2026_08_19_120000     # "Pending" -> run the next line
 php artisan migrate --path=database/migrations/2026_08_19_120000_add_student_master_course_map_lookup_index.php
-# rollback
-php artisan migrate:rollback --path=database/migrations/2026_08_19_120000_add_student_master_course_map_lookup_index.php
+```
+
+**Rolling back this release does not touch this index.** It belongs to `main` (commit
+`2b8e64dd0`), not to this release, and main's own Group Mapping lookup uses the same
+columns, so leave it in place when reverting the directory redesign.
+
+Do not use `php artisan migrate:rollback --path=<this file>` to remove it either. Laravel
+9's rollback only considers the **latest batch**, so on any host that has migrated since,
+that command drops nothing. It prints "Migration not found" for the other files in the
+batch and exits without error. If the index ever has to go, the DBA drops it by name,
+after confirming it exists:
+
+```sql
+SHOW INDEX FROM student_master_course__map WHERE Key_name = 'smcm_course_active_student_index';
+ALTER TABLE student_master_course__map DROP INDEX smcm_course_active_student_index;
 ```
 
 **Do not create the index by hand, under any name.** An earlier version of this section gave
@@ -383,3 +396,26 @@ them meets the same refusal in the other direction — run the same
 6. `storage/logs/laravel.log` carries exactly one `directory.export` line per
    download, with no row data, and a search term containing a line break appears
    escaped on that one line rather than starting a new record.
+
+## 5. Also in this release: PRs #322 and #326
+
+Two separate fixes were merged into this branch and ship with it (merge commits
+`7b8f6ec4c` and `a1f4b9802`). Neither touches a directory file.
+
+| PR | What it changes | Files |
+| --- | --- | --- |
+| #322 | Closes four unclosed Blade sections. The one in **both master layouts** leaked an output buffer on every admin and faculty page, flushing stray bytes ahead of `<!DOCTYPE html>` | both master layouts, `admin/country/create`, `course-repository/user/class-material-subject-wise`, 2 tests |
+| #326 | Fixes the `/faculty_dashboard` HTTP 500 (a missing component and a deleted include). That route is now restricted to **Faculty and Super Admin**: the faculty layout shows the unfiltered static admin sidebar, so every other role gets 403 (review finding F-019) | `faculty/layouts/master`, `components/menu/material_management`, `routes/web.php`, 2 tests |
+
+**Rollback.** The section 3 revert of the merge commit also reverts both fixes. Expect the
+stray pre-doctype output to return on every admin page, and `/faculty_dashboard` to return to
+HTTP 500 for everyone. Nothing in either fix writes to the database.
+
+**Post-deploy checks**, in addition to section 4:
+
+1. Open any admin page as Super Admin, then view the source. The first bytes are
+   `<!DOCTYPE html>`, with nothing before them.
+2. `/faculty_dashboard`: 200 for a Faculty account, 403 for an Officer Trainee and for an
+   Employee-only account.
+3. The MDO/Escort Exemption create page still has its dual-list styling (its page CSS arrives
+   through `admin.layouts.pre_header`'s `@yield('css')`).

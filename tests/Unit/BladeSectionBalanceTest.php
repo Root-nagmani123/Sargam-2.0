@@ -18,10 +18,11 @@ use Tests\TestCase;
  *     from, and why CompressResponse has to absorb it before gzipping (leading
  *     bytes in front of a gzip stream render a blank page - the ERR_CONTENT_
  *     DECODING_FAILED incident).
- *   - the content of the unclosed section is captured rather than emitted, so
- *     whatever follows the opener silently disappears. On master/country/create
- *     an @ensection typo meant addCountryField() was never rendered and the Add
- *     Country button did nothing.
+ *   - the content of the unclosed section never reaches its @yield. It lands in
+ *     the leaked buffer instead and is flushed OUTSIDE the response body, ahead of
+ *     <!DOCTYPE html>. On master/country/create an @ensection typo put the whole
+ *     addCountryField() script (and the literal text "@ensection") there, not in
+ *     the page's scripts section.
  *   - any test that renders such a page is reported RISKY by PHPUnit rather than
  *     passing, because the test did not close its own output buffers.
  *
