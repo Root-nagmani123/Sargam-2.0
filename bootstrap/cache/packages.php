@@ -78,6 +78,17 @@
       0 => 'Collective\\Html\\HtmlServiceProvider',
     ),
   ),
+  'livewire/livewire' => 
+  array (
+    'aliases' => 
+    array (
+      'Livewire' => 'Livewire\\Livewire',
+    ),
+    'providers' => 
+    array (
+      0 => 'Livewire\\LivewireServiceProvider',
+    ),
+  ),
   'maatwebsite/excel' => 
   array (
     'aliases' => 
@@ -144,6 +155,13 @@
     'providers' => 
     array (
       0 => 'Yajra\\DataTables\\ButtonsServiceProvider',
+    ),
+  ),
+  'yajra/laravel-datatables-export' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'Yajra\\DataTables\\ExportServiceProvider',
     ),
   ),
   'yajra/laravel-datatables-fractal' => 

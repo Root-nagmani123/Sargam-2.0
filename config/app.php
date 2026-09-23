@@ -69,7 +69,7 @@ return [
     |
     */
 
-   
+
     'timezone' => 'Asia/Kolkata',
 
     /*
@@ -185,6 +185,7 @@ return [
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
         Yajra\DataTables\DataTablesServiceProvider::class,
+        Modules\Protocol\Providers\ProtocolServiceProvider::class,
     ],
 
     /*
@@ -201,6 +202,6 @@ return [
     'aliases' => Facade::defaultAliases()->merge([
         // ...
     ])->toArray(),
-    
+
 
 ];

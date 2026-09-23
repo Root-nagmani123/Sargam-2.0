@@ -35,3 +35,4 @@ docker-compose.yml
 /blob-report/
 /playwright/.cache/
 bootstrap/
+Modules/Protocol_old/

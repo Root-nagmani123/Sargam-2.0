@@ -1,0 +1,280 @@
+<style>
+  /*
+  Protocol Module stylesheet.
+  Publish/copy this to: public/modules/protocol/css/protocol.css
+  (the layout links to it at that path). If your host app already runs
+  a Sass/Vite pipeline, move this file's contents into your own build
+  instead and drop the <link> tag in layouts/app.blade.php.
+*/
+
+:root{
+  --saffron:#FF9933;
+  --saffron-dark:#E6802A;
+  --india-green:#138808;
+  --green-dark:#0e6606;
+  --navy:#1B2430;
+  --navy-2:#232F3E;
+  --paper:#F7F6F3;
+  --ink:#1B2430;
+  --muted:#6B7280;
+  --border:#E7E5E0;
+}
+*{box-sizing:border-box;}
+body{
+  background:var(--paper);
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  color:var(--ink);
+}
+.brand-strip{height:4px;background:linear-gradient(90deg,var(--saffron) 0 33%, #fff 33% 66%, var(--india-green) 66% 100%);}
+
+/* Sidebar */
+#protocol-sidebar{
+  width:250px; min-height:100vh; background:var(--navy);
+  position:fixed; top:0; left:0; z-index:1030;
+  display:flex; flex-direction:column;
+}
+#protocol-sidebar .brand{
+  padding:18px 20px; border-bottom:1px solid rgba(255,255,255,.08);
+  display:flex; align-items:center; gap:10px;
+}
+#protocol-sidebar .emblem{
+  width:36px;height:36px;border-radius:8px;background:var(--saffron);
+  display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;
+}
+#protocol-sidebar .brand-text{color:#fff;line-height:1.15;}
+#protocol-sidebar .brand-title{font-weight:700;font-size:14.5px;}
+#protocol-sidebar .brand-text small{color:#9aa4b2;font-size:11px;letter-spacing:.04em;}
+.nav-section-label{
+  color:#6b7684; font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+  padding:16px 20px 6px;
+}
+#protocol-sidebar .nav-link{
+  color:#c7ccd3; padding:10px 20px; font-size:14.5px; display:flex; align-items:center; gap:10px;
+  border-left:3px solid transparent; cursor:pointer; text-decoration:none;
+}
+#protocol-sidebar .nav-link i{font-size:16px; width:18px;}
+#protocol-sidebar .nav-link:hover{background:rgba(255,255,255,.05); color:#fff;}
+#protocol-sidebar .nav-link.active{
+  background:rgba(255,153,51,.12); color:#fff; border-left-color:var(--saffron); font-weight:600;
+}
+
+/* Main */
+#protocol-main{margin-left:250px;}
+#protocol-topbar{
+  background:#fff; border-bottom:1px solid var(--border);
+  padding:14px 28px; display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:1020;
+}
+#protocol-topbar h5{margin:0; font-weight:700;}
+#protocol-topbar .subtitle{color:var(--muted); font-size:12.5px;}
+.protocol-content{padding:26px 28px 60px;}
+
+.stat-card{
+  background:#fff; border:1px solid var(--border); border-radius:12px; padding:18px 20px;
+  height:100%;
+}
+.stat-card .num{font-size:26px; font-weight:800; line-height:1;}
+.stat-card .lbl{color:var(--muted); font-size:12.5px; margin-top:4px;}
+.stat-card .icon-badge{
+  width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;
+}
+
+.card-clean{background:#fff; border:1px solid var(--border); border-radius:12px;}
+.section-title{font-weight:700; font-size:16px; margin-bottom:2px;}
+.section-sub{color:var(--muted); font-size:12.5px;}
+
+.badge-status{font-size:11.5px; padding:5px 10px; border-radius:20px; font-weight:600; letter-spacing:.02em;}
+.badge-pending{background:#FFF4E0; color:#B8720A;}
+.badge-recommended{background:#E7EEFB; color:#2D5FCC;}
+.badge-approved{background:#E4F6E4; color:var(--green-dark);}
+.badge-rejected{background:#FBE7E7; color:#C13030;}
+
+table.table thead th{
+  font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted);
+  border-bottom:1px solid var(--border); font-weight:700; background:#FAFAF8;
+}
+table.table td{font-size:13.5px; vertical-align:middle;}
+table.table tbody tr:hover{background:#FFF9F0;}
+
+.type-pill{
+  display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;
+  padding:4px 10px; border-radius:8px;
+}
+.type-guesthouse{background:#EFEBFF; color:#5B3FD9;}
+.type-vehicle{background:#FFF0E0; color:var(--saffron-dark);}
+.type-ticket{background:#E0F5F0; color:#0E8F73;}
+
+.req-type-choice{
+  border:1.5px solid var(--border); border-radius:14px; padding:22px; text-align:center; cursor:pointer;
+  transition:.15s; height:100%;
+}
+.req-type-choice:hover{border-color:var(--saffron); box-shadow:0 4px 16px rgba(255,153,51,.15); transform:translateY(-2px);}
+.icon-circle{
+  width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  margin:0 auto 12px; font-size:24px;
+}
+
+.timeline{position:relative; margin-left:8px; padding-left:22px; border-left:2px solid var(--border);}
+.timeline-item{position:relative; padding-bottom:22px;}
+.timeline-item:last-child{padding-bottom:0;}
+.timeline-item::before{
+  content:''; position:absolute; left:-29px; top:2px; width:14px;height:14px;border-radius:50%;
+  background:#fff; border:3px solid var(--saffron);
+}
+.timeline-item.done::before{border-color:var(--india-green);}
+.timeline-item .t-title{font-weight:700; font-size:13.5px;}
+.timeline-item .t-meta{color:var(--muted); font-size:12px;}
+.timeline-item .t-remark{font-size:12.5px; color:#4b5563; margin-top:3px; background:#FAFAF8; border-radius:8px; padding:8px 10px;}
+
+.modal-header.gov{background:var(--navy); color:#fff; border-radius:.5rem .5rem 0 0;}
+.modal-header.gov .btn-close{filter:invert(1);}
+
+.btn-saffron{background:var(--saffron); border-color:var(--saffron); color:#fff; font-weight:600;}
+.btn-saffron:hover{background:var(--saffron-dark); border-color:var(--saffron-dark); color:#fff;}
+.btn-outline-saffron{border-color:var(--saffron); color:var(--saffron-dark); font-weight:600;}
+.btn-outline-saffron:hover{background:var(--saffron); color:#fff;}
+.btn-green{background:var(--india-green); border-color:var(--india-green); color:#fff; font-weight:600;}
+.btn-green:hover{background:var(--green-dark); border-color:var(--green-dark); color:#fff;}
+
+.empty-state{text-align:center; padding:50px 20px; color:var(--muted);}
+.empty-state i{font-size:40px; color:#d8d5cd; display:block; margin-bottom:10px;}
+
+.form-label{font-size:12.5px; font-weight:600; color:#374151;}
+.required-star{color:#C13030;}
+
+@media (max-width: 900px){
+  #protocol-sidebar{transform:translateX(-100%); transition:.2s;}
+  #protocol-sidebar.open{transform:translateX(0);}
+  #protocol-main{margin-left:0;}
+}
+
+// Add Css by Akshay Sharma
+.button-group {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding-top: 15px;
+    margin-top: 10px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.btn-save {
+    background: #0d4f9c;
+    border-color: #0d4f9c;
+    color: #fff;
+    padding: 9px 25px;
+    font-weight: 600;
+}
+
+.btn-save:hover {
+    background: #0a3e7a;
+    border-color: #0a3e7a;
+    color: #fff;
+}
+
+.btn-cancel {
+    background: #6c757d;
+    border-color: #6c757d;
+    color: #fff;
+    padding: 9px 25px;
+    font-weight: 600;
+}
+
+.btn-cancel:hover {
+    background: #5c636a;
+    border-color: #5c636a;
+    color: #fff;
+}
+
+@media (max-width: 768px) {
+    .form-section {
+        padding: 15px;
+    }
+
+    .button-group {
+        flex-direction: column;
+    }
+
+    .btn-save,
+    .btn-cancel {
+        width: 100%;
+    }
+}
+
+    .protocol-tabs{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #f4f5f7;
+      border-radius: 10px;
+      padding: 6px;
+      border: 1px solid #e5e7eb;
+  }
+
+  .protocol-tabs .nav-item{
+      margin: 0;
+  }
+
+  .protocol-tabs .nav-link{
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #6b7280;
+      font-size: 14px;
+      font-weight: 600;
+      border: 0;
+      border-radius: 8px;
+      padding: 6px 15px;
+      background: transparent;
+      transition: .2s ease;
+  }
+
+  .protocol-tabs .nav-link:hover{
+      color: #0d6efd;
+      background: rgba(13,110,253,.08);
+  }
+
+  .protocol-tabs .nav-link.active{
+      background: #0d4f9c;
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,.12);
+  }
+
+  .protocol-tabs .count{
+      background: rgba(255,255,255,.2);
+      color: inherit;
+      border-radius: 999px;
+      padding: 2px 7px;
+      font-size: 12px;
+      font-weight: 700;
+  }
+
+  .protocol-tabs .nav-link:not(.active) .count{
+      background: #e5e7eb;
+      color: #6b7280;
+  }
+  </style>
+
+
+
+
+
+
+{{-- 
+@if (session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle me-1"></i> {{ session('success') }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+
+@if ($errors->any())
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <ul class="mb-0">
+        @foreach ($errors->all() as $error)
+        <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif --}}
