@@ -520,6 +520,11 @@ class PeerEvaluationController extends Controller
      * class. They used to run separate queries, which is how a column belonging
      * to another course could be rendered, and how any column_id in the table
      * could be posted back.
+     *
+     * A locked evaluation gets NO FORM - closedReason() explains why, and the
+     * page offers the OT's own report instead. The greyed-out grid this used to
+     * render still read as a form: criteria, peers, reflection questions and a
+     * Submit button, all dead, and nothing but the colour saying so.
      */
     public function user_index(Request $request)
     {
@@ -554,20 +559,26 @@ class PeerEvaluationController extends Controller
         if ($selectedGroup) {
             $closedReason = PeerEvaluationForm::closedReason($selectedGroup);
 
-            $membership = PeerEvaluationForm::membershipOf($selectedGroup->id, $userPk);
+            // A locked evaluation renders no form - just the reason and the way to
+            // the OT's own report - so none of what a form is built from is
+            // fetched. The criteria, the peers and the previous answers were all
+            // queried and then rendered into a greyed-out grid nobody could use.
+            if ($closedReason === null) {
+                $membership = PeerEvaluationForm::membershipOf($selectedGroup->id, $userPk);
 
-            $columns = PeerEvaluationForm::columnsFor($selectedGroup);
-            // The remarks toggle only appears when a criterion asks for one.
-            // store() gates the same way, so the column can never be shown
-            // without somewhere to save it.
-            $allowsRemarks = $columns->contains(fn ($column) => (bool) $column->has_remarks);
-            $reflectionFields = PeerEvaluationForm::reflectionFieldsFor($selectedGroup);
-            // Nobody evaluates themselves, so the evaluator's own row is dropped.
-            $members = PeerEvaluationForm::peersFor($selectedGroup, $membership?->id);
-            // Submitting twice is an edit (store() uses updateOrInsert), so the
-            // form has to reopen showing what was saved - otherwise the second
-            // submit would overwrite good answers with the default 0.
-            $answers = PeerEvaluationForm::existingAnswers($selectedGroup->id, $userPk);
+                $columns = PeerEvaluationForm::columnsFor($selectedGroup);
+                // The remarks toggle only appears when a criterion asks for one.
+                // store() gates the same way, so the column can never be shown
+                // without somewhere to save it.
+                $allowsRemarks = $columns->contains(fn ($column) => (bool) $column->has_remarks);
+                $reflectionFields = PeerEvaluationForm::reflectionFieldsFor($selectedGroup);
+                // Nobody evaluates themselves, so the evaluator's own row is dropped.
+                $members = PeerEvaluationForm::peersFor($selectedGroup, $membership?->id);
+                // Submitting twice is an edit (store() uses updateOrInsert), so the
+                // form has to reopen showing what was saved - otherwise the second
+                // submit would overwrite good answers with the default 0.
+                $answers = PeerEvaluationForm::existingAnswers($selectedGroup->id, $userPk);
+            }
         }
 
         return view('admin.forms.peer_evaluation.index', compact(
@@ -833,6 +844,56 @@ class PeerEvaluationController extends Controller
     public function user_evaluation($groupId)
     {
         return redirect()->route('peer.index', ['group_id' => (int) $groupId]);
+    }
+
+    /**
+     * One OT's own report: what their peers scored them, without naming them.
+     *
+     * The admin has had this since the reports screen landed; the person being
+     * scored had nowhere to see it at all. What they get is deliberately not the
+     * admin's table - PeerEvaluationForm::receivedSummary() explains why the
+     * evaluators' names cannot travel with their scores.
+     *
+     * Held back until the evaluation is CLOSED. While the window is open an OT
+     * watching their score move can work out who has just submitted, and is being
+     * shown other people's opinions of them while they still have their own form
+     * to fill - the two influence each other. Closed is whatever closedReason()
+     * says: the window ended, the form was switched off, or the event was.
+     */
+    public function user_report($groupId)
+    {
+        $userPk = (int) auth()->user()->pk;
+
+        // Membership through the login handle, same as everywhere else - and the
+        // reason this cannot be reached for somebody else's group.
+        $group = PeerEvaluationForm::groupsFor($userPk)->firstWhere('id', (int) $groupId);
+
+        if (! $group) {
+            return redirect()->route('peer.user_groups')
+                ->with('error', 'You are not a member of that group.');
+        }
+
+        $closedReason = PeerEvaluationForm::closedReason($group);
+
+        if ($closedReason === null) {
+            return redirect()->route('peer.user_groups')
+                ->with('error', 'Your report opens once this evaluation closes.');
+        }
+
+        $membership = PeerEvaluationForm::membershipOf((int) $group->id, $userPk);
+
+        if (! $membership) {
+            return redirect()->route('peer.user_groups')
+                ->with('error', 'You are not a member of that group.');
+        }
+
+        $summary = PeerEvaluationForm::receivedSummary($group, (int) $membership->id);
+
+        return view('admin.forms.peer_evaluation.my_report', $summary + [
+            'group' => $group,
+            'member' => $membership,
+            'closedReason' => $closedReason,
+        ]);
     }
 
     /**

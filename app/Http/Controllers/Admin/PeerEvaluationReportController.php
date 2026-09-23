@@ -10,6 +10,7 @@ use App\Models\PeerEvent;
 use App\Models\PeerGroup;
 use App\Models\PeerGroupMember;
 use App\Support\PeerCourseStatusScope;
+use App\Support\PeerEvaluationForm;
 use App\Support\PeerGroupSource;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -230,6 +231,10 @@ class PeerEvaluationReportController extends Controller
                 'peer_group_members.user_id',
                 'peer_group_members.group_id',
                 'peer_groups.group_name',
+                // The group's own scope, for the reflection questions below:
+                // PeerEvaluationForm scopes those on course -> event -> group.
+                'peer_groups.course_id',
+                'peer_groups.event_id',
                 'course_master.course_name as course_name',
                 'peer_events.event_name as event_name',
             ])
@@ -254,26 +259,54 @@ class PeerEvaluationReportController extends Controller
 
         $evaluatorIds = $scores->pluck('evaluator_id')->unique()->filter()->values();
 
-        // Evaluator display name + code. peer_scores stores user_credentials.pk;
-        // the OT-facing code lives on peer_group_members, matched back through
-        // user_credentials.user_id (the module's own linkage).
-        $people = DB::table('user_credentials')
-            ->whereIn('pk', $evaluatorIds)
-            ->get(['pk', 'user_id', 'first_name', 'last_name', 'user_name'])
-            ->keyBy('pk');
+        /*
+         * The evaluator's own member row in this group, which is where the OT code
+         * lives - reached the way the rest of the module reaches it.
+         *
+         * peer_scores stores the evaluator as user_credentials.pk; a member row
+         * carries the login HANDLE, which is user_credentials.user_NAME. This
+         * looked the code up in a map keyed by that handle using
+         * user_credentials.user_ID - a numeric column holding the student_master
+         * pk ("AmitMeena" vs 41301). The two can never match, so every evaluator
+         * on this page read "No OT code". See the identity note on
+         * App\Support\PeerEvaluationForm, and PeerGroupSource::EVALUATOR_JOIN for
+         * the collation the join needs.
+         */
+        $peers = DB::table('peer_group_members')
+            ->join('user_credentials', function ($join) {
+                $join->whereRaw(PeerGroupSource::EVALUATOR_JOIN);
+            })
+            ->leftJoin('student_master', 'student_master.pk', '=', 'peer_group_members.member_pk')
+            ->where('peer_group_members.group_id', $member->group_id)
+            ->whereIn('user_credentials.pk', $evaluatorIds)
+            ->whereNotNull('peer_group_members.user_id')
+            ->where('peer_group_members.user_id', '<>', '')
+            ->select([
+                'user_credentials.pk as evaluator_pk',
+                'peer_group_members.ot_code',
+                // student_master wins when the join lands; the member row's copy is
+                // the fallback for rows imported by the legacy Excel path. Same
+                // COALESCE the OT-facing form uses (PeerEvaluationForm::peersFor).
+                DB::raw('COALESCE(NULLIF(TRIM(student_master.display_name), ""), peer_group_members.user_name) as display_name'),
+            ])
+            ->get()
+            ->keyBy('evaluator_pk');
 
-        $codes = DB::table('peer_group_members')
-            ->where('group_id', $member->group_id)
-            ->whereNotNull('user_id')
-            ->where('user_id', '<>', '')
-            ->pluck('ot_code', 'user_id');
+        // An evaluator with no member row in this group - legacy data, or somebody
+        // removed from the group after scoring - still has a login to be named by.
+        $logins = DB::table('user_credentials')
+            ->whereIn('pk', $evaluatorIds)
+            ->get(['pk', 'first_name', 'last_name', 'user_name'])
+            ->keyBy('pk');
 
         $rows = [];
         foreach ($evaluatorIds as $evaluatorId) {
-            $person = $people->get($evaluatorId);
-            $name = $person
-                ? trim(($person->first_name ?? '') . ' ' . ($person->last_name ?? '')) ?: ($person->user_name ?? 'Unknown')
-                : 'Unknown';
+            $peer = $peers->get((int) $evaluatorId);
+            $login = $logins->get((int) $evaluatorId);
+
+            $name = trim((string) ($peer->display_name ?? '')) ?: ($login
+                ? (trim(($login->first_name ?? '') . ' ' . ($login->last_name ?? '')) ?: ($login->user_name ?? 'Unknown'))
+                : 'Unknown');
 
             $mine = $scores->where('evaluator_id', $evaluatorId);
             $perCriterion = [];
@@ -287,7 +320,7 @@ class PeerEvaluationReportController extends Controller
             $rows[] = [
                 'evaluator_id' => $evaluatorId,
                 'name' => $name,
-                'code' => $person && isset($codes[(string) $person->user_id]) ? $codes[(string) $person->user_id] : null,
+                'code' => $peer->ot_code ?? null,
                 'scores' => $perCriterion,
                 'overall' => $given === [] ? null : array_sum($given) / count($given),
                 'remarks' => $remarks[$evaluatorId] ?? null,
@@ -316,7 +349,59 @@ class PeerEvaluationReportController extends Controller
             'averages' => $averages,
             'overallScore' => $allOveralls === [] ? null : array_sum($allOveralls) / count($allOveralls),
             'submitted' => $rows !== [],
+            'reflections' => $this->reflectionsOf($member),
         ];
+    }
+
+    /**
+     * What this OT wrote in the reflection questions under the scored grid.
+     *
+     * Nothing on the admin side showed these. The scores and remarks on this page
+     * are what the OT RECEIVED; a reflection answer is the opposite direction -
+     * the OT is the evaluator there, reflection_responses keys on their login
+     * rather than on the member row - which is why it needs the handle join and
+     * not the member id.
+     *
+     * Every question in the group's scope is listed, answered or not: "asked and
+     * left blank" and "never asked" are different facts about a submission, and a
+     * page that only listed answers could not tell them apart.
+     *
+     * @return array<int, array{label: string, answer: string|null}>
+     */
+    private function reflectionsOf(object $member): array
+    {
+        $fields = PeerEvaluationForm::reflectionFieldsFor((object) [
+            'id' => $member->group_id,
+            'course_id' => $member->course_id,
+            'event_id' => $member->event_id,
+        ]);
+
+        if ($fields->isEmpty()) {
+            return [];
+        }
+
+        // The login that answers as this member. Same rule as everywhere else:
+        // peer_group_members.user_id is the HANDLE, user_credentials.user_name.
+        $evaluatorPk = DB::table('user_credentials')
+            ->join('peer_group_members', function ($join) {
+                $join->whereRaw(PeerGroupSource::EVALUATOR_JOIN);
+            })
+            ->where('peer_group_members.id', $member->id)
+            ->whereNotNull('peer_group_members.user_id')
+            ->where('peer_group_members.user_id', '<>', '')
+            ->value('user_credentials.pk');
+
+        $answers = $evaluatorPk
+            ? DB::table('reflection_responses')
+                ->where('group_id', $member->group_id)
+                ->where('evaluator_id', $evaluatorPk)
+                ->pluck('description', 'field_id')
+            : collect();
+
+        return $fields->map(fn ($field) => [
+            'label' => $field->field_label,
+            'answer' => trim((string) ($answers[$field->id] ?? '')) ?: null,
+        ])->all();
     }
 
     // ==================== EXPORTS ====================
@@ -496,6 +581,11 @@ class PeerEvaluationReportController extends Controller
                 'reportTitle' => $title,
                 'averages' => $report['averages'],
                 'criteria' => $report['criteria'],
+                // Printed under the grid by the PDF and print sheets. CSV and
+                // Excel stay the score table: a column grid has nowhere to put
+                // paragraphs of free text without one answer per row shifting
+                // every other column out of line.
+                'reflections' => $report['reflections'],
             ],
             new PeerEvaluationReportExport($rows, $columns, $exportDate, $filterText, $title),
             'EvaluationReport_' . preg_replace('/[^A-Za-z0-9]+/', '_', (string) $member->user_name) . '_' . $stamp,

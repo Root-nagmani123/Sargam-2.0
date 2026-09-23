@@ -46,30 +46,51 @@
                     </div>
                 @endif
 
-                {{-- Why the form below is read-only: group inactive, form not
-                     switched on, or today is outside the event's start/end dates.
-                     Same sentence store() would answer with. --}}
+                {{-- A locked evaluation shows NO FORM.
+
+                     It used to render the whole grid disabled, on the reasoning
+                     that an OT could still read back what they had submitted. On
+                     screen that reads as a form: the criteria, the peers, the
+                     reflection questions and a Submit button, all greyed out -
+                     and when the criteria behind it had been switched off it was
+                     a form of names with nothing to score. An evaluation that
+                     cannot be filled should not be presented as one.
+
+                     What they get instead is the reason, in the same sentence
+                     store() would refuse them with, and the way on to their own
+                     report - which is readable exactly when this is locked. --}}
                 @if (!empty($closedReason))
-                    <div class="alert alert-warning border-0 rounded-3 shadow-sm mb-4" role="alert">
-                        <div class="d-flex align-items-center">
-                            <i class="material-icons material-symbols-rounded text-warning me-3" style="font-size: 1.5rem;">lock_clock</i>
-                            <div class="flex-grow-1">
-                                <strong>This evaluation is not open.</strong> {{ $closedReason }}
+                    <div class="alert alert-warning border-0 rounded-4 shadow-sm mb-0" role="alert">
+                        <div class="d-flex align-items-start">
+                            <div class="flex-shrink-0">
+                                <i class="material-icons material-symbols-rounded text-warning" style="font-size: 2.5rem;">lock_clock</i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h5 class="alert-heading fw-bold mb-2">This evaluation is not open</h5>
+                                <p class="mb-0">{{ $closedReason }}</p>
+                                @if ($selectedGroup)
+                                    <p class="mb-0 mt-1 small text-muted">
+                                        {{ $selectedGroup->group_name }}{{ $selectedGroup->event_name ? ' · ' . $selectedGroup->event_name : '' }}
+                                    </p>
+                                @endif
+
+                                <div class="d-flex flex-wrap gap-2 mt-3">
+                                    <a href="{{ route('peer.user_groups') }}" class="btn btn-outline-secondary rounded-pill px-4">
+                                        <i class="material-icons material-symbols-rounded me-1 align-middle" style="font-size: 1rem;">arrow_back</i>
+                                        My peer evaluations
+                                    </a>
+                                    @if ($selectedGroupId)
+                                        <a href="{{ route('peer.user_report', ['groupId' => $selectedGroupId]) }}"
+                                           class="btn btn-primary rounded-pill px-4">
+                                            <i class="material-icons material-symbols-rounded me-1 align-middle" style="font-size: 1rem;">insights</i>
+                                            My report
+                                        </a>
+                                    @endif
+                                </div>
                             </div>
                         </div>
                     </div>
-                @endif
-
-                {{-- Group Selection --}}
-                <div class="mb-4">
-                    <form method="GET" action="{{ route('peer.index') }}" id="groupForm">
-                        <div class="row">
-                            {{-- Group selection form content if needed --}}
-                        </div>
-                    </form>
-                </div>
-
-                @if ($selectedGroupId && count($members) > 0)
+                @elseif ($selectedGroupId && count($members) > 0)
                     @php
                         $selectedGroup = $groups->where('id', $selectedGroupId)->first();
 
@@ -209,7 +230,6 @@
                                                                     class="form-control form-control-lg text-center score-input fw-bold border-2"
                                                                     value="{{ old("scores.{$member->id}.{$column->id}", $answers['scores'][$member->id][$column->id] ?? 0) }}"
                                                                     required
-                                                                    @if (!empty($closedReason)) disabled @endif
                                                                     onchange="validateScore(this)"
                                                                     aria-label="Score for {{ $column->column_name }}">
                                                             </div>
@@ -221,7 +241,6 @@
                                                                       class="form-control"
                                                                       rows="2"
                                                                       maxlength="2000"
-                                                                      @if (!empty($closedReason)) disabled @endif
                                                                       placeholder="Optional note about {{ $member->first_name }}"
                                                                       aria-label="Remarks for {{ $member->first_name }}">{{ old("remarks.{$member->id}", $answers['remarks'][$member->id] ?? '') }}</textarea>
                                                         </td>
@@ -249,7 +268,6 @@
                                                     class="form-control reflection-textarea border-2 rounded-3"
                                                     rows="5"
                                                     maxlength="5000"
-                                                    @if (!empty($closedReason)) disabled @endif
                                                     placeholder="Enter your detailed description for {{ $field->field_label }}..."
                                                     style="resize: vertical;">{{ old("reflections.{$field->id}", $answers['reflections'][$field->id] ?? '') }}</textarea>
                                                 <div class="form-text">
@@ -263,16 +281,17 @@
 
                                 {{-- Action Buttons --}}
                                 <div class="card-footer bg-white border-0 p-4 d-flex gap-3 flex-wrap">
-                                    {{-- Disabled, not hidden: the OT can still read back what they
-                                         submitted after the window closes. store() refuses it either
-                                         way - this only saves them the round trip. --}}
-                                    <button type="submit" class="btn btn-success btn-lg px-5 rounded-pill shadow-sm fw-semibold"
-                                        @if (!empty($closedReason)) disabled @endif>
+                                    {{-- No closed-state guard on these two, or on any
+                                         input above: the whole form is behind
+                                         @if(empty($closedReason)) now, so a locked
+                                         evaluation renders no form to guard. store()
+                                         re-checks the same rule regardless - the
+                                         route is reachable without this page. --}}
+                                    <button type="submit" class="btn btn-success btn-lg px-5 rounded-pill shadow-sm fw-semibold">
                                         <i class="material-icons material-symbols-rounded me-2 align-middle" style="font-size: 1.125rem;">send</i>
                                         Submit Evaluation
                                     </button>
-                                    <button type="button" class="btn btn-outline-warning btn-lg px-5 rounded-pill fw-semibold" onclick="resetScores()"
-                                        @if (!empty($closedReason)) disabled @endif>
+                                    <button type="button" class="btn btn-outline-warning btn-lg px-5 rounded-pill fw-semibold" onclick="resetScores()">
                                         <i class="material-icons material-symbols-rounded me-2 align-middle" style="font-size: 1.125rem;">refresh</i>
                                         Reset Scores
                                     </button>

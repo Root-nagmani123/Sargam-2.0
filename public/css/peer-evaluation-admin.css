@@ -944,3 +944,24 @@
 .pe-modal .pe-form-hint.is-shown {
     color: #b54708;
 }
+
+/* Reflection answers on an OT's evaluation report. The label reads as a question
+   and the answer as prose, so the two are weighted differently - an answer set in
+   the same grey as its label is unreadable at paragraph length. */
+.per-reflection__label {
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: .25rem;
+}
+
+.per-reflection__answer {
+    color: #374151;
+    /* Answers are typed into a textarea: keep the OT's own line breaks rather
+       than collapsing a considered answer into one run-on paragraph. */
+    white-space: pre-wrap;
+}
+
+.per-reflection__answer--empty {
+    color: #9ca3af;
+    font-style: italic;
+}

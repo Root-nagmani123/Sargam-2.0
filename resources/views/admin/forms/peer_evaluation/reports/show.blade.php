@@ -145,9 +145,28 @@
                             @endif
                         </tbody>
                     </table>
-                </div>
+    {{-- Reflections --}}
+    {{-- The direction the rest of this page does not cover. Everything above is
+         what the OT RECEIVED; these are the free-text questions THEY answered
+         under the scored grid, and nothing on the admin side showed them. Every
+         question in the group's scope is listed, answered or not - "asked and left
+         blank" is a different fact from "never asked". --}}
+    @if (count($reflections))
+        <div class="card overflow-hidden rounded-3 mt-3">
+            <div class="card-body p-3 p-md-4">
+                <h6 class="per-detail-heading mb-3">Reflection &amp; Feedback</h6>
+                <hr class="mt-0 mb-3">
+
+                @foreach ($reflections as $reflection)
+                    <div class="per-reflection {{ $loop->last ? '' : 'mb-3' }}">
+                        <div class="per-reflection__label">{{ $reflection['label'] }}</div>
+                        <div class="per-reflection__answer {{ $reflection['answer'] ? '' : 'per-reflection__answer--empty' }}">
+                            {{ $reflection['answer'] ?: 'Not answered' }}
+                        </div>
+                    </div>
+                @endforeach
             </div>
         </div>
-    </div>
+    @endif
 </div>
 @endsection

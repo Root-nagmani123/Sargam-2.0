@@ -303,6 +303,69 @@ final class PeerEvaluationForm
     }
 
     /**
+     * What one OT was scored, with nobody's name on it.
+     *
+     * The OT-facing counterpart of the admin's report. The admin page is a table
+     * of evaluators - name, OT code, what each of them gave - and that table can
+     * never be shown to the person being scored: an evaluation whose author is
+     * identifiable stops being an honest one, and next round everybody scores
+     * generously. So this returns only what survives anonymisation - the average
+     * per criterion, the overall, how many people scored, and the remarks with
+     * their authors dropped.
+     *
+     * Averages, never sums: a sum grows with the number of evaluators instead of
+     * measuring anything, which is the same reason the admin grid averages.
+     *
+     * @return array{
+     *     criteria: Collection,
+     *     averages: array<int, float|null>,
+     *     overall: float|null,
+     *     evaluators: int,
+     *     remarks: array<int, string>
+     * }
+     */
+    public static function receivedSummary(object $group, int $memberId): array
+    {
+        $criteria = self::columnsFor($group);
+
+        $scores = DB::table('peer_scores')
+            ->where('member_id', $memberId)
+            ->where('group_id', $group->id)
+            ->get(['column_id', 'score', 'evaluator_id']);
+
+        $averages = [];
+
+        foreach ($criteria as $criterion) {
+            $given = $scores->where('column_id', $criterion->id)->pluck('score');
+
+            $averages[$criterion->id] = $given->isEmpty()
+                ? null
+                : $given->sum(fn ($score) => (float) $score) / $given->count();
+        }
+
+        return [
+            'criteria' => $criteria,
+            'averages' => $averages,
+            'overall' => $scores->isEmpty()
+                ? null
+                : $scores->sum(fn ($row) => (float) $row->score) / $scores->count(),
+            'evaluators' => $scores->pluck('evaluator_id')->unique()->filter()->count(),
+            // Values only - the evaluator_id never leaves this method. Ordered by
+            // the remark's own id rather than by evaluator, so the order carries
+            // nothing about who wrote what.
+            'remarks' => DB::table('peer_evaluation_remarks')
+                ->where('member_id', $memberId)
+                ->where('group_id', $group->id)
+                ->orderBy('id')
+                ->pluck('remarks')
+                ->map(fn ($remark) => trim((string) $remark))
+                ->filter()
+                ->values()
+                ->all(),
+        ];
+    }
+
+    /**
      * What this evaluator submitted last time, so the form reopens filled in.
      *
      * updateOrInsert in store() already makes submitting twice an edit rather

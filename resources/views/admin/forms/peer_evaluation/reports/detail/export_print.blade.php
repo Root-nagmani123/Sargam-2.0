@@ -16,6 +16,13 @@
         .col-num     { width: 8%;  text-align: center; }
         .col-remarks { width: 22%; }
         .ic-print-total-row { background: #eef2f8; font-weight: bold; }
+
+        /* Reflection answers under the grid. white-space keeps the OT's own line
+           breaks; page-break-inside stops one answer being split across sheets. */
+        .ic-print-subhead { font-size: 12px; margin: 14px 0 6px; }
+        .ic-print-reflection { margin-bottom: 8px; page-break-inside: avoid; }
+        .ic-print-reflection-label { font-weight: bold; font-size: 10px; }
+        .ic-print-reflection-answer { font-size: 10px; white-space: pre-wrap; }
         .col-course  { width: 14%; }
         
         
@@ -74,6 +81,19 @@
             @endif
         </tbody>
     </table>
+
+    {{-- The OT's own answers to the reflection questions. Printed under the grid
+         the same way the screen shows them, so a printed report is the whole
+         submission rather than only the half the OT received. --}}
+    @if (count($reflections ?? []))
+        <h2 class="ic-print-subhead">Reflection &amp; Feedback</h2>
+        @foreach ($reflections as $reflection)
+            <div class="ic-print-reflection">
+                <div class="ic-print-reflection-label">{{ $reflection['label'] }}</div>
+                <div class="ic-print-reflection-answer">{{ $reflection['answer'] ?: 'Not answered' }}</div>
+            </div>
+        @endforeach
+    @endif
 
     <div class="ic-print-foot">Sargam 2.0 · Peer Evaluation · Lal Bahadur Shastri National Academy of Administration</div>
 </body>

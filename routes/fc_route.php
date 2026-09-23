@@ -373,6 +373,10 @@ Route::get('/peer/download-template', [PeerEvaluationController::class, 'PeerDow
 // User-facing routes
 Route::prefix('peer')->middleware('auth')->group(function () {
     Route::get('my-groups', [PeerEvaluationController::class, 'user_groups'])->name('peer.user_groups');
+    // The OT's own report: what their peers scored them, once the evaluation has
+    // closed. Reached from the My Peer Evaluation list, not from a menu of its
+    // own - it is about one group, and that list is where the groups are.
+    Route::get('report/{groupId}', [PeerEvaluationController::class, 'user_report'])->name('peer.user_report');
     Route::get('evaluate/{groupId}', [PeerEvaluationController::class, 'user_evaluation'])->name('peer.user_evaluation');
     Route::post('store', [PeerEvaluationController::class, 'store'])->name('peer.store');
 });

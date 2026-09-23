@@ -75,6 +75,14 @@
         
 
         .empty { text-align: center; padding: 16px; color: #6b7280; }
+
+        /* Reflection answers under the grid. DomPDF honours pre-wrap, so the OT's
+           own line breaks survive; page-break-inside keeps one answer together. */
+        .subhead { font-size: 10px; margin: 10px 0 4px; }
+        .reflection { margin-bottom: 6px; page-break-inside: avoid; }
+        .reflection-label { font-weight: bold; font-size: 8px; }
+        .reflection-answer { font-size: 8px; white-space: pre-wrap; }
+
         .foot  { margin-top: 8px; text-align: center; font-size: 7px; color: #6b7280; }
     </style>
 </head>
@@ -138,6 +146,17 @@
             @endif
         </tbody>
     </table>
+
+    {{-- The OT's own answers to the reflection questions - see the print sheet. --}}
+    @if (count($reflections ?? []))
+        <h2 class="subhead">Reflection &amp; Feedback</h2>
+        @foreach ($reflections as $reflection)
+            <div class="reflection">
+                <div class="reflection-label">{{ $reflection['label'] }}</div>
+                <div class="reflection-answer">{{ $reflection['answer'] ?: 'Not answered' }}</div>
+            </div>
+        @endforeach
+    @endif
 
     <div class="foot">Sargam 2.0 · Peer Evaluation · Lal Bahadur Shastri National Academy of Administration</div>
     {{-- Page numbers on every page. Must be the LAST thing in <body>: DomPDF only
