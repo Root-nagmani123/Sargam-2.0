@@ -2780,7 +2780,7 @@ class CalendarController extends Controller
                 abort(403, 'Invalid token');
             }
 
-            $user = User::where('user_name', $username)->firstOrFail();
+            $user = $this->moodleSsoUser($username) ?? abort(404);
             Auth::login($user);
 
             $student_pk = auth()->user()->user_id;
@@ -2952,6 +2952,27 @@ class CalendarController extends Controller
         return $username === '' ? null : $username;
     }
 
+    /**
+     * The account a Moodle SSO user_name refers to, or null.
+     *
+     * An exact match wins (indexed, and the only behaviour before). Failing that,
+     * the stored name is compared trimmed, because 78 user_credentials rows carry
+     * stray whitespace and could never sign in through Moodle - but only a single
+     * trimmed match is accepted. Where two accounts differ only by whitespace we
+     * cannot tell which one Moodle means, and guessing would log in a stranger.
+     */
+    private function moodleSsoUser(string $username): ?User
+    {
+        $user = User::where('user_name', $username)->first();
+        if ($user) {
+            return $user;
+        }
+
+        $candidates = User::whereRaw('TRIM(user_name) = ?', [$username])->limit(2)->get();
+
+        return $candidates->count() === 1 ? $candidates->first() : null;
+    }
+
  /**
   * Student session-feedback listing, doubling as the SSO entry point.
   *
@@ -2979,7 +3000,7 @@ class CalendarController extends Controller
                 abort(403, 'Invalid token');
             }
 
-            $user = User::where('user_name', $username)->firstOrFail();
+            $user = $this->moodleSsoUser($username) ?? abort(404);
             Auth::login($user);
 
             // Keep the username available in the session for downstream use.
@@ -2992,7 +3013,7 @@ class CalendarController extends Controller
         // Clean request: ensure we have an authenticated user. Fall back to the
         // username stashed on the SSO hop if the session somehow lost the login.
         if (!auth()->check() && ($stashed = session('feedback_username'))) {
-            if ($user = User::where('user_name', trim($stashed))->first()) {
+            if ($user = $this->moodleSsoUser(trim($stashed))) {
                 Auth::login($user);
             }
         }

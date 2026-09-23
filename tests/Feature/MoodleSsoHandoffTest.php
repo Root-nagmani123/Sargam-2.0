@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -107,6 +108,37 @@ class MoodleSsoHandoffTest extends TestCase
         $forged = $this->token($user->user_name, '', str_repeat("\0", 16));
 
         $this->get('/student-faculty-feedback?token=' . urlencode($forged));
+        $this->assertGuest();
+    }
+    /**
+     * A stored user_name with stray whitespace (78 rows on testsargam6) used to be
+     * unreachable: the decrypted name is trimmed and the lookup was exact.
+     */
+    public function test_a_user_name_stored_with_whitespace_can_sign_in(): void
+    {
+        $this->configureKey(self::KEY, self::IV);
+        $name = 'zz_sso_ws_'.bin2hex(random_bytes(4));
+        $pk = DB::table('user_credentials')->insertGetId(['user_name' => ' '.$name.' ']);
+
+        $this->get('/feedback/student-feedback-url?token='.urlencode($this->token($name, self::KEY, self::IV)))
+            ->assertRedirect(route('feedback.get.studentFeedbackUrl'));
+
+        $this->assertAuthenticatedAs(User::find($pk));
+    }
+
+    /**
+     * Two accounts that differ only by whitespace, and neither an exact match: we
+     * cannot tell which one Moodle means, so nobody is signed in.
+     */
+    public function test_an_ambiguous_trimmed_user_name_signs_nobody_in(): void
+    {
+        $this->configureKey(self::KEY, self::IV);
+        $name = 'zz_sso_amb_'.bin2hex(random_bytes(4));
+        DB::table('user_credentials')->insert([['user_name' => ' '.$name], ['user_name' => $name.' ']]);
+
+        $this->get('/feedback/student-feedback-url?token='.urlencode($this->token($name, self::KEY, self::IV)))
+            ->assertNotFound();
+
         $this->assertGuest();
     }
 }
