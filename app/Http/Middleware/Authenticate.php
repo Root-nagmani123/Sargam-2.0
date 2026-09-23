@@ -55,11 +55,19 @@ class Authenticate extends Middleware
                 Log::info('Moodle token found in auth middleware, attempting authentication');
             }
             try {
-                $key = config('services.moodle.key', '1234567890abcdef');
-                $iv = config('services.moodle.iv', 'abcdef1234567890');
+                // Fail closed, as CalendarController::moodleTokenUsername() does. With
+                // MOODLE_SHARED_KEY / MOODLE_SHARED_IV unset, openssl_decrypt() uses
+                // all-zero bytes, and the old literal fallbacks were readable in source:
+                // either way anyone could mint a token for any user_name and be logged
+                // in on every route behind `auth` (PR #324 review F-001). No key, no
+                // token login. A non-string ?token[]= is refused too: urldecode() threw
+                // a TypeError that the catch (\Exception) below does not catch.
+                $key = (string) config('services.moodle.key');
+                $iv = (string) config('services.moodle.iv');
+                $token = $request->query('token', $request->input('token'));
 
-                $decodedToken = urldecode($request->token);
-                $base64Decoded = base64_decode($decodedToken);
+                $decodedToken = ($key !== '' && $iv !== '' && is_string($token)) ? urldecode($token) : '';
+                $base64Decoded = $decodedToken !== '' ? base64_decode($decodedToken) : false;
 
                 if ($base64Decoded !== false) {
                     $username = openssl_decrypt(

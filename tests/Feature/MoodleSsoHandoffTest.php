@@ -141,4 +141,66 @@ class MoodleSsoHandoffTest extends TestCase
 
         $this->assertGuest();
     }
+
+    // -- The third token login: the `auth` middleware itself -----------------
+    //
+    // App\Http\Middleware\Authenticate accepts ?token= on EVERY route in the
+    // auth group (PR #324 review F-001), not only the two SSO routes above.
+    // Any auth-only GET route will do; /directory/lbsnaa is one.
+
+    private const AUTH_ROUTE = '/directory/lbsnaa';
+
+    /**
+     * With the key and IV unset, the middleware used to decrypt with zero bytes,
+     * so an unauthenticated caller could mint a token for any user_name and be
+     * logged in as that user on every auth-only route.
+     */
+    public function test_an_unset_key_refuses_a_zero_key_forgery_in_the_auth_middleware(): void
+    {
+        $this->configureKey(null, null);
+        $user = $this->anyUser();
+        $forged = $this->token($user->user_name, '', str_repeat("\0", 16));
+
+        $this->get(self::AUTH_ROUTE.'?token='.urlencode($forged));
+        $this->assertGuest();
+    }
+
+    /**
+     * The middleware also carried a literal fallback key and IV in source. A key
+     * anyone can read is no key: a token minted with it must not log anyone in.
+     */
+    public function test_the_old_hardcoded_fallback_key_logs_nobody_in(): void
+    {
+        // The fallback was config()'s DEFAULT, so it applies only when the keys are
+        // absent from config altogether - a null value would not reach it.
+        config(['services.moodle' => []]);
+        $user = $this->anyUser();
+        $forged = $this->token($user->user_name, '1234567890abcdef', 'abcdef1234567890');
+
+        $this->get(self::AUTH_ROUTE.'?token='.urlencode($forged));
+        $this->assertGuest();
+    }
+
+    /** The control: with the key configured, a genuine Moodle token still signs in. */
+    public function test_a_valid_token_still_signs_in_through_the_auth_middleware(): void
+    {
+        $this->configureKey(self::KEY, self::IV);
+        $user = $this->anyUser();
+
+        $this->get(self::AUTH_ROUTE.'?token='.urlencode($this->token($user->user_name, self::KEY, self::IV)))
+            ->assertRedirect();
+
+        $this->assertAuthenticatedAs($user);
+    }
+
+    /** ?token[]= made urldecode() throw a TypeError the middleware's catch (\Exception) missed. */
+    public function test_an_array_token_is_refused_quietly(): void
+    {
+        $this->configureKey(self::KEY, self::IV);
+
+        $response = $this->get(self::AUTH_ROUTE.'?token[]=x');
+
+        $this->assertLessThan(500, $response->getStatusCode());
+        $this->assertGuest();
+    }
 }
