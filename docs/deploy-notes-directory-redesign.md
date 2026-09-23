@@ -261,40 +261,62 @@ it is weighed against these grounds, not assumed to outrank them.
 text that did not describe a merge resolution, so it was re-taken on 2026-09-23 against
 this section as ratified — see section 0.3.
 
-### 0.5 An index for the OT roster feed — DBA, optional, not part of this release
+### 0.5 An index for the OT roster feed — already a migration on main; do not add it by hand
 
 The OT grid, its count and its export all read `student_master_course__map` filtered by
-course. That table has no index beyond its primary key, and this release moves the query
-from once per page load onto every grid draw (PR #317 F-002). It is not a merge condition:
-at today's volume the scan is cheap. The statement is written down here so the DBA has it
-ready, rather than as a schema change hidden inside a redesign branch.
+course, and this release moves that query from once per page load onto every grid draw
+(PR #317 F-002). It is not a merge condition: at today's volume the scan is cheap.
 
-Measured 2026-09-23 on testsargam6, against the largest course (456 officer trainees). The
-index was built on a session-only `TEMPORARY` copy of the table, so the shared schema was
-not touched:
+**The index already ships, as a migration that is on `main`.**
+`database/migrations/2026_08_19_120000_add_student_master_course_map_lookup_index.php`
+(commit `2b8e64dd0`, an ancestor of this release's base) creates
+`smcm_course_active_student_index` on exactly the columns this feed needs:
+`(course_master_pk, active_inactive, student_master_pk)`. The leading columns match the
+query's `course_master_pk = ?` and `active_inactive = 1`, and the trailing
+`student_master_pk` lets the join to `student_master` read from the index. On any host where
+that migration has run, there is nothing to do.
+
+Measured 2026-09-23 on testsargam6 against the largest course (456 officer trainees), with an
+index on those three columns built on a session-only `TEMPORARY` copy of the table:
 
 | | Access to the map table | Rows examined | Time |
 | --- | --- | --- | --- |
-| Today | full scan, no key | 3,796 | 9.3 ms |
-| With the index below | `ref` on the new index | 456 | 1.7 ms |
+| No index | full scan, no key | 3,796 | 9.3 ms |
+| With the index | `ref` on the index | 456 | 1.7 ms |
+
+Where the migration is still pending, run **that one file**. A bare `php artisan migrate`
+would also run every other pending migration on the host:
+
+```bash
+php artisan migrate:status | grep 2026_08_19_120000     # "Pending" -> run the next line
+php artisan migrate --path=database/migrations/2026_08_19_120000_add_student_master_course_map_lookup_index.php
+# rollback
+php artisan migrate:rollback --path=database/migrations/2026_08_19_120000_add_student_master_course_map_lookup_index.php
+```
+
+**Do not create the index by hand, under any name.** An earlier version of this section gave
+a hand-written `ALTER TABLE … ADD INDEX idx_smcm_course_active_student (…)` instead. The
+migration's guard looks for its own index **by name**, so on a host where that hand-made index
+exists, the migration still runs and builds a second index on the same three columns.
+MySQL 8.0.46 accepts that silently: executed 2026-09-23 on a `TEMPORARY` table, both
+`idx_smcm_course_active_student` and `smcm_course_active_student_index` were created on
+identical columns. The duplicate costs write time and disk and buys nothing.
+
+**testsargam6 is in exactly that state** (checked 2026-09-23, read-only):
+`idx_smcm_course_active_student` is present, applied from the earlier text, and the migration
+is `Pending`. Before anyone runs the migration there, drop the hand-made index first:
 
 ```sql
--- apply. ALGORITHM/LOCK make MySQL refuse rather than block writes if it cannot build
--- the index online, so a refusal here means: reschedule into a quiet window.
-ALTER TABLE student_master_course__map
-    ADD INDEX idx_smcm_course_active_student (course_master_pk, active_inactive, student_master_pk),
-    ALGORITHM=INPLACE, LOCK=NONE;
-
--- rollback
 ALTER TABLE student_master_course__map DROP INDEX idx_smcm_course_active_student;
 ```
 
-The index and its rollback were executed on the temporary copy without the
-`ALGORITHM`/`LOCK` clause, because a `TEMPORARY` table only supports a copying rebuild —
-so whether the live table accepts the online form (MySQL 8.0.46, InnoDB) is **not yet
-verified**; the clause exists so that finding out is safe. The leading columns match the query's
-`course_master_pk = ?` and `active_inactive = 1`; the trailing `student_master_pk` lets the
-join to `student_master` read from the index. Owner: **DBA**.
+Check every other host with
+`SHOW INDEX FROM student_master_course__map WHERE Key_name = 'idx_smcm_course_active_student'`
+and treat a hit the same way.
+
+Online build: the migration uses the schema builder, which issues a plain
+`ALTER TABLE … ADD INDEX` with no `ALGORITHM`/`LOCK` clause. Whether the live table builds it
+without blocking writes is **not verified**, so run it in a quiet window. Owner: **DBA**.
 
 ## 1. Before pulling, on every host
 
