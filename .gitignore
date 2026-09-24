@@ -31,3 +31,9 @@ docker-compose.yml
 # pin it are. One stray vendor file used to be tracked here, which could not
 # run anything and drifted from tools/phpstan/composer.lock on every install.
 tools/phpstan/vendor/
+# Playwright writes these on every run; they are generated artifacts, not source.
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+bootstrap/
