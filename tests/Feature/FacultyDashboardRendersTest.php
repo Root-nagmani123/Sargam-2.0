@@ -20,8 +20,9 @@ use Tests\TestCase;
  * catches it the way a user would, which also covers anything the scanner cannot
  * see, such as a view name built at runtime.
  *
- * faculty/dashboard.blade.php is the only view extending faculty.layouts.master,
- * so this single route covers that whole layout.
+ * The page now extends admin.layouts.master (PR #317 F-024), so these tests cover
+ * that layout on this route. They do not cover faculty.layouts.master, which no
+ * view extends any more (F-026).
  */
 class FacultyDashboardRendersTest extends TestCase
 {
@@ -60,9 +61,10 @@ class FacultyDashboardRendersTest extends TestCase
     }
 
     /**
-     * The faculty layout renders the static admin sidebar partials, which the RBAC
-     * menu table does not filter. Before the route was gated, an Officer Trainee got
-     * 49 admin links here against 28 on their own dashboard (PR #317 F-019).
+     * Before the route was gated the page rendered the faculty layout's static admin
+     * sidebar partials, which the RBAC menu table does not filter, and an Officer
+     * Trainee got 49 admin links here against 28 on their own dashboard (PR #317
+     * F-019). The gate stays in place now that the page uses the admin layout.
      */
     public function test_roles_other_than_faculty_and_super_admin_are_refused(): void
     {
@@ -164,6 +166,37 @@ class FacultyDashboardRendersTest extends TestCase
             $paths->diff($dashboardPaths)->values()->all(),
             'the page links where the same account\'s own dashboard does not'
         );
+    }
+
+    /**
+     * faculty.layouts.master still renders the unfiltered static admin sidebar. No
+     * view may extend it: a page built on it would show every holder admin links
+     * their roles are not granted, and the tests above, bound to /faculty_dashboard,
+     * would stay green (PR #317 F-026).
+     */
+    public function test_no_view_extends_the_unfiltered_faculty_layout(): void
+    {
+        $pattern = '/@extends\s*\(\s*[\'"]faculty\.layouts\.master[\'"]/';
+
+        // Prove the detector fires before trusting it to find nothing.
+        $this->assertSame(1, preg_match($pattern, "@extends('faculty.layouts.master')"));
+
+        $offenders = [];
+        $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(resource_path('views')));
+
+        foreach ($files as $file) {
+            if (! str_ends_with($file->getFilename(), '.blade.php')) {
+                continue;
+            }
+
+            $source = preg_replace('/\{\{--.*?--\}\}/s', '', file_get_contents($file->getPathname())) ?? '';
+
+            if (preg_match($pattern, $source)) {
+                $offenders[] = str_replace(base_path().DIRECTORY_SEPARATOR, '', $file->getPathname());
+            }
+        }
+
+        $this->assertSame([], $offenders, 'these views extend the unfiltered faculty layout');
     }
 
     private function facultyUserWithoutSuperAdmin(): User

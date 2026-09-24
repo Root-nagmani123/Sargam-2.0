@@ -4,7 +4,7 @@
      sidebar is built from the viewer's own menu permissions. --}}
 @extends('admin.layouts.master')
 
-@section('title', 'Faculty Dashboard - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Faculty Dashboard')
 
 @section('setup_content')
 <h1>Hi Welod</h1>
