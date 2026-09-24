@@ -405,17 +405,32 @@ Two separate fixes were merged into this branch and ship with it (merge commits
 | PR | What it changes | Files |
 | --- | --- | --- |
 | #322 | Closes four unclosed Blade sections. The one in **both master layouts** leaked an output buffer on every admin and faculty page, flushing stray bytes ahead of `<!DOCTYPE html>` | both master layouts, `admin/country/create`, `course-repository/user/class-material-subject-wise`, 2 tests |
-| #326 | Fixes the `/faculty_dashboard` HTTP 500 (a missing component and a deleted include). That route is now restricted to **Faculty and Super Admin**: the faculty layout shows the unfiltered static admin sidebar, so every other role gets 403 (review finding F-019) | `faculty/layouts/master`, `components/menu/material_management`, `routes/web.php`, 2 tests |
+| #326 | Fixes the `/faculty_dashboard` HTTP 500 (a missing component and a deleted include). **Nothing else**: at #326's own head the route renders for every authenticated user | `faculty/layouts/master`, `components/menu/material_management`, 2 tests |
 
-**Rollback.** The section 3 revert of the merge commit also reverts both fixes. Expect the
-stray pre-doctype output to return on every admin page, and `/faculty_dashboard` to return to
-HTTP 500 for everyone. Nothing in either fix writes to the database.
+The **access control on `/faculty_dashboard` is not in #326.** It is this PR's own work, made
+after the merges:
+
+| Commit | What it changes |
+| --- | --- |
+| `e5299f834` | Restricts the route to **Faculty and Super Admin**; every other role gets 403 (review finding F-019). `routes/web.php` |
+| the F-024 fix commit | Renders the page on the admin layout, whose sidebar is filtered by the RBAC menu table, instead of the faculty layout's unfiltered static admin partials, so a Faculty account sees only the menus its roles are granted (review finding F-024). `faculty/dashboard.blade.php` |
+
+**Do not merge #322 or #326 to `main` on their own.** #326 without #317 puts the 500 fix on
+`main` with no restriction, which serves the unfiltered admin menu to every logged-in account,
+Officer Trainees included. #317 already carries both; close #322 and #326 as superseded, or merge
+#317 first.
+
+**Rollback.** The section 3 revert of the merge commit also reverts both fixes and the
+restriction. Expect the stray pre-doctype output to return on every admin page, and
+`/faculty_dashboard` to return to HTTP 500 for everyone. Nothing in any of them writes to the
+database.
 
 **Post-deploy checks**, in addition to section 4:
 
 1. Open any admin page as Super Admin, then view the source. The first bytes are
    `<!DOCTYPE html>`, with nothing before them.
 2. `/faculty_dashboard`: 200 for a Faculty account, 403 for an Officer Trainee and for an
-   Employee-only account.
+   Employee-only account. As the Faculty account, the sidebar matches the one on its own
+   `/dashboard`: no Programme, Group Mapping, Memo Type or Memo Conclusion master links.
 3. The MDO/Escort Exemption create page still has its dual-list styling (its page CSS arrives
    through `admin.layouts.pre_header`'s `@yield('css')`).

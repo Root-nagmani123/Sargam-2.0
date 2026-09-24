@@ -104,6 +104,90 @@ class FacultyDashboardRendersTest extends TestCase
     }
 
     /**
+     * Gating who may open the page is not enough: the faculty layout's static admin
+     * sidebar showed a Faculty account 17 links to menus its roles are not granted
+     * (PR #317 F-024). Every link on the page that is an RBAC menu must be one the
+     * viewer holds the menu's permission for.
+     */
+    public function test_faculty_sees_only_menu_links_they_are_granted(): void
+    {
+        $user = $this->facultyUserWithoutSuperAdmin();
+
+        $before = ob_get_level();
+        $response = $this->actingAs($user)->get('/faculty_dashboard');
+        while (ob_get_level() > $before) {
+            ob_end_clean();
+        }
+        $response->assertOk();
+
+        preg_match_all('/href\s*=\s*["\']([^"\'#]+)["\']/i', $response->getContent(), $m);
+        $paths = collect($m[1])
+            ->map(fn ($href) => trim((string) parse_url(html_entity_decode($href), PHP_URL_PATH), '/'))
+            ->filter()
+            ->unique();
+
+        $menus = DB::table('menus')
+            ->whereIn('route', $paths->all())
+            ->whereNull('deleted_at')
+            ->whereNotNull('permission_name')
+            ->where('permission_name', '!=', '')
+            ->get(['route', 'permission_name']);
+
+        // A route can sit under several menus; holding any one of their permissions entitles it.
+        $unentitled = $menus->groupBy('route')
+            ->reject(fn ($rows) => $rows->contains(fn ($menu) => $user->can($menu->permission_name)))
+            ->map(fn ($rows, $route) => $route.' ('.$rows->pluck('permission_name')->unique()->implode(', ').')')
+            ->values()
+            ->all();
+
+        $this->assertSame([], $unentitled, 'the page links to menus this Faculty account is not granted');
+
+        // The sidebar's menu items arrive later from sidebar.menu, so the check above sees
+        // little of it. Also hold the page to the same account's own dashboard, which is
+        // built from its RBAC grant: nothing here may link where that page does not.
+        $this->app['auth']->forgetGuards();
+        $before = ob_get_level();
+        $dashboard = $this->actingAs($user)->get('/dashboard');
+        while (ob_get_level() > $before) {
+            ob_end_clean();
+        }
+        $dashboard->assertOk();
+
+        preg_match_all('/href\s*=\s*["\']([^"\'#]+)["\']/i', $dashboard->getContent(), $d);
+        $dashboardPaths = collect($d[1])
+            ->map(fn ($href) => trim((string) parse_url(html_entity_decode($href), PHP_URL_PATH), '/'))
+            ->filter()
+            ->unique();
+
+        $this->assertSame(
+            [],
+            $paths->diff($dashboardPaths)->values()->all(),
+            'the page links where the same account\'s own dashboard does not'
+        );
+    }
+
+    private function facultyUserWithoutSuperAdmin(): User
+    {
+        $id = DB::table('model_has_roles as mr')
+            ->join('roles as r', 'r.id', '=', 'mr.role_id')
+            ->where('r.name', 'Faculty')
+            ->whereNotExists(function ($q) {
+                $q->from('model_has_roles as other')
+                    ->join('roles as ro', 'ro.id', '=', 'other.role_id')
+                    ->whereColumn('other.model_id', 'mr.model_id')
+                    ->where('ro.name', 'Super Admin');
+            })
+            ->orderBy('mr.model_id')
+            ->value('mr.model_id');
+
+        if (! $id || ! ($user = User::find($id))) {
+            $this->markTestSkipped('no Faculty user without Super Admin in this database');
+        }
+
+        return $user;
+    }
+
+    /**
      * An actor holding a second, admitted role would pass under the old and the new
      * rule alike, so only a user with exactly this one role proves the gate.
      */

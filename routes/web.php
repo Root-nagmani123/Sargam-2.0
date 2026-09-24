@@ -1243,8 +1243,9 @@ Route::middleware(['auth'])->group(function () {
 
     /// Faculty Dashboard Route
     Route::get('/faculty_dashboard', function () {
-        // The faculty layout renders the static admin sidebar partials, which are not
-        // filtered by the RBAC menu table, so this page is for Faculty and Super Admin only.
+        // Faculty and Super Admin only. The view now uses the admin layout, whose sidebar
+        // is filtered by the RBAC menu table (PR #317 F-024); it used to render the
+        // unfiltered static admin partials (F-019).
         abort_unless(hasRole('Faculty') || isSidebarPrivilegedUser(), 403);
 
         return view('faculty.dashboard');
