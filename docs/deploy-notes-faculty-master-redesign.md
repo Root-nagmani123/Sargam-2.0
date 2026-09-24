@@ -5,31 +5,12 @@ optional on a host that has run `composer install` on `main`.
 
 ---
 
-## 1. Before pulling: release the tracked bootstrap cache files
+## 1. Bootstrap cache files: no step needed
 
-This release stops tracking `bootstrap/cache/packages.php` and
-`bootstrap/cache/services.php` and adds a tracked `bootstrap/cache/.gitignore`
-keeper in their place, so a clean checkout still has the directory Laravel needs
-at boot.
-
-Any host that has run `composer install` (and therefore `package:discover`) on
-`main` has a **locally modified tracked file**, and git refuses to move to a
-commit that deletes it:
-
-```
-error: Your local changes to the following files would be overwritten by checkout:
-        bootstrap/cache/packages.php
-Aborting
-```
-
-Run this first, on every host:
-
-```bash
-git checkout -- bootstrap/cache/packages.php bootstrap/cache/services.php
-```
-
-Then pull as usual. The same note applies in reverse if this release is ever
-reverted.
+`bootstrap/cache/packages.php` and `bootstrap/cache/services.php` stay tracked,
+exactly as `main` has them (main re-tracked them on 2026-09-20 in `c9fd46e73`).
+This release does not change either file, so pulling it never touches them, even
+on a host where `package:discover` has modified them locally.
 
 ## 2. Confirm the PHP version
 
@@ -48,8 +29,8 @@ composer install
 php artisan package:discover
 ```
 
-`bootstrap/cache/*.php` are now generated on the host and ignored by git, which
-is where they should have been all along.
+`package:discover` rewrites the tracked manifests from the installed packages.
+That leaves them locally modified on the host, which is expected and harmless.
 
 ## 4. Migration
 
