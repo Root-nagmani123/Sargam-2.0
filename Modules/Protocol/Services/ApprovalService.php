@@ -30,8 +30,10 @@ class ApprovalService
 
     private function tabs(): array
     {
-        $userPermissions = Auth::user()->permissions()->pluck('name')->toArray();
-        if(in_array('protocol.all_booking', $userPermissions)){
+        $userPermissions = Auth::user()->getDirectPermissions()->pluck('name')->toArray();
+
+        // Full access
+        if (in_array('protocol.all_booking', $userPermissions)) {
             return [
                 [
                     'type' => 'all',
@@ -58,36 +60,38 @@ class ApprovalService
                     'active' => false,
                 ],
             ];
-        }elseif(in_array('protocol.guest_house_booking', $userPermissions)){
-            return [
-                [
-                    'type' => 'guesthouse',
-                    'label' => 'Guest House',
-                    'count' => $this->getCounts('guesthouse'),
-                    'active' => true,
-                ],
-            ];
-        }elseif(in_array('protocol.vehicle_booking', $userPermissions)){
-            return [
-                [
-                    'type' => 'vehicle',
-                    'label' => 'Vehicle',
-                    'count' => $this->getCounts('vehicle'),
-                    'active' => true,
-                ],
-            ];
-        }elseif(in_array('protocol.ticket_booking', $userPermissions)){
-            return [
-                [
-                    'type' => 'ticket',
-                    'label' => 'Ticket',
-                    'count' => $this->getCounts('ticket'),
-                    'active' => true,
-                ],
-            ];
-        }else{
-            return [];
         }
+
+        $tabs = [];
+
+        if (in_array('protocol.guest_house_booking', $userPermissions)) {
+            $tabs[] = [
+                'type' => 'guesthouse',
+                'label' => 'Guest House',
+                'count' => $this->getCounts('guesthouse'),
+                'active' => empty($tabs),
+            ];
+        }
+
+        if (in_array('protocol.vehicle_booking', $userPermissions)) {
+            $tabs[] = [
+                'type' => 'vehicle',
+                'label' => 'Vehicle',
+                'count' => $this->getCounts('vehicle'),
+                'active' => empty($tabs),
+            ];
+        }
+
+        if (in_array('protocol.ticket_booking', $userPermissions)) {
+            $tabs[] = [
+                'type' => 'ticket',
+                'label' => 'Ticket',
+                'count' => $this->getCounts('ticket'),
+                'active' => empty($tabs),
+            ];
+        }
+
+        return $tabs;
     }
 
     private function getCounts(string $type): int
@@ -130,21 +134,38 @@ class ApprovalService
     # @ Base Query
     protected function baseQuery(Request $request)
     {
-        $user =  Auth::user();
+        $user = Auth::user();
+
+        // Direct user permissions only
         $userPermissions = $user->permissions()->pluck('name')->toArray();
-        switch($userPermissions){
-            case(in_array('protocol.all_booking', $userPermissions)):
-                return ProtocolRequest::query();
-            case(in_array('protocol.guest_house_booking', $userPermissions)):
-                return ProtocolRequest::where('request_type', 'guesthouse');
-            case(in_array('protocol.ticket_booking', $userPermissions)):
-                return ProtocolRequest::where('request_type', 'ticket');
-            case(in_array('protocol.vehicle_booking', $userPermissions)):
-                return ProtocolRequest::where('request_type', 'vehicle');
-            default:
-               return ProtocolRequest::query();
+
+        // Full access
+        if (in_array('protocol.all_booking', $userPermissions)) {
+            return ProtocolRequest::query();
         }
+
+        $requestTypes = [];
+
+        if (in_array('protocol.guest_house_booking', $userPermissions)) {
+            $requestTypes[] = 'guesthouse';
+        }
+
+        if (in_array('protocol.ticket_booking', $userPermissions)) {
+            $requestTypes[] = 'ticket';
+        }
+
+        if (in_array('protocol.vehicle_booking', $userPermissions)) {
+            $requestTypes[] = 'vehicle';
+        }
+
+        // No valid permission
+        if (empty($requestTypes)) {
+            return ProtocolRequest::whereRaw('1 = 0');
+        }
+
+        return ProtocolRequest::whereIn('request_type', $requestTypes);
     }
+
 
     protected function applyTabFilters(Request $request)
     {
@@ -172,13 +193,13 @@ class ApprovalService
     public function getDatatable(Request $request)
     {
         return DataTables::of($this->applyTabFilters($request))
-            ->addColumn('request_id', fn ($e) => $e->request_number ?: '-')
-            ->addColumn('request_type', fn ($e) => view('protocol::components.type-pill', ['type' => $e->request_type])->render())
-            ->addColumn('employee', fn ($e) => $e->employee->name ?: '-')
-            ->addColumn('created_at', fn ($e) => $e->created_at->format('d-m-Y') ?: '-')
-            ->addColumn('current_stage', fn ($e) => $e->current_stage)
-            ->addColumn('status', fn ($e) => view('protocol::components.status-badge', ['status' => $e->status])->render())
-            ->addColumn('action', fn ($e) => $this->actionButtons($e))
+            ->addColumn('request_id', fn($e) => $e->request_number ?: '-')
+            ->addColumn('request_type', fn($e) => view('protocol::components.type-pill', ['type' => $e->request_type])->render())
+            ->addColumn('employee', fn($e) => $e->employee->name ?: '-')
+            ->addColumn('created_at', fn($e) => $e->created_at->format('d-m-Y') ?: '-')
+            ->addColumn('current_stage', fn($e) => $e->current_stage)
+            ->addColumn('status', fn($e) => view('protocol::components.status-badge', ['status' => $e->status])->render())
+            ->addColumn('action', fn($e) => $this->actionButtons($e))
             ->rawColumns(['request_type', 'current_stage', 'status', 'action'])
             ->addIndexColumn()
             ->make(true);
@@ -186,8 +207,8 @@ class ApprovalService
 
     private function actionButtons($data)
     {
-        $editUrl   = route('protocol.approval.review', $data->id);
-        return '<a href="'.$editUrl.'" class="btn btn-sm btn-outline-saffron">Review <i class="bi bi-chevron-right"></i></a>';
+        $editUrl = route('protocol.approval.review', $data->id);
+        return '<a href="' . $editUrl . '" class="btn btn-sm btn-outline-saffron">Review <i class="bi bi-chevron-right"></i></a>';
     }
 
     public function getAll()

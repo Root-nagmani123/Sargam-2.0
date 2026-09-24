@@ -17,42 +17,63 @@ use Modules\Protocol\Http\Controllers\ManagerApprovalController;
 use Modules\Protocol\Http\Controllers\ProtocolRequestController;
 use Modules\Protocol\Http\Controllers\Admin\{PermissionController,VehicleMasterController,DriverMasterController,VehicleTypesController,VehicleCategoryController};
 use Modules\Protocol\Http\Controllers\CommonController;
+use Spatie\Permission\Models\Permission;
 
 Route::group(['middleware' => ['web', 'auth'], 'prefix' => 'protocol', 'as' => 'protocol.'], function () {
+
+    // @assigned_permissions
+    Route::get('assign-permission',function(){
+        $permissions = [
+            "protocol.all_booking",
+            "protocol.guest_house_booking",
+            "protocol.vehicle_booking",
+            "protocol.ticket_booking",
+        ];
+        foreach($permissions as $permission){
+            Permission::firstOrCreate([
+                'name' => $permission,
+                'guard_name' => 'web'
+            ]);
+        }
+
+    });
+   
 
     /*
     |--------------------------------------------------------------------------
     | Employee routes
     |--------------------------------------------------------------------------
     */  
-    // Route::middleware('can:protocol.my_requests')->group(function () {
+    Route::middleware('can:protocol.my_requests')->group(function () {
         Route::get('/', [ProtocolRequestController::class, 'dashboard'])->name('dashboard');
         Route::get('/new', [ProtocolRequestController::class, 'create'])->name('requests.create');
         Route::get('/my-requests', [ProtocolRequestController::class, 'myRequests'])->name('requests.my');
         Route::get('/requests/{protocolRequest}', [ProtocolRequestController::class, 'show'])->name('requests.show');
         Route::post('/requests', [ProtocolRequestController::class, 'storeCombined'])->name('requests.store');
-    // });
+    });
 
     /*
     |--------------------------------------------------------------------------
-    | Protocol Staff routes
+    | Protocol Staff / Admin routes
     |--------------------------------------------------------------------------
     */
-    // Route::middleware('any.permission:protocol.all_booking,protocol.ticket_booking,protocol.vehicle_booking,protocol.guest_house_booking')->group(function () {
+
+    // Requests routes
+    Route::middleware('can:protocol.protocol_requests')->group(function () {
         Route::get('/all-requests', [ApprovalController::class, 'allRequests'])->name('requests.all');
         Route::group(['prefix' => 'approval','as' => 'approval.',], function () {
             Route::get('/queue', [ApprovalController::class, 'queue'])->name('queue');
             Route::get('/queue/{protocolRequest}', [ApprovalController::class, 'review'])->name('review');
             Route::post('/queue/{protocolRequest}/decide', [ApprovalController::class, 'decide'])->name('decide');
         });
-    // });
+    });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Protocol Admin routes
-    |--------------------------------------------------------------------------
-    */
-    Route::resource('/driver-master', DriverMasterController::class)->names('driver-master')->middleware('can:protocol.driver_master');
+    // Driver Master routes
+    Route::middleware('can:protocol.driver_master')->group(function () {
+        Route::resource('/driver-master', DriverMasterController::class)->names('driver-master');
+    });
+
+    // Vehicle Master routes
     Route::middleware('can:protocol.vehicle_master')->group(function () {
         Route::get('vehicle-master/{id}/edit', [VehicleMasterController::class, 'edit'])->name('vehicle-master.edit');
         Route::put('vehicle-master/{id}', [VehicleMasterController::class, 'update'])->name('vehicle-master.update');
@@ -61,17 +82,15 @@ Route::group(['middleware' => ['web', 'auth'], 'prefix' => 'protocol', 'as' => '
         Route::resource('vehicle-categories', VehicleCategoryController::class)->names('vehicle-category');
         Route::resource('vehicle-types', VehicleTypesController::class)->names('vehicle-types');
     });
+
+    // Permission routes
     Route::middleware('can:protocol.permissions')->group(function(){
         Route::get('/permissions', [PermissionController::class, 'permissions'])->name('permissions');
         Route::get('/permissions/employee/{employee}', [PermissionController::class, 'show']);
         Route::post('/permissions/employee/{employee}', [PermissionController::class, 'update']);
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Manager / recommended-staff routes
-    |--------------------------------------------------------------------------
-    */
+    // Manager routes
     Route::group(['prefix' => 'manager', 'as' => 'manager.'], function () {
         Route::get('/queue', [ManagerApprovalController::class, 'queue'])->name('queue');
         Route::get('/queue/{protocolRequest}', [ManagerApprovalController::class, 'review'])->name('review');
