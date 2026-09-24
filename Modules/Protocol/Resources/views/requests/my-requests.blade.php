@@ -81,13 +81,14 @@
 <script>
   let type = 'all';
   let table;
+  let url = "{{ route('protocol.requests.my') }}";
 
   $(document).ready(function () {
     table = $('#RequestTable').DataTable({
       processing: true,
       serverSide: true,
       ajax: {
-        url: "{{ route('protocol.requests.my') }}",
+        url: url,
         type: "GET",
         data: function (d) {
           d.type = type;
