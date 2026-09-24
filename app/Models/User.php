@@ -10,6 +10,8 @@ use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\EmployeeMaster;
 
 class User extends Authenticatable
 {
@@ -97,14 +99,26 @@ class User extends Authenticatable
 //     );
 // }
 
-/**
+    /**
      * Employees and faculty for complaint section (complainant / assignment dropdowns).
      * user_credentials.user_id maps to employee_master.pk and faculty_master.employee_master_pk.
      * Excludes students: user_credentials.user_category != 'S'.
      *
      * @param int|null $departmentId Optional: filter by employee department_master_pk
      * @return \Illuminate\Support\Collection { employee_pk, employee_name, mobile, designation_name? }
+     * 
      */
+
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(EmployeeMaster::class, 'user_id');
+    }
+
+    public function employeeDetail()
+    {
+        return $this->employee()->select('department_master_pk','pk')->first();
+    }
+
     public static function getEmployeesAndFacultyForComplaint($departmentId = null)
     {
         $query = DB::table('user_credentials as uc')
@@ -120,10 +134,12 @@ class User extends Authenticatable
                 'e.pk as employee_pk',
                 DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),
                 DB::raw("COALESCE(e.mobile, '') as mobile"),
-                'd.designation_name'
+                'd.designation_name',
+                'uc.image_path',
+                'uc.pk as user_credentials_pk'
             )
             ->orderBy('e.first_name')
-            ->groupBy('e.pk', 'e.first_name', 'e.middle_name', 'e.last_name', 'e.mobile', 'd.designation_name');
+            ->groupBy('e.pk', 'e.first_name', 'e.middle_name', 'e.last_name', 'e.mobile', 'd.designation_name','uc.image_path','uc.pk');
 
         if ($departmentId) {
             $query->where('e.department_master_pk', $departmentId);
