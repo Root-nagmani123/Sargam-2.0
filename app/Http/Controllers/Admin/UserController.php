@@ -4699,7 +4699,18 @@ public function toggleStatus(Request $request)
         // remaining tables stay behind `auth` alone until the sidebar permission
         // model covers their screens, and that is still the Engineering lead's
         // call to make rather than this endpoint's.
-        if (($allowed['admin_only'] ?? false) && ! (hasRole('Admin') || hasRole('Super Admin'))) {
+        //
+        // The check reads the role tables, not hasRole(): that helper answers
+        // from the session list written at login, so an administrator whose
+        // role is revoked would keep these switches until they log out. The
+        // Admin / Super Admin entries in that session list are copied from
+        // these same Spatie roles at login, so a current administrator gets
+        // the same answer either way.
+        $actor = auth()->user();
+        $isAdministrator = $actor !== null
+            && $actor->roles()->whereIn('name', ['Admin', 'Super Admin', 'SuperAdmin'])->exists();
+
+        if (($allowed['admin_only'] ?? false) && ! $isAdministrator) {
             \Log::warning('Refused a toggle-status request on a privileged table', \App\Support\LogSafe::context([
                 'user'   => optional(auth()->user())->getKey(),
                 'table'  => $table,
@@ -4713,9 +4724,24 @@ public function toggleStatus(Request $request)
 
         $status = (int) $status;
 
+        $previous = DB::table($table)->where($idColumn, $id)->value($column);
+
         DB::table($table)
             ->where($idColumn, $id)
             ->update([$column => $status]);
+
+        // The refusals above are logged; so is every change that goes through,
+        // or the log would show only the requests that changed nothing. Table
+        // and column are allow-listed by now; id is still request text.
+        \Log::info('Toggle-status change', \App\Support\LogSafe::context([
+            'user'       => optional($actor)->getKey(),
+            'table'      => $table,
+            'column'     => $column,
+            'id'         => (string) $id,
+            'from'       => $previous,
+            'to'         => $status,
+            'privileged' => (bool) ($allowed['admin_only'] ?? false),
+        ]));
 
         if ($table === 'employee_type_master') {
             EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
@@ -4766,8 +4792,11 @@ public function toggleStatus(Request $request)
         ]);
     } catch (\Exception $e) {
         \Log::error('Toggle status error: ' . $e->getMessage());
+
+        // The exception text stays in the log only: a QueryException message
+        // carries the rendered SQL, the bound values and the server's error.
         return response()->json([
-            'message' => 'Failed to update status: ' . $e->getMessage(),
+            'message' => 'Status could not be updated.',
         ], 500);
     }
 }

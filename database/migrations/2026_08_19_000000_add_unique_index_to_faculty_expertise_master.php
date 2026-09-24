@@ -16,9 +16,8 @@ use Illuminate\Support\Facades\Schema;
  * `SHOW INDEX FROM faculty_expertise_master` against the live schema, not by
  * reading a create migration (there isn't one in this repository).
  *
- * Safe to apply: the table held 10 rows with 0 duplicate and 0 null/empty
- * `expertise_name` values when this was written. MySQL permits repeated NULLs
- * under a UNIQUE index, so rows that never had a name stay legal.
+ * MySQL permits repeated NULLs under a UNIQUE index, so rows that never had a
+ * name stay legal. Repeated empty strings do not, and are counted as duplicates.
  *
  * Guarded and idempotent throughout — this runs against environments whose
  * schema history is unreliable, so it must survive being re-run and must never
@@ -41,13 +40,21 @@ return new class extends Migration
             ->exists();
     }
 
-    /** @return \Illuminate\Support\Collection<int, object> the duplicated values and their counts */
+    /**
+     * Every value the UNIQUE index would reject, with its count.
+     *
+     * Only NULL is exempt: MySQL lets a UNIQUE index hold any number of NULLs.
+     * The empty string is an ordinary value, so two '' rows collide exactly as
+     * two "Public Policy" rows do and must be counted here. GROUP BY compares
+     * under the column's own collation, the same one the index uses.
+     *
+     * @return \Illuminate\Support\Collection<int, object>
+     */
     private function duplicates()
     {
         return DB::table(self::TABLE)
             ->selectRaw(sprintf('`%s` AS value, COUNT(*) AS occurrences', self::COLUMN))
             ->whereNotNull(self::COLUMN)
-            ->where(self::COLUMN, '<>', '')
             ->groupBy(self::COLUMN)
             ->havingRaw('COUNT(*) > 1')
             ->get();
@@ -74,8 +81,11 @@ return new class extends Migration
         // take under pressure with a release half out of the door.
         //
         // So: skip the index, say so loudly, and name the offending values.
-        // Nothing is half-applied - the index is either created or it is not -
-        // and re-running the migration after the rows are merged adds it. The
+        // Nothing is half-applied - the index is either created or it is not.
+        //
+        // Re-running `php artisan migrate` will NOT retry it: the migrator
+        // records this file as run as soon as up() returns, skip or not. So the
+        // message names the statement to run once the rows are merged. The
         // uniqueness users actually experience is unaffected meanwhile: the
         // store path validates with Rule::unique()->ignore() and still catches
         // 1062, so the index is defence in depth rather than the only guard.
@@ -84,7 +94,8 @@ return new class extends Migration
         if ($duplicates->isNotEmpty()) {
             $message = sprintf(
                 '%s NOT created: %d duplicate %s value(s) in %s (%s). '
-                . 'Merge or rename them and re-run this migration; '
+                . 'This migration is now recorded as run, so `php artisan migrate` will not retry it. '
+                . 'Merge or rename the rows, then run: ALTER TABLE `%s` ADD UNIQUE INDEX `%s` (`%s`); '
                 . 'application-level uniqueness is unaffected in the meantime.',
                 self::INDEX,
                 $duplicates->count(),
@@ -92,7 +103,10 @@ return new class extends Migration
                 self::TABLE,
                 $duplicates->take(10)->map(
                     fn ($row) => sprintf('"%s" x%d', $row->value, $row->occurrences)
-                )->implode(', ')
+                )->implode(', '),
+                self::TABLE,
+                self::INDEX,
+                self::COLUMN
             );
 
             Log::warning($message);

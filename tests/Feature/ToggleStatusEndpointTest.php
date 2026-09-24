@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -162,9 +163,8 @@ class ToggleStatusEndpointTest extends TestCase
 
         // The guard would pass vacuously if the fixture user happened to be an
         // administrator, so the premise is asserted rather than assumed.
-        $this->actingAs($actor);
         $this->assertFalse(
-            hasRole('Admin') || hasRole('Super Admin'),
+            $this->isAdministrator($actor),
             'this test needs a NON-administrator actor; the fixture user has changed'
         );
 
@@ -209,8 +209,12 @@ class ToggleStatusEndpointTest extends TestCase
         ];
     }
 
-    /** An administrator is still allowed through - the gate narrows, it does not close. */
-    public function test_a_privileged_table_is_permitted_to_an_administrator(): void
+    /**
+     * An administrator is still allowed through - the gate narrows, it does not
+     * close - and the change that goes through leaves an audit record naming
+     * the actor, the row and both values.
+     */
+    public function test_a_privileged_table_is_permitted_to_an_administrator_and_logged(): void
     {
         $row = DB::table('user_role_master')->first();
 
@@ -218,10 +222,14 @@ class ToggleStatusEndpointTest extends TestCase
             $this->markTestSkipped('no user_role_master row to toggle');
         }
 
-        $target = (int) $row->active_inactive === 1 ? 0 : 1;
+        $admin  = $this->administrator();
+        $before = (int) $row->active_inactive;
+        $target = $before === 1 ? 0 : 1;
+
+        Log::spy();
 
         $this->withSession(['user_roles' => ['Admin']])
-            ->actingAs($this->actor())
+            ->actingAs($admin)
             ->post('/admin/toggle-status', [
                 'table'  => 'user_role_master',
                 'column' => 'active_inactive',
@@ -235,6 +243,85 @@ class ToggleStatusEndpointTest extends TestCase
             (int) DB::table('user_role_master')->where('pk', $row->pk)->value('active_inactive'),
             'an administrator must still be able to toggle a privileged table'
         );
+
+        Log::shouldHaveReceived('info')
+            ->withArgs(fn ($message, $context = []) => $message === 'Toggle-status change'
+                && ($context['user'] ?? null) === $admin->getKey()
+                && ($context['table'] ?? null) === 'user_role_master'
+                && ($context['column'] ?? null) === 'active_inactive'
+                && ($context['id'] ?? null) === (string) $row->pk
+                && (int) ($context['from'] ?? -1) === $before
+                && ($context['to'] ?? null) === $target
+                && ($context['privileged'] ?? null) === true)
+            ->once();
+    }
+
+    /**
+     * A revoked administrator is refused at once, not at their next login.
+     *
+     * hasRole() answers from the session list written at login, so a session
+     * still carrying 'Admin' after the Spatie role was removed used to pass.
+     * The actor here holds NO administrator role in the role tables and the
+     * session still says 'Admin' - exactly the state after a revocation.
+     */
+    public function test_a_session_only_administrator_is_refused_a_privileged_table(): void
+    {
+        $actor = $this->actor();
+
+        $this->assertFalse(
+            $this->isAdministrator($actor),
+            'this test needs an actor with no administrator role in the role tables'
+        );
+
+        $row = DB::table('user_role_master')->first();
+
+        if (! $row) {
+            $this->markTestSkipped('no user_role_master row to target');
+        }
+
+        $before = DB::table('user_role_master')->where('pk', $row->pk)->value('active_inactive');
+
+        $this->withSession(['user_roles' => ['Admin', 'Super Admin']])
+            ->actingAs($actor)
+            ->post('/admin/toggle-status', [
+                'table'  => 'user_role_master',
+                'column' => 'active_inactive',
+                'id'     => $row->pk,
+                'status' => (int) $before === 1 ? 0 : 1,
+            ])
+            ->assertForbidden();
+
+        $this->assertSame(
+            $before,
+            DB::table('user_role_master')->where('pk', $row->pk)->value('active_inactive'),
+            'a session-only administrator must not reach the row'
+        );
+    }
+
+    /**
+     * A failed write answers with a fixed message: the exception text, which
+     * for a QueryException carries the SQL and bound values, stays in the log.
+     *
+     * `news` is allow-listed but absent from some databases, which is a real
+     * failure to provoke without touching anything.
+     */
+    public function test_a_failed_write_does_not_return_the_database_error(): void
+    {
+        if (Schema::hasTable('news')) {
+            $this->markTestSkipped('`news` exists on this connection, so the write would not fail');
+        }
+
+        $response = $this->actingAs($this->administrator())
+            ->post('/admin/toggle-status', [
+                'table'  => 'news',
+                'column' => 'status',
+                'id'     => 1,
+                'status' => 1,
+            ])
+            ->assertStatus(500)
+            ->assertExactJson(['message' => 'Status could not be updated.']);
+
+        $this->assertStringNotContainsString('SQL', $response->getContent());
     }
 
     /**
@@ -277,5 +364,24 @@ class ToggleStatusEndpointTest extends TestCase
         }
 
         return $user;
+    }
+
+    /** A user who holds Admin or Super Admin in the role tables, not just the session. */
+    private function administrator(): User
+    {
+        $user = User::query()
+            ->whereHas('roles', fn ($q) => $q->whereIn('name', ['Admin', 'Super Admin', 'SuperAdmin']))
+            ->first();
+
+        if (! $user) {
+            $this->markTestSkipped('no user holds an administrator role in the role tables');
+        }
+
+        return $user;
+    }
+
+    private function isAdministrator(User $user): bool
+    {
+        return $user->roles()->whereIn('name', ['Admin', 'Super Admin', 'SuperAdmin'])->exists();
     }
 }

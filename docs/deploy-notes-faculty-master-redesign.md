@@ -66,33 +66,46 @@ either created or it is not.
 
 The uniqueness users experience is unaffected meanwhile — the store path
 validates with `Rule::unique()->ignore()` and still catches MySQL 1062 — so the
-index is defence in depth rather than the only guard. Merge or rename the rows
-and re-run `php artisan migrate` to add it.
+index is defence in depth rather than the only guard.
+
+**Re-running `php artisan migrate` will not add the index later.** Laravel
+records the migration as run the moment it returns, skip or not, so `migrate`
+answers "Nothing to migrate". Once the rows are merged or renamed, add the index
+directly:
+
+```sql
+ALTER TABLE `faculty_expertise_master`
+  ADD UNIQUE INDEX `fem_expertise_name_unique` (`expertise_name`);
+```
 
 The message looks like this:
 
 ```
 [migration] fem_expertise_name_unique NOT created: 1 duplicate expertise_name
-value(s) in faculty_expertise_master ("Public Administration" x2). Merge or
-rename them and re-run this migration; application-level uniqueness is
-unaffected in the meantime.
+value(s) in faculty_expertise_master ("Public Administration" x2). This migration
+is now recorded as run, so `php artisan migrate` will not retry it. Merge or
+rename the rows, then run: ALTER TABLE `faculty_expertise_master` ADD UNIQUE
+INDEX `fem_expertise_name_unique` (`expertise_name`); application-level
+uniqueness is unaffected in the meantime.
 ```
 
 To know in advance, run the query the migration runs — a zero result means the
-index will be created on this host:
+index will be created on this host. Only NULL is exempt from a UNIQUE index;
+repeated empty strings collide like any other value, so they are counted:
 
 ```sql
 SELECT expertise_name, COUNT(*)
 FROM faculty_expertise_master
-WHERE expertise_name IS NOT NULL AND expertise_name <> ''
+WHERE expertise_name IS NOT NULL
 GROUP BY expertise_name
 HAVING COUNT(*) > 1;
 ```
 
-Executed 2026-09-16 on `testsargam6`, a **development** database and not
-production: **0 duplicate groups over 10 rows**, with `fem_expertise_name_unique`
-present. Run it on the production host too if you want to know beforehand whether
-the index will land — but the deploy no longer depends on the answer.
+Executed 2026-09-24 on `testsargam6`, a **development** database and not
+production: **0 duplicate groups over 10 rows, 0 empty-string and 0 NULL
+names**, with `fem_expertise_name_unique` present. Run it on the production host
+too if you want to know beforehand whether the index will land — but the deploy
+no longer depends on the answer.
 
 ```bash
 php artisan migrate
@@ -127,4 +140,9 @@ moved v1 → v2; rolling back serves the v1 keys again, which is harmless.
   and an inactive one offers it.
 - Confirm one `Master grid export` and one `Faculty full-detail workbook export`
   line in `storage/logs/laravel.log`.
-- `php artisan migrate:status` shows the new migration as run.
+- `php artisan migrate:status` shows the new migration as run — which it does
+  even when the index was skipped, so also check
+  `SHOW INDEX FROM faculty_expertise_master WHERE Key_name = 'fem_expertise_name_unique'`
+  returns a row. If it does not, see section 4.
+- Toggle any status switch and confirm one `Toggle-status change` line in the
+  log naming your user, the table, the row and the old and new value.
