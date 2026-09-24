@@ -4,7 +4,12 @@
 <head>
     @include('admin.layouts.pre_header')
     <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
-    @section('css')
+    {{-- Deliberately NOT a @section. This was an unclosed @section('css'): it opened an
+     output buffer that was never closed, so every page built on this layout leaked
+     one buffer level. A child page's own @section('css') is still emitted, by the
+     @yield('css') at the end of admin.layouts.pre_header (included above) - keep
+     that yield. The styles below are emitted inline, which is where they already
+     ended up. --}}
     <style>
     .nav-item .tab-item .active {
         background-color: #bbd9f7;
@@ -424,7 +429,11 @@
         @include('faculty.layouts.sidebar')
         <div class="page-wrapper">
             @include('faculty.layouts.header')
-            @include('admin.layouts.aside')
+            {{-- @include('admin.layouts.aside') removed: that view was deleted in
+                 21682a447 ("responsiveness"), which folded its 764 lines into
+                 admin/layouts/header.blade.php (+744) but did not update this
+                 layout, so every faculty page died with "View [admin.layouts.aside]
+                 not found". --}}
             <div class="body-wrapper">
                 <!-- Tab Content Container -->
                 <div class="tab-content" id="mainNavbarContent">
