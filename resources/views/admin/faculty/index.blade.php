@@ -297,7 +297,9 @@ $(document).on('click', '.delete-faculty-btn', function(e) {
     e.preventDefault();
 
     var deleteUrl = $(this).data('url');
-    var facultyName = $(this).data('name');
+    // attr(), not data(): data() returns the decoded name and may coerce it to a number.
+    // Escaped before it reaches Swal's html option, so a stored name is shown as text.
+    var facultyName = $('<div>').text(String($(this).attr('data-name') || '')).html();
     var csrfToken = $(this).data('token');
 
     Swal.fire({
