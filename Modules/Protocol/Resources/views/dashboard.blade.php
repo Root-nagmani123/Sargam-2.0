@@ -1,10 +1,11 @@
-@extends('protocol::layouts.app')
+@extends('admin.layouts.master')
 
 @section('title', 'Dashboard')
 @section('page_title', 'Dashboard')
 @section('page_subtitle', 'Overview of protocol requests across Guest House, Vehicle Pass & Ticket')
 
-@section('content')
+
+@section('setup_content')
 
   <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
@@ -44,7 +45,12 @@
       <table class="table mb-0">
         <thead>
           <tr>
-            <th>Request ID</th><th>Type</th><th>Employee</th><th>Raised On</th><th>Current Stage</th><th>Status</th>
+            <th>Request ID</th>
+            <th>Type</th>
+            <th>Employee</th>
+            <th>Raised On</th>
+            <th>Current Stage</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody>
@@ -58,7 +64,11 @@
               <td><x-protocol::status-badge :status="$r->status" /></td>
             </tr>
           @empty
-            <tr><td colspan="6"><div class="empty-state"><i class="bi bi-inbox"></i>No requests yet.</div></td></tr>
+            <tr>
+              <td colspan="6">
+                <div class="empty-state"><i class="bi bi-inbox"></i>No requests yet.</div>
+              </td>
+            </tr>
           @endforelse
         </tbody>
       </table>
