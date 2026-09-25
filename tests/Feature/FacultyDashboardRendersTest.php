@@ -24,15 +24,32 @@ use Tests\TestCase;
  */
 class FacultyDashboardRendersTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Probe before any query: with no connection the actor lookup below throws,
+        // so this is the only place a missing database can become a skip.
+        try {
+            DB::connection()->getPdo();
+        } catch (\Throwable $e) {
+            $this->markTestSkipped('the faculty dashboard test renders a real page and needs the application database');
+        }
+    }
+
     public function test_the_faculty_dashboard_renders_a_complete_page(): void
     {
         $id = DB::table('model_has_roles as mr')
             ->join('roles as r', 'r.id', '=', 'mr.role_id')
             ->where('r.name', 'Super Admin')->value('mr.model_id');
 
-        if (! $id || ! ($user = User::find($id))) {
-            $this->markTestSkipped('no Super Admin in this database');
-        }
+        // With a database but no actor, fail rather than skip: a skipped guard reads
+        // as a green suite while the page it protects can be 500ing again.
+        $user = $id ? User::find($id) : null;
+        $this->assertNotNull(
+            $user,
+            'no Super Admin user in this database - this test needs one to request /faculty_dashboard as'
+        );
 
         $before = ob_get_level();
         $response = $this->actingAs($user)->get('/faculty_dashboard');

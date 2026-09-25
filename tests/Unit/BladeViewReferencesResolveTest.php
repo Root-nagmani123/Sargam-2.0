@@ -29,16 +29,42 @@ use Tests\TestCase;
  */
 class BladeViewReferencesResolveTest extends TestCase
 {
+    /**
+     * An anonymous component tag. Segments may be snake_case or kebab-case - both
+     * are in use here (<x-menu.material_management />, <x-menu.fc-sidebar />) -
+     * so a hyphen must be allowed, or every kebab-named tag fails to match and is
+     * never examined at all.
+     */
+    private const COMPONENT_TAG = '/<x-([a-z0-9_-]+(?:\.[a-z0-9_-]+)*)[\s\/>]/i';
+
+    /** Blade's own tags, which are not components with a view file. */
+    private const BUILT_IN_TAGS = ['slot', 'dynamic-component'];
+
     public function test_every_view_named_by_a_blade_file_exists(): void
     {
         $pattern = '/@(include|includeWhen|includeUnless|includeFirst|extends|component)\s*\(\s*[\'"]([A-Za-z0-9_.\-\/]+)[\'"]/';
 
-        // Prove the detector fires before trusting it to find nothing.
+        // Prove both detectors fire before trusting them to find nothing, on every
+        // naming form the view tree uses.
         $this->assertSame(
             1,
             preg_match($pattern, "@include('admin.layouts.aside')"),
             'the view-reference detector no longer matches a known @include'
         );
+
+        foreach ([
+            '<x-menu.material_management />' => 'menu.material_management',
+            '<x-menu.fc-sidebar />' => 'menu.fc-sidebar',
+            '<x-datatable-chrome />' => 'datatable-chrome',
+            '<x-data-table.table>' => 'data-table.table',
+            '<x-breadcrum title="x">' => 'breadcrum',
+        ] as $tag => $expected) {
+            $this->assertSame(1, preg_match(self::COMPONENT_TAG, $tag, $m), 'the component detector does not match '.$tag);
+            $this->assertSame($expected, $m[1], 'the component detector misreads the name in '.$tag);
+        }
+
+        // Alpine attributes are not tags and must not be read as components.
+        $this->assertSame(0, preg_match(self::COMPONENT_TAG, '<div x-data="{ open: false }" x-show="open">'));
 
         $missing = [];
 
@@ -55,9 +81,13 @@ class BladeViewReferencesResolveTest extends TestCase
             }
 
             // Anonymous components under resources/views/components.
-            preg_match_all('/<x-([a-z0-9_]+(?:\.[a-z0-9_]+)*)[\s\/>]/i', $source, $components);
+            preg_match_all(self::COMPONENT_TAG, $source, $components);
 
             foreach (array_unique($components[1]) as $component) {
+                if (in_array(strtolower($component), self::BUILT_IN_TAGS, true)) {
+                    continue;
+                }
+
                 if (! $this->componentExists($component)) {
                     $missing[] = sprintf('%s  ->  <x-%s />', $relative, $component);
                 }
@@ -92,7 +122,7 @@ class BladeViewReferencesResolveTest extends TestCase
         }
 
         $studly = implode('\\', array_map(
-            fn ($segment) => str_replace(' ', '', ucwords(str_replace('_', ' ', $segment))),
+            fn ($segment) => str_replace(' ', '', ucwords(str_replace(['_', '-'], ' ', $segment))),
             explode('.', $name)
         ));
 

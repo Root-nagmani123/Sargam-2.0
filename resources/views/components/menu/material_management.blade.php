@@ -21,4 +21,8 @@
     over a missing feature: general.blade.php and setup_academic.blade.php are both
     0-byte files beside it for the same reason. Populate this only when a real
     material / purchase-order menu is deliberately introduced and product-reviewed.
+
+    While this renders nothing, the faculty header hides its Purchase Order tab and
+    the sidebar partial hides its Material entry, so no one is offered a pane with
+    nothing in it. Both reappear on their own once this component has content.
 --}}

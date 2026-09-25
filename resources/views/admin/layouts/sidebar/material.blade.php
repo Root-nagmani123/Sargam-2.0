@@ -1,3 +1,10 @@
+@php
+    // <x-menu.material_management /> renders nothing until a real Material menu is
+    // built. Render it once here so the Material entry is only shown when there is
+    // a menu behind it - an entry that opens a blank pane is worse than none.
+    // faculty/layouts/header.blade.php hides the Purchase Order tab on the same test.
+    $materialMenu = trim(\Illuminate\Support\Facades\Blade::render('<x-menu.material_management />'));
+@endphp
 <aside class="side-mini-panel with-vertical sidebar-google-style" id="sidebar-material">
     <div class="vh-100 d-flex flex-column overflow-hidden">
         <div class="iconbar sargam-sidebar-iconbar flex-fill d-flex flex-row align-items-stretch" style="min-height: 0;">
@@ -12,6 +19,7 @@
                                 <div class="simplebar-content-wrapper" tabindex="0" role="region"
                                     aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                     <div class="simplebar-content" style="padding: 0px;">
+                                        @if ($materialMenu !== '')
                                         <li class="mini-nav-item selected" id="material-mini-1">
                                             <a href="javascript:void(0)"
                                                 class="mini-nav-link sidebar-google-item sidebar-mini-squircle-item">
@@ -21,6 +29,7 @@
                                                 <span class="mini-nav-title sidebar-mini-squircle-label">Material</span>
                                             </a>
                                         </li>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -29,7 +38,7 @@
                 </ul>
             </div>
             <div class="sidebarmenu flex-fill min-vw-0 d-flex flex-column" style="min-height: 0;">
-                <x-menu.material_management />
+                {!! $materialMenu !!}
             </div>
         </div>
     </div>
