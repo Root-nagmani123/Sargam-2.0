@@ -79,27 +79,52 @@ use App\Http\Controllers\SidebarMenu\{
     SidebarCategoryController,MenuGroupController,MenuController
 };
 
-Route::get('assign-role', function () {
-    $user = User::find(2);
-    $permissions = $user->getAllPermissions();
-    foreach ($permissions as $permission) {
-        echo $permission->name . "<br>";
-    }
-})->name('admin.assign-role');
+// Removed: two unauthenticated debug routes that sat outside the auth group and
+// disclosed application internals to anybody who knew the path (PR #317 L-1, L-2).
+//
+//   GET assign-role  echoed every permission of the hard-coded User::find(2)
+//   GET test-menus   dd()'d the resolved sidebar menu tree
+//
+// Neither was referenced anywhere: no route('admin.assign-role') call and no link
+// to either path exists in app/, resources/ or public/. Deleted rather than gated,
+// because neither has a caller to keep working.
 
-Route::get('test-menus', function () {
-    
-    $menus = app()->make(\App\Services\SidebarMenu\MenuService::class)->getMenus();
-    dd($menus);
-});
+// Gated, not deleted: this one is plausibly in operational use from a browser on a
+// host with no shell, so a bookmarked /clear-cache still works for a Super Admin.
+//
+// The clearing itself is a POST. As a GET it was a cross-site request away from
+// running: an <img src=".../clear-cache"> on any page a signed-in Super Admin
+// opened sends their session cookie, the role check passes, and VerifyCsrfToken
+// never looks at a GET. So the GET only shows a confirmation form, and the POST
+// behind it carries the CSRF token the web group checks.
+Route::middleware(['auth'])->group(function () {
+    Route::get('clear-cache', function () {
+        if (! hasRole('Super Admin')) {
+            abort(403);
+        }
 
-Route::get('clear-cache', function () {
-    Artisan::call('cache:clear');
-    Artisan::call('config:clear');
-    Artisan::call('view:clear');
-    Artisan::call('route:clear');
-    Artisan::call('optimize:clear');
-    return redirect()->back()->with('success', 'Cache cleared successfully');
+        $done = session('success') ? '<p>'.e(session('success')).'</p>' : '';
+
+        return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Clear cache</title></head><body>'
+            .$done
+            .'<form method="POST" action="'.e(url('clear-cache')).'">'.csrf_field()
+            .'<p>Clear the application, config, view and route caches on this server?</p>'
+            .'<button type="submit">Clear caches</button></form></body></html>';
+    })->name('clear-cache.confirm');
+
+    Route::post('clear-cache', function () {
+        if (! hasRole('Super Admin')) {
+            abort(403);
+        }
+
+        Artisan::call('cache:clear');
+        Artisan::call('config:clear');
+        Artisan::call('view:clear');
+        Artisan::call('route:clear');
+        Artisan::call('optimize:clear');
+
+        return redirect()->to(url('clear-cache'))->with('success', 'Cache cleared successfully');
+    })->name('clear-cache');
 });
 
 // Read-only: list pending/ran migrations from a server with no shell/SSH access.
