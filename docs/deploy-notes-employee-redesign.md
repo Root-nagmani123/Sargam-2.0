@@ -272,6 +272,36 @@ FROM model_has_roles mhr JOIN roles r ON r.id = mhr.role_id
 WHERE r.name = 'Super Admin';
 ```
 
+### 0.6 Passwordless sign-in now depends on `APP_ENV`, not on the Host header
+
+`LoginController::authenticate()` has a branch that signs a user in with **no
+password check**. It was chosen by `request()->getHost()`, which returns the
+client-supplied `Host` header because `TrustHosts` is not registered. So one
+request carrying `Host: localhost` (or `127.0.0.1`, `dev.local`,
+`98.70.99.215`, `74.225.234.234`) signed in as any user, Super Admin included
+(PR #309 review F-066). **It is now chosen by `APP_ENV=local` only**, which a
+request cannot set.
+
+**Before deploying, on every host, check the environment:**
+
+```bash
+php artisan tinker --execute="echo app()->environment();"
+```
+
+- **Production must print `production`.** If it prints `local`, the passwordless
+  branch is open to everyone who can reach the login page. Fix `APP_ENV` first.
+- **A shared dev or staging server that used passwordless sign-in** — including
+  any reached as `98.70.99.215` or `74.225.234.234` — loses it unless its
+  `APP_ENV` is `local`. That is the intended effect on anything reachable by other
+  people. Its users sign in with real credentials from now on.
+- Developer machines with `APP_ENV=local` keep working exactly as before.
+
+**Still owed, as a separate change:** the two hard-coded passwords in the
+non-local branch (one for student accounts, one that skips LDAP) are unchanged by
+this release. They have been in a public repository and must be treated as
+compromised. Removing them needs a real credential path for the student accounts
+first. See `reviews/pr-309-F066-mitigation-brief.md` STEP 2 (review workspace).
+
 ---
 
 ## 1. Before pulling: the bootstrap cache manifests stay tracked

@@ -55,7 +55,6 @@ class LoginController extends Controller
 
     $username   = $request->input('username');
     $password   = $request->input('password');
-    $serverHost = request()->getHost();
 
     // ── Lockout check (CWE-307): 5 attempts → 15-minute lock ─────────────────
     $credRow = DB::table('user_credentials')->where('user_name', $username)->first();
@@ -72,7 +71,12 @@ class LoginController extends Controller
     try {
 
         /* ================= LOCAL ================= */
-        if (in_array($serverHost, ['localhost', '127.0.0.1', 'dev.local', '98.70.99.215', '74.225.234.234'])) {
+        // Passwordless sign-in is for LOCAL DEVELOPMENT ONLY, so it is gated on the
+        // server's own environment (APP_ENV), which a request cannot influence. It used
+        // to be gated on request()->getHost() - the client-controlled Host header, with
+        // TrustHosts not registered - so one request carrying `Host: localhost` signed
+        // in as any user, Super Admin included, with no password (PR #309 review F-066).
+        if (app()->environment('local')) {
 
             $user = User::where('user_name', $username)->first();
             if (!$user) {
