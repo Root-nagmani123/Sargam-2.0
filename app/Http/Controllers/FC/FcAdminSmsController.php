@@ -42,7 +42,18 @@ class FcAdminSmsController extends Controller
         }
 
         $selectedForm = $forms->firstWhere('id', $selectedFormId);
-        $counts = $bulk->previewCounts($selectedFormId > 0 ? $selectedFormId : null);
+
+        // No selectable form: show a zero state rather than another form's numbers.
+        //
+        // previewCounts(null) does not mean "no form" - it falls back to
+        // activeRegistrationDynamicForm(), which ignores the course-end scope. Passing
+        // null here once the picker is empty put a programme name and three non-zero
+        // recipient counts next to an empty dropdown, all belonging to a form this
+        // screen had deliberately excluded. Nothing could be sent to that cohort (every
+        // validator rejects form_id 0), so this is a display fix, not a send fix.
+        $counts = $selectedFormId > 0
+            ? $bulk->previewCounts($selectedFormId)
+            : ['b1' => 0, 'b2' => 0, 'b3' => 0, 'programme' => 'No active form', 'last_date' => '—'];
 
         return view('admin.fc-sms.index', [
             'preview' => [
