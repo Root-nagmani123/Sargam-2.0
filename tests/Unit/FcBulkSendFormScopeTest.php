@@ -122,6 +122,52 @@ class FcBulkSendFormScopeTest extends TestCase
     }
 
     /**
+     * The two admin-list tabs must cover every form between them.
+     *
+     * "Active" defers to activeRunning() (active_inactive = 1 AND end_date >=
+     * today), so "Archive" has to be its complement or a form falls through
+     * both: a course with a null end_date, or a disabled one still dated in the
+     * future, satisfies neither a bare "end_date < today" nor activeRunning().
+     * The only edit link for an FC form lives in this grid, so a form in neither
+     * tab is unreachable. Asserted by looking for the complement's disjuncts in
+     * the compiled SQL - restating "end_date < today" here would drop them.
+     */
+    public function test_admin_list_tabs_are_exhaustive(): void
+    {
+        $controller = app(FormManagementController::class);
+        $method = new ReflectionMethod($controller, 'formsIndexQuery');
+        $method->setAccessible(true);
+
+        $archive = $method->invoke($controller, new Request(['status_filter' => 'archive']))->toSql();
+
+        $this->assertStringContainsString(
+            '`active_inactive` != ?',
+            $archive,
+            'Archive must include disabled courses, whatever their end_date'
+        );
+        $this->assertStringContainsString(
+            '`end_date` is null',
+            $archive,
+            'Archive must include a null end_date - activeRunning() excludes it, so nothing else claims it'
+        );
+        $this->assertStringContainsString(
+            '`end_date` < ?',
+            $archive,
+            'Archive must still include finished courses'
+        );
+
+        $source = file_get_contents(
+            (new \ReflectionClass($controller))->getFileName()
+        );
+
+        $this->assertStringContainsString(
+            'archived()',
+            $source,
+            'The archive branch must defer to CourseMaster::archived(), not restate its predicate'
+        );
+    }
+
+    /**
      * scopeOnRunningCourse() must call CourseMaster rather than restate it.
      *
      * The point of the shared scope is that changing the rule in CourseMaster

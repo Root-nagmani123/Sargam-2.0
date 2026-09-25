@@ -9,7 +9,6 @@ use App\Models\FC\FcFormStep;
 use App\Models\FC\FcFormFieldGroup;
 use App\Services\FC\FcDescriptiveDataFieldResolver;
 use App\Services\FC\FcStepApplicabilityService;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\JsonResponse;
@@ -68,13 +67,16 @@ class FormManagementController extends Controller
             ->withCount('steps');
 
         $statusFilter = $request->input('status_filter', 'active');
-        $currentDate  = Carbon::now()->format('Y-m-d');
 
         if ($statusFilter === 'archive') {
-            $query->whereHas('courseMaster', function ($q) use ($currentDate) {
-                $q->whereNotNull('end_date')
-                    ->where('end_date', '<', $currentDate);
-            });
+            // CourseMaster::scopeArchived() is written as the exact complement of
+            // scopeActiveRunning(), which the active branch below defers to. Delegating
+            // to it rather than restating "end_date < today" is what keeps the two tabs
+            // exhaustive: a course with a null end_date, or a disabled one still dated in
+            // the future, fails activeRunning() and so has to land here - otherwise its
+            // forms show under neither tab and become uneditable, since the only edit
+            // link lives in this grid.
+            $query->whereHas('courseMaster', fn ($q) => $q->archived());
         } else {
             // One definition of "the course is still running", shared with the bulk-send
             // scope - see FcForm::scopeOnRunningCourse(). Not is_active-filtered: this
