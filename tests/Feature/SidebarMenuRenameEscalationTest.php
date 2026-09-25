@@ -20,9 +20,11 @@ use Tests\TestCase;
  * `member_pii_read` and pass the gates those names protect. The sidebar write routes
  * are now Super Admin only.
  *
- * The actor holds a real menu permission, not nothing: a role-less account has no
- * permission row to rename, so a test written with one passes against the unfixed
- * routes and proves nothing. The Super Admin control shows the write path still
+ * Before the fix any signed-in account could rename a menu, whatever it held: a
+ * role-less account's rename also returned 302. The actor holds a real menu
+ * permission for the second half of the first test - assign-role must stay 403
+ * after the attempt - because only an account holding the renamed permission would
+ * have gained anything from it. The Super Admin control shows the write path still
  * works - and still renames - for the one role allowed to use it.
  */
 class SidebarMenuRenameEscalationTest extends TestCase

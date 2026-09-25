@@ -111,9 +111,11 @@ export on the office's behalf. Do not issue a Super Admin account to solve a
 download request, and do not grant `member_pii_read` to solve one either unless
 you are content for that role to hold an irreversible delete.
 
-**Who can grant this permission.** On `main`, two routes could put
+**Who can grant this permission.** On `main`, three routes could put
 `member_pii_read` (or any other permission) in the hands of any signed-in
-account, and this release closes both. `POST roles/permissions/{id}` created
+account, and this release closes all three. `POST admin/users/assign-role-save`
+gave any account any role, Super Admin included (PR #309 F-073; see 0.5).
+`POST roles/permissions/{id}` created
 and granted whatever name it was posted (PR #309 F-027 / PR #317 L-8); it is now
 Super Admin only (`EnsureRoleAdmin`). The sidebar menu editor renamed the
 `permissions` row whenever a menu's name changed, and a rename moves that
@@ -124,12 +126,36 @@ status) are now Super Admin only too. Their read routes, and the sidebar feed
 every user loads, are unchanged.
 
 So after this release only a Super Admin can grant the permission or create it
-under another name. Check that before relying on it: on each server,
-`SELECT name, guard_name, COUNT(*) FROM permissions GROUP BY name, guard_name
-HAVING COUNT(*) > 1` should return nothing for `member_pii_read` and `users`.
-A duplicate is what an earlier rename leaves behind (DBA; the
+under another name. The code change does not undo a grant or rename made while
+these routes were open, so check who holds the two names before relying on
+it. On each server, after the migration has run:
+
+```sql
+SELECT p.name AS permission, 'role' AS via, r.name AS holder
+FROM role_has_permissions x
+JOIN permissions p ON p.id = x.permission_id
+JOIN roles r ON r.id = x.role_id
+WHERE p.name IN ('member_pii_read', 'users')
+UNION ALL
+SELECT p.name, 'direct', CAST(x.model_id AS CHAR)
+FROM model_has_permissions x
+JOIN permissions p ON p.id = x.permission_id
+WHERE p.name IN ('member_pii_read', 'users');
+```
+
+Anything other than Super Admin, or a role you granted on purpose, is the
+signature of an earlier rename or grant: remove it before relying on either
+gate. Do **not** rely on looking for duplicate `(name, guard_name)` rows. A
+rename made before this release is adopted by the migration (it inserts
+`member_pii_read` only when no row by that name exists), and a rename done in
+two steps never creates a duplicate. Both leave the duplicate check clean while
+an ordinary account still passes the gate (PR #309 F-079). This query does not
+show accounts that gave themselves a role through `assign-role-save` on `main`:
+0.5's Super Admin membership check catches those that took Super Admin, and
+any other role taken that way needs its membership reviewed the same way.
+Separately (DBA): the
 `unique(name, guard_name)` index the permission-table migration declares is
-missing on at least the development database). What this release achieves is
+missing on at least the development database. What this release achieves is
 worth stating plainly: the member roster and the per-member profile sheets are
 out of casual reach, and every served download now writes an audit line naming
 the actor, the IP and the row count.

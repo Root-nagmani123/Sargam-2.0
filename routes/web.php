@@ -101,28 +101,11 @@ use App\Http\Middleware\EnsureFacultyPortalUser;
 use App\Http\Middleware\EnsureMenuPermission;
 use App\Http\Middleware\EnsureRoleAdmin;
 use App\Models\CourseMaster;
-use App\Models\User;
-use App\Services\SidebarMenu\MenuService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use Spatie\Permission\Models\Role;
-
-Route::get('assign-role', function () {
-    $user = User::find(2);
-    $permissions = $user->getAllPermissions();
-    foreach ($permissions as $permission) {
-        echo $permission->name.'<br>';
-    }
-})->name('admin.assign-role');
-
-Route::get('test-menus', function () {
-
-    $menus = app()->make(MenuService::class)->getMenus();
-    dd($menus);
-});
 
 Route::get('clear-cache', function () {
     Artisan::call('cache:clear');
