@@ -5,7 +5,7 @@
     "keywords": ["framework", "laravel"],
     "license": "MIT",
     "require": {
-        "php": "^8.0",
+        "php": "^8.2",
         "adldap2/adldap2-laravel": "^6.1",
         "arcanedev/log-viewer": "^9.0",
         "barryvdh/laravel-dompdf": "^3.1",
@@ -78,7 +78,10 @@
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
-        "platform-check": false
+        "platform-check": false,
+        "platform": {
+            "php": "8.2.12"
+        }
     },
     "minimum-stability": "dev",
     "prefer-stable": true

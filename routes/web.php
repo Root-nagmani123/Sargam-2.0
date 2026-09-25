@@ -482,14 +482,17 @@ Route::middleware(['auth'])->group(function () {
     // Faculty Routes
     Route::prefix('faculty')->name('faculty.')->controller(FacultyController::class)->group(function () {
 
-        Route::get('/', 'index')->name('index');
-        Route::get('create', 'create')->name('create');
-        Route::post('store', 'store')->name('store');
-        Route::get('edit/{id}', 'edit')->name('edit');
-        Route::post('update', 'update')->name('update');
-        Route::get('show/{id}', 'show')->name('show');
-        Route::delete('delete/{id}', 'destroy')->name('destroy');
-        Route::get('excel-export', 'excelExportFaculty')->name('excel.export');
+        Route::get('/',  'index')->name('index');
+        Route::get('create',  'create')->name('create');
+        Route::post('store',  'store')->name('store');
+        Route::get('edit/{id}',  'edit')->name('edit');
+        Route::post('update',  'update')->name('update');
+        Route::get('show/{id}',  'show')->name('show');
+        Route::delete('delete/{id}',  'destroy')->name('destroy');
+        // Full-detail workbook (34 columns) - kept, see the controller.
+        Route::get('excel-export',  'excelExportFaculty')->name('excel.export');
+        // Grid-shaped export: one action, four formats (csv | excel | pdf | print).
+        Route::get('export/{format?}', 'export')->name('export');
         Route::post('check-unique', 'checkUnique')->name('checkUnique');
         Route::get('search-first-name', 'searchFirstName')->name('searchFirstName');
         Route::get('check-firstname', 'checkFirstName')->name('checkFirstName');
@@ -1091,13 +1094,17 @@ Route::middleware(['auth'])->group(function () {
 
     // Appellation Master
 
-    Route::prefix('admin/appellation')->name('master.appellation.')->middleware('auth')->group(function () {
-        Route::get('/', [AppellationMasterController::class, 'index'])->name('index');
-        Route::get('create', [AppellationMasterController::class, 'create'])->name('create');
-        Route::get('edit/{id}', [AppellationMasterController::class, 'edit'])->name('edit');
-        Route::post('store', [AppellationMasterController::class, 'store'])->name('store');
-        Route::delete('delete/{id}', [AppellationMasterController::class, 'destroy'])->name('delete');
-    });
+     // Appellation Master
+
+Route::prefix('admin/appellation')->name('master.appellation.')->middleware('auth')->group(function () {
+    Route::get('/', [AppellationMasterController::class, 'index'])->name('index');
+    // One action, four formats (csv | excel | pdf | print) - see the controller.
+    Route::get('export/{format?}', [AppellationMasterController::class, 'export'])->name('export');
+    Route::get('create', [AppellationMasterController::class, 'create'])->name('create');
+    Route::get('edit/{id}', [AppellationMasterController::class, 'edit'])->name('edit');
+    Route::post('store', [AppellationMasterController::class, 'store'])->name('store');
+    Route::delete('delete/{id}', [AppellationMasterController::class, 'destroy'])->name('delete');
+});
 
     Route::prefix('admin/discipline')->name('master.discipline.')->group(function () {
         Route::get('/', [DisciplineMasterController::class, 'index'])->name('index');
