@@ -1946,12 +1946,24 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
 Route::get('/view-logs', [LogController::class, 'index']);
 
 Route::middleware(['auth'])->prefix('sidebar')->name('sidebar.')->group(function () {
-    Route::get('categories/status/{id}', [SidebarCategoryController::class, 'status'])->name('categories.status');
-    Route::resource('categories', SidebarCategoryController::class);
-    Route::get('menu-groups/status/{id}', [MenuGroupController::class, 'status'])->name('menu-groups.status');
-    Route::resource('menu-groups', MenuGroupController::class);
-    Route::get('menus/status/{id}', [MenuController::class, 'status'])->name('menus.status');
-    Route::resource('menus', MenuController::class);
+    // Writes are Super Admin only (PR #309 review F-077). MenuService::update()
+    // renames the `permissions` row whenever a menu's name changes, and a rename
+    // moves that permission to every role holding it - so behind `auth` alone any
+    // account holding one menu permission could turn it into `users` or
+    // `member_pii_read` and pass the gates those names protect. The status toggles
+    // are GETs but they write, so they sit here too. Reads stay open: `sidebar.menu`
+    // and the get* lookups below feed every user's sidebar.
+    Route::middleware([EnsureRoleAdmin::class])->group(function () {
+        Route::get('categories/status/{id}', [SidebarCategoryController::class, 'status'])->name('categories.status');
+        Route::get('menu-groups/status/{id}', [MenuGroupController::class, 'status'])->name('menu-groups.status');
+        Route::get('menus/status/{id}', [MenuController::class, 'status'])->name('menus.status');
+        Route::resource('categories', SidebarCategoryController::class)->only(['store', 'update', 'destroy']);
+        Route::resource('menu-groups', MenuGroupController::class)->only(['store', 'update', 'destroy']);
+        Route::resource('menus', MenuController::class)->only(['store', 'update', 'destroy']);
+    });
+    Route::resource('categories', SidebarCategoryController::class)->except(['store', 'update', 'destroy']);
+    Route::resource('menu-groups', MenuGroupController::class)->except(['store', 'update', 'destroy']);
+    Route::resource('menus', MenuController::class)->except(['store', 'update', 'destroy']);
     Route::get('groups', [SidebarController::class, 'getGroups'])->name('groups');
     Route::get('menu', [SidebarController::class, 'sidebarMenus'])->name('menu');
     Route::get('getGroups/{category_id}', [SidebarController::class, 'getCategoryGroups'])->name('getGroups');

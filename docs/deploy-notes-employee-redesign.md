@@ -111,17 +111,28 @@ export on the office's behalf. Do not issue a Super Admin account to solve a
 download request, and do not grant `member_pii_read` to solve one either unless
 you are content for that role to hold an irreversible delete.
 
-**Do not read this permission as a boundary.** Granting it is not restricted to
-an administrator: `POST roles/permissions/{id}` carries `auth` and nothing else,
-and the controller behind it creates whatever permission name it is posted and
-grants it to the role in the URL, with no check on the caller. Any authenticated
-account can therefore hand itself `member_pii_read` in one request. That endpoint
-is pre-existing, is not touched by this release, and defeats every
-permission-based gate in the application — it is tracked as its own change
-(PR #317 L-8 / PR #309 F-027), owner Engineering lead. What this release does
-achieve is real and worth stating plainly: the member roster and the per-member
-profile sheets are out of casual reach, and every served download now writes an
-audit line naming the actor, the IP and the row count.
+**Who can grant this permission.** On `main`, two routes could put
+`member_pii_read` (or any other permission) in the hands of any signed-in
+account, and this release closes both. `POST roles/permissions/{id}` created
+and granted whatever name it was posted (PR #309 F-027 / PR #317 L-8); it is now
+Super Admin only (`EnsureRoleAdmin`). The sidebar menu editor renamed the
+`permissions` row whenever a menu's name changed, and a rename moves that
+permission to every role holding it, so one edit could turn a permission an
+account already held into `member_pii_read` or `users` (PR #309 F-077); the
+sidebar category, menu-group and menu **write** routes (store, update, destroy,
+status) are now Super Admin only too. Their read routes, and the sidebar feed
+every user loads, are unchanged.
+
+So after this release only a Super Admin can grant the permission or create it
+under another name. Check that before relying on it: on each server,
+`SELECT name, guard_name, COUNT(*) FROM permissions GROUP BY name, guard_name
+HAVING COUNT(*) > 1` should return nothing for `member_pii_read` and `users`.
+A duplicate is what an earlier rename leaves behind (DBA; the
+`unique(name, guard_name)` index the permission-table migration declares is
+missing on at least the development database). What this release achieves is
+worth stating plainly: the member roster and the per-member profile sheets are
+out of casual reach, and every served download now writes an audit line naming
+the actor, the IP and the row count.
 
 ### 0.2 Rolling the migration back
 
@@ -240,6 +251,13 @@ check sits in `RoleController`'s constructor rather than on the route, because
 the controller answers on two mounts (`roles/*` and `admin/roles/*`) and a
 route-level gate would have closed one of them. Reads — the roles listing, the
 dashboard-card screen — are untouched.
+
+The sidebar menu editor is a second way to change what a role can do: renaming a
+menu renames its `permissions` row, and every role holding that row now holds the
+new name (PR #309 F-077). Its write routes — category, menu-group and menu store,
+update, destroy and the status toggles — are Super Admin only as well, on the
+route group in `routes/web.php`. The sidebar screens' reads and the sidebar feed
+are untouched.
 
 **What to expect:** nothing, for anyone who was administering roles through the
 UI, because that screen is already offered to Super Admin alone. If a

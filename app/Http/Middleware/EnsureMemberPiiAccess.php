@@ -98,8 +98,11 @@ use Illuminate\Http\Request;
  *
  * Read this gate, then, as what it demonstrably is: it removes a bulk personal
  * data egress from casual reach, puts an audit line on every served download,
- * and - as of this PR - the one path that used to let a refused account grant
- * itself back in is gated too.
+ * and - as of this PR - the paths that used to let a refused account grant
+ * itself back in are gated too. There were two: assignPermission() above, and
+ * the sidebar menu editor, whose update renames the `permissions` row a menu
+ * names and so hands the new name to every role holding the old one (PR #309
+ * F-077). Its write routes are EnsureRoleAdmin in routes/web.php.
  *
  * WHY THE LOOKUP BELOW IS WRAPPED - and it is not the reason this comment used
  * to give. A permission name that does not exist does NOT raise: Spatie's
