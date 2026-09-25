@@ -19,9 +19,14 @@ use Illuminate\Support\Facades\Auth;
  * protected, so a user who can see a screen in the sidebar can also export it, and
  * the two can never drift apart:
  *
- *     Route::get('roles/export', ...)->middleware('menu.permission:roles');
+ *     Route::middleware([EnsureMenuPermission::class . ':users'])->group(...);
  *
  * Several may be listed; holding ANY one of them admits the request.
+ *
+ * Referenced BY CLASS, never through a Kernel alias: there is no `menu.permission`
+ * alias on this branch, and a string middleware name that does not resolve throws
+ * rather than gates. Wired on the assign-role routes in routes/web.php (PR #309
+ * review F-017 / F-019).
  */
 class EnsureMenuPermission
 {
@@ -58,6 +63,6 @@ class EnsureMenuPermission
             return $next($request);
         }
 
-        abort(403, 'You do not have permission to export this data.');
+        abort(403, 'You do not have permission to open this screen.');
     }
 }

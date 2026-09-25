@@ -85,18 +85,47 @@ return new class extends Migration
         // Copied from employee_master at migration time - never a literal in
         // source (F-001). Guarded on the current placeholder value, exactly
         // as the per-row loop this replaced was.
-        DB::table('user_credentials as uc')
-            ->join('employee_master as em', 'em.pk', '=', 'uc.user_id')
-            ->whereIn('uc.pk', self::CONTACT_BACKFILL_PKS)
-            ->whereRaw("LOWER(TRIM(uc.email_id)) = 'a@a.com'")
-            ->whereRaw("TRIM(em.email) <> ''")
-            ->update([
-                'uc.email_id' => DB::raw('TRIM(em.email)'),
-                // 0 is not a real phone number - only overwrite mobile_no
-                // where employee_master actually has one on file.
-                'uc.mobile_no' => DB::raw("CASE WHEN TRIM(em.mobile) NOT IN ('', '0') THEN TRIM(em.mobile) ELSE uc.mobile_no END"),
-                'uc.updated_date' => now(),
-            ]);
+        //
+        // AND guarded on the credential's own NAME agreeing with the employee
+        // row (review finding F-021). EnsureMemberRecordAccess admits on a
+        // contact match over this same join, so copying the employee row's
+        // contact details into the credential would otherwise manufacture the
+        // very proof the gate treats as independent - admitting the account
+        // whatever its user_id points at. The name is the independent signal
+        // category C already relies on; a row without it is left refused.
+        foreach (self::CONTACT_BACKFILL_PKS as $credPk) {
+            $row = DB::table('user_credentials as uc')
+                ->join('employee_master as em', 'em.pk', '=', 'uc.user_id')
+                ->where('uc.pk', $credPk)
+                ->first([
+                    'uc.first_name as cred_first',
+                    'uc.last_name as cred_last',
+                    'em.first_name as emp_first',
+                    'em.middle_name as emp_middle',
+                    'em.last_name as emp_last',
+                ]);
+
+            if (! $row || ! self::namesAgree(
+                [$row->cred_first, $row->cred_last],
+                [$row->emp_first, $row->emp_middle, $row->emp_last]
+            )) {
+                continue;
+            }
+
+            DB::table('user_credentials as uc')
+                ->join('employee_master as em', 'em.pk', '=', 'uc.user_id')
+                ->where('uc.pk', $credPk)
+                ->whereRaw("LOWER(TRIM(uc.email_id)) = 'a@a.com'")
+                ->whereRaw("TRIM(em.email) <> ''")
+                ->update([
+                    'uc.email_id' => DB::raw('TRIM(em.email)'),
+                    // Only FILL an empty mobile_no, never overwrite one: an
+                    // overwritten number could not be restored by down()
+                    // (F-022). 0 is not a real phone number on either side.
+                    'uc.mobile_no' => DB::raw("CASE WHEN COALESCE(TRIM(uc.mobile_no), '') IN ('', '0') AND TRIM(em.mobile) NOT IN ('', '0') THEN TRIM(em.mobile) ELSE uc.mobile_no END"),
+                    'uc.updated_date' => now(),
+                ]);
+        }
 
         foreach (self::USER_ID_CORRECTIONS as $credPk => $c) {
             DB::table('user_credentials')
@@ -128,11 +157,35 @@ return new class extends Migration
                 'uc.updated_date' => now(),
             ]);
 
-        DB::table('user_credentials as uc')
-            ->join('employee_master as em', 'em.pk', '=', 'uc.user_id')
-            ->whereIn('uc.pk', self::CONTACT_BACKFILL_PKS)
-            ->whereRaw('TRIM(uc.mobile_no) = TRIM(em.mobile)')
-            ->whereRaw("TRIM(em.mobile) NOT IN ('', '0')")
-            ->update(['uc.mobile_no' => null]);
+        // mobile_no is deliberately NOT reverted (review finding F-022). up()
+        // only fills an empty one, so the prior value was empty, but whether it
+        // was NULL, '' or '0' was never recorded - and the version before this
+        // nulled any number that merely EQUALLED employee_master's, including
+        // numbers up() never wrote. A filled-in real number is left in place.
+    }
+
+    /**
+     * Do the credential's own name and the employee row share a name token?
+     * Same tokenisation as MemberRecordAccessTest::credentialsNamingSomebodyElse().
+     *
+     * @param  array<int, string|null>  $credential
+     * @param  array<int, string|null>  $employee
+     */
+    private static function namesAgree(array $credential, array $employee): bool
+    {
+        $tokens = static function (array $parts): array {
+            $out = [];
+            foreach ($parts as $part) {
+                foreach (preg_split('/[^a-z]+/', strtolower(trim((string) $part))) as $t) {
+                    if (strlen($t) > 1) {
+                        $out[] = $t;
+                    }
+                }
+            }
+
+            return $out;
+        };
+
+        return (bool) array_intersect($tokens($credential), $tokens($employee));
     }
 };

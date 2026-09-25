@@ -182,7 +182,11 @@ class MemberRecordAccessTest extends TestCase
                 'em.middle_name as emp_middle',
                 'em.last_name as emp_last',
             ])
-            ->limit(2000)
+            // No limit. A `limit(2000)` stood here with no ORDER BY, so "all
+            // pairs" meant whichever 2,000 of ~15,000 credentials the server
+            // returned first - the same hiding place the paragraph above
+            // describes (PR #309 review F-023). Seven narrow columns per row.
+            ->orderBy('uc.pk')
             ->get();
 
         $tokens = static function (string ...$parts): array {

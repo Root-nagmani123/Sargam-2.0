@@ -201,9 +201,22 @@ class RolePermissionAuthorisationTest extends TestCase
         $this->actAsSuperAdmin();
         $role = $this->anyRole();
 
+        // An EXISTING permission the role does not hold yet. The endpoint refuses to
+        // invent names for anybody (see the next test), so the probe name - which
+        // exists nowhere - cannot be the thing a Super Admin grants.
+        $name = DB::table('permissions')
+            ->where('guard_name', 'web')
+            ->whereNotIn('id', DB::table('role_has_permissions')->where('role_id', $role->id)->pluck('permission_id'))
+            ->orderBy('id')
+            ->value('name');
+
+        if (! $name) {
+            $this->markTestSkipped('the role already holds every permission');
+        }
+
         $response = $this->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
             ->post(route('assign.roles.permissions', $role->id), [
-                'permission' => self::PROBE_PERMISSION,
+                'permission' => $name,
                 'status' => 1,
             ]);
 
@@ -214,14 +227,33 @@ class RolePermissionAuthorisationTest extends TestCase
         );
 
         $this->assertTrue(
-            $this->probePermissionExists(),
-            'a Super Admin was admitted but the permission was not created'
-        );
-
-        $this->assertTrue(
-            $this->probePermissionIsGrantedTo($role),
+            DB::table('role_has_permissions')
+                ->join('permissions', 'permissions.id', '=', 'role_has_permissions.permission_id')
+                ->where('role_has_permissions.role_id', $role->id)
+                ->where('permissions.name', $name)
+                ->exists(),
             'a Super Admin was admitted but the permission was not granted'
         );
+    }
+
+    /**
+     * Not even a Super Admin may INVENT a permission name. firstOrCreate() used to mint
+     * a row for any string; the endpoint now accepts only names that already exist or
+     * that a `menus` row defines, so typos cannot become permissions.
+     */
+    public function test_a_super_admin_cannot_invent_a_permission_name(): void
+    {
+        $this->actAsSuperAdmin();
+        $role = $this->anyRole();
+
+        $this->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
+            ->post(route('assign.roles.permissions', $role->id), [
+                'permission' => self::PROBE_PERMISSION,
+                'status' => 1,
+            ])
+            ->assertStatus(422);
+
+        $this->assertFalse($this->probePermissionExists(), 'an unknown permission name was minted');
     }
 
     /**

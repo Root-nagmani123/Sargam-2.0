@@ -74,12 +74,12 @@ class PdfRemoteAssetGuardTest extends TestCase
                 $enablesViaSetter = preg_match('/setOption\(\s*[\'"]isRemoteEnabled[\'"]\s*,\s*true/', $line);
 
                 if ($enablesViaArray || $enablesViaSetter) {
-                    $offenders[] = $this->relative($path) . ':' . ($i + 1) . '  ' . trim($line);
+                    $offenders[] = $this->relative($path).':'.($i + 1).'  '.trim($line);
                 }
             }
         }
 
-        $this->assertSame([], $offenders, "dompdf remote loading is enabled at:\n" . implode("\n", $offenders));
+        $this->assertSame([], $offenders, "dompdf remote loading is enabled at:\n".implode("\n", $offenders));
     }
 
     /**
@@ -129,7 +129,7 @@ class PdfRemoteAssetGuardTest extends TestCase
 
                     foreach (self::FORBIDDEN_IMAGE_HOSTS as $host) {
                         if (str_contains($line, $host)) {
-                            $offenders[] = $this->relative($path) . ':' . ($i + 1) . '  ' . trim($line);
+                            $offenders[] = $this->relative($path).':'.($i + 1).'  '.trim($line);
                         }
                     }
                 }
@@ -139,7 +139,7 @@ class PdfRemoteAssetGuardTest extends TestCase
         $this->assertSame(
             [],
             $offenders,
-            "A PDF asset is still fetched from a remote host:\n" . implode("\n", $offenders)
+            "A PDF asset is still fetched from a remote host:\n".implode("\n", $offenders)
         );
     }
 

@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
 use App\Exports\MedicalExemptionReportDetailExport;
 use App\Exports\MedicalExemptionReportSummaryExport;
+use App\Http\Controllers\Controller;
 use App\Models\CourseMaster;
 use App\Models\ExemptionCategoryMaster;
 use App\Models\MedicalCaseMaster;
@@ -41,16 +41,16 @@ class MedicalExemptionReportController extends Controller
                 ->addIndexColumn()
                 ->addColumn('ot_name', function ($row) {
                     $name = trim((string) ($row->display_name ?? '')) ?: 'N/A';
-                    $label = $row->generated_OT_code ? $name . ' - ' . $row->generated_OT_code : $name;
+                    $label = $row->generated_OT_code ? $name.' - '.$row->generated_OT_code : $name;
 
-                    return '<a href="' . $this->detailUrl($row->student_master_pk, $row->course_master_pk) . '" '
-                        . 'class="mer-ot-link">' . e($label) . '</a>';
+                    return '<a href="'.$this->detailUrl($row->student_master_pk, $row->course_master_pk).'" '
+                        .'class="mer-ot-link">'.e($label).'</a>';
                 })
                 ->addColumn('exemptions', function ($row) {
                     $count = str_pad((string) ($row->exemption_count ?? 0), 2, '0', STR_PAD_LEFT);
 
-                    return '<a href="' . $this->detailUrl($row->student_master_pk, $row->course_master_pk) . '" '
-                        . 'class="mer-count-link">' . $count . '</a>';
+                    return '<a href="'.$this->detailUrl($row->student_master_pk, $row->course_master_pk).'" '
+                        .'class="mer-count-link">'.$count.'</a>';
                 })
                 ->rawColumns(['ot_name', 'exemptions'])
                 ->make(true);
@@ -151,13 +151,13 @@ class MedicalExemptionReportController extends Controller
         $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get(['pk', 'exemp_category_name']);
 
         return view('admin.medical_exemption_report.detail', [
-            'student'      => $studentModel,
-            'course'       => $courseModel,
-            'stats'        => $stats,
+            'student' => $studentModel,
+            'course' => $courseModel,
+            'stats' => $stats,
             'medicalCases' => $medicalCases,
-            'categories'   => $categories,
+            'categories' => $categories,
             'studentToken' => $student,
-            'courseToken'  => $course,
+            'courseToken' => $course,
         ]);
     }
 
@@ -200,18 +200,18 @@ class MedicalExemptionReportController extends Controller
             $this->parseColumns($request->get('columns')),
             $request->get('status', 'active')
         );
-        $fileName = 'medical-exemption-report-' . now()->format('Y-m-d_H-i-s');
+        $fileName = 'medical-exemption-report-'.now()->format('Y-m-d_H-i-s');
 
         if ($format === 'pdf') {
             @ini_set('memory_limit', '256M');
             @set_time_limit(120);
 
             $pdf = Pdf::loadView('admin.medical_exemption_report.export_pdf', array_merge([
-                'headings'    => $export->activeHeadings(),
-                'rows'        => $export->pdfRows(),
+                'headings' => $export->activeHeadings(),
+                'rows' => $export->pdfRows(),
                 'reportTitle' => 'Medical Exemption Report',
-                'filterLine'  => $export->filterLine(),
-                'printedOn'   => now()->format('d-m-Y H:i'),
+                'filterLine' => $export->filterLine(),
+                'printedOn' => now()->format('d-m-Y H:i'),
             ], $this->pdfHeaderAssets()))
                 ->setPaper('a4', 'portrait')
                 // Never true: isPhpEnabled makes the renderer a PHP
@@ -221,10 +221,10 @@ class MedicalExemptionReportController extends Controller
                 // instead - see PdfPageNumbers.
                 ->setOptions(['defaultFont' => 'DejaVu Sans', 'isRemoteEnabled' => false, 'isPhpEnabled' => false, 'dpi' => 96]);
 
-            return $pdf->download($fileName . '.pdf');
+            return $pdf->download($fileName.'.pdf');
         }
 
-        return Excel::download($export, $fileName . '.xlsx', ExcelFormat::XLSX);
+        return Excel::download($export, $fileName.'.xlsx', ExcelFormat::XLSX);
     }
 
     public function detailExport(Request $request, $student, $course)
@@ -247,19 +247,19 @@ class MedicalExemptionReportController extends Controller
             $request->get('to_date'),
             $this->parseColumns($request->get('columns'))
         );
-        $fileName = 'medical-exemption-' . preg_replace('/[^A-Za-z0-9]+/', '-', $otName) . '-' . now()->format('Y-m-d_H-i-s');
+        $fileName = 'medical-exemption-'.preg_replace('/[^A-Za-z0-9]+/', '-', $otName).'-'.now()->format('Y-m-d_H-i-s');
 
         if ($format === 'pdf') {
             @ini_set('memory_limit', '256M');
             @set_time_limit(120);
 
             $pdf = Pdf::loadView('admin.medical_exemption_report.detail_export_pdf', array_merge([
-                'headings'    => $export->activeHeadings(),
-                'rows'        => $export->pdfRows(),
-                'reportTitle' => $otName . '’s Medical Exemption Report',
-                'courseName'  => optional($courseModel)->course_name ?? '',
-                'filterLine'  => $export->filterLine(),
-                'printedOn'   => now()->format('d-m-Y H:i'),
+                'headings' => $export->activeHeadings(),
+                'rows' => $export->pdfRows(),
+                'reportTitle' => $otName.'’s Medical Exemption Report',
+                'courseName' => optional($courseModel)->course_name ?? '',
+                'filterLine' => $export->filterLine(),
+                'printedOn' => now()->format('d-m-Y H:i'),
             ], $this->pdfHeaderAssets()))
                 ->setPaper('a4', 'landscape')
                 // Never true: isPhpEnabled makes the renderer a PHP
@@ -269,10 +269,10 @@ class MedicalExemptionReportController extends Controller
                 // instead - see PdfPageNumbers.
                 ->setOptions(['defaultFont' => 'DejaVu Sans', 'isRemoteEnabled' => false, 'isPhpEnabled' => false, 'dpi' => 96]);
 
-            return $pdf->download($fileName . '.pdf');
+            return $pdf->download($fileName.'.pdf');
         }
 
-        return Excel::download($export, $fileName . '.xlsx', ExcelFormat::XLSX);
+        return Excel::download($export, $fileName.'.xlsx', ExcelFormat::XLSX);
     }
 
     /* ===================================================================
@@ -282,7 +282,7 @@ class MedicalExemptionReportController extends Controller
     {
         return route('medical.exemption.report.detail', [
             'student' => encrypt($studentPk),
-            'course'  => encrypt($coursePk),
+            'course' => encrypt($coursePk),
         ]);
     }
 
@@ -348,7 +348,7 @@ class MedicalExemptionReportController extends Controller
                 default => 'image/png',
             };
 
-            return 'data:' . $mime . ';base64,' . base64_encode($raw);
+            return 'data:'.$mime.';base64,'.base64_encode($raw);
         };
 
         $rightLogo = public_path('admin_assets/images/logos/constitution-75.png');
@@ -357,8 +357,8 @@ class MedicalExemptionReportController extends Controller
         }
 
         return [
-            'logoLeft'   => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
-            'logoRight'  => $toDataUri($rightLogo),
+            'logoLeft' => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
+            'logoRight' => $toDataUri($rightLogo),
             'titleHindi' => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
         ];
     }

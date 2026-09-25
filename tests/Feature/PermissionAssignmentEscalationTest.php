@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /**
@@ -16,9 +17,15 @@ use Tests\TestCase;
  * that writes a PERMISSION to a ROLE - assign.roles.permissions - kept the shape it
  * always had. RoleController::assignPermission() constrains WHICH names may be written
  * (a name must already exist or be defined by a `menus` row) but never asked who may
- * write them, and the only other control is the route gate `menu.permission:roles`.
+ * write them.
  *
- * This PR's condition-1 migration grants `roles` to the Training-Induction role, so the
+ * ON THIS BRANCH the route is also behind EnsureRoleAdmin (Super Admin only, from
+ * RoleController's constructor), so a `roles` holder is refused before the controller
+ * guard runs; there is no `menu.permission` alias here (PR #309 review F-019). The
+ * paragraph below describes PR #311, where the file originated and the route is gated
+ * on the `roles` permission instead.
+ *
+ * PR #311's condition-1 migration grants `roles` to the Training-Induction role, so the
  * set of accounts passing that gate went from 2 to 12. Confirmed by executed probe
  * against the review database before this guard existed: an account holding only
  * Training-Induction was refused `/sidebar/menus` with 403, POSTed once to grant
@@ -45,7 +52,7 @@ class PermissionAssignmentEscalationTest extends TestCase
     /** Spatie caches the permission map; without this a just-granted permission is invisible. */
     private function forgetPermissionCache(): void
     {
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     /**
@@ -206,10 +213,14 @@ class PermissionAssignmentEscalationTest extends TestCase
     }
 
     /**
-     * CONTROL - the guard must not be a blanket lockout. Ordinary permission
-     * administration, within what the caller already holds, still works.
+     * On PR #311 this was a CONTROL asserting a `roles` holder may still grant a
+     * permission it holds. On this branch permission administration is Super Admin
+     * only - EnsureRoleAdmin, applied in RoleController's constructor - so the same
+     * request is refused at the gate, and nothing is written. If the two PRs merge,
+     * which rule wins is the Engineering lead's decision, not this test's; the Super
+     * Admin control below is what shows administration still works here.
      */
-    public function test_a_roles_holder_may_still_assign_a_permission_it_holds(): void
+    public function test_a_roles_holder_is_refused_at_the_gate_on_this_branch(): void
     {
         $actor = $this->rolesHolder();
         $role = $this->targetRole();
@@ -217,9 +228,9 @@ class PermissionAssignmentEscalationTest extends TestCase
         $role->revokePermissionTo($this->permission('roles'));
         $this->forgetPermissionCache();
 
-        $this->assignAs($actor, $role, 'roles', 1)->assertOk();
+        $this->assignAs($actor, $role, 'roles', 1)->assertForbidden();
 
-        $this->assertTrue($this->roleHas($role, 'roles'), 'the guard blocked a grant the caller was entitled to make');
+        $this->assertFalse($this->roleHas($role, 'roles'), 'refused at the gate, and the grant was written anyway');
     }
 
     /** CONTROL - Super Admin is exempt from both rules, as it is everywhere else here. */

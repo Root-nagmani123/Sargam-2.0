@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers\Admin\Security;
 
-use App\Http\Controllers\Controller;
 use App\Exports\VehiclePassExport;
+use App\Http\Controllers\Controller;
+use App\Models\EmployeeMaster;
+use App\Models\SecVehicleType;
+use App\Models\VehiclePassFWApply;
+use App\Models\VehiclePassTWApply;
 use App\Support\DataTableRedisCache;
 use App\Support\IdCardSecurityMapper;
-use App\Models\VehiclePassTWApply;
-use App\Models\VehiclePassFWApply;
-use App\Models\SecVehicleType;
-use App\Models\EmployeeMaster;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -19,7 +20,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
-use Carbon\Carbon;
 
 class VehiclePassController extends Controller
 {
@@ -39,7 +39,7 @@ class VehiclePassController extends Controller
         $pk_old = $user_old_pk->pk_old ?? null;
 
         $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_security_vehicle_pass_index:v1:' . md5(json_encode([
+        $cacheKey = 'admin_security_vehicle_pass_index:v1:'.md5(json_encode([
             'epoch' => $epoch,
             'employee_pk' => $employeePk,
             'pk_old' => $pk_old,
@@ -137,7 +137,7 @@ class VehiclePassController extends Controller
             $tab = 'active';
         }
 
-        $filename = 'vehicle_pass_requests_' . $tab . '_' . now()->format('Y-m-d_His');
+        $filename = 'vehicle_pass_requests_'.$tab.'_'.now()->format('Y-m-d_His');
 
         $baseQuery = VehiclePassTWApply::with(['vehicleType', 'employee'])
             ->where(function ($q) use ($employeePk, $pkOld) {
@@ -165,20 +165,20 @@ class VehiclePassController extends Controller
                 ->setOption('isHtml5ParserEnabled', true)
                 ->setOption('isRemoteEnabled', false);
 
-            return $pdf->download($filename . '.pdf');
+            return $pdf->download($filename.'.pdf');
         }
 
         if ($format === 'csv') {
             return Excel::download(
                 new VehiclePassExport($tab, $employeePk, $pkOld),
-                $filename . '.csv',
+                $filename.'.csv',
                 \Maatwebsite\Excel\Excel::CSV
             );
         }
 
         return Excel::download(
             new VehiclePassExport($tab, $employeePk, $pkOld),
-            $filename . '.xlsx',
+            $filename.'.xlsx',
             \Maatwebsite\Excel\Excel::XLSX
         );
     }
@@ -235,7 +235,7 @@ class VehiclePassController extends Controller
 
         return (object) [
             'pk' => $emp->pk,
-            'name' => trim($emp->first_name . ' ' . ($emp->last_name ?? '')),
+            'name' => trim($emp->first_name.' '.($emp->last_name ?? '')),
             'designation' => $emp->designation->designation_name ?? '',
             'department' => $emp->department->department_name ?? '',
             'emp_id' => $empIdDisplay,
@@ -303,7 +303,7 @@ class VehiclePassController extends Controller
     }
 
     /**
-     * @return object|null  pk, first_name, last_name, emp_id, designation_name, department_name
+     * @return object|null pk, first_name, last_name, emp_id, designation_name, department_name
      */
     private function vehiclePassLookupEmployeeMasterRow(string $lookup): ?object
     {
@@ -337,7 +337,7 @@ class VehiclePassController extends Controller
      */
     private function vehiclePassBuildLookupPayloadFromEmployeeJoinRow(object $em, string $lookupFallback, ?string $preferredEmployeeIdCard = null): array
     {
-        $name = trim(($em->first_name ?? '') . ' ' . ($em->last_name ?? ''));
+        $name = trim(($em->first_name ?? '').' '.($em->last_name ?? ''));
         $empCode = $em->emp_id !== null && (string) $em->emp_id !== ''
             ? (string) $em->emp_id
             : (string) $lookupFallback;
@@ -629,7 +629,7 @@ class VehiclePassController extends Controller
         if (in_array($applicantType, ['employee', 'government_vehicle']) && $empMasterPk) {
             $emp = EmployeeMaster::with(['designation', 'department'])->find($empMasterPk);
             if ($emp) {
-                $applicantName = $applicantName ?: trim($emp->first_name . ' ' . ($emp->last_name ?? ''));
+                $applicantName = $applicantName ?: trim($emp->first_name.' '.($emp->last_name ?? ''));
                 $designation = $designation ?: ($emp->designation->designation_name ?? null);
                 $department = $department ?: ($emp->department->department_name ?? null);
                 $employeeIdCard = $employeeIdCard ?: ($emp->emp_id ?? null);
@@ -681,11 +681,11 @@ class VehiclePassController extends Controller
 
         // Generate vehicle_tw_pk per SQL: TW + zero-padded next pk (primary key in table is vehicle_tw_pk)
         $nextPk = (int) DB::table('vehicle_pass_tw_apply')->max('pk') + 1;
-        $vehicleTwPk = 'TW' . str_pad($nextPk, 5, '0', STR_PAD_LEFT);
+        $vehicleTwPk = 'TW'.str_pad($nextPk, 5, '0', STR_PAD_LEFT);
 
         $vehicleReqId = $this->generateVehicleReqId($validated['vehicle_type']);
 
-        $vehiclePass = new VehiclePassTWApply();
+        $vehiclePass = new VehiclePassTWApply;
         $vehiclePass->vehicle_tw_pk = $vehicleTwPk;
         $vehiclePass->employee_id_card = $employeeIdCard ?? '';
         $vehiclePass->emp_master_pk = $empMasterPk;
@@ -710,6 +710,7 @@ class VehiclePassController extends Controller
         // Condition: Employee ID card must be valid (not expired), vehicle no must be valid.
 
         static::bumpIndexListCacheEpoch();
+
         return redirect()->route('admin.security.vehicle_pass.index')->with('success', 'Vehicle Pass application submitted successfully');
     }
 
@@ -737,7 +738,7 @@ class VehiclePassController extends Controller
         }
 
         $vehiclePass = VehiclePassTWApply::with(['employee.designation', 'employee.department'])->findOrFail($pk);
-        
+
         // Only allow editing if status is pending and no approver has acted yet
         if ($vehiclePass->vech_card_status != 1) {
             return redirect()->route('admin.security.vehicle_pass.index')->with('error', 'Cannot edit approved/rejected application');
@@ -786,7 +787,7 @@ class VehiclePassController extends Controller
 
         if ($vehiclePass->employee) {
             $emp = $vehiclePass->employee;
-            $name = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? ''));
+            $name = trim(($emp->first_name ?? '').' '.($emp->last_name ?? ''));
             if ($emp->relationLoaded('designation') && $emp->designation) {
                 $designation = (string) ($emp->designation->designation_name ?? '');
             }
@@ -813,7 +814,7 @@ class VehiclePassController extends Controller
             $row = $this->fetchEmployeeMasterDisplayRowForVehiclePass($vehiclePass);
             if ($row) {
                 if ($name === '') {
-                    $name = trim(($row->first_name ?? '') . ' ' . ($row->last_name ?? ''));
+                    $name = trim(($row->first_name ?? '').' '.($row->last_name ?? ''));
                 }
                 if ($designation === '') {
                     $designation = (string) ($row->designation_name ?? '');
@@ -930,7 +931,7 @@ class VehiclePassController extends Controller
         if (in_array($applicantType, ['employee', 'government_vehicle']) && $empMasterPk) {
             $emp = EmployeeMaster::with(['designation', 'department'])->find($empMasterPk);
             if ($emp) {
-                $applicantName = $applicantName ?: trim($emp->first_name . ' ' . ($emp->last_name ?? ''));
+                $applicantName = $applicantName ?: trim($emp->first_name.' '.($emp->last_name ?? ''));
                 $designation = $designation ?: ($emp->designation->designation_name ?? null);
                 $department = $department ?: ($emp->department->department_name ?? null);
                 $employeeIdCard = $employeeIdCard ?: ($emp->emp_id ?? null);
@@ -997,6 +998,7 @@ class VehiclePassController extends Controller
         $vehiclePass->save();
 
         static::bumpIndexListCacheEpoch();
+
         return redirect()->route('admin.security.vehicle_pass.index')->with('success', 'Vehicle Pass application updated successfully');
     }
 
@@ -1027,6 +1029,7 @@ class VehiclePassController extends Controller
         $vehiclePass->delete();
 
         static::bumpIndexListCacheEpoch();
+
         return redirect()->route('admin.security.vehicle_pass.index')->with('success', 'Vehicle Pass application deleted successfully');
     }
 

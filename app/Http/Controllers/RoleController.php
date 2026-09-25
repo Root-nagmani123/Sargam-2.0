@@ -8,15 +8,10 @@ use App\Models\SidebarMenu\SidebarCategory;
 use App\Services\RoleService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Spatie\Permission\Models\Permission;
-use App\Models\SidebarMenu\SidebarCategory;
-use App\Models\DashboardCard;
-use App\Exports\BrandedGridExport;
-use App\Support\ExportCsvHeader;
-use App\Support\PdfPageNumbers;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
-use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
@@ -300,7 +295,7 @@ class RoleController extends Controller
         $existing = Permission::where('name', $permission)->where('guard_name', 'web')->first();
 
         if (! $existing) {
-            $definedByAScreen = \Illuminate\Support\Facades\DB::table('menus')
+            $definedByAScreen = DB::table('menus')
                 ->where('permission_name', $permission)
                 ->exists();
 
@@ -312,10 +307,12 @@ class RoleController extends Controller
             }
         }
 
-        // Privilege-amplification guard. This route is gated on `menu.permission:roles`,
-        // which admits Super Admin AND any holder of the `roles` permission — and this
-        // PR's own condition-1 migration grants `roles` to Training-Induction (10
-        // accounts). The check above constrains WHICH names may be written; it says
+        // Privilege-amplification guard. On this branch the route is reachable by Super
+        // Admin only (EnsureRoleAdmin, registered in the constructor), so this guard is
+        // defence in depth: it was written for PR #311, where the route is gated on the
+        // `roles` permission and that permission is granted to Training-Induction (10
+        // accounts), and it keeps this method safe if the gate is ever widened the same
+        // way here. The check above constrains WHICH names may be written; it says
         // nothing about who may write them, so a `roles` holder could grant its own
         // role any permission in the table and walk through the gate it was excluded
         // from. Confirmed by executed probe against the review database: an account

@@ -17,8 +17,12 @@ class HostelBuildingMaster extends Model
     /**
      * hostel_building_master stores its status in `active_room`; it has no
      * `active_inactive` column, so the previous scope threw "Unknown column"
-     * on every caller. Column list confirmed against the schema, and it is the
-     * same column the status switch and the toggle allow-list use.
+     * on every caller. It is the same column the toggle allow-list uses.
+     *
+     * Checked, not assumed (PR #309 review F-013): SHOW COLUMNS FROM
+     * hostel_building_master on testsargam6, 2026-09-25 -> pk, building_name,
+     * active_room. tests/Feature/ToggleStatusSchemaTest asserts it on any
+     * connection that has the table.
      */
     public function scopeActive($query)
     {

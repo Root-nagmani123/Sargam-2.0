@@ -45,6 +45,7 @@ use App\Services\FC\RegistrationService;
 use App\Services\NotificationService;
 use App\Services\OTNoticeMemoService;
 use App\Support\DataTableRedisCache;
+use App\Support\LogSafe;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -4598,25 +4599,22 @@ class UserController extends Controller
     }
 
     /**
-     * Every (table => status column) pair the shared `.status-toggle` switch is
-     * allowed to write, derived from the markup that drives it.
+     * Tables this generic status endpoint may write, with the key column and
+     * the status column allowed for each.
      *
-     * Without this list the endpoint took the table name, the column name and
-     * the value straight off the request and wrote them, which made it an
-     * arbitrary-write primitive for any authenticated session: one POST naming
-     * `user_credentials` and any column of it would have been honoured. The
-     * switches themselves are unchanged — they send exactly these pairs — so
-     * the list costs nothing at runtime and only refuses what no screen asks
-     * for.
+     * The endpoint takes the table, column and key column straight from the
+     * request, so without this list any authenticated session can write any
+     * column of any table (accepted-risk record SAST-2026-08-21-01). The list
+     * is the complete set of screens that post here - every element carrying
+     * the global `.status-toggle` class under resources/views, app/ and
+     * public/ - so no screen that worked before is refused.
      *
-     * Each row carries the KEY COLUMN as well as the status columns, because
-     * the screens do not agree on one: venue_master is keyed by venue_id and
-     * has no pk column at all, so a hard-coded pk made that toggle a dead
-     * button. Confirmed against the schema, not assumed.
+     * Screens with their own toggle route never reach this method and are
+     * deliberately absent: member (`/member/{id}/toggle-status`), the sidebar
+     * screens, security vehicle pass/type (own `data-url`), and everything on
+     * `.plain-status-toggle`, which posts through a hidden form instead.
      *
-     * Adding a screen means adding its row here. ToggleStatusAllowListTest
-     * scans the markup and fails if a pair is missing, so the list cannot
-     * silently fall behind the UI.
+     * Adding a status switch to a new screen means adding its row here.
      */
     private const TOGGLE_STATUS_ALLOWED = [
         'appellation_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
@@ -4664,229 +4662,166 @@ class UserController extends Controller
         'venue_master' => ['id_column' => 'venue_id', 'columns' => ['active_inactive']],
     ];
 
-    /**
-     * Tables this generic status endpoint may write, with the key column and
-     * the status column allowed for each.
-     *
-     * The endpoint takes the table, column and key column straight from the
-     * request, so without this list any authenticated session can write any
-     * column of any table (accepted-risk record SAST-2026-08-21-01). The list
-     * is the complete set of screens that post here - every element carrying
-     * the global `.status-toggle` class under resources/views, app/ and
-     * public/ - so no screen that worked before is refused.
-     *
-     * Screens with their own toggle route never reach this method and are
-     * deliberately absent: member (`/member/{id}/toggle-status`), the sidebar
-     * screens, security vehicle pass/type (own `data-url`), and everything on
-     * `.plain-status-toggle`, which posts through a hidden form instead.
-     *
-     * Adding a status switch to a new screen means adding its row here.
-     */
-    private const TOGGLE_STATUS_ALLOWED = [
-        'appellation_master'                  => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'building_floor_room_mapping'         => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'building_master'                     => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'caste_category_master'               => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'city_master'                         => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'class_session_master'                => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'country_master'                      => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'course_master'                       => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'course_memo_decision_mapp'           => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'department_master'                   => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'designation_master'                  => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'discipline_master'                   => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'employee_group_master'               => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'employee_type_master'                => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'faculty_expertise_master'            => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'faculty_master'                      => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'faculty_type_master'                 => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'fc_exemption_master'                 => ['id_column' => 'pk', 'columns' => ['visible'], 'admin_only' => true],
-        'fc_registration_master'              => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'admin_only' => true],
-        'floor_master'                        => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'group_type_master_course_master_map' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'hostel_building_floor_mapping'       => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'hostel_building_master'              => ['id_column' => 'pk', 'columns' => ['active_room']],
-        'hostel_floor_room_mapping'           => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'hostel_room_master'                  => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'issue_category_master'               => ['id_column' => 'pk', 'columns' => ['status']],
-        'issue_priority_master'               => ['id_column' => 'pk', 'columns' => ['status']],
-        'issue_sub_category_master'           => ['id_column' => 'pk', 'columns' => ['status']],
-        'memo_conclusion_master'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'memo_type_master'                    => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'news'                                => ['id_column' => 'pk', 'columns' => ['status'], 'admin_only' => true],
-        'notices_notification'                => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'admin_only' => true],
-        'ot_hostel_room_details'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'sec_id_cardno_config_map'            => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'sec_id_cardno_master'                => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'state_district_mapping'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'state_master'                        => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'states'                              => ['id_column' => 'pk', 'columns' => ['status']],
-        'stream_master'                       => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'subject_master'                      => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'subject_module_master'               => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'user_role_master'                    => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'admin_only' => true],
-        'venue_master'                        => ['id_column' => 'venue_id', 'columns' => ['active_inactive']],
-    ];
+    public function toggleStatus(Request $request)
+    {
+        try {
+            $table = (string) $request->input('table', '');
+            $column = (string) $request->input('column', '');
+            $idColumn = (string) ($request->input('id_column') ?: 'pk');
+            $id = $request->input('id');
+            $status = $request->input('status');
 
-public function toggleStatus(Request $request)
-{
-    try {
-        $table    = (string) $request->input('table', '');
-        $column   = (string) $request->input('column', '');
-        $idColumn = (string) ($request->input('id_column') ?: 'pk');
-        $id       = $request->input('id');
-        $status   = $request->input('status');
+            $allowed = self::TOGGLE_STATUS_ALLOWED[$table] ?? null;
 
-        $allowed = self::TOGGLE_STATUS_ALLOWED[$table] ?? null;
+            // Refuse anything the UI never asks for: an unlisted table, a column
+            // that is not that table's status column, a key column other than the
+            // one the screen uses, a non-numeric id, or a status outside 0/1.
+            if ($allowed === null
+                || ! in_array($column, $allowed['columns'], true)
+                || $idColumn !== $allowed['id_column']
+                || ! is_numeric($id)
+                || ! in_array((int) $status, [0, 1], true)) {
 
-        // Refuse anything the UI never asks for: an unlisted table, a column
-        // that is not that table's status column, a key column other than the
-        // one the screen uses, a non-numeric id, or a status outside 0/1.
-        if ($allowed === null
-            || ! in_array($column, $allowed['columns'], true)
-            || $idColumn !== $allowed['id_column']
-            || ! is_numeric($id)
-            || ! in_array((int) $status, [0, 1], true)) {
+                // Every value below is request text. Without LogSafe::context() a
+                // `table` containing %0A would close this record and open a forged
+                // one, so the log that exists to show refusals could be used to
+                // manufacture them.
+                \Log::warning('Rejected a toggle-status request outside the allow-list', LogSafe::context([
+                    'user' => optional(auth()->user())->getKey(),
+                    'table' => $table,
+                    'column' => $column,
+                    'id_column' => $idColumn,
+                    'status' => $status,
+                ]));
 
-            // Every value below is request text. Without LogSafe::context() a
-            // `table` containing %0A would close this record and open a forged
-            // one, so the log that exists to show refusals could be used to
-            // manufacture them.
-            \Log::warning('Rejected a toggle-status request outside the allow-list', \App\Support\LogSafe::context([
-                'user'      => optional(auth()->user())->getKey(),
-                'table'     => $table,
-                'column'    => $column,
-                'id_column' => $idColumn,
-                'status'    => $status,
-            ]));
+                return response()->json([
+                    'message' => 'This status change is not permitted.',
+                ], 422);
+            }
 
-            return response()->json([
-                'message' => 'This status change is not permitted.',
-            ], 422);
-        }
+            // Most rows in this list are reference masters whose own screens are
+            // reachable by any signed-in user, so gating them here would only make
+            // the switch 403 on a page the user can still open. Five are different:
+            // flipping user_role_master or fc_registration_master changes who can do
+            // what, and news / notices_notification decide what the institute
+            // publishes. Those carry admin_only and are refused to everyone but the
+            // two roles the application already treats as administrators
+            // (authorizeAdmin() in the Setup controllers uses the same pair).
+            //
+            // This closes the escalation path, not the whole of Trap 29: the
+            // remaining tables stay behind `auth` alone until the sidebar permission
+            // model covers their screens, and that is still the Engineering lead's
+            // call to make rather than this endpoint's.
+            //
+            // The check reads the role tables, not hasRole(): that helper answers
+            // from the session list written at login, so an administrator whose
+            // role is revoked would keep these switches until they log out. The
+            // Admin / Super Admin entries in that session list are copied from
+            // these same Spatie roles at login, so a current administrator gets
+            // the same answer either way.
+            $actor = auth()->user();
+            $isAdministrator = $actor !== null
+                && $actor->roles()->whereIn('name', ['Admin', 'Super Admin', 'SuperAdmin'])->exists();
 
-        // Most rows in this list are reference masters whose own screens are
-        // reachable by any signed-in user, so gating them here would only make
-        // the switch 403 on a page the user can still open. Five are different:
-        // flipping user_role_master or fc_registration_master changes who can do
-        // what, and news / notices_notification decide what the institute
-        // publishes. Those carry admin_only and are refused to everyone but the
-        // two roles the application already treats as administrators
-        // (authorizeAdmin() in the Setup controllers uses the same pair).
-        //
-        // This closes the escalation path, not the whole of Trap 29: the
-        // remaining tables stay behind `auth` alone until the sidebar permission
-        // model covers their screens, and that is still the Engineering lead's
-        // call to make rather than this endpoint's.
-        //
-        // The check reads the role tables, not hasRole(): that helper answers
-        // from the session list written at login, so an administrator whose
-        // role is revoked would keep these switches until they log out. The
-        // Admin / Super Admin entries in that session list are copied from
-        // these same Spatie roles at login, so a current administrator gets
-        // the same answer either way.
-        $actor = auth()->user();
-        $isAdministrator = $actor !== null
-            && $actor->roles()->whereIn('name', ['Admin', 'Super Admin', 'SuperAdmin'])->exists();
+            if (($allowed['admin_only'] ?? false) && ! $isAdministrator) {
+                \Log::warning('Refused a toggle-status request on a privileged table', LogSafe::context([
+                    'user' => optional(auth()->user())->getKey(),
+                    'table' => $table,
+                    'column' => $column,
+                ]));
 
-        if (($allowed['admin_only'] ?? false) && ! $isAdministrator) {
-            \Log::warning('Refused a toggle-status request on a privileged table', \App\Support\LogSafe::context([
-                'user'   => optional(auth()->user())->getKey(),
-                'table'  => $table,
+                return response()->json([
+                    'message' => 'You do not have permission to change this record.',
+                ], 403);
+            }
+
+            $status = (int) $status;
+
+            $previous = DB::table($table)->where($idColumn, $id)->value($column);
+
+            DB::table($table)
+                ->where($idColumn, $id)
+                ->update([$column => $status]);
+
+            // The refusals above are logged; so is every change that goes through,
+            // or the log would show only the requests that changed nothing. Table
+            // and column are allow-listed by now; id is still request text.
+            \Log::info('Toggle-status change', LogSafe::context([
+                'user' => optional($actor)->getKey(),
+                'table' => $table,
                 'column' => $column,
+                'id' => (string) $id,
+                'from' => $previous,
+                'to' => $status,
+                'privileged' => (bool) ($allowed['admin_only'] ?? false),
             ]));
 
-            return response()->json([
-                'message' => 'You do not have permission to change this record.',
-            ], 403);
-        }
-
-        $status = (int) $status;
-
-        $previous = DB::table($table)->where($idColumn, $id)->value($column);
-
-        DB::table($table)
-            ->where($idColumn, $id)
-            ->update([$column => $status]);
-
-        // The refusals above are logged; so is every change that goes through,
-        // or the log would show only the requests that changed nothing. Table
-        // and column are allow-listed by now; id is still request text.
-        \Log::info('Toggle-status change', \App\Support\LogSafe::context([
-            'user'       => optional($actor)->getKey(),
-            'table'      => $table,
-            'column'     => $column,
-            'id'         => (string) $id,
-            'from'       => $previous,
-            'to'         => $status,
-            'privileged' => (bool) ($allowed['admin_only'] ?? false),
-        ]));
-
-        if ($table === 'employee_type_master') {
-            EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
-        }
-        if ($table === 'faculty_expertise_master') {
-            FacultyExpertiseMasterController::bumpListCacheEpoch();
-        }
-        if ($table === 'faculty_master') {
-            FacultyDataTable::bumpListingCacheEpoch();
-        }
-        if ($table === 'user_role_master') {
-            RoleDataTable::bumpListingCacheEpoch();
-        }
-        if ($table === 'venue_master') {
-            VenueMasterController::bumpIndexCacheEpoch();
-        }
-        if ($table === 'course_master') {
-            CourseMasterDataTable::bumpListingCacheEpoch();
-        }
-        if ($table === 'group_type_master_course_master_map') {
-            GroupMappingDataTable::bumpListingCacheEpoch();
-        }
-        if ($table === 'faculty_type_master') {
-            FacultyTypeMasterController::bumpListCacheEpoch();
-        }
-        /* CENTCOM grids are server-side: their cached page snapshots are keyed by
-           search + sort, and both can depend on status (sorting by the Status
-           column, or a search term that matches the status pill). Without these
-           bumps a toggled row keeps its old position until the TTL expires. */
-        if ($table === 'issue_category_master') {
-            IssueCategoryController::bumpIndexListCacheEpoch();
-            // The matrix lists ACTIVE categories only, so it changes shape too.
-            IssueEscalationMatrixController::bumpEscalationMatrixListCacheEpoch();
-        }
-        if ($table === 'issue_sub_category_master') {
-            IssueSubCategoryController::bumpIndexListCacheEpoch();
-        }
-        if ($table === 'issue_priority_master') {
-            IssuePriorityController::bumpIndexListCacheEpoch();
-        }
+            if ($table === 'employee_type_master') {
+                EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
+            }
+            if ($table === 'faculty_expertise_master') {
+                FacultyExpertiseMasterController::bumpListCacheEpoch();
+            }
+            if ($table === 'faculty_master') {
+                FacultyDataTable::bumpListingCacheEpoch();
+            }
+            if ($table === 'user_role_master') {
+                RoleDataTable::bumpListingCacheEpoch();
+            }
+            if ($table === 'venue_master') {
+                VenueMasterController::bumpIndexCacheEpoch();
+            }
+            if ($table === 'course_master') {
+                CourseMasterDataTable::bumpListingCacheEpoch();
+            }
+            if ($table === 'group_type_master_course_master_map') {
+                GroupMappingDataTable::bumpListingCacheEpoch();
+            }
+            if ($table === 'faculty_type_master') {
+                FacultyTypeMasterController::bumpListCacheEpoch();
+            }
+            /* CENTCOM grids are server-side: their cached page snapshots are keyed by
+               search + sort, and both can depend on status (sorting by the Status
+               column, or a search term that matches the status pill). Without these
+               bumps a toggled row keeps its old position until the TTL expires. */
+            if ($table === 'issue_category_master') {
+                IssueCategoryController::bumpIndexListCacheEpoch();
+                // The matrix lists ACTIVE categories only, so it changes shape too.
+                IssueEscalationMatrixController::bumpEscalationMatrixListCacheEpoch();
+            }
+            if ($table === 'issue_sub_category_master') {
+                IssueSubCategoryController::bumpIndexListCacheEpoch();
+            }
+            if ($table === 'issue_priority_master') {
+                IssuePriorityController::bumpIndexListCacheEpoch();
+            }
 
             $newState = ((int) $status === 1) ? 'Active' : 'Inactive';
             session()->flash('success', "Status updated to {$newState}.");
 
-        return response()->json([
-            'message' => "Status updated to {$newState}.",
-            'state' => $newState,
-        ]);
-    } catch (\Exception $e) {
-        \Log::error('Toggle status error: ' . $e->getMessage());
+            return response()->json([
+                'message' => "Status updated to {$newState}.",
+                'state' => $newState,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Toggle status error: '.$e->getMessage());
 
-        // The exception text stays in the log only: a QueryException message
-        // carries the rendered SQL, the bound values and the server's error.
-        return response()->json([
-            'message' => 'Status could not be updated.',
-        ], 500);
+            // The exception text stays in the log only: a QueryException message
+            // carries the rendered SQL, the bound values and the server's error.
+            return response()->json([
+                'message' => 'Status could not be updated.',
+            ], 500);
+        }
     }
-}
-public function assignRole($id)
-{
-    try {
-        $decryptedId = decrypt($id);
-    } catch (\Exception $e) {
-        return redirect()->route('admin.users.index')
-            ->with('error', 'Invalid user ID. Please try again.');
-    }
+
+    public function assignRole($id)
+    {
+        try {
+            $decryptedId = decrypt($id);
+        } catch (\Exception $e) {
+            return redirect()->route('admin.users.index')
+                ->with('error', 'Invalid user ID. Please try again.');
+        }
 
         $user = User::findOrFail($decryptedId);
 
@@ -4905,11 +4840,34 @@ public function assignRole($id)
 
     public function assignRoleSave(Request $request)
     {
+        // The route carries EnsureMenuPermission:users. This re-check is here because
+        // the method grants any role, Super Admin included, and a controller is the
+        // one place a later route edit cannot quietly un-gate (PR #309 review F-017).
+        abort_unless(hasMenuPermission('users'), 403, 'You do not have permission to assign roles.');
+
         $request->validate([
             'user_id' => 'required|integer|exists:user_credentials,pk',
             'roles' => 'nullable|array',
             'roles.*' => 'exists:roles,id',
         ]);
+
+        // The `users` permission admits more than Super Admin, and syncRoles() below
+        // writes whatever role ids are posted - so without this a `users` holder could
+        // post its own pk with the Super Admin role id and become Super Admin, which
+        // then bypasses every menu.permission gate (EnsureMenuPermission admits
+        // isSidebarPrivilegedUser() before it reads a permission). Same guard as PR #311
+        // (18a676afb). Deliberately narrow: a caller who is not Super Admin may not
+        // CHANGE anyone's Super Admin membership in either direction - removing it
+        // would let a `users` holder strand the only accounts able to undo that.
+        if (! isSidebarPrivilegedUser()) {
+            $target = User::find($request->user_id);
+            $requestedRoleNames = Role::whereIn('id', $request->input('roles', []))->pluck('name')->toArray();
+
+            $wouldHoldSuperAdmin = in_array('Super Admin', $requestedRoleNames, true);
+            $holdsSuperAdmin = $target ? $target->hasRole('Super Admin') : false;
+
+            abort_if($wouldHoldSuperAdmin !== $holdsSuperAdmin, 403, 'Only a Super Admin may grant or revoke the Super Admin role.');
+        }
 
         try {
             DB::beginTransaction();
@@ -4923,17 +4881,17 @@ public function assignRole($id)
             app(PermissionRegistrar::class)->forgetCachedPermissions();
             self::bumpAdminUsersIndexCacheEpoch();
 
-        // A role-assignment notification block stood here and had never fired: it was
-        // guarded by `if (!empty($assignedRoleNames))` and read `$userId`, and neither
-        // variable is ever assigned in this method — the names belong to the older
-        // employee_role_mapping implementation still commented out below. empty() on an
-        // undefined variable is true and raises no warning, so the guard was silently
-        // false on every call and the block was unreachable. Identical at the merge-base.
-        //
-        // Removed rather than repaired: switching on notifications that have never been
-        // sent is a behaviour change, and this is a permissions PR. If the notification
-        // is wanted, it belongs in its own change, with $user and $roleNames (which DO
-        // exist here) and a test.
+            // A role-assignment notification block stood here and had never fired: it was
+            // guarded by `if (!empty($assignedRoleNames))` and read `$userId`, and neither
+            // variable is ever assigned in this method — the names belong to the older
+            // employee_role_mapping implementation still commented out below. empty() on an
+            // undefined variable is true and raises no warning, so the guard was silently
+            // false on every call and the block was unreachable. Identical at the merge-base.
+            //
+            // Removed rather than repaired: switching on notifications that have never been
+            // sent is a behaviour change, and this is a permissions PR. If the notification
+            // is wanted, it belongs in its own change, with $user and $roleNames (which DO
+            // exist here) and a test.
 
             return redirect()->route('admin.users.index')
                 ->with('success', 'Roles assigned successfully.');

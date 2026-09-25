@@ -872,7 +872,7 @@ function isSidebarPrivilegedUser(): bool
 }
 
 /**
- * Does the current user pass a `menu.permission:<name>` gate?
+ * Does the current user pass an `EnsureMenuPermission:<name>` gate?
  *
  * This is the SINGLE definition of that question. `EnsureMenuPermission` gates routes
  * with it and the sidebar decides whether to draw the link with it, so a screen can

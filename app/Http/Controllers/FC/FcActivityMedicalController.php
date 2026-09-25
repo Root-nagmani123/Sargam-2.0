@@ -10,6 +10,7 @@ use App\Models\FC\FcOtActivity;
 use App\Models\FC\FcOtDetail;
 use App\Models\FC\FcPathReport;
 use App\Models\FC\FcPreHistory;
+use App\Rules\SafeUploadedDocument;
 use App\Services\FC\FcPostArrivalAccessService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
@@ -21,13 +22,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Maatwebsite\Excel\Facades\Excel;
 use Yajra\DataTables\Facades\DataTables;
-use App\Rules\SafeUploadedDocument;
 
 class FcActivityMedicalController extends Controller
 {
-    public function __construct(private FcPostArrivalAccessService $access)
-    {
-    }
+    public function __construct(private FcPostArrivalAccessService $access) {}
 
     private function authorizeMedical(): void
     {
@@ -42,19 +40,19 @@ class FcActivityMedicalController extends Controller
 
         // Active courses: has at least one fc_ot_details row OR active_inactive=1.
         // Inactive/archived: active_inactive != 1 but has historical fc_ot_details data.
-        $allCourses = \Illuminate\Support\Facades\DB::table('course_master')
+        $allCourses = DB::table('course_master')
             ->orderBy('course_name')
             ->get(['pk', 'course_name', 'active_inactive']);
 
         // Course pks that actually appear in fc_ot_details (for showing archived ones with data)
-        $pksInOt = \Illuminate\Support\Facades\DB::table('fc_ot_details')
+        $pksInOt = DB::table('fc_ot_details')
             ->whereNotNull('course_master_pk')
             ->where('status', 1)
             ->distinct()
             ->pluck('course_master_pk')
             ->flip();
 
-        $activeCourses   = $allCourses->filter(fn ($c) => $c->active_inactive == 1)->values();
+        $activeCourses = $allCourses->filter(fn ($c) => $c->active_inactive == 1)->values();
         $archivedCourses = $allCourses->filter(fn ($c) => $c->active_inactive != 1 && $pksInOt->has($c->pk))->values();
 
         return view('admin.fc-activities.medical.index', compact('activeCourses', 'archivedCourses'));
@@ -247,7 +245,7 @@ class FcActivityMedicalController extends Controller
         if ($request->filled('course_filter')) {
             $c = trim($request->string('course_filter'));
             if (ctype_digit($c)) {
-                $name = \Illuminate\Support\Facades\DB::table('course_master')->where('pk', (int)$c)->value('course_name');
+                $name = DB::table('course_master')->where('pk', (int) $c)->value('course_name');
                 $parts[] = 'Course: '.($name ?: $c);
             } else {
                 $parts[] = 'Course: '.$c;
@@ -518,7 +516,7 @@ class FcActivityMedicalController extends Controller
     }
 
     /**
-     * @param \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<int, FcOtActivity>> $byActivity
+     * @param  Collection<string, Collection<int, FcOtActivity>>  $byActivity
      */
     private function firstActivityRow($byActivity, string $menuid): ?FcOtActivity
     {
@@ -531,7 +529,7 @@ class FcActivityMedicalController extends Controller
     }
 
     /**
-     * @param \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<int, FcOtActivity>> $byActivity
+     * @param  Collection<string, Collection<int, FcOtActivity>>  $byActivity
      */
     private function latestActivityRow($byActivity, string $menuid): ?FcOtActivity
     {
@@ -599,7 +597,7 @@ class FcActivityMedicalController extends Controller
                 'nullable',
                 'file',
                 'mimes:pdf',
-                'max:' . SafeUploadedDocument::maxKilobytes(10240),
+                'max:'.SafeUploadedDocument::maxKilobytes(10240),
                 new SafeUploadedDocument(['pdf']),
             ],
             'textfindings' => 'nullable|string|max:5000',
@@ -618,7 +616,7 @@ class FcActivityMedicalController extends Controller
             // avoid double-extension / overwrite issues (CWE-434). Extension is
             // derived from the validated file content, not the client-supplied name.
             $path = $file->storeAs('fc/path_report', $ot->user_id.'_'.uniqid('', true).'.'.$file->extension(), 'public');
-            $pathreport = 'storage/' . $path;
+            $pathreport = 'storage/'.$path;
         }
 
         if (! $pathreport && ! $findings) {

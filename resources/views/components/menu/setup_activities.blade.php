@@ -133,8 +133,10 @@
                                 </li>
                             </ul>
 
-                            {{-- Navigation must agree with the route gate. These two screens are gated by
-                                 `menu.permission:roles` / `:users`, while the block around them is gated on
+                            {{-- Navigation must agree with the route gate. On this branch the assign-role
+                                 routes carry EnsureMenuPermission:users (by class - there is no
+                                 `menu.permission` alias here) and role writes are Super Admin only
+                                 (EnsureRoleAdmin). Originally the block around them was gated on
                                  role NAMES - and the two disagreed (review finding F-017): a Training-Induction
                                  holder was shown both links and got 403 on both. Three of the five role names
                                  above ('Admin', 'Training-MCTP', 'IST') do not exist in this database, so the

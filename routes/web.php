@@ -34,6 +34,7 @@ use App\Http\Controllers\Admin\IssueManagement\IssueEscalationMatrixController;
 use App\Http\Controllers\Admin\IssueManagement\IssueManagementController;
 use App\Http\Controllers\Admin\IssueManagement\IssuePriorityController;
 use App\Http\Controllers\Admin\IssueManagement\IssueSubCategoryController;
+use App\Http\Controllers\Admin\IssueReportController;
 use App\Http\Controllers\Admin\LeaveApplicationController;
 use App\Http\Controllers\Admin\Master\AppellationMasterController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
@@ -44,12 +45,29 @@ use App\Http\Controllers\Admin\MedicalExemptionReportController;
 use App\Http\Controllers\Admin\MemberController;
 use App\Http\Controllers\Admin\MemoDisciplineController;
 use App\Http\Controllers\Admin\MemoNoticeController;
+use App\Http\Controllers\Admin\NavigationErrorController;
 use App\Http\Controllers\Admin\NoticeNotificationController;
 use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\OTMDOEscrotExemptionController;
 use App\Http\Controllers\Admin\OTNoticeMemoViewController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\QuickLinkController;
+use App\Http\Controllers\Admin\Security\CardSubTypeMasterController;
+use App\Http\Controllers\Admin\Security\CardTypeMasterController;
+use App\Http\Controllers\Admin\Security\DuplicateVehiclePassController;
+use App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController;
+use App\Http\Controllers\Admin\Security\FamilyIDCardApprovalController;
+use App\Http\Controllers\Admin\Security\VehiclePassApprovalController;
+use App\Http\Controllers\Admin\Security\VehiclePassConfigController;
+use App\Http\Controllers\Admin\Security\VehiclePassController;
+use App\Http\Controllers\Admin\Security\VehicleTypeController;
+use App\Http\Controllers\Admin\Setup\CasteCategoryController;
+use App\Http\Controllers\Admin\Setup\DepartmentMasterSetupController;
+use App\Http\Controllers\Admin\Setup\DesignationMasterSetupController;
+use App\Http\Controllers\Admin\Setup\EmployeeGroupController;
+use App\Http\Controllers\Admin\Setup\EmployeeTypeController;
+use App\Http\Controllers\Admin\Setup\QuickLinksSetupController;
+use App\Http\Controllers\Admin\Setup\UsefulLinksSetupController;
 use App\Http\Controllers\Admin\StationedLeaveMasterController;
 use App\Http\Controllers\Admin\StreamController;
 use App\Http\Controllers\Admin\StudentMedicalExemptionController;
@@ -60,12 +78,33 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VenueMasterController;
 use App\Http\Controllers\Admin\WhosWhoController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Faculty\SessionFeedbackReportController;
+use App\Http\Controllers\LogController;
+use App\Http\Controllers\Mess\ClientTypeController;
+use App\Http\Controllers\Mess\ItemCategoryController;
+use App\Http\Controllers\Mess\ItemSubcategoryController;
+use App\Http\Controllers\Mess\KitchenIssueController;
+use App\Http\Controllers\Mess\ProcessMessBillsEmployeeController;
+use App\Http\Controllers\Mess\PurchaseOrderController;
+use App\Http\Controllers\Mess\ReportController;
+use App\Http\Controllers\Mess\SellingVoucherDateRangeController;
+use App\Http\Controllers\Mess\StoreAllocationController;
+use App\Http\Controllers\Mess\StoreController;
+use App\Http\Controllers\Mess\SubStoreController;
+use App\Http\Controllers\Mess\VendorController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SidebarController;
 use App\Http\Controllers\SidebarMenu\MenuController;
 use App\Http\Controllers\SidebarMenu\MenuGroupController;
 use App\Http\Controllers\SidebarMenu\SidebarCategoryController;
+use App\Http\Middleware\EnsureFacultyPortalUser;
+use App\Http\Middleware\EnsureMenuPermission;
+use App\Http\Middleware\EnsureRoleAdmin;
+use App\Models\CourseMaster;
 use App\Models\User;
+use App\Services\SidebarMenu\MenuService;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -152,7 +191,7 @@ Route::middleware(['auth'])->group(function () {
     // purpose: $middlewareAliases is the array this branch conflicts with
     // `main` on, and a gate that lives there can be lost in a conflict
     // resolution without anything failing loudly. See the class docblock.
-    Route::middleware([\App\Http\Middleware\EnsureRoleAdmin::class])->group(function () {
+    Route::middleware([EnsureRoleAdmin::class])->group(function () {
         Route::post('roles/permissions/{id}', [RoleController::class, 'assignPermission'])->name('assign.roles.permissions');
         Route::post('roles/{id}/dashboard', [RoleController::class, 'assignDashboardCard'])->name('assign.roles.dashboard');
         Route::post('dashboard-cards', [RoleController::class, 'storeDashboardCard'])->name('dashboard.cards.store');
@@ -169,8 +208,22 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth'])->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
-        Route::get('users/get-roles', [UserController::class, 'getAllRoles'])
-            ->name('users.getRoles');
+        // The assign-role screen writes Spatie roles onto any user id it is posted,
+        // Super Admin included, so behind `auth` alone any signed-in account could
+        // make itself Super Admin (PR #309 review F-017). Gated on the same `users`
+        // menu permission the sidebar uses to offer "User Permissions", so nobody
+        // who is shown the screen is refused by it. By class, not a Kernel alias -
+        // see EnsureRoleAdmin's docblock for why. assignRoleSave() re-checks.
+        Route::middleware([EnsureMenuPermission::class.':users'])->group(function () {
+            Route::get('users/get-roles', [UserController::class, 'getAllRoles'])
+                ->name('users.getRoles');
+            Route::get('users/assign-role/{id}', [UserController::class, 'assignRole'])->name('users.assignRole');
+            Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
+                ->name('users.assignRoleSave');
+        });
+
+        // store/update/destroy below are gated in RoleController's constructor
+        // (EnsureRoleAdmin), which covers this mount and the `roles/*` one alike.
         Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
         Route::get('roles/create', [RoleController::class, 'create'])->name('roles.create');
         Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
@@ -183,9 +236,6 @@ Route::middleware(['auth'])->group(function () {
             ->whereIn('format', ['csv', 'xlsx', 'pdf'])
             ->name('users.export');
         Route::resource('users', UserController::class);
-        Route::get('users/assign-role/{id}', [UserController::class, 'assignRole'])->name('users.assignRole');
-        Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
-            ->name('users.assignRoleSave');
 
         Route::post('quick-links', [QuickLinkController::class, 'store'])->name('quick-links.store');
         Route::delete('quick-links/{id}', [QuickLinkController::class, 'destroy'])->name('quick-links.destroy');
@@ -482,15 +532,15 @@ Route::middleware(['auth'])->group(function () {
     // Faculty Routes
     Route::prefix('faculty')->name('faculty.')->controller(FacultyController::class)->group(function () {
 
-        Route::get('/',  'index')->name('index');
-        Route::get('create',  'create')->name('create');
-        Route::post('store',  'store')->name('store');
-        Route::get('edit/{id}',  'edit')->name('edit');
-        Route::post('update',  'update')->name('update');
-        Route::get('show/{id}',  'show')->name('show');
-        Route::delete('delete/{id}',  'destroy')->name('destroy');
+        Route::get('/', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('store', 'store')->name('store');
+        Route::get('edit/{id}', 'edit')->name('edit');
+        Route::post('update', 'update')->name('update');
+        Route::get('show/{id}', 'show')->name('show');
+        Route::delete('delete/{id}', 'destroy')->name('destroy');
         // Full-detail workbook (34 columns) - kept, see the controller.
-        Route::get('excel-export',  'excelExportFaculty')->name('excel.export');
+        Route::get('excel-export', 'excelExportFaculty')->name('excel.export');
         // Grid-shaped export: one action, four formats (csv | excel | pdf | print).
         Route::get('export/{format?}', 'export')->name('export');
         Route::post('check-unique', 'checkUnique')->name('checkUnique');
@@ -1094,17 +1144,17 @@ Route::middleware(['auth'])->group(function () {
 
     // Appellation Master
 
-     // Appellation Master
+    // Appellation Master
 
-Route::prefix('admin/appellation')->name('master.appellation.')->middleware('auth')->group(function () {
-    Route::get('/', [AppellationMasterController::class, 'index'])->name('index');
-    // One action, four formats (csv | excel | pdf | print) - see the controller.
-    Route::get('export/{format?}', [AppellationMasterController::class, 'export'])->name('export');
-    Route::get('create', [AppellationMasterController::class, 'create'])->name('create');
-    Route::get('edit/{id}', [AppellationMasterController::class, 'edit'])->name('edit');
-    Route::post('store', [AppellationMasterController::class, 'store'])->name('store');
-    Route::delete('delete/{id}', [AppellationMasterController::class, 'destroy'])->name('delete');
-});
+    Route::prefix('admin/appellation')->name('master.appellation.')->middleware('auth')->group(function () {
+        Route::get('/', [AppellationMasterController::class, 'index'])->name('index');
+        // One action, four formats (csv | excel | pdf | print) - see the controller.
+        Route::get('export/{format?}', [AppellationMasterController::class, 'export'])->name('export');
+        Route::get('create', [AppellationMasterController::class, 'create'])->name('create');
+        Route::get('edit/{id}', [AppellationMasterController::class, 'edit'])->name('edit');
+        Route::post('store', [AppellationMasterController::class, 'store'])->name('store');
+        Route::delete('delete/{id}', [AppellationMasterController::class, 'destroy'])->name('delete');
+    });
 
     Route::prefix('admin/discipline')->name('master.discipline.')->group(function () {
         Route::get('/', [DisciplineMasterController::class, 'index'])->name('index');
@@ -1202,44 +1252,6 @@ Route::prefix('admin')->group(function () {
 });
 
 // setup route
-
-use App\Http\Controllers\Admin\IssueReportController;
-use App\Http\Controllers\Admin\NavigationErrorController;
-use App\Http\Controllers\Admin\Security\CardSubTypeMasterController;
-use App\Http\Controllers\Admin\Security\CardTypeMasterController;
-use App\Http\Controllers\Admin\Security\DuplicateVehiclePassController;
-use App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController;
-use App\Http\Controllers\Admin\Security\FamilyIDCardApprovalController;
-use App\Http\Controllers\Admin\Security\VehiclePassApprovalController;
-use App\Http\Controllers\Admin\Security\VehiclePassConfigController;
-use App\Http\Controllers\Admin\Security\VehiclePassController;
-use App\Http\Controllers\Admin\Security\VehicleTypeController;
-use App\Http\Controllers\Admin\Setup\CasteCategoryController;
-use App\Http\Controllers\Admin\Setup\DepartmentMasterSetupController;
-use App\Http\Controllers\Admin\Setup\DesignationMasterSetupController;
-use App\Http\Controllers\Admin\Setup\EmployeeGroupController;
-use App\Http\Controllers\Admin\Setup\EmployeeTypeController;
-use App\Http\Controllers\Admin\Setup\QuickLinksSetupController;
-use App\Http\Controllers\Admin\Setup\UsefulLinksSetupController;
-use App\Http\Controllers\Faculty\SessionFeedbackReportController;
-use App\Http\Controllers\LogController;
-use App\Http\Controllers\Mess\ClientTypeController;
-use App\Http\Controllers\Mess\ItemCategoryController;
-use App\Http\Controllers\Mess\ItemSubcategoryController;
-use App\Http\Controllers\Mess\KitchenIssueController;
-use App\Http\Controllers\Mess\ProcessMessBillsEmployeeController;
-use App\Http\Controllers\Mess\PurchaseOrderController;
-use App\Http\Controllers\Mess\ReportController;
-use App\Http\Controllers\Mess\SellingVoucherDateRangeController;
-use App\Http\Controllers\Mess\StoreAllocationController;
-use App\Http\Controllers\Mess\StoreController;
-use App\Http\Controllers\Mess\SubStoreController;
-use App\Http\Controllers\Mess\VendorController;
-use App\Http\Middleware\EnsureFacultyPortalUser;
-use App\Models\CourseMaster;
-use App\Services\SidebarMenu\MenuService;
-use Carbon\Carbon;
-use Illuminate\Http\Request;
 
 // Setup -> Employee Type (moved to controller with modal CRUD)
 Route::middleware(['auth'])->group(function () {
