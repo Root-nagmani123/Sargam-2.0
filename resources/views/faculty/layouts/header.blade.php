@@ -208,7 +208,15 @@
                     </a>
                 </li>
 
-                <!-- Purchase Order -->
+                <!-- Purchase Order: its only sidebar content is the Material menu, and
+                     no view fills its content pane, so hide it until that menu exists
+                     (the same test admin/layouts/sidebar/material.blade.php uses). -->
+                @php
+                    // Inside @php so Blade leaves the tag in this string alone; in an
+                    // inline @if it would be compiled as a component.
+                    $hasMaterialMenu = trim(\Illuminate\Support\Facades\Blade::render('<x-menu.material_management />')) !== '';
+                @endphp
+                @if ($hasMaterialMenu)
                 <li class="nav-item" role="none">
                     <a href="#tab-purchase-order" 
                        class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 hover-lift"
@@ -221,6 +229,7 @@
                         <span>Purchase Order</span>
                     </a>
                 </li>
+                @endif
 
                 <!-- Financial Dropdown - Enhanced -->
                 <li class="nav-item dropdown" role="none">
