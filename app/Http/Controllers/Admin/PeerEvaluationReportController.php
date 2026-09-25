@@ -581,13 +581,15 @@ class PeerEvaluationReportController extends Controller
                 'reportTitle' => $title,
                 'averages' => $report['averages'],
                 'criteria' => $report['criteria'],
-                // Printed under the grid by the PDF and print sheets. CSV and
-                // Excel stay the score table: a column grid has nowhere to put
-                // paragraphs of free text without one answer per row shifting
-                // every other column out of line.
+                // All four formats carry these now. They print as a BLOCK under
+                // the score table rather than as extra columns: every row in that
+                // table is one evaluator of this OT, while a reflection answer was
+                // written BY the OT, so it belongs to none of them.
                 'reflections' => $report['reflections'],
             ],
-            new PeerEvaluationReportExport($rows, $columns, $exportDate, $filterText, $title),
+            new PeerEvaluationReportExport(
+                $rows, $columns, $exportDate, $filterText, $title, $report['reflections']
+            ),
             'EvaluationReport_' . preg_replace('/[^A-Za-z0-9]+/', '_', (string) $member->user_name) . '_' . $stamp,
             $title
         );
@@ -628,6 +630,8 @@ class PeerEvaluationReportController extends Controller
 
         $columns = $data['columns'];
         $rows = $data['rows'];
+        // Only the single-OT report carries these; the grid export has none.
+        $reflections = $data['reflections'] ?? [];
         $csvBand = \App\Support\ExportCsvHeader::rows(
             $title ?: 'Evaluation Reports',
             $data['filterText'] !== '' ? $data['filterText'] : null,
@@ -635,7 +639,7 @@ class PeerEvaluationReportController extends Controller
             is_countable($rows) ? count($rows) : $rows->count()
         );
 
-        return response()->streamDownload(function () use ($columns, $rows, $csvBand) {
+        return response()->streamDownload(function () use ($columns, $rows, $csvBand, $reflections) {
             $handle = fopen('php://output', 'w');
             // BOM so Excel opens the UTF-8 file with the right encoding.
             fwrite($handle, "\xEF\xBB\xBF");
@@ -647,6 +651,21 @@ class PeerEvaluationReportController extends Controller
 
             foreach ($rows as $index => $row) {
                 fputcsv($handle, array_values(array_map(fn ($c) => $c['value']($row, $index), $columns)));
+            }
+
+            // Reflection answers go UNDER the table, not in it: every row above is
+            // one evaluator of this OT, while these were written BY the OT, so
+            // they belong to no row. Only the single-OT report has them.
+            if ($reflections !== []) {
+                fputcsv($handle, []);
+                fputcsv($handle, ['Reflection & Feedback']);
+                fputcsv($handle, ['Question', 'Answer']);
+
+                foreach ($reflections as $reflection) {
+                    // "Asked and left blank" is a different fact from "never
+                    // asked", so an unanswered question is still listed.
+                    fputcsv($handle, [$reflection['label'], $reflection['answer'] ?? 'Not answered']);
+                }
             }
 
             fclose($handle);

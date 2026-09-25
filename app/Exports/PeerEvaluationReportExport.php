@@ -47,7 +47,16 @@ class PeerEvaluationReportExport implements
         private string $exportDate,
         private string $filterText = '',
         /** Set for a single OT's report; null for the grid. */
-        private ?string $reportTitle = null
+        private ?string $reportTitle = null,
+        /**
+         * The OT's OWN reflection answers, printed as a block under the score
+         * table. Not columns: the table's rows are the EVALUATORS who scored this
+         * OT, while a reflection answer was written BY the OT, so it belongs to no
+         * row in it. Empty for the grid export.
+         *
+         * @var array<int, array{label: string, answer: string|null}>
+         */
+        private array $reflections = []
     ) {
     }
 
@@ -176,6 +185,59 @@ class PeerEvaluationReportExport implements
                             ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                     }
                     $index++;
+                }
+
+                // -- Reflection & Feedback, under the score table --
+                //
+                // A block, not extra columns: every row above is one EVALUATOR of
+                // this OT, and these answers were written BY the OT, so there is no
+                // row they belong to. Label in column A, the answer merged across
+                // the rest so a paragraph has somewhere to go.
+                if ($this->reflections !== []) {
+                    $row = $lastRow + 2;                         // one blank spacer row
+                    $answerFrom = count($this->columns) > 1 ? 'B' : 'A';
+
+                    $sheet->mergeCells("A{$row}:{$last}{$row}");
+                    $sheet->setCellValue("A{$row}", 'REFLECTION & FEEDBACK');
+                    $sheet->getStyle("A{$row}")->applyFromArray([
+                        'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                        'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '003366']],
+                        'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER],
+                    ]);
+                    $sheet->getRowDimension($row)->setRowHeight(22);
+
+                    foreach ($this->reflections as $reflection) {
+                        $row++;
+                        $sheet->setCellValue("A{$row}", $reflection['label']);
+                        $sheet->getStyle("A{$row}")->applyFromArray([
+                            'font' => ['bold' => true, 'color' => ['rgb' => '003366']],
+                            'alignment' => ['vertical' => Alignment::VERTICAL_TOP, 'wrapText' => true],
+                        ]);
+
+                        if ($answerFrom !== 'A') {
+                            $sheet->mergeCells("{$answerFrom}{$row}:{$last}{$row}");
+                        }
+
+                        // "Asked and left blank" is a different fact from "never
+                        // asked", and the grid says so rather than leaving a hole.
+                        $sheet->setCellValueExplicit(
+                            "{$answerFrom}{$row}",
+                            $reflection['answer'] ?? 'Not answered',
+                            \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING
+                        );
+                        $sheet->getStyle("{$answerFrom}{$row}")->applyFromArray([
+                            'alignment' => ['vertical' => Alignment::VERTICAL_TOP, 'wrapText' => true],
+                        ]);
+
+                        if ($reflection['answer'] === null) {
+                            $sheet->getStyle("{$answerFrom}{$row}")
+                                ->getFont()->setItalic(true)->getColor()->setRGB('888888');
+                        }
+
+                        $sheet->getStyle("A{$row}:{$last}{$row}")->applyFromArray([
+                            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]],
+                        ]);
+                    }
                 }
 
                 // -- Logo, floated over the header band --
