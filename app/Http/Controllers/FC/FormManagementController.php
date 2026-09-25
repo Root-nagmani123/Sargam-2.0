@@ -76,15 +76,10 @@ class FormManagementController extends Controller
                     ->where('end_date', '<', $currentDate);
             });
         } else {
-            $query->where(function ($q) use ($currentDate) {
-                $q->whereNull('course_master_pk')
-                    ->orWhereHas('courseMaster', function ($c) use ($currentDate) {
-                        $c->where(function ($e) use ($currentDate) {
-                            $e->whereNull('end_date')
-                                ->orWhere('end_date', '>=', $currentDate);
-                        });
-                    });
-            });
+            // One definition of "the course is still running", shared with the bulk-send
+            // scope - see FcForm::scopeOnRunningCourse(). Not is_active-filtered: this
+            // list shows disabled forms too, so they can be edited.
+            $query->onRunningCourse();
         }
 
         if ($request->filled('course_filter')) {

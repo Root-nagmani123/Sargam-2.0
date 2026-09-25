@@ -57,24 +57,31 @@ class FcForm extends Model
      * picker - both guard against future data rather than filtering today's.)
      *
      * Kept in one place so the picker, the request validation and the send-side resolver
-     * cannot drift apart. This is NOT the same query as the Dynamic Forms admin list
-     * (FormManagementController::formsIndexQuery), and no longer overlaps it at all: that
-     * list does not filter fc_forms.is_active, and its own course-end test still admits a
-     * null end_date and ignores active_inactive. Changing the rule here does not change
-     * which forms that list shows - see the follow-up to give both one definition.
+     * cannot drift apart. The course half is scopeOnRunningCourse() below, which the
+     * Dynamic Forms admin list uses too; the is_active filter is this scope's own, since
+     * that list deliberately shows disabled forms so they can be edited.
      */
     public function scopeSelectableForBulkSend($query)
     {
-        $currentDate = now()->format('Y-m-d');
+        return $query->where('is_active', true)->onRunningCourse();
+    }
 
-        return $query->where('is_active', true)
-            ->where(function ($q) use ($currentDate) {
-                $q->whereNull('course_master_pk')
-                    ->orWhereHas('courseMaster', function ($c) use ($currentDate) {
-                        $c->where('active_inactive', 1)
-                            ->where('end_date', '>=', $currentDate);
-                    });
-            });
+    /**
+     * Forms whose linked course is still running - or that are linked to no course.
+     *
+     * The single definition of "still running" for fc_forms, shared by the bulk-send
+     * scope above and FormManagementController::formsIndexQuery(). It defers to
+     * CourseMaster::scopeActiveRunning() (active_inactive = 1 AND end_date >= today)
+     * rather than restating it, so the rule cannot be changed in one place only.
+     *
+     * A form with no linked course is always included: it has no lifecycle to be past.
+     */
+    public function scopeOnRunningCourse($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('course_master_pk')
+                ->orWhereHas('courseMaster', fn ($c) => $c->activeRunning());
+        });
     }
 
     public function steps(): HasMany
