@@ -34,10 +34,17 @@
                         <i class="material-icons material-symbols-rounded me-1 align-middle" style="font-size: 1rem;">arrow_back</i>
                         Back to my groups
                     </a>
-                    {{-- Why this report is readable at all: the evaluation is over.
-                         The same sentence the form gives, so the two never
-                         disagree about what happened to this group. --}}
-                    <span class="badge bg-secondary-subtle text-secondary px-3 py-2 rounded-pill">{{ $closedReason }}</span>
+                    {{-- Null while the evaluation is still running - the report is
+                         readable then too. When there IS a reason it is the same
+                         sentence the form gives, so the two never disagree about
+                         what happened to this group. --}}
+                    @if ($closedReason)
+                        <span class="badge bg-secondary-subtle text-secondary px-3 py-2 rounded-pill">{{ $closedReason }}</span>
+                    @else
+                        <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill">
+                            Evaluation still open — more scores may come in
+                        </span>
+                    @endif
                 </div>
 
                 @if ($evaluators === 0)

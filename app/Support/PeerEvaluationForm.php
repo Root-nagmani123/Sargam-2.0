@@ -222,7 +222,21 @@ final class PeerEvaluationForm
             ->leftJoin('peer_events', 'peer_events.id', '=', 'peer_groups.event_id')
             ->leftJoin('course_master', 'course_master.pk', '=', 'peer_groups.course_id')
             ->where('user_credentials.pk', $userPk)
+            // Deactivated by an admin means GONE from the OT side, not "listed but
+            // locked". The two switches - the group's on Manage Groups and the
+            // event's on Manage Events - are how an admin retires an evaluation,
+            // and a retired one has no business still sitting in somebody's list.
+            //
+            // This is deliberately NOT the same thing as closedReason(): a window
+            // that has ended, a form not switched on yet, or a group with no
+            // criteria all stay listed, because those are states the evaluation
+            // passes through rather than an admin taking it away.
             ->where('peer_groups.is_active', 1)
+            ->where(function ($q) {
+                // leftJoin: a group with no event at all is not hidden by this.
+                $q->whereNull('peer_groups.event_id')
+                    ->orWhere('peer_events.is_active', 1);
+            })
             // A handle that appears on more than one member row of the same group
             // would otherwise list that group twice.
             ->distinct()

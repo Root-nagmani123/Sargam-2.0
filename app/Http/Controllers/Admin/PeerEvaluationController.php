@@ -631,6 +631,15 @@ class PeerEvaluationController extends Controller
     public function showGroupMembers($groupId)
     {
         $group = DB::table('peer_groups')->where('id', $groupId)->first();
+
+        // A deleted group used to reach the blade as null and 500 on
+        // $group->group_name - which is what a stale bookmark, or a second tab
+        // left open while the group was removed, actually does.
+        if (! $group) {
+            return redirect()->route('admin.peer.index')
+                ->with('error', 'That peer group no longer exists.');
+        }
+
         $members = DB::table('peer_group_members')
             ->join('fc_registration_master', 'peer_group_members.member_pk', '=', 'fc_registration_master.pk')
             ->where('peer_group_members.group_id', $groupId)
@@ -742,6 +751,13 @@ class PeerEvaluationController extends Controller
     public function importMembersView($groupId)
     {
         $group = DB::table('peer_groups')->where('id', $groupId)->first();
+
+        // Same null-group 500 as showGroupMembers() above.
+        if (! $group) {
+            return redirect()->route('admin.peer.index')
+                ->with('error', 'That peer group no longer exists.');
+        }
+
         return view('admin.forms.peer_evaluation.import_members', compact('group'));
     }
 
@@ -854,31 +870,34 @@ class PeerEvaluationController extends Controller
      * admin's table - PeerEvaluationForm::receivedSummary() explains why the
      * evaluators' names cannot travel with their scores.
      *
-     * Held back until the evaluation is CLOSED. While the window is open an OT
-     * watching their score move can work out who has just submitted, and is being
-     * shown other people's opinions of them while they still have their own form
-     * to fill - the two influence each other. Closed is whatever closedReason()
-     * says: the window ended, the form was switched off, or the event was.
+     * Readable while the evaluation is still running, not only once it closes -
+     * every group offers the OT their report alongside the form.
+     *
+     * ⚠️ That is a product decision with a cost, and it is worth knowing: while
+     * the window is open, an OT refreshing this page can watch their score move
+     * and work out who has just submitted, and they are reading other people's
+     * opinions of them while they still have their own form to fill in. If either
+     * matters more than the convenience, put the closedReason() === null check
+     * back - nothing else here depends on it being gone.
      */
     public function user_report($groupId)
     {
         $userPk = (int) auth()->user()->pk;
 
         // Membership through the login handle, same as everywhere else - and the
-        // reason this cannot be reached for somebody else's group.
+        // reason this cannot be reached for somebody else's group. groupsFor()
+        // also drops anything an admin has deactivated, so a retired evaluation
+        // is unreachable here as well as unlisted.
         $group = PeerEvaluationForm::groupsFor($userPk)->firstWhere('id', (int) $groupId);
 
         if (! $group) {
             return redirect()->route('peer.user_groups')
-                ->with('error', 'You are not a member of that group.');
+                ->with('error', 'That evaluation is not available to you.');
         }
 
+        // Null while the evaluation is still open. The view shows it as a badge
+        // when there is one, so it stays optional rather than required.
         $closedReason = PeerEvaluationForm::closedReason($group);
-
-        if ($closedReason === null) {
-            return redirect()->route('peer.user_groups')
-                ->with('error', 'Your report opens once this evaluation closes.');
-        }
 
         $membership = PeerEvaluationForm::membershipOf((int) $group->id, $userPk);
 

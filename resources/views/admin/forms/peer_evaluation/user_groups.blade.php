@@ -33,28 +33,37 @@
                                 <td>{{ $group->course_name ?? '-' }}</td>
                                 <td>{{ $group->event_name ?? '-' }}</td>
 
-                                {{-- Closed groups stay LISTED but offer no way into the
-                                     form: there is no form to open once an evaluation
-                                     is locked, only the notice saying so. What they get
-                                     instead is their own report, which is readable
-                                     exactly when the evaluation is closed - the same
-                                     gate user_report() applies, so the button can never
-                                     lead to a redirect.
+                                {{-- My Report is on EVERY row, open or closed - an OT
+                                     can read what they have been scored while the
+                                     evaluation is still running, so the two buttons
+                                     sit side by side on an open group.
 
-                                     The reason is the sentence the form and store()
-                                     both give, so all three agree on what happened. --}}
+                                     Submit Evaluation only appears when the form is
+                                     actually open: once an evaluation is locked there
+                                     is no form to serve, only the notice saying so.
+                                     That notice is the sentence the form and store()
+                                     both give, so all three agree on what happened.
+
+                                     Groups an admin has DEACTIVATED are not here at
+                                     all - groupsFor() drops them, rather than listing
+                                     them as locked. --}}
                                 <td>
-                                    @if ($group->closed_reason)
+                                    <div class="d-flex flex-wrap align-items-center gap-2">
+                                        @unless ($group->closed_reason)
+                                            <a href="{{ route('peer.index', ['group_id' => $group->id]) }}"
+                                                class="btn btn-sm btn-success">
+                                                Submit Evaluation
+                                            </a>
+                                        @endunless
+
                                         <a href="{{ route('peer.user_report', ['groupId' => $group->id]) }}"
                                             class="btn btn-sm btn-outline-primary">
                                             My Report
                                         </a>
+                                    </div>
+
+                                    @if ($group->closed_reason)
                                         <div class="small text-muted mt-1">{{ $group->closed_reason }}</div>
-                                    @else
-                                        <a href="{{ route('peer.index', ['group_id' => $group->id]) }}"
-                                            class="btn btn-sm btn-success">
-                                            Submit Evaluation
-                                        </a>
                                     @endif
                                 </td>
                             </tr>
