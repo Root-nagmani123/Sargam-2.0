@@ -1,5 +1,14 @@
 <?php
 
+######################################
+// DEVELOPER INFO 
+// => MANJEET CHNAD (शैतान 💀)
+// => manjeetchand01@gmail.com
+// => +919997294527
+// => 14 September 2026
+// => veragyam param sukham : 👹
+######################################
+
 namespace Modules\Protocol\Http\Controllers;
 
 use Illuminate\Routing\Controller;

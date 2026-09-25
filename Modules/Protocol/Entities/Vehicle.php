@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Vehicle extends Model
 {
-    protected $table = 'vehicle_master';
+    protected $table = 'protocol_vehicle_masters';
 
     protected $guarded = [];
     public $timestamps = false;

@@ -4,6 +4,7 @@
     'ajaxRoute' => '',
     'id' => 'data-table',
     'buttons' => [],
+    'tabs' => [],
     'tableClass' => 'table table-bordered',
     'theadClass' => 'table-default-primary',
     'tableCaption' => null,
@@ -51,7 +52,22 @@
     </div>
 @endif
 
-
+{{-- Tabs --}}
+@if(!empty($tabs))
+    <ul class="nav protocol-tabs" id="tabs">
+        @foreach($tabs as $tab)
+            <li class="nav-item">
+                <a href="javascript:void(0)"
+                    class="nav-link {{ $tab['active'] ? 'active' : '' }}"
+                    data-type="{{ $tab['type'] }}">
+                    {{ $tab['label'] }}
+                    <span class="count">{{ $tab['count'] }}</span>
+                </a>
+            </li>
+        @endforeach
+    </ul>
+@endif
+{{-- 
 
 <div class="row my-2">
     <div class="col-3">
@@ -91,7 +107,7 @@
 </div>  
 
 
-
+ --}}
 
 <table class="{{ $tableClass }}" id="{{ $id }}">
     @if (! empty($tableCaption))
@@ -210,7 +226,8 @@
                     d.sub_type  = $('#{{ $id }}-sub-type').val();
                     // date filter
                     d.from_date = $('#from_date').val();
-                    d.to_date   = $('#to_date').val();  
+                    d.to_date   = $('#to_date').val();
+                    d.type = $('#tabs .nav-link.active').data('type');
                 }
             },
             drawCallback: function (settings) {
@@ -266,6 +283,12 @@
             $('.sub-button-group[data-parent="' + filter + '"]').removeClass('d-none');
 
             // table.draw();
+        });
+
+        $('#tabs').on('click', '.nav-link', function () {
+            $('#tabs .nav-link').removeClass('active');
+            $(this).addClass('active');
+            table.draw();
         });
 
         // SUB BUTTON CLICK

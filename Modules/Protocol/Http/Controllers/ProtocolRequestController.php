@@ -25,13 +25,18 @@ use Modules\Protocol\Entities\Vehicle;
 use Modules\Protocol\Entities\VehiclePassRequest;
 use Modules\Protocol\Http\Requests\StoreCombinedRequest;
 use App\Models\CourseMaster;
-use Yajra\DataTables\Facades\DataTables;
+use Modules\Protocol\Services\RequestService;
 
 class ProtocolRequestController extends Controller
 {
+    private $service;
+    public function __construct(RequestService $service) {
+        $this->service = $service;
+    }
+
     /**
-     * Dashboard — quick counts + recent activity. Shared lan  ding page.
-     */
+    * Dashboard — quick counts + recent activity. Shared lan  ding page.
+    */
     public function dashboard()
     {
         $counts = [
@@ -55,7 +60,7 @@ class ProtocolRequestController extends Controller
     public function create()
     {
         $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name', 'asc')->pluck('course_name', 'pk');
-        $vehicles = Vehicle::orderBy('vehicle_name', 'asc')->pluck('vehicle_name', 'pk');
+        $vehicles = Vehicle::orderBy('vehicle_name', 'asc')->pluck('vehicle_name', 'id');
         return view('protocol::requests.create', compact('courses', 'vehicles'));
     }
 
@@ -68,57 +73,11 @@ class ProtocolRequestController extends Controller
 
     public function myRequests(Request $request)
     {
-        $type = $request->query('type', 'all');
-        $query = ProtocolRequest::with(['requestable', 'batch', 'logs'])->forUser(Auth::id());
-
-        if (in_array($type, ['guesthouse', 'vehicle', 'ticket'], true)) {
-            $query->where('request_type', $type);
+        if($request->ajax()){
+            return $this->service->getDatatable($request);
         }
-
-        if ($request->ajax()) {
-            return DataTables::eloquent($query)
-                ->addIndexColumn()
-                ->addColumn('request_id', function ($row) {
-                    return $row->request_number ?? '-';
-                })
-                ->addColumn('type', function ($row) {
-                    return view('protocol::components.type-pill', [
-                        'type' => $row->request_type,
-                    ])->render();
-                })
-                ->addColumn('details', function ($row) {
-                    return $row->current_stage ?? '-';
-                })
-                ->addColumn('raised_on', function ($row) {
-                    return $row->created_at->format('d M Y');
-                })
-                ->addColumn('status', function ($row) {
-                    return view('protocol::components.status-badge', [
-                        'status' => $row->status,
-                    ])->render();
-                })
-                ->addColumn('action', function ($row) {
-                    return '
-                        <a href="' . route('protocol.requests.show', $row->id) . '" class="btn btn-sm btn-primary">
-                            View <i class="bi bi-chevron-right"></i>
-                        </a>';
-                })
-                ->rawColumns(['action', 'type', 'status'])
-                ->make(true);
-        }
-
-        $requests = $query->latest()
-            ->paginate(config('protocol.per_page'))
-            ->withQueryString();
-
-        $counts = [
-            'all' => ProtocolRequest::forUser(Auth::id())->count(),
-            'guesthouse' => ProtocolRequest::forUser(Auth::id())->where('request_type', 'guesthouse')->count(),
-            'vehicle' => ProtocolRequest::forUser(Auth::id())->where('request_type', 'vehicle')->count(),
-            'ticket' => ProtocolRequest::forUser(Auth::id())->where('request_type', 'ticket')->count(),
-        ];
-
-        return view('protocol::requests.my-requests', compact('requests', 'counts', 'type'));
+        $pageData = $this->service->pageData();
+        return view('protocol::requests.my-requests', compact('pageData'));
     }
 
     /**
@@ -308,6 +267,7 @@ class ProtocolRequestController extends Controller
             'request_type' => $type,
             'requestable_id' => $requestable->id,
             'requestable_type' => $modelClass,
+            'user_id'=>Auth::id(),
             'employee_id' => $batch->employee_id,
             'employee_department' => $batch->employee_department,
             'status' => ProtocolRequest::STATUS_PENDING,
