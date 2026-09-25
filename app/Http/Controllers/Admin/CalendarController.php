@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Models\User;
 use App\Services\FacultyFeedbackReportService;
+use App\Services\MoodleSso;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -2774,22 +2775,13 @@ class CalendarController extends Controller
             }
 
             // ================= TOKEN AUTH =================
-            $key = config('services.moodle.key');
-            $iv  = config('services.moodle.iv');
+            $username = $this->moodleTokenUsername((string) $request->token);
 
-            $username = openssl_decrypt(
-                base64_decode($request->token),
-                'AES-128-CBC',
-                $key,
-                0,
-                $iv
-            );
-
-            if (!$username) {
+            if ($username === null) {
                 abort(403, 'Invalid token');
             }
 
-            $user = User::where('user_name', trim($username))->firstOrFail();
+            $user = $this->moodleSsoUser($username) ?? abort(404);
             Auth::login($user);
 
             $student_pk = auth()->user()->user_id;
@@ -2937,27 +2929,51 @@ class CalendarController extends Controller
         }
     }
 
+    /**
+     * The user_name carried by a Moodle SSO token, or null if the token cannot
+     * be trusted. Both SSO routes sit outside the auth group and log the caller
+     * in as whoever this returns, so every doubt resolves to null. The rule lives
+     * in App\Services\MoodleSso, shared with the auth middleware.
+     */
+    private function moodleTokenUsername(string $token): ?string
+    {
+        return app(MoodleSso::class)->usernameFromToken($token);
+    }
+
+    /** The account a Moodle SSO user_name refers to, or null - see MoodleSso::userFor(). */
+    private function moodleSsoUser(string $username): ?User
+    {
+        return app(MoodleSso::class)->userFor($username);
+    }
+
  /**
   * Student session-feedback listing, doubling as the SSO entry point.
   *
-  * An external site (e.g. Moodle) redirects here with ?username=<user_name>.
-  * On that first hop we log the user in, stash the username in the session,
-  * then redirect back to this same route WITHOUT the query string so the
-  * username never lingers in the address bar. The clean follow-up request is
-  * authenticated (via the session) and renders the listing.
+  * An external site (Moodle) redirects here with ?token=<encrypted user_name>,
+  * the same token studentFacultyFeedback() accepts. On that first hop we log
+  * the user in, stash the username in the session, then redirect back to this
+  * same route WITHOUT the query string so the token never lingers in the
+  * address bar. The clean follow-up request is authenticated (via the session)
+  * and renders the listing.
   *
-  * SECURITY: the username arrives in plaintext, so anyone can impersonate any
-  * user simply by editing the query string. This is intentional for now per
-  * request. Before exposing this beyond a trusted/internal redirect, switch to
-  * an encrypted token like studentFacultyFeedback() does.
+  * A plaintext ?username= is refused: it let anyone become any user by editing
+  * the query string (PR #317 L-10).
   */
  public function studentFeedback_url(Request $request)
   {
-        // SSO hop: ?username=<user_name> present → log in, stash, strip the query.
         if ($request->filled('username')) {
-            $username = trim((string) $request->query('username'));
+            abort(403, 'Plaintext username is not accepted; send an encrypted token');
+        }
 
-            $user = User::where('user_name', $username)->firstOrFail();
+        // SSO hop: ?token=<encrypted user_name> present → log in, stash, strip the query.
+        if ($request->filled('token')) {
+            $username = $this->moodleTokenUsername((string) $request->query('token'));
+
+            if ($username === null) {
+                abort(403, 'Invalid token');
+            }
+
+            $user = $this->moodleSsoUser($username) ?? abort(404);
             Auth::login($user);
 
             // Keep the username available in the session for downstream use.
@@ -2970,7 +2986,7 @@ class CalendarController extends Controller
         // Clean request: ensure we have an authenticated user. Fall back to the
         // username stashed on the SSO hop if the session somehow lost the login.
         if (!auth()->check() && ($stashed = session('feedback_username'))) {
-            if ($user = User::where('user_name', trim($stashed))->first()) {
+            if ($user = $this->moodleSsoUser(trim($stashed))) {
                 Auth::login($user);
             }
         }

@@ -37,8 +37,13 @@ return [
 ],
 
 'moodle' => [
+        // No defaults, deliberately: unset means every Moodle token is refused.
+        // See docs/moodle-sso-deploy.md.
         'key' => env('MOODLE_SHARED_KEY'),
         'iv'  => env('MOODLE_SHARED_IV'),
+        // Comma-separated Request::is() patterns on which the auth middleware
+        // accepts ?token=. Empty means the timetable only (App\Services\MoodleSso).
+        'token_paths' => array_values(array_filter(array_map('trim', explode(',', (string) env('MOODLE_TOKEN_PATHS', ''))))),
     ],
 
 ];
