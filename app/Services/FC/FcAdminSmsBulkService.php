@@ -1314,7 +1314,7 @@ class FcAdminSmsBulkService
     protected function resolveFormForScope(?int $formId = null): ?FcForm
     {
         if ($formId && $formId > 0) {
-            return FcForm::query()->where('is_active', true)->find($formId);
+            return FcForm::selectableForBulkSend()->find($formId);
         }
 
         return FcForm::activeRegistrationDynamicForm();
