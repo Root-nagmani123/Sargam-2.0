@@ -11,7 +11,7 @@
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-            <x-input type="number" name="basicpay" formLabelClass="form-label" formInputClass="form-control" label="Basic Pay :" id="basicpay" value="{{ old('basicpay') }}" />
+            <x-input type="number" step="0.01" min="0" name="basicpay" formLabelClass="form-label" formInputClass="form-control" label="Basic Pay :" id="basicpay" value="{{ old('basicpay') }}" />
         </div>
     </div>
     <div class="col-md-6">

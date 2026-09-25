@@ -85,7 +85,26 @@ return new class extends Migration
             ->flip();
 
         $now = now();
-        $insertedPks = [];
+
+        // PR #319 review round 2 (F-007). The tracking table used to be created, and the
+        // pks written into it, only AFTER the whole loop had finished. Every
+        // insertGetId() below therefore committed a user_role_master row while the record
+        // of it existed nowhere but in a PHP array. If the migration failed partway — a
+        // duplicate-key error, a lock timeout, a killed connection — those rows survived
+        // and $insertedPks did not, and down() (which returns early when the log table is
+        // absent, by design) could never reverse them. An operator running
+        // migrate:rollback would get a success message and no change.
+        //
+        // Creating the table FIRST and recording each pk in the same step as its insert
+        // closes that window: whatever subset of the loop completed, the log describes
+        // exactly that subset. Note this cannot be solved by wrapping the loop in a
+        // transaction instead — Schema::create() causes an implicit commit in MySQL, so
+        // the DDL could not participate in it. The ordering is the fix.
+        if (!Schema::hasTable(self::LOG_TABLE)) {
+            Schema::create(self::LOG_TABLE, function (Blueprint $table) {
+                $table->unsignedBigInteger('user_role_master_pk')->primary();
+            });
+        }
 
         foreach ($roleNames as $roleName) {
             $key = $this->normalize($roleName);
@@ -95,9 +114,9 @@ return new class extends Migration
             }
 
             // insertGetId (rather than a single bulk insert()) so the exact pk
-            // Just-inserted can be recorded below — the only reliable way to tell
+            // just-inserted can be recorded — the only reliable way to tell
             // this row apart later from a pre-existing row with the same name.
-            $insertedPks[] = DB::table('user_role_master')->insertGetId([
+            $insertedPk = DB::table('user_role_master')->insertGetId([
                 'user_role_name' => $roleName,
                 'user_role_display_name' => $roleName,
                 'active_inactive' => 1,
@@ -105,20 +124,10 @@ return new class extends Migration
                 'updated_date' => $now,
             ]);
 
+            DB::table(self::LOG_TABLE)->insert(['user_role_master_pk' => $insertedPk]);
+
             // Guard against the same role appearing twice in `roles` itself.
             $existingActiveNames[$key] = true;
-        }
-
-        if (!empty($insertedPks)) {
-            if (!Schema::hasTable(self::LOG_TABLE)) {
-                Schema::create(self::LOG_TABLE, function (Blueprint $table) {
-                    $table->unsignedBigInteger('user_role_master_pk')->primary();
-                });
-            }
-
-            DB::table(self::LOG_TABLE)->insert(
-                array_map(fn ($pk) => ['user_role_master_pk' => $pk], $insertedPks)
-            );
         }
     }
 
