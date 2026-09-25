@@ -61,7 +61,7 @@ return new class extends Migration
         // The command owns the copy/verify/delete logic; calling it keeps one
         // implementation rather than a second copy that can drift.
         //
-        // A failed move FAILS the migration (review finding F-024). Swallowing it let
+        // A failed move FAILS the migration. Swallowing it let
         // Laravel record this migration as run - Migrator::runUp() logs it once up()
         // returns - so `php artisan migrate` never tried again and the exposure stayed
         // open behind a green deploy. The command also reports per-file failures by

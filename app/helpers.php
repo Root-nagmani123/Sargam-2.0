@@ -872,24 +872,6 @@ function isSidebarPrivilegedUser(): bool
 }
 
 /**
- * Does the current user pass an `EnsureMenuPermission:<name>` gate?
- *
- * This is the SINGLE definition of that question. `EnsureMenuPermission` gates routes
- * with it and the sidebar decides whether to draw the link with it, so a screen can
- * never be advertised to someone the route will refuse.
- *
- * That divergence was real, not hypothetical: `setup_activities.blade.php` gated the
- * User Management block on five ROLE names while the routes gated on the `users` and
- * `roles` PERMISSIONS. Review finding F-017 — a populated role was shown "Roles" and
- * "User Permissions" and got 403 on both. Three of those five role names
- * ('Admin', 'Training-MCTP', 'IST') do not exist in this database at all, so the same
- * 403 was waiting for whoever created one of them next.
- *
- * Holding ANY of the listed permissions passes, matching the middleware's variadic
- * contract. Super Admin passes without holding any, which is why this is not `can:`
- * — see the note on EnsureMenuPermission.
- */
-/**
  * A PDF-safe <img src> for a local image, as a base64 data URI.
  *
  * Returns the first readable candidate under public/, or '' - NEVER a remote URL.
@@ -960,6 +942,28 @@ function pdf_lbsnaa_logo_src(): string
     ]);
 }
 
+/**
+ * Does the current user pass an `EnsureMenuPermission:<name>` gate?
+ *
+ * Callers: `EnsureMenuPermission` (the route gate), `UserController::assignRoleSave()`
+ * (its in-method re-check), and `setup_activities.blade.php`, which decides with it
+ * whether to draw the "Roles" and "User Permissions" links - so those two links are
+ * never offered to someone their route will refuse.
+ *
+ * It is NOT what the rest of the sidebar uses. `SidebarController` and `MenuService`
+ * decide menu visibility with their own `menuVisibleToUser()`; a route gated with
+ * `EnsureMenuPermission` and a menu drawn by those two can still disagree.
+ *
+ * The divergence this closed was real: `setup_activities.blade.php` gated the User
+ * Management block on five ROLE names while the routes gated on the `users` and
+ * `roles` PERMISSIONS (PR #311 review F-017) - a populated role was shown both links
+ * and got 403 on both. Three of those five role names ('Admin', 'Training-MCTP', 'IST')
+ * do not exist in this database at all.
+ *
+ * Holding ANY of the listed permissions passes, matching the middleware's variadic
+ * contract. Super Admin passes without holding any, which is why this is not `can:`
+ * - see the note on EnsureMenuPermission.
+ */
 function hasMenuPermission(string ...$permissions): bool
 {
     if (isSidebarPrivilegedUser()) {

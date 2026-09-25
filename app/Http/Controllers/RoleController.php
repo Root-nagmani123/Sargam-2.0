@@ -319,7 +319,12 @@ class RoleController extends Controller
         // holding only Training-Induction went 403 -> 200 on `/sidebar/menus` in one
         // request by granting itself `menus`.
         //
-        // This is the same shape as the assignRoleSave() guard (review finding F-023):
+        // No route reaches this branch today (PR #309 review F-069): every caller has
+        // already passed EnsureRoleAdmin. It is kept on purpose (decided 2026-09-25) and
+        // is executed by tests/Feature/PermissionAmplificationGuardDirectTest, which
+        // calls this method without the route gate, so it cannot rot unseen.
+        //
+        // This is the same shape as the assignRoleSave() guard (PR #311 review F-023):
         // the route gate answered "may this caller use this screen" and nothing
         // answered "may this caller hand out THIS". The rule is deliberately narrow:
         //

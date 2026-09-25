@@ -210,7 +210,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('admin')->name('admin.')->group(function () {
         // The assign-role screen writes Spatie roles onto any user id it is posted,
         // Super Admin included, so behind `auth` alone any signed-in account could
-        // make itself Super Admin (PR #309 review F-017). Gated on the same `users`
+        // make itself Super Admin (PR #309 review F-073). Gated on the same `users`
         // menu permission the sidebar uses to offer "User Permissions", so nobody
         // who is shown the screen is refused by it. By class, not a Kernel alias -
         // see EnsureRoleAdmin's docblock for why. assignRoleSave() re-checks.

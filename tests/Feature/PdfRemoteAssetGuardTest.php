@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use Tests\TestCase;
 
 /**
- * Guard for review finding F-027: dompdf must never fetch anything over the network.
+ * Guard for PR #311 review F-027: dompdf must never fetch anything over the network.
  *
  * dompdf renders server-side, so an http(s) `src` makes the SERVER fetch it while building
  * the document. Before this guard the mess PDF exports resolved the national emblem by

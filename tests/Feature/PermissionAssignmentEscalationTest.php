@@ -10,9 +10,9 @@ use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /**
- * Cover for the privilege AMPLIFICATION path left open beside review finding F-023.
+ * Cover for the privilege AMPLIFICATION path left open beside PR #311 review F-023.
  *
- * F-023 closed the route that writes a ROLE to a USER (assignRoleSave): a caller who
+ * PR #311's F-023 closed the route that writes a ROLE to a USER (assignRoleSave): a caller who
  * is not Super Admin may no longer change anyone's Super Admin membership. The route
  * that writes a PERMISSION to a ROLE - assign.roles.permissions - kept the shape it
  * always had. RoleController::assignPermission() constrains WHICH names may be written
@@ -21,7 +21,7 @@ use Tests\TestCase;
  *
  * ON THIS BRANCH the route is also behind EnsureRoleAdmin (Super Admin only, from
  * RoleController's constructor), so a `roles` holder is refused before the controller
- * guard runs; there is no `menu.permission` alias here (PR #309 review F-019). The
+ * guard runs; there is no `menu.permission` alias here (PR #309 review F-068). The
  * paragraph below describes PR #311, where the file originated and the route is gated
  * on the `roles` permission instead.
  *

@@ -10,7 +10,7 @@ use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /**
- * PR #309 review F-017: who may write a ROLE onto a USER.
+ * PR #309 review F-073: who may write a ROLE onto a USER.
  *
  * `POST admin/users/assign-role-save` carried `auth` and nothing else, and
  * UserController::assignRoleSave() checked nothing: it synced whatever role ids it
@@ -192,7 +192,7 @@ class RoleAssignmentAuthorisationTest extends TestCase
     }
 
     /**
-     * PR #309 review F-018: role CRUD is mounted twice, and the `admin/roles` family
+     * Role CRUD is mounted twice, and the `admin/roles` family
      * carried `auth` alone. RoleController's constructor gates store/update/destroy
      * on every mount - this is the executed refusal against the admin-prefixed one.
      */

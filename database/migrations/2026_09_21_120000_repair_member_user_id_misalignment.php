@@ -38,7 +38,7 @@ use Illuminate\Support\Facades\DB;
  *      a guess rather than a confirmed identity. Left refused pending
  *      separate identification.
  *
- * F-001 (Blocker, this PR): an earlier version of this migration carried the
+ * F-059 (Blocker, this PR): an earlier version of this migration carried the
  * names, personal emails and mobile numbers behind these decisions as literal
  * values, committed to a public repository. Identity evidence for every row
  * below now lives ONLY in reviews/pr-309-dba-brief-user-id-misalignment.md,
@@ -56,7 +56,7 @@ return new class extends Migration
     /**
      * Category B: credential pks whose placeholder email (and, where
      * employee_master has one on file, mobile number) is backfilled from the
-     * linked employee_master row. See the class docblock (F-001) for why no
+     * linked employee_master row. See the class docblock (F-059) for why no
      * email or mobile value appears here as a literal.
      */
     private const CONTACT_BACKFILL_PKS = [1441, 2120, 2195, 2201, 2389];
@@ -67,7 +67,7 @@ return new class extends Migration
      * writing so this migration never overwrites a value someone already
      * corrected by hand, and `down()` can restore exactly what was here.
      * Identity evidence for each row is in the DBA brief (kept outside this
-     * repository - see the class docblock, F-001).
+     * repository - see the class docblock, F-059).
      */
     private const USER_ID_CORRECTIONS = [
         1778 => ['from' => 10317, 'to' => 10525],
@@ -83,11 +83,11 @@ return new class extends Migration
     public function up(): void
     {
         // Copied from employee_master at migration time - never a literal in
-        // source (F-001). Guarded on the current placeholder value, exactly
+        // source (F-059). Guarded on the current placeholder value, exactly
         // as the per-row loop this replaced was.
         //
         // AND guarded on the credential's own NAME agreeing with the employee
-        // row (review finding F-021). EnsureMemberRecordAccess admits on a
+        // row. EnsureMemberRecordAccess admits on a
         // contact match over this same join, so copying the employee row's
         // contact details into the credential would otherwise manufacture the
         // very proof the gate treats as independent - admitting the account
@@ -121,7 +121,7 @@ return new class extends Migration
                     'uc.email_id' => DB::raw('TRIM(em.email)'),
                     // Only FILL an empty mobile_no, never overwrite one: an
                     // overwritten number could not be restored by down()
-                    // (F-022). 0 is not a real phone number on either side.
+                    // 0 is not a real phone number on either side.
                     'uc.mobile_no' => DB::raw("CASE WHEN COALESCE(TRIM(uc.mobile_no), '') IN ('', '0') AND TRIM(em.mobile) NOT IN ('', '0') THEN TRIM(em.mobile) ELSE uc.mobile_no END"),
                     'uc.updated_date' => now(),
                 ]);
@@ -157,7 +157,7 @@ return new class extends Migration
                 'uc.updated_date' => now(),
             ]);
 
-        // mobile_no is deliberately NOT reverted (review finding F-022). up()
+        // mobile_no is deliberately NOT reverted. up()
         // only fills an empty one, so the prior value was empty, but whether it
         // was NULL, '' or '0' was never recorded - and the version before this
         // nulled any number that merely EQUALLED employee_master's, including

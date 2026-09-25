@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * The document-move migration must FAIL when the move fails (PR #309 review F-024).
+ * The document-move migration must FAIL when the move fails.
  *
  * It used to catch the failure, log it and return - and Laravel records a migration
  * as run as soon as up() returns, so `php artisan migrate` never retried and every

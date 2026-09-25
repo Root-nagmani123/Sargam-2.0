@@ -4842,7 +4842,9 @@ class UserController extends Controller
     {
         // The route carries EnsureMenuPermission:users. This re-check is here because
         // the method grants any role, Super Admin included, and a controller is the
-        // one place a later route edit cannot quietly un-gate (PR #309 review F-017).
+        // one place a later route edit cannot quietly un-gate (PR #309 review F-073:
+        // on `main` this route carries `auth` alone and any account can make itself
+        // Super Admin).
         abort_unless(hasMenuPermission('users'), 403, 'You do not have permission to assign roles.');
 
         $request->validate([
@@ -4854,11 +4856,17 @@ class UserController extends Controller
         // The `users` permission admits more than Super Admin, and syncRoles() below
         // writes whatever role ids are posted - so without this a `users` holder could
         // post its own pk with the Super Admin role id and become Super Admin, which
-        // then bypasses every menu.permission gate (EnsureMenuPermission admits
+        // then bypasses every EnsureMenuPermission gate (it admits
         // isSidebarPrivilegedUser() before it reads a permission). Same guard as PR #311
         // (18a676afb). Deliberately narrow: a caller who is not Super Admin may not
         // CHANGE anyone's Super Admin membership in either direction - removing it
         // would let a `users` holder strand the only accounts able to undo that.
+        //
+        // `users` IS A SUPER-ADMIN-GRADE PERMISSION (PR #309 review F-076, decided
+        // 2026-09-25: keep and document). Apart from Super Admin itself, a holder may
+        // give ANY role to ANY account, its own included, so it effectively holds every
+        // permission any role carries. Grant it only to accounts you would make Super
+        // Admin.
         if (! isSidebarPrivilegedUser()) {
             $target = User::find($request->user_id);
             $requestedRoleNames = Role::whereIn('id', $request->input('roles', []))->pluck('name')->toArray();

@@ -26,7 +26,7 @@ use Illuminate\Support\Facades\Auth;
  * Referenced BY CLASS, never through a Kernel alias: there is no `menu.permission`
  * alias on this branch, and a string middleware name that does not resolve throws
  * rather than gates. Wired on the assign-role routes in routes/web.php (PR #309
- * review F-017 / F-019).
+ * review F-068 raised it as unwired; F-073 is the escalation those routes had).
  */
 class EnsureMenuPermission
 {
@@ -55,10 +55,11 @@ class EnsureMenuPermission
             abort(403, 'This route is gated by menu.permission but names no permission.');
         }
 
-        // Delegated so the sidebar can ask the SAME question before drawing a link.
-        // When this test lived only here, `setup_activities.blade.php` answered it with
-        // role names instead and the two disagreed — review finding F-017, a populated
-        // role offered a screen that answered 403. One definition, one answer.
+        // Delegated so `setup_activities.blade.php` can ask the SAME question before
+        // drawing the Roles / User Permissions links. When this test lived only here,
+        // that view answered it with role names instead and the two disagreed (PR #311
+        // review F-017): a populated role was offered a screen that answered 403.
+        // The rest of the sidebar decides with menuVisibleToUser() - see hasMenuPermission().
         if (hasMenuPermission(...$permissions)) {
             return $next($request);
         }

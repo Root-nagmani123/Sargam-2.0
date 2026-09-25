@@ -246,23 +246,43 @@ UI, because that screen is already offered to Super Admin alone. If a
 non-Super-Admin account reports losing role administration, do not widen the
 gate: that account was relying on the defect. Route it to the Engineering lead.
 
+### 0.5 Assigning roles to users now requires the `users` permission — and `users` is Super-Admin-grade
+
+On `main`, `POST admin/users/assign-role-save` carries `auth` and nothing else,
+and `UserController::assignRoleSave()` writes whatever role ids it is posted onto
+whatever account it is posted. **Any signed-in account can make itself Super
+Admin with one request** (PR #309 review F-073, executed against `main`'s code).
+This release gates the assign-role routes on the `users` permission and re-checks
+it inside the method; a caller who is not Super Admin may not change anyone's
+Super Admin membership.
+
+**Treat `users` as a Super-Admin-grade permission** (decided 2026-09-25). Apart
+from Super Admin itself, a holder may give any role to any account, its own
+included, so it effectively holds every permission any role carries. Grant it
+only to accounts you would make Super Admin. On the review database only the
+Super Admin role holds it.
+
+**Until this release is live, the hole is open wherever `main` runs.** After
+deploying, list the Super Admin members on the host and confirm each one with the
+Security owner:
+
+```sql
+SELECT mhr.model_id AS user_credentials_pk
+FROM model_has_roles mhr JOIN roles r ON r.id = mhr.role_id
+WHERE r.name = 'Super Admin';
+```
+
 ---
 
-## 1. Before pulling: release the tracked bootstrap cache files
+## 1. Before pulling: the bootstrap cache manifests stay tracked
 
-This release stops tracking `bootstrap/cache/packages.php` and
-`bootstrap/cache/services.php`, and adds a tracked `bootstrap/cache/.gitignore`
-keeper so a clean checkout still has the directory Laravel requires at boot.
+`bootstrap/cache/packages.php` and `bootstrap/cache/services.php` stay
+**tracked**, exactly as on `main` (decided 2026-09-25). The committed copies match
+this release's `composer.lock`: every package with a service provider is listed,
+and nothing listed is missing.
 
-Git tracks files, not directories, so **without that keeper a fresh clone has no
-`bootstrap/cache` directory at all** and the application refuses to boot with:
-
-```
-The .../bootstrap/cache directory must be present and writable.
-```
-
-And any host that already ran `package:discover` on `main` has a locally modified
-tracked file, which makes git refuse the checkout outright:
+Any host that already ran `package:discover` has locally modified copies, and git
+refuses the checkout:
 
 ```
 error: Your local changes to the following files would be overwritten by checkout:
@@ -281,16 +301,44 @@ git checkout -- bootstrap/cache/packages.php bootstrap/cache/services.php
 ```bash
 composer install
 php artisan package:discover
-php artisan migrate --path=database/migrations/2026_09_16_090000_add_member_pii_read_permission.php
+php artisan migrate \
+  --path=database/migrations/2026_09_16_090000_add_member_pii_read_permission.php \
+  --path=database/migrations/2026_09_21_120000_repair_member_user_id_misalignment.php \
+  --path=database/migrations/2026_09_21_130000_clear_lbs_reception_coincidental_email.php
 php artisan permission:cache-reset
 ```
 
-Both cache files are regenerated on the host and are now ignored by git, which
-is where generated files belong.
+`package:discover` rewrites the two tracked manifests from the installed
+packages, so they show as modified afterwards. That is expected on a deployed
+host. Do not commit them from the host, and run the `git checkout --` step above
+before the next pull.
 
-The migrate step is **not optional in this release** — it is the first migration
-this branch has ever carried, and it is what makes §0.1 possible. It is **scoped
-with `--path` deliberately, and it must stay scoped.**
+The migrate step is **not optional in this release**, and it is **scoped with
+`--path` deliberately, and it must stay scoped.** It names this release's three
+migrations and nothing else:
+
+- `2026_09_16_090000` creates the `member_pii_read` permission — what makes §0.1
+  possible.
+- `2026_09_21_120000` and `2026_09_21_130000` are the DBA-approved data repairs
+  that §0.3's deploy-day figures assume have run. **Skip them and those figures
+  are wrong:** the 11 accounts the first one repairs (6 whose `user_id` points at
+  somebody else's record, 5 with a placeholder email) stay refused.
+
+Both repairs guard every write on the current (broken) value, so running them on
+a host where someone already fixed a row by hand changes nothing for that row.
+**`2026_09_21_120000` was changed after it first ran on the review database** (its
+contact backfill now requires the credential's own name to agree with the
+employee row, and it only fills an empty `mobile_no` instead of overwriting one).
+Laravel never re-runs a migration it has recorded, so **before deploying, check
+whether any host other than testsargam6 already ran it** (`migrate:status`).
+On any host that did, the DBA compares `user_credentials.mobile_no` for pks 1441,
+2120, 2195, 2201 and 2389 with a backup from before that run (PR #309 review F-075).
+
+`2026_08_19_130000_move_course_repository_documents_off_public_disk` is already on
+`main` and is **not** in this scoped command. This release makes it fail loudly:
+if `course-repository:secure-documents` cannot move a file, the migration throws and
+`migrate` stops, so later migrations in the same run do not apply until the cause
+is fixed. Whoever runs it (in its own release) should expect that.
 
 `php artisan permission:cache-reset` is belt and braces. Spatie keeps the
 permission collection in the application cache (the file driver here, 24-hour
@@ -363,8 +411,16 @@ row and its menus row by hand per §0.1 instead.
 The order matters because the code revert on its own leaves one thing behind: the
 `member_pii_read` permission row and its capability menu row, added by this
 release's migration. Roll that back too — with the same `--path` scope — or the
-permission survives with nothing reading it. See §0.2. No member data is written
-or rewritten by this release, so there is nothing else in the database to undo.
+permission survives with nothing reading it. See §0.2.
+
+**Leave the two data repairs in place** (`2026_09_21_120000`,
+`2026_09_21_130000`). They correct `user_credentials` rows the DBA confirmed were
+wrong, and nothing in the reverted code depends on them. Rolling them back would
+re-point 6 accounts at somebody else's record. They share a batch with
+`2026_09_16_090000` when run by §2's command. The scoped rollback above names
+only the permission migration, so it leaves them alone; do not widen it. If they
+ever must be undone, that is the DBA's call. Their `down()` restores the old
+`user_id` values and emails but deliberately leaves `mobile_no` as it is.
 
 **What this order costs, so it is not a surprise mid-rollback.** Between the
 rollback and the *deployed* revert, the new code is still live with the
@@ -424,8 +480,10 @@ anyone has run an unscoped `migrate` on the host, that batch is the full pending
 set, and those `down()` bodies restore column *definitions*, not the rows that
 were dropped — see §2.1. Nothing in this note vouches for rolling those back.
 
-Reverting re-tracks the two cache files, so hosts that have regenerated them need
-the same `git checkout -- bootstrap/cache` step again first.
+The two cache files are tracked before and after this release, so a revert
+changes nothing about them; hosts that have regenerated them still need the
+`git checkout -- bootstrap/cache` step from §1 before pulling. **Reverting re-opens
+§0.5's escalation** on that host.
 
 ## 4. Merge order with the Faculty release
 
