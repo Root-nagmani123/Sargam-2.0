@@ -297,8 +297,9 @@ $(document).on('click', '.delete-faculty-btn', function(e) {
     e.preventDefault();
 
     var deleteUrl = $(this).data('url');
-    // attr(), not data(): data() returns the decoded name and may coerce it to a number.
-    // Escaped before it reaches Swal's html option, so a stored name is shown as text.
+    // The guard is .text().html(): attr() and data() both return the DECODED name, so it must be
+    // re-escaped before Swal's html option or stored markup runs. attr() only avoids data()'s
+    // coercion of a numeric name. Covered by tests/e2e/faculty-delete-dialog.spec.js.
     var facultyName = $('<div>').text(String($(this).attr('data-name') || '')).html();
     var csrfToken = $(this).data('token');
 
