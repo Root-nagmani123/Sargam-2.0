@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Models\User;
 use App\Services\FacultyFeedbackReportService;
+use App\Services\MoodleSso;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -2931,46 +2932,18 @@ class CalendarController extends Controller
     /**
      * The user_name carried by a Moodle SSO token, or null if the token cannot
      * be trusted. Both SSO routes sit outside the auth group and log the caller
-     * in as whoever this returns, so every doubt resolves to null.
-     *
-     * Fails closed when MOODLE_SHARED_KEY / MOODLE_SHARED_IV are unset: with a
-     * null key and IV openssl_decrypt() silently uses all-zero bytes, so anyone
-     * could encrypt any user_name themselves and be logged in as that user.
+     * in as whoever this returns, so every doubt resolves to null. The rule lives
+     * in App\Services\MoodleSso, shared with the auth middleware.
      */
     private function moodleTokenUsername(string $token): ?string
     {
-        $key = (string) config('services.moodle.key');
-        $iv  = (string) config('services.moodle.iv');
-
-        if ($key === '' || $iv === '' || $token === '') {
-            return null;
-        }
-
-        $username = openssl_decrypt(base64_decode($token), 'AES-128-CBC', $key, 0, $iv);
-        $username = is_string($username) ? trim($username) : '';
-
-        return $username === '' ? null : $username;
+        return app(MoodleSso::class)->usernameFromToken($token);
     }
 
-    /**
-     * The account a Moodle SSO user_name refers to, or null.
-     *
-     * An exact match wins (indexed, and the only behaviour before). Failing that,
-     * the stored name is compared trimmed, because 78 user_credentials rows carry
-     * stray whitespace and could never sign in through Moodle - but only a single
-     * trimmed match is accepted. Where two accounts differ only by whitespace we
-     * cannot tell which one Moodle means, and guessing would log in a stranger.
-     */
+    /** The account a Moodle SSO user_name refers to, or null - see MoodleSso::userFor(). */
     private function moodleSsoUser(string $username): ?User
     {
-        $user = User::where('user_name', $username)->first();
-        if ($user) {
-            return $user;
-        }
-
-        $candidates = User::whereRaw('TRIM(user_name) = ?', [$username])->limit(2)->get();
-
-        return $candidates->count() === 1 ? $candidates->first() : null;
+        return app(MoodleSso::class)->userFor($username);
     }
 
  /**

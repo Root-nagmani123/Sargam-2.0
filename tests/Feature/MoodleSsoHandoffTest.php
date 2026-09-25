@@ -17,7 +17,25 @@ use Tests\TestCase;
  */
 class MoodleSsoHandoffTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions {
+        beginDatabaseTransaction as openTransaction;
+    }
+
+    /**
+     * The trait opens its transaction inside parent::setUp(), before any test body,
+     * so with no database it throws there and the skips below never fire. Probe
+     * first, so a missing database is a skip rather than an error.
+     */
+    public function beginDatabaseTransaction()
+    {
+        try {
+            DB::connection()->getPdo();
+        } catch (\Throwable $e) {
+            $this->markTestSkipped('the Moodle SSO tests need the application database');
+        }
+
+        $this->openTransaction();
+    }
 
     private const KEY = '0123456789abcdef';
     private const IV = 'fedcba9876543210';
@@ -144,11 +162,104 @@ class MoodleSsoHandoffTest extends TestCase
 
     // -- The third token login: the `auth` middleware itself -----------------
     //
-    // App\Http\Middleware\Authenticate accepts ?token= on EVERY route in the
-    // auth group (PR #324 review F-001), not only the two SSO routes above.
-    // Any auth-only GET route will do; /directory/lbsnaa is one.
+    // App\Http\Middleware\Authenticate accepts ?token= only on the landing paths
+    // MoodleSso::tokenPaths() lists - the timetable by default. It used to accept
+    // it on every route in the auth group (PR #324 review F-001).
 
-    private const AUTH_ROUTE = '/directory/lbsnaa';
+    private const AUTH_ROUTE = '/calendar';
+
+    /** An auth-only GET route that is NOT a Moodle landing path. */
+    private const OTHER_AUTH_ROUTE = '/directory/lbsnaa';
+
+    public function test_a_valid_token_is_ignored_off_the_landing_paths(): void
+    {
+        $this->configureKey(self::KEY, self::IV);
+        $user = $this->anyUser();
+
+        $this->get(self::OTHER_AUTH_ROUTE.'?token='.urlencode($this->token($user->user_name, self::KEY, self::IV)));
+
+        $this->assertGuest();
+    }
+
+    /**
+     * ?token= that does not resolve to an account must leave a signed-in session
+     * alone, on a landing path or not. It used to log the user out on presence
+     * alone, so any link with ?token= appended signed a victim out (F-003).
+     */
+    public function test_an_invalid_token_does_not_end_the_current_session(): void
+    {
+        $this->configureKey(self::KEY, self::IV);
+        $user = $this->anyUser();
+
+        // The request is expected to reach the timetable page itself, which is not
+        // under test, so what it renders after the middleware has run is beside the
+        // point - including a buffer the admin layout leaves open until PR #322 lands.
+        foreach (['', 'garbage', $this->token('no-such-user-'.bin2hex(random_bytes(4)), self::KEY, self::IV)] as $token) {
+            $this->actingAs($user);
+            $level = ob_get_level();
+            $this->get(self::AUTH_ROUTE.'?token='.urlencode($token));
+            while (ob_get_level() > $level) {
+                ob_end_clean();
+            }
+            $this->assertAuthenticatedAs($user);
+        }
+    }
+
+    /** A token for the account already signed in is not a reason to sign it out. */
+    public function test_a_token_for_the_signed_in_user_keeps_the_session(): void
+    {
+        $this->configureKey(self::KEY, self::IV);
+        $user = $this->anyUser();
+
+        $this->actingAs($user)
+            ->withSession(['marker' => 'kept'])
+            ->get(self::AUTH_ROUTE.'?token='.urlencode($this->token($user->user_name, self::KEY, self::IV)))
+            ->assertRedirect()
+            ->assertSessionHas('marker', 'kept');
+
+        $this->assertAuthenticatedAs($user);
+    }
+
+    /** The middleware resolves a whitespace-stored user_name exactly as the feedback routes do (F-004). */
+    public function test_a_user_name_stored_with_whitespace_signs_in_through_the_auth_middleware(): void
+    {
+        $this->configureKey(self::KEY, self::IV);
+        $name = 'zz_sso_mw_'.bin2hex(random_bytes(4));
+        $pk = DB::table('user_credentials')->insertGetId(['user_name' => ' '.$name.' ']);
+
+        $this->get(self::AUTH_ROUTE.'?token='.urlencode($this->token($name, self::KEY, self::IV)))
+            ->assertRedirect();
+
+        $this->assertAuthenticatedAs(User::find($pk));
+    }
+
+    /**
+     * Session roles follow the account, as they do on a password login. They used
+     * to be ['Student-OT'] whoever the token named (F-006).
+     */
+    public function test_a_token_login_takes_the_session_roles_of_the_account(): void
+    {
+        $this->configureKey(self::KEY, self::IV);
+
+        $staffId = DB::table('model_has_roles as mr')
+            ->join('user_credentials as u', 'u.pk', '=', 'mr.model_id')
+            ->where('u.user_category', '!=', 'S')
+            ->whereNotNull('u.user_name')->where('u.user_name', '!=', '')
+            ->whereRaw('u.user_name = TRIM(u.user_name)')
+            ->value('u.pk');
+        $staff = $staffId ? User::find($staffId) : null;
+        if (! $staff) {
+            $this->markTestSkipped('no non-student user with a role in this database');
+        }
+
+        $this->get(self::AUTH_ROUTE.'?token='.urlencode($this->token($staff->user_name, self::KEY, self::IV)))
+            ->assertRedirect();
+
+        $this->assertAuthenticatedAs($staff);
+        $expected = $staff->roles()->pluck('name')->all();
+        $this->assertSame($expected, session('user_roles'));
+        $this->assertNotContains('Student-OT', $expected, 'the fixture should not itself be a trainee');
+    }
 
     /**
      * With the key and IV unset, the middleware used to decrypt with zero bytes,

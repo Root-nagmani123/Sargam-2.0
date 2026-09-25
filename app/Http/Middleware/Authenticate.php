@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
 
-use App\Models\User;
+use App\Services\MoodleSso;
 use App\Services\FC\FcRosterAuthService;
 use App\Services\FC\FcRegistrationIntentService;
 
@@ -37,63 +37,48 @@ class Authenticate extends Middleware
                 'user' => Auth::check() ? Auth::user()->user_name : 'Not authenticated',
             ]);
         }
-        if ($request->has('token') && Auth::check()) {
-                if ($debug) {
-                    Log::info('Token present but user already logged in, logging out old user', [
-                        'old_user' => Auth::user()->user_name
-                    ]);
-                }
-                Auth::logout();
-                Session::flush();             
-                Session::regenerate();        
-            }
+        // STEP 1: Moodle token login, only on the landing paths MoodleSso::tokenPaths()
+        // lists. The token never expires and is not signed, so accepting it on every
+        // route behind `auth` made one leaked token a login everywhere (PR #324 review
+        // F-001). On any other path ?token= is ignored.
+        $sso = app(MoodleSso::class);
 
-
-        // STEP 1: Check for Moodle token authentication if not already authenticated
-        if ($request->has('token') && !Auth::check()) {
-            if ($debug) {
-                Log::info('Moodle token found in auth middleware, attempting authentication');
-            }
+        if ($request->has('token') && $request->is(...$sso->tokenPaths())) {
             try {
-                // Fail closed, as CalendarController::moodleTokenUsername() does. With
-                // MOODLE_SHARED_KEY / MOODLE_SHARED_IV unset, openssl_decrypt() uses
-                // all-zero bytes, and the old literal fallbacks were readable in source:
-                // either way anyone could mint a token for any user_name and be logged
-                // in on every route behind `auth` (PR #324 review F-001). No key, no
-                // token login. A non-string ?token[]= is refused too: urldecode() threw
-                // a TypeError that the catch (\Exception) below does not catch.
-                $key = (string) config('services.moodle.key');
-                $iv = (string) config('services.moodle.iv');
+                // Fails closed with MOODLE_SHARED_KEY / MOODLE_SHARED_IV unset. A
+                // non-string ?token[]= is refused rather than reaching urldecode(),
+                // whose TypeError the catch (\Exception) below would not catch.
                 $token = $request->query('token', $request->input('token'));
+                $user = is_string($token) ? $sso->userFromToken(urldecode($token)) : null;
 
-                $decodedToken = ($key !== '' && $iv !== '' && is_string($token)) ? urldecode($token) : '';
-                $base64Decoded = $decodedToken !== '' ? base64_decode($decodedToken) : false;
-
-                if ($base64Decoded !== false) {
-                    $username = openssl_decrypt(
-                        $base64Decoded,
-                        'AES-128-CBC',
-                        $key,
-                        0,
-                        $iv
-                    );
-
-                    if ($username && $username !== false) {
-                        $user = User::where('user_name', trim($username))->first();
-
-                        if ($user) {
-                            $roles = ['Student-OT'];
-                            Session::put('user_roles', $roles);
-                            Auth::login($user);
-                            session()->flash('success', 'Welcome back from Moodle!');
-
-                            if ($request->isMethod('get')) {
-                                return redirect()->to($request->path());
-                            }
-                        } else {
-                            Log::error('User not found in middleware', ['username' => $username]);
+                if ($user) {
+                    // Only a token that resolves to a DIFFERENT account ends the
+                    // current session. Before, the mere presence of ?token= logged the
+                    // user out, so any link with ?token= appended - even an empty one -
+                    // signed a victim out at will (F-003).
+                    if (Auth::check() && Auth::id() !== $user->getKey()) {
+                        if ($debug) {
+                            Log::info('Moodle token names another account; ending the current session', [
+                                'old_user' => Auth::user()->user_name,
+                            ]);
                         }
+                        Auth::logout();
+                        Session::flush();
+                        Session::regenerate();
                     }
+
+                    if (! Auth::check()) {
+                        Session::put('user_roles', $sso->sessionRolesFor($user));
+                        Auth::login($user);
+                        session()->flash('success', 'Welcome back from Moodle!');
+                    }
+
+                    // Strip the token from the address bar.
+                    if ($request->isMethod('get')) {
+                        return redirect()->to($request->path());
+                    }
+                } elseif ($debug) {
+                    Log::info('Moodle token in auth middleware did not resolve to an account');
                 }
             } catch (\Exception $e) {
                 Log::error('Error in middleware Moodle authentication: ' . $e->getMessage());
