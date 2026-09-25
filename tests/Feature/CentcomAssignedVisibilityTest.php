@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Http\Controllers\Admin\IssueManagement\IssueManagementController;
 use App\Models\IssueCategoryMaster;
 use App\Models\IssueLogManagement;
+use App\Models\IssueLogStatus;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
@@ -71,7 +72,10 @@ class CentcomAssignedVisibilityTest extends TestCase
         $issue = IssueLogManagement::create([
             'issue_category_master_pk' => $category->pk,
             'description' => 'Assigned-visibility regression probe',
-            'issue_status' => IssueLogManagement::STATUS_REPORTED,
+            // Deliberately not STATUS_REPORTED (0): a filter that wrongly casts an
+            // absent status to 0 would still match a 0 row, so seeding Reported
+            // here would hide exactly the bug these feeds need to catch.
+            'issue_status' => IssueLogManagement::STATUS_IN_PROGRESS,
             'created_by' => $other,
             'issue_logger' => $other,
             'employee_master_pk' => $other,
@@ -106,6 +110,16 @@ class CentcomAssignedVisibilityTest extends TestCase
             'search' => ['value' => '', 'regex' => 'false'],
             'columns' => $cols,
             'order' => [['column' => 0, 'dir' => 'desc']],
+            // The grids post every toolbar filter on each draw, empty or not.
+            // Sending them matters: ConvertEmptyStringsToNull turns "" into null
+            // before the controller reads it, and a guard that only rejects ""
+            // then applies a (int) null = 0 filter. Omitting these here hid that
+            // bug from the suite entirely.
+            'status' => '',
+            'category' => '',
+            'priority' => '',
+            'date_from' => '',
+            'date_to' => '',
             'sort' => 'id',
             'dir' => 'desc',
         ], $extra);
@@ -139,6 +153,41 @@ class CentcomAssignedVisibilityTest extends TestCase
             (int) $issue->pk,
             $this->idsFromFeed($actor, 'admin.issue-management.centcom.data'),
             'An issue assigned to the logged-in employee is missing from the CENTCOM queue.'
+        );
+    }
+
+    /**
+     * An untouched toolbar must not filter anything.
+     *
+     * The grid posts status/category/priority on every draw; empty ones reach
+     * the controller as null (ConvertEmptyStringsToNull). A guard that only
+     * rejects "" then ran `where issue_status = (int) null` — pinning every
+     * draw to status 0, so an assigned complaint in any other state disappeared
+     * from Assign to You while All Requests, which uses filled(), still showed
+     * it. Picking a real status must still filter.
+     */
+    public function test_empty_toolbar_filters_do_not_filter_the_centcom_grid(): void
+    {
+        $actor = $this->employeeActor();
+        $issue = $this->seedIssueAssignedTo($actor);   // STATUS_IN_PROGRESS
+        $route = 'admin.issue-management.centcom.data';
+
+        $this->assertContains(
+            (int) $issue->pk,
+            $this->idsFromFeed($actor, $route),
+            'Empty toolbar filters silently filtered the CENTCOM grid.'
+        );
+
+        $this->assertContains(
+            (int) $issue->pk,
+            $this->idsFromFeed($actor, $route, ['status' => (string) IssueLogManagement::STATUS_IN_PROGRESS]),
+            'Filtering by the issue own status dropped it.'
+        );
+
+        $this->assertNotContains(
+            (int) $issue->pk,
+            $this->idsFromFeed($actor, $route, ['status' => (string) IssueLogManagement::STATUS_REPORTED]),
+            'The status filter stopped working — a Reported filter returned an In Progress issue.'
         );
     }
 
@@ -280,6 +329,130 @@ class CentcomAssignedVisibilityTest extends TestCase
             $employees->contains(fn ($e) => (string) $e->employee_pk === (string) $blockedPk),
             'A deactivated current assignee dropped off the detail page, so re-saving would lose the assignment.'
         );
+    }
+
+    /**
+     * Render the status <select> the detail page shows $actor for $issue.
+     *
+     * @return array<string, bool> option label => disabled
+     */
+    private function statusOptionsFor(User $actor, int $issueId): array
+    {
+        $this->actingAs($actor);
+        $view = app(IssueManagementController::class)->show($issueId);
+        $this->assertInstanceOf(\Illuminate\View\View::class, $view, 'Actor was redirected away from the issue.');
+
+        // The show blade leaves an output buffer open; unwind whatever it adds
+        // so PHPUnit does not flag the test as risky.
+        $level = ob_get_level();
+        $html = $view->render();
+        while (ob_get_level() > $level) {
+            ob_end_clean();
+        }
+
+        $this->assertSame(1, preg_match('/<select name="issue_status".*?<\/select>/s', $html, $m), 'Status select not rendered.');
+        preg_match_all('/<option value="(\d+)"([^>]*)>([^<]*)</', $m[0], $opts, PREG_SET_ORDER);
+
+        $out = [];
+        foreach ($opts as $o) {
+            $out[trim($o[3])] = str_contains($o[2], 'disabled');
+        }
+
+        return $out;
+    }
+
+    /**
+     * A reopened complaint starts its cycle again. Counting the whole history
+     * left the assignee unable to close it: Completed had been used before the
+     * reopen, so the option stayed disabled and the work could never be marked
+     * done.
+     */
+    public function test_assignee_can_still_complete_a_reopened_ticket_after_starting_work(): void
+    {
+        $actor = $this->employeeActor();
+        $category = IssueCategoryMaster::query()->first();
+        if (! $category) {
+            $this->markTestSkipped('No issue_category_master row to hang a test issue off.');
+        }
+
+        // Actor is the assignee, somebody else is the nodal officer — the nodal
+        // officer is exempt from the lock, so they cannot show this bug.
+        $other = (int) DB::table('employee_master')->where('pk', '!=', $actor->user_id)->value('pk');
+        $issue = IssueLogManagement::create([
+            'issue_category_master_pk' => $category->pk,
+            'description' => 'Reopened-completion regression probe',
+            'issue_status' => IssueLogManagement::STATUS_IN_PROGRESS,
+            'created_by' => $other,
+            'issue_logger' => $other,
+            'employee_master_pk' => $other,
+            'assigned_to' => (string) $actor->user_id,
+            'created_date' => now(),
+        ]);
+
+        // Reported → In Progress → Completed → Reopened → In Progress.
+        $cycle = [
+            IssueLogManagement::STATUS_REPORTED,
+            IssueLogManagement::STATUS_IN_PROGRESS,
+            IssueLogManagement::STATUS_COMPLETED,
+            IssueLogManagement::STATUS_REOPENED,
+            IssueLogManagement::STATUS_IN_PROGRESS,
+        ];
+        foreach ($cycle as $i => $status) {
+            IssueLogStatus::create([
+                'issue_log_management_pk' => $issue->pk,
+                'issue_date' => now()->addSeconds($i),
+                'created_by' => $other,
+                'issue_status' => $status,
+            ]);
+        }
+        IssueManagementController::bumpIndexListCacheEpoch();
+
+        $options = $this->statusOptionsFor($actor, (int) $issue->pk);
+
+        $this->assertFalse(
+            $options['Completed'] ?? true,
+            'The assignee cannot mark a reopened complaint Completed — the option is disabled.'
+        );
+    }
+
+    /**
+     * The forward-only rule still has to hold on a complaint that was never
+     * reopened, or the reopen fix would have unlocked every old status.
+     */
+    public function test_used_statuses_stay_locked_when_the_ticket_was_never_reopened(): void
+    {
+        $actor = $this->employeeActor();
+        $category = IssueCategoryMaster::query()->first();
+        if (! $category) {
+            $this->markTestSkipped('No issue_category_master row to hang a test issue off.');
+        }
+
+        $other = (int) DB::table('employee_master')->where('pk', '!=', $actor->user_id)->value('pk');
+        $issue = IssueLogManagement::create([
+            'issue_category_master_pk' => $category->pk,
+            'description' => 'Forward-only regression probe',
+            'issue_status' => IssueLogManagement::STATUS_IN_PROGRESS,
+            'created_by' => $other,
+            'issue_logger' => $other,
+            'employee_master_pk' => $other,
+            'assigned_to' => (string) $actor->user_id,
+            'created_date' => now(),
+        ]);
+
+        foreach ([IssueLogManagement::STATUS_REPORTED, IssueLogManagement::STATUS_IN_PROGRESS] as $i => $status) {
+            IssueLogStatus::create([
+                'issue_log_management_pk' => $issue->pk,
+                'issue_date' => now()->addSeconds($i),
+                'created_by' => $other,
+                'issue_status' => $status,
+            ]);
+        }
+        IssueManagementController::bumpIndexListCacheEpoch();
+
+        $options = $this->statusOptionsFor($actor, (int) $issue->pk);
+
+        $this->assertTrue($options['Reported'] ?? false, 'A used status is selectable again without any reopen.');
+        $this->assertFalse($options['Completed'] ?? true, 'Completed was never used, so it must stay selectable.');
     }
 
     public function test_an_unrelated_employee_still_cannot_see_the_ticket(): void

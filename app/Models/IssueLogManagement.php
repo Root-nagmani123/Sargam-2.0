@@ -116,8 +116,12 @@ class IssueLogManagement extends Model
     public function statusHistory()
     {
         return $this->hasMany(IssueLogStatus::class, 'issue_log_management_pk', 'pk')
-                    
-                    ->orderBy('issue_date', 'desc');
+                    ->orderBy('issue_date', 'desc')
+                    // issue_date is second-resolution, so two updates in the same
+                    // second tie. The detail page reads this order to find the last
+                    // Reopen; an arbitrary tie-break there would re-lock the status
+                    // options. pk is monotonic, so it settles the order.
+                    ->orderBy('pk', 'desc');
     }
 
     /**

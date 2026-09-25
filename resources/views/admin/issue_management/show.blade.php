@@ -353,15 +353,20 @@
                 </div>
                 <div class="modal-body">
                     @php
-                        $usedStatuses = $issue->statusHistory->pluck('issue_status')->toArray();
+                        // Statuses already used SINCE the last Reopen — history is newest
+                        // first, so stop counting at the reopen row. A reopened complaint
+                        // starts its cycle again: counting the whole history left the
+                        // assignee unable to mark it Completed, because it had been
+                        // completed once before the reopen.
+                        $usedStatuses = $issue->statusHistory
+                            ->takeWhile(fn ($h) => (int) $h->issue_status !== 6)
+                            ->pluck('issue_status')
+                            ->map(fn ($s) => (int) $s)
+                            ->all();
                         $isAssigned = !empty($issue->assigned_to);
                         $isNodalOfficer = ($issue->employee_master_pk == Auth::user()->user_id);
                         $canReassign = $isNodalOfficer && !$isCompleted; // Re-assign not allowed for closed (Completed) issues
                         $canOnlyReopen = $isComplainant && $isCompleted;
-
-                        // Determine latest status from history (most recent first),
-                        // fall back to main issue_status if no history exists.
-                        $latestStatus = (int) ($issue->statusHistory->first()->issue_status ?? $issue->issue_status);
                     @endphp
 
                     @if(($issue->created_by == Auth::user()->user_id || $issue->issue_logger == Auth::user()->user_id) && $issue->issue_status === 2)
@@ -390,10 +395,12 @@
                     @endif
 
                     @php
-                        // After Reopen (6), all status options stay enabled so user can set any status again.
-                        // Use the latest status from history so this works even if the main column lags.
-                        // Additionally, allow Nodal Officer to always change to any status.
-                        $disableStatusOptions = !$isNodalOfficer && $latestStatus !== 6;
+                        // A status already used in the current cycle cannot be picked again,
+                        // so the complaint only moves forward. $usedStatuses is scoped to
+                        // the run since the last Reopen, which is what lets a reopened
+                        // complaint be worked and completed afresh.
+                        // The Nodal Officer is exempt and may set any status.
+                        $disableStatusOptions = !$isNodalOfficer;
                     @endphp
                     <div class="mb-3">
                         <label for="issue_status" class="form-label">Status <span class="text-danger">*</span></label>

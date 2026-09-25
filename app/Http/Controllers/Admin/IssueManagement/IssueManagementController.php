@@ -221,12 +221,12 @@ class IssueManagementController extends Controller
             }
 
             // Filter by category
-            if ($request->has('category') && ! empty($request->category)) {
+            if ($request->filled('category')) {
                 $builder->where('issue_category_master_pk', $request->category);
             }
 
             // Filter by priority
-            if ($request->has('priority') && ! empty($request->priority)) {
+            if ($request->filled('priority')) {
                 $builder->where('issue_priority_master_pk', $request->priority);
             }
 
@@ -255,7 +255,7 @@ class IssueManagementController extends Controller
         }
 
         // Single list: all complaints. Status filter only when user selects from dropdown.
-        if ($request->filled('status') && $request->status !== '') {
+        if ($request->filled('status')) {
             $query->where('issue_status', (int) $request->status);
         }
 
@@ -302,7 +302,7 @@ class IssueManagementController extends Controller
             || $request->filled('priority')
             || $request->filled('date_from')
             || $request->filled('date_to')
-            || ($request->has('status') && $request->get('status') !== '');
+            || $request->filled('status');
 
         return view('admin.issue_management.index', compact(
             'categories',
@@ -542,8 +542,12 @@ class IssueManagementController extends Controller
         // keystroke in a typing run — cache it against the scope + toolbar
         // filters rather than counting 65k rows again on each draw.
         $userId = Auth::user()->user_id;
-        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_management_records_total:v2:' . md5(json_encode([
+        // Each grid's own epoch — a centcom count keyed to the index epoch would
+        // outlive a centcom-only invalidation.
+        $epoch = DataTableRedisCache::readListEpoch(
+            $variant === 'centcom' ? self::CENTCOM_LISTING_CACHE_EPOCH_KEY : self::LISTING_CACHE_EPOCH_KEY
+        );
+        $cacheKey = 'admin_issue_management_records_total:v3:' . md5(json_encode([
             'epoch' => $epoch,
             'variant' => $variant,
             'user_id' => $userId,
@@ -916,18 +920,22 @@ class IssueManagementController extends Controller
             });
         }
 
-        // Status (use has + !== '' so "0" works)
-        if ($request->has('status') && $request->status !== '') {
+        // filled(), not has() + !== '': the grid always sends these keys, and an
+        // unset dropdown arrives as "" which ConvertEmptyStringsToNull rewrites to
+        // null before the controller sees it. null !== '' is true, so the old
+        // guard ran `where issue_status = (int) null` — every draw was silently
+        // pinned to status 0 and an assigned complaint in any other state
+        // vanished from this grid while still showing on All Requests.
+        // filled() drops null and "" and keeps "0", which is what "Reported" needs.
+        if ($request->filled('status')) {
             $query->where('issue_status', (int) $request->status);
         }
 
-        // Category
-        if ($request->has('category') && $request->category !== '') {
+        if ($request->filled('category')) {
             $query->where('issue_category_master_pk', (int) $request->category);
         }
 
-        // Priority
-        if ($request->has('priority') && $request->priority !== '') {
+        if ($request->filled('priority')) {
             $query->where('issue_priority_master_pk', (int) $request->priority);
         }
 
@@ -1007,7 +1015,11 @@ class IssueManagementController extends Controller
         sort($scopedIds);
 
         $epoch = DataTableRedisCache::readListEpoch(self::CENTCOM_LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_management_centcom:v2:' . md5(json_encode([
+        // v3: this grid's filter guards changed, so every snapshot stored under
+        // v2 was computed with a status = 0 filter that should never have been
+        // applied. Those entries live for the full TTL, so the key has to retire
+        // with the behaviour rather than wait them out.
+        $cacheKey = 'admin_issue_management_centcom:v3:' . md5(json_encode([
             'epoch' => $epoch,
             'user_id' => $userId,
             'scoped_ids' => $scopedIds,
@@ -1060,7 +1072,7 @@ class IssueManagementController extends Controller
             || $request->filled('priority')
             || $request->filled('date_from')
             || $request->filled('date_to')
-            || ($request->has('status') && $request->get('status') !== '');
+            || $request->filled('status');
 
         return view('admin.issue_management.centcom', compact(
             'categories',
