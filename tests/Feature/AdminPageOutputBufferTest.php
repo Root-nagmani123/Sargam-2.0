@@ -21,6 +21,19 @@ use Tests\TestCase;
  */
 class AdminPageOutputBufferTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Probe before superAdmin() queries: with no connection that query throws,
+        // and the skip below it would never be reached.
+        try {
+            DB::connection()->getPdo();
+        } catch (\Throwable $e) {
+            $this->markTestSkipped('the output-buffer test renders a real admin page and needs the application database');
+        }
+    }
+
     public function test_an_admin_page_leaves_no_output_buffer_open(): void
     {
         $superAdmin = $this->superAdmin();

@@ -2,7 +2,7 @@
 
 @section('title', 'Class Material (Subject Wise) | Course Repository Admin')
 
-@section('content')
+@section('setup_content')
 <div class="cru-page">
     <div class="container-fluid px-3 px-md-4 pt-3 pb-0">
         <x-breadcrum title="Class Material (Subject Wise)"></x-breadcrum>
