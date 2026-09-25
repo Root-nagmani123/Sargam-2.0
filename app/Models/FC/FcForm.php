@@ -41,10 +41,27 @@ class FcForm extends Model
     }
 
     /**
-     * Forms that may be picked for an FC bulk SMS/Email send: active, and either not
-     * linked to a course or linked to one that has not ended yet. Same "active" scope
-     * as the Dynamic Forms admin list (Form Management), kept in one place so the
-     * picker, the request validation and the send-side resolver cannot drift apart.
+     * Forms that may be picked for an FC bulk SMS/Email send: the form is active, and it
+     * is either unlinked from a course or linked to one that is still running.
+     *
+     * "Still running" is CourseMaster::scopeActiveRunning()'s definition, not a second
+     * one: active_inactive = 1 AND end_date >= today. That matters because this scope
+     * gates a *paid* SMS + email run, so the set of forms eligible for a send must not
+     * be wider than the set of courses the rest of the app calls running.
+     *
+     * A null end_date is therefore NOT selectable. CourseMaster::scopeArchived() counts
+     * it as archived and is documented as the exact complement of activeRunning(), so
+     * admitting it here would put a course in both buckets. (Checked against the live
+     * table before tightening this: 0 of 146 rows have a null end_date, and 0 rows are
+     * disabled with a future or null end_date, so neither clause changes the current
+     * picker - both guard against future data rather than filtering today's.)
+     *
+     * Kept in one place so the picker, the request validation and the send-side resolver
+     * cannot drift apart. This is NOT the same query as the Dynamic Forms admin list
+     * (FormManagementController::formsIndexQuery), and no longer overlaps it at all: that
+     * list does not filter fc_forms.is_active, and its own course-end test still admits a
+     * null end_date and ignores active_inactive. Changing the rule here does not change
+     * which forms that list shows - see the follow-up to give both one definition.
      */
     public function scopeSelectableForBulkSend($query)
     {
@@ -54,10 +71,8 @@ class FcForm extends Model
             ->where(function ($q) use ($currentDate) {
                 $q->whereNull('course_master_pk')
                     ->orWhereHas('courseMaster', function ($c) use ($currentDate) {
-                        $c->where(function ($e) use ($currentDate) {
-                            $e->whereNull('end_date')
-                                ->orWhere('end_date', '>=', $currentDate);
-                        });
+                        $c->where('active_inactive', 1)
+                            ->where('end_date', '>=', $currentDate);
                     });
             });
     }
