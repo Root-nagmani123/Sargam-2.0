@@ -425,11 +425,21 @@
                             <option value="other">Other Employee</option>
                             @if(isset($employees) && count($employees) > 0)
                                 @foreach($employees as $employee)
-                                    <option value="{{ $employee->employee_pk }}" 
+                                    @php
+                                        // Accounts that cannot sign in stay listed but cannot be
+                                        // picked: work handed to one of them reaches nobody. The
+                                        // current assignee stays selectable-looking so an existing
+                                        // assignment still shows when the status form reopens.
+                                        $isCurrentAssignee = $isAssigned
+                                            && (string) $issue->assigned_to === (string) $employee->employee_pk;
+                                        $cannotSignIn = ! ($employee->can_login ?? 1) && ! $isCurrentAssignee;
+                                    @endphp
+                                    <option value="{{ $employee->employee_pk }}"
                                         data-name="{{ $employee->employee_name }}"
                                         data-mobile="{{ $employee->mobile ?? '' }}"
-                                        @if($isAssigned && (string)$issue->assigned_to === (string)$employee->employee_pk) selected @endif>
-                                        {{ $employee->employee_name }}
+                                        @if($cannotSignIn) disabled @endif
+                                        @if($isCurrentAssignee) selected @endif>
+                                        {{ $employee->employee_name }}@if($cannotSignIn) — inactive, cannot sign in @endif
                                     </option>
                                 @endforeach
                             @else

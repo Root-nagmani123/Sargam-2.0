@@ -170,12 +170,20 @@ class IssueManagementController extends Controller
                 if (empty($ids)) {
                     $ids = [Auth::user()->user_id];
                 }
-                // Index page: only show issues raised by the employee themselves.
-                // Issues where they are assigned_to are handled by the CENTCOM page.
+                // Everything the employee is party to: raised by them, logged by
+                // them, nodal officer on it, or handed to them. assigned_to is a
+                // VARCHAR carrying the employee pk as a string (or a free-text
+                // name for the "Other" flow), so the ids compare as strings.
+                //
+                // The CENTCOM tab remains the dedicated assigned queue, but the
+                // ticket has to surface here too: this is the page the sidebar
+                // lands on, and an assignee who never opens that tab would
+                // otherwise never see the ticket at all.
                 $builder->where(function ($q) use ($ids) {
                     $q->whereIn('employee_master_pk', $ids)
                         ->orWhereIn('issue_logger', $ids)
-                        ->orWhereIn('created_by', $ids);
+                        ->orWhereIn('created_by', $ids)
+                        ->orWhereIn('assigned_to', $ids);
                 });
             }
         };
@@ -535,7 +543,7 @@ class IssueManagementController extends Controller
         // filters rather than counting 65k rows again on each draw.
         $userId = Auth::user()->user_id;
         $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_management_records_total:v1:' . md5(json_encode([
+        $cacheKey = 'admin_issue_management_records_total:v2:' . md5(json_encode([
             'epoch' => $epoch,
             'variant' => $variant,
             'user_id' => $userId,
@@ -592,7 +600,7 @@ class IssueManagementController extends Controller
         }
 
         $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_management_index:v3:' . md5(json_encode([
+        $cacheKey = 'admin_issue_management_index:v4:' . md5(json_encode([
             'epoch' => $epoch,
             'is_admin' => $isAdmin,
             'user_id' => $userId,
@@ -1391,7 +1399,10 @@ class IssueManagementController extends Controller
                         'e.pk as employee_pk',
                         DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),
                         DB::raw("COALESCE(e.mobile, '') as mobile"),
-                        'd.designation_name'
+                        'd.designation_name',
+                        // Same shape as getEmployeesAndFacultyForComplaint() — the
+                        // dropdown reads can_login on every row it renders.
+                        DB::raw('(e.status = 1) as can_login')
                     )
                     ->first();
                 if ($assigned) {
@@ -2036,6 +2047,30 @@ class IssueManagementController extends Controller
                 } else {
                     $assignedTo = $request->assigned_to ? (string) $request->assigned_to : null;
                     $assignedToContact = $request->assigned_to_contact;
+
+                    // The dropdown disables accounts that cannot sign in, but
+                    // that is only markup — a handler who never reaches the
+                    // login screen would silently swallow the complaint, which
+                    // is the failure this whole path exists to prevent.
+                    $isNewAssignee = $assignedTo !== null
+                        && (string) $assignedTo !== (string) $issue->assigned_to;
+                    if ($isNewAssignee && is_numeric($assignedTo)) {
+                        $canSignIn = DB::table('employee_master')
+                            ->where(function ($q) use ($assignedTo) {
+                                $q->where('pk', $assignedTo);
+                                if (Schema::hasColumn('employee_master', 'pk_old')) {
+                                    $q->orWhere('pk_old', $assignedTo);
+                                }
+                            })
+                            ->where('status', 1)
+                            ->exists();
+
+                        if (! $canSignIn) {
+                            DB::rollBack();
+
+                            return back()->with('error', 'That employee’s account is inactive — they cannot sign in, so the complaint would never reach them. Pick an active employee, or use "Other Employee" to record a name and contact number.');
+                        }
+                    }
                 }
             } else {
                 $assignedTo = $issue->assigned_to;

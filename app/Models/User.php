@@ -102,8 +102,20 @@ class User extends Authenticatable
      * user_credentials.user_id maps to employee_master.pk and faculty_master.employee_master_pk.
      * Excludes students: user_credentials.user_category != 'S'.
      *
+     * Each row carries `can_login`: LoginController turns away any user_category
+     * 'E' whose employee_master.status is 2 ("Your account is inactive"), and
+     * two thirds of the rows this join reaches are status 2 — dormant accounts,
+     * some unused since 2016. Assigning a complaint to one of those sent it to
+     * somebody who could never open the app, so it surfaced for nobody.
+     *
+     * The flag rather than a filter, because the two callers want different
+     * things: the assignment dropdown must not let a nodal officer hand work to
+     * an account that cannot sign in, while the complainant dropdown may still
+     * name anyone a complaint is logged on behalf of. Loginable names sort
+     * first so the usable half of the list is what the officer sees.
+     *
      * @param int|null $departmentId Optional: filter by employee department_master_pk
-     * @return \Illuminate\Support\Collection { employee_pk, employee_name, mobile, designation_name? }
+     * @return \Illuminate\Support\Collection { employee_pk, employee_name, mobile, designation_name?, can_login }
      */
     public static function getEmployeesAndFacultyForComplaint($departmentId = null)
     {
@@ -120,10 +132,12 @@ class User extends Authenticatable
                 'e.pk as employee_pk',
                 DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),
                 DB::raw("COALESCE(e.mobile, '') as mobile"),
-                'd.designation_name'
+                'd.designation_name',
+                DB::raw('(e.status = 1) as can_login')
             )
+            ->orderByDesc(DB::raw('e.status = 1'))
             ->orderBy('e.first_name')
-            ->groupBy('e.pk', 'e.first_name', 'e.middle_name', 'e.last_name', 'e.mobile', 'd.designation_name');
+            ->groupBy('e.pk', 'e.first_name', 'e.middle_name', 'e.last_name', 'e.mobile', 'd.designation_name', 'e.status');
 
         if ($departmentId) {
             $query->where('e.department_master_pk', $departmentId);
