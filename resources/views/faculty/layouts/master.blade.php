@@ -4,7 +4,11 @@
 <head>
     @include('admin.layouts.pre_header')
     <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
-    @section('css')
+    {{-- No @section wrapper: these styles belong in <head> where they are.
+         This opened @section('css') and never closed it, and @section compiles
+         to startSection() -> ob_start(), so every faculty page render leaked an
+         output buffer. Same defect as admin/layouts/master. PR #309 F-007.
+         Do not "fix" it with @endsection/@show - see the note in that file. --}}
     <style>
     .nav-item .tab-item .active {
         background-color: #bbd9f7;

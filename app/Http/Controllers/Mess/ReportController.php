@@ -1164,70 +1164,33 @@ class ReportController extends Controller
         return 'data:'.$mime.';base64,'.base64_encode($raw);
     }
 
-    /**
-     * Fetch an image over HTTP and return a data URI for Dompdf embedding.
-     */
-    private function pdfTryHttpToDataUri(string $url, string $mime): ?string
-    {
-        try {
-            $response = Http::timeout(20)->connectTimeout(8)->get($url);
-            if ($response->successful()) {
-                $body = $response->body();
-                if ($body !== '' && strlen($body) > 100) {
-                    return 'data:'.$mime.';base64,'.base64_encode($body);
-                }
-            }
-        } catch (\Throwable $e) {
-            // Fall back to returning the raw URL for the view / Dompdf remote loader
-        }
-
-        return null;
-    }
 
     /**
-     * LBSNAA header logo for Stock Summary PDF: local academy assets first, then official site, then URL fallback.
+     * LBSNAA header logo for the mess PDF headers. Local assets only.
+     *
+     * Review finding F-027. This used to try the local files, then fetch
+     * https://www.lbsnaa.gov.in/admin_assets/images/logo.png over HTTP, then hand dompdf
+     * that raw URL if even the fetch failed - so a server-side render depended on the
+     * public website being up, and dompdf needed isRemoteEnabled to load the fallback.
      */
     private function messPdfLbsnaaLogoForDompdf(): string
     {
-        foreach ([public_path('images/lbsnaa_logo.jpg'), public_path('images/lbsnaa_logo.png')] as $path) {
-            $uri = $this->pdfTryFileToDataUri($path);
-            if ($uri !== null) {
-                return $uri;
-            }
-        }
-
-        $official = 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
-        $embedded = $this->pdfTryHttpToDataUri($official, 'image/png');
-        if ($embedded !== null) {
-            return $embedded;
-        }
-
-        foreach ([
-            public_path('admin_assets/images/logos/logo.png'),
-            public_path('admin_assets/images/logos/logo.svg'),
-            public_path('admin_assets/images/logos/logo-icon.svg'),
-        ] as $path) {
-            $uri = $this->pdfTryFileToDataUri($path);
-            if ($uri !== null) {
-                return $uri;
-            }
-        }
-
-        return $official;
+        return pdf_lbsnaa_logo_src();
     }
 
     /**
-     * India emblem (PNG) for PDF header — embedded when fetch succeeds.
+     * India emblem for the mess PDF headers. Local assets only.
+     *
+     * Review finding F-027, and the sharper half of it: this method did not try a local
+     * file at all. Every mess PDF export called
+     * https://upload.wikimedia.org/.../Emblem_of_India.svg.png with Http::timeout(20) while
+     * building the document, and returned the raw URL for dompdf to fetch when that failed.
+     * public/admin_assets/images/logos/ashoka.png has been sitting in the repository the
+     * whole time, and is what every other PDF header in this application already uses.
      */
     private function messPdfIndiaEmblemForDompdf(): string
     {
-        $url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
-        $embedded = $this->pdfTryHttpToDataUri($url, 'image/png');
-        if ($embedded !== null) {
-            return $embedded;
-        }
-
-        return $url;
+        return pdf_emblem_src();
     }
 
     /**
@@ -1281,7 +1244,7 @@ class ReportController extends Controller
             ->setOptions([
                 'defaultFont'           => 'DejaVu Sans',
                 'isHtml5ParserEnabled'  => true,
-                'isRemoteEnabled'       => true,
+                'isRemoteEnabled'       => false,
                 'dpi'                   => 96,
             ]);
 
@@ -1336,7 +1299,7 @@ class ReportController extends Controller
             ->setOptions([
                 'defaultFont'           => 'DejaVu Sans',
                 'isHtml5ParserEnabled'  => true,
-                'isRemoteEnabled'       => true,
+                'isRemoteEnabled'       => false,
                 'dpi'                   => 96,
             ]);
 
@@ -1387,7 +1350,7 @@ class ReportController extends Controller
             ->setOptions([
                 'defaultFont'           => 'DejaVu Sans',
                 'isHtml5ParserEnabled'  => true,
-                'isRemoteEnabled'       => true,
+                'isRemoteEnabled'       => false,
                 'dpi'                   => 96,
                 'isPhpEnabled'          => false,
             ]);
@@ -1465,7 +1428,7 @@ class ReportController extends Controller
             ->setOptions([
                 'defaultFont'           => 'DejaVu Sans',
                 'isHtml5ParserEnabled'  => true,
-                'isRemoteEnabled'       => true,
+                'isRemoteEnabled'       => false,
                 'dpi'                   => 96,
             ]);
 
@@ -1555,7 +1518,7 @@ class ReportController extends Controller
             ->setOptions([
                 'defaultFont' => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => true,
+                'isRemoteEnabled' => false,
                 'isPhpEnabled' => false,
                 'chroot' => realpath(public_path()) ?: public_path(),
                 'dpi' => 96,
@@ -3394,7 +3357,7 @@ class ReportController extends Controller
             ->setOptions([
                 'defaultFont'           => 'DejaVu Sans',
                 'isHtml5ParserEnabled'  => true,
-                'isRemoteEnabled'       => true,
+                'isRemoteEnabled'       => false,
                 'dpi'                   => 96,
             ]);
 

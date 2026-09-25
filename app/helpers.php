@@ -872,6 +872,122 @@ function isSidebarPrivilegedUser(): bool
 }
 
 /**
+ * A PDF-safe <img src> for a local image, as a base64 data URI.
+ *
+ * Returns the first readable candidate under public/, or '' - NEVER a remote URL.
+ * That last part is the point. dompdf renders server-side, so an http(s) src makes the
+ * SERVER fetch it while building the document: a third-party outage becomes a broken
+ * export, a slow response becomes a slow one, and the fetch is what forces
+ * isRemoteEnabled to stay on across every export in this application.
+ *
+ * Review finding F-027. Before this, the mess PDF exports resolved the national emblem
+ * by calling https://upload.wikimedia.org/... on EVERY render (Http::timeout(20)), and
+ * handed dompdf the raw URL when that call failed.
+ *
+ * @param  string[]  $relativePaths  candidates relative to public/, best first
+ */
+function pdf_local_image_data_uri(array $relativePaths): string
+{
+    foreach ($relativePaths as $relative) {
+        $path = public_path($relative);
+
+        if (! is_file($path) || ! is_readable($path)) {
+            continue;
+        }
+
+        $raw = @file_get_contents($path);
+
+        if ($raw === false || $raw === '') {
+            continue;
+        }
+
+        $mime = match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
+            'png' => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'webp' => 'image/webp',
+            'gif' => 'image/gif',
+            'svg' => 'image/svg+xml',
+            default => 'image/png',
+        };
+
+        return 'data:' . $mime . ';base64,' . base64_encode($raw);
+    }
+
+    return '';
+}
+
+/** The national emblem for a PDF header. Local only. See pdf_local_image_data_uri(). */
+function pdf_emblem_src(): string
+{
+    return pdf_local_image_data_uri([
+        'admin_assets/images/logos/ashoka.png',
+        'images/ashoka.png',
+    ]);
+}
+
+/**
+ * The LBSNAA header logo for a PDF. Local only.
+ *
+ * admin_assets/images/logos/logo.png first: it is the local copy of the very file the
+ * old remote fallback fetched (/admin_assets/images/logo.png) and is a third the size
+ * of images/lbsnaa_logo.jpg, which every render would otherwise embed.
+ */
+function pdf_lbsnaa_logo_src(): string
+{
+    return pdf_local_image_data_uri([
+        'admin_assets/images/logos/logo.png',
+        'admin_assets/images/logos/logo_new.png',
+        'images/lbsnaa_logo.jpg',
+        'images/lbsnaa_logo.png',
+    ]);
+}
+
+/**
+ * Does the current user pass an `EnsureMenuPermission:<name>` gate?
+ *
+ * Callers: `EnsureMenuPermission` (the route gate), `UserController::assignRoleSave()`
+ * (its in-method re-check), and `setup_activities.blade.php`, which decides with it
+ * whether to draw the "Roles" and "User Permissions" links - so those two links are
+ * never offered to someone their route will refuse.
+ *
+ * It is NOT what the rest of the sidebar uses. `SidebarController` and `MenuService`
+ * decide menu visibility with their own `menuVisibleToUser()`; a route gated with
+ * `EnsureMenuPermission` and a menu drawn by those two can still disagree.
+ *
+ * The divergence this closed was real: `setup_activities.blade.php` gated the User
+ * Management block on five ROLE names while the routes gated on the `users` and
+ * `roles` PERMISSIONS (PR #311 review F-017) - a populated role was shown both links
+ * and got 403 on both. Three of those five role names ('Admin', 'Training-MCTP', 'IST')
+ * do not exist in this database at all.
+ *
+ * Holding ANY of the listed permissions passes, matching the middleware's variadic
+ * contract. Super Admin passes without holding any, which is why this is not `can:`
+ * - see the note on EnsureMenuPermission.
+ */
+function hasMenuPermission(string ...$permissions): bool
+{
+    if (isSidebarPrivilegedUser()) {
+        return true;
+    }
+
+    $user = \Illuminate\Support\Facades\Auth::user();
+
+    if (! $user || empty($permissions)) {
+        return false;
+    }
+
+    $held = $user->getAllPermissions()->pluck('name');
+
+    foreach ($permissions as $permission) {
+        if ($held->contains($permission)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
  * Estate authority: can manage all estate records (Estate Admin role or Super Admin).
  * DB role names: 'Estate Admin' (id:8), 'Super Admin' (id:1).
  */

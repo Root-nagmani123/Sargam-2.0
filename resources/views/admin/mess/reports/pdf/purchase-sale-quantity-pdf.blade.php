@@ -12,8 +12,8 @@
     $itemsLabel = (isset($selectedItemNamesLabel) && $selectedItemNamesLabel !== '') ? $selectedItemNamesLabel : 'All Items';
     $printedOn = now()->format('d-m-Y H:i');
 
-    $emblemSrc = $emblemSrc ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
-    $lbsnaaLogoSrc = $lbsnaaLogoSrc ?? 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
+    $emblemSrc = $emblemSrc ?? pdf_emblem_src();
+    $lbsnaaLogoSrc = $lbsnaaLogoSrc ?? pdf_lbsnaa_logo_src();
 
     $periodBar = 'From ' . ($fromLabel ?? '—') . ' To ' . ($toLabel ?? '—');
 @endphp

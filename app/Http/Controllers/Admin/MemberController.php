@@ -1,26 +1,79 @@
 <?php
+
 namespace App\Http\Controllers\Admin;
 
 use App\DataTables\MemberDataTable;
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use App\Http\Requests\Admin\Member\{
-    StoreMemberStep1Request,
-    StoreMemberStep2Request,
-    StoreMemberStep3Request,
-    StoreMemberStep4Request,
-    StoreMemberStep5Request,
-};
-use App\Models\{EmployeeMaster, EmployeeRoleMapping, UserCredential, City};
 use App\Exports\MemberExport;
-use Maatwebsite\Excel\Facades\Excel;
+use App\Http\Controllers\Concerns\ExportsBrandedGrid;
+use App\Http\Controllers\Controller;
+use App\Http\Middleware\EnsureMemberPiiAccess;
+use App\Http\Middleware\EnsureMemberRecordAccess;
+use App\Http\Requests\Admin\Member\StoreMemberStep1Request;
+use App\Http\Requests\Admin\Member\StoreMemberStep2Request;
+use App\Http\Requests\Admin\Member\StoreMemberStep3Request;
+use App\Http\Requests\Admin\Member\StoreMemberStep4Request;
+use App\Http\Requests\Admin\Member\StoreMemberStep5Request;
 use App\Models\AppellationMaster;
+use App\Models\City;
+use App\Models\Country;
+use App\Models\DepartmentMaster;
+use App\Models\District;
+use App\Models\EmployeeGroupMaster;
+use App\Models\EmployeeMaster;
+use App\Models\EmployeeRoleMapping;
+use App\Models\EmployeeTypeMaster;
+use App\Models\State;
+use App\Models\UserCredential;
+use App\Support\LogSafe;
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
+
 class MemberController extends Controller
 {
+    use ExportsBrandedGrid;
+
     public function index(MemberDataTable $dataTable)
     {
-        return $dataTable->render('admin.member.index');
+        return $dataTable->render('admin.member.index', $this->listingFilterOptions());
+    }
+
+    /**
+     * Options for the listing's Type / Group / Department dropdowns.
+     *
+     * Only active rows, and only ones actually used by an employee — the three
+     * masters carry retired entries, and a dropdown that offers 71 departments
+     * where 40 can never match is a filter that mostly returns nothing.
+     *
+     * @return array{employeeTypes: Collection, employeeGroups: Collection, departments: Collection}
+     */
+    private function listingFilterOptions(): array
+    {
+        $inUse = fn (string $column) => EmployeeMaster::query()
+            ->whereNotNull($column)
+            ->where($column, '!=', '')
+            ->distinct()
+            ->pluck($column);
+
+        return [
+            'employeeTypes' => EmployeeTypeMaster::whereIn('pk', $inUse('emp_type'))
+                ->where('active_inactive', 1)
+                ->orderBy('category_type_name')
+                ->pluck('category_type_name', 'pk'),
+            'employeeGroups' => EmployeeGroupMaster::whereIn('pk', $inUse('emp_group_pk'))
+                ->where('active_inactive', 1)
+                ->orderBy('emp_group_name')
+                ->pluck('emp_group_name', 'pk'),
+            'departments' => DepartmentMaster::whereIn('pk', $inUse('department_master_pk'))
+                ->where('active_inactive', 1)
+                ->orderBy('department_name')
+                ->pluck('department_name', 'pk'),
+        ];
     }
 
     public function create()
@@ -86,17 +139,17 @@ class MemberController extends Controller
             'landline_contact_no' => $request->landlinenumber,
         ];
 
-        if (!empty($request->other_city)) {
+        if (! empty($request->other_city)) {
             $otherCity = City::firstOrCreate(
                 [
                     'country_master_pk' => $request->country,
                     'state_master_pk' => $request->state,
                     'district_master_pk' => $request->district,
                     'city_name' => $request->other_city,
-                    'active_inactive' => 1
+                    'active_inactive' => 1,
                 ],
                 [
-                    'active_inactive' => 1
+                    'active_inactive' => 1,
                 ]
             );
             $address['city'] = $otherCity->pk;
@@ -104,17 +157,17 @@ class MemberController extends Controller
             $address['city'] = $request->city;
         }
 
-        if (!empty($request->permanent_other_city)) {
+        if (! empty($request->permanent_other_city)) {
             $permanentOtherCity = City::firstOrCreate(
                 [
                     'country_master_pk' => $request->permanentcountry,
                     'state_master_pk' => $request->permanentstate,
                     'district_master_pk' => $request->permanentdistrict,
                     'city_name' => $request->permanent_other_city,
-                    'active_inactive' => 1
+                    'active_inactive' => 1,
                 ],
                 [
-                    'active_inactive' => 1
+                    'active_inactive' => 1,
                 ]
             );
             $address['pcity'] = $permanentOtherCity->pk;
@@ -145,7 +198,7 @@ class MemberController extends Controller
     {
         $validatorClass = "App\\Http\\Requests\\Admin\\Member\\StoreMemberStep{$step}Request";
 
-        if (!class_exists($validatorClass)) {
+        if (! class_exists($validatorClass)) {
             return response()->json(['error' => 'Invalid step'], 400);
         }
 
@@ -180,7 +233,7 @@ class MemberController extends Controller
 
         if ($validator->fails()) {
             return response()->json([
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -193,6 +246,38 @@ class MemberController extends Controller
      * Merge rules()/messages() from all 5 step requests into one combined validator,
      * since the final submit carries every step's fields at once.
      */
+    /**
+     * The same object-level decision EnsureMemberRecordAccess makes, for the
+     * routes that carry the member's key in the request body instead of the URL.
+     *
+     * One rule, resolved through one method, so the middleware and the
+     * controller cannot come to different answers about who may touch a record.
+     */
+    /**
+     * The same decision EnsureMemberRecordAccess makes, from the same method.
+     *
+     * It used to be a copy of the rule rather than a call to it - `user_id`
+     * compared to the requested pk, in both places. Two copies of an
+     * authorisation rule drift, and this pair had further to drift than most:
+     * the middleware guards the wizard READS and this guards the WRITE, so a
+     * divergence would have meant a record you may not open but may save.
+     * F-024 tightened the rule (user_category = 'E' plus a contact proof, see
+     * that class), and this now inherits the change instead of needing the same
+     * edit made twice.
+     */
+    private function authorizeMemberRecord($memberPk): void
+    {
+        if (EnsureMemberPiiAccess::grantsAccess()) {
+            return;
+        }
+
+        abort_unless(
+            EnsureMemberRecordAccess::ownsMemberRecord($memberPk),
+            403,
+            'You do not have access to this member record.'
+        );
+    }
+
     private function combinedMemberRules(): array
     {
         $requestClasses = [
@@ -206,7 +291,7 @@ class MemberController extends Controller
         $rules = [];
         $messages = [];
         foreach ($requestClasses as $requestClass) {
-            $instance = new $requestClass();
+            $instance = new $requestClass;
             $rules = array_merge($rules, $instance->rules());
             $messages = array_merge($messages, $instance->messages());
         }
@@ -233,32 +318,75 @@ class MemberController extends Controller
             $additional_doc_upload = $request->file('additionaldocument')->store('members', 'public');
         }
 
-        $employee = EmployeeMaster::create(array_merge(
-            $this->mapStep1Data($request),
-            $this->mapStep2Data($request),
-            $this->mapStep4Data($request),
-            $this->mapStep5Data($request, $profile_picture, $additional_doc_upload)
-        ));
+        // The unique rules above run in a separate statement from the insert, so
+        // two submits that arrive together can both pass them and both create a
+        // member: a re-POST after a refresh, a second tab, a replayed request, or
+        // any client where the page's double-submit guard never loaded. The
+        // re-check below runs inside the transaction and takes a row lock, which
+        // on InnoDB also gap-locks the indexed emp_id range, so the second submit
+        // waits for the first and then sees the row it would have duplicated.
+        //
+        // This is a guard, not a guarantee - only a unique constraint is that,
+        // and employee_master.emp_id cannot carry one until the duplicate groups
+        // already in the table are cleaned up and emp_id is confirmed to be the
+        // intended business key. Both are open human actions.
+        $duplicate = null;
 
-        $userCredential = UserCredential::create([
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'email_id' => $request->personalemail,
-            'mobile_no' => $request->mnumber,
-            'reg_date' => now(),
-            'user_id' => $employee->pk,
-            'user_name' => $request->userid,
-            'user_category' => 'E'
-        ]);
+        DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload, &$duplicate) {
+            if (EmployeeMaster::where('emp_id', $request->id)->lockForUpdate()->exists()) {
+                $duplicate = ['id' => ['This employee ID already exists']];
 
-        if ($userCredential) {
-            $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
-            foreach ($roles as $role) {
-                EmployeeRoleMapping::create([
-                    'user_credentials_pk' => $userCredential->pk,
-                    'user_role_master_pk' => $role,
-                ]);
+                return;
             }
+
+            if (UserCredential::where('user_name', $request->userid)->lockForUpdate()->exists()) {
+                $duplicate = ['userid' => ['This user ID already exists']];
+
+                return;
+            }
+
+            $employee = EmployeeMaster::create(array_merge(
+                $this->mapStep1Data($request),
+                $this->mapStep2Data($request),
+                $this->mapStep4Data($request),
+                $this->mapStep5Data($request, $profile_picture, $additional_doc_upload)
+            ));
+
+            $userCredential = UserCredential::create([
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
+                'email_id' => $request->personalemail,
+                'mobile_no' => $request->mnumber,
+                'reg_date' => now(),
+                'user_id' => $employee->pk,
+                'user_name' => $request->userid,
+                'user_category' => 'E',
+            ]);
+
+            if ($userCredential) {
+                $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
+                foreach ($roles as $role) {
+                    EmployeeRoleMapping::create([
+                        'user_credentials_pk' => $userCredential->pk,
+                        'user_role_master_pk' => $role,
+                    ]);
+                }
+            }
+        });
+
+        // Same shape the validator returns, so the wizard renders it in the same
+        // place as any other field error rather than as an unexplained failure.
+        if ($duplicate !== null) {
+            // The uploads were written before the transaction opened, and this
+            // early return is new: before the duplicate guard existed, every
+            // create that reached this point inserted a row, so every stored
+            // file was referenced by one. A refused duplicate would otherwise
+            // leave a profile picture and an identity document on the PUBLIC
+            // disk with nothing pointing at them - unreferenced personal
+            // documents, accumulating one pair per refused re-submit.
+            Storage::disk('public')->delete(array_filter([$profile_picture, $additional_doc_upload]));
+
+            return response()->json(['errors' => $duplicate], 422);
         }
 
         MemberDataTable::bumpListingCacheEpoch();
@@ -266,7 +394,15 @@ class MemberController extends Controller
         return response()->json(['message' => 'Member successfully created']);
     }
 
-    public function update(Request $request) {
+    public function update(Request $request)
+    {
+
+        // The write twin of the edit wizard. `member.update` takes the member's
+        // pk from the BODY rather than the route, so the member.record
+        // middleware cannot see it - without this check, gating the read path
+        // while leaving this open would let any authenticated account rewrite
+        // any member's record, which is the larger half of the same hole.
+        $this->authorizeMemberRecord($request->emp_id);
 
         [$rules, $messages] = $this->combinedMemberRules();
 
@@ -296,12 +432,12 @@ class MemberController extends Controller
         UserCredential::updateOrCreate(
             ['user_id' => $request->emp_id], // Search condition
             [
-                'first_name'  => $request->first_name,
-                'last_name'   => $request->last_name,
-                'email_id'    => $request->personalemail,
-                'mobile_no'   => $request->mnumber,
-                'user_name'   => $request->userid,
-                'user_category' => 'E'
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
+                'email_id' => $request->personalemail,
+                'mobile_no' => $request->mnumber,
+                'user_name' => $request->userid,
+                'user_category' => 'E',
             ]
         );
         $userCredential = UserCredential::where('user_id', $request->emp_id)->first();
@@ -329,47 +465,195 @@ class MemberController extends Controller
         $appellationMasterList = AppellationMaster::where('active_inactive', 1)
             ->pluck('appettation_name', 'pk')
             ->toArray();
+
         return view("admin.member.steps.step{$step}", compact('appellationMasterList'));
     }
 
     public function show($id)
     {
-        $member = EmployeeMaster::with('appellationMaster')->findOrFail(decrypt($id));
-        return view('admin.member.show', compact('member'));
+        // Same reason as printMember(): a tampered id is a 404, not a 500.
+        try {
+            $memberPk = decrypt($id);
+        } catch (DecryptException $e) {
+            abort(404);
+        }
+
+        $member = EmployeeMaster::with('appellationMaster')->findOrFail($memberPk);
+
+        $this->logMemberPii('show', ['member_pk' => $member->pk]);
+
+        return view('admin.member.show', [
+            'member' => $member,
+            'sections' => $this->memberProfileSections($member),
+        ]);
     }
 
-    public function edit($id) {
+    /**
+     * One member's profile, grouped into the sections both the View screen and
+     * the print sheet render.
+     *
+     * Built here rather than in either view so the printed copy cannot quietly
+     * drift from the screen it was printed off — the same reason the listing's
+     * four export formats share one column list.
+     *
+     * A '__wide' marker means "every field after this one spans the full width".
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function memberProfileSections(EmployeeMaster $member): array
+    {
+        return [
+            'Personal Information' => [
+                'Title' => optional($member->appellationMaster)->appettation_name,
+                'First Name' => $member->first_name,
+                'Middle Name' => $member->middle_name,
+                'Last Name' => $member->last_name,
+                "Father's / Husband's Name" => $member->father_name,
+                'Date of Birth' => $member->dob,
+                'Gender' => EmployeeMaster::gender[$member->gender] ?? null,
+                'Marital Status' => EmployeeMaster::maritalStatus[$member->marital_status] ?? null,
+                'Height (Without Shoes)' => filled($member->height) ? $member->height.' cm' : null,
+            ],
+            'Employment Details' => [
+                'Employee ID' => $member->emp_id,
+                'User ID' => optional($member->userCredential)->user_name,
+                'Employee Type' => optional($member->employeeType)->category_type_name,
+                'Employee Group' => optional($member->employeeGroup)->emp_group_name,
+                'Designation' => optional($member->designation)->designation_name,
+                'Department' => optional($member->department)->department_name,
+            ],
+            'Contact Information' => [
+                'Personal Email' => $member->email,
+                'Official Email' => $member->officalemail,
+                'Mobile Number' => $member->mobile,
+                'Emergency Contact Number' => $member->emergency_contact_no,
+                'Landline Number' => $member->landline_contact_no,
+                'Residence Number' => $member->residence_no,
+            ],
+            'Address' => [
+                'Country' => optional(Country::find($member->country_master_pk))->country_name,
+                'State' => optional(State::find($member->state_master_pk))->state_name,
+                'District' => optional(District::find($member->state_district_mapping_pk))->district_name,
+                'City' => optional(City::find($member->city))->city_name,
+                'Postal Code' => $member->zipcode,
+                '__wide' => true,
+                'Current Address' => $member->current_address,
+                'Permanent Address' => $member->permanent_address,
+                'Home Address Data' => $member->home_town_details,
+            ],
+        ];
+    }
+
+    /**
+     * Branded print sheet for ONE member — the row-level Print action.
+     *
+     * The listing's Print gives the whole filtered table; this gives the single
+     * profile, which is what you want when handing someone their own record. It
+     * is a server-rendered page like every other export here, not window.print()
+     * over the View screen, so it carries the letterhead and none of the app
+     * chrome (docs/new-design-index-page.md §1).
+     */
+    public function printMember($id)
+    {
+        // decrypt() throws DecryptException, which is not an HTTP exception, so
+        // an edited or truncated link reached the handler as a 500 and was
+        // logged as a server fault. A tampered id is a missing page.
+        try {
+            $memberPk = decrypt($id);
+        } catch (DecryptException $e) {
+            abort(404);
+        }
+
+        $member = EmployeeMaster::with('appellationMaster')->findOrFail($memberPk);
+
+        $this->logMemberPii('print', ['member_pk' => $member->pk]);
+
+        return view('admin.member.print', [
+            'member' => $member,
+            'sections' => $this->memberProfileSections($member),
+            'assignedRoles' => $member->assignedRoles(),
+            'exportDate' => now()->format('d-m-Y h:i A'),
+        ]);
+    }
+
+    /**
+     * The wizard reads, gated IN THE METHOD and not only on the route.
+     *
+     * `member.record` is attached to member/edit/{id}, member/profile/edit/{id}
+     * and the edit-step routes, and that was the whole boundary until now. It
+     * was never the whole story: middleware protects a URL, not the method
+     * behind it, and this controller is mounted TWICE. The mirror group at
+     * routes/web.php:1218 - Route::prefix('admin/setup/member')->controller(
+     * MemberController::class) - carries the enclosing `auth` and nothing else,
+     * and it includes edit/{id}. So GET /admin/setup/member/edit/<any pk>
+     * answered 200 to an account that GET /member/edit/<same pk> answered 403.
+     *
+     * Nothing leaked through it, and the reason is worth stating because it is
+     * not a control: admin/member/edit.blade.php is a SHELL. It embeds
+     * $member->pk and fetches every field over member/edit-step/{step}/{id},
+     * which is gated, then saves through member.update, which calls
+     * authorizeMemberRecord() below. Render one member field into that view
+     * server-side and the mirror route serves it to every authenticated
+     * account. The 200 also distinguishes a live pk from an absent one (404),
+     * which is an enumeration oracle on its own.
+     *
+     * So the check moves to where the data is. update() has always done this;
+     * these three now do the same, which makes the rule hold for every route
+     * that reaches them - including one added later by someone who never reads
+     * this file. Recorded as PR #309 F-041; it also answers F-019, which asked
+     * for the boundary to be decided once and applied to every route that
+     * returns member personal data rather than only to the ones returning a
+     * file.
+     *
+     * The route middleware stays. It refuses before the controller is reached,
+     * which is cheaper and keeps the 403 uniform; this is defence in depth, not
+     * a replacement.
+     */
+    public function edit($id)
+    {
+        $this->authorizeMemberRecord($id);
         $member = EmployeeMaster::findOrFail($id);
         $appellationMasterList = AppellationMaster::where('active_inactive', 1)
             ->pluck('appettation_name', 'pk')
             ->toArray();
+
         return view('admin.member.edit', compact('member', 'appellationMasterList'));
     }
 
-    public function editProfile($id) {
+    public function editProfile($id)
+    {
+        $this->authorizeMemberRecord($id);
         $member = EmployeeMaster::findOrFail($id);
         $appellationMasterList = AppellationMaster::where('active_inactive', 1)
             ->pluck('appettation_name', 'pk')
             ->toArray();
+
         return view('admin.member.edit_profile', compact('member', 'appellationMasterList'));
     }
 
-    function editStep($step, $id)
+    public function editStep($step, $id)
     {
+        $this->authorizeMemberRecord($id);
         $member = EmployeeMaster::findOrFail($id);
         $appellationMasterList = AppellationMaster::where('active_inactive', 1)
             ->pluck('appettation_name', 'pk')
             ->toArray();
+
         return view("admin.member.edit_steps.step{$step}", compact('member', 'appellationMasterList'));
     }
 
     public function updateValidateStep(Request $request, $step, $id)
     {
+        // Same rule as the three reads above and as update(): this endpoint
+        // takes a member pk and validates a payload against that member, so it
+        // answers "does this row exist / would this write be accepted" for
+        // whichever pk it is handed.
+        $this->authorizeMemberRecord($id);
 
         $request->merge(['emp_id' => $id]);
 
         $validatorClass = "App\\Http\\Requests\\Admin\\Member\\StoreMemberStep{$step}Request";
-        if (!class_exists($validatorClass)) {
+        if (! class_exists($validatorClass)) {
             return response()->json(['error' => 'Invalid step'], 400);
         }
 
@@ -411,9 +695,198 @@ class MemberController extends Controller
             'message' => "Step $step validated.",
         ], 200);
     }
+
+    /**
+     * The listing's export columns - deliberately the same nine the grid shows,
+     * in the same order, so a downloaded report can be reconciled against the
+     * screen it came from (docs/new-design-index-page.md section 1).
+     *
+     * One definition feeds CSV, Excel, PDF and Print; none of them may build
+     * their own column list.
+     *
+     * @return array<string, array{heading:string, class:string, value:callable}>
+     */
+    private function exportColumnDefs(): array
+    {
+        return [
+            'sno' => [
+                'heading' => 'S. No.',
+                'class' => 'col-sno',
+                'value' => fn ($row, int $index) => $index + 1,
+            ],
+            'employee_name' => [
+                'heading' => 'Employee Name',
+                'class' => 'col-name',
+                'value' => function ($row) {
+                    $appellation = $row->appellation ? ($row->appellationMaster->appettation_name ?? null) : null;
+
+                    $parts = array_filter(
+                        array_map(
+                            fn ($part) => trim((string) $part),
+                            [$appellation, $row->first_name, $row->middle_name, $row->last_name]
+                        ),
+                        fn ($part) => $part !== ''
+                    );
+
+                    return implode(' ', $parts);
+                },
+            ],
+            'employee_id' => [
+                'heading' => 'Employee ID',
+                'class' => 'col-empid',
+                'value' => fn ($row) => (string) $row->emp_id,
+            ],
+            'employee_type' => [
+                'heading' => 'Employee Type',
+                'class' => 'col-type',
+                'value' => fn ($row) => (string) optional($row->employeeType)->category_type_name,
+            ],
+            'employee_group' => [
+                'heading' => 'Employee Group',
+                'class' => 'col-group',
+                'value' => fn ($row) => (string) optional($row->employeeGroup)->emp_group_name,
+            ],
+            'department' => [
+                'heading' => 'Department',
+                'class' => 'col-dept',
+                'value' => fn ($row) => (string) optional($row->department)->department_name,
+            ],
+            'mobile_no' => [
+                'heading' => 'Mobile No',
+                'class' => 'col-mobile',
+                'value' => fn ($row) => (string) $row->mobile,
+            ],
+            'email' => [
+                'heading' => 'Email',
+                'class' => 'col-email',
+                'value' => fn ($row) => (string) $row->email,
+            ],
+            'status' => [
+                'heading' => 'Status',
+                'class' => 'col-status',
+                'value' => fn ($row) => ((int) $row->status === 1) ? 'Active' : 'Inactive',
+            ],
+        ];
+    }
+
+    /**
+     * Member listing -> CSV / Excel / PDF / Print, all through
+     * {@see ExportsBrandedGrid}.
+     *
+     * The four run off one query and one column list, and honour whatever the
+     * grid is showing: the search box and the Columns modal, plus a
+     * ?status_filter= when one is deep-linked. Print is a server-rendered
+     * branded view, not window.print() over the screen.
+     */
+    /**
+     * One structured line per personal-data egress from this controller.
+     *
+     * These endpoints hand out a member's home address, date of birth, personal
+     * email and mobile — the print sheet for one member, the export for every
+     * member matching the current filters. A privileged read of personal data
+     * with no record of who took it, when, or how much is not auditable after
+     * the fact, which is the whole point of having the record.
+     *
+     * The row DATA is never logged: copying the PII into log files would widen
+     * the exposure rather than account for it.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function logMemberPii(string $action, array $context = []): void
+    {
+        // LogSafe::context() first: `filters` carries the user's own ?q= text,
+        // and the default LineFormatter keeps inline line breaks, so a %0A in
+        // the search box used to close this record and open a second, forged
+        // one naming any actor, format and row count. An audit line that the
+        // audited person can write is worse than none, because it is believed.
+        Log::info('member.pii.'.$action, LogSafe::context(array_merge([
+            // user_credentials is keyed on `pk`, so auth()->id() is that pk.
+            'user_pk' => auth()->id(),
+            'ip' => request()->ip(),
+        ], $context)));
+    }
+
+    public function export(Request $request, string $format = 'csv')
+    {
+        $format = strtolower($format);
+        abort_unless(in_array($format, ['csv', 'excel', 'pdf', 'print'], true), 404);
+
+        $filters = MemberDataTable::resolveFilters();
+        $search = trim((string) $request->query('q', ''));
+
+        // Same columns and same relations MemberDataTable::query() reads, from
+        // the same two constants - an export that selected a different set could
+        // put columns in the file that the screen it was started from never
+        // showed. Explicit, not SELECT *: this query is not paginated, so the
+        // default pulled all 73 employee_master columns for every matching row.
+        $query = EmployeeMaster::query()
+            ->select(MemberDataTable::LISTING_COLUMNS)
+            ->with(MemberDataTable::LISTING_RELATIONS);
+        MemberDataTable::applyListingFilters($query, $filters, $search);
+        $rows = $query->orderBy('pk', 'desc')->get();
+
+        // One filter description, rendered by all four formats. The dropdowns are
+        // named on the sheet, not just applied to it — a report that silently
+        // omits 1,700 rows is indistinguishable from a broken one.
+        $filterParts = array_filter([
+            $filters['status'] !== '' ? 'Status: '.ucfirst($filters['status']) : null,
+            // `!== null`, not truthiness: a filter on pk 0 is applied to the
+            // rows, so it has to be named on the sheet too, or the export claims
+            // to be unfiltered while showing a subset.
+            $filters['type'] !== null ? 'Type: '.(optional(EmployeeTypeMaster::find($filters['type']))->category_type_name ?? $filters['type']) : null,
+            $filters['group'] !== null ? 'Group: '.(optional(EmployeeGroupMaster::find($filters['group']))->emp_group_name ?? $filters['group']) : null,
+            $filters['department'] !== null ? 'Department: '.(optional(DepartmentMaster::find($filters['department']))->department_name ?? $filters['department']) : null,
+            $search !== '' ? 'Search: '.$search : null,
+        ]);
+
+        $this->logMemberPii('export', [
+            'format' => $format,
+            'filters' => $filterParts === [] ? null : implode('  |  ', $filterParts),
+            'rows' => $rows->count(),
+        ]);
+
+        return $this->brandedGridResponse(
+            $format,
+            'Members',
+            'Members',
+            $rows,
+            $this->resolveExportColumns($this->exportColumnDefs(), $request),
+            $filterParts === [] ? null : implode('  |  ', $filterParts),
+            [
+                'emptyText' => 'No members to export',
+                'centeredKeys' => ['sno', 'status'],
+                'textKeys' => ['employee_id', 'mobile_no'],
+                // This grid is four figures deep, and DomPDF needs ~276 MB to lay
+                // out the 1,000-row cap — a hard OOM fatal (blank page, no error)
+                // wherever memory_limit is 256M. mPDF does the same page in
+                // ~144 MB and half the time. See ExportsBrandedGrid::$pdfRowCap.
+                'pdfEngine' => 'mpdf',
+                // Nine columns on A4 portrait: Name and Email give up the room
+                // Type / Group / Department need. Percentages, so the sheet still
+                // fills the page when the Columns modal drops some of them.
+                'columnStyles' => '
+        .col-sno    { width: 5%;  text-align: center; }
+        .col-name   { width: 17%; }
+        .col-empid  { width: 10%; }
+        .col-type   { width: 11%; }
+        .col-group  { width: 10%; }
+        .col-dept   { width: 13%; }
+        .col-mobile { width: 10%; }
+        .col-email  { width: 16%; }
+        .col-status { width: 8%;  text-align: center; }',
+            ]
+        );
+    }
+
+    /**
+     * The legacy full-profile dump (every employee_master column). Kept alongside
+     * the grid exports above because it is a different report, not a format of
+     * the same one — dropping it would lose data the grid exports don't carry.
+     */
     public function excelExport(Request $request)
     {
         $fileName = 'members-'.date('d-m-Y').'.xlsx';
+
         return Excel::download(new MemberExport, $fileName);
     }
 
@@ -429,6 +902,14 @@ class MemberController extends Controller
             // Update the status
             $member->update(['status' => $newStatus]);
 
+            // Same audit line the gated reads leave. This endpoint is now behind
+            // member.pii, and a privileged mutation with no trail is what let the
+            // ungated version of it go unnoticed.
+            $this->logMemberPii('toggle_status', [
+                'member_pk' => (int) $member->pk,
+                'new_status' => $newStatus,
+            ]);
+
             // Bump cache epoch to refresh datatable
             MemberDataTable::bumpListingCacheEpoch();
 
@@ -441,19 +922,19 @@ class MemberController extends Controller
                     'success' => true,
                     'message' => "Status updated to {$statusLabel}.",
                     'status' => $newStatus,
-                    'statusLabel' => $statusLabel
+                    'statusLabel' => $statusLabel,
                 ], 200);
             }
 
             // Redirect with success message for non-AJAX requests
             return redirect()->route('member.index')->with('success', "Status updated to {$statusLabel}.");
         } catch (\Exception $e) {
-            $errorMessage = 'Error toggling status: ' . $e->getMessage();
+            $errorMessage = 'Error toggling status: '.$e->getMessage();
 
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $errorMessage
+                    'message' => $errorMessage,
                 ], 500);
             }
 
@@ -473,6 +954,7 @@ class MemberController extends Controller
                 if (request()->ajax()) {
                     return response()->json(['success' => false, 'message' => $message], 422);
                 }
+
                 return redirect()->route('member.index')->with('error', $message);
             }
 
@@ -488,18 +970,27 @@ class MemberController extends Controller
             // Delete the member
             $member->delete();
 
+            // Audit AFTER the deletes succeed: this removes an employee row, a
+            // user_credentials row and every role mapping attached to it, which
+            // is the most destructive act in the module.
+            $this->logMemberPii('destroy', [
+                'member_pk' => (int) $memberId,
+            ]);
+
             MemberDataTable::bumpListingCacheEpoch();
 
             $message = 'Member deleted successfully.';
             if (request()->ajax()) {
                 return response()->json(['success' => true, 'message' => $message]);
             }
+
             return redirect()->route('member.index')->with('success', $message);
         } catch (\Exception $e) {
-            $message = 'Error deleting member: ' . $e->getMessage();
+            $message = 'Error deleting member: '.$e->getMessage();
             if (request()->ajax()) {
                 return response()->json(['success' => false, 'message' => $message], 500);
             }
+
             return redirect()->route('member.index')->with('error', $message);
         }
     }

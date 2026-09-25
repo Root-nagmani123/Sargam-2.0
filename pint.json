@@ -1,0 +1,13 @@
+{
+    "preset": "laravel",
+    "exclude": [
+        "bootstrap/cache",
+        "public",
+        "storage",
+        "vendor",
+        "node_modules"
+    ],
+    "rules": {
+        "line_ending": false
+    }
+}

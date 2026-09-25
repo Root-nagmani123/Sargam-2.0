@@ -2,23 +2,26 @@
 
 @section('title', 'Member - Sargam | Lal Bahadur')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/member-admin.css') }}?v={{ @filemtime(public_path('css/member-admin.css')) ?: time() }}">
+@endpush
+
 @section('setup_content')
 
-<div class="container-fluid">
+<div class="container-fluid member-admin-page member-form-page">
 
-    <x-breadcrum title="Member" />
+    <x-breadcrum title="Add Member" />
     <x-session_message />
 
     <!-- start Vertical Steps Example -->
-    <div class="card">
-        <div class="card-body">
-            <h4 class="card-title mb-0">Add Member</h4>
-            <h6 class="card-subtitle mb-3"></h6>
-            <hr>
+    <div>
+        <div>
 
             <form id="member-form" enctype="multipart/form-data">
                 @csrf
-                <div id="wizard" class="wizard clearfix vertical">
+                <div id="wizard" class="wizard clearfix vertical"
+                    data-finish-label="Add Employee"
+                    data-cancel-url="{{ route('member.index') }}">
                     <h3>Member Information</h3>
                     <section id="step-1" class="step-section">
                         <!-- Content will be loaded via AJAX -->
@@ -57,11 +60,14 @@
 </div>
 
 @push('scripts')
+<script src="{{ asset('js/member-wizard.js') }}?v={{ @filemtime(public_path('js/member-wizard.js')) ?: time() }}"></script>
 <script>
 $(document).ready(function() {
     const form = $("#member-form");
     const loadedSteps = {};
     let formIsDirty = false;
+    // True from the moment the member POST leaves until it fails; see onFinished.
+    let memberSubmitInFlight = false;
 
     const wizard = $("#wizard").steps({
         headerTag: "h3",
@@ -119,6 +125,18 @@ $(document).ready(function() {
         },
 
         onFinished: function() {
+            // The button guard in member-wizard.js stops the ordinary double
+            // click; this stops every other route to finish() (the Enter key,
+            // a programmatic call) while a POST is already in flight. Without
+            // it two requests both pass validation before either inserts, and
+            // employee_master has no unique constraint on emp_id to catch the
+            // duplicate.
+            if (memberSubmitInFlight) {
+                return;
+            }
+            memberSubmitInFlight = true;
+            window.MemberWizardUI.setBusy('#wizard', true);
+
             // All 5 steps' inputs are still in the DOM (jQuery Steps never removes
             // them), so this FormData already carries every field from every step —
             // this is the single point where the member is actually created.
@@ -136,6 +154,12 @@ $(document).ready(function() {
                     window.location.href = "/member";
                 },
                 error: function(xhr) {
+                    // Released only on failure: on success the page navigates
+                    // away, and re-enabling the button first would offer a
+                    // second submit of a member that already exists.
+                    memberSubmitInFlight = false;
+                    window.MemberWizardUI.setBusy('#wizard', false);
+
                     const status = xhr.status;
                     const errors = xhr.responseJSON?.errors || {};
                     const lastStep = $(".wizard .step-section").last();
@@ -150,6 +174,10 @@ $(document).ready(function() {
             });
         }
     });
+
+    // Rail numbering + the Cancel / Next (→ "Add Employee") pair. Presentation
+    // only — the wizard above still owns validation and submit.
+    window.MemberWizardUI.attach('#wizard');
 
     // --- Unsaved changes protection ---
     // Any edit inside the wizard (including fields loaded later via AJAX,
@@ -214,13 +242,128 @@ $(document).ready(function() {
     }
 
     function showErrors(stepElement, errors) {
-        clearErrors(stepElement);
-        $.each(errors, function(field, messages) {
-            const input = stepElement.find(`[name="${field}"]`);
-            const message = messages[0];
-            const errorDiv = $('<div class="text-danger mt-1"></div>').text(message);
-            input.addClass("is-invalid").after(errorDiv);
+        // The server validates the UNION of all five steps (MemberController::
+        // combinedMemberRules), so a final-submit 422 can name a field that is not
+        // on the step we were handed.
+        //
+        // jQuery Steps keeps every step body in the DOM but HIDES all but the
+        // current one - jquery.steps.min.js K() calls _showAria(currentIndex === d),
+        // and _showAria(false) is this.hide()._aria("hidden","true"), i.e. inline
+        // display:none PLUS aria-hidden="true". So widening the search is not
+        // enough on its own: a message rendered into another step is invisible on
+        // screen and withheld from assistive technology as well.
+        //
+        // Three things therefore have to happen, and the last two are what make
+        // the message actually reach the user:
+        //   1. render each message next to its own field, wherever that field is;
+        //   2. walk the wizard back to the earliest step carrying an error, so
+        //      those messages become visible;
+        //   3. summarise anything still off-screen in a toast, so a failure can
+        //      never be silent even if navigation is refused mid-transition.
+        var wizard = $("#wizard");
+        var scope = wizard.length ? wizard : stepElement;
+        var unseen = [];
+        var firstErrorIndex = null;
+
+        clearErrors(scope);
+
+        $.each(errors, function (field, messages) {
+            var message = messages[0];
+            // The "[]" form catches array inputs such as userrole[] on step 3,
+            // whose error key arrives as "userrole" or "userrole.0".
+            var base = String(field).split(".")[0];
+            var input = stepElement.find('[name="' + field + '"]');
+            if (!input.length) input = scope.find('[name="' + field + '"]');
+            if (!input.length) input = scope.find('[name="' + base + '"]');
+            if (!input.length) input = scope.find('[name="' + base + '[]"]');
+            if (!input.length) {
+                // No field on the page owns this message - a toast is the only
+                // place it can go.
+                unseen.push(message);
+                return;
+            }
+
+            var target = input.first();
+            target.addClass("is-invalid")
+                  .after($('<div class="text-danger mt-1"></div>').text(message));
+
+            if (!target.is(":visible")) {
+                var idx = stepIndexOf(target);
+                if (idx !== null && (firstErrorIndex === null || idx < firstErrorIndex)) {
+                    firstErrorIndex = idx;
+                }
+                var title = stepTitleAt(idx);
+                unseen.push(title ? title + " - " + message : message);
+            }
         });
+
+        // Bring the earliest offending step into view. The messages are already
+        // rendered there, so this turns them from present-but-hidden into visible.
+        if (firstErrorIndex !== null && wizard.length) {
+            goToStep(wizard, firstErrorIndex);
+        }
+
+        if (unseen.length && window.toastr) {
+            // escapeHtml is off in this toastr build (escapeHtml: !1), so the
+            // message would otherwise be inserted as HTML. Force escaping and keep
+            // the separator plain text rather than <br>.
+            toastr.error(unseen.join(" \u00b7 "), "Please correct the highlighted fields",
+                { escapeHtml: true });
+        }
+    }
+
+    /**
+     * Index of the wizard step that owns an element, or null.
+     * jQuery Steps re-ids each step body as #wizard-p-{n} while leaving the
+     * original <section> element (and its step-section class) in place.
+     */
+    function stepIndexOf($el) {
+        var id = $el.closest("section").attr("id") || "";
+        var m = /wizard-p-(\d+)/.exec(id);
+        return m ? parseInt(m[1], 10) : null;
+    }
+
+    /** Human label for a step, read from the rail the plugin builds. */
+    function stepTitleAt(index) {
+        if (index === null) return "";
+        var a = $("#wizard").children(".steps").find("> ul > li").eq(index).find("a").first();
+        if (!a.length) return "";
+        var clone = a.clone();
+        clone.find(".number, .current-info").remove();
+        return $.trim(clone.text());
+    }
+
+    /**
+     * Step the wizard back to targetIndex.
+     *
+     * steps("setStep") is NOT usable - this build defines it as
+     * throw new Error("Not yet implemented!") - so move one step at a time with
+     * previous(). onStepChanging returns true immediately when newIndex <
+     * currentIndex, so going backwards never re-validates.
+     *
+     * If a call is refused (a slide transition still in flight) the index does not
+     * change; stop rather than spin. The toast has already been prepared, so the
+     * user is told either way.
+     */
+    function goToStep($wizard, targetIndex) {
+        for (var guard = 0; guard < 20; guard++) {
+            var current;
+            try {
+                current = $wizard.steps("getCurrentIndex");
+            } catch (e) {
+                // Fall back to the rail's own state if the plugin isn't ready.
+                current = $wizard.children(".steps").find("> ul > li").index($wizard.find("li.current"));
+            }
+            if (current === null || current <= targetIndex) return;
+            $wizard.steps("previous");
+            var moved;
+            try {
+                moved = $wizard.steps("getCurrentIndex");
+            } catch (e) {
+                return;
+            }
+            if (moved === current) return;
+        }
     }
 
     function clearErrors(stepElement) {
