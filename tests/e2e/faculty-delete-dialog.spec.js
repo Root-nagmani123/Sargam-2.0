@@ -14,9 +14,10 @@ const path = require("path");
  * The handler lives inside a Blade template, so it cannot be imported. Its <script> block is
  * lifted out of the real file and run in page context, which means this test fails if someone
  * edits the template rather than passing against a stale copy. No application server is needed.
- * jQuery comes from the bundle the admin layout loads (admin_assets/js/vendor.min.js, see
- * pre_header.blade.php); SweetAlert2 from the local copy in admin_assets/libs, because the
- * layout's CDN copy would need the network.
+ * jQuery comes from the bundle the admin layout loads (admin_assets/js/vendor.min.js, loaded by
+ * admin/layouts/footer.blade.php, which master.blade.php includes before @stack('scripts'));
+ * SweetAlert2 from the local copy in admin_assets/libs, because the layout's CDN copy would need
+ * the network.
  */
 
 const ROOT = path.join(__dirname, "..", "..");
