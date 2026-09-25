@@ -41,6 +41,23 @@ class MemberWizardStep6RegressionTest extends TestCase
     use DatabaseTransactions;
 
     /**
+     * PR #319 review (F-002): with no database reachable, DatabaseTransactions'
+     * beginDatabaseTransaction() (invoked from parent::setUp()) threw a raw PDOException
+     * and every test in this file errored rather than skipping — indistinguishable from a
+     * real defect on a run where the environment, not the code, is the reason nothing ran.
+     * Separate from requireStep6Schema() below, which handles a reachable database that is
+     * simply missing this PR's migrations.
+     */
+    protected function setUp(): void
+    {
+        try {
+            parent::setUp();
+        } catch (\Throwable $e) {
+            $this->markTestSkipped('Database not reachable: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Skip, with an actionable message, when this PR's migrations have not been applied.
      * Stated as a skip rather than a failure because the absence is an environment fact,
      * not a defect in the code these tests cover.

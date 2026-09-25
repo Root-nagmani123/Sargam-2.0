@@ -49,4 +49,6 @@ docker-compose.yml
 # is scoped to the generated files only: it matches neither bootstrap/app.php
 # nor bootstrap/cache/.gitignore.
 /bootstrap/cache/*.php
+/docs/Sargam-code-review-guideline/
+/reviews/
 

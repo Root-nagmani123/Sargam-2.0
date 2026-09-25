@@ -4658,6 +4658,11 @@ public function toggleStatus(Request $request)
 }
 public function assignRole($id)
 {
+    // PR #319 review (F-004): this screen discloses which roles a user holds, and carried
+    // no authorization check at all while assignRoleSave() beside it requires Super Admin.
+    // Same gate, so viewing and saving are consistent.
+    abort_unless(hasRole('Super Admin'), 403);
+
     try {
         $decryptedId = decrypt($id);
     } catch (\Exception $e) {

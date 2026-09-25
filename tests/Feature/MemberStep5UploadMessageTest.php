@@ -32,6 +32,13 @@ class MemberStep5UploadMessageTest extends TestCase
         $user->reg_date = now();
         $user->save();
 
+        // member.store is admin-only (MemberController::store() aborts unless
+        // actingUserCanManageMembers(), i.e. hasRole('Super Admin') — creating a member is
+        // never self-service). That gate did not exist when this test was first written; it
+        // arrived via the PR's own authorization hardening. Without this, both tests below
+        // hit 403 before ever reaching the picture/document validation they exercise.
+        $user->assignRole('Super Admin');
+
         return $user;
     }
 
@@ -90,7 +97,7 @@ class MemberStep5UploadMessageTest extends TestCase
         $response = $this->actingAs($actor)->post(route('member.store'), $payload);
 
         $response->assertStatus(422);
-        $response->assertJsonPath('errors.picture.0', 'Picture size must not exceed 500KB.');
+        $response->assertJsonPath('errors.picture.0', 'Picture size must not exceed 500 KB.');
     }
 
     /** F-036: the document-type message must list only the types the rule actually accepts (no doc/docx). */

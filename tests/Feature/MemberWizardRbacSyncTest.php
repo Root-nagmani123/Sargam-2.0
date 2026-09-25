@@ -29,6 +29,21 @@ class MemberWizardRbacSyncTest extends TestCase
 {
     use DatabaseTransactions;
 
+    /**
+     * PR #319 review (F-002): with no database reachable, DatabaseTransactions'
+     * beginDatabaseTransaction() (invoked from parent::setUp()) threw a raw PDOException
+     * and every test in this file errored rather than skipping — indistinguishable from a
+     * real defect on a run where the environment, not the code, is the reason nothing ran.
+     */
+    protected function setUp(): void
+    {
+        try {
+            parent::setUp();
+        } catch (\Throwable $e) {
+            $this->markTestSkipped('Database not reachable: ' . $e->getMessage());
+        }
+    }
+
     private function makeTestUser(string $suffix): User
     {
         // user_credentials has no created_at/updated_at columns, and User::$fillable

@@ -794,8 +794,12 @@ class MemberController extends Controller
         // Provide user resolver (for authorize() method)
         $formRequest->setUserResolver(fn () => $request->user());
 
-        // Run authorization logic
-        if (! $formRequest->authorize()) {
+        // PR #319 review (F-003): $formRequest->authorize() can never return false — every
+        // StoreMemberStep*Request::authorize() returns true unconditionally — so this branch
+        // was structurally unreachable and gated nothing. This endpoint backs the CREATE
+        // wizard (no member id yet), which is never self-service (see store()), so the real
+        // check is the same admin-only gate store() uses.
+        if (! $this->actingUserCanManageMembers()) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -1235,9 +1239,15 @@ class MemberController extends Controller
         // Resolve the user (for authorize())
         $formRequest->setUserResolver(fn () => $request->user());
 
-        // Run authorization
-        if (! $formRequest->authorize()) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+        // PR #319 review (F-003): same dead branch as validateStep() — every step request's
+        // authorize() returns true unconditionally. This endpoint backs the EDIT wizard (both
+        // admin edit and self-service profile edit, both carrying an $id), so the real check
+        // is the same one update() uses: Super Admin may write any member, anyone else only
+        // their own record.
+        try {
+            $this->authorizeMemberWrite($id);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return response()->json(['error' => 'Unauthorized'], $e->getStatusCode());
         }
 
         // Run validation with rules & messages from FormRequest

@@ -64,13 +64,13 @@ class MemberDataTable extends DataTable
                         $appellationPrefix = $appellation->appettation_name . ' ';
                     }
                 }
-                return '<label class="text-dark">' . $appellationPrefix . $row->first_name . ' ' . $row->middle_name . ' ' . $row->last_name . '</label>';
+                return '<label class="text-dark">' . e($appellationPrefix . $row->first_name . ' ' . $row->middle_name . ' ' . $row->last_name) . '</label>';
             })
-            ->addColumn('employee_id', fn($row) => '<label class="text-dark">' . $row->emp_id . '</label>')
+            ->addColumn('employee_id', fn($row) => '<label class="text-dark">' . e($row->emp_id) . '</label>')
             ->addColumn('department', fn($row) => '<label class="text-dark">' . e(optional($row->department)->department_name) . '</label>')
             ->addColumn('designation', fn($row) => '<label class="text-dark">' . e(optional($row->designation)->designation_name) . '</label>')
-            ->addColumn('mobile_no', fn($row) => '<label class="text-dark">' . $row->mobile . '</label>')
-            ->addColumn('email', fn($row) => '<label class="text-dark">' . $row->email . '</label>')
+            ->addColumn('mobile_no', fn($row) => '<label class="text-dark">' . e($row->mobile) . '</label>')
+            ->addColumn('email', fn($row) => '<label class="text-dark">' . e($row->email) . '</label>')
             ->addColumn('actions', function($row) {
                 $deleteUrl = route('member.destroy', encrypt($row->pk));
                 $isActive = $row->status == 1;
