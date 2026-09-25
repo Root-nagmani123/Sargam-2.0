@@ -33,7 +33,25 @@ class RolePermissionAdministrationGuardTest extends TestCase
     // Every test here posts to endpoints that WRITE when the guard is missing. Without
     // this, running the file against unfixed code (the red half of red/green) granted
     // directory.export to a real role in the shared database, and nothing rolled it back.
-    use DatabaseTransactions;
+    use DatabaseTransactions {
+        beginDatabaseTransaction as openTransaction;
+    }
+
+    /**
+     * The trait opens its transaction inside parent::setUp(), before any test body
+     * runs, so with no database it throws there and none of the skips below can
+     * fire. Probe first, so a missing database is a skip rather than an error.
+     */
+    public function beginDatabaseTransaction()
+    {
+        try {
+            DB::connection()->getPdo();
+        } catch (\Throwable $e) {
+            $this->markTestSkipped('role administration tests need the application database');
+        }
+
+        $this->openTransaction();
+    }
 
     /** Routes that must refuse an ordinary authenticated user, on BOTH mounts. */
     private const GUARDED_GET_ROUTES = [
@@ -95,8 +113,57 @@ class RolePermissionAdministrationGuardTest extends TestCase
     }
 
     /**
-     * The control. Without it a guard that refuses EVERYONE would pass the three
-     * tests above, and a review of those alone could not tell the two apart.
+     * The guard tests hasRole('Super Admin'), so the role-assignment endpoint is a
+     * second way past it: post your own user_id with the Super Admin role id, and
+     * every screen above opens. It must refuse, and must not have written the row.
+     */
+    public function test_an_ordinary_user_cannot_assign_themselves_super_admin(): void
+    {
+        $actor = $this->ordinaryUser();
+        $superAdminRole = DB::table('roles')->where('name', 'Super Admin')->value('id');
+
+        if (! $superAdminRole) {
+            $this->markTestSkipped('no Super Admin role in this database');
+        }
+
+        $this->actingAs($actor)
+            ->get(route('admin.users.assignRole', encrypt($actor->getKey())))
+            ->assertForbidden();
+
+        $this->actingAs($actor)
+            ->post(route('admin.users.assignRoleSave'), [
+                'user_id' => $actor->getKey(),
+                'roles' => [$superAdminRole],
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('model_has_roles', [
+            'model_id' => $actor->getKey(),
+            'role_id' => $superAdminRole,
+        ]);
+    }
+
+    /** The control for the test above: a Super Admin still reaches role assignment. */
+    public function test_a_super_admin_can_still_open_role_assignment(): void
+    {
+        $superAdmin = $this->superAdmin();
+
+        $level = ob_get_level();
+        $response = $this->actingAs($superAdmin)
+            ->get(route('admin.users.assignRole', encrypt($superAdmin->getKey())));
+
+        // Until PR #322 lands, the admin layout leaves one output buffer open per
+        // render; close it here so this test is not reported as risky for it.
+        while (ob_get_level() > $level) {
+            ob_end_clean();
+        }
+
+        $response->assertOk();
+    }
+
+    /**
+     * The control. Without it a guard that refuses EVERYONE would pass the
+     * refusal tests above, and a review of those alone could not tell the two apart.
      */
     public function test_a_super_admin_can_still_grant_a_permission(): void
     {

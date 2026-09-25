@@ -18,7 +18,22 @@ class Menu extends Model
 {
     use HasFactory,SoftDeletes;
 
-    protected $guarded = [];
+    // Explicit, not $guarded = []: these rows define permission names, so a column
+    // added to menus later must not become writable from the edit form by default.
+    // This is exactly what MenuRequest validates plus permission_name, which
+    // MenuService derives from the name rather than taking from the form.
+    protected $fillable = [
+        'category_id',
+        'group_id',
+        'parent_id',
+        'name',
+        'route',
+        'permission_name',
+        'order',
+        'icon',
+        'is_active',
+        'target',
+    ];
 
     public function category()
     {

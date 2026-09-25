@@ -29,6 +29,13 @@ use Illuminate\Http\Request;
  * database), so this narrows nobody's access in practice - it just stops the
  * screens being reachable without them.
  *
+ * IT ALSO GUARDS ROLE ASSIGNMENT (UserController::assignRole/assignRoleSave).
+ * A guard that tests a role is only as strong as the weakest writer of role
+ * assignments. `POST admin/users/assign-role-save` called syncRoles() on any
+ * user_id and role ids it was sent, so without this any account could grant
+ * itself Super Admin and then pass this check everywhere. Guarding the
+ * permission matrix alone closes the permission self-grant, not self-elevation.
+ *
  * WHY IT IS APPLIED IN THE CONTROLLER CONSTRUCTOR rather than on the routes:
  * RoleController is mounted twice, once bare and once under the admin/ prefix,
  * and a route-level guard protects one URL rather than the method behind it.
