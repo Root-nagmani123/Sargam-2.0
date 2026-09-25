@@ -7,9 +7,10 @@ use Tests\TestCase;
 /**
  * Every Blade directive that opens an output buffer must be closed.
  *
- * @section (one argument), @push, @prepend, @component and @slot all call
- * ob_start(). If the matching close is missing, the buffer is never cleaned and
- * the consequences are not local to that view:
+ * @section, @push, @prepend and @slot (each with one argument), @component,
+ * @pushOnce, @prependOnce, @pushIf and @fragment all call ob_start(). If the
+ * matching close is missing, the buffer is never cleaned and the consequences
+ * are not local to that view:
  *
  *   - every buffer level above the leak shifts by one, so the OUTERMOST buffer -
  *     the one holding anything echoed before the view started - is the one that
@@ -18,10 +19,11 @@ use Tests\TestCase;
  *     from, and why CompressResponse has to absorb it before gzipping (leading
  *     bytes in front of a gzip stream render a blank page - the ERR_CONTENT_
  *     DECODING_FAILED incident).
- *   - the content of the unclosed section is captured rather than emitted, so
- *     whatever follows the opener silently disappears. On master/country/create
- *     an @ensection typo meant addCountryField() was never rendered and the Add
- *     Country button did nothing.
+ *   - the content of the unclosed section never reaches its @yield. It is flushed
+ *     with the orphaned buffer instead, outside the document. On
+ *     master/country/create an @ensection typo left @section('scripts') open, so
+ *     the addCountryField() <script> was emitted ahead of <!DOCTYPE html> rather
+ *     than at the layout's @yield('scripts').
  *   - any test that renders such a page is reported RISKY by PHPUnit rather than
  *     passing, because the test did not close its own output buffers.
  *
@@ -31,10 +33,19 @@ use Tests\TestCase;
  */
 class BladeSectionBalanceTest extends TestCase
 {
-    /** Directives that call ob_start(). @section with a second argument does not. */
-    private const OPENERS = '@(section|push|prepend|slot|component)\s*\(';
+    /**
+     * Directives that call ob_start(). @section, @push, @prepend and @slot given a
+     * second argument take it as the content and open no buffer. The leading
+     * (?<![\w@]) mirrors Blade's own \B@: "@@push(" is an escape and "x@show" is
+     * text, neither is a directive. Directive names are case-insensitive, as the
+     * compiler dispatches them to PHP methods.
+     */
+    private const OPENERS = '/(?<![\w@])@(section|push|prepend|slot|component|pushOnce|prependOnce|pushIf|fragment)\s*\(/i';
 
-    private const CLOSERS = '@(endsection|stop|show|overwrite|append|endpush|endprepend|endslot|endcomponent)\b';
+    private const CLOSERS = '/(?<![\w@])@(endsection|stop|show|overwrite|append|endpush|endprepend|endslot|endcomponent|endPushOnce|endPrependOnce|endPushIf|endfragment)\b/i';
+
+    /** Openers whose second argument is content rather than part of the call. */
+    private const CONTENT_ARGUMENT = ['section', 'push', 'prepend', 'slot'];
 
     public function test_every_blade_closes_the_buffers_it_opens(): void
     {
@@ -55,6 +66,32 @@ class BladeSectionBalanceTest extends TestCase
             $this->imbalance("@section('title', 'Two args opens no buffer')\r\n"),
             'a two-argument @section does not call ob_start() and must not be counted'
         );
+        $this->assertSame(
+            0,
+            $this->imbalance("@push('scripts', '<script></script>')\r\n"),
+            'a two-argument @push does not call ob_start() and must not be counted'
+        );
+        $this->assertNull(
+            $this->imbalance("@endsection\r\n@section('css')\r\n"),
+            'a closer before its opener balances on paper but must be reported'
+        );
+        $this->assertSame(
+            0,
+            $this->imbalance("@@section('css') is an escape, and so is x@show.y\r\n"),
+            'escaped and word-embedded directives are text, not buffer operations'
+        );
+        foreach (['pushOnce' => 'endPushOnce', 'prependOnce' => 'endPrependOnce', 'pushIf' => 'endPushIf', 'fragment' => 'endfragment'] as $open => $close) {
+            $this->assertSame(
+                1,
+                $this->imbalance("@{$open}('a', 'b')\r\n<i></i>\r\n"),
+                "the detector no longer recognises an unclosed @{$open}"
+            );
+            $this->assertSame(
+                0,
+                $this->imbalance("@{$open}('a', 'b')\r\n<i></i>\r\n@{$close}\r\n"),
+                "the detector does not pair @{$open} with @{$close}"
+            );
+        }
 
         $unbalanced = [];
 
@@ -62,7 +99,11 @@ class BladeSectionBalanceTest extends TestCase
             $delta = $this->imbalance(file_get_contents($path));
 
             if ($delta !== 0) {
-                $unbalanced[] = sprintf('%+d  %s', $delta, str_replace(base_path().DIRECTORY_SEPARATOR, '', $path));
+                $unbalanced[] = sprintf(
+                    '%s  %s',
+                    $delta === null ? 'closes before opening' : sprintf('%+d', $delta),
+                    str_replace(base_path().DIRECTORY_SEPARATOR, '', $path)
+                );
             }
         }
 
@@ -75,27 +116,52 @@ class BladeSectionBalanceTest extends TestCase
         );
     }
 
-    /** Openers minus closers, ignoring Blade comments and @php blocks. */
-    private function imbalance(string $source): int
+    /**
+     * Openers minus closers, ignoring Blade comments, @php and @verbatim blocks.
+     * Null when a closer comes before any opener it could close: Blade throws on
+     * that at runtime, or it closes a buffer the file did not open.
+     */
+    private function imbalance(string $source): ?int
     {
         // Prose inside {{-- --}} and PHP inside @php ... @endphp mentions these
         // directive names without invoking them - the admin master layout has a
         // long comment about @section('content') that is not a directive.
         $source = preg_replace('/\{\{--.*?--\}\}/s', '', $source) ?? $source;
         $source = preg_replace('/@php\b.*?@endphp/s', '', $source) ?? $source;
+        $source = preg_replace('/@verbatim\b.*?@endverbatim/s', '', $source) ?? $source;
 
-        $opens = 0;
-        preg_match_all('/' . self::OPENERS . '/', $source, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
+        $events = [];
+        preg_match_all(self::OPENERS, $source, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
 
         foreach ($matches as $match) {
-            if ($match[1][0] === 'section' && $this->hasSecondArgument($source, $match[0][1] + strlen($match[0][0]))) {
+            $name = strtolower($match[1][0]);
+
+            if (in_array($name, self::CONTENT_ARGUMENT, true)
+                && $this->hasSecondArgument($source, $match[0][1] + strlen($match[0][0]))) {
                 continue;
             }
 
-            $opens++;
+            $events[$match[0][1]] = 1;
         }
 
-        return $opens - preg_match_all('/' . self::CLOSERS . '/', $source);
+        preg_match_all(self::CLOSERS, $source, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
+
+        foreach ($matches as $match) {
+            $events[$match[0][1]] = -1;
+        }
+
+        ksort($events);
+        $depth = 0;
+
+        foreach ($events as $step) {
+            $depth += $step;
+
+            if ($depth < 0) {
+                return null;
+            }
+        }
+
+        return $depth;
     }
 
     /** True when the argument list starting at $offset carries a top-level comma. */

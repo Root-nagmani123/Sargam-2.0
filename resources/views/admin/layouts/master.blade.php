@@ -109,12 +109,12 @@
     @include('admin.layouts.pre_header')
     <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }} - Sargam 2.0 | Lal Bahadur Shastri National Academy of
         Administration</title>
-    {{-- Deliberately NOT a @section('css'). The one @yield('css') lives in
-     admin.layouts.pre_header, included above, and it has already run by this
-     point, so it only ever emitted the css section a child view defines - never
-     these styles. The directive's only effect was an output buffer that was never
-     closed, leaking one buffer level on every page built on this layout. The
-     styles below are emitted inline, which is where they always ended up. --}}
+    {{-- Deliberately NOT a @section. This was an unclosed @section('css'): it opened an
+     output buffer that was never closed, so every page built on this layout leaked
+     one buffer level. A child page's own @section('css') is still emitted, by the
+     @yield('css') at the end of admin.layouts.pre_header (included above) - keep
+     that yield. The styles below are emitted inline, which is where they already
+     ended up. --}}
     <style>
         .nav-item .tab-item .active {
             background-color: #bbd9f7;
