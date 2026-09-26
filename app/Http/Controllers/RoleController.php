@@ -7,6 +7,7 @@ use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Models\SidebarMenu\SidebarCategory;
 use App\Models\DashboardCard;
+use App\Http\Middleware\EnsureRoleAdministration;
 
 class RoleController extends Controller
 {
@@ -14,6 +15,12 @@ class RoleController extends Controller
 
     public function __construct(RoleService $roleService)
     {
+        // Every action on this controller decides what other gates are worth,
+        // so the guard goes here rather than on the routes: this controller is
+        // mounted twice (bare, and under admin/), and a route-level guard
+        // protects one URL rather than the method behind it. PR #317 L-8.
+        $this->middleware(EnsureRoleAdministration::class);
+
         $this->service = $roleService;
     }
     /**

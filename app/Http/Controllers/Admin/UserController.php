@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\Master\FacultyExpertiseMasterController;
 use App\Http\Controllers\Admin\Master\FacultyTypeMasterController;
 use App\DataTables\UserCredentialsDataTable;
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\EnsureRoleAdministration;
 use App\Http\Requests\Admin\User\StoreUserRequest;
 use App\Http\Requests\Admin\User\UpdateUserRequest;
 use App\Models\User;
@@ -70,6 +71,15 @@ use Carbon\Carbon;
 
 class UserController extends Controller
 {
+    public function __construct()
+    {
+        // Assigning roles writes the predicate EnsureRoleAdministration tests. Left
+        // open, any signed-in account could post its own user_id with the Super
+        // Admin role and then walk through that guard on every screen it protects.
+        // Only these two actions: the rest of this controller serves dashboards.
+        $this->middleware(EnsureRoleAdministration::class)->only(['assignRole', 'assignRoleSave']);
+    }
+
     /** Notices per page on the dashboard feed. */
     private const NOTICE_FEED_PER_PAGE = 10;
 

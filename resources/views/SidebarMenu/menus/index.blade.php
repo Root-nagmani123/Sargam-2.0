@@ -161,8 +161,10 @@
                             <input type="text" class="form-control" name="route" id="route" placeholder="Enter menu url" value="{{old('route')}}">
                         </div>
                         <div class="col-12 form-group mb-2">
-                            <label class="form-label" for="permission_name">Permission Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="permission_name" id="permission_name" placeholder="Enter menu permission name" value="{{old('permission_name')}}">
+                            <label class="form-label" for="permission_name">Permission Name</label>
+                            <small class="text-muted fs-2">(set automatically from the name; renaming a menu changes it)</small>
+                            {{-- No name attribute: the server derives this value and ignores anything posted. --}}
+                            <input type="text" class="form-control" id="permission_name" readonly tabindex="-1" placeholder="Derived from the menu name">
                         </div>
                         <div class="col-6 form-group mb-2 position-relative">
                             <label class="form-label" for="icon">Icon</label>
@@ -209,17 +211,19 @@
 @section('script')
 <script src="{{ asset('admin_assets/js/material-symbols-list.js') }}"></script>
 <script>
-    let manualEdit = false;
-
-    $('#permission_name').on('keyup', function () {
-        manualEdit = true;
-    });
+    // Preview only. On create it follows the name; on edit it shows the stored
+    // permission, which the server changes only when the name itself changes.
+    let editingPermission = null;
+    let editingName = null;
 
     $('#name').on('keyup', function () {
 
-        if (manualEdit) return;
-
         let name = $(this).val();
+
+        if (editingPermission !== null && name.trim() === editingName.trim()) {
+            $('#permission_name').val(editingPermission);
+            return;
+        }
 
         let permission = name
             .toLowerCase()
@@ -246,14 +250,17 @@
 
     function MenuGroupModal(data = null) {
         $('input[name="_method"]').remove();
-        manualEdit = false;
+        editingPermission = null;
+        editingName = null;
+        $('#permission_name').val('');
 
         if (data) {
             $('#menuId').val(data.id);
             $('#name').val(data.name);
             $('#route').val(data.route ?? '');
-            $('#permission_name').val(data.permission_name);
-            manualEdit = true;
+            editingPermission = data.permission_name ?? '';
+            editingName = data.name ?? '';
+            $('#permission_name').val(editingPermission);
             $('#icon').val(data.icon ?? '');
             $('#order').val(data.order ?? '');
             $('#is_active').val(data.is_active);
@@ -380,11 +387,6 @@
                     required: false,
                     maxlength: 100,
                 },
-                permission_name: {
-                    required: false,
-                    minlength: 2,
-                    maxlength: 100,
-                },
                 icon: {
                     maxlength: 100
                 },
@@ -411,11 +413,6 @@
                 route: {
                     required: "Route is required",
                     maxlength: "Route must be less than 100 characters"
-                },
-                permission_name: {
-                    required: "Permission name is required",
-                    minlength: "Permission name must be at least 2 characters",
-                    maxlength: "Permission name must be less than 100 characters"
                 },
                 icon: {
                     maxlength: "Icon must be less than 100 characters"

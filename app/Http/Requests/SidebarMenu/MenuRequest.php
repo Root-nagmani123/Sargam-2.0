@@ -31,22 +31,8 @@ class MenuRequest extends FormRequest
             'parent_id' => 'nullable|exists:menus,id',
             'name' => 'required',
             'route' => 'nullable|string|max:255',
-            'permission_name' => [
-                'nullable',
-                'string',
-                'max:255',
-                Rule::unique('menus', 'permission_name')
-                    ->ignore($id)
-                    ->where(function ($query) {
-                        $query->where('group_id', $this->group_id);
-
-                        if ($this->parent_id) {
-                            $query->where('parent_id', $this->parent_id);
-                        } else {
-                            $query->whereNull('parent_id');
-                        }
-                    }),
-            ],
+            // No permission_name rule: MenuService derives it from the name and
+            // ignores anything posted, so it checks the name it actually stores.
             'order' => [
                 'nullable',
                 'integer',
