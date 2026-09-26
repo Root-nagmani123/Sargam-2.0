@@ -2,8 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\LogSafe;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Gate for the screens that decide what every other gate is worth: role CRUD,
@@ -51,6 +53,17 @@ class EnsureRoleAdministration
     public function handle(Request $request, Closure $next)
     {
         if (! isSidebarPrivilegedUser()) {
+            // Before this guard a self-grant succeeded silently; record the attempt
+            // now that it is refused. Route parameters are request text, so every
+            // value goes through LogSafe. The request body is never logged.
+            Log::warning('Refused role/permission administration request', LogSafe::context([
+                'actor'  => optional($request->user())->getKey(),
+                'route'  => optional($request->route())->getName(),
+                'method' => $request->method(),
+                'target' => optional($request->route())->parameters() ?? [],
+                'ip'     => $request->ip(),
+            ]));
+
             abort(403, 'You do not have access to role and permission administration.');
         }
 

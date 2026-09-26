@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\SidebarMenu\MenuService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -255,6 +256,27 @@ class RolePermissionAdministrationGuardTest extends TestCase
         }
 
         $this->assertDatabaseMissing('menus', ['name' => 'ZZ Review Probe 317']);
+    }
+
+    /** PR #323 F-006: a refusal leaves a record naming the actor and route, not the payload. */
+    public function test_a_refused_request_is_logged_without_its_payload(): void
+    {
+        $actor = $this->ordinaryUser();
+        $roleId = $this->roleIdOf($actor);
+        Log::spy();
+
+        $this->actingAs($actor)
+            ->post("/roles/permissions/{$roleId}", ['permission' => 'zz_secret_payload_value', 'status' => 1])
+            ->assertForbidden();
+
+        Log::shouldHaveReceived('warning')->once()->withArgs(function ($message, $context) use ($actor, $roleId) {
+            return $message === 'Refused role/permission administration request'
+                && $context['actor'] === $actor->getKey()
+                && $context['route'] === 'assign.roles.permissions'
+                && $context['method'] === 'POST'
+                && (string) ($context['target']['id'] ?? '') === (string) $roleId
+                && ! str_contains(json_encode($context), 'zz_secret_payload_value');
+        });
     }
 
     /** Must-succeed control for the guarded assign-role-save write. */
