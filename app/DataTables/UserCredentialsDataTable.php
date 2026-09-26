@@ -64,6 +64,11 @@ class UserCredentialsDataTable extends DataTable
             }
         }, true)
         ->addColumn('action', function ($row) {
+            // Role assignment is Super-Admin-only (EnsureRoleAdministration); do not
+            // offer a button that answers 403 to everyone else.
+            if (! isSidebarPrivilegedUser()) {
+                return '';
+            }
             $url = route('admin.users.assignRole', encrypt($row->pk));
             return '<a href="'.$url.'" class="btn btn-sm btn-primary">Assign Role</a>';
         })

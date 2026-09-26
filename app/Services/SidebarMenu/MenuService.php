@@ -16,6 +16,10 @@ use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Http\Request;
 use App\Models\SidebarMenu\{MenuGroup,SidebarCategory};
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
+use Spatie\Permission\PermissionRegistrar;
 
 class MenuService
 {
@@ -44,6 +48,23 @@ class MenuService
     public function store(array $data)
     {
         $permission = Str::slug($data['name'], '_');
+
+        // MenuRequest used to check uniqueness of the POSTED permission name, which
+        // is discarded. Check the name that is actually stored, with the same scope.
+        $clash = Menu::where('permission_name', $permission)
+            ->where('group_id', $data['group_id'] ?? null)
+            ->where(function ($q) use ($data) {
+                empty($data['parent_id'])
+                    ? $q->whereNull('parent_id')
+                    : $q->where('parent_id', $data['parent_id']);
+            })
+            ->exists();
+        if ($clash) {
+            throw ValidationException::withMessages([
+                'name' => "A menu in this group already uses the permission \"{$permission}\". Choose a different name.",
+            ]);
+        }
+
         $data['permission_name'] = $permission;
         $data['order'] = $data['order'] ?? Menu::max('order') + 1;
         $menu = Menu::create($data);
@@ -74,39 +95,87 @@ class MenuService
     {
         $menu = $this->find($id);
         $oldPermission = $menu->permission_name;
-        $newPermission = Str::slug($data['name'], '_');
 
-        // Derive the permission name here exactly as store() does, instead of
-        // saving whatever the edit form posted. Without this line the posted
-        // permission_name went through verbatim - Menu has $guarded = [] and
-        // MenuRequest puts no format rule on the field - while the block below
-        // renamed the PERMISSIONS row to $newPermission, so an edit left the two
-        // disagreeing, and a name the slug cannot produce (anything with a dot)
-        // could be planted on a menus row and would then be offered as a
-        // checkbox by the Roles matrix. PR #317 F-011, root cause L-9.
-        $data['permission_name'] = $newPermission;
+        // permission_name is never taken from the request (L-9): a posted value
+        // could plant a name the slug cannot produce. It only changes when the
+        // menu is renamed, or when the menu has none yet. Many live menus carry
+        // a name that differs from their slug, so re-deriving it on every Save
+        // would rename a live permission on an edit that changed only the icon.
+        unset($data['permission_name']);
         $data['order'] = $data['order'] ?? Menu::max('order') + 1;
-        $menu->update($data);
 
-        if ($oldPermission !== $newPermission) {
+        $nameChanged = trim((string) $data['name']) !== trim((string) $menu->name);
+        $newPermission = ($nameChanged || $oldPermission === null || $oldPermission === '')
+            ? Str::slug($data['name'], '_')
+            : $oldPermission;
 
-            $permission = Permission::where('name', $oldPermission)->first();
-
-            if ($permission) {
-                $permission->update([
-                    'name' => $newPermission,
-                    'guard_name' => 'web'
-                ]);
-            } else {
-                Permission::create([
-                    'name' => $newPermission,
-                    'guard_name' => 'web'
+        if ($newPermission !== $oldPermission) {
+            // permissions has no unique index, and the sidebar matches by name, so
+            // landing on an existing name would merge two sets of holders.
+            if (Permission::where('name', $newPermission)->exists()) {
+                throw ValidationException::withMessages([
+                    'name' => "A permission named \"{$newPermission}\" already exists. Choose a menu name that gives a different permission name.",
                 ]);
             }
+            $data['permission_name'] = $newPermission;
         }
+
+        DB::transaction(function () use ($menu, $data, $oldPermission, $newPermission) {
+            if ($newPermission !== $oldPermission) {
+                $this->movePermission($menu, $oldPermission, $newPermission);
+            }
+            $menu->update($data);
+        });
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
         SidebarNavResolver::clearCache();
         self::clearStructureCache();
         return $menu;
+    }
+
+    /**
+     * Give $menu the permission $new in place of $old without changing any other
+     * menu. The old row is renamed only when this menu is its sole user; when
+     * another live menu shares it (or the name is duplicated), a new row is
+     * created and every role and direct holder of the old name is granted it,
+     * so the edited menu keeps its audience and the other menus keep theirs.
+     */
+    private function movePermission(Menu $menu, ?string $old, string $new): void
+    {
+        $oldRows = ($old === null || $old === '')
+            ? collect()
+            : Permission::where('name', $old)->get();
+        $shared = $oldRows->isNotEmpty()
+            && Menu::where('permission_name', $old)->where('id', '!=', $menu->id)->exists();
+
+        if ($oldRows->count() === 1 && ! $shared) {
+            $oldRows->first()->update(['name' => $new, 'guard_name' => 'web']);
+            $mode = 'renamed';
+        } else {
+            $created = Permission::create(['name' => $new, 'guard_name' => 'web']);
+            foreach ($oldRows as $row) {
+                foreach ($row->roles as $role) {
+                    $role->givePermissionTo($created);
+                }
+                $direct = DB::table('model_has_permissions')->where('permission_id', $row->id)->get();
+                foreach ($direct as $grant) {
+                    DB::table('model_has_permissions')->insertOrIgnore([
+                        'permission_id' => $created->id,
+                        'model_type' => $grant->model_type,
+                        'model_id' => $grant->model_id,
+                    ]);
+                }
+            }
+            $mode = $oldRows->isEmpty() ? 'created' : 'copied';
+        }
+
+        Log::info('Sidebar menu permission changed', [
+            'actor' => optional(auth()->user())->getKey(),
+            'menu_id' => $menu->id,
+            'old_permission' => $old,
+            'new_permission' => $new,
+            'mode' => $mode,
+        ]);
     }
 
     public function delete($id)

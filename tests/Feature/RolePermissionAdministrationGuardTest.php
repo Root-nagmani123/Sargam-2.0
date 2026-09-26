@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\SidebarMenu\MenuService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
@@ -96,12 +97,20 @@ class RolePermissionAdministrationGuardTest extends TestCase
             $this->markTestSkipped('no menus row in this database');
         }
 
+        // A complete, valid edit-form payload, so that on unguarded code the request
+        // reaches the write rather than failing validation first.
         $this->actingAs($actor)
             ->put("/sidebar/menus/{$menu->id}", [
                 'category_id' => $menu->category_id,
                 'group_id' => $menu->group_id,
-                'name' => $menu->name,
+                'parent_id' => $menu->parent_id,
+                'name' => $menu->name . ' X',
+                'route' => $menu->route,
                 'permission_name' => 'directory.export',
+                'order' => $menu->order,
+                'icon' => $menu->icon,
+                'is_active' => (string) $menu->is_active,
+                'target' => (string) ($menu->target ?? '0'),
             ])
             ->assertForbidden();
 
@@ -248,7 +257,167 @@ class RolePermissionAdministrationGuardTest extends TestCase
         $this->assertDatabaseMissing('menus', ['name' => 'ZZ Review Probe 317']);
     }
 
+    /** Must-succeed control for the guarded assign-role-save write. */
+    public function test_a_super_admin_can_still_save_a_role_assignment(): void
+    {
+        $superAdmin = $this->superAdmin();
+        $target = $this->ordinaryUser();
+        $roles = DB::table('model_has_roles')->where('model_id', $target->getKey())
+            ->pluck('role_id')->map(fn ($id) => (int) $id)->sort()->values()->all();
+
+        $this->actingAs($superAdmin)
+            ->post(route('admin.users.assignRoleSave'), [
+                'user_id' => $target->getKey(),
+                'roles' => $roles,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame($roles, DB::table('model_has_roles')->where('model_id', $target->getKey())
+            ->pluck('role_id')->map(fn ($id) => (int) $id)->sort()->values()->all());
+    }
+
+    /** Must-succeed control for a write on the admin/ mount of RoleController. */
+    public function test_a_super_admin_can_still_create_a_role_on_the_admin_mount(): void
+    {
+        $this->actingAs($this->superAdmin())
+            ->post(route('admin.roles.store'), ['name' => 'ZZ Review Probe Role 323'])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('roles', ['name' => 'ZZ Review Probe Role 323']);
+    }
+
+    /**
+     * PR #323 F-001. Many live menus carry a permission name that differs from
+     * the slug of their name. Saving such a menu without renaming it must not
+     * touch any permission: re-deriving the name renamed a live permission.
+     */
+    public function test_an_unchanged_menu_save_renames_no_permission(): void
+    {
+        $this->permission('zz_probe_drift_old');
+        $menuId = $this->menuFixture('ZZ Probe Drift', 'zz_probe_drift_old');
+
+        (new MenuService())->update($menuId, $this->editPayload($menuId));
+
+        $this->assertSame('zz_probe_drift_old', DB::table('menus')->where('id', $menuId)->value('permission_name'));
+        $this->assertDatabaseHas('permissions', ['name' => 'zz_probe_drift_old']);
+        $this->assertDatabaseMissing('permissions', ['name' => 'zz_probe_drift']);
+    }
+
+    /** The same case through the real route and MenuRequest, as the edit form posts it. */
+    public function test_an_unchanged_menu_save_over_http_renames_no_permission(): void
+    {
+        $this->permission('zz_probe_http_old');
+        $menuId = $this->menuFixture('ZZ Probe Http', 'zz_probe_http_old');
+
+        $this->actingAs($this->superAdmin())
+            ->put("/sidebar/menus/{$menuId}", $this->editPayload($menuId))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('zz_probe_http_old', DB::table('menus')->where('id', $menuId)->value('permission_name'));
+        $this->assertDatabaseMissing('permissions', ['name' => 'zz_probe_http']);
+    }
+
+    /** A rename that would land on an existing permission name is refused, not merged. */
+    public function test_a_menu_rename_onto_an_existing_permission_name_is_refused(): void
+    {
+        $this->permission('zz_probe_one');
+        $this->permission('zz_probe_two');
+        $menuId = $this->menuFixture('ZZ Probe One', 'zz_probe_one');
+
+        try {
+            (new MenuService())->update($menuId, ['name' => 'ZZ Probe Two'] + $this->editPayload($menuId));
+            $this->fail('a rename onto an existing permission name must be refused');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('name', $e->errors());
+        }
+
+        $this->assertSame('zz_probe_one', DB::table('menus')->where('id', $menuId)->value('permission_name'));
+        $this->assertSame(1, DB::table('permissions')->where('name', 'zz_probe_one')->count());
+        $this->assertSame(1, DB::table('permissions')->where('name', 'zz_probe_two')->count());
+    }
+
+    /**
+     * Renaming a menu whose permission row another live menu also uses must leave
+     * that row, its name and its holders alone, and give the renamed menu a new
+     * row that the same roles hold.
+     */
+    public function test_renaming_a_menu_leaves_a_shared_permission_row_alone(): void
+    {
+        $roleId = $this->roleIdOf($this->ordinaryUser());
+        $shared = $this->permission('zz_probe_shared');
+        DB::table('role_has_permissions')->insert(['permission_id' => $shared, 'role_id' => $roleId]);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $renamed = $this->menuFixture('ZZ Probe Shared A', 'zz_probe_shared');
+        $sibling = $this->menuFixture('ZZ Probe Shared B', 'zz_probe_shared');
+
+        (new MenuService())->update($renamed, ['name' => 'ZZ Probe Gamma'] + $this->editPayload($renamed));
+
+        $this->assertSame('zz_probe_shared', DB::table('menus')->where('id', $sibling)->value('permission_name'));
+        $this->assertSame('zz_probe_gamma', DB::table('menus')->where('id', $renamed)->value('permission_name'));
+        $this->assertSame('zz_probe_shared', DB::table('permissions')->where('id', $shared)->value('name'));
+        $this->assertDatabaseHas('role_has_permissions', ['permission_id' => $shared, 'role_id' => $roleId]);
+
+        $gamma = DB::table('permissions')->where('name', 'zz_probe_gamma')->value('id');
+        $this->assertNotNull($gamma, 'the renamed menu needs its own permission row');
+        $this->assertDatabaseHas('role_has_permissions', ['permission_id' => $gamma, 'role_id' => $roleId]);
+    }
+
+    protected function tearDown(): void
+    {
+        // The transaction rolls back inside parent::tearDown(), after which the
+        // container is gone. Nothing reads permissions in between, so flushing
+        // here leaves no cache describing the rolled-back rows.
+        if ($this->app) {
+            $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
+        }
+        parent::tearDown();
+    }
+
     // -- fixtures ---------------------------------------------------------------
+
+    private function permission(string $name): int
+    {
+        $id = (int) DB::table('permissions')->insertGetId([
+            'name' => $name, 'guard_name' => 'web', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        return $id;
+    }
+
+    /** A menus row inside the test transaction, with a chosen permission name. */
+    private function menuFixture(string $name, string $permission): int
+    {
+        $category = DB::table('sidebar_categories')->value('id');
+        $group = DB::table('menu_groups')->value('id');
+
+        if (! $category || ! $group) {
+            $this->markTestSkipped('no sidebar category or menu group in this database');
+        }
+
+        return (int) DB::table('menus')->insertGetId([
+            'category_id' => $category, 'group_id' => $group, 'parent_id' => null,
+            'name' => $name, 'route' => null, 'permission_name' => $permission,
+            'order' => 900000 + DB::table('menus')->count(), 'icon' => null,
+            'is_active' => 1, 'target' => '0', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+    }
+
+    /** What the edit modal posts for an untouched row. */
+    private function editPayload(int $menuId): array
+    {
+        $row = DB::table('menus')->where('id', $menuId)->first();
+
+        return [
+            'category_id' => $row->category_id, 'group_id' => $row->group_id, 'parent_id' => $row->parent_id,
+            'name' => $row->name, 'route' => $row->route, 'order' => $row->order,
+            'icon' => $row->icon, 'is_active' => (string) $row->is_active, 'target' => (string) ($row->target ?? '0'),
+        ];
+    }
 
     private function superAdmin(): User
     {

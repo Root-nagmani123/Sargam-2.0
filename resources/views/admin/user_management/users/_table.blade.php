@@ -1,4 +1,8 @@
 {{-- Table --}}
+@php
+    // Role assignment is Super-Admin-only (EnsureRoleAdministration).
+    $canAssignRoles = isSidebarPrivilegedUser();
+@endphp
 <div class="users-table-outer">
     <div class="table-responsive users-dt-scroll">
         <table class="table align-middle mb-0 programme-dt-table users-table" id="zero_config_table">
@@ -23,12 +27,16 @@
                     <td>{{ $user->mobile_no ?: '—' }}</td>
                     <td class="users-usertype">{{ !empty($user->roles) ? $user->roles : 'No Role' }}</td>
                     <td>
+                        @if ($canAssignRoles)
                         <a href="{{ route('admin.users.assignRole', encrypt($user->pk)) }}"
                             class="users-assign-link"
                             aria-label="Assign role to {{ $user->user_name }}">
                             <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">assignment_ind</i>
                             <span>Assign</span>
                         </a>
+                        @else
+                        <span class="text-muted" aria-hidden="true">—</span>
+                        @endif
                     </td>
                 </tr>
                 @empty
