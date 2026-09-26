@@ -6,7 +6,6 @@ use App\DataTables\CourseMasterDataTable;
 use App\DataTables\FacultyDataTable;
 use App\DataTables\GroupMappingDataTable;
 use App\DataTables\Master\EmployeeTypeMasterDataTable;
-use App\DataTables\MemberDataTable;
 use App\DataTables\RoleDataTable;
 use App\Http\Controllers\Admin\IssueManagement\IssueCategoryController;
 use App\Http\Controllers\Admin\IssueManagement\IssueEscalationMatrixController;
@@ -4596,24 +4595,166 @@ class UserController extends Controller
         }
     }
 
+    /**
+     * Tables this generic status endpoint may write, with the key column and
+     * the status column allowed for each.
+     *
+     * The endpoint takes the table, column and key column straight from the
+     * request, so without this list any authenticated session can write any
+     * column of any table (accepted-risk record SAST-2026-08-21-01). The list
+     * is the complete set of screens that post here - every element carrying
+     * the global `.status-toggle` class under resources/views, app/ and
+     * public/ - so no screen that worked before is refused.
+     *
+     * Screens with their own toggle route never reach this method and are
+     * deliberately absent: member (`/member/{id}/toggle-status`), the sidebar
+     * screens, security vehicle pass/type (own `data-url`), and everything on
+     * `.plain-status-toggle`, which posts through a hidden form instead.
+     *
+     * Adding a status switch to a new screen means adding its row here.
+     */
+    private const TOGGLE_STATUS_ALLOWED = [
+        'appellation_master'                  => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'building_floor_room_mapping'         => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'building_master'                     => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'caste_category_master'               => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'city_master'                         => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'class_session_master'                => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'country_master'                      => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'course_master'                       => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'course_memo_decision_mapp'           => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'department_master'                   => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'designation_master'                  => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'discipline_master'                   => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'employee_group_master'               => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'employee_type_master'                => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'faculty_expertise_master'            => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'faculty_master'                      => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'faculty_type_master'                 => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'fc_exemption_master'                 => ['id_column' => 'pk', 'columns' => ['visible'], 'admin_only' => true],
+        'fc_registration_master'              => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'admin_only' => true],
+        'floor_master'                        => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'group_type_master_course_master_map' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'hostel_building_floor_mapping'       => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'hostel_building_master'              => ['id_column' => 'pk', 'columns' => ['active_room']],
+        'hostel_floor_room_mapping'           => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'hostel_room_master'                  => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'issue_category_master'               => ['id_column' => 'pk', 'columns' => ['status']],
+        'issue_priority_master'               => ['id_column' => 'pk', 'columns' => ['status']],
+        'issue_sub_category_master'           => ['id_column' => 'pk', 'columns' => ['status']],
+        'memo_conclusion_master'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'memo_type_master'                    => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'news'                                => ['id_column' => 'pk', 'columns' => ['status'], 'admin_only' => true],
+        'notices_notification'                => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'admin_only' => true],
+        'ot_hostel_room_details'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'sec_id_cardno_config_map'            => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'sec_id_cardno_master'                => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'state_district_mapping'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'state_master'                        => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'states'                              => ['id_column' => 'pk', 'columns' => ['status']],
+        'stream_master'                       => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'subject_master'                      => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'subject_module_master'               => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'user_role_master'                    => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'admin_only' => true],
+        'venue_master'                        => ['id_column' => 'venue_id', 'columns' => ['active_inactive']],
+    ];
+
 public function toggleStatus(Request $request)
 {
     try {
-        $idColumn = $request->id_column ?? 'pk';
-        $table = $request->table;
-        $column = $request->column;
-        $id = $request->id;
-        $status = $request->status;
+        $table    = (string) $request->input('table', '');
+        $column   = (string) $request->input('column', '');
+        $idColumn = (string) ($request->input('id_column') ?: 'pk');
+        $id       = $request->input('id');
+        $status   = $request->input('status');
 
-        DB::table($request->table)
+        $allowed = self::TOGGLE_STATUS_ALLOWED[$table] ?? null;
+
+        // Refuse anything the UI never asks for: an unlisted table, a column
+        // that is not that table's status column, a key column other than the
+        // one the screen uses, a non-numeric id, or a status outside 0/1.
+        if ($allowed === null
+            || ! in_array($column, $allowed['columns'], true)
+            || $idColumn !== $allowed['id_column']
+            || ! is_numeric($id)
+            || ! in_array((int) $status, [0, 1], true)) {
+
+            // Every value below is request text. Without LogSafe::context() a
+            // `table` containing %0A would close this record and open a forged
+            // one, so the log that exists to show refusals could be used to
+            // manufacture them.
+            \Log::warning('Rejected a toggle-status request outside the allow-list', \App\Support\LogSafe::context([
+                'user'      => optional(auth()->user())->getKey(),
+                'table'     => $table,
+                'column'    => $column,
+                'id_column' => $idColumn,
+                'status'    => $status,
+            ]));
+
+            return response()->json([
+                'message' => 'This status change is not permitted.',
+            ], 422);
+        }
+
+        // Most rows in this list are reference masters whose own screens are
+        // reachable by any signed-in user, so gating them here would only make
+        // the switch 403 on a page the user can still open. Five are different:
+        // flipping user_role_master or fc_registration_master changes who can do
+        // what, and news / notices_notification decide what the institute
+        // publishes. Those carry admin_only and are refused to everyone but the
+        // two roles the application already treats as administrators
+        // (authorizeAdmin() in the Setup controllers uses the same pair).
+        //
+        // This closes the escalation path, not the whole of Trap 29: the
+        // remaining tables stay behind `auth` alone until the sidebar permission
+        // model covers their screens, and that is still the Engineering lead's
+        // call to make rather than this endpoint's.
+        //
+        // The check reads the role tables, not hasRole(): that helper answers
+        // from the session list written at login, so an administrator whose
+        // role is revoked would keep these switches until they log out. The
+        // Admin / Super Admin entries in that session list are copied from
+        // these same Spatie roles at login, so a current administrator gets
+        // the same answer either way.
+        $actor = auth()->user();
+        $isAdministrator = $actor !== null
+            && $actor->roles()->whereIn('name', ['Admin', 'Super Admin', 'SuperAdmin'])->exists();
+
+        if (($allowed['admin_only'] ?? false) && ! $isAdministrator) {
+            \Log::warning('Refused a toggle-status request on a privileged table', \App\Support\LogSafe::context([
+                'user'   => optional(auth()->user())->getKey(),
+                'table'  => $table,
+                'column' => $column,
+            ]));
+
+            return response()->json([
+                'message' => 'You do not have permission to change this record.',
+            ], 403);
+        }
+
+        $status = (int) $status;
+
+        $previous = DB::table($table)->where($idColumn, $id)->value($column);
+
+        DB::table($table)
             ->where($idColumn, $id)
             ->update([$column => $status]);
 
+        // The refusals above are logged; so is every change that goes through,
+        // or the log would show only the requests that changed nothing. Table
+        // and column are allow-listed by now; id is still request text.
+        \Log::info('Toggle-status change', \App\Support\LogSafe::context([
+            'user'       => optional($actor)->getKey(),
+            'table'      => $table,
+            'column'     => $column,
+            'id'         => (string) $id,
+            'from'       => $previous,
+            'to'         => $status,
+            'privileged' => (bool) ($allowed['admin_only'] ?? false),
+        ]));
+
         if ($table === 'employee_type_master') {
             EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
-        }
-        if ($table === 'employee_master') {
-            MemberDataTable::bumpListingCacheEpoch();
         }
         if ($table === 'faculty_expertise_master') {
             FacultyExpertiseMasterController::bumpListCacheEpoch();
@@ -4661,8 +4802,11 @@ public function toggleStatus(Request $request)
         ]);
     } catch (\Exception $e) {
         \Log::error('Toggle status error: ' . $e->getMessage());
+
+        // The exception text stays in the log only: a QueryException message
+        // carries the rendered SQL, the bound values and the server's error.
         return response()->json([
-            'message' => 'Failed to update status: ' . $e->getMessage(),
+            'message' => 'Status could not be updated.',
         ], 500);
     }
 }
