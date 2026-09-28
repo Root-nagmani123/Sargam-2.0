@@ -34,6 +34,13 @@ class FeedbackReportOptimizationTest extends TestCase
 
     private function skipUnlessFeedbackData(): void
     {
+        // Probe the connection first so a host without MySQL reports a skip, not an error.
+        try {
+            DB::connection()->getPdo();
+        } catch (\Throwable $e) {
+            $this->markTestSkipped('No database connection: ' . $e->getMessage());
+        }
+
         if (! DB::getSchemaBuilder()->hasTable('topic_feedback')) {
             $this->markTestSkipped('topic_feedback table not present.');
         }

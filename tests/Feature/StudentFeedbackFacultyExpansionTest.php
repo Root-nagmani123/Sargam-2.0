@@ -27,6 +27,13 @@ class StudentFeedbackFacultyExpansionTest extends TestCase
 
     private function skipUnlessTimetable(): void
     {
+        // Probe the connection first so a host without MySQL reports a skip, not an error.
+        try {
+            DB::connection()->getPdo();
+        } catch (\Throwable $e) {
+            $this->markTestSkipped('No database connection: ' . $e->getMessage());
+        }
+
         if (! DB::getSchemaBuilder()->hasTable('timetable')
             || DB::table('timetable')->limit(1)->count() === 0) {
             $this->markTestSkipped('No timetable rows to exercise.');
