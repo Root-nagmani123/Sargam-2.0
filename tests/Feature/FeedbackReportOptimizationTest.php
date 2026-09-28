@@ -489,6 +489,43 @@ class FeedbackReportOptimizationTest extends TestCase
     }
 
     /**
+     * The model-event bust must wait for the enclosing transaction to commit.
+     *
+     * Busting inside the transaction lets a concurrent read cache the still-committed old row
+     * under the new generation, where it outlives the write for the full TTL. The saved/deleted
+     * events are dispatched on an unsaved model inside a transaction that writes nothing, so
+     * this stays read-only against the shared database.
+     */
+    public function test_model_event_bust_is_deferred_until_commit(): void
+    {
+        $this->skipUnlessCacheStorePersists();
+
+        foreach ([\App\Models\FacultyMaster::class, \App\Models\CalendarEvent::class, \App\Models\Timetable::class] as $class) {
+            foreach (['saved', 'deleted'] as $event) {
+                $fire = fn () => event("eloquent.$event: $class", new $class());
+                $label = class_basename($class) . " $event";
+
+                $start = FeedbackReportCache::generation();
+                DB::beginTransaction();
+                $fire();
+                $this->assertSame($start, FeedbackReportCache::generation(), "$label busted before commit.");
+                DB::commit();
+                $this->assertGreaterThan($start, FeedbackReportCache::generation(), "$label did not bust after commit.");
+
+                $start = FeedbackReportCache::generation();
+                DB::beginTransaction();
+                $fire();
+                DB::rollBack();
+                $this->assertSame($start, FeedbackReportCache::generation(), "$label busted on a rolled-back transaction.");
+
+                $start = FeedbackReportCache::generation();
+                $fire();
+                $this->assertGreaterThan($start, FeedbackReportCache::generation(), "$label did not bust outside a transaction.");
+            }
+        }
+    }
+
+    /**
      * A cache store failure must not take a report down.
      *
      * Pointing cache.default at a missing store proves nothing: FeedbackReportCache resolves

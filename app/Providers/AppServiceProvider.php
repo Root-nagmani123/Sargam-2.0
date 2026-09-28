@@ -63,10 +63,20 @@ class AppServiceProvider extends ServiceProvider
          * nothing writes, and session changes left the topic dropdown stale for the full
          * TTL. Timetable stays in the list so the coverage survives if a write path is ever
          * added through it.
+         *
+         * The bust is deferred to after commit. saved/deleted fire inside the caller's
+         * transaction (FacultyController saves inside one and keeps working before it
+         * commits), so an immediate bust let a concurrent read cache the still-committed
+         * old row under the new generation, where it stayed for the full TTL. afterCommit()
+         * runs the callback at once when no transaction is open, and drops it on rollback,
+         * when nothing changed.
          */
+        $bustAfterCommit = static function ($model) {
+            $model->getConnection()->afterCommit(static fn () => FeedbackReportCache::bust());
+        };
         foreach ([CalendarEvent::class, Timetable::class, FacultyMaster::class] as $model) {
-            $model::saved(static fn () => FeedbackReportCache::bust());
-            $model::deleted(static fn () => FeedbackReportCache::bust());
+            $model::saved($bustAfterCommit);
+            $model::deleted($bustAfterCommit);
         }
 
         // Schema introspection (Schema::hasTable/hasColumn) is cached across requests
