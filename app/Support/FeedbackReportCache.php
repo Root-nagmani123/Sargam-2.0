@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use Closure;
+use Illuminate\Contracts\Cache\LockProvider;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -48,6 +50,8 @@ final class FeedbackReportCache
     public const TTL_STATS = 300;       // 5 minutes
 
     private const GENERATION_KEY = 'feedback_reports:generation';
+
+    private const GENERATION_LOCK_KEY = 'feedback_reports:generation:lock';
 
     /** Store name proven writable this request; skips re-probing on every call. */
     private static ?string $resolvedStore = null;
@@ -212,15 +216,22 @@ final class FeedbackReportCache
     /**
      * Invalidate every cached feedback lookup by moving to a new generation.
      * Call after any write to topic_feedback.
+     *
+     * The bump runs under the store's lock. FileStore::increment() is a read followed by a
+     * separate write, so without the lock overlapping busts lose bumps, and a bust that read
+     * the counter before two others finished writes back an older value. The generation then
+     * goes backwards and entries cached under the older generation are served again.
      */
     public static function bust(): void
     {
         try {
             $store = self::store();
-            if ($store->get(self::GENERATION_KEY) === null) {
-                $store->forever(self::GENERATION_KEY, 1);
-            }
-            $store->increment(self::GENERATION_KEY);
+            self::withGenerationLock($store, static function () use ($store) {
+                if ($store->get(self::GENERATION_KEY) === null) {
+                    $store->forever(self::GENERATION_KEY, 1);
+                }
+                $store->increment(self::GENERATION_KEY);
+            });
         } catch (Throwable $e) {
             report($e);
         }
@@ -231,17 +242,49 @@ final class FeedbackReportCache
         try {
             $store = self::store();
             $current = $store->get(self::GENERATION_KEY);
-            if ($current === null) {
-                $store->forever(self::GENERATION_KEY, 1);
-
-                return 1;
+            if ($current !== null) {
+                return (int) $current;
             }
 
-            return (int) $current;
+            // First use, or after cache:clear. Initialise under the lock, so this cannot
+            // overwrite a bump that lands between the read above and the write.
+            self::withGenerationLock($store, static function () use ($store) {
+                if ($store->get(self::GENERATION_KEY) === null) {
+                    $store->forever(self::GENERATION_KEY, 1);
+                }
+            });
+
+            return (int) ($store->get(self::GENERATION_KEY) ?? 1);
         } catch (Throwable $e) {
             report($e);
 
             return 1;
+        }
+    }
+
+    /**
+     * Run a read-modify-write of the generation key under the store's own lock.
+     *
+     * The lock is held for microseconds, so waiters retry every 10 ms instead of Laravel's
+     * default 250 ms. If it cannot be taken within 10 s the write still runs, unlocked, and the
+     * timeout is reported: an invalidation must never be dropped.
+     */
+    private static function withGenerationLock(Repository $store, Closure $callback): void
+    {
+        $backing = $store->getStore();
+        if (! $backing instanceof LockProvider) {
+            $callback();
+
+            return;
+        }
+
+        try {
+            $backing->lock(self::GENERATION_LOCK_KEY, 5)
+                ->betweenBlockedAttemptsSleepFor(10)
+                ->block(10, $callback);
+        } catch (LockTimeoutException $e) {
+            report($e);
+            $callback();
         }
     }
 
