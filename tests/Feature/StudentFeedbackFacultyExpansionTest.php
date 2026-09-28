@@ -233,49 +233,122 @@ class StudentFeedbackFacultyExpansionTest extends TestCase
         return array_values(array_unique($pairs));
     }
     /**
-     * The Teaching expansion is deliberately LOOSER than the JSON_CONTAINS predicate it replaced.
+     * The Teaching expansion must select exactly what JSON_CONTAINS did, for every JSON shape.
      *
-     * JSON_CONTAINS(faculty_details, JSON_OBJECT('faculty_pk', 12, 'role', 'Teaching')) compared
-     * JSON values: a JSON string "12" never equalled the JSON number 12, and 'teaching' never
-     * equalled 'Teaching'. The rewrite reads faculty_pk through BIGINT and compares role with a
-     * collation-dependent SQL '=', so both of those now match.
+     * An earlier version read role and faculty_pk through JSON_TABLE columns and was looser in
+     * some shapes (string id, lower-case role) and stricter in another (bare object). None of
+     * those shapes exist in the data today, so only synthetic values exercise the difference.
+     * This drives the SHIPPED constant, with the timetable column replaced by each literal, and
+     * compares the faculty it selects with the original predicate over the real faculty_master.
+     * Nothing is written: the values are SQL literals.
      *
-     * No row the application writes today takes either shape — buildFacultyDetails() casts the id
-     * to int and writes the role verbatim — so this is not a live divergence. It is pinned here so
-     * that an import or a hand-edited row cannot widen the report silently: if MySQL's behaviour or
-     * the constant changes, this test says so.
-     *
-     * @dataProvider teachingShapeDivergences
+     * @dataProvider teachingShapes
      */
-    public function test_teaching_expansion_is_looser_than_the_predicate_it_replaced(
-        string $json,
-        int $jsonContainsMatches,
-        int $jsonTableMatches
-    ): void {
-        $row = DB::selectOne(
-            'SELECT
-                JSON_CONTAINS(CAST(? AS JSON), JSON_OBJECT("faculty_pk", 12, "role", "Teaching")) AS old_pred,
-                (SELECT COUNT(*) FROM JSON_TABLE(CAST(? AS JSON), "$" COLUMNS(
-                    faculty_pk BIGINT PATH "$.faculty_pk",
-                    role       VARCHAR(64) PATH "$.role")) jt
-                  WHERE jt.role = "Teaching" AND jt.faculty_pk = 12) AS new_pred',
-            [$json, $json]
-        );
+    public function test_teaching_expansion_matches_original_predicate_for_json_shapes(string $literal): void
+    {
+        $this->skipUnlessTimetable();
 
-        $this->assertSame($jsonContainsMatches, (int) $row->old_pred, 'Original predicate changed behaviour.');
-        $this->assertSame($jsonTableMatches, (int) $row->new_pred, 'Rewritten expansion changed behaviour.');
+        $pk = (int) DB::table('faculty_master')->orderBy('pk')->value('pk');
+        $other = (int) DB::table('faculty_master')->orderByDesc('pk')->value('pk');
+        if (! $pk || $pk === $other) {
+            $this->markTestSkipped('Need at least two faculty_master rows.');
+        }
+
+        $value = str_replace(['{PK}', '{OTHER}'], [(string) $pk, (string) $other], $literal);
+        $quoted = DB::getPdo()->quote($value);
+
+        $original = DB::select("
+            SELECT f.pk FROM faculty_master f
+            WHERE JSON_VALID($quoted) = 1
+              AND JSON_CONTAINS($quoted, JSON_OBJECT('faculty_pk', f.pk, 'role', 'Teaching')) = 1
+        ");
+
+        $expansion = str_replace(
+            ['tt.faculty_details', 'tt.pk AS timetable_pk', 'FROM timetable tt'],
+            [$quoted, '1 AS timetable_pk', 'FROM (SELECT 1) AS tt'],
+            $this->constant('TEACHING_FACULTY_JSON_TABLE')
+        );
+        $rewritten = DB::select("SELECT fd.faculty_pk AS pk FROM $expansion JOIN faculty_master f ON f.pk = fd.faculty_pk");
+
+        $ids = fn (array $rows) => array_map('intval', array_column(array_map(fn ($r) => (array) $r, $rows), 'pk'));
+        $sorted = function (array $a) { sort($a); return $a; };
+
+        $this->assertSame(
+            $sorted($ids($original)),
+            $sorted($ids($rewritten)),
+            "Teaching expansion diverged from the original predicate for $value."
+        );
     }
 
-    /** @return array<string, array{0: string, 1: int, 2: int}> */
-    public static function teachingShapeDivergences(): array
+    /** @return array<string, array{0: string}> */
+    public static function teachingShapes(): array
     {
         return [
-            // shape                        => [json, JSON_CONTAINS, JSON_TABLE]
-            'numeric id, exact role'        => ['{"faculty_pk": 12, "role": "Teaching"}', 1, 1],
-            'string id, exact role'         => ['{"faculty_pk": "12", "role": "Teaching"}', 0, 1],
-            'numeric id, lower-case role'   => ['{"faculty_pk": 12, "role": "teaching"}', 0, 1],
-            'numeric id, different role'    => ['{"faculty_pk": 12, "role": "Chair"}', 0, 0],
-            'different id, exact role'      => ['{"faculty_pk": 99, "role": "Teaching"}', 0, 0],
+            'normal array'                  => ['[{"faculty_pk":{PK},"role":"Teaching"}]'],
+            'two teaching faculty'          => ['[{"faculty_pk":{OTHER},"role":"Teaching"},{"faculty_pk":{PK},"role":"Teaching"}]'],
+            'teaching beside admin'         => ['[{"faculty_pk":{PK},"role":"Administration"},{"faculty_pk":{OTHER},"role":"Teaching"}]'],
+            'duplicate element'             => ['[{"faculty_pk":{PK},"role":"Teaching"},{"faculty_pk":{PK},"role":"Teaching"}]'],
+            'extra keys in element'         => ['[{"faculty_pk":{PK},"role":"Teaching","extra":1}]'],
+            'bare object'                   => ['{"faculty_pk":{PK},"role":"Teaching"}'],
+            'bare object, array of ids'     => ['{"faculty_pk":[{OTHER},{PK}],"role":"Teaching"}'],
+            'string id'                     => ['[{"faculty_pk":"{PK}","role":"Teaching"}]'],
+            'lower-case role'               => ['[{"faculty_pk":{PK},"role":"teaching"}]'],
+            'trailing space in role'        => ['[{"faculty_pk":{PK},"role":"Teaching "}]'],
+            'other role only'               => ['[{"faculty_pk":{PK},"role":"Administration"}]'],
+            'integral double id'            => ['[{"faculty_pk":{PK}.0,"role":"Teaching"}]'],
+            'fractional id'                 => ['[{"faculty_pk":{PK}.5,"role":"Teaching"}]'],
+            'id wrapped in array'           => ['[{"faculty_pk":[{PK}],"role":"Teaching"}]'],
+            'role wrapped in array'         => ['[{"faculty_pk":{PK},"role":["Teaching"]}]'],
+            'nested array'                  => ['[[{"faculty_pk":{PK},"role":"Teaching"}]]'],
+            'object nested under a key'     => ['[{"x":{"faculty_pk":{PK},"role":"Teaching"}}]'],
+            'non-object element alongside'  => ['[{"faculty_pk":{PK},"role":"Teaching"},5]'],
+            'array of ids'                  => ['[{PK}]'],
+            'missing id'                    => ['[{"role":"Teaching"}]'],
+            'null id'                       => ['[{"faculty_pk":null,"role":"Teaching"}]'],
+            'boolean id'                    => ['[{"faculty_pk":true,"role":"Teaching"}]'],
+            'non-numeric string id'         => ['[{"faculty_pk":"{PK}abc","role":"Teaching"}]'],
+            'out-of-range id'               => ['[{"faculty_pk":99999999999999999999,"role":"Teaching"}]'],
+            'empty array'                   => ['[]'],
+            'empty object'                  => ['{}'],
+            'bare number'                   => ['{PK}'],
+            'bare string'                   => ['"{PK}"'],
+            'invalid JSON'                  => ['not json'],
+            'empty string'                  => [''],
+            'bare object, string id'        => ['{"faculty_pk":"{PK}","role":"Teaching"}'],
+        ];
+    }
+
+    /**
+     * Two or more levels of array nesting are the one known divergence, and it is STRICTER:
+     * the original predicate matched these, the expansion matches nothing. Nothing writes these
+     * shapes. Covering them needs a faculty_master fallback that made the page ~10x slower (see
+     * the constant's docblock). Pinned so the expansion can never turn looser here.
+     *
+     * @dataProvider deeplyNestedTeachingShapes
+     */
+    public function test_deeply_nested_teaching_shapes_match_nothing(string $literal): void
+    {
+        $this->skipUnlessTimetable();
+
+        $pk = (int) DB::table('faculty_master')->orderBy('pk')->value('pk');
+        $quoted = DB::getPdo()->quote(str_replace('{PK}', (string) $pk, $literal));
+
+        $expansion = str_replace(
+            ['tt.faculty_details', 'tt.pk AS timetable_pk', 'FROM timetable tt'],
+            [$quoted, '1 AS timetable_pk', 'FROM (SELECT 1) AS tt'],
+            $this->constant('TEACHING_FACULTY_JSON_TABLE')
+        );
+
+        $this->assertSame(0, (int) DB::selectOne("SELECT COUNT(*) AS n FROM $expansion")->n);
+    }
+
+    /** @return array<string, array{0: string}> */
+    public static function deeplyNestedTeachingShapes(): array
+    {
+        return [
+            'array nested twice'            => ['[[[{"faculty_pk":{PK},"role":"Teaching"}]]]'],
+            'id nested twice'               => ['[{"faculty_pk":[[{PK}]],"role":"Teaching"}]'],
+            'nested array with listed id'   => ['[[{"faculty_pk":[{PK}],"role":"Teaching"}]]'],
         ];
     }
 }

@@ -87,26 +87,49 @@ class CalendarController extends Controller
     /**
      * (timetable_pk, faculty_pk) for Teaching faculty, expanded from timetable.faculty_details.
      *
-     * Same rewrite and the same reason as {@see self::OLD_FACULTY_JSON_TABLE}. Reading
-     * faculty_pk and role out of one JSON_TABLE row is what reproduces
-     * JSON_CONTAINS(faculty_details, JSON_OBJECT('faculty_pk', f.pk, 'role', 'Teaching')),
-     * which required both keys to sit in the SAME array element — filtering the two
-     * independently would wrongly match a session where a different faculty teaches.
+     * Must select the pairs the original predicate did:
+     *   JSON_CONTAINS(faculty_details, JSON_OBJECT('faculty_pk', f.pk, 'role', 'Teaching'))
+     * Reading role through a JSON_TABLE column is NOT equivalent: the column compares with a
+     * case- and trailing-space-insensitive collation, and BIGINT coerces "12", 12.5 and true to
+     * integers, all of which JSON_CONTAINS rejects; and '$[*]' alone misses a bare object, a
+     * listed id or a nested array, which it accepts.
      *
-     * The CASE guard keeps JSON_TABLE from being handed invalid JSON, which raises an error
-     * rather than yielding no rows.
+     * So JSON_TABLE only proposes candidate ids, and the original JSON_CONTAINS decides. The
+     * candidates cover a bare object (wrapped into an array), an id given as a list, and one
+     * level of array nesting. Deeper nesting is not proposed, so it matches nothing where the
+     * original matched: never looser, and no such row is written by buildFacultyDetails() or
+     * exists in the data. DISTINCT keeps one row per (session, faculty), as the original join did.
+     *
+     * Kept to a single SELECT on purpose: a UNION with a faculty_master fallback was exact for
+     * every shape, but MySQL then materialises it in full for each prepared page query, which
+     * made the student feedback page ~10x slower.
+     *
+     * Every JSON function gets a document that is valid JSON by construction. A CASE around
+     * the call is not enough: MySQL may evaluate a JSON argument before the CASE, and
+     * faculty_details is TEXT, so invalid JSON is possible. Pinned by
+     * StudentFeedbackFacultyExpansionTest.
      */
     private const TEACHING_FACULTY_JSON_TABLE = "(
-        SELECT tt.pk AS timetable_pk, jt.faculty_pk
+        SELECT DISTINCT tt.pk AS timetable_pk, COALESCE(jt.pk_listed, jt.pk_nested, jt.pk) AS faculty_pk
         FROM timetable tt
         CROSS JOIN JSON_TABLE(
-            CASE WHEN JSON_VALID(tt.faculty_details) THEN tt.faculty_details ELSE '[]' END,
+            CASE WHEN JSON_VALID(tt.faculty_details)
+                 THEN CASE JSON_TYPE(tt.faculty_details)
+                          WHEN 'ARRAY'  THEN tt.faculty_details
+                          WHEN 'OBJECT' THEN JSON_ARRAY(CAST(tt.faculty_details AS JSON))
+                          ELSE '[]' END
+                 ELSE '[]' END,
             '$[*]' COLUMNS (
-                faculty_pk BIGINT      PATH '$.faculty_pk',
-                role       VARCHAR(64) PATH '$.role'
+                pk BIGINT PATH '$.faculty_pk' NULL ON EMPTY NULL ON ERROR,
+                NESTED PATH '$.faculty_pk[*]' COLUMNS (pk_listed BIGINT PATH '$' NULL ON EMPTY NULL ON ERROR),
+                NESTED PATH '$[*]' COLUMNS (pk_nested BIGINT PATH '$.faculty_pk' NULL ON EMPTY NULL ON ERROR)
             )
         ) jt
-        WHERE jt.role = 'Teaching'
+        WHERE COALESCE(jt.pk_listed, jt.pk_nested, jt.pk) IS NOT NULL
+          AND JSON_CONTAINS(
+                CASE WHEN JSON_VALID(tt.faculty_details) THEN tt.faculty_details ELSE '[]' END,
+                JSON_OBJECT('faculty_pk', COALESCE(jt.pk_listed, jt.pk_nested, jt.pk), 'role', 'Teaching')
+              ) = 1
     ) AS fd";
 
     /**
