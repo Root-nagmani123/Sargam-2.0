@@ -115,6 +115,50 @@ class FeedbackReportOptimizationTest extends TestCase
     }
 
     /**
+     * Same groups is not the same rows: compare every selected column of the shipped query
+     * against the same query grouped on the original eight-column key.
+     *
+     * One difference is expected and pinned here: all_comments. GROUP_CONCAT(DISTINCT remark)
+     * under utf8mb4_general_ci treats "Good" and "good" as one remark and keeps whichever
+     * variant the grouping plan reads first, so the narrow key can show a different case
+     * variant, or list them in a different order. Neither key chooses deliberately. The SET of
+     * remarks, case-folded, must be identical; every other column must match exactly.
+     */
+    public function test_database_grid_rows_match_the_original_wide_key(): void
+    {
+        $this->skipUnlessFeedbackData();
+        $this->actingAsSuperAdmin();
+
+        $controller = new FeedbackController();
+        $narrow = $this->callPrivate($controller, 'baseDatabaseQuery', $this->request());
+        $wide = clone $narrow;
+        $wide->groups = ['f.pk', 'f.full_name', 'f.email_id', 'f.Permanent_Address',
+            'c.course_name', 't.subject_topic', 't.START_DATE', 't.pk'];
+
+        $normalise = function ($rows) {
+            return $rows->map(function ($row) {
+                $row = (array) $row;
+                $remarks = array_filter(array_map(
+                    fn ($r) => mb_strtolower(trim($r)),
+                    explode(' | ', (string) ($row['all_comments'] ?? ''))
+                ), fn ($r) => $r !== '');
+                $remarks = array_values(array_unique($remarks));
+                sort($remarks);
+                $row['all_comments'] = $remarks;
+                ksort($row);
+
+                return json_encode($row);
+            })->sort()->values()->all();
+        };
+
+        $this->assertSame(
+            $normalise($wide->get()),
+            $normalise($narrow->get()),
+            'The narrow GROUP BY changed report data beyond the case variant of remarks.'
+        );
+    }
+
+    /**
      * Faculty Average key: fm.full_name was dropped as dependent on tf.faculty_pk.
      * The course/date/session columns must still be present — nothing determines them.
      */

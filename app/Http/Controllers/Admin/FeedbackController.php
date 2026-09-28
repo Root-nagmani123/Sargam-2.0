@@ -188,7 +188,9 @@ class FeedbackController extends Controller
         // Group on the two primary keys only. Every other selected column is functionally
         // dependent on f.pk or t.pk, so listing them cannot split a group further — it only
         // widens the sort key, and t.subject_topic being TEXT forced MySQL into a row-ID sort
-        // over the whole join. Same groups, same rows, roughly half the time.
+        // over the whole join. Same groups and the same values, roughly half the time — except
+        // which case variant GROUP_CONCAT(DISTINCT) keeps for duplicate remarks ("Good" vs
+        // "good"), which depends on the plan under either key. See the optimisation doc.
         $query->groupBy(FeedbackReportGrouping::DATABASE_GRID);
 
         // Conditional filter (content/presentation with comparison operator)
