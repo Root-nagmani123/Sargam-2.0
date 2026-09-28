@@ -30,10 +30,10 @@ class HostelBuildingMasterDataTable extends DataTable
                 return '<a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>';
             })
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
+                $checked = $row->active_room == 1 ? 'checked' : '';
                 return '<div class="form-check form-switch d-inline-block ms-2">
                 <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                    data-table="hostel_building_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
+                    data-table="hostel_building_master" data-column="active_room" data-id="' . $row->pk . '" ' . $checked . '>
             </div>';
             })
 
