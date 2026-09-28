@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Support\PdfPageNumbers;
 
 
 
@@ -1528,6 +1529,8 @@ class CalendarController extends Controller
                 'dpi'                  => 96,
             ]);
 
+        $pdf = PdfPageNumbers::stamp($pdf, 16, 14, [0.4, 0.4, 0.4]);
+
         $fileName = 'time-table-' . $rangeStartDate->format('Y-m-d') . '.pdf';
 
         return $request->boolean('download')
@@ -1650,6 +1653,8 @@ class CalendarController extends Controller
                 'isPhpEnabled'         => false,
                 'dpi'                  => 96,
             ]);
+
+        $pdf = PdfPageNumbers::stamp($pdf, 16, 14, [0.4, 0.4, 0.4]);
 
         $fileName = 'time-table-' . $rangeStartDate->format('Y-m-d') . '.pdf';
 
@@ -1782,6 +1787,8 @@ class CalendarController extends Controller
                 'isPhpEnabled'         => false,
                 'dpi'                  => 96,
             ]);
+
+        $pdf = PdfPageNumbers::stamp($pdf, 16, 14, [0.4, 0.4, 0.4]);
 
         $fileName = 'time-table-' . now()->format('Y-m-d_His') . '.pdf';
 

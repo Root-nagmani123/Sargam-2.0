@@ -1,17 +1,20 @@
 <?php
 
 namespace App\Http\Controllers;
-
 use App\Http\Middleware\EnsureRoleAdmin;
-use App\Models\DashboardCard;
-use App\Models\SidebarMenu\SidebarCategory;
-use App\Services\RoleService;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Spatie\Permission\Models\Permission;
+use App\Services\RoleService;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
+use App\Models\SidebarMenu\SidebarCategory;
+use App\Models\DashboardCard;
+use App\Exports\BrandedGridExport;
+use App\Support\ExportCsvHeader;
+use App\Support\PdfPageNumbers;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 
 class RoleController extends Controller
 {
@@ -24,8 +27,9 @@ class RoleController extends Controller
         // Everything that CHANGES what a role can do requires Super Admin.
         //
         // Registered HERE and not only on the route, because this controller is
-        // mounted TWICE: `roles/*` at routes/web.php:162-171 and a second,
-        // hand-written `admin/roles/*` block at routes/web.php:180-185. A gate
+        // mounted TWICE: the `roles/*` group (route names `roles.*`,
+        // `assign.roles.*`, `dashboard.cards.*`) and a second, hand-written
+        // `admin/roles/*` block (route names `admin.roles.*`) in routes/web.php. A gate
         // attached to one route group protects that URL and nothing else, so
         // gating only the first would have left store/update/destroy reachable
         // through the second - and left the next mount unprotected as well.
@@ -53,11 +57,10 @@ class RoleController extends Controller
             'destroyDashboardCard',
         ]);
     }
-
     /**
      * Display a listing of the resource.
      *
-     * @return Response
+     * @return \Illuminate\Http\Response
      */
     public function index(Request $request)
     {
@@ -65,14 +68,13 @@ class RoleController extends Controller
             return $this->service->getDatatable($request);
         }
         $pageData = $this->service->pageData();
-
         return view('roles-permissions.roles', $pageData);
     }
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return Response
+     * @return \Illuminate\Http\Response
      */
     public function create()
     {
@@ -80,9 +82,137 @@ class RoleController extends Controller
     }
 
     /**
+     * Download / Print — one action, four formats (csv, excel, pdf, print), off
+     * the same query and the same column definitions, so a spreadsheet, a PDF and
+     * a printout can't drift apart (docs/new-design-index-page.md §1). ?q and
+     * ?cols are stamped on by the grid so every format carries what the user is
+     * looking at.
+     */
+    public function export(Request $request)
+    {
+        $format = strtolower((string) $request->input('format', 'csv'));
+        abort_unless(in_array($format, ['csv', 'excel', 'pdf', 'print'], true), 404);
+
+        $columns = $this->service->exportColumns($request->input('cols'));
+        $rows = $this->service->exportRows($request);
+        $search = trim((string) $request->input('q', ''));
+
+        if ($format === 'print') {
+            return view('roles-permissions.export_print', [
+                'rows' => $rows,
+                'columns' => $columns,
+                'search' => $search,
+                'exportDate' => now()->format('d-m-Y H:i'),
+            ]);
+        }
+
+        return $this->gridExport(
+            $format,
+            $rows,
+            $columns,
+            'Roles & Permissions',
+            'Roles',
+            $search !== '' ? 'Search: '.$search : null,
+            // Mirrors export_print.blade.php's column widths, so the PDF and the
+            // printout lay out the same.
+            ['sno' => '10%', 'name' => '48%', 'permissions_count' => '20%', 'created_at' => '22%']
+        );
+    }
+
+    /**
+     * CSV / .xlsx / PDF off one resolved row set and one resolved column list.
+     *
+     * `print` is deliberately NOT routed through here — each report keeps its own
+     * print blade, because a browser printout is styled with @media print rules
+     * and print-color-adjust that DomPDF does not understand.
+     *
+     * @param  iterable  $rows
+     * @param  array<int, array{key?:string, heading:string, class:string, value:callable}>  $columns
+     * @param  string|null  $filterLine  PLAIN text ("Search: foo  |  Status: Enabled"), null when unfiltered
+     * @param  array<string, string>  $widths  column key => CSS width, for the fixed-layout PDF table
+     */
+    private function gridExport(
+        string $format,
+        iterable $rows,
+        array $columns,
+        string $reportTitle,
+        string $baseFilename,
+        ?string $filterLine = null,
+        array $widths = []
+    ) {
+        $exportDate = now()->format('d-m-Y h:i A');
+        $filename = $baseFilename.'_'.now()->format('YmdHis');
+
+        if ($format === 'excel') {
+            return Excel::download(
+                BrandedGridExport::fromGrid($rows, $columns, $reportTitle, $exportDate, $filterLine),
+                $filename.'.xlsx'
+            );
+        }
+
+        if ($format === 'pdf') {
+            $pdf = Pdf::loadView('exports.branded_grid_pdf', [
+                'reportTitle' => $reportTitle,
+                'columns' => $columns,
+                'rows' => $rows,
+                'filterLine' => $filterLine,
+                'exportDate' => $exportDate,
+                'widths' => $widths,
+            ])
+                ->setPaper('a4', 'portrait')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    // Never true: isPhpEnabled makes the renderer a PHP
+                    // execution context for the whole view, so any raw block
+                    // that later appears in an export blade would execute.
+                    // Page numbers are stamped on the canvas after render
+                    // instead — see PdfPageNumbers.
+                    'isPhpEnabled' => false,
+                ]);
+
+            return PdfPageNumbers::stamp($pdf)->download($filename.'.pdf');
+        }
+
+        // The same band the .xlsx and the print/PDF headers carry, so the CSV names
+        // the report and its applied filters too instead of arriving as bare columns.
+        $band = ExportCsvHeader::rows(
+            $reportTitle,
+            $filterLine,
+            $exportDate,
+            is_countable($rows) ? count($rows) : null
+        );
+
+        return response()->streamDownload(function () use ($rows, $columns, $band) {
+            $handle = fopen('php://output', 'w');
+            // BOM: without it Excel reads the file as ANSI and mangles any
+            // non-ASCII value.
+            fwrite($handle, "\xEF\xBB\xBF");
+            foreach ($band as $bandRow) {
+                fputcsv($handle, $bandRow);
+            }
+            fputcsv($handle, array_column($columns, 'heading'));
+
+            $index = 0;
+            foreach ($rows as $row) {
+                fputcsv($handle, array_map(
+                    fn (array $col) => sanitize_export_cell($col['value']($row, $index)),
+                    $columns
+                ));
+                $index++;
+            }
+
+            fclose($handle);
+        }, $filename.'.csv', [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    /**
      * Store a newly created resource in storage.
      *
-     * @return Response
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
     {
@@ -91,7 +221,7 @@ class RoleController extends Controller
         ]);
 
         Role::create([
-            'name' => $validated['name'],
+            'name' => $validated['name']
         ]);
 
         return redirect()->back()->with('success', 'Role created successfully.');
@@ -101,25 +231,127 @@ class RoleController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return Response
+     * @return \Illuminate\Http\Response
      */
     public function show(Request $request, $id)
     {
         $role = Role::findOrFail($id);
         $rolePermissions = $role->permissions->pluck('name')->toArray();
         $categories = SidebarCategory::with([
-            'groups.menus',
+            'groups.menus'
         ])->get();
 
-        // dd($categories);
-        return view('roles-permissions.assign-permission', compact('role', 'rolePermissions', 'categories'));
+        // One flat matrix drives both the grid and the export, so a printed
+        // sheet can't disagree with what is on screen.
+        $rows = $this->service->permissionMatrix($categories, $rolePermissions);
+
+        return view('roles-permissions.assign-permission', [
+            'role' => $role,
+            'rolePermissions' => $rolePermissions,
+            'categories' => $categories,
+            'rows' => $rows,
+            'enabledCount' => count(array_filter($rows, fn (array $r) => $r['enabled'])),
+        ]);
+    }
+
+    /**
+     * Download / Print the role's permission matrix — one action, four formats,
+     * off the same rows and the same column definitions as the screen
+     * (docs/new-design-index-page.md §1). ?q, the four tier selects
+     * (?category / ?group / ?menu / ?submenu), ?status and ?cols are stamped on by
+     * the grid so the export carries what the user is looking at.
+     */
+    public function exportPermissions(Request $request, $id)
+    {
+        $format = strtolower((string) $request->input('format', 'csv'));
+        abort_unless(in_array($format, ['csv', 'excel', 'pdf', 'print'], true), 404);
+
+        $role = Role::findOrFail($id);
+        $rolePermissions = $role->permissions->pluck('name')->toArray();
+        $categories = SidebarCategory::with(['groups.menus'])->get();
+
+        // Row-field => value, straight off the query string. filterPermissionMatrix()
+        // intersects this against its own PERMISSION_TIERS list, so an extra key here
+        // is ignored rather than trusted.
+        $tiers = [];
+        foreach (RoleService::PERMISSION_TIERS as $field => $param) {
+            $tiers[$field] = (string) $request->input($param, '');
+        }
+
+        $rows = $this->service->filterPermissionMatrix(
+            $this->service->permissionMatrix($categories, $rolePermissions),
+            $request->input('q'),
+            $tiers,
+            $request->input('status')
+        );
+        $columns = $this->service->permissionExportColumns($request->input('cols'));
+
+        // Two renderings of the same filters: the print sheet gets the bold HTML
+        // one, the CSV / .xlsx / PDF band gets plain text. Driven by the same
+        // PERMISSION_TIERS list as the filtering, so a tier can never be applied
+        // and then go unmentioned on the sheet.
+        $tierLabels = [
+            'category' => 'Category',
+            'group' => 'Group',
+            'menu' => 'Menu',
+            'submenu' => 'Sub Menu',
+        ];
+
+        $bits = [];
+        $plain = [];
+        foreach ($tiers as $field => $value) {
+            if ($value === '') {
+                continue;
+            }
+            // The matrix writes '-' for "this menu has no sub menu"; spell that out
+            // rather than printing a bare dash next to the label.
+            $shown = ($field === 'submenu' && $value === '-') ? 'None' : $value;
+            $bits[] = '<strong>'.$tierLabels[$field].':</strong> '.e($shown);
+            $plain[] = $tierLabels[$field].': '.$shown;
+        }
+        if (in_array($request->input('status'), ['enabled', 'disabled'], true)) {
+            $bits[] = '<strong>Status:</strong> '.ucfirst($request->input('status'));
+            $plain[] = 'Status: '.ucfirst($request->input('status'));
+        }
+        if (filled(trim((string) $request->input('q')))) {
+            $bits[] = '<strong>Search:</strong> '.e(trim((string) $request->input('q')));
+            $plain[] = 'Search: '.trim((string) $request->input('q'));
+        }
+
+        if ($format === 'print') {
+            return view('roles-permissions.assign_permission_print', [
+                'role' => $role,
+                'rows' => $rows,
+                'columns' => $columns,
+                'filterLine' => empty($bits) ? null : implode(' &nbsp;|&nbsp; ', $bits),
+                'exportDate' => now()->format('d-m-Y H:i'),
+            ]);
+        }
+
+        $slug = \Illuminate\Support\Str::slug($role->name) ?: 'role';
+
+        return $this->gridExport(
+            $format,
+            $rows,
+            $columns,
+            'Permissions — '.$role->name,
+            'Permissions_'.$slug,
+            empty($plain) ? null : implode('  |  ', $plain),
+            // Mirrors assign_permission_print.blade.php's column widths, but with a
+            // point taken off Permission for Sr No. — the print sheet's 5% wraps the
+            // heading onto two lines in the PDF's narrower font.
+            [
+                'sno' => '6%', 'category' => '12%', 'group' => '16%', 'menu' => '17%',
+                'submenu' => '17%', 'permission' => '22%', 'status' => '10%',
+            ]
+        );
     }
 
     /**
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return Response
+     * @return \Illuminate\Http\Response
      */
     public function edit($id)
     {
@@ -129,8 +361,9 @@ class RoleController extends Controller
     /**
      * Update the specified resource in storage.
      *
+     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
-     * @return Response
+     * @return \Illuminate\Http\Response
      */
     public function update(Request $request, $id)
     {
@@ -139,9 +372,8 @@ class RoleController extends Controller
         ]);
 
         Role::where('id', $id)->update([
-            'name' => $validated['name'],
+            'name' => $validated['name']
         ]);
-
         return redirect()->back()->with('success', 'Role updated successfully.');
     }
 
@@ -149,16 +381,17 @@ class RoleController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return Response
+     * @return \Illuminate\Http\Response
      */
-    public function destroy($id) {}
+    public function destroy($id)
+    {
+    }
 
     public function destroyDashboardCard($id)
     {
         $card = DashboardCard::findOrFail($id);
         $card->roles()->detach();
         $card->delete();
-
         return response()->json(['success' => true, 'message' => 'Card deleted successfully.']);
     }
 
@@ -166,9 +399,9 @@ class RoleController extends Controller
     {
         $card = DashboardCard::findOrFail($id);
         $request->validate([
-            'label' => 'required|string|max:200',
-            'icon' => 'required|string|max:100',
-            'color_class' => 'required|string|max:100',
+            'label'      => 'required|string|max:200',
+            'icon'       => 'required|string|max:100',
+            'color_class'=> 'required|string|max:100',
             'sort_order' => 'required|integer|min:1',
         ]);
 
@@ -177,35 +410,68 @@ class RoleController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Card updated successfully.',
-            'card' => $card->fresh(),
+            'card'    => $card->fresh(),
         ]);
     }
 
     public function storeDashboardCard(Request $request)
     {
         $request->validate([
-            'label' => 'required|string|max:200',
-            'icon' => 'required|string|max:100',
-            'color_class' => 'required|string|max:100',
+            'label'      => 'required|string|max:200',
+            'icon'       => 'required|string|max:100',
+            'color_class'=> 'required|string|max:100',
             'sort_order' => 'required|integer|min:1',
         ]);
 
         $baseKey = trim(preg_replace('/[^a-z0-9]+/', '_', strtolower($request->label)), '_');
-        $key = $baseKey;
-        $i = 1;
-        while (DashboardCard::where('key', $key)->exists()) {
-            $key = $baseKey.'_'.$i++;
+
+        // A label of nothing but punctuation slugs to the empty string, and `key`
+        // is NOT NULL with a '' default - so the first such card would take '' and
+        // every later one would collide with it.
+        if ($baseKey === '') {
+            $baseKey = 'card';
         }
 
-        $card = DashboardCard::create(array_merge(
-            $request->only('label', 'icon', 'color_class', 'sort_order'),
-            ['key' => $key]
-        ));
+        // `dashboard_cards.key` carries a unique index, so the exists() probe below
+        // is a convenience for picking a readable suffix, not the thing that makes
+        // the key unique. Two requests with the same label can both pass the probe
+        // and the loser's INSERT then raises SQLSTATE 23000 - which reached the
+        // user as a 500 carrying a raw SQL error. Recompute and retry instead: the
+        // database stays the authority and the caller gets a card.
+        $card = null;
+
+        for ($attempt = 0; $attempt < 5 && $card === null; $attempt++) {
+            $key = $baseKey;
+            $i = 1;
+            while (DashboardCard::where('key', $key)->exists()) {
+                $key = $baseKey . '_' . $i++;
+            }
+
+            try {
+                $card = DashboardCard::create(array_merge(
+                    $request->only('label', 'icon', 'color_class', 'sort_order'),
+                    ['key' => $key]
+                ));
+            } catch (\Illuminate\Database\QueryException $e) {
+                // Only a uniqueness collision is worth retrying; anything else is a
+                // real failure and must not be swallowed.
+                if ((string) $e->getCode() !== '23000') {
+                    throw $e;
+                }
+            }
+        }
+
+        if ($card === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Could not allocate a unique key for this card. Please try again.',
+            ], 409);
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'Card created successfully.',
-            'card' => $card,
+            'card'    => $card,
         ]);
     }
 
@@ -218,32 +484,94 @@ class RoleController extends Controller
             ->toArray();
         $materialIcons = $this->materialIconNames();
 
-        return view('roles-permissions.assign-dashboard', compact('role', 'allCards', 'assignedCardIds', 'materialIcons'));
+        return view('roles-permissions.assign-dashboard', [
+            'role' => $role,
+            'allCards' => $allCards,
+            'assignedCardIds' => $assignedCardIds,
+            'materialIcons' => $materialIcons,
+            'enabledCount' => $allCards->whereIn('id', $assignedCardIds)->count(),
+        ]);
+    }
+
+    /**
+     * Download / Print the role's dashboard-card assignment — one action, two
+     * formats, off the same rows and column definitions as the screen
+     * (docs/new-design-index-page.md §1). ?q, ?status and ?cols are stamped on
+     * by the grid so the export carries what the user is looking at.
+     */
+    public function exportDashboardCards(Request $request, $id)
+    {
+        $format = strtolower((string) $request->input('format', 'csv'));
+        abort_unless(in_array($format, ['csv', 'excel', 'pdf', 'print'], true), 404);
+
+        $role = Role::findOrFail($id);
+        $assignedCardIds = $role->belongsToMany(DashboardCard::class, 'role_dashboard_cards', 'role_id', 'dashboard_card_id')
+            ->pluck('dashboard_cards.id')
+            ->toArray();
+
+        $rows = $this->service->filterDashboardCardRows(
+            $this->service->dashboardCardRows(DashboardCard::orderBy('id', 'desc')->get(), $assignedCardIds),
+            $request->input('q'),
+            $request->input('status')
+        );
+        $columns = $this->service->dashboardExportColumns($request->input('cols'));
+
+        // Two renderings of the same filters: the print sheet gets the bold HTML
+        // one, the CSV / .xlsx / PDF band gets plain text.
+        $bits = [];
+        $plain = [];
+        if (in_array($request->input('status'), ['enabled', 'disabled'], true)) {
+            $bits[] = '<strong>Status:</strong> '.ucfirst($request->input('status'));
+            $plain[] = 'Status: '.ucfirst($request->input('status'));
+        }
+        if (filled(trim((string) $request->input('q')))) {
+            $bits[] = '<strong>Search:</strong> '.e(trim((string) $request->input('q')));
+            $plain[] = 'Search: '.trim((string) $request->input('q'));
+        }
+
+        if ($format === 'print') {
+            return view('roles-permissions.assign_dashboard_print', [
+                'role' => $role,
+                'rows' => $rows,
+                'columns' => $columns,
+                'filterLine' => empty($bits) ? null : implode(' &nbsp;|&nbsp; ', $bits),
+                'exportDate' => now()->format('d-m-Y H:i'),
+            ]);
+        }
+
+        $slug = \Illuminate\Support\Str::slug($role->name) ?: 'role';
+
+        return $this->gridExport(
+            $format,
+            $rows,
+            $columns,
+            'Dashboard Cards — '.$role->name,
+            'DashboardCards_'.$slug,
+            empty($plain) ? null : implode('  |  ', $plain),
+            // Mirrors assign_dashboard_print.blade.php's column widths.
+            [
+                'sno' => '7%', 'label' => '30%', 'icon' => '20%', 'color' => '12%',
+                'sort_order' => '8%', 'created_at' => '12%', 'status' => '11%',
+            ]
+        );
     }
 
     private function materialIconNames(): array
     {
         $path = resource_path('data/material-symbols-rounded.codepoints');
-        if (! is_readable($path)) {
+        if (!is_readable($path)) {
             return [];
         }
         $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        if (! $lines) {
-            return [];
-        }
+        if (!$lines) return [];
         $names = [];
         foreach ($lines as $line) {
             $line = trim($line);
-            if ($line === '' || str_starts_with($line, '#')) {
-                continue;
-            }
+            if ($line === '' || str_starts_with($line, '#')) continue;
             $parts = preg_split('/\s+/', $line, 2);
-            if (! empty($parts[0])) {
-                $names[] = $parts[0];
-            }
+            if (!empty($parts[0])) $names[] = $parts[0];
         }
         sort($names, SORT_NATURAL | SORT_FLAG_CASE);
-
         return $names;
     }
 
@@ -253,7 +581,7 @@ class RoleController extends Controller
         $cardId = $request->card_id;
         $status = $request->status;
 
-        if (! $cardId) {
+        if (!$cardId) {
             return response()->json(['success' => false, 'message' => 'Card ID missing']);
         }
 

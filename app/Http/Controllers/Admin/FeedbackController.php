@@ -29,6 +29,7 @@ use App\Exports\FeedbackDatabaseExport;
 use App\Services\FacultyFeedbackReportService;
 use App\Http\Controllers\Admin\Concerns\ScopesSessionFeedbackReports;
 use App\Support\FeedbackReportRouteRegistry;
+use App\Support\PdfPageNumbers;
 
 class FeedbackController extends Controller
 {

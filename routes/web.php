@@ -155,25 +155,22 @@ Route::get('/logout', function () {
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'authenticate'])->middleware('throttle:login')->name('post_login');
 
-Route::middleware(['auth'])->group(function () {
-    // Reads stay open to anyone who can already reach the screen; gating them
-    // would break navigation without closing an escalation.
-    Route::get('roles/{id}/dashboard', [RoleController::class, 'showDashboard'])->name('roles.dashboard');
-
-    // Everything that CHANGES what a role can do.
-    //
-    // `POST roles/permissions/{id}` carried `auth` and nothing else, and
-    // RoleController::assignPermission() checked nothing itself: it
-    // firstOrCreate()d whatever permission name it was posted and granted it to
-    // the role named in the URL. Any authenticated account could therefore hand
-    // itself any permission and walk back through every `can()`-based gate in
-    // the application - including `member_pii_read`, which this same PR
-    // introduces. Recorded as PR #309 F-027 / PR #317 L-8.
-    //
-    // The middleware is referenced BY CLASS, not through a Kernel alias, on
-    // purpose: $middlewareAliases is the array this branch conflicts with
-    // `main` on, and a gate that lives there can be lost in a conflict
-    // resolution without anything failing loudly. See the class docblock.
+// Role and permission administration.
+//
+// Two gates, one per question. `EnsureMenuPermission:roles` answers "may this
+// account use the Roles screen at all" - the permission the screen itself is
+// listed under (menus row 157), so whoever the sidebar offers the screen to can
+// read it and export it, and nobody else can. EnsureRoleAdmin answers "may this
+// account CHANGE what a role can do", and only Super Admin may (PR #309 F-027 /
+// PR #317 L-8): assignPermission() writes permissions onto the role named in the
+// URL, so a write path open to every holder of the screen would let any holder
+// amplify its own role.
+//
+// Both are referenced BY CLASS, not through a Kernel alias: the alias array is
+// where branches conflict, and a gate that lives there can be lost in a conflict
+// resolution without anything failing loudly - which is how the merge
+// 4da6339c8 dropped every gate on this group (PR #311 review round 7, F-030).
+Route::middleware(['auth', EnsureMenuPermission::class.':roles'])->group(function () {
     Route::middleware([EnsureRoleAdmin::class])->group(function () {
         Route::post('roles/permissions/{id}', [RoleController::class, 'assignPermission'])->name('assign.roles.permissions');
         Route::post('roles/{id}/dashboard', [RoleController::class, 'assignDashboardCard'])->name('assign.roles.dashboard');
@@ -183,6 +180,12 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('roles', RoleController::class)->only(['store', 'update', 'destroy']);
     });
 
+    Route::get('roles/{id}/permissions/export', [RoleController::class, 'exportPermissions'])->name('roles.permissions.export');
+    Route::get('roles/{id}/dashboard', [RoleController::class, 'showDashboard'])->name('roles.dashboard');
+    Route::get('roles/{id}/dashboard/export', [RoleController::class, 'exportDashboardCards'])->name('roles.dashboard.export');
+    // Must stay ABOVE the resource: `roles/{role}` would otherwise swallow
+    // /roles/export and hand "export" to show().
+    Route::get('roles/export', [RoleController::class, 'export'])->name('roles.export');
     // The remaining resource verbs - index, create, show, edit - are reads.
     Route::resource('roles', RoleController::class)->except(['store', 'update', 'destroy']);
 });
@@ -191,34 +194,45 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth'])->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
-        // The assign-role screen writes Spatie roles onto any user id it is posted,
-        // Super Admin included, so behind `auth` alone any signed-in account could
-        // make itself Super Admin (PR #309 review F-073). Gated on the same `users`
-        // menu permission the sidebar uses to offer "User Permissions", so nobody
-        // who is shown the screen is refused by it. By class, not a Kernel alias -
-        // see EnsureRoleAdmin's docblock for why. assignRoleSave() re-checks.
+        // Roles under /admin: the same screen as the un-prefixed group above, so the
+        // same screen gate. store/update/destroy are additionally Super Admin only
+        // through RoleController's constructor (EnsureRoleAdmin), which covers this
+        // mount and the `roles/*` one alike.
+        Route::middleware([EnsureMenuPermission::class.':roles'])->group(function () {
+            Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
+            Route::get('roles/create', [RoleController::class, 'create'])->name('roles.create');
+            Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
+            Route::get('roles/{id}/edit', [RoleController::class, 'edit'])->name('roles.edit');
+            Route::put('roles/{id}', [RoleController::class, 'update'])->name('roles.update');
+            Route::delete('roles/{id}', [RoleController::class, 'destroy'])->name('roles.destroy');
+        });
+
+        // User Management. The WHOLE module, not one route of it, on the `users`
+        // permission the screen is listed under (menus row 158); Super Admin passes
+        // without holding it. With `auth` alone, any signed-in account could read the
+        // 15,108-row directory through the index or the export, and DELETE
+        // admin/users/{pk} deleted any account (PR #311 review round 7, F-016 / F-031,
+        // executed). The assign-role screen writes Spatie roles onto any user id,
+        // Super Admin included (PR #309 F-073); assignRoleSave() re-checks.
         Route::middleware([EnsureMenuPermission::class.':users'])->group(function () {
             Route::get('users/get-roles', [UserController::class, 'getAllRoles'])
                 ->name('users.getRoles');
             Route::get('users/assign-role/{id}', [UserController::class, 'assignRole'])->name('users.assignRole');
             Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
                 ->name('users.assignRoleSave');
+
+            // Above the resource for consistency with users/get-roles. What keeps
+            // /admin/users/export/<x> from reaching another action is the whereIn,
+            // not the position: the resource's `users/{user}/edit` would match
+            // export/edit if `edit` were ever added to the list. Pinned by
+            // ExportRoutePermissionTest.
+            Route::get('users/export/{format}', [UserController::class, 'export'])
+                ->whereIn('format', ['csv', 'xlsx', 'pdf', 'print'])
+                ->name('users.export');
+            Route::resource('users', UserController::class);
         });
 
-        // store/update/destroy below are gated in RoleController's constructor
-        // (EnsureRoleAdmin), which covers this mount and the `roles/*` one alike.
-        Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
-        Route::get('roles/create', [RoleController::class, 'create'])->name('roles.create');
-        Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
-        Route::get('roles/{id}/edit', [RoleController::class, 'edit'])->name('roles.edit');
-        Route::put('roles/{id}', [RoleController::class, 'update'])->name('roles.update');
-        Route::delete('roles/{id}', [RoleController::class, 'destroy'])->name('roles.destroy');
-
         // Route::resource('permissions', PermissionController::class);
-        Route::get('users/export/{format}', [UserController::class, 'export'])
-            ->whereIn('format', ['csv', 'xlsx', 'pdf'])
-            ->name('users.export');
-        Route::resource('users', UserController::class);
 
         Route::post('quick-links', [QuickLinkController::class, 'store'])->name('quick-links.store');
         Route::delete('quick-links/{id}', [QuickLinkController::class, 'destroy'])->name('quick-links.destroy');
@@ -1310,6 +1324,7 @@ Route::middleware(['auth'])->group(function () {
     // Useful Links master
     Route::prefix('admin/setup/useful-links')->name('admin.setup.useful_links.')->controller(UsefulLinksSetupController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/export', 'export')->name('export');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
@@ -1928,25 +1943,45 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
 });
 Route::get('/view-logs', [LogController::class, 'index']);
 
+// Sidebar administration.
+//
+// Each screen is gated on the permission it is listed under, for reads and
+// exports alike. Writes - store / update / destroy and the status toggles, which
+// are GETs but write - are ALSO Super Admin only (PR #309 F-077):
+// MenuService::update() renames the `permissions` row that follows a menu, and a
+// rename moves that permission for every role holding it, so a screen holder able
+// to write could turn one permission into another it was never granted.
+// `sidebar.menu` and the get* lookups at the end stay open: they feed every
+// user's sidebar.
 Route::middleware(['auth'])->prefix('sidebar')->name('sidebar.')->group(function () {
-    // Writes are Super Admin only (PR #309 review F-077). MenuService::update()
-    // renames the `permissions` row whenever a menu's name changes, and a rename
-    // moves that permission to every role holding it - so behind `auth` alone any
-    // account holding one menu permission could turn it into `users` or
-    // `member_pii_read` and pass the gates those names protect. The status toggles
-    // are GETs but they write, so they sit here too. Reads stay open: `sidebar.menu`
-    // and the get* lookups below feed every user's sidebar.
-    Route::middleware([EnsureRoleAdmin::class])->group(function () {
-        Route::get('categories/status/{id}', [SidebarCategoryController::class, 'status'])->name('categories.status');
-        Route::get('menu-groups/status/{id}', [MenuGroupController::class, 'status'])->name('menu-groups.status');
-        Route::get('menus/status/{id}', [MenuController::class, 'status'])->name('menus.status');
-        Route::resource('categories', SidebarCategoryController::class)->only(['store', 'update', 'destroy']);
-        Route::resource('menu-groups', MenuGroupController::class)->only(['store', 'update', 'destroy']);
-        Route::resource('menus', MenuController::class)->only(['store', 'update', 'destroy']);
+    Route::middleware([EnsureMenuPermission::class.':topbar_category'])->group(function () {
+        Route::middleware([EnsureRoleAdmin::class])->group(function () {
+            Route::get('categories/status/{id}', [SidebarCategoryController::class, 'status'])->name('categories.status');
+            Route::resource('categories', SidebarCategoryController::class)->only(['store', 'update', 'destroy']);
+        });
+        // Must stay ABOVE the resource: `categories/{category}` would otherwise
+        // swallow /categories/export and hand "export" to show().
+        Route::get('categories/export', [SidebarCategoryController::class, 'export'])->name('categories.export');
+        Route::resource('categories', SidebarCategoryController::class)->except(['store', 'update', 'destroy']);
     });
-    Route::resource('categories', SidebarCategoryController::class)->except(['store', 'update', 'destroy']);
-    Route::resource('menu-groups', MenuGroupController::class)->except(['store', 'update', 'destroy']);
-    Route::resource('menus', MenuController::class)->except(['store', 'update', 'destroy']);
+
+    Route::middleware([EnsureMenuPermission::class.':sidemenu_groups'])->group(function () {
+        Route::middleware([EnsureRoleAdmin::class])->group(function () {
+            Route::get('menu-groups/status/{id}', [MenuGroupController::class, 'status'])->name('menu-groups.status');
+            Route::resource('menu-groups', MenuGroupController::class)->only(['store', 'update', 'destroy']);
+        });
+        Route::get('menu-groups/export', [MenuGroupController::class, 'export'])->name('menu-groups.export');
+        Route::resource('menu-groups', MenuGroupController::class)->except(['store', 'update', 'destroy']);
+    });
+
+    Route::middleware([EnsureMenuPermission::class.':menus'])->group(function () {
+        Route::middleware([EnsureRoleAdmin::class])->group(function () {
+            Route::get('menus/status/{id}', [MenuController::class, 'status'])->name('menus.status');
+            Route::resource('menus', MenuController::class)->only(['store', 'update', 'destroy']);
+        });
+        Route::get('menus/export', [MenuController::class, 'export'])->name('menus.export');
+        Route::resource('menus', MenuController::class)->except(['store', 'update', 'destroy']);
+    });
     Route::get('groups', [SidebarController::class, 'getGroups'])->name('groups');
     Route::get('menu', [SidebarController::class, 'sidebarMenus'])->name('menu');
     Route::get('getGroups/{category_id}', [SidebarController::class, 'getCategoryGroups'])->name('getGroups');

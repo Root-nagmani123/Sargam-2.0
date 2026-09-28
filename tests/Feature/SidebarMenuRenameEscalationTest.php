@@ -128,12 +128,21 @@ class SidebarMenuRenameEscalationTest extends TestCase
         $this->assertSame((int) $menu->is_active, (int) DB::table('menus')->where('id', $menu->id)->value('is_active'));
     }
 
+    /**
+     * The permission follows the menu's Permission Name field, not a slug of its
+     * label (decided 2026-09-28, PR #311 review round 7 F-032). Re-deriving the name
+     * from the label renamed live permissions on an unchanged save wherever the two
+     * had diverged (Trap 40), so a label-only edit now leaves the permission alone,
+     * and an edit of the Permission Name field is what moves it.
+     */
     public function test_super_admin_can_still_edit_a_menu_and_the_rename_still_follows(): void
     {
         [$menu, $permission] = $this->menuWithPermission();
         $admin = $this->actorHolding($permission, 6, 'Super Admin');
         $this->assertTrue($admin->hasRole('Super Admin'));
+        $original = $permission->name;
 
+        // Label only: the menu is renamed, the permission is not.
         $this->actingAs($admin)
             ->from('/sidebar/menus')
             ->put('/sidebar/menus/'.$menu->id, $this->renamePayload($menu, 'Zz F077 Renamed'))
@@ -141,6 +150,17 @@ class SidebarMenuRenameEscalationTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $this->assertSame('Zz F077 Renamed', DB::table('menus')->where('id', $menu->id)->value('name'));
+        $this->assertSame($original, DB::table('permissions')->where('id', $permission->id)->value('name'));
+
+        // Permission Name field: the permission row follows it.
+        $menu->refresh();
+        $this->actingAs($admin)
+            ->from('/sidebar/menus')
+            ->put('/sidebar/menus/'.$menu->id, $this->renamePayload($menu, 'Zz F077 Renamed') + ['permission_name' => 'zz_f077_renamed'])
+            ->assertStatus(302)
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('zz_f077_renamed', DB::table('menus')->where('id', $menu->id)->value('permission_name'));
         $this->assertSame('zz_f077_renamed', DB::table('permissions')->where('id', $permission->id)->value('name'));
     }
 

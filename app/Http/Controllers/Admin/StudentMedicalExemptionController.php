@@ -24,6 +24,7 @@ use Yajra\DataTables\Facades\DataTables;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use App\Support\PdfPageNumbers;
 
 
 class StudentMedicalExemptionController extends Controller
@@ -957,7 +958,7 @@ class StudentMedicalExemptionController extends Controller
                     'dpi' => 96,
                 ]);
 
-            return $pdf->download($fileName . '.pdf');
+            return PdfPageNumbers::stamp($pdf, 18, 20, [0.4, 0.4, 0.4])->download($fileName . '.pdf');
         }
 
         // Styled workbook (logos, blue header band, bordered zebra rows) so the

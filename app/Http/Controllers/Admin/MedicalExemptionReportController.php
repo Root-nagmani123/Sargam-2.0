@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Maatwebsite\Excel\Facades\Excel;
 use Yajra\DataTables\Facades\DataTables;
+use App\Support\PdfPageNumbers;
 
 /**
  * Read-only "Medical Exemption Report".

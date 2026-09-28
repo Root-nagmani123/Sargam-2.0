@@ -14,6 +14,7 @@ use App\Http\Middleware\EnsureFcRegAdmin;
 use App\Http\Middleware\EnsureIssueReportsAdmin;
 use App\Http\Middleware\EnsureMemberPiiAccess;
 use App\Http\Middleware\EnsureMemberRecordAccess;
+use App\Http\Middleware\EnsureMenuPermission;
 use App\Http\Middleware\EnsureMemoNoticeManager;
 use App\Http\Middleware\EnsureRoleAssigned;
 use App\Http\Middleware\FcAuth;
@@ -116,5 +117,8 @@ class Kernel extends HttpKernel
         'member.record' => EnsureMemberRecordAccess::class,
         'memo.notice.manager' => EnsureMemoNoticeManager::class,
         'fc.builder.action' => BlockFcFormBuilderAction::class,
+        // Convenience alias only. routes/web.php references EnsureMenuPermission by
+        // class, so losing this line in a conflict cannot ungate a route.
+        'menu.permission' => EnsureMenuPermission::class,
     ];
 }

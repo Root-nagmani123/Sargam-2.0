@@ -1080,7 +1080,7 @@ class EmployeeIDCardRequestController extends Controller
 
                     $paymentReceipt = null;
                     if ($request->hasFile('payment_receipt')) {
-                        $ext = $request->file('payment_receipt')->getClientOriginalExtension();
+                        $ext = safe_upload_extension($request->file('payment_receipt'));
                         $file = $applyId . '_PAY_' . time() . '.' . $ext;
                         $request->file('payment_receipt')->storeAs('idcard/dup_docs', $file, 'public');
                         $paymentReceipt = $file;
@@ -1088,7 +1088,7 @@ class EmployeeIDCardRequestController extends Controller
 
                     $firDoc = null;
                     if ($request->hasFile('fir_receipt')) {
-                        $ext = $request->file('fir_receipt')->getClientOriginalExtension();
+                        $ext = safe_upload_extension($request->file('fir_receipt'));
                         $file = $applyId . '_FIR_' . time() . '.' . $ext;
                         $request->file('fir_receipt')->storeAs('idcard/dup_docs', $file, 'public');
                         $firDoc = $file;
@@ -1096,7 +1096,7 @@ class EmployeeIDCardRequestController extends Controller
 
                     $serviceExt = null;
                     if ($request->hasFile('joining_letter')) {
-                        $ext = $request->file('joining_letter')->getClientOriginalExtension();
+                        $ext = safe_upload_extension($request->file('joining_letter'));
                         $file = $applyId . '_EXT_' . time() . '.' . $ext;
                         $request->file('joining_letter')->storeAs('idcard/dup_docs', $file, 'public');
                         $serviceExt = $file;
@@ -1145,7 +1145,7 @@ class EmployeeIDCardRequestController extends Controller
 
                     $paymentReceipt = null;
                     if ($request->hasFile('payment_receipt')) {
-                        $ext = $request->file('payment_receipt')->getClientOriginalExtension();
+                        $ext = safe_upload_extension($request->file('payment_receipt'));
                         $file = $applyId . '_PAY_' . time() . '.' . $ext;
                         $request->file('payment_receipt')->storeAs('idcard/dup_docs', $file, 'public');
                         $paymentReceipt = $file;
@@ -1153,7 +1153,7 @@ class EmployeeIDCardRequestController extends Controller
 
                     $firDoc = null;
                     if ($request->hasFile('fir_receipt')) {
-                        $ext = $request->file('fir_receipt')->getClientOriginalExtension();
+                        $ext = safe_upload_extension($request->file('fir_receipt'));
                         $file = $applyId . '_FIR_' . time() . '.' . $ext;
                         $request->file('fir_receipt')->storeAs('idcard/dup_docs', $file, 'public');
                         $firDoc = $file;
@@ -1161,7 +1161,7 @@ class EmployeeIDCardRequestController extends Controller
 
                     $serviceExt = null;
                     if ($request->hasFile('documents')) {
-                        $ext = $request->file('documents')->getClientOriginalExtension();
+                        $ext = safe_upload_extension($request->file('documents'));
                         $file = $applyId . '_DOC_' . time() . '.' . $ext;
                         $request->file('documents')->storeAs('idcard/dup_docs', $file, 'public');
                         $serviceExt = $file;
@@ -1748,7 +1748,7 @@ class EmployeeIDCardRequestController extends Controller
 
         $firDoc = null;
         if ($cardReason === 'Lost' && $request->hasFile('fir_receipt')) {
-            $ext = $request->file('fir_receipt')->getClientOriginalExtension();
+            $ext = safe_upload_extension($request->file('fir_receipt'));
             $firDoc = $applyId . '_FIR_' . time() . '.' . $ext;
             $request->file('fir_receipt')->storeAs('idcard/dup_docs', $firDoc, 'public');
         }
@@ -1756,7 +1756,7 @@ class EmployeeIDCardRequestController extends Controller
         $paymentReceipt = null;
         $serviceExt = null;
         if ($request->hasFile('payment_receipt')) {
-            $ext = $request->file('payment_receipt')->getClientOriginalExtension();
+            $ext = safe_upload_extension($request->file('payment_receipt'));
             $file = $applyId . '_DOC_' . time() . '.' . $ext;
             $request->file('payment_receipt')->storeAs('idcard/dup_docs', $file, 'public');
             if ($cardReason === 'Expired Card') {
@@ -1768,7 +1768,7 @@ class EmployeeIDCardRequestController extends Controller
 
         $nameChangeDoc = null;
         if ($request->hasFile('supporting_document')) {
-            $ext = $request->file('supporting_document')->getClientOriginalExtension();
+            $ext = safe_upload_extension($request->file('supporting_document'));
             $file = $applyId . '_SUPPORT_' . time() . '.' . $ext;
             $request->file('supporting_document')->storeAs('idcard/dup_docs', $file, 'public');
             $nameChangeDoc = $file;

@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use App\Support\PdfPageNumbers;
 
 class MemoDisciplineController extends Controller
 {
@@ -472,7 +473,7 @@ public function exportPdf(Request $request)
             'dpi' => 96,
         ]);
 
-    return $pdf->download('send-discipline-memo-' . now()->format('Y-m-d_His') . '.pdf');
+    return PdfPageNumbers::stamp($pdf, 18, 20, [0.4, 0.4, 0.4])->download('send-discipline-memo-' . now()->format('Y-m-d_His') . '.pdf');
 }
 
 /**
