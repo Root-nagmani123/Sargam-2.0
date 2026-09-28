@@ -27,8 +27,9 @@ class RoleController extends Controller
         // Everything that CHANGES what a role can do requires Super Admin.
         //
         // Registered HERE and not only on the route, because this controller is
-        // mounted TWICE: `roles/*` at routes/web.php:162-171 and a second,
-        // hand-written `admin/roles/*` block at routes/web.php:180-185. A gate
+        // mounted TWICE: the `roles/*` group (route names `roles.*`,
+        // `assign.roles.*`, `dashboard.cards.*`) and a second, hand-written
+        // `admin/roles/*` block (route names `admin.roles.*`) in routes/web.php. A gate
         // attached to one route group protects that URL and nothing else, so
         // gating only the first would have left store/update/destroy reachable
         // through the second - and left the next mount unprotected as well.

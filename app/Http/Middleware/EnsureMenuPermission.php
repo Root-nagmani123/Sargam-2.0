@@ -23,9 +23,10 @@ use Illuminate\Support\Facades\Auth;
  *
  * Several may be listed; holding ANY one of them admits the request.
  *
- * Referenced BY CLASS, never through a Kernel alias: there is no `menu.permission`
- * alias on this branch, and a string middleware name that does not resolve throws
- * rather than gates. Wired on the assign-role routes in routes/web.php (PR #309
+ * Referenced BY CLASS in routes/web.php. A `menu.permission` alias also exists in
+ * app/Http/Kernel.php, for convenience only: routes do not depend on it, so losing
+ * it in a merge conflict cannot ungate a route (a string middleware name that does
+ * not resolve throws rather than gates). Wired on the assign-role routes in routes/web.php (PR #309
  * review F-068 raised it as unwired; F-073 is the escalation those routes had).
  */
 class EnsureMenuPermission
