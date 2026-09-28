@@ -7,6 +7,7 @@ use App\Services\SidebarMenu\MenuService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -388,6 +389,264 @@ class RolePermissionAdministrationGuardTest extends TestCase
         $this->assertDatabaseHas('role_has_permissions', ['permission_id' => $gamma, 'role_id' => $roleId]);
     }
 
+    /**
+     * PR #323 F-009. Menu groups and sidebar categories share the sidebar/ route
+     * group with menus, and an inactive group's menus drop out of the Roles
+     * matrix, so an ordinary account must not reach them either.
+     */
+    public function test_an_ordinary_user_cannot_change_menu_groups_or_categories(): void
+    {
+        $actor = $this->ordinaryUser();
+        $group = DB::table('menu_groups')->whereNull('deleted_at')->first();
+        $category = DB::table('sidebar_categories')->whereNull('deleted_at')->first();
+
+        if (! $group || ! $category) {
+            $this->markTestSkipped('no menu group or sidebar category in this database');
+        }
+
+        $this->actingAs($actor);
+
+        $this->get(route('sidebar.menu-groups.index'))->assertForbidden();
+        $this->post(route('sidebar.menu-groups.store'), [
+            'category_id' => $category->id, 'name' => 'ZZ Probe Group 323', 'icon' => 'label', 'is_active' => '1',
+        ])->assertForbidden();
+        $this->put(route('sidebar.menu-groups.update', $group->id), [
+            'category_id' => $group->category_id, 'name' => $group->name . ' ZZ', 'icon' => $group->icon ?: 'label',
+            'order' => $group->order, 'is_active' => (string) $group->is_active,
+        ])->assertForbidden();
+        $this->get(route('sidebar.menu-groups.status', $group->id) . '?is_active=0')->assertForbidden();
+        $this->delete(route('sidebar.menu-groups.destroy', $group->id))->assertForbidden();
+
+        $this->get(route('sidebar.categories.index'))->assertForbidden();
+        $this->post(route('sidebar.categories.store'), [
+            'name' => 'ZZ Probe Category 323', 'slug' => 'zz-probe-category-323', 'is_active' => '1',
+        ])->assertForbidden();
+        $this->put(route('sidebar.categories.update', $category->id), [
+            'name' => $category->name . ' ZZ', 'slug' => $category->slug, 'icon' => $category->icon,
+            'order' => $category->order, 'is_active' => (string) $category->is_active,
+        ])->assertForbidden();
+        $this->get(route('sidebar.categories.status', $category->id) . '?is_active=0')->assertForbidden();
+        $this->delete(route('sidebar.categories.destroy', $category->id))->assertForbidden();
+
+        $this->assertEquals($group, DB::table('menu_groups')->where('id', $group->id)->first());
+        $this->assertEquals($category, DB::table('sidebar_categories')->where('id', $category->id)->first());
+        $this->assertDatabaseMissing('menu_groups', ['name' => 'ZZ Probe Group 323']);
+        $this->assertDatabaseMissing('sidebar_categories', ['name' => 'ZZ Probe Category 323']);
+    }
+
+    /** The control for the test above: a Super Admin still edits groups and categories. */
+    public function test_a_super_admin_can_still_change_menu_groups_and_categories(): void
+    {
+        $superAdmin = $this->superAdmin();
+        $group = DB::table('menu_groups')->whereNull('deleted_at')->first();
+        $category = DB::table('sidebar_categories')->whereNull('deleted_at')->first();
+
+        if (! $group || ! $category) {
+            $this->markTestSkipped('no menu group or sidebar category in this database');
+        }
+
+        $this->actingAs($superAdmin);
+
+        $this->put(route('sidebar.menu-groups.update', $group->id), [
+            'category_id' => $group->category_id, 'name' => $group->name . ' ZZ', 'icon' => $group->icon ?: 'label',
+            'order' => $group->order, 'is_active' => (string) $group->is_active,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->getJson(route('sidebar.menu-groups.status', $group->id) . '?is_active=' . $group->is_active)
+            ->assertOk()->assertJson(['success' => true]);
+
+        $this->put(route('sidebar.categories.update', $category->id), [
+            'name' => $category->name . ' ZZ', 'slug' => $category->slug, 'icon' => $category->icon,
+            'order' => $category->order, 'is_active' => (string) $category->is_active,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->getJson(route('sidebar.categories.status', $category->id) . '?is_active=' . $category->is_active)
+            ->assertOk()->assertJson(['success' => true]);
+
+        $this->assertSame($group->name . ' ZZ', DB::table('menu_groups')->where('id', $group->id)->value('name'));
+        $this->assertSame($category->name . ' ZZ', DB::table('sidebar_categories')->where('id', $category->id)->value('name'));
+    }
+
+    /** The menu-groups grid is a Super Admin screen; a stored icon must reach it as text. */
+    public function test_the_menu_groups_grid_escapes_a_stored_icon(): void
+    {
+        $category = DB::table('sidebar_categories')->whereNull('deleted_at')->value('id');
+
+        if (! $category) {
+            $this->markTestSkipped('no sidebar category in this database');
+        }
+
+        $groupId = (int) DB::table('menu_groups')->insertGetId([
+            'category_id' => $category, 'name' => 'ZZ Probe Icon 323', 'icon' => '<img src=x onerror=alert(1)>',
+            'order' => 900000 + DB::table('menu_groups')->count(), 'is_active' => 1,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $rows = $this->actingAs($this->superAdmin())
+            ->getJson(route('sidebar.menu-groups.index'), ['X-Requested-With' => 'XMLHttpRequest'])
+            ->assertOk()
+            ->json('data');
+
+        $row = collect($rows)->firstWhere('id', $groupId);
+        $this->assertNotNull($row, 'the fixture group must be in the grid feed');
+        $this->assertStringNotContainsString('<img', $row['icon']);
+        $this->assertStringContainsString('&lt;img', $row['icon']);
+    }
+
+    /**
+     * PR #323 F-007. A permission name that route middleware checks (can:<name>)
+     * must survive a label rename of its menu, or every holder - Super Admin
+     * included - is locked out of those routes.
+     */
+    public function test_renaming_the_menu_of_a_route_checked_permission_keeps_the_route_open(): void
+    {
+        $superAdmin = $this->superAdmin();
+        $superAdminRole = (int) DB::table('roles')->where('name', 'Super Admin')->value('id');
+        $gated = $this->permission('zz_probe_gated');
+        DB::table('role_has_permissions')->insert(['permission_id' => $gated, 'role_id' => $superAdminRole]);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        Route::middleware(['web', 'auth', 'can:zz_probe_gated'])->get('/zz-probe-gated-323', fn () => 'ok');
+        $menuId = $this->menuFixture('ZZ Probe Gated', 'zz_probe_gated');
+
+        $this->actingAs($superAdmin)->get('/zz-probe-gated-323')->assertOk();
+
+        $this->put("/sidebar/menus/{$menuId}", ['name' => 'ZZ Probe Gated Reports'] + $this->editPayload($menuId))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('ZZ Probe Gated Reports', DB::table('menus')->where('id', $menuId)->value('name'));
+        $this->assertSame('zz_probe_gated', DB::table('menus')->where('id', $menuId)->value('permission_name'));
+        $this->assertSame('zz_probe_gated', DB::table('permissions')->where('id', $gated)->value('name'));
+        $this->get('/zz-probe-gated-323')->assertOk();
+    }
+
+    /** The live can: names (the FC step reports) are recognised the same way. */
+    public function test_live_route_checked_permissions_are_kept_on_rename(): void
+    {
+        $gatedNames = collect(app('router')->getRoutes()->getRoutes())
+            ->flatMap(fn ($route) => (array) $route->middleware())
+            ->filter(fn ($m) => is_string($m) && str_starts_with($m, 'can:'))
+            ->map(fn ($m) => substr($m, 4))
+            ->unique();
+        $menus = \App\Models\SidebarMenu\Menu::whereIn('permission_name', $gatedNames)->get();
+
+        if ($menus->isEmpty()) {
+            $this->markTestSkipped('no menu carries a can:-checked permission in this database');
+        }
+
+        foreach ($menus as $menu) {
+            $this->assertSame(
+                $menu->permission_name,
+                (new MenuService())->permissionFor($menu->name . ' Renamed', $menu),
+                "menu {$menu->id} would rename {$menu->permission_name}, which route middleware checks"
+            );
+        }
+    }
+
+    /** PR #323 F-010. A name with nothing sluggable must not become an empty permission name. */
+    public function test_a_menu_name_with_no_letters_or_digits_is_refused(): void
+    {
+        $this->permission('zz_probe_symbols');
+        $menuId = $this->menuFixture('ZZ Probe Symbols', 'zz_probe_symbols');
+        $this->actingAs($this->superAdmin());
+
+        $this->put("/sidebar/menus/{$menuId}", ['name' => '!!!'] + $this->editPayload($menuId))
+            ->assertSessionHasErrors('name');
+
+        $this->assertSame('zz_probe_symbols', DB::table('menus')->where('id', $menuId)->value('permission_name'));
+        $this->assertDatabaseHas('permissions', ['name' => 'zz_probe_symbols']);
+
+        $this->post('/sidebar/menus', ['name' => '!!!'] + $this->createPayload())
+            ->assertSessionHasErrors('name');
+
+        $this->assertDatabaseMissing('menus', ['name' => '!!!']);
+        $this->assertDatabaseMissing('permissions', ['name' => '']);
+    }
+
+    /**
+     * PR #323 F-008. Creating a menu whose derived name is already a permission -
+     * in another group, or with no menu at all - is refused as update() refuses it,
+     * rather than silently sharing that permission's holders.
+     */
+    public function test_creating_a_menu_on_an_existing_permission_name_is_refused(): void
+    {
+        $groups = DB::table('menu_groups')->whereNull('deleted_at')->orderBy('id')->limit(2)->get();
+
+        if ($groups->count() < 2) {
+            $this->markTestSkipped('needs two menu groups');
+        }
+
+        $this->permission('zz_probe_taken');
+        $this->menuFixture('ZZ Probe Taken', 'zz_probe_taken');   // in the first group
+        $this->permission('zz_probe_orphan');                      // no menu uses it
+
+        $this->actingAs($this->superAdmin());
+        $other = ['group_id' => $groups[1]->id, 'category_id' => $groups[1]->category_id];
+
+        $this->post('/sidebar/menus', ['name' => 'ZZ Probe Taken'] + $other + $this->createPayload())
+            ->assertSessionHasErrors('name');
+        $this->post('/sidebar/menus', ['name' => 'ZZ Probe Orphan'] + $other + $this->createPayload())
+            ->assertSessionHasErrors('name');
+
+        $this->assertSame(1, DB::table('menus')->where('permission_name', 'zz_probe_taken')->whereNull('deleted_at')->count());
+        $this->assertDatabaseMissing('menus', ['permission_name' => 'zz_probe_orphan']);
+    }
+
+    /** Must-succeed control for the refusals above: a new name still creates a menu. */
+    public function test_a_super_admin_can_still_create_a_menu_with_a_new_name(): void
+    {
+        $this->actingAs($this->superAdmin())
+            ->post('/sidebar/menus', ['name' => 'ZZ Probe Fresh 323'] + $this->createPayload())
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('menus', ['name' => 'ZZ Probe Fresh 323', 'permission_name' => 'zz_probe_fresh_323']);
+        $this->assertDatabaseHas('permissions', ['name' => 'zz_probe_fresh_323']);
+    }
+
+    /**
+     * PR #323 F-003. The form's permission-name preview comes from the server,
+     * so it matches what Save stores - including transliteration and the cases
+     * where an existing menu keeps its permission.
+     */
+    public function test_the_permission_preview_matches_what_save_stores(): void
+    {
+        $superAdmin = $this->superAdmin();
+        $this->actingAs($superAdmin);
+
+        foreach (['ZZ A - B', 'ZZ Café Menu', 'ZZ Reports @ FC'] as $name) {
+            $preview = $this->getJson(route('sidebar.menus.permission-preview', ['name' => $name]))
+                ->assertOk()->json('permission');
+
+            $this->post('/sidebar/menus', ['name' => $name] + $this->createPayload())
+                ->assertSessionHasNoErrors();
+
+            $this->assertSame(
+                DB::table('menus')->where('name', $name)->value('permission_name'),
+                $preview,
+                "preview for \"{$name}\" differs from the stored name"
+            );
+        }
+
+        $this->getJson(route('sidebar.menus.permission-preview', ['name' => '!!!']))
+            ->assertOk()->assertJson(['permission' => null])->assertJsonStructure(['error']);
+
+        $this->permission('zz_probe_preview_old');
+        $menuId = $this->menuFixture('ZZ Probe Preview', 'zz_probe_preview_old');
+        $this->getJson(route('sidebar.menus.permission-preview', ['name' => 'ZZ Probe Preview', 'menu_id' => $menuId]))
+            ->assertOk()->assertJson(['permission' => 'zz_probe_preview_old']);
+
+        $level = ob_get_level();
+        $page = $this->get(route('sidebar.menus.index'));
+        while (ob_get_level() > $level) {
+            ob_end_clean();
+        }
+        $page->assertOk()->assertSee(json_encode(route('sidebar.menus.permission-preview')), false);
+
+        $this->actingAs($this->ordinaryUser())
+            ->getJson(route('sidebar.menus.permission-preview', ['name' => 'x']))
+            ->assertForbidden();
+    }
+
     protected function tearDown(): void
     {
         // The transaction rolls back inside parent::tearDown(), after which the
@@ -438,6 +697,21 @@ class RolePermissionAdministrationGuardTest extends TestCase
             'category_id' => $row->category_id, 'group_id' => $row->group_id, 'parent_id' => $row->parent_id,
             'name' => $row->name, 'route' => $row->route, 'order' => $row->order,
             'icon' => $row->icon, 'is_active' => (string) $row->is_active, 'target' => (string) ($row->target ?? '0'),
+        ];
+    }
+
+    /** What the create modal posts, minus the name. */
+    private function createPayload(): array
+    {
+        $group = DB::table('menu_groups')->whereNull('deleted_at')->orderBy('id')->first();
+
+        if (! $group) {
+            $this->markTestSkipped('no menu group in this database');
+        }
+
+        return [
+            'category_id' => $group->category_id, 'group_id' => $group->id, 'parent_id' => '',
+            'route' => '', 'order' => '', 'icon' => '', 'is_active' => '1', 'target' => '0',
         ];
     }
 

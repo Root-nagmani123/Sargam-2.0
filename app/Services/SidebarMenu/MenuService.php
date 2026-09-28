@@ -47,23 +47,7 @@ class MenuService
 
     public function store(array $data)
     {
-        $permission = Str::slug($data['name'], '_');
-
-        // MenuRequest used to check uniqueness of the POSTED permission name, which
-        // is discarded. Check the name that is actually stored, with the same scope.
-        $clash = Menu::where('permission_name', $permission)
-            ->where('group_id', $data['group_id'] ?? null)
-            ->where(function ($q) use ($data) {
-                empty($data['parent_id'])
-                    ? $q->whereNull('parent_id')
-                    : $q->where('parent_id', $data['parent_id']);
-            })
-            ->exists();
-        if ($clash) {
-            throw ValidationException::withMessages([
-                'name' => "A menu in this group already uses the permission \"{$permission}\". Choose a different name.",
-            ]);
-        }
+        $permission = $this->permissionFor((string) $data['name']);
 
         $data['permission_name'] = $permission;
         $data['order'] = $data['order'] ?? Menu::max('order') + 1;
@@ -104,19 +88,9 @@ class MenuService
         unset($data['permission_name']);
         $data['order'] = $data['order'] ?? Menu::max('order') + 1;
 
-        $nameChanged = trim((string) $data['name']) !== trim((string) $menu->name);
-        $newPermission = ($nameChanged || $oldPermission === null || $oldPermission === '')
-            ? Str::slug($data['name'], '_')
-            : $oldPermission;
+        $newPermission = $this->permissionFor((string) $data['name'], $menu);
 
         if ($newPermission !== $oldPermission) {
-            // permissions has no unique index, and the sidebar matches by name, so
-            // landing on an existing name would merge two sets of holders.
-            if (Permission::where('name', $newPermission)->exists()) {
-                throw ValidationException::withMessages([
-                    'name' => "A permission named \"{$newPermission}\" already exists. Choose a menu name that gives a different permission name.",
-                ]);
-            }
             $data['permission_name'] = $newPermission;
         }
 
@@ -131,6 +105,70 @@ class MenuService
         SidebarNavResolver::clearCache();
         self::clearStructureCache();
         return $menu;
+    }
+
+    /**
+     * The permission name a menu called $name will carry once saved - $menu's
+     * current one when it keeps it, otherwise one derived from $name. store(),
+     * update() and the form's preview all ask this, so the preview shows what
+     * Save stores. Throws a validation error on `name` when no usable name can
+     * be derived.
+     */
+    public function permissionFor(string $name, ?Menu $menu = null): string
+    {
+        $old = $menu ? $menu->permission_name : null;
+
+        if ($old !== null && $old !== '') {
+            if (trim($name) === trim((string) $menu->name)) {
+                return $old;
+            }
+
+            // Route middleware (can:...) checks some permission names directly.
+            // Renaming one locks every holder out of those routes, Super Admin
+            // included, so a menu on such a name keeps it and only the label changes.
+            if (in_array($old, self::routeCheckedPermissions(), true)) {
+                return $old;
+            }
+        }
+
+        $new = Str::slug($name, '_');
+
+        if ($new === '') {
+            throw ValidationException::withMessages([
+                'name' => 'The menu name needs at least one letter or digit to make a permission name from.',
+            ]);
+        }
+
+        if ($new === $old) {
+            return $old;
+        }
+
+        // permissions has no unique index, and the sidebar matches by name, so
+        // landing on a name already in use would merge two sets of holders.
+        if (Permission::where('name', $new)->exists() || Menu::where('permission_name', $new)->exists()) {
+            throw ValidationException::withMessages([
+                'name' => "A permission named \"{$new}\" already exists. Choose a menu name that gives a different permission name.",
+            ]);
+        }
+
+        return $new;
+    }
+
+    /** Every parameter passed to route middleware, e.g. the name in can:<name>. */
+    private static function routeCheckedPermissions(): array
+    {
+        $names = [];
+
+        foreach (app('router')->getRoutes() as $route) {
+            foreach ((array) $route->middleware() as $middleware) {
+                if (is_string($middleware) && str_contains($middleware, ':')) {
+                    [, $parameters] = explode(':', $middleware, 2);
+                    array_push($names, ...explode(',', $parameters));
+                }
+            }
+        }
+
+        return array_values(array_unique($names));
     }
 
     /**

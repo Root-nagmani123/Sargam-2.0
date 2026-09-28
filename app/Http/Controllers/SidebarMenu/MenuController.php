@@ -15,6 +15,7 @@ use App\Http\Requests\SidebarMenu\MenuRequest;
 use App\Services\SidebarMenu\MenuService;
 use App\Services\SidebarMenu\MenuGroupService;
 use App\Http\Middleware\EnsureRoleAdministration;
+use Illuminate\Validation\ValidationException;
 
 class MenuController extends Controller
 {
@@ -74,6 +75,20 @@ class MenuController extends Controller
         $this->menuService->delete($id);
 
         return back();
+    }
+
+    /** What Save would store as the permission name for this name (and menu, when editing). */
+    public function permissionPreview(Request $request)
+    {
+        $menu = $request->filled('menu_id') ? $this->menuService->find($request->menu_id) : null;
+
+        try {
+            return response()->json([
+                'permission' => $this->menuService->permissionFor((string) $request->input('name'), $menu),
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json(['permission' => null, 'error' => $e->errors()['name'][0] ?? null]);
+        }
     }
 
     public function status($id,Request $request)

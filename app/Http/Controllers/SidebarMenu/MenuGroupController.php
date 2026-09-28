@@ -13,6 +13,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\SidebarMenu\MenuGroupService;
 use App\Http\Requests\SidebarMenu\MenuGroupRequest;
+use App\Http\Middleware\EnsureRoleAdministration;
 
 class MenuGroupController extends Controller
 {
@@ -20,6 +21,10 @@ class MenuGroupController extends Controller
 
     public function __construct(MenuGroupService $service)
     {
+        // Only active groups' menus reach the Roles matrix, and the groups grid is
+        // a Super Admin screen, so group edits belong to the same surface as menus.
+        $this->middleware(EnsureRoleAdministration::class);
+
         $this->service = $service;
     }
 

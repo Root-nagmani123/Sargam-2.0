@@ -14,6 +14,7 @@ use App\Http\Controllers\Controller;
 use App\Services\SidebarMenu\SidebarCategoryService;
 use App\Http\Requests\SidebarMenu\CategoryRequest;
 use Illuminate\Http\Request;
+use App\Http\Middleware\EnsureRoleAdministration;
 
 
 class SidebarCategoryController extends Controller
@@ -22,6 +23,10 @@ class SidebarCategoryController extends Controller
 
     public function __construct(SidebarCategoryService $service)
     {
+        // The Roles matrix is built category -> groups -> menus, so category edits
+        // belong to the same administration surface as menus and groups.
+        $this->middleware(EnsureRoleAdministration::class);
+
         $this->service = $service;
     }
 

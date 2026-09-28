@@ -174,7 +174,7 @@ class MenuGroupService
 
     private function iconBadge($data)
     {
-        return '<span class="material-symbols-rounded fs-6" aria-hidden="true">'.$data->icon.'</span>';
+        return '<span class="material-symbols-rounded fs-6" aria-hidden="true">'.e($data->icon).'</span>';
     }
 
     private function actionButtons($data)

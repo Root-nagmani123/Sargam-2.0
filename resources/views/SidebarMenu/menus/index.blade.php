@@ -162,9 +162,10 @@
                         </div>
                         <div class="col-12 form-group mb-2">
                             <label class="form-label" for="permission_name">Permission Name</label>
-                            <small class="text-muted fs-2">(set automatically from the name; renaming a menu changes it)</small>
+                            <small class="text-muted fs-2">(set by the server from the name; shown as Save will store it)</small>
                             {{-- No name attribute: the server derives this value and ignores anything posted. --}}
                             <input type="text" class="form-control" id="permission_name" readonly tabindex="-1" placeholder="Derived from the menu name">
+                            <small class="text-danger d-none" id="permission_name_error"></small>
                         </div>
                         <div class="col-6 form-group mb-2 position-relative">
                             <label class="form-label" for="icon">Icon</label>
@@ -211,28 +212,34 @@
 @section('script')
 <script src="{{ asset('admin_assets/js/material-symbols-list.js') }}"></script>
 <script>
-    // Preview only. On create it follows the name; on edit it shows the stored
-    // permission, which the server changes only when the name itself changes.
-    let editingPermission = null;
-    let editingName = null;
+    // Preview only. The server decides the name (it transliterates, and keeps an
+    // existing menu's permission in some cases), so ask it rather than guess here.
+    let editingMenuId = null;
+    let previewTimer = null;
+    let previewSeq = 0;
 
-    $('#name').on('keyup', function () {
+    function showPermissionPreview(permission, error) {
+        $('#permission_name').val(permission ?? '');
+        $('#permission_name_error').text(error ?? '').toggleClass('d-none', !error);
+    }
 
-        let name = $(this).val();
+    $('#name').on('input', function () {
+        const name = $(this).val();
+        clearTimeout(previewTimer);
 
-        if (editingPermission !== null && name.trim() === editingName.trim()) {
-            $('#permission_name').val(editingPermission);
+        if (name.trim() === '') {
+            previewSeq++;
+            showPermissionPreview('', null);
             return;
         }
 
-        let permission = name
-            .toLowerCase()
-            .trim()
-            .replace(/-/g, '_')          
-            .replace(/[^a-z0-9_\s]/g, '')   
-            .replace(/\s+/g, '_');    
-
-        $('#permission_name').val(permission);
+        previewTimer = setTimeout(function () {
+            const seq = ++previewSeq;
+            $.getJSON(@json(route('sidebar.menus.permission-preview')), { name: name, menu_id: editingMenuId ?? '' })
+                .done(function (res) {
+                    if (seq === previewSeq) showPermissionPreview(res.permission, res.error);
+                });
+        }, 250);
     });
 
     $(document).on('click', '.edit-btn', function () {
@@ -250,17 +257,17 @@
 
     function MenuGroupModal(data = null) {
         $('input[name="_method"]').remove();
-        editingPermission = null;
-        editingName = null;
-        $('#permission_name').val('');
+        editingMenuId = null;
+        clearTimeout(previewTimer);
+        previewSeq++;
+        showPermissionPreview('', null);
 
         if (data) {
             $('#menuId').val(data.id);
             $('#name').val(data.name);
             $('#route').val(data.route ?? '');
-            editingPermission = data.permission_name ?? '';
-            editingName = data.name ?? '';
-            $('#permission_name').val(editingPermission);
+            editingMenuId = data.id;
+            showPermissionPreview(data.permission_name, null);
             $('#icon').val(data.icon ?? '');
             $('#order').val(data.order ?? '');
             $('#is_active').val(data.is_active);

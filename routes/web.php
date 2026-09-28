@@ -1860,6 +1860,7 @@ Route::middleware(['auth'])->prefix('sidebar')->name('sidebar.')->group(function
     Route::get('menu-groups/status/{id}', [MenuGroupController::class, 'status'])->name('menu-groups.status');
     Route::resource('menu-groups', MenuGroupController::class);
     Route::get('menus/status/{id}', [MenuController::class, 'status'])->name('menus.status');
+    Route::get('menus/permission-preview', [MenuController::class, 'permissionPreview'])->name('menus.permission-preview');
     Route::resource('menus', MenuController::class);
     Route::get('groups', [SidebarController::class, 'getGroups'])->name('groups');
     Route::get('menu', [SidebarController::class, 'sidebarMenus'])->name('menu');
