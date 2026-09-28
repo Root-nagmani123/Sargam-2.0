@@ -51,6 +51,15 @@ class CalendarController extends Controller
      *  2. The comparison was textual, so "012" would not have matched pk 12; the
      *     round-trip CAST check keeps that. No such value exists in the data today.
      *
+     * A JSON value that is valid but not an array (a bare `"5"`, `3`, an object) is wrapped
+     * into a one-element array first, because JSON_TABLE's '$[*]' returns no row for a scalar.
+     * That keeps the bare string `"5"`, which the original matched through JSON_CONTAINS, and
+     * leaves quirk 1 intact: a wrapped number is still rejected by the STRING guard. Each JSON
+     * function gets a CASE-guarded argument, as in TEACHING_FACULTY_JSON_TABLE. An array row
+     * pays one extra JSON parse for the type check: measured on dev (653 rows, 400 alternated
+     * runs, twice) at about +0.7 ms minimum and +1.5 ms median for this derived table, with the
+     * same 698 pairs as before.
+     *
      * @see studentFeedback()
      */
     /*
@@ -71,9 +80,13 @@ class CalendarController extends Controller
         SELECT tt.pk AS timetable_pk, CAST(jt.faculty_txt AS UNSIGNED) AS faculty_pk
         FROM timetable tt
         CROSS JOIN JSON_TABLE(
-            CASE
-                WHEN JSON_VALID(tt.faculty_master) THEN tt.faculty_master
-                ELSE JSON_ARRAY(CAST(tt.faculty_master AS CHAR))
+            CASE JSON_TYPE(CASE WHEN JSON_VALID(tt.faculty_master) THEN tt.faculty_master END)
+                WHEN 'ARRAY' THEN tt.faculty_master
+                ELSE CASE
+                    WHEN JSON_VALID(tt.faculty_master)
+                        THEN JSON_ARRAY(CAST(CASE WHEN JSON_VALID(tt.faculty_master) THEN tt.faculty_master ELSE 'null' END AS JSON))
+                    ELSE JSON_ARRAY(CAST(tt.faculty_master AS CHAR))
+                END
             END,
             '$[*]' COLUMNS (
                 faculty_txt VARCHAR(64) PATH '$',
