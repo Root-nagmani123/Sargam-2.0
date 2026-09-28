@@ -95,7 +95,9 @@
 @section('content')
 <div class="container-fluid notice-form-page">
     <x-breadcrum title="Notice notification List" />
-    <x-session_message />
+    {{-- No <x-session_message /> here: it renders every validation error as its
+         own dismissible pill, which duplicated the grouped list below — one
+         mistake showed up twice. Flash success/error land on the index page. --}}
 
     <div class="card notice-form-card border-0 shadow-sm rounded-3">
         @if ($errors->any())
@@ -332,22 +334,22 @@ $(document).ready(function() {
 
 @php
 // The cascade's starting state: old() wins after a failed validation, otherwise
-// the saved notice. `ot_group_selection` folds three saved columns back into the
-// single dropdown the form uses — a group pk, or the literal all / individual.
-$savedGroupSelection = $notice->audience_mode === \App\Models\NoticeNotification::MODE_GROUP
-    ? $notice->group_type_map_pk
-    : ($notice->audience_mode ?: \App\Models\NoticeNotification::MODE_ALL);
+// the saved notice's audience rows. audience_mode maps straight onto the scope
+// dropdown on both sides (the staff side has no Group option, so it falls back
+// to All).
+$savedMode = $notice->audience_mode ?: \App\Models\NoticeNotification::MODE_ALL;
 
 $audiencePreset = [
-    'target_audience'      => old('target_audience', $notice->target_audience),
-    'course_master_pk'     => old('course_master_pk', $notice->course_master_pk),
-    'ot_group_selection'   => old('ot_group_selection', $savedGroupSelection),
-    'student_pks'          => old('student_pks', $selectedStudents->all()),
-    'department_master_pk' => old('department_master_pk', $notice->department_master_pk),
-    'staff_scope'          => old('staff_scope', $notice->audience_mode === \App\Models\NoticeNotification::MODE_INDIVIDUAL
+    'target_audience'       => old('target_audience', $notice->target_audience),
+    'course_master_pks'     => old('course_master_pks', $selectedCourses),
+    'ot_scope'              => old('ot_scope', $savedMode),
+    'group_type_map_pks'    => old('group_type_map_pks', $selectedGroups),
+    'student_pks'           => old('student_pks', $selectedStudents),
+    'department_master_pks' => old('department_master_pks', $selectedDepartments),
+    'staff_scope'           => old('staff_scope', $savedMode === \App\Models\NoticeNotification::MODE_INDIVIDUAL
         ? \App\Models\NoticeNotification::MODE_INDIVIDUAL
         : \App\Models\NoticeNotification::MODE_ALL),
-    'employee_pks'         => old('employee_pks', $selectedEmployees->all()),
+    'employee_pks'          => old('employee_pks', $selectedEmployees),
 ];
 @endphp
 

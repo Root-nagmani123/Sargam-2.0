@@ -192,18 +192,18 @@
                         $feedNoticeDate      = !empty($feedNotice->display_date) ? \Carbon\Carbon::parse($feedNotice->display_date)->format('d/m/Y h:i A') : '—';
                         $feedNoticeSearch    = strtolower(($feedNotice->notice_title ?? '') . ' ' . ($feedNotice->notice_type ?? '') . ' ' . ($feedNotice->author_name ?? '') . ' ' . ($feedNotice->author_department ?? ''));
 
+                        // The badge shows the notice's OWN type. It used to relabel
+                        // "Course notice" as "Work Allocations", so an OT was told
+                        // a notice was something the author never selected.
+                        // Only the colour is derived from the type now.
+                        $noticeBadgeLabel = $feedNotice->notice_type ?: 'Notice';
+
                         if (str_contains($noticeTypeLower, 'office order')) {
                             $noticeBadgeClass = 'notices-feed-badge--order';
-                            $noticeBadgeLabel = $feedNotice->notice_type;
-                        } elseif (str_contains($noticeTypeLower, 'course notice')) {
+                        } elseif (str_contains($noticeTypeLower, 'course notice') || str_contains($noticeTypeLower, 'work allocation')) {
                             $noticeBadgeClass = 'notices-feed-badge--work';
-                            $noticeBadgeLabel = 'Work Allocations';
-                        } elseif (str_contains($noticeTypeLower, 'work allocation')) {
-                            $noticeBadgeClass = 'notices-feed-badge--work';
-                            $noticeBadgeLabel = $feedNotice->notice_type;
                         } else {
                             $noticeBadgeClass = 'notices-feed-badge--notice';
-                            $noticeBadgeLabel = $feedNotice->notice_type ?? 'Notice';
                         }
                     @endphp
                     {{-- data-notice-year/-type/-dept/-audience used to drive client-side

@@ -120,7 +120,9 @@
                         </div>
 
                         <div class="col-12 col-sm-6 col-md">
-                            <label class="form-label fw-semibold mb-1">Year</label>
+                            {{-- Named for the column it filters: "Year" alone, next to
+                                 Created / Display / Expiry columns, was a guess. --}}
+                            <label class="form-label fw-semibold mb-1">Display Year</label>
                             <select name="year" class="form-select form-select-sm js-choice"
                                 onchange="this.form.submit()">
                                 <option value="">All</option>
@@ -235,20 +237,19 @@
                                     {{ $n->notice_type }}
                                 </span>
                             </td>
+                            {{-- course_label / department_label read the audience map,
+                                 so a multi-course or multi-department notice lists all
+                                 of them and an empty selection reads "All ...". --}}
                             <td class="col-course">
-                                @if($n->course_master_pk)
-                                {{ $n->course->course_name ?? 'N/A' }}
-                                @elseif(stripos($n->target_audience, 'Office trainee') !== false)
-                                <span class="text-muted">All courses</span>
+                                @if($n->course_label)
+                                <span class="{{ $n->courses->isEmpty() ? 'text-muted' : '' }}">{{ $n->course_label }}</span>
                                 @else
                                 N/A
                                 @endif
                             </td>
                             <td class="col-department">
-                                @if($n->department_master_pk)
-                                {{ $n->department->department_name ?? 'N/A' }}
-                                @elseif(stripos($n->target_audience, 'Staff/Faculty') !== false)
-                                <span class="text-muted">All departments</span>
+                                @if($n->department_label)
+                                <span class="{{ $n->departments->isEmpty() ? 'text-muted' : '' }}">{{ $n->department_label }}</span>
                                 @else
                                 N/A
                                 @endif
@@ -257,13 +258,13 @@
                                 <span class="badge rounded-1 bg-primary-subtle text-primary">
                                     {{ $n->target_audience }}
                                 </span>
-                                @if($n->audience_mode === \App\Models\NoticeNotification::MODE_GROUP && $n->groupTypeMap)
+                                @if($n->audience_mode === \App\Models\NoticeNotification::MODE_GROUP)
                                 <span class="d-block small text-muted mt-1">
-                                    {{ trim(($n->groupTypeMap->courseGroupType->type_name ?? 'Group') . ' - ' . $n->groupTypeMap->group_name, ' -') }}
+                                    {{ $n->group_labels->isEmpty() ? 'Group' : $n->group_labels->implode(', ') }}
                                 </span>
                                 @elseif($n->audience_mode === \App\Models\NoticeNotification::MODE_INDIVIDUAL)
                                 <span class="d-block small text-muted mt-1">
-                                    Individual · {{ $n->audience_maps_count }} selected
+                                    Individual · {{ $n->individual_count }} selected
                                 </span>
                                 @endif
                             </td>

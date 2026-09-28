@@ -5,14 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * One row per individually-picked recipient of a notice.
+ * One row per thing a notice is addressed to.
  *
- * Only written when the notice's audience_mode is "individual" — an "all" or
- * group-wide notice resolves its recipients from the course/department/group
- * columns on the notice itself.
+ * A notice's whole audience lives here — the courses / departments it targets,
+ * the groups within them, and any individually-picked people. The scalar
+ * columns still on notices_notification mirror the single-value case only and
+ * are not read back by this module.
  */
 class NoticeAudienceMap extends Model
 {
+    public const TYPE_COURSE = 'C';
+    public const TYPE_GROUP = 'G';
+    public const TYPE_DEPARTMENT = 'D';
     public const TYPE_STUDENT = 'S';
     public const TYPE_EMPLOYEE = 'E';
 
@@ -24,6 +28,26 @@ class NoticeAudienceMap extends Model
     public function notice()
     {
         return $this->belongsTo(NoticeNotification::class, 'notices_notification_pk', 'pk');
+    }
+
+    public function scopeOfType($query, string $type)
+    {
+        return $query->where('audience_type', $type);
+    }
+
+    public function scopeCourses($query)
+    {
+        return $query->where('audience_type', self::TYPE_COURSE);
+    }
+
+    public function scopeGroups($query)
+    {
+        return $query->where('audience_type', self::TYPE_GROUP);
+    }
+
+    public function scopeDepartments($query)
+    {
+        return $query->where('audience_type', self::TYPE_DEPARTMENT);
     }
 
     public function scopeStudents($query)

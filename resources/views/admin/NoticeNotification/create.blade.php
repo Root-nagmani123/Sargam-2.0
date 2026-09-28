@@ -91,7 +91,9 @@
 @section('content')
 <div class="container-fluid notice-form-page py-1">
     <x-breadcrum title="Notice List" />
-    <x-session_message />
+    {{-- No <x-session_message /> here: it renders every validation error as its
+         own dismissible pill, which duplicated the grouped list below — one
+         mistake showed up twice. Flash success/error land on the index page. --}}
 
     <div class="card notice-form-card border-0 shadow-sm rounded-3">
         @if ($errors->any())
@@ -333,13 +335,14 @@
 // What the cascade should show on load. On create that is only whatever survived
 // a failed validation; the saved notice adds to this on the edit form.
 $audiencePreset = [
-    'target_audience'      => old('target_audience'),
-    'course_master_pk'     => old('course_master_pk'),
-    'ot_group_selection'   => old('ot_group_selection'),
-    'student_pks'          => old('student_pks', []),
-    'department_master_pk' => old('department_master_pk'),
-    'staff_scope'          => old('staff_scope'),
-    'employee_pks'         => old('employee_pks', []),
+    'target_audience'       => old('target_audience'),
+    'course_master_pks'     => old('course_master_pks', []),
+    'ot_scope'              => old('ot_scope'),
+    'group_type_map_pks'    => old('group_type_map_pks', []),
+    'student_pks'           => old('student_pks', []),
+    'department_master_pks' => old('department_master_pks', []),
+    'staff_scope'           => old('staff_scope'),
+    'employee_pks'          => old('employee_pks', []),
 ];
 @endphp
 

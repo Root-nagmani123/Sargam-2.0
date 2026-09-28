@@ -1574,6 +1574,56 @@ if (!function_exists('notice_feed_base_query')) {
             ->orderBy('notices_notification.display_date', 'desc');
     }
 }
+if (!function_exists('notice_audience_has_any')) {
+    /**
+     * "This notice has an audience row of $type pointing at one of $ids."
+     *
+     * EXISTS rather than a join: a notice can carry several rows of the same
+     * type (that is the point of multi-select), and a join would emit the notice
+     * once per matching row — duplicate cards, and a count() that cannot drive
+     * pagination without a distinct().
+     */
+    function notice_audience_has_any($query, string $type, array $ids): void
+    {
+        if (empty($ids)) {
+            $query->whereRaw('1 = 0');
+            return;
+        }
+
+        $query->whereExists(function ($sub) use ($type, $ids) {
+            $sub->select(DB::raw(1))
+                ->from('notice_audience_map')
+                ->whereColumn('notice_audience_map.notices_notification_pk', 'notices_notification.pk')
+                ->where('notice_audience_map.audience_type', $type)
+                ->whereIn('notice_audience_map.reference_pk', $ids);
+        });
+    }
+}
+if (!function_exists('notice_audience_unpinned_or_any')) {
+    /**
+     * "This notice is not pinned to any $type, or it is pinned to one of mine."
+     *
+     * No rows of a type is how "Select All" is stored: the author narrowed
+     * nothing, so the notice reaches every course / department.
+     */
+    function notice_audience_unpinned_or_any($query, string $type, array $ids): void
+    {
+        $query->where(function ($w) use ($type, $ids) {
+            $w->whereNotExists(function ($sub) use ($type) {
+                $sub->select(DB::raw(1))
+                    ->from('notice_audience_map')
+                    ->whereColumn('notice_audience_map.notices_notification_pk', 'notices_notification.pk')
+                    ->where('notice_audience_map.audience_type', $type);
+            });
+
+            if (!empty($ids)) {
+                $w->orWhere(function ($m) use ($type, $ids) {
+                    notice_audience_has_any($m, $type, $ids);
+                });
+            }
+        });
+    }
+}
 if (!function_exists('notice_feed_query_by_role')) {
     /**
      * Role-scoped notice feed as an UNEXECUTED query builder.
@@ -1600,45 +1650,61 @@ if (!function_exists('notice_feed_query_by_role')) {
 
         $sessionRoles = Session::get('user_roles', []);
 
-        $roleStaffFaculty = ['Internal Faculty', 'Guest Faculty', 'Training', 'Staff'];
-        $roleStudent      = ['Student-OT'];
+        // user_category is the authoritative split: E = employee, S = student.
+        // The role-name list below is only a fallback for credentials that have
+        // no category set.
+        //
+        // It cannot be the primary test. user_role_master holds 30+ roles and an
+        // employee is far more likely to hold 'Admin', 'Faculty', 'Employee',
+        // 'Doctor', 'Estate' or 'Training-MCTP' than the four names this list
+        // used to check — 'Training' matches no role at all. Every one of those
+        // employees fell through to the final "only 'All' notices" branch, which
+        // is why Staff/Faculty notices reached nobody.
+        $category = (string) ($user->user_category ?? '');
 
-        $isStaffFaculty = !empty(array_intersect($roleStaffFaculty, $sessionRoles));
-        $isStudent      = !empty(array_intersect($roleStudent, $sessionRoles));
+        $roleStaffFaculty = [
+            'Internal Faculty', 'Guest Faculty', 'Staff', 'Faculty', 'Employee',
+            'Doctor', 'Admin', 'Super Admin', 'Personal Assistant', 'Estate',
+            'Estate Admin', 'Estate HAC', 'Mess-Staff', 'Mess-Admin',
+            'Training-Induction', 'Training-MCTP', 'Training MCTP Admin',
+            'Training IST', 'IST', 'Discipline Admin', 'Admin Security',
+            'Security Card', 'Centcom Admin', 'CR-Admin', 'TA and RF',
+        ];
+        $roleStudent = ['Student-OT', 'Officer Trainee'];
+
+        $isStaffFaculty = $category === 'E'
+            || ($category === '' && !empty(array_intersect($roleStaffFaculty, $sessionRoles)));
+        $isStudent = $category === 'S'
+            || ($category === '' && !empty(array_intersect($roleStudent, $sessionRoles)));
 
         $query = notice_feed_base_query($scope);
 
-        // Staff/Faculty: everyone's "All" notices plus their own audience, now
-        // narrowed by the notice's department and individual-recipient list.
-        // A NULL department means "all departments", and a NULL audience_mode is
+        // Staff/Faculty: everyone's "All" notices plus their own audience,
+        // narrowed by the notice's departments and individual-recipient list.
+        // No department rows means "all departments", and a NULL audience_mode is
         // every notice written before this targeting existed — both reach everyone.
         if ($isStaffFaculty) {
-            $departmentId = DB::table('employee_master')
+            $departmentIds = DB::table('employee_master')
                 ->where('pk', $user->user_id)
-                ->value('department_master_pk');
+                ->pluck('department_master_pk')
+                ->filter()
+                ->values()
+                ->all();
 
-            return $query->where(function ($w) use ($user, $departmentId) {
+            return $query->where(function ($w) use ($user, $departmentIds) {
                 $w->where('notices_notification.target_audience', 'All')
-                    ->orWhere(function ($o) use ($user, $departmentId) {
-                        $o->where('notices_notification.target_audience', 'like', '%Staff/Faculty%')
-                            ->where(function ($d) use ($departmentId) {
-                                $d->whereNull('notices_notification.department_master_pk');
+                    ->orWhere(function ($o) use ($user, $departmentIds) {
+                        $o->where('notices_notification.target_audience', 'like', '%Staff/Faculty%');
 
-                                if ($departmentId) {
-                                    $d->orWhere('notices_notification.department_master_pk', $departmentId);
-                                }
-                            })
-                            ->where(function ($m) use ($user) {
-                                $m->where('notices_notification.audience_mode', '!=', 'individual')
-                                    ->orWhereNull('notices_notification.audience_mode')
-                                    ->orWhereExists(function ($sub) use ($user) {
-                                        $sub->select(DB::raw(1))
-                                            ->from('notice_audience_map')
-                                            ->whereColumn('notice_audience_map.notices_notification_pk', 'notices_notification.pk')
-                                            ->where('notice_audience_map.audience_type', 'E')
-                                            ->where('notice_audience_map.reference_pk', $user->user_id);
-                                    });
-                            });
+                        notice_audience_unpinned_or_any($o, 'D', $departmentIds);
+
+                        $o->where(function ($m) use ($user) {
+                            $m->where('notices_notification.audience_mode', '!=', 'individual')
+                                ->orWhereNull('notices_notification.audience_mode')
+                                ->orWhere(function ($i) use ($user) {
+                                    notice_audience_has_any($i, 'E', [$user->user_id]);
+                                });
+                        });
                     });
             });
         }
@@ -1665,40 +1731,27 @@ if (!function_exists('notice_feed_query_by_role')) {
             return $query->where(function ($w) use ($user, $courseIds, $groupIds) {
                 $w->where('notices_notification.target_audience', 'All')
                     ->orWhere(function ($o) use ($user, $courseIds, $groupIds) {
-                        $o->where('notices_notification.target_audience', 'like', '%Office trainee%')
-                            // NULL course = the author picked "Select All" courses.
-                            ->where(function ($c) use ($courseIds) {
-                                $c->whereNull('notices_notification.course_master_pk');
+                        $o->where('notices_notification.target_audience', 'like', '%Office trainee%');
 
-                                if ($courseIds->isNotEmpty()) {
-                                    $c->orWhereIn('notices_notification.course_master_pk', $courseIds);
-                                }
-                            })
-                            ->where(function ($m) use ($user, $groupIds) {
-                                // NULL mode = a notice written before this
-                                // targeting existed; it reaches the whole course.
-                                $m->whereNull('notices_notification.audience_mode')
-                                    ->orWhere('notices_notification.audience_mode', 'all')
-                                    ->orWhere(function ($g) use ($groupIds) {
-                                        $g->where('notices_notification.audience_mode', 'group');
+                        // No course rows = the author picked "Select All" courses.
+                        notice_audience_unpinned_or_any($o, 'C', $courseIds->all());
 
-                                        if ($groupIds->isNotEmpty()) {
-                                            $g->whereIn('notices_notification.group_type_map_pk', $groupIds);
-                                        } else {
-                                            $g->whereRaw('1 = 0');
-                                        }
-                                    })
-                                    ->orWhere(function ($i) use ($user) {
-                                        $i->where('notices_notification.audience_mode', 'individual')
-                                            ->whereExists(function ($sub) use ($user) {
-                                                $sub->select(DB::raw(1))
-                                                    ->from('notice_audience_map')
-                                                    ->whereColumn('notice_audience_map.notices_notification_pk', 'notices_notification.pk')
-                                                    ->where('notice_audience_map.audience_type', 'S')
-                                                    ->where('notice_audience_map.reference_pk', $user->user_id);
-                                            });
-                                    });
-                            });
+                        $o->where(function ($m) use ($user, $groupIds) {
+                            // NULL mode = a notice written before this targeting
+                            // existed; it reaches the whole course.
+                            $m->whereNull('notices_notification.audience_mode')
+                                ->orWhere('notices_notification.audience_mode', 'all')
+                                ->orWhere(function ($g) use ($groupIds) {
+                                    $g->where('notices_notification.audience_mode', 'group');
+
+                                    notice_audience_has_any($g, 'G', $groupIds->all());
+                                })
+                                ->orWhere(function ($i) use ($user) {
+                                    $i->where('notices_notification.audience_mode', 'individual');
+
+                                    notice_audience_has_any($i, 'S', [$user->user_id]);
+                                });
+                        });
                     });
             });
         }

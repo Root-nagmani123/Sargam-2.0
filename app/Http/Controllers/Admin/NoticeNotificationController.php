@@ -24,8 +24,12 @@ class NoticeNotificationController extends Controller
     public function index(Request $request)
     {
         $types = self::TYPES;
-        $query = Notice::with(['course', 'user', 'department', 'groupTypeMap.courseGroupType'])
-            ->withCount('audienceMaps')
+        $query = Notice::with(['user', 'courses', 'departments', 'groupTypeMaps.courseGroupType'])
+            ->withCount([
+                'audienceMaps as individual_count' => function ($q) {
+                    $q->whereIn('audience_type', [NoticeAudienceMap::TYPE_STUDENT, NoticeAudienceMap::TYPE_EMPLOYEE]);
+                },
+            ])
             ->orderBy('pk', 'DESC');
 
         // 🔍 Filters
@@ -33,29 +37,26 @@ class NoticeNotificationController extends Controller
             $query->where('notice_type', $request->notice_type);
         }
 
-        if ($request->course_id) {
-            $query->where('course_master_pk', $request->course_id);
+        // Course and Department are both multi-valued now, so both filters ask the
+        // audience map rather than the scalar column.
+        if ($request->filled('course_id')) {
+            $this->whereTargets($query, NoticeAudienceMap::TYPE_COURSE, $request->input('course_id'));
         }
 
         if ($request->status != "") {
             $query->where('active_inactive', $request->status);
         }
 
-        // Department: an "all departments" Staff/Faculty notice reaches this
-        // department too, so it stays in the result set alongside the ones
-        // pinned to it.
+        // Strict match: picking a department shows the notices addressed to that
+        // department, not also every "all departments" notice. A filter that
+        // widens its own result set reads as broken.
         if ($request->filled('department_id')) {
-            $departmentId = $request->input('department_id');
-            $query->where(function ($q) use ($departmentId) {
-                $q->where('department_master_pk', $departmentId)
-                    ->orWhere(function ($w) {
-                        $w->whereNull('department_master_pk')
-                            ->where('target_audience', 'like', '%Staff/Faculty%');
-                    });
-            });
+            $this->whereTargets($query, NoticeAudienceMap::TYPE_DEPARTMENT, $request->input('department_id'));
         }
 
-        // Year of the notice itself — display_date is what the feed sorts on.
+        // Year applies to display_date — the date the notice goes up, and what
+        // the feed sorts on. The filter label says so, because "Year" next to
+        // three date columns is otherwise a guess.
         if ($request->filled('year')) {
             $query->whereYear('display_date', $request->input('year'));
         }
@@ -67,10 +68,10 @@ class NoticeNotificationController extends Controller
             $query->where(function ($q) use ($like) {
                 $q->where('notice_title', 'like', $like)
                     ->orWhere('notice_type', 'like', $like)
-                    ->orWhereHas('course', function ($c) use ($like) {
+                    ->orWhereHas('courses', function ($c) use ($like) {
                         $c->where('course_name', 'like', $like);
                     })
-                    ->orWhereHas('department', function ($d) use ($like) {
+                    ->orWhereHas('departments', function ($d) use ($like) {
                         $d->where('department_name', 'like', $like);
                     })
                     ->orWhereHas('user', function ($u) use ($like) {
@@ -102,6 +103,14 @@ class NoticeNotificationController extends Controller
             ->values();
 
         return view('admin.NoticeNotification.index', compact('notices', 'courses', 'types', 'departments', 'years'));
+    }
+
+    /** Notices carrying an audience row of $type pointing at $referencePk. */
+    private function whereTargets($query, string $type, $referencePk): void
+    {
+        $query->whereHas('audienceMaps', function ($q) use ($type, $referencePk) {
+            $q->where('audience_type', $type)->where('reference_pk', $referencePk);
+        });
     }
 
 
@@ -140,7 +149,7 @@ class NoticeNotificationController extends Controller
         }
 
         $notice = Notice::create($data);
-        $this->syncIndividualAudience($notice, $request);
+        $this->syncAudience($notice, $request);
 
         return redirect()
             ->route('admin.notice.index')
@@ -152,7 +161,7 @@ class NoticeNotificationController extends Controller
     public function edit($encId)
     {
         $id = Crypt::decrypt($encId);
-        $notice = Notice::with('groupTypeMap')->findOrFail($id);
+        $notice = Notice::with('audienceMaps')->findOrFail($id);
 
         $types = self::TYPES;
         $target = self::TARGETS;
@@ -161,23 +170,20 @@ class NoticeNotificationController extends Controller
             ->orderBy('department_name')
             ->get();
 
-        // Pre-selected individual recipients, so the form can re-check them once
-        // the AJAX list for the saved course / department comes back.
-        $selectedStudents = $notice->audienceMaps()
-            ->where('audience_type', NoticeAudienceMap::TYPE_STUDENT)
-            ->pluck('reference_pk')
-            ->map(function ($pk) {
-                return (string) $pk;
-            })
-            ->values();
+        // Saved selections, so the form can re-check them once the AJAX lists
+        // come back. Cast to string: the form posts strings, and the JS compares
+        // option values as strings.
+        $selected = $notice->audienceMaps
+            ->groupBy('audience_type')
+            ->map(function ($rows) {
+                return $rows->pluck('reference_pk')->map(fn ($pk) => (string) $pk)->values()->all();
+            });
 
-        $selectedEmployees = $notice->audienceMaps()
-            ->where('audience_type', NoticeAudienceMap::TYPE_EMPLOYEE)
-            ->pluck('reference_pk')
-            ->map(function ($pk) {
-                return (string) $pk;
-            })
-            ->values();
+        $selectedCourses = $selected[NoticeAudienceMap::TYPE_COURSE] ?? [];
+        $selectedGroups = $selected[NoticeAudienceMap::TYPE_GROUP] ?? [];
+        $selectedDepartments = $selected[NoticeAudienceMap::TYPE_DEPARTMENT] ?? [];
+        $selectedStudents = $selected[NoticeAudienceMap::TYPE_STUDENT] ?? [];
+        $selectedEmployees = $selected[NoticeAudienceMap::TYPE_EMPLOYEE] ?? [];
 
         return view('admin.NoticeNotification.edit', compact(
             'notice',
@@ -185,6 +191,9 @@ class NoticeNotificationController extends Controller
             'target',
             'encId',
             'departments',
+            'selectedCourses',
+            'selectedGroups',
+            'selectedDepartments',
             'selectedStudents',
             'selectedEmployees'
         ));
@@ -213,7 +222,7 @@ class NoticeNotificationController extends Controller
         }
 
         $notice->update($data);
-        $this->syncIndividualAudience($notice, $request);
+        $this->syncAudience($notice, $request);
 
         return redirect()->route('admin.notice.index')->with('success', 'Notice updated!');
     }
@@ -238,10 +247,26 @@ class NoticeNotificationController extends Controller
      * ----------------------------------------------------------------- */
 
     /**
+     * Posted ids for one audience field, cleaned to a list of positive ints.
+     */
+    private function idsFrom(Request $request, string $field): array
+    {
+        $ids = $request->input($field, []);
+
+        if (! is_array($ids)) {
+            $ids = $ids === null || $ids === '' ? [] : [$ids];
+        }
+
+        return array_values(array_unique(array_filter(array_map('intval', $ids))));
+    }
+
+    /**
      * Shared rules for store + update.
      *
-     * The audience half is conditional: a field is only required once the
-     * selection above it makes it visible, which mirrors what the form shows.
+     * Each field is only required once the selection above it makes it visible,
+     * which mirrors what the form shows. Messages are deliberately one per
+     * field: the array rules name `.*` elements too, and without these the
+     * form reported the same problem once per selected row.
      */
     private function validateNotice(Request $request): void
     {
@@ -272,50 +297,79 @@ class NoticeNotificationController extends Controller
         $target = (string) $request->input('target_audience');
 
         if ($this->isOfficerTrainee($target)) {
-            // Blank = "Select All" courses, so the course itself stays optional.
-            $rules['course_master_pk'] = 'nullable|exists:course_master,pk';
-            $messages['course_master_pk.exists'] = 'Selected course does not exist.';
+            // Empty = "Select All" courses, so the courses themselves stay optional.
+            $rules['course_master_pks']   = 'nullable|array';
+            $rules['course_master_pks.*'] = 'integer|exists:course_master,pk';
+            $messages['course_master_pks.*.exists'] = 'One of the selected courses does not exist.';
 
-            if ($request->filled('course_master_pk')) {
-                $selection = (string) $request->input('ot_group_selection');
+            if ($this->idsFrom($request, 'course_master_pks')) {
+                $scope = (string) $request->input('ot_scope');
 
-                if ($selection === '') {
-                    $rules['ot_group_selection'] = 'required';
-                    $messages['ot_group_selection.required'] = 'Please select a group type.';
-                } elseif ($selection === Notice::MODE_INDIVIDUAL) {
+                $rules['ot_scope'] = ['required', Rule::in([Notice::MODE_ALL, Notice::MODE_GROUP, Notice::MODE_INDIVIDUAL])];
+                $messages['ot_scope.required'] = 'Please choose All, Group or Individual.';
+                $messages['ot_scope.in'] = 'Please choose All, Group or Individual.';
+
+                if ($scope === Notice::MODE_GROUP) {
+                    $rules['group_type_map_pks']   = 'required|array|min:1';
+                    $rules['group_type_map_pks.*'] = 'integer|exists:group_type_master_course_master_map,pk';
+                    $messages['group_type_map_pks.required'] = 'Please select at least one group.';
+                    $messages['group_type_map_pks.*.exists'] = 'One of the selected groups does not exist.';
+                } elseif ($scope === Notice::MODE_INDIVIDUAL) {
                     $rules['student_pks']   = 'required|array|min:1';
                     $rules['student_pks.*'] = 'integer|exists:student_master,pk';
                     $messages['student_pks.required'] = 'Please select at least one Officer Trainee.';
-                } elseif ($selection !== Notice::MODE_ALL) {
-                    $rules['ot_group_selection'] = 'required|exists:group_type_master_course_master_map,pk';
-                    $messages['ot_group_selection.exists'] = 'Selected group type does not exist.';
+                    $messages['student_pks.*.exists'] = 'One of the selected Officer Trainees does not exist.';
                 }
             }
         } elseif ($this->isStaffFaculty($target)) {
-            $rules['department_master_pk'] = 'nullable|exists:department_master,pk';
-            $messages['department_master_pk.exists'] = 'Selected department does not exist.';
+            $rules['department_master_pks']   = 'nullable|array';
+            $rules['department_master_pks.*'] = 'integer|exists:department_master,pk';
+            $messages['department_master_pks.*.exists'] = 'One of the selected departments does not exist.';
 
-            if ($request->filled('department_master_pk')) {
+            if ($this->idsFrom($request, 'department_master_pks')) {
                 $rules['staff_scope'] = ['required', Rule::in([Notice::MODE_ALL, Notice::MODE_INDIVIDUAL])];
                 $messages['staff_scope.required'] = 'Please choose All or Individual.';
+                $messages['staff_scope.in'] = 'Please choose All or Individual.';
 
                 if ($request->input('staff_scope') === Notice::MODE_INDIVIDUAL) {
                     $rules['employee_pks']   = 'required|array|min:1';
                     $rules['employee_pks.*'] = 'integer|exists:employee_master,pk';
                     $messages['employee_pks.required'] = 'Please select at least one staff / faculty member.';
+                    $messages['employee_pks.*.exists'] = 'One of the selected staff members does not exist.';
                 }
             }
         }
 
-        $request->validate($rules, $messages);
+        $validator = validator($request->all(), $rules, $messages);
+
+        if ($validator->fails()) {
+            // Collapse duplicates before throwing. A `.*` rule fails once per bad
+            // row and Laravel keys each one separately — student_pks.0,
+            // student_pks.1, ... — so three bad ids produced the same sentence
+            // three times. Fold the indexed keys back onto their base field and
+            // keep one copy of each distinct message.
+            $unique = [];
+
+            foreach ($validator->errors()->toArray() as $field => $fieldMessages) {
+                $base = preg_replace('/\.\d+$/', '', $field);
+
+                foreach ($fieldMessages as $message) {
+                    if (! in_array($message, $unique[$base] ?? [], true)) {
+                        $unique[$base][] = $message;
+                    }
+                }
+            }
+
+            throw \Illuminate\Validation\ValidationException::withMessages($unique);
+        }
     }
 
     /**
-     * Form fields -> the audience columns on the notice row.
+     * Form fields -> the scalar audience columns on the notice row.
      *
-     * Every branch writes all four columns so switching a notice from one
-     * audience to another clears the previous branch's values instead of
-     * leaving a stale course or department behind.
+     * These mirror the single-selection case only; notice_audience_map is what
+     * this module reads back. They are still written so anything outside this
+     * module that joins on course_master_pk keeps working for the common case.
      */
     private function audienceColumns(Request $request): array
     {
@@ -329,26 +383,25 @@ class NoticeNotificationController extends Controller
         $target = (string) $request->input('target_audience');
 
         if ($this->isOfficerTrainee($target)) {
-            $columns['course_master_pk'] = $request->filled('course_master_pk')
-                ? (int) $request->input('course_master_pk')
-                : null;
+            $courses = $this->idsFrom($request, 'course_master_pks');
+            $columns['course_master_pk'] = count($courses) === 1 ? $courses[0] : null;
 
-            if ($columns['course_master_pk']) {
-                $selection = (string) $request->input('ot_group_selection', Notice::MODE_ALL);
+            if ($courses) {
+                $scope = (string) $request->input('ot_scope', Notice::MODE_ALL);
 
-                if ($selection === Notice::MODE_INDIVIDUAL) {
+                if ($scope === Notice::MODE_INDIVIDUAL) {
                     $columns['audience_mode'] = Notice::MODE_INDIVIDUAL;
-                } elseif ($selection !== '' && $selection !== Notice::MODE_ALL) {
+                } elseif ($scope === Notice::MODE_GROUP) {
+                    $groups = $this->idsFrom($request, 'group_type_map_pks');
                     $columns['audience_mode'] = Notice::MODE_GROUP;
-                    $columns['group_type_map_pk'] = (int) $selection;
+                    $columns['group_type_map_pk'] = count($groups) === 1 ? $groups[0] : null;
                 }
             }
         } elseif ($this->isStaffFaculty($target)) {
-            $columns['department_master_pk'] = $request->filled('department_master_pk')
-                ? (int) $request->input('department_master_pk')
-                : null;
+            $departments = $this->idsFrom($request, 'department_master_pks');
+            $columns['department_master_pk'] = count($departments) === 1 ? $departments[0] : null;
 
-            if ($columns['department_master_pk'] && $request->input('staff_scope') === Notice::MODE_INDIVIDUAL) {
+            if ($departments && $request->input('staff_scope') === Notice::MODE_INDIVIDUAL) {
                 $columns['audience_mode'] = Notice::MODE_INDIVIDUAL;
             }
         }
@@ -357,49 +410,53 @@ class NoticeNotificationController extends Controller
     }
 
     /**
-     * Replace the notice's individual-recipient rows.
+     * Replace every audience row for this notice.
      *
-     * Wiped unconditionally first: an edit that moves a notice off "Individual"
-     * must not leave the old picks behind, because the feed reads them whenever
-     * audience_mode says individual.
+     * Wiped first: an edit that moves a notice from one audience to another must
+     * not leave the old rows behind, because the feed reads them as the notice's
+     * whole audience.
      */
-    private function syncIndividualAudience(Notice $notice, Request $request): void
+    private function syncAudience(Notice $notice, Request $request): void
     {
         $notice->audienceMaps()->delete();
 
-        if ($notice->audience_mode !== Notice::MODE_INDIVIDUAL) {
-            return;
-        }
-
         $target = (string) $notice->target_audience;
+        $rows = [];
+
+        $add = function (string $type, array $ids) use (&$rows, $notice) {
+            foreach ($ids as $id) {
+                $rows[] = [
+                    'notices_notification_pk' => $notice->pk,
+                    'audience_type'           => $type,
+                    'reference_pk'            => $id,
+                    'active_inactive'         => 1,
+                ];
+            }
+        };
 
         if ($this->isOfficerTrainee($target)) {
-            $type = NoticeAudienceMap::TYPE_STUDENT;
-            $ids = (array) $request->input('student_pks', []);
+            $courses = $this->idsFrom($request, 'course_master_pks');
+            $add(NoticeAudienceMap::TYPE_COURSE, $courses);
+
+            if ($courses) {
+                if ($notice->audience_mode === Notice::MODE_GROUP) {
+                    $add(NoticeAudienceMap::TYPE_GROUP, $this->idsFrom($request, 'group_type_map_pks'));
+                } elseif ($notice->audience_mode === Notice::MODE_INDIVIDUAL) {
+                    $add(NoticeAudienceMap::TYPE_STUDENT, $this->idsFrom($request, 'student_pks'));
+                }
+            }
         } elseif ($this->isStaffFaculty($target)) {
-            $type = NoticeAudienceMap::TYPE_EMPLOYEE;
-            $ids = (array) $request->input('employee_pks', []);
-        } else {
-            return;
+            $departments = $this->idsFrom($request, 'department_master_pks');
+            $add(NoticeAudienceMap::TYPE_DEPARTMENT, $departments);
+
+            if ($departments && $notice->audience_mode === Notice::MODE_INDIVIDUAL) {
+                $add(NoticeAudienceMap::TYPE_EMPLOYEE, $this->idsFrom($request, 'employee_pks'));
+            }
         }
 
-        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
-
-        if (empty($ids)) {
-            return;
+        if ($rows) {
+            NoticeAudienceMap::insert($rows);
         }
-
-        $rows = [];
-        foreach ($ids as $id) {
-            $rows[] = [
-                'notices_notification_pk' => $notice->pk,
-                'audience_type'           => $type,
-                'reference_pk'            => $id,
-                'active_inactive'         => 1,
-            ];
-        }
-
-        NoticeAudienceMap::insert($rows);
     }
 
     private function isOfficerTrainee(string $target): bool
@@ -417,23 +474,25 @@ class NoticeNotificationController extends Controller
      * ----------------------------------------------------------------- */
 
     /**
-     * Courses available to target: the running ones, plus `include` if given.
+     * Courses available to target: the running ones, plus any `include` ids.
      *
-     * The edit form passes the notice's saved course as `include` — most saved
+     * The edit form passes the notice's saved courses as `include` — most saved
      * courses have already ended and would otherwise be missing from the list,
-     * which would silently reset the dropdown to "Select All" and widen the
-     * notice's audience the next time it was saved.
+     * which would silently drop them from the selection the next time the notice
+     * was saved.
      */
     public function getCourses(Request $request)
     {
-        $courses = CourseMaster::where(function ($q) use ($request) {
+        $include = $this->idsFrom($request, 'include');
+
+        $courses = CourseMaster::where(function ($q) use ($include) {
             $q->where(function ($live) {
                 $live->where('active_inactive', 1)
                     ->where('end_date', '>=', date('Y-m-d'));
             });
 
-            if ($request->filled('include')) {
-                $q->orWhere('pk', $request->input('include'));
+            if ($include) {
+                $q->orWhereIn('pk', $include);
             }
         })
             ->orderBy('course_name', 'ASC')
@@ -446,33 +505,48 @@ class NoticeNotificationController extends Controller
     }
 
     /**
-     * Group types mapped to a course.
+     * Group types mapped to any of the given courses.
      *
      * group_type_master_course_master_map.course_name holds course_master.pk and
      * .type_name holds course_group_type_master.pk — the column names do not
      * describe their contents, which is why this joins rather than reads names.
+     *
+     * With several courses selected the group label is prefixed with the course
+     * name, because "Lecture Group - A" exists in more than one course and the
+     * bare label would be ambiguous.
      */
     public function getGroupTypes(Request $request)
     {
-        $request->validate(['course_master_pk' => 'required|exists:course_master,pk']);
+        $request->validate([
+            'course_master_pks'   => 'required|array|min:1',
+            'course_master_pks.*' => 'integer|exists:course_master,pk',
+        ]);
+
+        $courseIds = $this->idsFrom($request, 'course_master_pks');
+        $multiCourse = count($courseIds) > 1;
 
         $groups = DB::table('group_type_master_course_master_map as gmap')
             ->join('course_group_type_master as cgt', 'cgt.pk', '=', 'gmap.type_name')
-            ->where('gmap.course_name', $request->input('course_master_pk'))
+            ->leftJoin('course_master as cm', 'cm.pk', '=', 'gmap.course_name')
+            ->whereIn('gmap.course_name', $courseIds)
             ->where('gmap.active_inactive', 1)
             ->where('cgt.active_inactive', 1)
+            ->orderBy('cm.course_name')
             ->orderBy('cgt.type_name')
             ->orderBy('gmap.group_name')
             ->get([
                 'gmap.pk',
                 'gmap.group_name',
                 'cgt.type_name as group_type_name',
+                'cm.course_name',
             ]);
 
-        $data = $groups->map(function ($g) {
+        $data = $groups->map(function ($g) use ($multiCourse) {
+            $label = trim($g->group_type_name . ' - ' . $g->group_name, ' -');
+
             return [
                 'pk'    => $g->pk,
-                'label' => trim($g->group_type_name . ' - ' . $g->group_name, ' -'),
+                'label' => $multiCourse && $g->course_name ? $g->course_name . ' · ' . $label : $label,
             ];
         });
 
@@ -480,51 +554,58 @@ class NoticeNotificationController extends Controller
     }
 
     /**
-     * Officer Trainees of a course, optionally narrowed to one group.
+     * Officer Trainees across the given courses, optionally narrowed to groups.
      *
-     * The OT code lives in course_wise_ot_list and is course-specific, so it is
-     * joined on both the student and the course.
+     * The OT code falls back from the course-specific code in course_wise_ot_list
+     * to student_master.generated_OT_code: course_wise_ot_list is only populated
+     * for courses that have been through the OT-code import, so for every other
+     * course the list rendered with no codes at all.
      */
     public function getStudents(Request $request)
     {
         $request->validate([
-            'course_master_pk'  => 'required|exists:course_master,pk',
-            'group_type_map_pk' => 'nullable|exists:group_type_master_course_master_map,pk',
+            'course_master_pks'    => 'required|array|min:1',
+            'course_master_pks.*'  => 'integer|exists:course_master,pk',
+            'group_type_map_pks'   => 'nullable|array',
+            'group_type_map_pks.*' => 'integer|exists:group_type_master_course_master_map,pk',
         ]);
 
-        $courseId = $request->input('course_master_pk');
+        $courseIds = $this->idsFrom($request, 'course_master_pks');
+        $groupIds = $this->idsFrom($request, 'group_type_map_pks');
 
         $query = DB::table('student_master_course__map as scm')
             ->join('student_master as sm', 'sm.pk', '=', 'scm.student_master_pk')
-            ->leftJoin('course_wise_ot_list as ot', function ($join) use ($courseId) {
+            ->leftJoin('course_wise_ot_list as ot', function ($join) use ($courseIds) {
                 $join->on('ot.student_master_pk', '=', 'sm.pk')
-                    ->where('ot.course_master_pk', '=', $courseId);
+                    ->whereIn('ot.course_master_pk', $courseIds);
             })
-            ->where('scm.course_master_pk', $courseId)
+            ->whereIn('scm.course_master_pk', $courseIds)
             ->where('sm.status', 1);
 
-        if ($request->filled('group_type_map_pk')) {
-            $query->join('student_course_group_map as scg', function ($join) use ($request) {
-                $join->on('scg.student_master_pk', '=', 'sm.pk')
-                    ->where('scg.group_type_master_course_master_map_pk', '=', $request->input('group_type_map_pk'))
-                    ->where('scg.active_inactive', '=', 1);
+        if ($groupIds) {
+            $query->whereExists(function ($sub) use ($groupIds) {
+                $sub->select(DB::raw(1))
+                    ->from('student_course_group_map as scg')
+                    ->whereColumn('scg.student_master_pk', 'sm.pk')
+                    ->whereIn('scg.group_type_master_course_master_map_pk', $groupIds)
+                    ->where('scg.active_inactive', 1);
             });
         }
 
         $students = $query->distinct()
-            ->orderBy('ot.generated_ot_code')
             ->orderBy('sm.first_name')
             ->get([
                 'sm.pk',
                 'sm.first_name',
                 'sm.middle_name',
                 'sm.last_name',
-                'ot.generated_ot_code',
+                'sm.generated_OT_code as student_ot_code',
+                'ot.generated_ot_code as course_ot_code',
             ]);
 
         $data = $students->map(function ($s) {
             $name = trim(preg_replace('/\s+/', ' ', $s->first_name . ' ' . $s->middle_name . ' ' . $s->last_name));
-            $code = $s->generated_ot_code ?: null;
+            $code = $s->course_ot_code ?: ($s->student_ot_code ?: null);
 
             return [
                 'pk'      => $s->pk,
@@ -532,7 +613,12 @@ class NoticeNotificationController extends Controller
                 'ot_code' => $code,
                 'label'   => $code ? $code . ' - ' . $name : $name,
             ];
-        });
+        })->sortBy(function ($row) {
+            // OT code first when there is one, so the list reads in code order
+            // and the codeless stragglers fall to the bottom rather than
+            // interleaving by first name.
+            return ($row['ot_code'] ? '0' : '1') . ($row['ot_code'] ?: $row['name']);
+        })->values();
 
         return response()->json(['status' => true, 'data' => $data]);
     }
@@ -548,11 +634,18 @@ class NoticeNotificationController extends Controller
 
     public function getEmployees(Request $request)
     {
-        $request->validate(['department_master_pk' => 'required|exists:department_master,pk']);
+        $request->validate([
+            'department_master_pks'   => 'required|array|min:1',
+            'department_master_pks.*' => 'integer|exists:department_master,pk',
+        ]);
+
+        $departmentIds = $this->idsFrom($request, 'department_master_pks');
+        $multiDepartment = count($departmentIds) > 1;
 
         $employees = DB::table('employee_master as em')
             ->leftJoin('designation_master as dm', 'dm.pk', '=', 'em.designation_master_pk')
-            ->where('em.department_master_pk', $request->input('department_master_pk'))
+            ->leftJoin('department_master as dep', 'dep.pk', '=', 'em.department_master_pk')
+            ->whereIn('em.department_master_pk', $departmentIds)
             ->where('em.status', 1)
             ->orderBy('em.first_name')
             ->get([
@@ -562,11 +655,16 @@ class NoticeNotificationController extends Controller
                 'em.last_name',
                 'em.emp_id',
                 'dm.designation_name',
+                'dep.department_name',
             ]);
 
-        $data = $employees->map(function ($e) {
+        $data = $employees->map(function ($e) use ($multiDepartment) {
             $name = trim(preg_replace('/\s+/', ' ', $e->first_name . ' ' . $e->middle_name . ' ' . $e->last_name));
-            $suffix = array_filter([$e->emp_id ?: null, $e->designation_name ?? null]);
+            $suffix = array_filter([
+                $e->emp_id ?: null,
+                $e->designation_name ?? null,
+                $multiDepartment ? ($e->department_name ?? null) : null,
+            ]);
 
             return [
                 'pk'    => $e->pk,

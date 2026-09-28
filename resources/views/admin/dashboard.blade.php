@@ -282,8 +282,13 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                         <ul class="list-unstyled mb-0 ps-0" id="dashboard-notice-list">
                             @foreach($notices as $notice)
                             @php
-                            $noticeCategory = $noticeCategoryLabels[$resolveDashboardNoticeTab($notice->notice_type ??
-                            '')];
+                            // The notice's own type, not the tab's label. Mapping it
+                            // through $noticeCategoryLabels showed "Course notice" as
+                            // "Work Allocations" and lumped Personal / Office notice /
+                            // Service related together as plain "Notice" — the reader
+                            // was told a type the author never chose. The tab grouping
+                            // still uses $resolveDashboardNoticeTab.
+                            $noticeCategory = $notice->notice_type ?: 'Notice';
                             $noticeDate = $notice->created_at ?? $notice->display_date ?? null;
                             $noticeDateLabel = $noticeDate
                             ? \Carbon\Carbon::parse($noticeDate)->format('d/m/Y h:i A')

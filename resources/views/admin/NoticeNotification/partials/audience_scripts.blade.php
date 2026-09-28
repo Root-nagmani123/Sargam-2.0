@@ -16,6 +16,7 @@
     };
 
     var MODE_ALL = @json(\App\Models\NoticeNotification::MODE_ALL);
+    var MODE_GROUP = @json(\App\Models\NoticeNotification::MODE_GROUP);
     var MODE_INDIVIDUAL = @json(\App\Models\NoticeNotification::MODE_INDIVIDUAL);
 
     var preset = @json($audiencePreset);
@@ -28,6 +29,8 @@
     var $otBox = $('#otAudienceBox');
     var $staffBox = $('#staffAudienceBox');
     var $course = $('#courseSelect');
+    var $otScopeBox = $('#otScopeBox');
+    var $otScope = $('#otScopeSelect');
     var $groupBox = $('#otGroupBox');
     var $group = $('#otGroupSelect');
     var $studentBox = $('#studentBox');
@@ -40,7 +43,23 @@
     var $employee = $('#employeeSelect');
 
     var choicesByEl = {};
-    var coursesLoaded = false;
+
+    // {pk, label} lists backing the two selects whose options do not change with
+    // the cascade. Courses arrive by AJAX once; departments are rendered by the
+    // server, so they are read out of the DOM before Choices takes the element
+    // over (after that the original <option>s are Choices' own bookkeeping).
+    var courseItems = null;
+    var departmentItems = $department.find('option').map(function () {
+        return { pk: this.value, label: $(this).text() };
+    }).get();
+
+    var COUNT_BADGES = {
+        courseSelect: '#courseCount',
+        otGroupSelect: '#otGroupCount',
+        studentSelect: '#studentCount',
+        departmentSelect: '#departmentCount',
+        employeeSelect: '#employeeCount'
+    };
 
     function isOfficerTrainee(value) {
         return String(value).toLowerCase().indexOf('office trainee') !== -1;
@@ -48,6 +67,10 @@
 
     function isStaffFaculty(value) {
         return String(value).toLowerCase().indexOf('staff/faculty') !== -1;
+    }
+
+    function asStrings(list) {
+        return (list || []).map(String);
     }
 
     /* ---------------- multi-select helpers ---------------- */
@@ -83,7 +106,7 @@
      * a fresh edit but as strings after a validation bounce.
      */
     function fillMultiSelect($el, items, selected) {
-        var picked = (selected || []).map(String);
+        var picked = asStrings(selected);
         var instance = multiSelect($el);
 
         if (instance) {
@@ -111,25 +134,24 @@
     }
 
     function selectedValues($el) {
-        return ($el.val() || []).map(String);
+        return asStrings($el.val() || []);
     }
 
     function refreshCount($el) {
-        var count = selectedValues($el).length;
-        var $badge = $el.attr('id') === 'studentSelect' ? $('#studentCount') : $('#employeeCount');
-        $badge.text(count + ' selected');
+        var badge = COUNT_BADGES[$el.attr('id')];
+        if (badge) {
+            $(badge).text(selectedValues($el).length + ' selected');
+        }
     }
 
     function setAllOptions($el, selected) {
         var instance = choicesByEl[$el.attr('id')];
 
         if (instance) {
-            var values = $el.find('option').map(function () {
-                return this.value;
-            }).get();
-
             if (selected) {
-                instance.setChoiceByValue(values);
+                instance.setChoiceByValue($el.find('option').map(function () {
+                    return this.value;
+                }).get());
             } else {
                 instance.removeActiveItems();
             }
@@ -138,6 +160,7 @@
         }
 
         refreshCount($el);
+        $el.trigger('change');
     }
 
     function clearMultiSelect($el) {
@@ -158,7 +181,7 @@
         $preview.empty();
 
         if (!items.length) {
-            $preview.append($('<span class="text-muted small"></span>').text('No Officer Trainees mapped to this group.'));
+            $preview.append($('<span class="text-muted small"></span>').text('No Officer Trainees mapped to the selected group(s).'));
             return;
         }
 
@@ -170,53 +193,61 @@
     /* ---------------- data loading ---------------- */
 
     function loadCourses(done) {
-        if (coursesLoaded) {
-            if (done) { done(); }
+        if (courseItems) {
+            done(courseItems);
             return;
         }
 
-        // `include` keeps the notice's saved course in the list even once the
-        // course has ended — without it the dropdown would fall back to blank,
-        // which silently means "all courses".
-        var params = preset.course_master_pk ? { include: preset.course_master_pk } : {};
+        // `include` keeps the notice's saved courses in the list even once they
+        // have ended — without it they would silently drop out of the selection
+        // the next time the notice was saved.
+        var params = {};
+        var saved = asStrings(preset.course_master_pks || []);
+
+        if (saved.length) {
+            params.include = saved;
+        }
 
         $.getJSON(ROUTES.courses, params, function (res) {
-            $course.find('option:not(:first)').remove();
-
-            (res.data || []).forEach(function (course) {
-                $course.append($('<option></option>').val(String(course.pk)).text(course.course_name));
+            courseItems = (res.data || []).map(function (course) {
+                return { pk: String(course.pk), label: course.course_name };
             });
 
-            coursesLoaded = true;
+            // Anything the endpoint still could not offer gets a placeholder, so
+            // the saved selection survives a re-save instead of vanishing.
+            var known = courseItems.map(function (item) { return item.pk; });
+            saved.forEach(function (pk) {
+                if (known.indexOf(pk) === -1) {
+                    courseItems.push({ pk: pk, label: 'Course #' + pk + ' (not listed)' });
+                }
+            });
 
-            if (done) { done(); }
+            done(courseItems);
         });
     }
 
-    function loadGroupTypes(courseId, done) {
-        // Rebuilt from scratch every time so groups from a previously selected
-        // course cannot linger as selectable options.
-        $group.find('option').slice(2).remove();
-
-        if (!courseId) {
+    function loadGroupTypes(courseIds, selected, done) {
+        if (!courseIds.length) {
+            clearMultiSelect($group);
             if (done) { done(); }
             return;
         }
 
-        $.getJSON(ROUTES.groupTypes, { course_master_pk: courseId }, function (res) {
-            (res.data || []).forEach(function (group) {
-                $group.append($('<option></option>').val(String(group.pk)).text(group.label));
-            });
-
+        $.getJSON(ROUTES.groupTypes, { course_master_pks: courseIds }, function (res) {
+            fillMultiSelect($group, res.data || [], selected);
             if (done) { done(); }
         });
     }
 
-    function loadStudents(courseId, groupId, selected, mode) {
-        var params = { course_master_pk: courseId };
+    function loadStudents(courseIds, groupIds, selected, mode) {
+        if (!courseIds.length) {
+            return;
+        }
 
-        if (groupId) {
-            params.group_type_map_pk = groupId;
+        var params = { course_master_pks: courseIds };
+
+        if (groupIds && groupIds.length) {
+            params.group_type_map_pks = groupIds;
         }
 
         $.getJSON(ROUTES.students, params, function (res) {
@@ -230,73 +261,85 @@
         });
     }
 
-    function loadEmployees(departmentId, selected) {
-        $.getJSON(ROUTES.employees, { department_master_pk: departmentId }, function (res) {
+    function loadEmployees(departmentIds, selected) {
+        if (!departmentIds.length) {
+            return;
+        }
+
+        $.getJSON(ROUTES.employees, { department_master_pks: departmentIds }, function (res) {
             fillMultiSelect($employee, res.data || [], selected);
         });
     }
 
     /* ---------------- cascade ---------------- */
 
-    function applyOtGroupSelection(selected) {
-        var courseId = $course.val();
-        var selection = String($group.val() || MODE_ALL);
+    function applyOtScope(presetGroups, presetStudents) {
+        var courseIds = selectedValues($course);
+        var scope = String($otScope.val() || MODE_ALL);
 
+        $groupBox.addClass('d-none');
         $studentBox.addClass('d-none');
         $previewBox.addClass('d-none');
 
-        if (!courseId) {
+        if (!courseIds.length) {
+            clearMultiSelect($group);
             clearMultiSelect($student);
             return;
         }
 
-        if (selection === MODE_INDIVIDUAL) {
-            $('#studentBoxLabel').text('Select Officer Trainees');
+        if (scope === MODE_GROUP) {
+            $groupBox.removeClass('d-none');
+            clearMultiSelect($student);
+
+            loadGroupTypes(courseIds, presetGroups || [], function () {
+                var groupIds = selectedValues($group);
+
+                if (groupIds.length) {
+                    $previewBox.removeClass('d-none');
+                    loadStudents(courseIds, groupIds, [], 'preview');
+                }
+            });
+            return;
+        }
+
+        clearMultiSelect($group);
+
+        if (scope === MODE_INDIVIDUAL) {
             $studentBox.removeClass('d-none');
-            loadStudents(courseId, null, selected, 'individual');
+            loadStudents(courseIds, null, presetStudents || [], 'individual');
             return;
         }
 
         clearMultiSelect($student);
-
-        if (selection !== MODE_ALL) {
-            $previewBox.removeClass('d-none');
-            loadStudents(courseId, selection, [], 'preview');
-        }
     }
 
-    function applyCourseSelection(presetGroup, presetStudents) {
-        var courseId = $course.val();
+    function applyCourseSelection(presetScope, presetGroups, presetStudents) {
+        var courseIds = selectedValues($course);
 
-        if (!courseId) {
+        if (!courseIds.length) {
+            $otScopeBox.addClass('d-none');
             $groupBox.addClass('d-none');
             $studentBox.addClass('d-none');
             $previewBox.addClass('d-none');
-            $group.val(MODE_ALL);
+            $otScope.val(MODE_ALL);
+            clearMultiSelect($group);
             clearMultiSelect($student);
             return;
         }
 
-        $groupBox.removeClass('d-none');
+        $otScopeBox.removeClass('d-none');
 
-        loadGroupTypes(courseId, function () {
-            var wanted = presetGroup ? String(presetGroup) : MODE_ALL;
+        if (presetScope) {
+            $otScope.val(String(presetScope));
+        }
 
-            // A saved group that no longer maps to the course falls back to All
-            // rather than leaving the dropdown on a value the form cannot submit.
-            if (!$group.find('option[value="' + wanted.replace(/"/g, '\\"') + '"]').length) {
-                wanted = MODE_ALL;
-            }
-
-            $group.val(wanted);
-            applyOtGroupSelection(presetStudents || []);
-        });
+        applyOtScope(presetGroups, presetStudents);
     }
 
     function applyStaffScope(selected) {
-        var departmentId = $department.val();
+        var departmentIds = selectedValues($department);
 
-        if (!departmentId) {
+        if (!departmentIds.length) {
             $staffScopeBox.addClass('d-none');
             $employeeBox.addClass('d-none');
             $staffScope.val(MODE_ALL);
@@ -308,7 +351,7 @@
 
         if (String($staffScope.val()) === MODE_INDIVIDUAL) {
             $employeeBox.removeClass('d-none');
-            loadEmployees(departmentId, selected || []);
+            loadEmployees(departmentIds, selected || []);
         } else {
             $employeeBox.addClass('d-none');
             clearMultiSelect($employee);
@@ -323,24 +366,15 @@
         if (isOfficerTrainee(value)) {
             $otBox.removeClass('d-none');
             $staffBox.addClass('d-none');
-            $department.val('');
+            setAllOptions($department, false);
             applyStaffScope([]);
 
-            loadCourses(function () {
-                if (usePreset && preset.course_master_pk) {
-                    var saved = String(preset.course_master_pk);
-
-                    // A course the list cannot offer would leave the dropdown
-                    // blank, i.e. silently retarget the notice at every course.
-                    if (!$course.find('option[value="' + saved + '"]').length) {
-                        $course.append($('<option></option>').val(saved).text('Course #' + saved + ' (not listed)'));
-                    }
-
-                    $course.val(saved);
-                }
+            loadCourses(function (items) {
+                fillMultiSelect($course, items, usePreset ? preset.course_master_pks : []);
 
                 applyCourseSelection(
-                    usePreset ? preset.ot_group_selection : null,
+                    usePreset ? preset.ot_scope : null,
+                    usePreset ? preset.group_type_map_pks : [],
                     usePreset ? preset.student_pks : []
                 );
             });
@@ -349,19 +383,19 @@
         }
 
         $otBox.addClass('d-none');
-        $course.val('');
-        $group.val(MODE_ALL);
+        setAllOptions($course, false);
+        $otScope.val(MODE_ALL);
+        $otScopeBox.addClass('d-none');
         $groupBox.addClass('d-none');
         $studentBox.addClass('d-none');
         $previewBox.addClass('d-none');
+        clearMultiSelect($group);
         clearMultiSelect($student);
 
         if (isStaffFaculty(value)) {
             $staffBox.removeClass('d-none');
 
-            if (usePreset && preset.department_master_pk) {
-                $department.val(String(preset.department_master_pk));
-            }
+            fillMultiSelect($department, departmentItems, usePreset ? (preset.department_master_pks || []) : []);
 
             if (usePreset && preset.staff_scope) {
                 $staffScope.val(String(preset.staff_scope));
@@ -372,7 +406,7 @@
         }
 
         $staffBox.addClass('d-none');
-        $department.val('');
+        setAllOptions($department, false);
         $staffScope.val(MODE_ALL);
         $staffScopeBox.addClass('d-none');
         $employeeBox.addClass('d-none');
@@ -382,9 +416,26 @@
     /* ---------------- wiring ---------------- */
 
     $target.on('change', applyTargetAudience);
-    $course.on('change', function () { applyCourseSelection(null, []); });
-    $group.on('change', function () { applyOtGroupSelection([]); });
+    $course.on('change', function () {
+        refreshCount($course);
+        applyCourseSelection(null, [], []);
+    });
+    $otScope.on('change', function () { applyOtScope([], []); });
+    $group.on('change', function () {
+        refreshCount($group);
+
+        var courseIds = selectedValues($course);
+        var groupIds = selectedValues($group);
+
+        if (groupIds.length) {
+            $previewBox.removeClass('d-none');
+            loadStudents(courseIds, groupIds, [], 'preview');
+        } else {
+            $previewBox.addClass('d-none');
+        }
+    });
     $department.on('change', function () {
+        refreshCount($department);
         $staffScope.val(MODE_ALL);
         applyStaffScope([]);
     });
