@@ -50,9 +50,11 @@ class AppServiceProvider extends ServiceProvider
          * a session or renaming a faculty left the dropdowns stale until the TTL expired —
          * before the caching went in they were always fresh.
          *
-         * Hooked on the models rather than the write call sites: the timetable is written
-         * from more than twenty places and faculty_master from several, so a per-call-site
-         * bust would be one missed edit away from silently going stale again.
+         * Hooked on the models rather than the write call sites, so a write added later is covered
+         * without anyone remembering to bust. Today every timetable write is an Eloquent
+         * CalendarEvent instance call in CalendarController - save() in store() and
+         * update_event(), delete() in delete_event() - and faculty_master is written from several
+         * controllers.
          *
          * Model events do NOT see query-builder writes. faculty_master has some:
          * FacultyController updates faculty_code through FacultyMaster::where(...)->update()
