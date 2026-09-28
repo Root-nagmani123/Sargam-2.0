@@ -279,9 +279,9 @@ What remains is recorded with the reason and a review trigger.
 | Cache staleness on the three lookup caches | **FIXED** — `CalendarEvent` / `Timetable` / `FacultyMaster` `saved`+`deleted` bump the generation (`AppServiceProvider::boot()`) | n/a | n/a |
 | showFacultyAverage all-programs filter divergence | **FIXED** — ids now derived from the main query's own `end_date` predicate via `facultyAverageCourseIdsForType()`, not from `$programs` | n/a | n/a |
 | Cache store resolution had no working fallback | **FIXED** — `FeedbackReportCache::store()` probes and falls back (`file`, then `cache.default`) | n/a | n/a |
-| Derived tables not bounded by `feedback_checkbox` | Accepted | _unassigned — Feedback module owner to sign_ | when `timetable` grows by an order of magnitude |
+| Derived tables not bounded by `feedback_checkbox` | Accepted | Engineering lead (Ravi Patel), 2026-09-28 | when `timetable` grows by an order of magnitude |
 | `TEACHING_FACULTY_JSON_TABLE` diverged from the `JSON_CONTAINS` predicate it replaced | **FIXED** — `JSON_CONTAINS` now makes the final decision; see below | n/a | n/a |
-| Remark text in the Feedback Database grid can show a different case variant (`Good` / `good`) | Accepted — see below | _unassigned — Feedback module owner to sign_ | if remarks must be shown exactly as each trainee typed them |
+| Remark text in the Feedback Database grid can show a different case variant (`Good` / `good`) | Accepted — see below | Engineering lead (Ravi Patel), 2026-09-28 | if remarks must be shown exactly as each trainee typed them |
 | Retired generations are never deleted on the file cache store | **FIXED** — `cache:prune-expired-files`, scheduled hourly | n/a | n/a |
 
 ### Teaching-faculty expansion — FIXED
