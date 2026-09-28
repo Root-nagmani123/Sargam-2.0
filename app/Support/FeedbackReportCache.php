@@ -22,7 +22,8 @@ use Throwable;
  * flapping), a bust goes to one store while reads come from the other. Only if EVERY candidate
  * rejects the probe does a call throw, get report()ed, and fall through to computing:
  * no caching, never wrong data. On the file store, entries retired by a bust are never read
- * again, so nothing deletes them — schedule `cache:prune`-style cleanup there, or run on Redis.
+ * again, so nothing deletes them on read; `cache:prune-expired-files` (scheduled hourly in
+ * App\Console\Kernel) removes them. Redis expires them itself.
  *
  * Invalidation is by generation counter rather than by deleting keys. Entries are namespaced
  * with the current generation; submitting feedback bumps it, so every existing entry becomes

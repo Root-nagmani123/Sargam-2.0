@@ -17,8 +17,14 @@ use Symfony\Component\Finder\Finder;
  * Only files the store itself would already treat as expired are deleted: the first 10
  * bytes are the expiry timestamp FileStore writes, and it discards an entry once
  * time() >= expiry. Entries stored forever (expiry 9999999999) and anything not in that
- * format are left alone, so no live cache value is ever removed. Safe to run at any time,
- * including alongside requests: a read that finds its file gone is an ordinary cache miss.
+ * format are left alone. The header is read again immediately before the unlink, so an entry
+ * rewritten since the scan (a value re-put, a lock re-acquired) is kept.
+ *
+ * One race remains and is accepted: a rewrite landing between that second read and the unlink
+ * itself, a window of microseconds on an hourly job. For a cached value the cost is one cache
+ * miss. For a file-store lock (Cache::lock, or the scheduler's withoutOverlapping mutex when
+ * cache.default is file) it is a moment in which a second process could take the same lock.
+ * Closing it fully would need the store's own locking, which FileStore does not expose.
  */
 class PruneExpiredFileCache extends Command
 {
@@ -43,19 +49,13 @@ class PruneExpiredFileCache extends Command
                 $scanned++;
                 $path = $file->getPathname();
 
-                $handle = @fopen($path, 'rb');
-                if ($handle === false) {
-                    continue;
-                }
-                $expiry = fread($handle, 10);
-                fclose($handle);
-
-                if ($expiry === false || strlen($expiry) !== 10 || ! ctype_digit($expiry) || $now < (int) $expiry) {
+                if (! $this->isExpired($path, $now)) {
                     continue;
                 }
 
                 $expired++;
-                if (! $dryRun) {
+                // Re-read right before deleting: the entry may have been rewritten since the scan.
+                if (! $dryRun && $this->isExpired($path, time())) {
                     @unlink($path);
                 }
             }
@@ -70,6 +70,19 @@ class PruneExpiredFileCache extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /** True when the file carries FileStore's 10-digit expiry header and that time has passed. */
+    private function isExpired(string $path, int $now): bool
+    {
+        $handle = @fopen($path, 'rb');
+        if ($handle === false) {
+            return false;
+        }
+        $expiry = fread($handle, 10);
+        fclose($handle);
+
+        return $expiry !== false && strlen($expiry) === 10 && ctype_digit($expiry) && $now >= (int) $expiry;
     }
 
     /** @return array<string, string> store name => directory, for every file-driver store */
