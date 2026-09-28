@@ -825,8 +825,14 @@ class MemberController extends Controller
     /**
      * Merge rules()/messages() from all 6 step requests into one combined validator,
      * since the final submit carries every step's fields at once.
+     *
+     * $requireUserRole is false for a caller who can't manage RBAC roles (the
+     * self-service profile form, which never renders the Role Assignment step) —
+     * their role-mapping write is already a no-op (see actingUserCanManageRbacRoles()
+     * gate in update()), so requiring the field would block a save over a control
+     * they were never shown (F-001).
      */
-    private function combinedMemberRules(): array
+    private function combinedMemberRules(bool $requireUserRole = true): array
     {
         $requestClasses = [
             StoreMemberStep1Request::class,
@@ -843,6 +849,10 @@ class MemberController extends Controller
             $instance = new $requestClass();
             $rules = array_merge($rules, $instance->rules());
             $messages = array_merge($messages, $instance->messages());
+        }
+
+        if (!$requireUserRole) {
+            $rules['userrole'] = ['nullable', 'array'];
         }
 
         return [$rules, $messages];
@@ -972,7 +982,7 @@ class MemberController extends Controller
 
         $this->authorizeMemberWrite($request->emp_id);
 
-        [$rules, $messages] = $this->combinedMemberRules();
+        [$rules, $messages] = $this->combinedMemberRules($this->actingUserCanManageRbacRoles());
 
         $validator = Validator::make($request->all(), $rules, $messages);
 

@@ -162,11 +162,6 @@ class MemberWriteAuthorizationTest extends TestCase
      * F-001, the permitted case — the fix must not lock everyone out. The header's
      * "Edit Profile" link posts to this same endpoint for the actor's own record, so a
      * self-scoped write must not be refused as unauthorised.
-     *
-     * Asserts "not 403" rather than 200 deliberately: the self-service profile form sends
-     * no userrole[] while combinedMemberRules() still marks it required, so that path
-     * currently answers 422 for a reason that pre-dates this change and is out of scope
-     * here. What this test pins is that authorisation is not what stops it.
      */
     public function test_an_actor_may_still_write_their_own_record(): void
     {
@@ -179,6 +174,54 @@ class MemberWriteAuthorizationTest extends TestCase
         );
 
         $this->assertNotSame(403, $response->getStatusCode(), 'A self-scoped write must not be refused.');
+    }
+
+    /**
+     * F-002 (independent re-review of the F-001 fix): edit_profile.blade.php initially
+     * dropped the Role Assignment tab from self-service for EVERY actor, including a
+     * Super Admin editing their own profile — but combinedMemberRules() still requires
+     * 'userrole' from exactly that actor (actingUserCanManageRbacRoles()), so a Super
+     * Admin's own save 422'd unconditionally. The tab must be shown to a Super Admin and
+     * hidden from everyone else, matching the validator's own requirement.
+     */
+    public function test_self_service_profile_page_shows_the_role_assignment_tab_only_to_a_super_admin(): void
+    {
+        $adminEmployeePk = $this->makeEmployee();
+        $admin = $this->makeZeroRoleActor($adminEmployeePk);
+        $admin->assignRole('Super Admin');
+
+        $this->actingAs($admin)
+            ->get(route('member.profile.edit', $adminEmployeePk))
+            ->assertOk()
+            ->assertSee('id="profile-step-3"', false);
+
+        $employeePk = $this->makeEmployee('Other');
+        $employee = $this->makeZeroRoleActor($employeePk);
+
+        $this->actingAs($employee)
+            ->get(route('member.profile.edit', $employeePk))
+            ->assertOk()
+            ->assertDontSee('id="profile-step-3"', false);
+    }
+
+    /**
+     * F-001 (independent review): the self-service Edit Profile form never renders the
+     * Role Assignment step and so never posts userrole[] at all — but combinedMemberRules()
+     * used to mark it unconditionally required, so a zero-role employee's own save 422'd
+     * regardless of what they actually changed. combinedMemberRules() now only requires
+     * userrole for a caller who can manage RBAC roles; this pins the self-service case.
+     */
+    public function test_a_zero_role_actor_can_save_their_own_record_without_selecting_a_role(): void
+    {
+        $ownEmployeePk = $this->makeEmployee();
+        $actor = $this->makeZeroRoleActor($ownEmployeePk);
+
+        $payload = $this->memberPayload($ownEmployeePk);
+        unset($payload['userrole']);
+
+        $response = $this->actingAs($actor)->post(route('member.update'), $payload);
+
+        $response->assertStatus(200);
     }
 
     /** F-001. Creating a member has no "own record" to scope to, so it is admin-only. */

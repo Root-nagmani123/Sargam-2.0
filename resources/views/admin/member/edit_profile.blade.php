@@ -4,12 +4,21 @@
 
 @section('content')
     @php
+        // Keys are the real wizard step numbers (same ones /member/edit-step/{n}/{id}
+        // serves), not a 1..N display index — self-service always skips step 6
+        // (Employee Grade Pay, admin-only). Step 3 (Role Assignment) is only shown to
+        // a Super Admin editing their own profile, matching combinedMemberRules()'s
+        // requirement of 'userrole' from exactly that same actor (F-001/F-002):
+        // an ordinary employee never sees or posts it, a Super Admin still does.
         $profileSteps = [
             1 => ['title' => 'Personal Details', 'description' => 'Identity and profile basics'],
             2 => ['title' => 'Employment', 'description' => 'Work, department, and access data'],
-            3 => ['title' => 'Contact', 'description' => 'Addresses and communication details'],
-            4 => ['title' => 'Additional', 'description' => 'Uploads and supporting information'],
         ];
+        if (hasRole('Super Admin')) {
+            $profileSteps[3] = ['title' => 'Role Assignment', 'description' => 'Roles granted to this account'];
+        }
+        $profileSteps[4] = ['title' => 'Contact', 'description' => 'Addresses and communication details'];
+        $profileSteps[5] = ['title' => 'Additional', 'description' => 'Uploads and supporting information'];
     @endphp
 
     <style>
@@ -542,19 +551,19 @@
                             </div>
 
                             <div class="tab-content profile-step-content">
-                                <div class="tab-pane fade show active profile-step-pane" id="profile-step-1" role="tabpanel" aria-labelledby="profile-step-1-tab">
-                                    <div class="profile-loading-state">
-                                        <div class="spinner-border text-primary profile-loading-spinner" role="status">
-                                            <span class="visually-hidden">Loading...</span>
-                                        </div>
-                                        <div class="fw-semibold text-dark">Loading personal details</div>
-                                        <div class="small">Please wait while we prepare the first section.</div>
+                                @foreach ($profileSteps as $stepNumber => $step)
+                                    <div class="tab-pane fade {{ $loop->first ? 'show active' : '' }} profile-step-pane" id="profile-step-{{ $stepNumber }}" role="tabpanel" aria-labelledby="profile-step-{{ $stepNumber }}-tab">
+                                        @if ($loop->first)
+                                            <div class="profile-loading-state">
+                                                <div class="spinner-border text-primary profile-loading-spinner" role="status">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
+                                                <div class="fw-semibold text-dark">Loading personal details</div>
+                                                <div class="small">Please wait while we prepare the first section.</div>
+                                            </div>
+                                        @endif
                                     </div>
-                                </div>
-                                <div class="tab-pane fade profile-step-pane" id="profile-step-2" role="tabpanel" aria-labelledby="profile-step-2-tab"></div>
-                                <div class="tab-pane fade profile-step-pane" id="profile-step-3" role="tabpanel" aria-labelledby="profile-step-3-tab"></div>
-                                <div class="tab-pane fade profile-step-pane" id="profile-step-4" role="tabpanel" aria-labelledby="profile-step-4-tab"></div>
-                                <div class="tab-pane fade profile-step-pane" id="profile-step-5" role="tabpanel" aria-labelledby="profile-step-5-tab"></div>
+                                @endforeach
                             </div>
                         </div>
 
@@ -577,7 +586,8 @@
         $(document).ready(function () {
             const form = $("#member-form");
             const empId = $('#emp_id').val();
-            const totalSteps = {{ count($profileSteps) }};
+            const stepNumbers = @json(array_keys($profileSteps));
+            const totalSteps = stepNumbers.length;
             let employeePK = empId;
             const loadedSteps = {};
             const loadPromises = {};
@@ -719,11 +729,11 @@
                 updateButton.prop('disabled', true).text('Updating...');
 
                 try {
-                    for (let step = 1; step <= 5; step++) {
+                    for (const step of stepNumbers) {
                         await loadStepContent(step);
                     }
 
-                    for (let step = 1; step <= 5; step++) {
+                    for (const step of stepNumbers) {
                         try {
                             await validateStep(step);
                         } catch (e) {
@@ -763,7 +773,7 @@
                     const errors = e.responseJSON?.errors || {};
 
                     if (status === 422) {
-                        showErrors(getPaneByStep(5), errors);
+                        showErrors(getPaneByStep(stepNumbers[stepNumbers.length - 1]), errors);
                     } else {
                         toastr.error(e.responseJSON?.message || `Unexpected error (${status || 'N/A'}) occurred.`);
                     }
