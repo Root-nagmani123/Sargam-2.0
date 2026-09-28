@@ -4,6 +4,8 @@
 
 @push('styles')
 <link href="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-lite.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+@include('admin.NoticeNotification.partials.audience_styles')
 <style>
     .notice-form-card {
         border-left: 4px solid #004a93;
@@ -221,13 +223,8 @@
                         </select>
                     </div>
 
-                    {{-- Conditional: Course --}}
-                    <div class="col-md-6 {{ old('target_audience', $notice->target_audience) == 'Office trainee' ? '' : 'd-none' }}" id="courseBox">
-                        <label class="form-label" for="courseSelect">Select Course</label>
-                        <select name="course_master_pk" id="courseSelect" class="form-control">
-                            <option value="">Select Course</option>
-                        </select>
-                    </div>
+                    {{-- Conditional: hierarchical audience cascade --}}
+                    @include('admin.NoticeNotification.partials.audience_fields')
 
                     {{-- Actions --}}
                     <div class="col-12">
@@ -249,6 +246,7 @@
 
 @section('scripts')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-lite.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
 <script>
 $(document).ready(function() {
@@ -329,38 +327,29 @@ $(document).ready(function() {
         }
     });
 
-    let selectedCourse = "{{ $notice->course_master_pk }}";
-
-    function loadCourses(preselect) {
-        $.ajax({
-            url: "{{ route('admin.notice.getCourses') }}",
-            type: "GET",
-            success: function(res) {
-                $('#courseSelect').empty().append('<option value="">Select Course</option>');
-                $.each(res.data, function(index, item) {
-                    let selected = (preselect == item.pk) ? 'selected' : '';
-                    $('#courseSelect').append(
-                        `<option value="${item.pk}" ${selected}>${item.course_name}</option>`
-                    );
-                });
-            }
-        });
-    }
-
-    if ("{{ old('target_audience', $notice->target_audience) }}" === "Office trainee") {
-        loadCourses(selectedCourse);
-    }
-
-    $('#targetAudience').on('change', function() {
-        let val = $(this).val();
-        if (val === 'Office trainee') {
-            $('#courseBox').removeClass('d-none');
-            loadCourses();
-        } else {
-            $('#courseBox').addClass('d-none');
-            $('#courseSelect').empty();
-        }
-    });
 });
 </script>
+
+@php
+// The cascade's starting state: old() wins after a failed validation, otherwise
+// the saved notice. `ot_group_selection` folds three saved columns back into the
+// single dropdown the form uses — a group pk, or the literal all / individual.
+$savedGroupSelection = $notice->audience_mode === \App\Models\NoticeNotification::MODE_GROUP
+    ? $notice->group_type_map_pk
+    : ($notice->audience_mode ?: \App\Models\NoticeNotification::MODE_ALL);
+
+$audiencePreset = [
+    'target_audience'      => old('target_audience', $notice->target_audience),
+    'course_master_pk'     => old('course_master_pk', $notice->course_master_pk),
+    'ot_group_selection'   => old('ot_group_selection', $savedGroupSelection),
+    'student_pks'          => old('student_pks', $selectedStudents->all()),
+    'department_master_pk' => old('department_master_pk', $notice->department_master_pk),
+    'staff_scope'          => old('staff_scope', $notice->audience_mode === \App\Models\NoticeNotification::MODE_INDIVIDUAL
+        ? \App\Models\NoticeNotification::MODE_INDIVIDUAL
+        : \App\Models\NoticeNotification::MODE_ALL),
+    'employee_pks'         => old('employee_pks', $selectedEmployees->all()),
+];
+@endphp
+
+@include('admin.NoticeNotification.partials.audience_scripts')
 @endsection

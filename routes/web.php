@@ -503,6 +503,17 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('/notice/get-courses', [NoticeNotificationController::class, 'getCourses'])
             ->name('notice.getCourses');
+
+        // Target-audience cascade on the notice form.
+        Route::get('/notice/get-group-types', [NoticeNotificationController::class, 'getGroupTypes'])
+            ->name('notice.getGroupTypes');
+        Route::get('/notice/get-students', [NoticeNotificationController::class, 'getStudents'])
+            ->name('notice.getStudents');
+        Route::get('/notice/get-departments', [NoticeNotificationController::class, 'getDepartments'])
+            ->name('notice.getDepartments');
+        Route::get('/notice/get-employees', [NoticeNotificationController::class, 'getEmployees'])
+            ->name('notice.getEmployees');
+
         Route::post('/summernote/upload', [UserController::class, 'uploadPdf'])->name('summernote.upload');
     });
 

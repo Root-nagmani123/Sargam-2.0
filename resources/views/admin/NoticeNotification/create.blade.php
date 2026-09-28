@@ -4,6 +4,8 @@
 
 @push('styles')
 <link href="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-lite.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+@include('admin.NoticeNotification.partials.audience_styles')
 <style>
     .notice-form-card {
         border-left: 4px solid #004a93;
@@ -207,13 +209,8 @@
                         </select>
                     </div>
 
-                    {{-- Conditional: Course --}}
-                    <div class="col-md-6 d-none" id="courseBox">
-                        <label class="form-label" for="courseSelect">Select Course</label>
-                        <select name="course_master_pk" id="courseSelect" class="form-control">
-                            <option value="">Select Course</option>
-                        </select>
-                    </div>
+                    {{-- Conditional: hierarchical audience cascade --}}
+                    @include('admin.NoticeNotification.partials.audience_fields')
 
                     {{-- Actions --}}
                     <div class="col-12">
@@ -235,6 +232,7 @@
 
 @section('scripts')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-lite.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
 <script>
     $(document).ready(function() {
@@ -328,33 +326,22 @@
             }
         });
 
-        $('#targetAudience').on('change', function() {
-            let val = $(this).val();
-
-            if (val === 'Office trainee') {
-
-                $('#courseBox').removeClass('d-none');
-
-                $.ajax({
-                    url: "{{ route('admin.notice.getCourses') }}",
-                    type: "GET",
-                    success: function(res) {
-                        $('#courseSelect').empty().append('<option value="">Select Course</option>');
-
-                        $.each(res.data, function(index, item) {
-                            $('#courseSelect').append(
-                                `<option value="${item.pk}">${item.course_name}</option>`
-                            );
-                        });
-                    }
-                });
-
-            } else {
-                $('#courseBox').addClass('d-none');
-                $('#courseSelect').empty();
-            }
-        });
-
     });
 </script>
+
+@php
+// What the cascade should show on load. On create that is only whatever survived
+// a failed validation; the saved notice adds to this on the edit form.
+$audiencePreset = [
+    'target_audience'      => old('target_audience'),
+    'course_master_pk'     => old('course_master_pk'),
+    'ot_group_selection'   => old('ot_group_selection'),
+    'student_pks'          => old('student_pks', []),
+    'department_master_pk' => old('department_master_pk'),
+    'staff_scope'          => old('staff_scope'),
+    'employee_pks'         => old('employee_pks', []),
+];
+@endphp
+
+@include('admin.NoticeNotification.partials.audience_scripts')
 @endsection

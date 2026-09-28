@@ -1531,9 +1531,20 @@ if (!function_exists('notice_feed_base_query')) {
      * Base notice query with the author name and department resolved.
      * Columns are table-qualified because user_credentials / department_master
      * carry their own active_inactive + pk columns.
+     *
+     * $scope selects which side of expiry_date to read:
+     *   live    — still current (the default; what the dashboard widget shows)
+     *   archive — already expired, newest first
+     *   all     — both
+     *
+     * Archive reverses the sort: a live feed reads forward from today, an
+     * archive reads backward from it, so the most recently expired notice is
+     * the one a user is looking for first.
      */
-    function notice_feed_base_query()
+    function notice_feed_base_query(string $scope = 'live')
     {
+        $today = date('Y-m-d');
+
         return DB::table('notices_notification')
             ->leftJoin('user_credentials as notice_author', 'notice_author.pk', '=', 'notices_notification.created_by')
             ->leftJoin('employee_master as notice_author_emp', 'notice_author_emp.pk', '=', 'notice_author.user_id')
@@ -1554,7 +1565,12 @@ if (!function_exists('notice_feed_base_query')) {
                 'notice_author_dept.department_name as author_department'
             )
             ->where('notices_notification.active_inactive', 1)
-            ->where('notices_notification.expiry_date', '>=', date('Y-m-d'))
+            ->when($scope === 'live', function ($q) use ($today) {
+                $q->where('notices_notification.expiry_date', '>=', $today);
+            })
+            ->when($scope === 'archive', function ($q) use ($today) {
+                $q->where('notices_notification.expiry_date', '<', $today);
+            })
             ->orderBy('notices_notification.display_date', 'desc');
     }
 }
@@ -1569,9 +1585,13 @@ if (!function_exists('notice_feed_query_by_role')) {
      * Each role resolves to ONE statement — the previous version ran a second
      * query per role and merged the two collections, which cannot be paginated.
      *
+     * $scope is passed straight to notice_feed_base_query() — 'live' (default),
+     * 'archive' or 'all'. Who may see a notice never depends on whether it has
+     * expired, so the role predicates below are identical for every scope.
+     *
      * @return \Illuminate\Database\Query\Builder|null  null when unauthenticated
      */
-    function notice_feed_query_by_role()
+    function notice_feed_query_by_role(string $scope = 'live')
     {
         $user = Auth::user();
         if (!$user) {
@@ -1586,13 +1606,40 @@ if (!function_exists('notice_feed_query_by_role')) {
         $isStaffFaculty = !empty(array_intersect($roleStaffFaculty, $sessionRoles));
         $isStudent      = !empty(array_intersect($roleStudent, $sessionRoles));
 
-        $query = notice_feed_base_query();
+        $query = notice_feed_base_query($scope);
 
-        // Staff/Faculty: everyone's "All" notices plus their own audience.
+        // Staff/Faculty: everyone's "All" notices plus their own audience, now
+        // narrowed by the notice's department and individual-recipient list.
+        // A NULL department means "all departments", and a NULL audience_mode is
+        // every notice written before this targeting existed — both reach everyone.
         if ($isStaffFaculty) {
-            return $query->where(function ($w) {
+            $departmentId = DB::table('employee_master')
+                ->where('pk', $user->user_id)
+                ->value('department_master_pk');
+
+            return $query->where(function ($w) use ($user, $departmentId) {
                 $w->where('notices_notification.target_audience', 'All')
-                    ->orWhere('notices_notification.target_audience', 'like', '%Staff/Faculty%');
+                    ->orWhere(function ($o) use ($user, $departmentId) {
+                        $o->where('notices_notification.target_audience', 'like', '%Staff/Faculty%')
+                            ->where(function ($d) use ($departmentId) {
+                                $d->whereNull('notices_notification.department_master_pk');
+
+                                if ($departmentId) {
+                                    $d->orWhere('notices_notification.department_master_pk', $departmentId);
+                                }
+                            })
+                            ->where(function ($m) use ($user) {
+                                $m->where('notices_notification.audience_mode', '!=', 'individual')
+                                    ->orWhereNull('notices_notification.audience_mode')
+                                    ->orWhereExists(function ($sub) use ($user) {
+                                        $sub->select(DB::raw(1))
+                                            ->from('notice_audience_map')
+                                            ->whereColumn('notice_audience_map.notices_notification_pk', 'notices_notification.pk')
+                                            ->where('notice_audience_map.audience_type', 'E')
+                                            ->where('notice_audience_map.reference_pk', $user->user_id);
+                                    });
+                            });
+                    });
             });
         }
 
@@ -1608,15 +1655,51 @@ if (!function_exists('notice_feed_query_by_role')) {
                 ->distinct()
                 ->pluck('course_master_pk');
 
-            return $query->where(function ($w) use ($courseIds) {
-                $w->where('notices_notification.target_audience', 'All');
+            // Groups the OT belongs to, for notices aimed at one group type.
+            $groupIds = DB::table('student_course_group_map')
+                ->where('student_master_pk', $user->user_id)
+                ->where('active_inactive', 1)
+                ->distinct()
+                ->pluck('group_type_master_course_master_map_pk');
 
-                if ($courseIds->isNotEmpty()) {
-                    $w->orWhere(function ($o) use ($courseIds) {
+            return $query->where(function ($w) use ($user, $courseIds, $groupIds) {
+                $w->where('notices_notification.target_audience', 'All')
+                    ->orWhere(function ($o) use ($user, $courseIds, $groupIds) {
                         $o->where('notices_notification.target_audience', 'like', '%Office trainee%')
-                            ->whereIn('notices_notification.course_master_pk', $courseIds);
+                            // NULL course = the author picked "Select All" courses.
+                            ->where(function ($c) use ($courseIds) {
+                                $c->whereNull('notices_notification.course_master_pk');
+
+                                if ($courseIds->isNotEmpty()) {
+                                    $c->orWhereIn('notices_notification.course_master_pk', $courseIds);
+                                }
+                            })
+                            ->where(function ($m) use ($user, $groupIds) {
+                                // NULL mode = a notice written before this
+                                // targeting existed; it reaches the whole course.
+                                $m->whereNull('notices_notification.audience_mode')
+                                    ->orWhere('notices_notification.audience_mode', 'all')
+                                    ->orWhere(function ($g) use ($groupIds) {
+                                        $g->where('notices_notification.audience_mode', 'group');
+
+                                        if ($groupIds->isNotEmpty()) {
+                                            $g->whereIn('notices_notification.group_type_map_pk', $groupIds);
+                                        } else {
+                                            $g->whereRaw('1 = 0');
+                                        }
+                                    })
+                                    ->orWhere(function ($i) use ($user) {
+                                        $i->where('notices_notification.audience_mode', 'individual')
+                                            ->whereExists(function ($sub) use ($user) {
+                                                $sub->select(DB::raw(1))
+                                                    ->from('notice_audience_map')
+                                                    ->whereColumn('notice_audience_map.notices_notification_pk', 'notices_notification.pk')
+                                                    ->where('notice_audience_map.audience_type', 'S')
+                                                    ->where('notice_audience_map.reference_pk', $user->user_id);
+                                            });
+                                    });
+                            });
                     });
-                }
             });
         }
 

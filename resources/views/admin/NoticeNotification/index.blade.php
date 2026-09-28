@@ -74,6 +74,11 @@
         <div class="card-body">
             <div class="bg-light rounded-3 p-3 mb-4">
                 <form method="GET" action="{{ route('admin.notice.index') }}">
+                    {{-- The sidebar reaches this page as ?menu=NNN; a GET filter submit
+                         would otherwise drop it and the menu would lose its highlight. --}}
+                    @if(request('menu'))
+                    <input type="hidden" name="menu" value="{{ request('menu') }}">
+                    @endif
                     <div class="row g-3 align-items-end">
                         <div class="col-12 col-sm-6 col-md">
                             <label class="form-label fw-semibold mb-1">Notice Type</label>
@@ -94,8 +99,34 @@
                                 onchange="this.form.submit()">
                                 <option value="">All</option>
                                 @foreach($courses as $c)
-                                <option value="{{ $c->id }}" {{ request('course_id') == $c->pk ? 'selected' : '' }}>
+                                <option value="{{ $c->pk }}" {{ request('course_id') == $c->pk ? 'selected' : '' }}>
                                     {{ $c->course_name }}
+                                </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-sm-6 col-md">
+                            <label class="form-label fw-semibold mb-1">Department</label>
+                            <select name="department_id" class="form-select form-select-sm js-choice"
+                                onchange="this.form.submit()">
+                                <option value="">All</option>
+                                @foreach($departments as $d)
+                                <option value="{{ $d->pk }}" {{ request('department_id') == $d->pk ? 'selected' : '' }}>
+                                    {{ $d->department_name }}
+                                </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-sm-6 col-md">
+                            <label class="form-label fw-semibold mb-1">Year</label>
+                            <select name="year" class="form-select form-select-sm js-choice"
+                                onchange="this.form.submit()">
+                                <option value="">All</option>
+                                @foreach($years as $y)
+                                <option value="{{ $y }}" {{ request('year') == $y ? 'selected' : '' }}>
+                                    {{ $y }}
                                 </option>
                                 @endforeach
                             </select>
@@ -124,7 +155,7 @@
                         </div>
 
                         <div class="col-12 col-md-auto d-flex align-items-end gap-2">
-                            <a href="{{ route('admin.notice.index') }}"
+                            <a href="{{ route('admin.notice.index', request('menu') ? ['menu' => request('menu')] : []) }}"
                                 class="btn btn-sm btn-outline-secondary" title="Reset Filters">
                                 Reset
                             </a>
@@ -143,6 +174,8 @@
                                     'title' => 'Notice Title',
                                     'type' => 'Notice Type',
                                     'course' => 'Course Name',
+                                    'department' => 'Department',
+                                    'audience' => 'Target Audience',
                                     'created_by' => 'Created By',
                                     'created_date' => 'Created Date',
                                     'display_date' => 'Display Date',
@@ -174,6 +207,8 @@
                             <th scope="col" class="col-title">Notice Title</th>
                             <th scope="col" class="col-type">Notice Type</th>
                             <th scope="col" class="col-course">Course Name</th>
+                            <th scope="col" class="col-department">Department</th>
+                            <th scope="col" class="col-audience">Target Audience</th>
                             <th scope="col" class="col-created_by">Created By</th>
                             <th scope="col" class="col-created_date">Created Date</th>
                             <th scope="col" class="col-display_date">Display Date</th>
@@ -200,7 +235,38 @@
                                     {{ $n->notice_type }}
                                 </span>
                             </td>
-                            <td class="col-course">{{ $n->course->course_name ?? 'N/A' }}</td>
+                            <td class="col-course">
+                                @if($n->course_master_pk)
+                                {{ $n->course->course_name ?? 'N/A' }}
+                                @elseif(stripos($n->target_audience, 'Office trainee') !== false)
+                                <span class="text-muted">All courses</span>
+                                @else
+                                N/A
+                                @endif
+                            </td>
+                            <td class="col-department">
+                                @if($n->department_master_pk)
+                                {{ $n->department->department_name ?? 'N/A' }}
+                                @elseif(stripos($n->target_audience, 'Staff/Faculty') !== false)
+                                <span class="text-muted">All departments</span>
+                                @else
+                                N/A
+                                @endif
+                            </td>
+                            <td class="col-audience">
+                                <span class="badge rounded-1 bg-primary-subtle text-primary">
+                                    {{ $n->target_audience }}
+                                </span>
+                                @if($n->audience_mode === \App\Models\NoticeNotification::MODE_GROUP && $n->groupTypeMap)
+                                <span class="d-block small text-muted mt-1">
+                                    {{ trim(($n->groupTypeMap->courseGroupType->type_name ?? 'Group') . ' - ' . $n->groupTypeMap->group_name, ' -') }}
+                                </span>
+                                @elseif($n->audience_mode === \App\Models\NoticeNotification::MODE_INDIVIDUAL)
+                                <span class="d-block small text-muted mt-1">
+                                    Individual · {{ $n->audience_maps_count }} selected
+                                </span>
+                                @endif
+                            </td>
                             <td class="col-created_by">{{ $n->user->first_name }} {{ $n->user->last_name }}</td>
                             <td class="col-created_date">{{ \Carbon\Carbon::parse($n->created_date)->format('d-m-Y') }}
                             </td>

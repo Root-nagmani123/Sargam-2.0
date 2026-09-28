@@ -1100,26 +1100,40 @@ class UserController extends Controller
      */
     protected function buildNoticeFeed(?Request $request): array
     {
-        // No year filter: this feed shows live notices only (the base query drops
-        // anything past its expiry_date), so a Year control could never offer more
-        // than the current year or two and would read as a broken archive. If an
-        // archive is wanted later, the expiry predicate has to relax first — the
-        // control on its own would not deliver one.
+        // Scope picks which side of expiry_date the feed reads. Archive is the
+        // whole back catalogue this user was entitled to see — the role predicates
+        // in notice_feed_query_by_role() are the same either way, so "archive"
+        // never widens what someone can read, it only reaches further back.
+        $scope = $request?->query('notice_scope') === 'archive' ? 'archive' : 'live';
+
+        // Year applies to display_date. It only earns its place once the archive
+        // exists: on the live feed the set spans a year or two at most.
+        $year = trim((string) ($request?->query('notice_year') ?? ''));
+        if ($year !== '' && !preg_match('/^\d{4}$/', $year)) {
+            $year = '';
+        }
+
         $filters = [
+            'scope'    => $scope,
+            'year'     => $year,
             'type'     => trim((string) ($request?->query('notice_type') ?? '')),
             'dept'     => trim((string) ($request?->query('notice_dept') ?? '')),
             'audience' => trim((string) ($request?->query('notice_audience') ?? '')),
             'q'        => trim((string) ($request?->query('q') ?? '')),
         ];
 
-        $base = notice_feed_query_by_role();
+        $base = notice_feed_query_by_role($scope);
 
         if (!$base) {
             $empty = new \Illuminate\Pagination\LengthAwarePaginator([], 0, self::NOTICE_FEED_PER_PAGE, 1, [
                 'path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(),
             ]);
 
-            return [$empty, ['types' => collect(), 'depts' => collect(), 'audiences' => collect()], $filters];
+            return [
+                $empty,
+                ['types' => collect(), 'depts' => collect(), 'audiences' => collect(), 'years' => collect(), 'archiveCount' => 0],
+                $filters,
+            ];
         }
 
         // Dropdown options come from the UNFILTERED role-scoped set, so choosing a
@@ -1144,11 +1158,34 @@ class UserController extends Controller
             ->sort()
             ->values();
 
+        // Years come from the same unfiltered, scope-applied set, so the dropdown
+        // never offers a year that returns nothing. YEAR() is projected rather than
+        // derived in PHP so the DISTINCT still collapses in SQL.
+        $years = (clone $base)
+            ->reorder()
+            ->select(DB::raw('YEAR(notices_notification.display_date) as notice_year'))
+            ->distinct()
+            ->pluck('notice_year')
+            ->filter()
+            ->sortDesc()
+            ->values();
+
+        // Drives the Archive button's count. Cheap — one COUNT over the same
+        // role-scoped predicates, and it tells the user whether the archive is
+        // worth opening before they switch to it.
+        $archiveCount = notice_feed_query_by_role('archive')->reorder()->count();
+
         $filterOptions = [
-            'types'     => $distinctOf('notices_notification.notice_type'),
-            'depts'     => $distinctOf('notice_author_dept.department_name'),
-            'audiences' => $distinctOf('notices_notification.target_audience'),
+            'types'        => $distinctOf('notices_notification.notice_type'),
+            'depts'        => $distinctOf('notice_author_dept.department_name'),
+            'audiences'    => $distinctOf('notices_notification.target_audience'),
+            'years'        => $years,
+            'archiveCount' => $archiveCount,
         ];
+
+        if ($filters['year'] !== '') {
+            $base->whereYear('notices_notification.display_date', $filters['year']);
+        }
 
         if ($filters['type'] !== '') {
             $base->where('notices_notification.notice_type', $filters['type']);
