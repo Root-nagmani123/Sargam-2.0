@@ -2,7 +2,42 @@
 
 namespace App\Http;
 
+use App\Http\Middleware\Authenticate;
+use App\Http\Middleware\BindSessionToUserAgent;
+use App\Http\Middleware\BlockFcFormBuilderAction;
+use App\Http\Middleware\BlockFcFormBuilderDelete;
+use App\Http\Middleware\CompressResponse;
+use App\Http\Middleware\EncryptCookies;
+use App\Http\Middleware\EnsureFcActivityCoordinator;
+use App\Http\Middleware\EnsureFcActivityMatrixAccess;
+use App\Http\Middleware\EnsureFcRegAdmin;
+use App\Http\Middleware\EnsureIssueReportsAdmin;
+use App\Http\Middleware\EnsureMemberPiiAccess;
+use App\Http\Middleware\EnsureMemberRecordAccess;
+use App\Http\Middleware\EnsureMemoNoticeManager;
+use App\Http\Middleware\EnsureRoleAssigned;
+use App\Http\Middleware\FcAuth;
+use App\Http\Middleware\PreventRequestsDuringMaintenance;
+use App\Http\Middleware\RedirectIfAuthenticated;
+use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\TrimStrings;
+use App\Http\Middleware\TrustProxies;
+use App\Http\Middleware\VerifyCsrfToken;
+use Fruitcake\Cors\HandleCors;
+use Illuminate\Auth\Middleware\AuthenticateWithBasicAuth;
+use Illuminate\Auth\Middleware\Authorize;
+use Illuminate\Auth\Middleware\EnsureEmailIsVerified;
+use Illuminate\Auth\Middleware\RequirePassword;
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
+use Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull;
+use Illuminate\Foundation\Http\Middleware\ValidatePostSize;
+use Illuminate\Http\Middleware\SetCacheHeaders;
+use Illuminate\Routing\Middleware\SubstituteBindings;
+use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Routing\Middleware\ValidateSignature;
+use Illuminate\Session\Middleware\StartSession;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class Kernel extends HttpKernel
 {
@@ -15,12 +50,12 @@ class Kernel extends HttpKernel
      */
     protected $middleware = [
         // \App\Http\Middleware\TrustHosts::class,
-        \App\Http\Middleware\TrustProxies::class,
-        \Fruitcake\Cors\HandleCors::class,
-        \App\Http\Middleware\PreventRequestsDuringMaintenance::class,
-        \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
-        \App\Http\Middleware\TrimStrings::class,
-        \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
+        TrustProxies::class,
+        HandleCors::class,
+        PreventRequestsDuringMaintenance::class,
+        ValidatePostSize::class,
+        TrimStrings::class,
+        ConvertEmptyStringsToNull::class,
     ];
 
     /**
@@ -32,24 +67,24 @@ class Kernel extends HttpKernel
         'web' => [
             // Outermost: gzips the finished response (no-op when the web server
             // already compressed it). FC form pages compress ~13x.
-            \App\Http\Middleware\CompressResponse::class,
-            \App\Http\Middleware\EncryptCookies::class,
-            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
-            \Illuminate\Session\Middleware\StartSession::class,
+            CompressResponse::class,
+            EncryptCookies::class,
+            AddQueuedCookiesToResponse::class,
+            StartSession::class,
             // \Illuminate\Session\Middleware\AuthenticateSession::class,
             // Reject a session cookie replayed from a different browser (copied-cookie
             // hijacking). Runs right after the session is available.
-            \App\Http\Middleware\BindSessionToUserAgent::class,
-            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-            \App\Http\Middleware\VerifyCsrfToken::class,
-            \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            \App\Http\Middleware\SecurityHeaders::class,
+            BindSessionToUserAgent::class,
+            ShareErrorsFromSession::class,
+            VerifyCsrfToken::class,
+            SubstituteBindings::class,
+            SecurityHeaders::class,
         ],
 
         'api' => [
             // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             'throttle:api',
-            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            SubstituteBindings::class,
         ],
     ];
 
@@ -61,23 +96,25 @@ class Kernel extends HttpKernel
      * @var array<string, class-string|string>
      */
     protected $routeMiddleware = [
-        'auth' => \App\Http\Middleware\Authenticate::class,
-        'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
-        'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
-        'can' => \Illuminate\Auth\Middleware\Authorize::class,
-        'ensure.role' => \App\Http\Middleware\EnsureRoleAssigned::class,
-        'fc.auth' => \App\Http\Middleware\FcAuth::class,
-        'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
-        'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
-        'signed' => \Illuminate\Routing\Middleware\ValidateSignature::class,
-        'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
-        'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
-        'fc.activity.coordinator' => \App\Http\Middleware\EnsureFcActivityCoordinator::class,
-        'fc.activity.matrix' => \App\Http\Middleware\EnsureFcActivityMatrixAccess::class,
-        'fc.reg.admin' => \App\Http\Middleware\EnsureFcRegAdmin::class,
-        'fc.builder.delete' => \App\Http\Middleware\BlockFcFormBuilderDelete::class,
-        'issue.reports.admin' => \App\Http\Middleware\EnsureIssueReportsAdmin::class,
-        'memo.notice.manager' => \App\Http\Middleware\EnsureMemoNoticeManager::class,
-        'fc.builder.action' => \App\Http\Middleware\BlockFcFormBuilderAction::class,
+        'auth' => Authenticate::class,
+        'auth.basic' => AuthenticateWithBasicAuth::class,
+        'cache.headers' => SetCacheHeaders::class,
+        'can' => Authorize::class,
+        'ensure.role' => EnsureRoleAssigned::class,
+        'fc.auth' => FcAuth::class,
+        'guest' => RedirectIfAuthenticated::class,
+        'password.confirm' => RequirePassword::class,
+        'signed' => ValidateSignature::class,
+        'throttle' => ThrottleRequests::class,
+        'verified' => EnsureEmailIsVerified::class,
+        'fc.activity.coordinator' => EnsureFcActivityCoordinator::class,
+        'fc.activity.matrix' => EnsureFcActivityMatrixAccess::class,
+        'fc.reg.admin' => EnsureFcRegAdmin::class,
+        'fc.builder.delete' => BlockFcFormBuilderDelete::class,
+        'issue.reports.admin' => EnsureIssueReportsAdmin::class,
+        'member.pii' => EnsureMemberPiiAccess::class,
+        'member.record' => EnsureMemberRecordAccess::class,
+        'memo.notice.manager' => EnsureMemoNoticeManager::class,
+        'fc.builder.action' => BlockFcFormBuilderAction::class,
     ];
 }
