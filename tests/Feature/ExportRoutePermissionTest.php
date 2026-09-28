@@ -23,6 +23,21 @@ class ExportRoutePermissionTest extends TestCase
 {
     use DatabaseTransactions;
 
+    /**
+     * A route's middleware, with the class reference folded into its alias.
+     * routes/web.php references EnsureMenuPermission BY CLASS so that a lost
+     * Kernel alias cannot ungate it (PR #311 review round 7, F-030); both spellings
+     * are the same gate.
+     */
+    private function gates(\Illuminate\Routing\Route $route): string
+    {
+        return str_replace(
+            \App\Http\Middleware\EnsureMenuPermission::class.':',
+            'menu.permission:',
+            implode(' ', $route->gatherMiddleware())
+        );
+    }
+
     /** Each export route and the menus.permission_name of the screen it belongs to. */
     private const GATED = [
         'roles.export'                  => 'roles',
@@ -197,7 +212,7 @@ class ExportRoutePermissionTest extends TestCase
             $route = Route::getRoutes()->getByName($name);
             $this->assertNotNull($route, "Route {$name} should exist.");
 
-            $middleware = implode(' ', $route->gatherMiddleware());
+            $middleware = $this->gates($route);
 
             $this->assertStringContainsString('menu.permission:'.$permission, $middleware,
                 "Route {$name} must be gated on the permission its own screen uses ({$permission}).");
@@ -213,7 +228,7 @@ class ExportRoutePermissionTest extends TestCase
             $route = Route::getRoutes()->getByName($name);
             $this->assertNotNull($route, "Route {$name} should exist.");
 
-            $middleware = implode(' ', $route->gatherMiddleware());
+            $middleware = $this->gates($route);
 
             $this->assertStringContainsString('menu.permission:'.$permission, $middleware,
                 "Route {$name} writes to a resource whose reads are gated on {$permission}; it must be gated too.");
@@ -292,7 +307,7 @@ class ExportRoutePermissionTest extends TestCase
 
             $this->assertStringContainsString(
                 'menu.permission:'.$permission,
-                implode(' ', $route->gatherMiddleware()),
+                $this->gates($route),
                 "Route {$name} serves the same rows as the gated export and must be gated too."
             );
         }

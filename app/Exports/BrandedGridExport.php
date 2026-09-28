@@ -55,6 +55,41 @@ class BrandedGridExport extends DefaultValueBinder implements FromArray, ShouldA
         private array $textKeys = []
     ) {}
 
+    /**
+     * The grid calling convention used by the Roles, Sidebar and Users screens:
+     * rows first, and columns as a LIST whose entries may carry their own 'key'.
+     *
+     * Those callers were written against an earlier constructor with that
+     * shape; merging main replaced the constructor under them, so every one of
+     * their Excel exports threw a TypeError (PR #311 review round 7, F-029). This
+     * adapts the shape rather than keeping two classes that format the same
+     * report two ways. Values are cast to string here, as that constructor did;
+     * BindsExportCellsAsText still decides numeric vs text by cell type.
+     *
+     * @param  array<int, array{key?:string, heading:string, class?:string, value:callable}>  $columns
+     * @param  list<string>  $centreKeys
+     */
+    public static function fromGrid(
+        iterable $rows,
+        array $columns,
+        string $title,
+        string $exportDate,
+        ?string $filterLine = null,
+        array $centreKeys = ['sno', 'permissions_count', 'created_at', 'status', 'sort_order', 'order']
+    ): self {
+        $keyed = [];
+        foreach (array_values($columns) as $i => $col) {
+            $value = $col['value'];
+            $keyed[$col['key'] ?? 'col'.$i] = [
+                'heading' => $col['heading'],
+                'class' => $col['class'] ?? '',
+                'value' => static fn ($row, $index) => (string) $value($row, $index),
+            ];
+        }
+
+        return new self($title, collect($rows)->values(), $keyed, $exportDate, $filterLine, $centreKeys);
+    }
+
     public function title(): string
     {
         // Excel rejects a sheet name over 31 chars or containing : \ / ? * [ ]

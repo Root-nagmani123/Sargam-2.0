@@ -183,7 +183,7 @@ class SidebarCategoryService
         //     It is the wrapper-less variant, which is exactly this layout. Drop
         //     it and the input falls back to Bootstrap's square checkbox.
         //   sidebar-category-status-toggle — this page's JS hook. Deliberately
-        //     NOT `status-toggle`: that one is bound globally by custom.js:170 to
+        //     NOT the global status toggle class: that one is bound globally by custom.js:170 to
         //     the generic table/column endpoint, and this grid posts to its own
         //     route instead.
         $html .= '

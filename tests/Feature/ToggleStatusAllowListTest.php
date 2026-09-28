@@ -188,7 +188,7 @@ class ToggleStatusAllowListTest extends TestCase
         $this->assertNotEmpty($matches[1], 'expected the cache-bump branches to be found');
 
         $reflection = new \ReflectionClass(\App\Http\Controllers\Admin\UserController::class);
-        $allowed = $reflection->getConstant('TOGGLEABLE');
+        $allowed = $reflection->getConstant('TOGGLE_STATUS_ALLOWED');
 
         foreach (array_unique($matches[1]) as $table) {
             $this->assertArrayHasKey($table, $allowed,

@@ -9,6 +9,7 @@ use App\DataTables\GroupMappingDataTable;
 use App\DataTables\Master\EmployeeTypeMasterDataTable;
 use App\DataTables\RoleDataTable;
 use App\Exports\StudentListReportExport;
+use App\Exports\BrandedGridExport;
 use App\Exports\UsersExport;
 use App\Http\Controllers\Admin\IssueManagement\IssueCategoryController;
 use App\Http\Controllers\Admin\IssueManagement\IssueEscalationMatrixController;
@@ -46,6 +47,7 @@ use App\Services\NotificationService;
 use App\Services\OTNoticeMemoService;
 use App\Support\DataTableRedisCache;
 use App\Support\LogSafe;
+use App\Support\PdfPageNumbers;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -4361,12 +4363,18 @@ class UserController extends Controller
     private function adminUsersExportColumns(): array
     {
         return [
-            'username' => ['label' => 'Username',  'value' => fn ($u) => $u->user_name ?? ''],
-            'name' => ['label' => 'Name',      'value' => fn ($u) => trim(($u->first_name ?? '').' '.($u->last_name ?? ''))],
-            'email' => ['label' => 'Email',     'value' => fn ($u) => $u->email_id ?? ''],
-            'mobile' => ['label' => 'Mobile',    'value' => fn ($u) => $u->mobile_no ?: '—'],
-            'usertype' => ['label' => 'User Type', 'value' => fn ($u) => self::userTypeLabel($u->User_type ?? '')],
-            'roles' => ['label' => 'Roles',     'value' => fn ($u) => $u->roles ?: 'No Role'],
+            'username' => ['label' => 'User Name', 'width' => '13%', 'centre' => false,
+                'value' => fn ($u) => $u->user_name ?? ''],
+            'name' => ['label' => 'Name', 'width' => '19%', 'centre' => false,
+                'value' => fn ($u) => trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? ''))],
+            'email' => ['label' => 'Email', 'width' => '22%', 'centre' => false,
+                'value' => fn ($u) => $u->email_id ?? ''],
+            'mobile' => ['label' => 'Contact Number', 'width' => '12%', 'centre' => true,
+                'value' => fn ($u) => $u->mobile_no ?: '—'],
+            'usertype' => ['label' => 'User Type', 'width' => '11%', 'centre' => true,
+                'value' => fn ($u) => self::userTypeLabel($u->User_type ?? '')],
+            'roles' => ['label' => 'User Role', 'width' => '17%', 'centre' => false,
+                'value' => fn ($u) => $u->roles ?: 'No Role'],
         ];
     }
 
@@ -4558,7 +4566,7 @@ class UserController extends Controller
             }
 
             return Excel::download(
-                new BrandedGridExport($rows, $branded, 'Users', $generatedAt, $filterLine, $centreKeys),
+                BrandedGridExport::fromGrid($rows, $branded, 'Users', $generatedAt, $filterLine, $centreKeys),
                 "{$fileBase}.xlsx"
             );
         }

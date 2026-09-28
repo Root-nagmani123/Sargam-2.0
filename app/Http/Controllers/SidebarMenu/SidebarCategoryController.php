@@ -75,7 +75,7 @@ class SidebarCategoryController extends Controller
 
         if ($format === 'excel') {
             return Excel::download(
-                new BrandedGridExport($rows, $columns, $reportTitle, $exportDate, $filterLine),
+                BrandedGridExport::fromGrid($rows, $columns, $reportTitle, $exportDate, $filterLine),
                 $filename.'.xlsx'
             );
         }

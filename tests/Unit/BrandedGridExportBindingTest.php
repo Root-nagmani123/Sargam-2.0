@@ -118,7 +118,7 @@ class BrandedGridExportBindingTest extends TestCase
 
     private function export(string $value): BrandedGridExport
     {
-        return new BrandedGridExport(
+        return BrandedGridExport::fromGrid(
             [(object) ['v' => $value]],
             [['key' => 'v', 'heading' => 'Value', 'class' => '', 'value' => fn ($row, $i) => $row->v]],
             'Binder Probe',

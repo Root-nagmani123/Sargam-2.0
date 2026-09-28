@@ -240,7 +240,11 @@ class ExportPdfPhpDisabledTest extends TestCase
         $offenders = [];
 
         foreach ($this->phpFilesUnder(resource_path('views')) as $file) {
-            if (str_contains((string) file_get_contents($file), 'text/php')) {
+            // Only markup the renderer would execute. A Blade or HTML comment that
+            // explains why a view avoids the block is not the block (two of main's
+            // shared export views carry exactly such a comment).
+            $source = preg_replace(['/\{\{--.*?--\}\}/s', '/<!--.*?-->/s'], '', (string) file_get_contents($file));
+            if (preg_match('/<script[^>]*type\s*=\s*["\']text\/php["\']/i', $source)) {
                 $offenders[] = str_replace(base_path().DIRECTORY_SEPARATOR, '', $file);
             }
         }
