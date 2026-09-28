@@ -463,7 +463,7 @@ public function exportPdf(Request $request)
         ->setOptions([
             'defaultFont' => 'DejaVu Sans',
             'isHtml5ParserEnabled' => true,
-            'isRemoteEnabled' => true,
+            'isRemoteEnabled' => false,
             // Never true: isPhpEnabled makes the renderer a PHP execution
             // context for the whole view, so any raw block that later
             // appears in an export blade would execute. Page numbers are
@@ -564,7 +564,7 @@ public function exportPdfZip(Request $request)
             ->setOptions([
                 'defaultFont' => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => true,
+                'isRemoteEnabled' => false,
                 'dpi' => 96,
             ])
             ->output();

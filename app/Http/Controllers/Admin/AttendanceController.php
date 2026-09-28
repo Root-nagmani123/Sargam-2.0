@@ -887,9 +887,9 @@ $currentPath = $segments[1] ?? null;
                     // block that later appears in an export blade would
                     // execute. Page numbers are stamped on the canvas
                     // after render instead - see PdfPageNumbers.
-                    ->setOptions(['defaultFont' => 'DejaVu Sans', 'isRemoteEnabled' => true, 'isPhpEnabled' => false, 'dpi' => 96]);
+                    ->setOptions(['defaultFont' => 'DejaVu Sans', 'isRemoteEnabled' => false, 'isPhpEnabled' => false, 'dpi' => 96]);
 
-                return PdfPageNumbers::stamp($pdf, 18, 20, [0.4, 0.4, 0.4])->download($filename . '.pdf');
+                return $pdf->download($filename . '.pdf');
             }
 
             return Excel::download($export, $filename . '.xlsx');

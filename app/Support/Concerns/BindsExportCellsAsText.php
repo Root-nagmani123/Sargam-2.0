@@ -34,7 +34,6 @@ use PhpOffice\PhpSpreadsheet\Cell\DataType;
 trait BindsExportCellsAsText
 {
     /**
-     * @param  Cell  $cell
      * @param  mixed  $value
      */
     public function bindValue(Cell $cell, $value): bool

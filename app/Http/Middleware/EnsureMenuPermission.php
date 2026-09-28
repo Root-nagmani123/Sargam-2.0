@@ -19,9 +19,14 @@ use Illuminate\Support\Facades\Auth;
  * protected, so a user who can see a screen in the sidebar can also export it, and
  * the two can never drift apart:
  *
- *     Route::get('roles/export', ...)->middleware('menu.permission:roles');
+ *     Route::middleware([EnsureMenuPermission::class . ':users'])->group(...);
  *
  * Several may be listed; holding ANY one of them admits the request.
+ *
+ * Referenced BY CLASS, never through a Kernel alias: there is no `menu.permission`
+ * alias on this branch, and a string middleware name that does not resolve throws
+ * rather than gates. Wired on the assign-role routes in routes/web.php (PR #309
+ * review F-068 raised it as unwired; F-073 is the escalation those routes had).
  */
 class EnsureMenuPermission
 {
@@ -50,14 +55,15 @@ class EnsureMenuPermission
             abort(403, 'This route is gated by menu.permission but names no permission.');
         }
 
-        $held = $user->getAllPermissions()->pluck('name');
-
-        foreach ($permissions as $permission) {
-            if ($held->contains($permission)) {
-                return $next($request);
-            }
+        // Delegated so `setup_activities.blade.php` can ask the SAME question before
+        // drawing the Roles / User Permissions links. When this test lived only here,
+        // that view answered it with role names instead and the two disagreed (PR #311
+        // review F-017): a populated role was offered a screen that answered 403.
+        // The rest of the sidebar decides with menuVisibleToUser() - see hasMenuPermission().
+        if (hasMenuPermission(...$permissions)) {
+            return $next($request);
         }
 
-        abort(403, 'You do not have permission to export this data.');
+        abort(403, 'You do not have permission to open this screen.');
     }
 }

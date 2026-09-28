@@ -502,7 +502,7 @@ class FeedbackController extends Controller
                 ->setOptions([
                     'defaultFont' => 'sans-serif',
                     'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled' => true,
+                    'isRemoteEnabled' => false,
                     'dpi' => 96,
                     'margin_top' => 8,
                     'margin_right' => 8,
@@ -1465,7 +1465,7 @@ class FeedbackController extends Controller
             ->setOptions([
                 'defaultFont' => 'Arial',
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => true,
+                'isRemoteEnabled' => false,
                 // Never true: isPhpEnabled makes the renderer a PHP
                 // execution context for the whole view, so any raw block
                 // that later appears in an export blade would execute.
@@ -2231,7 +2231,7 @@ class FeedbackController extends Controller
                 ->setOptions([
                     'defaultFont' => 'Arial',
                     'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled' => true,
+                    'isRemoteEnabled' => false,
                     // Never true: isPhpEnabled makes the renderer a PHP
                     // execution context for the whole view, so any raw
                     // block that later appears in an export blade would
@@ -3549,7 +3549,7 @@ class FeedbackController extends Controller
             ->setOptions([
                 'defaultFont' => 'Arial',
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => true,
+                'isRemoteEnabled' => false,
                 // Never true: isPhpEnabled makes the renderer a PHP
                 // execution context for the whole view, so any raw block
                 // that later appears in an export blade would execute.
@@ -4088,7 +4088,7 @@ class FeedbackController extends Controller
                 ->setOptions([
                     'defaultFont' => 'sans-serif',
                     'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled' => true,
+                    'isRemoteEnabled' => false,
                     'dpi' => 96,
                     'margin_top' => 8,
                     'margin_right' => 8,

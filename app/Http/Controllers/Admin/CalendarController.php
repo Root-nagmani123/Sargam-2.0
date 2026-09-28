@@ -1359,20 +1359,14 @@ class CalendarController extends Controller
         return null;
     }
 
-    /**
-     * Build a QR code image (data URI) from arbitrary text/URL using a public
-     * QR rendering service. Returns null if the value is empty or fetch fails.
-     */
-    private function cardQrSrc(?string $data): ?string
-    {
-        $data = trim((string) $data);
-        if ($data === '') {
-            return null;
-        }
-        $url = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=0&data=' . urlencode($data);
+    // A cardQrSrc() helper stood here and was unreachable: nothing in app/ or resources/
+    // ever called it, and it called $this->cardHttpToDataUri(), which is not defined in
+    // this class or any parent - so wiring it up would have fatalled on the first call.
+    // It also sent whatever the QR encodes to https://api.qrserver.com at render time.
+    // Removed rather than repaired (review finding F-028): reviving it means choosing a
+    // QR renderer and deciding whether that payload may leave the server, which is a
+    // decision, not a repair.
 
-        return $this->cardHttpToDataUri($url, 'image/png');
-    }
 
     /**
      * LBSNAA header logo for the Event Card PDF (local asset first, then official site).
@@ -1389,9 +1383,9 @@ class CalendarController extends Controller
             }
         }
 
-        $official = 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
-
-        return $this->cardHttpToDataUri($official, 'image/png') ?? $official;
+        // F-027: local assets only. This used to fetch a remote image while dompdf was
+        // building the document, then hand dompdf the raw URL when that call failed.
+        return pdf_lbsnaa_logo_src();
     }
 
     /**
@@ -1399,9 +1393,9 @@ class CalendarController extends Controller
      */
     private function cardIndiaEmblem(): string
     {
-        $url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
-
-        return $this->cardHttpToDataUri($url, 'image/png') ?? $url;
+        // F-027: local assets only. This used to fetch a remote image while dompdf was
+        // building the document, then hand dompdf the raw URL when that call failed.
+        return pdf_emblem_src();
     }
 
     /**
@@ -1525,7 +1519,7 @@ class CalendarController extends Controller
             ->setOptions([
                 'defaultFont'          => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled'      => true,
+                'isRemoteEnabled'      => false,
                 // Never true: isPhpEnabled makes the renderer a PHP
                 // execution context for the whole view, so any raw block
                 // that later appears in an export blade would execute.
@@ -1650,7 +1644,7 @@ class CalendarController extends Controller
             ->setOptions([
                 'defaultFont'          => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled'      => true,
+                'isRemoteEnabled'      => false,
                 // Never true: isPhpEnabled makes the renderer a PHP
                 // execution context for the whole view, so any raw block
                 // that later appears in an export blade would execute.
@@ -1784,7 +1778,7 @@ class CalendarController extends Controller
             ->setOptions([
                 'defaultFont'          => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled'      => true,
+                'isRemoteEnabled'      => false,
                 // Never true: isPhpEnabled makes the renderer a PHP
                 // execution context for the whole view, so any raw block
                 // that later appears in an export blade would execute.

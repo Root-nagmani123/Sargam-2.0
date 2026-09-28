@@ -1873,7 +1873,7 @@ class EmployeeIDCardRequestController extends Controller
             ])
                 ->setPaper('a4', 'landscape')
                 ->setOption('isHtml5ParserEnabled', true)
-                ->setOption('isRemoteEnabled', true);
+                ->setOption('isRemoteEnabled', false);
             return $pdf->download($filename . '.pdf');
         }
 

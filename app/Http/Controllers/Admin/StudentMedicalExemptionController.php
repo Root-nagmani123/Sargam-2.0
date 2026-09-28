@@ -948,7 +948,7 @@ class StudentMedicalExemptionController extends Controller
                 ->setOptions([
                     'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled' => true,
+                    'isRemoteEnabled' => false,
                     // Never true: isPhpEnabled makes the renderer a PHP
                     // execution context for the whole view, so any raw
                     // block that later appears in an export blade would
