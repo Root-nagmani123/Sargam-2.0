@@ -4,6 +4,7 @@ namespace App\Support;
 
 use Closure;
 use Illuminate\Contracts\Cache\Repository;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -51,6 +52,9 @@ final class FeedbackReportCache
     /** Store name proven writable this request; skips re-probing on every call. */
     private static ?string $resolvedStore = null;
 
+    /** Whether a failed store probe has already been logged while this static lives (one request under PHP-FPM). */
+    private static bool $probeFailureLogged = false;
+
     /**
      * The cache store these reports use, proven usable before it is returned.
      *
@@ -75,10 +79,11 @@ final class FeedbackReportCache
             try {
                 $repository = RedisBackedCache::repositoryForStore($name);
                 $repository->put('feedback_reports:probe', 1, 10);
-                self::$resolvedStore = $name;
+                self::$resolvedStore = self::effectiveStoreName($name);
 
                 return $repository;
             } catch (Throwable $e) {
+                self::reportFailedProbe($name, $e);
                 continue;
             }
         }
@@ -86,6 +91,44 @@ final class FeedbackReportCache
         self::$resolvedStore = (string) config('cache.default', 'file');
 
         return RedisBackedCache::repositoryForStore(self::$resolvedStore);
+    }
+
+    /**
+     * The store name repositoryForStore() actually used: it maps a name absent from
+     * cache.stores to cache.default, so recording the candidate would name a store that
+     * does not exist.
+     */
+    private static function effectiveStoreName(string $name): string
+    {
+        $name = trim($name);
+
+        return $name !== '' && array_key_exists($name, config('cache.stores', []))
+            ? $name
+            : (string) config('cache.default', 'file');
+    }
+
+    /**
+     * Log the first failed probe, so a store outage (e.g. Redis down with phpredis loaded)
+     * leaves a trace instead of being skipped silently. Statics last one request under
+     * PHP-FPM and one worker lifetime under queue/console, so during an outage this writes
+     * one warning per report request (per worker for long-running processes) — never one per
+     * cache call.
+     */
+    private static function reportFailedProbe(string $name, Throwable $e): void
+    {
+        if (self::$probeFailureLogged) {
+            return;
+        }
+        self::$probeFailureLogged = true;
+
+        try {
+            Log::warning('FeedbackReportCache: store probe failed, trying the next candidate', [
+                'store' => $name,
+                'error' => $e->getMessage(),
+            ]);
+        } catch (Throwable $ignored) {
+            // Logging must never take a report down.
+        }
     }
 
     /**

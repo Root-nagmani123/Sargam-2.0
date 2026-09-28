@@ -9,6 +9,7 @@ use App\Support\FeedbackReportGrouping;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use ReflectionClass;
 use Tests\TestCase;
 
@@ -617,6 +618,61 @@ class FeedbackReportOptimizationTest extends TestCase
             FeedbackReportCache::remember('test:fallback:' . uniqid('', true), 60, fn () => 'computed'),
             'A store that cannot be resolved must fall through to computing the value.'
         );
+    }
+
+    /**
+     * A failed store probe is logged, but only once while the static lives, however often
+     * store() re-probes. Needs no database.
+     */
+    public function test_a_failed_store_probe_is_logged_once(): void
+    {
+        config(['cache.default' => 'no-such-store']);
+        config(['cache.redis_backed_unified_store' => 'no-such-store']);
+        Log::spy();
+
+        $this->withFreshCacheStoreState(function (\ReflectionProperty $resolved) {
+            FeedbackReportCache::store();
+            $this->assertSame('file', $resolved->getValue(), 'The unresolvable store must fall back to file.');
+
+            $resolved->setValue(null, null); // force a second probe of the failing store
+            FeedbackReportCache::store();
+        });
+
+        Log::shouldHaveReceived('warning')->once();
+    }
+
+    /**
+     * RedisBackedCache maps a name absent from cache.stores to cache.default, so the recorded
+     * store must be the one actually used, not the candidate name. Needs no database.
+     */
+    public function test_the_recorded_store_is_the_one_actually_used(): void
+    {
+        config(['cache.default' => 'array']);
+        config(['cache.redis_backed_unified_store' => 'no-such-store']);
+
+        $this->withFreshCacheStoreState(function (\ReflectionProperty $resolved) {
+            FeedbackReportCache::store();
+            $this->assertSame('array', $resolved->getValue());
+        });
+    }
+
+    /** Run $test with FeedbackReportCache's per-request statics reset before and after. */
+    private function withFreshCacheStoreState(\Closure $test): void
+    {
+        $class = new ReflectionClass(FeedbackReportCache::class);
+        $resolved = $class->getProperty('resolvedStore');
+        $logged = $class->getProperty('probeFailureLogged');
+        $resolved->setAccessible(true);
+        $logged->setAccessible(true);
+
+        $resolved->setValue(null, null);
+        $logged->setValue(null, false);
+        try {
+            $test($resolved);
+        } finally {
+            $resolved->setValue(null, null);
+            $logged->setValue(null, false);
+        }
     }
 
     /** The value callback must run exactly once, even when it throws. */

@@ -336,7 +336,8 @@ the kind of staleness bug F-002 was. Not worth it.
 0.9 ms median on the file store (0.03 ms for each generation read after that). This is what makes
 a box without Redis fall back to `file` instead of failing, so it stays. A loaded but unreachable
 Redis adds one failed connect per request before the fallback; that is an outage condition, and
-it serves computed (never wrong) data meanwhile.
+it serves computed (never wrong) data meanwhile. The first failed probe in each request is logged as
+a warning (`FeedbackReportCache: store probe failed`), so the fallback is visible in `laravel.log`.
 
 **Store flapping.** If processes resolve different stores (Redis up for some, down for others), a
 bust lands in one store while reads come from the other, and stale entries can survive to their
