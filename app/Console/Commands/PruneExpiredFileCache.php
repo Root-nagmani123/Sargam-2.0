@@ -77,7 +77,14 @@ class PruneExpiredFileCache extends Command
                 } elseif (@unlink($path)) {
                     $deleted++;
                 } else {
-                    $failed++;
+                    // A read can discard the entry between the is_file() check and the unlink; a file
+                    // that no longer exists was removed, not left behind, and must not raise a warning.
+                    clearstatcache(true, $path);
+                    if (is_file($path)) {
+                        $failed++;
+                    } else {
+                        $gone++;
+                    }
                 }
             }
 
