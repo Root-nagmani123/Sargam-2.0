@@ -300,6 +300,14 @@ looser; nothing writes it and `sargam_prod` has none. A fully exact variant (a `
 prepared page query, ~10x slower on the student feedback page. Checked on dev (122 = 122 pairs)
 and on `sargam_prod` (600 = 600).
 
+**Cost of the per-argument `JSON_VALID` guard** (PR #316 round-8 F-011). Guarding each JSON
+function's argument evaluates `JSON_VALID(tt.faculty_details)` four times per row, against two
+before the guard. Measured 2026-09-28 on dev (MySQL 8.0.39, 653 `timetable` rows), 25
+interleaved reps of `SELECT COUNT(*)` over the derived table: round-7 constant 2.48 ms min /
+2.83 ms median; guarded constant 2.22 / 3.01; a variant that computes the guard once in an inner
+derived table 2.15 / 3.12. All three return the same 122 pairs. The difference is within noise,
+so the guard stays per argument. Re-measure if `timetable` grows by an order of magnitude.
+
 ### Remark text can show a different case variant — accepted
 
 `GROUP_CONCAT(DISTINCT remark)` runs under `utf8mb4_general_ci`, so `Good` and `good` are one
