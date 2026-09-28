@@ -104,20 +104,22 @@ class CalendarController extends Controller
      * every shape, but MySQL then materialises it in full for each prepared page query, which
      * made the student feedback page ~10x slower.
      *
-     * Every JSON function gets a document that is valid JSON by construction. A CASE around
-     * the call is not enough: MySQL may evaluate a JSON argument before the CASE, and
-     * faculty_details is TEXT, so invalid JSON is possible. Pinned by
-     * StudentFeedbackFacultyExpansionTest.
+     * Every JSON function (JSON_TYPE, CAST AS JSON, JSON_TABLE, JSON_CONTAINS) is handed
+     * CASE WHEN JSON_VALID(x) THEN x ELSE '[]' END rather than the raw column, so it receives
+     * valid JSON by construction. faculty_details is TEXT, so invalid JSON is possible. For a
+     * stored value a CASE around the call is enough on MySQL 8.0.39 (tested), but for a
+     * constant MySQL may evaluate the JSON argument while folding, before the CASE, and error;
+     * guarding the argument is correct in both cases and does not depend on evaluation order.
+     * Pinned by StudentFeedbackFacultyExpansionTest, including a case that stores invalid JSON
+     * in a real column rather than substituting a literal.
      */
     private const TEACHING_FACULTY_JSON_TABLE = "(
         SELECT DISTINCT tt.pk AS timetable_pk, COALESCE(jt.pk_listed, jt.pk_nested, jt.pk) AS faculty_pk
         FROM timetable tt
         CROSS JOIN JSON_TABLE(
-            CASE WHEN JSON_VALID(tt.faculty_details)
-                 THEN CASE JSON_TYPE(tt.faculty_details)
-                          WHEN 'ARRAY'  THEN tt.faculty_details
-                          WHEN 'OBJECT' THEN JSON_ARRAY(CAST(tt.faculty_details AS JSON))
-                          ELSE '[]' END
+            CASE JSON_TYPE(CASE WHEN JSON_VALID(tt.faculty_details) THEN tt.faculty_details ELSE '[]' END)
+                 WHEN 'ARRAY'  THEN CASE WHEN JSON_VALID(tt.faculty_details) THEN tt.faculty_details ELSE '[]' END
+                 WHEN 'OBJECT' THEN JSON_ARRAY(CAST(CASE WHEN JSON_VALID(tt.faculty_details) THEN tt.faculty_details ELSE '[]' END AS JSON))
                  ELSE '[]' END,
             '$[*]' COLUMNS (
                 pk BIGINT PATH '$.faculty_pk' NULL ON EMPTY NULL ON ERROR,

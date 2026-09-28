@@ -351,4 +351,72 @@ class StudentFeedbackFacultyExpansionTest extends TestCase
             'nested array with listed id'   => ['[[{"faculty_pk":[{PK}],"role":"Teaching"}]]'],
         ];
     }
+
+    /**
+     * Invalid JSON STORED in a column must not break the expansion.
+     *
+     * The shape tests above substitute a quoted literal for tt.faculty_details, and MySQL can fold
+     * a CASE over a literal before execution, so they cannot show what happens to a stored value.
+     * This stores the values in a real TEXT column - a TEMPORARY table, private to this
+     * connection and dropped with it, so no shared table is written - runs the shipped constant
+     * over it, and compares every pair with the original JSON_CONTAINS predicate. One invalid row
+     * would otherwise fail the whole derived table, and with it every trainee's feedback page.
+     */
+    public function test_teaching_expansion_survives_invalid_json_stored_in_the_column(): void
+    {
+        $this->skipUnlessTimetable();
+
+        $pk = (int) DB::table('faculty_master')->orderBy('pk')->value('pk');
+        if (! $pk) {
+            $this->markTestSkipped('No faculty_master rows.');
+        }
+
+        try {
+            DB::statement('CREATE TEMPORARY TABLE tt_invalid_json (pk INT PRIMARY KEY, faculty_details TEXT NULL)');
+        } catch (\Throwable $e) {
+            $this->markTestSkipped('Cannot create a temporary table: ' . $e->getMessage());
+        }
+
+        try {
+            $rows = [
+                1 => '[{"faculty_pk":' . $pk . ',"role":"Teaching"}]',
+                2 => 'not json',
+                3 => '',
+                4 => null,
+                5 => '{"faculty_pk":' . $pk . ',"role":"Teaching"}',
+                6 => '[{"faculty_pk":' . $pk . ',"role":"Teaching"}',
+                7 => '[{"faculty_pk":' . $pk . ',"role":"Administration"}]',
+            ];
+            foreach ($rows as $id => $value) {
+                DB::insert('INSERT INTO tt_invalid_json (pk, faculty_details) VALUES (?, ?)', [$id, $value]);
+            }
+
+            $expansion = str_replace('FROM timetable tt', 'FROM tt_invalid_json tt', $this->constant('TEACHING_FACULTY_JSON_TABLE'));
+            $rewritten = DB::select("SELECT fd.timetable_pk, fd.faculty_pk FROM $expansion JOIN faculty_master f ON f.pk = fd.faculty_pk");
+
+            $original = [];
+            foreach ($rows as $id => $value) {
+                if ($value === null) {
+                    continue;
+                }
+                $quoted = DB::getPdo()->quote($value);
+                foreach (DB::select("
+                    SELECT f.pk FROM faculty_master f
+                    WHERE JSON_VALID($quoted) = 1
+                      AND JSON_CONTAINS($quoted, JSON_OBJECT('faculty_pk', f.pk, 'role', 'Teaching')) = 1
+                ") as $r) {
+                    $original[] = (object) ['timetable_pk' => $id, 'faculty_pk' => $r->pk];
+                }
+            }
+
+            $this->assertSame(
+                $this->normalisePairs($original),
+                $this->normalisePairs($rewritten),
+                'Teaching expansion over stored values diverged from the original predicate.'
+            );
+            $this->assertSame([1 . ':' . $pk, 5 . ':' . $pk], $this->normalisePairs($rewritten));
+        } finally {
+            DB::statement('DROP TEMPORARY TABLE IF EXISTS tt_invalid_json');
+        }
+    }
 }
