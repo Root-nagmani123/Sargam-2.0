@@ -11,21 +11,18 @@ use Throwable;
  *
  * Backed by whichever store {@see RedisBackedCache} resolves.
  *
- * DEPLOYMENT REQUIREMENT: this environment must be able to reach the store the chain resolves
- * to. With neither REDIS_BACKED_CACHE_STORE nor APP_REDIS_CACHE_STORE set, that name is "redis" —
- * and because "redis" is always present in config/cache.php, the cache.default fallback in
- * RedisBackedCache::repositoryForStore() is NOT reached. Two configurations satisfy this:
+ * Store selection: store() probes the stores in candidateStoreNames() order (the chain's
+ * preferred store, then `file`, then cache.default) with a throwaway write and keeps the first
+ * that accepts it, once per PHP process. With neither REDIS_BACKED_CACHE_STORE nor
+ * APP_REDIS_CACHE_STORE set, the preferred name is "redis"; when no Redis client is loaded,
+ * `file` is tried first. So a box without Redis caches on the file store rather than failing.
  *
- *   - CACHE_DRIVER=redis with a reachable Redis — the deployed production setting. The resolved
- *     store and the fallback are then the same store, so the unreachable fallback is moot.
- *   - REDIS_BACKED_CACHE_STORE set explicitly to a reachable store (e.g. `file`) — needed on any
- *     box where Redis is absent, such as a developer machine or a CI worker with no .env.
- *
- * Where neither holds, every remember()/bust()/generation() call throws inside the store, is
- * report()ed, and falls through to computing: no caching at all, and one reported exception per
- * call on hot paths including the per-keystroke typeahead. Nothing serves wrong data, but
- * nothing is cached either. The same chain backs the Estate, Mess and DataTable caches, so this
- * is not specific to these reports.
+ * Costs of that choice: a loaded but unreachable Redis costs one failed connect per process
+ * before falling back; and if the store resolves differently across processes (Redis
+ * flapping), a bust goes to one store while reads come from the other. Only if EVERY candidate
+ * rejects the probe does a call throw, get report()ed, and fall through to computing:
+ * no caching, never wrong data. On the file store, entries retired by a bust are never read
+ * again, so nothing deletes them — schedule `cache:prune`-style cleanup there, or run on Redis.
  *
  * Invalidation is by generation counter rather than by deleting keys. Entries are namespaced
  * with the current generation; submitting feedback bumps it, so every existing entry becomes

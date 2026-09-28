@@ -52,8 +52,14 @@ class AppServiceProvider extends ServiceProvider
          *
          * Hooked on the models rather than the write call sites: the timetable is written
          * from more than twenty places and faculty_master from several, so a per-call-site
-         * bust would be one missed edit away from silently going stale again. Both are
-         * Eloquent models with no raw query-builder writes, so saved/deleted covers them.
+         * bust would be one missed edit away from silently going stale again.
+         *
+         * Model events do NOT see query-builder writes. faculty_master has some:
+         * FacultyController updates faculty_code through FacultyMaster::where(...)->update()
+         * after saving, and UserController::toggleStatus() can update any table. These are safe
+         * today only because no cached lookup selects faculty_code or the toggled status column.
+         * A builder write to a column the cached lookups DO read (full_name, faculty_type,
+         * timetable fields) must call FeedbackReportCache::bust() itself.
          *
          * CalendarEvent is listed because Eloquent events are per model CLASS, not per table,
          * and TWO classes map to `timetable`: Timetable (app/Models/Timetable.php) and

@@ -4061,14 +4061,6 @@ class FeedbackController extends Controller
     }
 
     /**
-     * Student count for the current filters.
-     *
-     * Same grouping and HAVING as the display query, but selecting only what the HAVING
-     * needs: the count does not care about names, emails or the GROUP_CONCAT of course
-     * names, and building those for every student only to count the rows was most of the
-     * cost. The HAVING itself depends on the aggregates, so the grouping cannot be skipped.
-     */
-    /**
      * One page of pending-feedback students, carrying the overall total with it.
      *
      * `pending_total` is a window count over the filtered set — evaluated before ORDER BY and
@@ -4095,6 +4087,14 @@ class FeedbackController extends Controller
             ->get();
     }
 
+    /**
+     * Student count for the current filters.
+     *
+     * Same grouping and HAVING as the display query, but selecting only what the HAVING
+     * needs: the count does not care about names, emails or the GROUP_CONCAT of course
+     * names, and building those for every student only to count the rows was most of the
+     * cost. The HAVING itself depends on the aggregates, so the grouping cannot be skipped.
+     */
     private function pendingStudentsTotal(Request $request, \Illuminate\Database\Query\Builder $outer): int
     {
         // The search box matches student_name and course_summary_build, which the lean
