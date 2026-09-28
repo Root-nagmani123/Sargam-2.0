@@ -15,8 +15,6 @@ npm-debug.log
 yarn-error.log
 /.idea
 /.vscode
-composer.lock
-composer.json
 
 # Project-specific ignores
 testsargam2_dump1811_20012026.sql
@@ -29,3 +27,13 @@ docker-compose.yml
 /SECURITY_MODULE_IMPLEMENTATION.md
 /ISSUE_REPORT_NOTIFICATIONS.md
 .htaccess
+# A nested tool install is never committed: only the manifest and lock that
+# pin it are. One stray vendor file used to be tracked here, which could not
+# run anything and drifted from tools/phpstan/composer.lock on every install.
+tools/phpstan/vendor/
+# Playwright writes these on every run; they are generated artifacts, not source.
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+bootstrap/
