@@ -21,8 +21,8 @@ use Tests\TestCase;
  * see, such as a view name built at runtime.
  *
  * The page now extends admin.layouts.master (PR #317 F-024), so these tests cover
- * that layout on this route. They do not cover faculty.layouts.master, which no
- * view extends any more (F-026).
+ * that layout on this route. The faculty layout chain it used to extend has been
+ * deleted (F-026); the last test keeps it that way.
  */
 class FacultyDashboardRendersTest extends TestCase
 {
@@ -169,34 +169,31 @@ class FacultyDashboardRendersTest extends TestCase
     }
 
     /**
-     * faculty.layouts.master still renders the unfiltered static admin sidebar. No
-     * view may extend it: a page built on it would show every holder admin links
-     * their roles are not granted, and the tests above, bound to /faculty_dashboard,
-     * would stay green (PR #317 F-026).
+     * The faculty layout chain rendered the static admin sidebar partials, which the
+     * RBAC menu table does not filter: a page built on it showed every holder admin
+     * links their roles are not granted, and the tests above, bound to
+     * /faculty_dashboard, would stay green (PR #317 F-026). Once no page used it, it
+     * was deleted rather than guarded. An earlier guard matched the literal
+     * @extends('faculty.layouts.master') and missed 'faculty/layouts/master', which
+     * Laravel normalises to the same file. So this asks the view finder itself,
+     * under both spellings: if any of these can be resolved again, a page can be
+     * built on the unfiltered sidebar again.
      */
-    public function test_no_view_extends_the_unfiltered_faculty_layout(): void
+    public function test_the_unfiltered_faculty_layout_chain_is_gone(): void
     {
-        $pattern = '/@extends\s*\(\s*[\'"]faculty\.layouts\.master[\'"]/';
+        $views = [
+            'faculty.layouts.master', 'faculty/layouts/master',
+            'faculty.layouts.sidebar', 'faculty/layouts/sidebar',
+            'faculty.layouts.header', 'faculty/layouts/header',
+            'admin.layouts.sidebar.material', 'admin/layouts/sidebar/material',
+        ];
 
-        // Prove the detector fires before trusting it to find nothing.
-        $this->assertSame(1, preg_match($pattern, "@extends('faculty.layouts.master')"));
+        // Prove the check can answer "yes" before trusting its "no".
+        $this->assertTrue(view()->exists('admin/layouts/master'), 'the view finder no longer resolves slash spellings');
 
-        $offenders = [];
-        $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(resource_path('views')));
+        $found = array_values(array_filter($views, fn ($name) => view()->exists($name)));
 
-        foreach ($files as $file) {
-            if (! str_ends_with($file->getFilename(), '.blade.php')) {
-                continue;
-            }
-
-            $source = preg_replace('/\{\{--.*?--\}\}/s', '', file_get_contents($file->getPathname())) ?? '';
-
-            if (preg_match($pattern, $source)) {
-                $offenders[] = str_replace(base_path().DIRECTORY_SEPARATOR, '', $file->getPathname());
-            }
-        }
-
-        $this->assertSame([], $offenders, 'these views extend the unfiltered faculty layout');
+        $this->assertSame([], $found, 'the unfiltered faculty layout chain can be rendered again');
     }
 
     private function facultyUserWithoutSuperAdmin(): User

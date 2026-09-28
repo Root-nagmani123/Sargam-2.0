@@ -182,8 +182,38 @@ class DirectoryExportGuardTest extends TestCase
         $middleware = app('router')->getRoutes()->getByName($name)->gatherMiddleware();
 
         $this->assertContains('auth', $middleware);
-        $this->assertContains('directory.export', $middleware);
+        $this->assertContains(EnsureDirectoryExportAccess::class, $middleware);
         $this->assertNotEmpty(preg_grep('/^throttle:/', $middleware));
+    }
+
+    /**
+     * Naming the gate is not enough: it must RESOLVE. A merge of main once dropped
+     * the 'directory.export' line from Kernel.php while the route still named the
+     * alias, so every export threw "Target class [directory.export] does not exist"
+     * and the test above still passed (PR #317 F-028). This resolves the route's
+     * middleware the way the router does and requires every entry to be a class.
+     *
+     * @dataProvider exportRouteNames
+     */
+    public function test_export_route_middleware_resolves_to_real_classes(string $name): void
+    {
+        $router = app('router');
+        $resolved = $router->gatherRouteMiddleware($router->getRoutes()->getByName($name));
+
+        $this->assertContains(EnsureDirectoryExportAccess::class, $resolved);
+        foreach ($resolved as $entry) {
+            $class = explode(':', $entry, 2)[0];
+            $this->assertTrue(class_exists($class), "Middleware [$entry] on route [$name] does not resolve to a class.");
+        }
+    }
+
+    /** The convenience alias, if anything uses it, must point at the gate. */
+    public function test_directory_export_alias_points_at_the_gate(): void
+    {
+        $this->assertSame(
+            EnsureDirectoryExportAccess::class,
+            app('router')->getMiddleware()['directory.export'] ?? null
+        );
     }
 
     public static function exportRouteNames(): array
@@ -201,6 +231,7 @@ class DirectoryExportGuardTest extends TestCase
 
         $this->assertContains('auth', $middleware);
         $this->assertNotContains('directory.export', $middleware);
+        $this->assertNotContains(EnsureDirectoryExportAccess::class, $middleware);
     }
 
     public static function gridRouteNames(): array

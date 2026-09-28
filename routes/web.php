@@ -97,6 +97,7 @@ use App\Http\Controllers\SidebarController;
 use App\Http\Controllers\SidebarMenu\MenuController;
 use App\Http\Controllers\SidebarMenu\MenuGroupController;
 use App\Http\Controllers\SidebarMenu\SidebarCategoryController;
+use App\Http\Middleware\EnsureDirectoryExportAccess;
 use App\Http\Middleware\EnsureFacultyPortalUser;
 use App\Http\Middleware\EnsureMenuPermission;
 use App\Http\Middleware\EnsureRoleAdmin;
@@ -275,7 +276,9 @@ Route::middleware(['auth'])->group(function () {
 
     // The grids are open to every authenticated user; the DOWNLOADS are not — one
     // GET returns the whole roster's address / phone / personal email as a file.
-    Route::middleware(['directory.export', 'throttle:20,1'])->group(function () {
+    // The gate is named by class, not by its Kernel alias, so a lost alias line in a
+    // Kernel.php merge cannot turn every export into a 500 (PR #317 F-028).
+    Route::middleware([EnsureDirectoryExportAccess::class, 'throttle:20,1'])->group(function () {
         // csv | excel | pdf | print | full — one action, so the five can't drift apart.
         Route::get('/directory/lbsnaa/export/{format}', [DirectoryController::class, 'lbsnaaExport'])
             ->whereIn('format', ['csv', 'excel', 'pdf', 'print', 'full'])

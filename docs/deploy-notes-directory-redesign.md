@@ -7,7 +7,7 @@ No migration. No dependency change. `composer.lock` is byte-identical to `main`.
 
 ## 0. What this release changes beyond the redesign
 
-The branch is named for a visual redesign, and three of the things in it are not
+The branch is named for a visual redesign, and two of the things in it are not
 visual. They are listed here so the release record carries them, rather than
 leaving them to be discovered from the diff:
 
@@ -22,9 +22,10 @@ leaving them to be discovered from the diff:
 2. **Every served download writes an audit line** (`directory.export`) carrying
    the grid, format, actor, IP, filters, row count and capped flag — and no row
    data.
-3. **Two tracked files stop being tracked** (`bootstrap/cache/packages.php`,
-   `services.php`), which is why §1 below is a mandatory manual step on every
-   host and why the rollback in §3 has a step of its own.
+
+Earlier revisions listed a third item, untracking `bootstrap/cache/packages.php` and
+`services.php`. That was withdrawn on 2026-09-28: this release now leaves both files
+tracked exactly as `main` has them (see 0.4), so there is no pre-pull step.
 
 ### 0.1 How the grant in (1) is actually performed
 
@@ -158,12 +159,13 @@ earlier 2026-09-18 acceptance is superseded by this one and is retained above as
 
 | Role | Person | What they own here |
 | --- | --- | --- |
-| Release / deploy owner | Ravi Patel | Section 1 below on every host, the section 3 rollback, and the section 4 checks |
+| Release / deploy owner | Ravi Patel | The section 3 rollback and the section 4 checks (section 1 no longer has a step) |
 | Security owner | Ravi Patel | The `directory.export` grant decision, and the dependency advisories in `docs/security-advisories.md` |
 
-The section 1 pre-pull step is **approved and owned**, not executed: approval names who
-is accountable for running it, it does not run it. It is still a manual step on every
-host and the release still aborts half-applied if it is skipped.
+**The 2026-09-23 sign-off predates the 2026-09-28 change in 0.4 and must be re-taken.** It
+approved a section 1 pre-pull step that no longer exists, and a merge resolution that has
+since been reversed. Until the Release / deploy owner signs off the text as it now stands,
+this release is not signed off.
 
 **Section 0.2 is accurate for this release, and stays accurate after it merges.** Sign
 this release off on that basis. At the head being signed off, `POST roles/permissions/{id}`
@@ -211,7 +213,8 @@ What the two sides did, read from the commits rather than from either branch's s
 | `c9fd46e73` | main | **Reverted that**, four hours later. The message records no reason |
 | `adb068731` | main | Took the opposite route instead: keep the manifests tracked, hand-edit them, and add a blanket `bootstrap/` ignore |
 
-**The decision: untracking stands, and the revert is overridden.** The grounds are the ones
+**The 2026-09-23 decision, since reversed (below): untracking stood, and the revert was
+overridden.** The grounds are the ones
 `7c302997a` already established and `c9fd46e73` does not answer — these files are build
 output; `composer.json` regenerates them on every install through its `post-autoload-dump`
 hook; Laravel rebuilds them on boot when absent; and Laravel ships a `bootstrap/cache`
@@ -221,45 +224,30 @@ place. **This is an engineering decision that overrides another branch's revert,
 the Engineering lead's to ratify, not the merge resolver's** — it is written down here so
 that ratification has something to point at.
 
-Three conflicts, and how each was taken:
+**History, kept for the record.** The 2026-09-23 merge resolution deleted both manifests and
+replaced main's blanket `bootstrap/` ignore with two explicit entries, and on 2026-09-23 the
+Engineering lead (Ravi Patel) ratified in session that untracking stood over main's revert
+`c9fd46e73`.
 
-| Path | Conflict | Resolution |
-| --- | --- | --- |
-| `bootstrap/cache/packages.php` | modify/delete | **Deleted.** Note that git leaves the *other* side in the tree by default, so this one has to be taken deliberately |
-| `bootstrap/cache/services.php` | modify/delete | **Deleted**, same |
-| `.gitignore` | content | Both sides kept — main's Playwright artifact entries and this release's two explicit cache entries — **except** main's blanket `bootstrap/`, which is deliberately dropped |
+**Reversed 2026-09-28 — this release now follows main.** After that ratification, main merged
+PR #308, whose own deploy notes (`docs/deploy-notes-faculty-master-redesign.md`, section 1)
+state that both manifests stay tracked. The 2026-09-28 merges of main into this branch then
+kept main's blanket `bootstrap/` ignore while still deleting the manifests, and this document
+described the opposite resolution (PR #317 F-016, round 16). On 2026-09-28, at the operator's
+instruction, the branch was brought into line with main instead:
 
-The blanket `bootstrap/` is dropped because it is wider than its intent: it covers
-`bootstrap/app.php` and `bootstrap/providers.php`, which are source, and it covers the
-keeper this release tracks on purpose. Tracked files ignore `.gitignore`, so nothing breaks
-today — it is a trap laid for whoever next deletes and re-adds one of those files. The two
-explicit entries say the same thing exactly.
+| Path | State in this release |
+| --- | --- |
+| `bootstrap/cache/packages.php` | **Tracked**, byte-identical to main. This release does not change it |
+| `bootstrap/cache/services.php` | **Tracked**, byte-identical to main. This release does not change it |
+| `bootstrap/cache/.gitignore` | Tracked, as on main |
+| `.gitignore` | Identical to main, including its blanket `bootstrap/` entry |
 
-**Sections 1, 2 and 3 below are unchanged and remain accurate after this merge** — that is
-the point of resolving it this way, and it was verified on the merged tree rather than
-assumed:
-
-- `php artisan --version` prints **Laravel Framework 9.52.22**, exit 0, on a merged tree
-  whose `bootstrap/cache` holds only the keeper — so section 2's precondition holds and the
-  manifests really are rebuilt on boot.
-- `php artisan package:discover` completes and regenerates both files, and `git status`
-  then reports nothing — so the ignore rule covers the regenerated output, which is what
-  makes section 1's pre-pull step safe to run repeatedly.
-- The suite is **281 tests, 0 failures** on the merged tree, identical to this release
-  before the merge (1,437 assertions at the merge commit; an earlier revision of this line
-  said 1,436, one short of what an independent run measured).
-
-Section 1 applies to more hosts after this merge, not fewer: a host currently tracking
-main's hand-edited manifests meets the same refusal on the way in, for the same reason.
-
-**Ratified 2026-09-23** by the Engineering lead (Ravi Patel), in session: untracking the
-two manifests stands, and it overrides main's revert `c9fd46e73`. The ratification rests
-on the grounds above; the revert's own reason is still unrecorded, so if one surfaces later
-it is weighed against these grounds, not assumed to outrank them.
-
-**The section 0.3 sign-off now carries this.** The 2026-09-21 sign-off was taken against a
-text that did not describe a merge resolution, so it was re-taken on 2026-09-23 against
-this section as ratified — see section 0.3.
+So this release changes nothing under `bootstrap/` and nothing in `.gitignore`, and the two
+deploy documents now agree. **This reverses a ratified decision, so the Engineering lead must
+confirm it** before the section 0.3 sign-off is re-taken; until then it is the operator's
+instruction, not a ratified decision. The grounds recorded above for untracking still stand
+as an argument, and belong in a change to main of their own if anyone wants to pursue them.
 
 ### 0.5 An index for the OT roster feed — already a migration on main; do not add it by hand
 
@@ -331,55 +319,27 @@ Online build: the migration uses the schema builder, which issues a plain
 `ALTER TABLE … ADD INDEX` with no `ALGORITHM`/`LOCK` clause. Whether the live table builds it
 without blocking writes is **not verified**, so run it in a quiet window. Owner: **DBA**.
 
-## 1. Before pulling, on every host
+## 1. Before pulling: no step needed
 
-This release **untracks** `bootstrap/cache/packages.php` and
-`bootstrap/cache/services.php` and tracks `bootstrap/cache/.gitignore` in their
-place, so the directory still exists on a clean checkout while its contents stop
-being repository content.
-
-Any host that has run `composer install` or `php artisan package:discover` since
-its last pull has a locally modified *tracked* `packages.php`. Git refuses to
-move to a commit that deletes a modified tracked file:
-
-```
-error: Your local changes to the following files would be overwritten by checkout:
-        bootstrap/cache/packages.php
-Please commit your changes or stash them before you switch branches.
-Aborting
-```
-
-Run this first — the files are regenerated output, so discarding them costs
-nothing:
-
-```bash
-git checkout -- bootstrap/cache/packages.php bootstrap/cache/services.php
-```
-
-Verified on a throwaway checkout: without the step the pull aborts; with it the
-pull succeeds and `bootstrap/cache/` then holds only `.gitignore`.
+`bootstrap/cache/packages.php` and `bootstrap/cache/services.php` stay tracked, exactly as
+main has them. This release does not change either file, so pulling it never touches them
+(see 0.4). This matches section 1 of `docs/deploy-notes-faculty-master-redesign.md`.
 
 ## 2. Release
 
 ```bash
 git pull
 composer install --no-dev --optimize-autoloader
-php artisan package:discover      # now mandatory: the manifests are no longer in the repository
 php artisan config:cache && php artisan route:cache
 ```
 
-`php artisan --version` must print a version before the release proceeds. On a
-clean checkout of this head it does (Laravel 9.52.22, exit 0) — that is the whole
-point of the tracked keeper.
+`php artisan --version` must print a version before the release proceeds.
 
 ## 3. Rollback
 
 Code revert of the merge commit. Nothing is written to the database by this
-change, so there is no data to undo.
-
-Reverting re-tracks the two manifests, which means a host that has regenerated
-them meets the same refusal in the other direction — run the same
-`git checkout -- bootstrap/cache/*.php` before the revert checkout.
+change, so there is no data to undo, and no file under `bootstrap/` changes in
+either direction.
 
 ## 4. Post-deploy checks (first working day)
 
@@ -417,8 +377,9 @@ after the merges:
 
 **Do not merge #322 or #326 to `main` on their own.** #326 without #317 puts the 500 fix on
 `main` with no restriction, which serves the unfiltered admin menu to every logged-in account,
-Officer Trainees included. #317 already carries both; close #322 and #326 as superseded, or merge
-#317 first.
+Officer Trainees included. Merge #317 first. #322 and #326 are **not** simply superseded: at
+2026-09-28 each carries commits #317 lacks (#326: `4d398888b`; #322: `9e3c9334e`, `7c21279f3`,
+`d26560bc8`), so before closing either, decide whether those commits are wanted.
 
 **Rollback.** The section 3 revert of the merge commit also reverts both fixes and the
 restriction. Expect the stray pre-doctype output to return on every admin page, and
