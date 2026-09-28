@@ -14,7 +14,8 @@ Two areas, verified independently:
 | **Student feedback page** (`CalendarController`) | 144 ms → 25 ms average over 300 trainees (**82% faster**) |
 
 **No report or page returns different data**: 103/106 admin cases and 1202/1202 student cases are
-byte-identical. All three exceptions are the paging fix — two reports went from silently losing a
+byte-identical, with remark bundles compared as a case-folded set (the displayed case variant of a
+duplicate remark can differ; see "Remark text can show a different case variant"). All three exceptions are the paging fix — two reports went from silently losing a
 row to reaching every row exactly once.
 
 ---
@@ -270,7 +271,7 @@ all of them; changing any single query corrects one.
 
 Things review raised that are **recorded rather than fixed**, each with the reason.
 
-Three of the five entries below were **fixed** in response to PR #316 review rather than accepted.
+Five of the seven entries below were **fixed** in response to PR #316 review rather than accepted.
 What remains is recorded with the reason and a review trigger.
 
 | Limitation | Status | Accepted by | Review by |
@@ -279,29 +280,68 @@ What remains is recorded with the reason and a review trigger.
 | showFacultyAverage all-programs filter divergence | **FIXED** — ids now derived from the main query's own `end_date` predicate via `facultyAverageCourseIdsForType()`, not from `$programs` | n/a | n/a |
 | Cache store resolution had no working fallback | **FIXED** — `FeedbackReportCache::store()` probes and falls back (`file`, then `cache.default`) | n/a | n/a |
 | Derived tables not bounded by `feedback_checkbox` | Accepted | _unassigned — Feedback module owner to sign_ | when `timetable` grows by an order of magnitude |
-| `TEACHING_FACULTY_JSON_TABLE` is looser than the `JSON_CONTAINS` predicate it replaced | Accepted — see below | _unassigned — Feedback module owner to sign_ | if any writer starts storing `faculty_pk` as a string or a case-variant role |
+| `TEACHING_FACULTY_JSON_TABLE` diverged from the `JSON_CONTAINS` predicate it replaced | **FIXED** — `JSON_CONTAINS` now makes the final decision; see below | n/a | n/a |
+| Remark text in the Feedback Database grid can show a different case variant (`Good` / `good`) | Accepted — see below | _unassigned — Feedback module owner to sign_ | if remarks must be shown exactly as each trainee typed them |
+| Retired generations are never deleted on the file cache store | **FIXED** — `cache:prune-expired-files`, scheduled hourly | n/a | n/a |
 
-### Why the JSON_TABLE widening is accepted, not fixed
+### Teaching-faculty expansion — FIXED
 
-The rewrite reads `faculty_pk` through `BIGINT` and compares `role` with a collation-dependent
-`=`, so `{"faculty_pk":"12"}` and `"role":"teaching"` now match where `JSON_CONTAINS` with a
-`JSON_OBJECT` candidate did not. Measured directly:
+The first rewrite read `faculty_pk` through `BIGINT` and compared `role` through a JSON_TABLE
+column, and was not equivalent to `JSON_CONTAINS(faculty_details, JSON_OBJECT('faculty_pk', f.pk,
+'role', 'Teaching'))` in either direction: looser for a string id, a lower-case or trailing-space
+role, a fractional or boolean id; stricter for a bare object, a listed id or a nested array; and it
+returned a duplicate element twice.
 
-| Stored value | Old predicate | New derived table |
-| --- | --- | --- |
-| `{"faculty_pk":12,"role":"Teaching"}` | match | match |
-| `{"faculty_pk":"12","role":"Teaching"}` | no match | **match** |
-| `{"faculty_pk":12,"role":"teaching"}` | no match | **match** |
+Now JSON_TABLE only proposes candidate ids and the original `JSON_CONTAINS` decides, so the result
+is the original predicate's for every shape up to one level of nesting (31 shapes pinned in
+`StudentFeedbackFacultyExpansionTest`). Deeper nesting matches nothing — stricter only, never
+looser; nothing writes it and `sargam_prod` has none. A fully exact variant (a `UNION` with a
+`faculty_master` fallback) was measured and rejected: MySQL materialises it in full for every
+prepared page query, ~10x slower on the student feedback page. Checked on dev (122 = 122 pairs)
+and on `sargam_prod` (600 = 600).
 
-It is accepted because nothing in the live data can reach the divergent rows: on `sargam_prod`
-every `faculty_details.faculty_pk` is JSON type `INTEGER`, and the only role spellings present are
-`Teaching`, `Sectional` and `Administration` — exact case. `buildFacultyDetails()` casts the id to
-int and writes the role verbatim, so rows this application writes cannot drift either.
+### Remark text can show a different case variant — accepted
 
-Tightening it would mean `JSON_TYPE($.faculty_pk) = 'INTEGER'` plus a binary role comparison on a
-hot per-trainee path, to exclude data that does not exist. `StudentFeedbackFacultyExpansionTest`
-pins the current behaviour, so a future import that introduces string ids or case-variant roles
-fails the test rather than silently changing a trainee's pending list.
+`GROUP_CONCAT(DISTINCT remark)` runs under `utf8mb4_general_ci`, so `Good` and `good` are one
+remark and MySQL keeps whichever variant it reads first. Which one that is depends on the grouping
+plan, so narrowing the `GROUP BY` changes the displayed variant (and order) in roughly a third of
+grid rows — 191 of 485 in one run, 156 in another, because it is not stable under either key.
+No remark is gained or lost, and every other column is identical:
+`FeedbackReportOptimizationTest::test_database_grid_rows_match_the_original_wide_key` compares
+full rows, remarks as a case-folded set.
+
+Not fixed in code because each option changes what users see: restoring the wide `GROUP BY`
+gives back the old plan's arbitrary choice at twice the cost; a binary collation would list
+`Good` and `good` separately; choosing a canonical variant needs a per-remark subquery.
+
+### Cache overhead and effectiveness — measured, kept as is
+
+Measured 2026-09-28 for PR #316 review finding F-007.
+
+**How often the cache is cleared.** Every feedback submission bumps the generation. On
+`sargam_prod` (32,024 distinct submission timestamps, 2025-05-20 to 2026-09-08) the gap between
+consecutive submissions is 8 s / 15 s / 38 s at p25 / median / p75; 81% arrive within 60 s of the
+previous one, and the busiest hour had 1,284. So during a feedback window a cached lookup rarely
+lives long enough to be reused. The cache pays off outside those windows, which is when admins
+mostly run the reports.
+
+**Why not a separate generation per source table.** Three of the four cached lookups read
+`topic_feedback` directly — `db_faculties` (faculty with qualifying feedback),
+`faculty_suggestions`, and the pending-feedback stats — so they must be invalidated by a
+submission either way. Only `topics:course:{id}` reads `timetable` alone. Splitting the generation
+would buy caching for that one cheap lookup at the price of a second invalidation path, which is
+the kind of staleness bug F-002 was. Not worth it.
+
+**Per-request store probe.** `store()` writes a probe key once per request that touches the cache:
+0.9 ms median on the file store (0.03 ms for each generation read after that). This is what makes
+a box without Redis fall back to `file` instead of failing, so it stays. A loaded but unreachable
+Redis adds one failed connect per request before the fallback; that is an outage condition, and
+it serves computed (never wrong) data meanwhile.
+
+**Store flapping.** If processes resolve different stores (Redis up for some, down for others), a
+bust lands in one store while reads come from the other, and stale entries can survive to their
+TTL (at most 15 minutes). Only possible while Redis is intermittently failing; confirm the
+production store (see "Which cache store is used") so this is a known quantity.
 
 ### Cache staleness on the three lookup caches — FIXED
 
@@ -381,17 +421,16 @@ synthetic-shape cases whose fixture has no `feedback_checkbox` column.
 **Accepted, not fixed.** The equivalence contract is worth more than 6% of an expansion that is
 cheap at this scale. Revisit together with the tests if `timetable` grows by an order of magnitude.
 
-### The cache is off unless the store is configured
+### Which cache store is used
 
-See the deployment note in `app/Support/FeedbackReportCache.php`. Without
-`REDIS_BACKED_CACHE_STORE` (or `APP_REDIS_CACHE_STORE`), the chain resolves to `redis` and the
-documented `cache.default` fallback does **not** engage.
+See the class docblock in `app/Support/FeedbackReportCache.php`. `store()` probes the preferred
+store, then `file`, then `cache.default`, and keeps the first that accepts a write, so a box
+without Redis caches on the file store instead of throwing on every call. Only if every
+candidate fails is each call reported and recomputed.
 
-**Production is fine:** it sets `CACHE_DRIVER=redis`, so the resolved store and the fallback are
-the same store and the gap cannot bite. **Developer and CI boxes are the exposure** — with no
-`.env`, `cache.default` is `file` while the chain still asks for `redis`, so every cache call
-throws, is reported, and recomputes. Set `REDIS_BACKED_CACHE_STORE=file` there. This is a
-deployment setting, not a code defect, and it governs the Estate, Mess and DataTable caches too.
+**Unverified for production:** which store it actually resolves to there (`CACHE_DRIVER`,
+`REDIS_BACKED_CACHE_STORE`). It matters because on the file store, entries retired by a
+generation bump are never deleted — they need a scheduled prune, which Redis does not.
 
 ---
 
