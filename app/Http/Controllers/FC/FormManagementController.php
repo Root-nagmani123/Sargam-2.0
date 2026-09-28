@@ -76,7 +76,17 @@ class FormManagementController extends Controller
             // the future, fails activeRunning() and so has to land here - otherwise its
             // forms show under neither tab and become uneditable, since the only edit
             // link lives in this grid.
-            $query->whereHas('courseMaster', fn ($q) => $q->archived());
+            //
+            // orWhereDoesntHave() covers the one row archived() cannot reach: whereHas()
+            // compiles to EXISTS, so a form whose course_master_pk points at a course row
+            // that no longer exists satisfies neither branch. The active branch admits a
+            // form with a NULL course_master_pk explicitly (scopeOnRunningCourse), so the
+            // two tabs were complements over linked forms only. A form with no reachable
+            // course has no lifecycle left to be in, and its edit link lives here.
+            $query->where(function ($q) {
+                $q->whereHas('courseMaster', fn ($c) => $c->archived())
+                    ->orWhereDoesntHave('courseMaster');
+            });
         } else {
             // One definition of "the course is still running", shared with the bulk-send
             // scope - see FcForm::scopeOnRunningCourse(). Not is_active-filtered: this
