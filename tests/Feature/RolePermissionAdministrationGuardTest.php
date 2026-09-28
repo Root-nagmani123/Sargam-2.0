@@ -647,6 +647,54 @@ class RolePermissionAdministrationGuardTest extends TestCase
             ->assertForbidden();
     }
 
+    /**
+     * PR #323 F-011. A menu saved without a permission, whose name already
+     * matches a permission, must stay editable: an edit that leaves the name
+     * alone saves, keeps the permission empty and writes no permissions row.
+     */
+    public function test_a_menu_without_a_permission_can_still_be_edited(): void
+    {
+        $this->permission('zz_probe_no_perm');   // what the unchanged name would derive
+        $this->actingAs($this->superAdmin());
+
+        foreach (['', null] as $stored) {
+            $menuId = $this->menuFixture('ZZ Probe No Perm', 'zz_placeholder');
+            DB::table('menus')->where('id', $menuId)->update(['permission_name' => $stored]);
+            $permissions = DB::table('permissions')->count();
+
+            $this->put("/sidebar/menus/{$menuId}", ['icon' => 'star'] + $this->editPayload($menuId))
+                ->assertRedirect()
+                ->assertSessionHasNoErrors();
+
+            $row = DB::table('menus')->where('id', $menuId)->first();
+            $this->assertSame('star', $row->icon, 'the edit must be saved');
+            $this->assertSame($stored, $row->permission_name, 'an unchanged name must not give the menu a permission');
+            $this->assertSame($permissions, DB::table('permissions')->count(), 'no permissions row may be written');
+
+            $preview = $this->getJson(route('sidebar.menus.permission-preview', ['name' => 'ZZ Probe No Perm', 'menu_id' => $menuId]))
+                ->assertOk()->json();
+            $this->assertSame($stored, $preview['permission']);
+            $this->assertArrayNotHasKey('error', $preview);
+
+            DB::table('menus')->where('id', $menuId)->delete();
+        }
+    }
+
+    /** Must-succeed control for the test above: renaming such a menu still derives a permission. */
+    public function test_renaming_a_menu_without_a_permission_derives_one(): void
+    {
+        $menuId = $this->menuFixture('ZZ Probe No Perm Two', 'zz_placeholder');
+        DB::table('menus')->where('id', $menuId)->update(['permission_name' => '']);
+
+        $this->actingAs($this->superAdmin())
+            ->put("/sidebar/menus/{$menuId}", ['name' => 'ZZ Probe Now Named 323'] + $this->editPayload($menuId))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('zz_probe_now_named_323', DB::table('menus')->where('id', $menuId)->value('permission_name'));
+        $this->assertDatabaseHas('permissions', ['name' => 'zz_probe_now_named_323']);
+    }
+
     protected function tearDown(): void
     {
         // The transaction rolls back inside parent::tearDown(), after which the

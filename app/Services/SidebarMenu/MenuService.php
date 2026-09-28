@@ -112,11 +112,20 @@ class MenuService
      * current one when it keeps it, otherwise one derived from $name. store(),
      * update() and the form's preview all ask this, so the preview shows what
      * Save stores. Throws a validation error on `name` when no usable name can
-     * be derived.
+     * be derived. Returns null or '' only for an existing menu that has no
+     * permission and whose name is unchanged: an edit that leaves the name
+     * alone leaves the permission alone too.
      */
-    public function permissionFor(string $name, ?Menu $menu = null): string
+    public function permissionFor(string $name, ?Menu $menu = null): ?string
     {
         $old = $menu ? $menu->permission_name : null;
+
+        // A menu saved without a permission keeps none until it is renamed.
+        // Deriving one here would refuse every edit of a menu whose name already
+        // matches a permission, or quietly give it a new permission no role holds.
+        if ($menu && ($old === null || $old === '') && trim($name) === trim((string) $menu->name)) {
+            return $old;
+        }
 
         if ($old !== null && $old !== '') {
             if (trim($name) === trim((string) $menu->name)) {
