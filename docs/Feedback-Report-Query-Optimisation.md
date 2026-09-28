@@ -282,7 +282,7 @@ What remains is recorded with the reason and a review trigger.
 | Derived tables not bounded by `feedback_checkbox` | Accepted | Engineering lead (Ravi Patel), 2026-09-28 | when `timetable` grows by an order of magnitude |
 | `TEACHING_FACULTY_JSON_TABLE` diverged from the `JSON_CONTAINS` predicate it replaced | **FIXED** — `JSON_CONTAINS` now makes the final decision; see below | n/a | n/a |
 | Remark text in the Feedback Database grid can show a different case variant (`Good` / `good`) | Accepted — see below | Engineering lead (Ravi Patel), 2026-09-28 | if remarks must be shown exactly as each trainee typed them |
-| Retired generations are never deleted on the file cache store | **FIXED** — `cache:prune-expired-files`, scheduled hourly | n/a | n/a |
+| Retired generations are never deleted on the file cache store | **FIXED** — `cache:prune-expired-files`, scheduled hourly; an expired file it cannot delete is logged as a warning and fails the exit code | n/a | n/a |
 
 ### Teaching-faculty expansion — FIXED
 

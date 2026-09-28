@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\Finder\Finder;
 
 /**
@@ -25,6 +26,11 @@ use Symfony\Component\Finder\Finder;
  * miss. For a file-store lock (Cache::lock, or the scheduler's withoutOverlapping mutex when
  * cache.default is file) it is a moment in which a second process could take the same lock.
  * Closing it fully would need the store's own locking, which FileStore does not expose.
+ *
+ * Under the scheduler this command's output goes to /dev/null, so an expired file that cannot be
+ * deleted (typically the cron user lacking write access to directories PHP-FPM created) is logged
+ * as a warning and makes the command exit non-zero. Otherwise the directory would keep growing
+ * with nothing in the logs to show it.
  */
 class PruneExpiredFileCache extends Command
 {
@@ -37,6 +43,7 @@ class PruneExpiredFileCache extends Command
     {
         $now = time();
         $dryRun = (bool) $this->option('dry-run');
+        $anyFailed = false;
 
         foreach ($this->fileStoreDirectories() as $store => $directory) {
             if (! is_dir($directory)) {
@@ -93,9 +100,18 @@ class PruneExpiredFileCache extends Command
                     $failed
                 ));
             }
+
+            if ($failed > 0) {
+                $anyFailed = true;
+                Log::warning('cache:prune-expired-files could not delete expired cache files', [
+                    'store' => $store,
+                    'directory' => $directory,
+                    'failed' => $failed,
+                ]);
+            }
         }
 
-        return self::SUCCESS;
+        return $anyFailed ? self::FAILURE : self::SUCCESS;
     }
 
     /** True when the file carries FileStore's 10-digit expiry header and that time has passed. */

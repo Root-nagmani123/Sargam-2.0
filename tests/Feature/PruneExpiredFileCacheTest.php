@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Illuminate\Cache\FileStore;
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 /**
@@ -69,6 +70,41 @@ class PruneExpiredFileCacheTest extends TestCase
         $this->artisan('cache:prune-expired-files', ['--dry-run' => true])
             ->expectsOutput('file: 1 file(s) scanned, 1 expired (dry run, nothing deleted)')
             ->assertExitCode(0);
+
+        $this->assertFileExists($path);
+    }
+
+    /**
+     * An expired file that cannot be deleted must be counted, logged, and fail the exit code:
+     * under the scheduler the output goes to /dev/null, so the log and exit code are the only
+     * signals. The entry's directory is made read-only, which is what a cron user without write
+     * access to directories PHP-FPM created looks like.
+     */
+    public function test_an_undeletable_expired_entry_is_reported_as_a_failure(): void
+    {
+        if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+            $this->markTestSkipped('root can unlink from a read-only directory');
+        }
+
+        $store = new FileStore(new Filesystem(), $this->dir);
+        $store->put('expired', 'old generation', 600);
+        $path = $this->pathFor($store, 'expired');
+        file_put_contents($path, (string) (time() - 5) . substr(file_get_contents($path), 10));
+
+        Log::shouldReceive('warning')
+            ->once()
+            ->with('cache:prune-expired-files could not delete expired cache files', \Mockery::on(
+                fn ($context) => $context['store'] === 'file' && $context['failed'] === 1
+            ));
+
+        chmod(dirname($path), 0555);
+        try {
+            $this->artisan('cache:prune-expired-files')
+                ->expectsOutput('file: 1 file(s) scanned, 1 expired: 0 deleted, 0 rewritten since the scan and kept, 0 already removed, 1 could not be deleted')
+                ->assertExitCode(1);
+        } finally {
+            chmod(dirname($path), 0777);
+        }
 
         $this->assertFileExists($path);
     }
