@@ -47,7 +47,11 @@ class PruneExpiredFileCacheTest extends TestCase
         // A file that is not a cache entry at all must survive.
         file_put_contents($this->dir . '/not-a-cache-entry.txt', 'hello');
 
-        $this->artisan('cache:prune-expired-files')->assertExitCode(0);
+        // 4 files: live, forever, expired, and the non-entry. Only the expired one is removed,
+        // and the summary must count the delete that actually happened.
+        $this->artisan('cache:prune-expired-files')
+            ->expectsOutput('file: 4 file(s) scanned, 1 expired: 1 deleted, 0 rewritten since the scan and kept, 0 already removed, 0 could not be deleted')
+            ->assertExitCode(0);
 
         $this->assertFileDoesNotExist($expiredPath);
         $this->assertSame('still valid', $store->get('live'));
@@ -62,7 +66,9 @@ class PruneExpiredFileCacheTest extends TestCase
         $path = $this->pathFor($store, 'expired');
         file_put_contents($path, (string) (time() - 5) . substr(file_get_contents($path), 10));
 
-        $this->artisan('cache:prune-expired-files', ['--dry-run' => true])->assertExitCode(0);
+        $this->artisan('cache:prune-expired-files', ['--dry-run' => true])
+            ->expectsOutput('file: 1 file(s) scanned, 1 expired (dry run, nothing deleted)')
+            ->assertExitCode(0);
 
         $this->assertFileExists($path);
     }

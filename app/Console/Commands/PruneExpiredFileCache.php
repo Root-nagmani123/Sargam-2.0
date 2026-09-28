@@ -45,6 +45,10 @@ class PruneExpiredFileCache extends Command
 
             $scanned = 0;
             $expired = 0;
+            $deleted = 0;
+            $rewritten = 0;
+            $gone = 0;
+            $failed = 0;
             foreach (Finder::create()->files()->in($directory)->ignoreDotFiles(true) as $file) {
                 $scanned++;
                 $path = $file->getPathname();
@@ -54,19 +58,41 @@ class PruneExpiredFileCache extends Command
                 }
 
                 $expired++;
-                // Re-read right before deleting: the entry may have been rewritten since the scan.
-                if (! $dryRun && $this->isExpired($path, time())) {
-                    @unlink($path);
+                if ($dryRun) {
+                    continue;
+                }
+                // Re-read right before deleting: the entry may have been rewritten or removed since the scan.
+                clearstatcache(true, $path);
+                if (! is_file($path)) {
+                    $gone++;        // removed meanwhile, e.g. FileStore discarding it on a read
+                } elseif (! $this->isExpired($path, time())) {
+                    $rewritten++;   // re-put or lock re-acquired: live again, kept
+                } elseif (@unlink($path)) {
+                    $deleted++;
+                } else {
+                    $failed++;
                 }
             }
 
-            $this->info(sprintf(
-                '%s: %d file(s) scanned, %d expired%s',
-                $store,
-                $scanned,
-                $expired,
-                $dryRun ? ' (dry run, nothing deleted)' : ' and deleted'
-            ));
+            if ($dryRun) {
+                $this->info(sprintf(
+                    '%s: %d file(s) scanned, %d expired (dry run, nothing deleted)',
+                    $store,
+                    $scanned,
+                    $expired
+                ));
+            } else {
+                $this->info(sprintf(
+                    '%s: %d file(s) scanned, %d expired: %d deleted, %d rewritten since the scan and kept, %d already removed, %d could not be deleted',
+                    $store,
+                    $scanned,
+                    $expired,
+                    $deleted,
+                    $rewritten,
+                    $gone,
+                    $failed
+                ));
+            }
         }
 
         return self::SUCCESS;
