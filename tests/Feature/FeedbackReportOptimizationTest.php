@@ -536,32 +536,53 @@ class FeedbackReportOptimizationTest extends TestCase
      * The model-event bust must wait for the enclosing transaction to commit.
      *
      * Busting inside the transaction lets a concurrent read cache the still-committed old row
-     * under the new generation, where it outlives the write for the full TTL. The saved/deleted
-     * events are dispatched on an unsaved model inside a transaction that writes nothing, so
-     * this stays read-only against the shared database.
+     * under the new generation, where it outlives the write for the full TTL.
+     *
+     * Needs no database. afterCommit() consults only the transactions manager, so the test drives
+     * that manager exactly as Connection::beginTransaction()/commit()/rollBack() do, and the
+     * saved/deleted events are dispatched on unsaved models. No query is issued, so it runs (not
+     * errors) on a host with no MySQL, which is the only way it can guard the deferral in CI.
      */
     public function test_model_event_bust_is_deferred_until_commit(): void
     {
         $this->skipUnlessCacheStorePersists();
 
+        $tx = app('db.transactions');
+
         foreach ([\App\Models\FacultyMaster::class, \App\Models\CalendarEvent::class, \App\Models\Timetable::class] as $class) {
             foreach (['saved', 'deleted'] as $event) {
-                $fire = fn () => event("eloquent.$event: $class", new $class());
+                $model = new $class();
+                $conn = $model->getConnectionName() ?? config('database.default');
+                $fire = fn () => event("eloquent.$event: $class", $model);
                 $label = class_basename($class) . " $event";
 
+                // Commit: held while the transaction is open, runs once it commits.
                 $start = FeedbackReportCache::generation();
-                DB::beginTransaction();
+                $tx->begin($conn, 1);
                 $fire();
                 $this->assertSame($start, FeedbackReportCache::generation(), "$label busted before commit.");
-                DB::commit();
+                $tx->commit($conn);
                 $this->assertGreaterThan($start, FeedbackReportCache::generation(), "$label did not bust after commit.");
 
+                // Rollback: dropped, because nothing changed.
                 $start = FeedbackReportCache::generation();
-                DB::beginTransaction();
+                $tx->begin($conn, 1);
                 $fire();
-                DB::rollBack();
+                $tx->rollback($conn, 0);
+                $tx->commit($conn);
                 $this->assertSame($start, FeedbackReportCache::generation(), "$label busted on a rolled-back transaction.");
 
+                // Nested: a rolled-back savepoint drops it; the outer commit runs only what survived.
+                $start = FeedbackReportCache::generation();
+                $tx->begin($conn, 1);
+                $tx->begin($conn, 2);
+                $fire();
+                $tx->rollback($conn, 1);
+                $this->assertSame($start, FeedbackReportCache::generation(), "$label busted inside a savepoint.");
+                $tx->commit($conn);
+                $this->assertSame($start, FeedbackReportCache::generation(), "$label survived a rolled-back savepoint.");
+
+                // No transaction: runs at once.
                 $start = FeedbackReportCache::generation();
                 $fire();
                 $this->assertGreaterThan($start, FeedbackReportCache::generation(), "$label did not bust outside a transaction.");
