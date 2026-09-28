@@ -77,8 +77,9 @@ class PruneExpiredFileCacheTest extends TestCase
     /**
      * An expired file that cannot be deleted must be counted, logged, and fail the exit code:
      * under the scheduler the output goes to /dev/null, so the log and exit code are the only
-     * signals. The entry's directory is made read-only, which is what a cron user without write
-     * access to directories PHP-FPM created looks like.
+     * signals. Both the entry and its directory are made read-only: on POSIX a read-only directory
+     * blocks unlink (what a cron user without write access to directories PHP-FPM created looks
+     * like), on Windows a read-only file does, and each is harmless on the other platform.
      */
     public function test_an_undeletable_expired_entry_is_reported_as_a_failure(): void
     {
@@ -97,6 +98,7 @@ class PruneExpiredFileCacheTest extends TestCase
                 fn ($context) => $context['store'] === 'file' && $context['failed'] === 1
             ));
 
+        chmod($path, 0444);
         chmod(dirname($path), 0555);
         try {
             $this->artisan('cache:prune-expired-files')
@@ -104,6 +106,7 @@ class PruneExpiredFileCacheTest extends TestCase
                 ->assertExitCode(1);
         } finally {
             chmod(dirname($path), 0777);
+            chmod($path, 0666);
         }
 
         $this->assertFileExists($path);
