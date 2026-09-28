@@ -106,12 +106,13 @@ class CalendarController extends Controller
      *
      * Every JSON function (JSON_TYPE, CAST AS JSON, JSON_TABLE, JSON_CONTAINS) is handed
      * CASE WHEN JSON_VALID(x) THEN x ELSE '[]' END rather than the raw column, so it receives
-     * valid JSON by construction. faculty_details is TEXT, so invalid JSON is possible. For a
-     * stored value a CASE around the call is enough on MySQL 8.0.39 (tested), but for a
-     * constant MySQL may evaluate the JSON argument while folding, before the CASE, and error;
-     * guarding the argument is correct in both cases and does not depend on evaluation order.
-     * Pinned by StudentFeedbackFacultyExpansionTest, including a case that stores invalid JSON
-     * in a real column rather than substituting a literal.
+     * valid JSON by construction. faculty_details is TEXT, so invalid JSON is possible. On
+     * MySQL 8.0.39 a single CASE around the calls was already enough, for stored values and
+     * for literals alike: no constant-folding error was reproduced. Guarding each argument is
+     * defensive, so correctness does not rest on evaluation order, and it measured
+     * cost-neutral. StudentFeedbackFacultyExpansionTest pins that invalid JSON (stored or
+     * literal) is tolerated; the earlier single-CASE form passes it too, so those tests do not
+     * detect a return to that form.
      */
     private const TEACHING_FACULTY_JSON_TABLE = "(
         SELECT DISTINCT tt.pk AS timetable_pk, COALESCE(jt.pk_listed, jt.pk_nested, jt.pk) AS faculty_pk

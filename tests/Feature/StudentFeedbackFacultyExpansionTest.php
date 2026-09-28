@@ -362,12 +362,14 @@ class StudentFeedbackFacultyExpansionTest extends TestCase
     /**
      * Invalid JSON STORED in a column must not break the expansion.
      *
-     * The shape tests above substitute a quoted literal for tt.faculty_details, and MySQL can fold
-     * a CASE over a literal before execution, so they cannot show what happens to a stored value.
-     * This stores the values in a real TEXT column - a TEMPORARY table, private to this
+     * The shape tests above substitute a quoted literal for tt.faculty_details, so they do not
+     * exercise a value read from a column. This stores the values in a real TEXT column - a TEMPORARY table, private to this
      * connection and dropped with it, so no shared table is written - runs the shipped constant
      * over it, and compares every pair with the original JSON_CONTAINS predicate. One invalid row
      * would otherwise fail the whole derived table, and with it every trainee's feedback page.
+     *
+     * This pins tolerance of invalid JSON, not the per-argument guard specifically: the earlier
+     * single-CASE form of the constant passes it as well (verified on MySQL 8.0.39).
      */
     public function test_teaching_expansion_survives_invalid_json_stored_in_the_column(): void
     {
