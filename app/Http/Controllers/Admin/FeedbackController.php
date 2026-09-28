@@ -3604,7 +3604,8 @@ class FeedbackController extends Controller
          * a border applyFromArray for every row, plus one per rating cell and one per remark
          * cell, took ~17 s of pure PHP for 4,708 rows and risked hitting max_execution_time.
          *
-         * The output is unchanged. Stacked single-row outlines are indistinguishable from an
+         * The output is unchanged (verified cell by cell against the per-cell version: values,
+         * fonts, fills, alignment and borders). Stacked single-row outlines are indistinguishable from an
          * outline around the block plus horizontal lines between its rows, and the blank row
          * every 10 records is exactly what bounds each block. Rating fills reuse one prepared
          * Style per rating via duplicateStyle() instead of re-parsing the same array each time.
@@ -3615,13 +3616,24 @@ class FeedbackController extends Controller
 
         // One prepared style per rating. Note the (string) cast: PHP turns numeric array keys
         // into integers, and the colour choice below compares against the string '3'.
+        //
+        // duplicateStyle() replaces the cell's whole style with the prototype, and a bare
+        // Style() carries PhpSpreadsheet's Calibri 11, not this workbook's default font. The
+        // per-cell applyFromArray() this replaced merged onto the default instead, so the
+        // default font's name and size are carried over explicitly to keep the output the same.
+        $defaultFont = $spreadsheet->getDefaultStyle()->getFont();
         $ratingStyles = [];
         foreach ($ratingColors as $ratingKey => $rgb) {
             $rating = (string) $ratingKey;
             $prototype = new \PhpOffice\PhpSpreadsheet\Style\Style();
             $prototype->applyFromArray([
                 'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => $rgb]],
-                'font' => ['bold' => true, 'color' => ['rgb' => in_array($rating, ['3']) ? '000000' : 'FFFFFF']],
+                'font' => [
+                    'name' => $defaultFont->getName(),
+                    'size' => $defaultFont->getSize(),
+                    'bold' => true,
+                    'color' => ['rgb' => in_array($rating, ['3']) ? '000000' : 'FFFFFF'],
+                ],
                 'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
             ]);
             $ratingStyles[$rating] = $prototype;
