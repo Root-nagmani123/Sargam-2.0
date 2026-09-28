@@ -60,18 +60,43 @@ return new class extends Migration
 
         // The command owns the copy/verify/delete logic; calling it keeps one
         // implementation rather than a second copy that can drift.
+        //
+        // A failed move FAILS the migration. Swallowing it let
+        // Laravel record this migration as run - Migrator::runUp() logs it once up()
+        // returns - so `php artisan migrate` never tried again and the exposure stayed
+        // open behind a green deploy. The command also reports per-file failures by
+        // exit code rather than by exception, and that code used to be ignored too.
+        // Failing is safe here: this migration changes no schema, the deny rule above
+        // is rewritten idempotently, and the command skips documents already on the
+        // private disk, so the next `migrate` simply resumes the move.
         try {
-            Artisan::call('course-repository:secure-documents');
-            Log::info('Course repository documents migrated off the public disk.', [
-                'output' => trim(Artisan::output()),
-            ]);
-        } catch (\Throwable $e) {
-            // A failed move must not abort the deploy and leave the schema half-applied —
-            // but it must be loud, because the exposure is still open when it happens.
+            $exitCode = Artisan::call('course-repository:secure-documents');
+        } catch (Throwable $e) {
             Log::error('Course repository document migration FAILED — documents remain on the public disk.', [
                 'error' => $e->getMessage(),
             ]);
+
+            throw $e;
         }
+
+        $output = trim(Artisan::output());
+
+        if ($exitCode !== 0) {
+            Log::error('Course repository document migration FAILED — documents remain on the public disk.', [
+                'exit_code' => $exitCode,
+                'output' => $output,
+            ]);
+
+            throw new RuntimeException(
+                'course-repository:secure-documents exited with code '.$exitCode
+                .' - some documents are still on the public disk. Fix the cause and re-run'
+                .' `php artisan migrate`; the move resumes where it stopped.'
+            );
+        }
+
+        Log::info('Course repository documents migrated off the public disk.', [
+            'output' => $output,
+        ]);
     }
 
     public function down(): void
@@ -82,20 +107,20 @@ return new class extends Migration
     private function denyDirectAccess(string $disk): void
     {
         $body = "# Course Repository documents are served through the application's\n"
-              . "# authenticated routes, never directly. See config/course_repository.php.\n"
-              . "<IfModule mod_authz_core.c>\n    Require all denied\n</IfModule>\n"
-              . "<IfModule !mod_authz_core.c>\n    Order allow,deny\n    Deny from all\n</IfModule>\n";
+              ."# authenticated routes, never directly. See config/course_repository.php.\n"
+              ."<IfModule mod_authz_core.c>\n    Require all denied\n</IfModule>\n"
+              ."<IfModule !mod_authz_core.c>\n    Order allow,deny\n    Deny from all\n</IfModule>\n";
 
         $allow = "# Category thumbnails are public by design — see the migration that wrote this.\n"
-               . "<IfModule mod_authz_core.c>\n    Require all granted\n</IfModule>\n"
-               . "<IfModule !mod_authz_core.c>\n    Order allow,deny\n    Allow from all\n</IfModule>\n";
+               ."<IfModule mod_authz_core.c>\n    Require all granted\n</IfModule>\n"
+               ."<IfModule !mod_authz_core.c>\n    Order allow,deny\n    Allow from all\n</IfModule>\n";
 
         foreach (self::DOCUMENT_ROOTS as $root) {
             try {
                 if (Storage::disk($disk)->exists($root)) {
-                    Storage::disk($disk)->put($root . '/.htaccess', $body);
+                    Storage::disk($disk)->put($root.'/.htaccess', $body);
                 }
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 Log::warning('Could not write deny rule for legacy document root.', [
                     'root' => $root,
                     'error' => $e->getMessage(),
@@ -107,9 +132,9 @@ return new class extends Migration
         foreach (self::PUBLIC_EXCEPTIONS as $root) {
             try {
                 if (Storage::disk($disk)->exists($root)) {
-                    Storage::disk($disk)->put($root . '/.htaccess', $allow);
+                    Storage::disk($disk)->put($root.'/.htaccess', $allow);
                 }
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 Log::warning('Could not re-permit public exception folder.', [
                     'root' => $root,
                     'error' => $e->getMessage(),

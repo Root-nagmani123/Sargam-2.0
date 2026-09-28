@@ -78,15 +78,6 @@
 <body>
 
     {{-- Page numbers drawn on every page (reliable DomPDF method; needs isPhpEnabled). --}}
-    <script type="text/php">
-        if (isset($pdf)) {
-            $text = "Page {PAGE_NUM} of {PAGE_COUNT}";
-            $size = 7;
-            $font = $fontMetrics->getFont("DejaVu Sans", "normal");
-            $w    = $fontMetrics->getTextWidth($text, $font, $size);
-            $pdf->page_text($pdf->get_width() - $w - 14, $pdf->get_height() - 16, $text, $font, $size, array(0.4, 0.4, 0.4));
-        }
-    </script>
 
 @if(count($weeks) === 0)
     <div class="empty">No sessions scheduled for this period.</div>

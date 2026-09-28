@@ -13,7 +13,20 @@
         @endauth
     </p>
     @if(Auth::check() && !hasRole('Officer Trainee') && Auth::user()->user_id)
-        <a href="{{ route('member.profile.edit', Auth::user()->user_id) }}" class="text-white fw-bold">Edit Profile</a><span class="mx-2 text-white">|</span>
+        {{-- Edit Profile is shown only to an account member.profile.edit will
+             actually admit - the same guard as admin/layouts/header_new, from the
+             same method. Without it this link 403s for the 359 credentials the
+             F-024 narrowing refuses, which is a dead button that reads as a fault
+             rather than as a boundary. PR #309 F-046.
+
+             The guard is on this link ALONE and not on the enclosing @if: Change
+             Password below goes to a different route with no member gate on it,
+             and hiding that from the same accounts would be a second defect in
+             the name of fixing the first. --}}
+        @if (\App\Http\Middleware\EnsureMemberRecordAccess::ownedMemberPk() !== null
+            || \App\Http\Middleware\EnsureMemberPiiAccess::grantsAccess())
+            <a href="{{ route('member.profile.edit', Auth::user()->user_id) }}" class="text-white fw-bold">Edit Profile</a><span class="mx-2 text-white">|</span>
+        @endif
         <a href="{{ route('admin.password.change_password') }}" class="text-white fw-bold">Change Password</a>
     @endif
 </div>

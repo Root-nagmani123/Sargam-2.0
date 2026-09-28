@@ -2,71 +2,69 @@
 
 namespace App\Http\Controllers\Admin;
 
+use Adldap\Laravel\Facades\Adldap;
 use App\DataTables\CourseMasterDataTable;
 use App\DataTables\FacultyDataTable;
 use App\DataTables\GroupMappingDataTable;
 use App\DataTables\Master\EmployeeTypeMasterDataTable;
 use App\DataTables\RoleDataTable;
+use App\Exports\StudentListReportExport;
+use App\Exports\BrandedGridExport;
+use App\Exports\UsersExport;
 use App\Http\Controllers\Admin\IssueManagement\IssueCategoryController;
 use App\Http\Controllers\Admin\IssueManagement\IssueEscalationMatrixController;
 use App\Http\Controllers\Admin\IssueManagement\IssuePriorityController;
 use App\Http\Controllers\Admin\IssueManagement\IssueSubCategoryController;
 use App\Http\Controllers\Admin\Master\FacultyExpertiseMasterController;
 use App\Http\Controllers\Admin\Master\FacultyTypeMasterController;
-use App\DataTables\UserCredentialsDataTable;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\User\StoreUserRequest;
 use App\Http\Requests\Admin\User\UpdateUserRequest;
-use App\Models\User;
-use App\Models\UserRoleMaster;
+use App\Models\CalendarEvent;
+use App\Models\CourseCordinatorMaster;
+use App\Models\CourseMaster;
+use App\Models\CourseStudentAttendance;
+use App\Models\DashboardCard;
 use App\Models\EmployeeMaster;
 use App\Models\EmployeeRoleMapping;
-use App\Models\CourseMaster;
 use App\Models\FacultyMaster;
 use App\Models\Holiday;
-use App\Services\NotificationService;
-use App\Exports\UsersExport;
-use App\Exports\StudentListReportExport;
-use Maatwebsite\Excel\Facades\Excel;
-use Maatwebsite\Excel\Excel as ExcelWriter;
-use Barryvdh\DomPDF\Facade\Pdf;
-
-use Adldap\Laravel\Facades\Adldap;
-use Illuminate\Support\Facades\Auth;
-
-
-
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
-
-use App\Models\StudentMedicalExemption;
 use App\Models\LeaveApplication;
 use App\Models\MDOEscotDutyMap;
-use App\Models\StudentCourseGroupMap;
-use App\Models\DashboardCard;
-use App\Models\CalendarEvent;
-use App\Models\ClassSessionMaster;
-use App\Models\VenueMaster;
-use App\Models\CourseCordinatorMaster;
-use App\Models\StudentMasterCourseMap;
-use App\Models\StudentMaster;
-use App\Services\FC\RegistrationService;
-use App\Models\CourseStudentAttendance;
-use App\Models\CourseGroupTimetableMapping;
-use App\Models\SecurityParmIdApply;
-use App\Models\SecurityDupPermIdApply;
+use App\Models\Notification;
 use App\Models\SecurityFamilyIdApply;
-use App\Models\SecurityFamilyIdApplyApproval;
-use App\Models\VehiclePassTWApply;
+use App\Models\SecurityParmIdApply;
+use App\Models\StudentCourseGroupMap;
+use App\Models\StudentMaster;
+use App\Models\StudentMasterCourseMap;
+use App\Models\StudentMedicalExemption;
+use App\Models\User;
+use App\Models\UserRoleMaster;
 use App\Models\VehiclePassFWApply;
-use App\Models\VehiclePassTWApplyApproval;
+use App\Models\VehiclePassTWApply;
+use App\Services\FC\RegistrationService;
+use App\Services\NotificationService;
+use App\Services\OTNoticeMemoService;
 use App\Support\DataTableRedisCache;
+use App\Support\LogSafe;
+use App\Support\PdfPageNumbers;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
-
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\View\View;
+use Maatwebsite\Excel\Excel as ExcelWriter;
+use Maatwebsite\Excel\Facades\Excel;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class UserController extends Controller
 {
@@ -74,6 +72,27 @@ class UserController extends Controller
     private const NOTICE_FEED_PER_PAGE = 10;
 
     private const ADMIN_USERS_INDEX_LIST_EPOCH_KEY = 'admin_users_index_list_epoch';
+
+    /**
+     * Rows the PDF export will lay out before it truncates.
+     *
+     * DomPDF builds the whole frame tree in memory: measured on this listing it
+     * peaks at 178 MB for 500 rows and 364 MB for 1,000, and fatals outright at
+     * 1,500 under the 512 MB limit. user_credentials has ~15k rows, so an
+     * uncapped PDF is a guaranteed 500. CSV and XLSX have no such ceiling and
+     * stay complete; the sheet says so when it truncates.
+     */
+    private const ADMIN_USERS_PDF_ROW_CAP = 750;
+
+    /**
+     * Row ceiling for the printable HTML sheet.
+     *
+     * Higher than the PDF's because the browser does the layout rather than
+     * DomPDF, but not absent: uncapped, one request built a 9.6 MB document out
+     * of all ~15k rows, server-side, for any user who asked and as often as they
+     * asked. That is a cost the application pays, not the browser.
+     */
+    private const ADMIN_USERS_PRINT_ROW_CAP = 5000;
 
     /**
      * Human-readable labels for the user_category code stored on user_credentials.
@@ -99,19 +118,20 @@ class UserController extends Controller
 
         return self::USER_TYPE_LABELS[$code] ?? 'Other';
     }
+
     /**
      * Display a listing of users.
      *
-     * @return \Illuminate\View\View
+     * @return View
      */
     public function dashboard(Request $request)
     {
-         $year = $request->input('year', now()->year);
+        $year = $request->input('year', now()->year);
         $month = $request->input('month', now()->month);
 
         // Fetch holidays for the selected month/year
-        $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth();
-        $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth();
+        $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+        $endDate = Carbon::create($year, $month, 1)->endOfMonth();
 
         $holidays = Holiday::active()
             ->whereBetween('holiday_date', [$startDate, $endDate])
@@ -121,14 +141,14 @@ class UserController extends Controller
         $events = [];
         foreach ($holidays as $holiday) {
             $dateKey = $holiday->holiday_date->format('Y-m-d');
-            if (!isset($events[$dateKey])) {
+            if (! isset($events[$dateKey])) {
                 $events[$dateKey] = [];
             }
             $events[$dateKey][] = [
                 'title' => $holiday->holiday_name,
                 'type' => 'holiday',
                 'holiday_type' => $holiday->holiday_type,
-                'description' => $holiday->description
+                'description' => $holiday->description,
             ];
         }
 
@@ -136,11 +156,11 @@ class UserController extends Controller
         $currentUser = Auth::user();
         $userEmployee = $currentUser ? EmployeeMaster::where('pk', $currentUser->user_id)->where('status', 1)->first() : null;
         if ($userEmployee && $userEmployee->dob) {
-            $dob = \Carbon\Carbon::parse($userEmployee->dob);
+            $dob = Carbon::parse($userEmployee->dob);
             $birthdayThisYear = $dob->copy()->year($year);
             if ((int) $birthdayThisYear->month === (int) $month) {
                 $bdKey = $birthdayThisYear->format('Y-m-d');
-                if (!isset($events[$bdKey])) {
+                if (! isset($events[$bdKey])) {
                     $events[$bdKey] = [];
                 }
                 $events[$bdKey][] = [
@@ -151,83 +171,81 @@ class UserController extends Controller
             }
         }
 
-      $emp_dob_data = EmployeeMaster::where('status', 1)->whereRaw("DATE_FORMAT(dob, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')")
-        ->where('employee_master.pk', '!=', Auth::user()->user_id ?? 0)
-        ->leftjoin('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
-        ->select(
-            'employee_master.pk',
-            'employee_master.first_name',
-            'employee_master.email',
-            'employee_master.mobile',
-            'employee_master.office_extension_no',
-            'employee_master.profile_picture',
-            'employee_master.last_name',
-            'designation_master.designation_name',
-            'employee_master.dob'
-        )
-      ->get();
+        $emp_dob_data = EmployeeMaster::where('status', 1)->whereRaw("DATE_FORMAT(dob, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')")
+            ->where('employee_master.pk', '!=', Auth::user()->user_id ?? 0)
+            ->leftjoin('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
+            ->select(
+                'employee_master.pk',
+                'employee_master.first_name',
+                'employee_master.email',
+                'employee_master.mobile',
+                'employee_master.office_extension_no',
+                'employee_master.profile_picture',
+                'employee_master.last_name',
+                'designation_master.designation_name',
+                'employee_master.dob'
+            )
+            ->get();
 
-      // Check if today is logged-in user's birthday
-      $isMyBirthday = false;
-      if ($userEmployee && $userEmployee->dob) {
-          $myDob = \Carbon\Carbon::parse($userEmployee->dob);
-          $isMyBirthday = $myDob->format('m-d') === now()->format('m-d');
-      }
+        // Check if today is logged-in user's birthday
+        $isMyBirthday = false;
+        if ($userEmployee && $userEmployee->dob) {
+            $myDob = Carbon::parse($userEmployee->dob);
+            $isMyBirthday = $myDob->format('m-d') === now()->format('m-d');
+        }
 
-      // Count wishes received today (birthday notifications for logged-in user)
-      $myBirthdayWishCount = 0;
-      if ($isMyBirthday) {
-          $myBirthdayWishCount = \App\Models\Notification::where('receiver_user_id', Auth::user()->user_id)
-              ->where('type', 'birthday')
-              ->whereDate('created_at', today())
-              ->count();
-      }
+        // Count wishes received today (birthday notifications for logged-in user)
+        $myBirthdayWishCount = 0;
+        if ($isMyBirthday) {
+            $myBirthdayWishCount = Notification::where('receiver_user_id', Auth::user()->user_id)
+                ->where('type', 'birthday')
+                ->whereDate('created_at', today())
+                ->count();
+        }
 
-      // Wish count per birthday person (how many wishes they received today)
-      $birthdayWishCounts = [];
-      if ($emp_dob_data->isNotEmpty()) {
-          $birthdayPks = $emp_dob_data->pluck('pk')->toArray();
-          $birthdayWishCounts = \App\Models\Notification::whereIn('receiver_user_id', $birthdayPks)
-              ->where('type', 'birthday')
-              ->whereDate('created_at', today())
-              ->selectRaw('receiver_user_id, COUNT(*) as wish_count')
-              ->groupBy('receiver_user_id')
-              ->pluck('wish_count', 'receiver_user_id')
-              ->toArray();
-      }
+        // Wish count per birthday person (how many wishes they received today)
+        $birthdayWishCounts = [];
+        if ($emp_dob_data->isNotEmpty()) {
+            $birthdayPks = $emp_dob_data->pluck('pk')->toArray();
+            $birthdayWishCounts = Notification::whereIn('receiver_user_id', $birthdayPks)
+                ->where('type', 'birthday')
+                ->whereDate('created_at', today())
+                ->selectRaw('receiver_user_id, COUNT(*) as wish_count')
+                ->groupBy('receiver_user_id')
+                ->pluck('wish_count', 'receiver_user_id')
+                ->toArray();
+        }
 
-      // Upcoming birthdays (next 7 days, excluding today)
-      $upcomingBirthdays = collect();
-      for ($i = 1; $i <= 7; $i++) {
-          $futureDate = now()->addDays($i);
-          $upcoming = EmployeeMaster::where('status', 1)
-              ->whereRaw("DATE_FORMAT(dob, '%m-%d') = ?", [$futureDate->format('m-d')])
-              ->leftjoin('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
-              ->select(
-                  'employee_master.pk',
-                  'employee_master.first_name',
-                  'employee_master.last_name',
-                  'employee_master.profile_picture',
-                  'employee_master.dob',
-                  'designation_master.designation_name'
-              )
-              ->get()
-              ->each(function ($emp) use ($futureDate) {
-                  $emp->birthday_date = $futureDate->format('d M');
-                  $emp->days_away = $futureDate->diffInDays(now());
-              });
-          $upcomingBirthdays = $upcomingBirthdays->merge($upcoming);
-      }
+        // Upcoming birthdays (next 7 days, excluding today)
+        $upcomingBirthdays = collect();
+        for ($i = 1; $i <= 7; $i++) {
+            $futureDate = now()->addDays($i);
+            $upcoming = EmployeeMaster::where('status', 1)
+                ->whereRaw("DATE_FORMAT(dob, '%m-%d') = ?", [$futureDate->format('m-d')])
+                ->leftjoin('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
+                ->select(
+                    'employee_master.pk',
+                    'employee_master.first_name',
+                    'employee_master.last_name',
+                    'employee_master.profile_picture',
+                    'employee_master.dob',
+                    'designation_master.designation_name'
+                )
+                ->get()
+                ->each(function ($emp) use ($futureDate) {
+                    $emp->birthday_date = $futureDate->format('d M');
+                    $emp->days_away = $futureDate->diffInDays(now());
+                });
+            $upcomingBirthdays = $upcomingBirthdays->merge($upcoming);
+        }
 
-      $totalActiveCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '<=', now()->toDateString())->where('end_date', '>=', now()->toDateString())->count();
-      $upcomingCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '>', now()->toDateString())->count();
-      $upcomingEventsCount = Holiday::active()->where('holiday_date', '>', now())->count();
+        $totalActiveCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '<=', now()->toDateString())->where('end_date', '>=', now()->toDateString())->count();
+        $upcomingCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '>', now()->toDateString())->count();
+        $upcomingEventsCount = Holiday::active()->where('holiday_date', '>', now())->count();
 
-
-
-       $total_guest_faculty = FacultyMaster::where('active_inactive', 1)->where('faculty_type', 2)->count();
-       $total_internal_faculty = FacultyMaster::where('active_inactive', 1)->where('faculty_type', 1)->count();
-//   print_r($emp_data);exit;
+        $total_guest_faculty = FacultyMaster::where('active_inactive', 1)->where('faculty_type', 2)->count();
+        $total_internal_faculty = FacultyMaster::where('active_inactive', 1)->where('faculty_type', 1)->count();
+        //   print_r($emp_data);exit;
         $exemptionCount = 0;
         $MDO_count = 0;
         $todayTimetable = collect([]);
@@ -235,59 +253,59 @@ class UserController extends Controller
         $totalStudents = 0;
         $isCCorACC = false;
         $userId = Auth::user()->user_id;
-         if(hasRole('Student-OT')){
-             $exemptionQuery = StudentMedicalExemption::where('student_master_pk', $userId)
+        if (hasRole('Student-OT')) {
+            $exemptionQuery = StudentMedicalExemption::where('student_master_pk', $userId)
                 ->where('active_inactive', 1);
             $exemptionCount = $exemptionQuery->count();
 
-              $MDO_count = MDOEscotDutyMap::where('selected_student_list', $userId)
-            ->with(['courseMaster', 'mdoDutyTypeMaster', 'facultyMaster'])
-            ->count();
+            $MDO_count = MDOEscotDutyMap::where('selected_student_list', $userId)
+                ->with(['courseMaster', 'mdoDutyTypeMaster', 'facultyMaster'])
+                ->count();
 
             // Fetch today's timetable for the logged-in student
             $todayTimetable = $this->getTodayTimetableForStudent($userId);
-         }
+        }
 
-         // Calculate total sessions for faculty portal users (Faculty / Internal / Guest)
-         if (is_faculty_portal_user()) {
-             $facultyPk = get_auth_faculty_master_pk();
+        // Calculate total sessions for faculty portal users (Faculty / Internal / Guest)
+        if (is_faculty_portal_user()) {
+            $facultyPk = get_auth_faculty_master_pk();
 
-             if ($facultyPk) {
-                 $totalSessions = CalendarEvent::where('active_inactive', 1)
-                     ->where(function ($query) use ($facultyPk) {
-                         $query->whereRaw('JSON_CONTAINS(faculty_master, ?)', ['"'.$facultyPk.'"'])
-                               ->orWhereRaw('FIND_IN_SET(?, faculty_master)', [$facultyPk]);
-                     })
-                     ->count();
+            if ($facultyPk) {
+                $totalSessions = CalendarEvent::where('active_inactive', 1)
+                    ->where(function ($query) use ($facultyPk) {
+                        $query->whereRaw('JSON_CONTAINS(faculty_master, ?)', ['"'.$facultyPk.'"'])
+                            ->orWhereRaw('FIND_IN_SET(?, faculty_master)', [$facultyPk]);
+                    })
+                    ->count();
 
-                 // Check if faculty is CC or ACC
-                 $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
+                // Check if faculty is CC or ACC
+                $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
 
-                 // Flag CC/ACC so the "Total Students" / "Student Details" cards
-                 // become visible for them (card visibility is unchanged).
-                 if ($coordinatorCourses->isNotEmpty()) {
-                     $isCCorACC = true;
-                 }
+                // Flag CC/ACC so the "Total Students" / "Student Details" cards
+                // become visible for them (card visibility is unchanged).
+                if ($coordinatorCourses->isNotEmpty()) {
+                    $isCCorACC = true;
+                }
 
-                 // "Total Students" is scoped to the viewer's COURSE ACCESS —
-                 // get_Role_by_course() maps the user's role(s) to
-                 // course_master.user_role_master_pk, the same access basis the
-                 // "My Course Participant" card uses. Empty result = no restriction
-                 // (Admin / Super Admin / PA see all); [-1] = no access → zero.
-                 // Counted as DISTINCT active enrolments so a student in several
-                 // accessible courses is not double-counted.
-                 $roleCourseIds = get_Role_by_course();
-                 $totalStudents = StudentMasterCourseMap::query()
-                     ->where('active_inactive', 1)
-                     ->when(! empty($roleCourseIds), fn ($q) => $q->whereIn('course_master_pk', $roleCourseIds))
-                     ->distinct('student_master_pk')
-                     ->count('student_master_pk');
-             } else {
-                 $totalSessions = 0;
-             }
+                // "Total Students" is scoped to the viewer's COURSE ACCESS —
+                // get_Role_by_course() maps the user's role(s) to
+                // course_master.user_role_master_pk, the same access basis the
+                // "My Course Participant" card uses. Empty result = no restriction
+                // (Admin / Super Admin / PA see all); [-1] = no access → zero.
+                // Counted as DISTINCT active enrolments so a student in several
+                // accessible courses is not double-counted.
+                $roleCourseIds = get_Role_by_course();
+                $totalStudents = StudentMasterCourseMap::query()
+                    ->where('active_inactive', 1)
+                    ->when(! empty($roleCourseIds), fn ($q) => $q->whereIn('course_master_pk', $roleCourseIds))
+                    ->distinct('student_master_pk')
+                    ->count('student_master_pk');
+            } else {
+                $totalSessions = 0;
+            }
 
-             // Fetch today's timetable for the logged-in faculty
-             $todayTimetable = $this->getTodayTimetableForFaculty($userId);
+            // Fetch today's timetable for the logged-in faculty
+            $todayTimetable = $this->getTodayTimetableForFaculty($userId);
         }
 
         // Super Admin / PA / Admin also see the "Total Students" / "Student Details"
@@ -340,34 +358,34 @@ class UserController extends Controller
 
         // Role flags used for card visibility
         $isSecurityRole = hasRole('Security Card') || hasRole('Admin Security');
-        $isSuperAdmin   = hasRole('Super Admin');
-        $isStudentOT    = hasRole('Student-OT');
-        $isFacultyRole  = hasRole('Internal Faculty') || hasRole('Guest Faculty');
+        $isSuperAdmin = hasRole('Super Admin');
+        $isStudentOT = hasRole('Student-OT');
+        $isFacultyRole = hasRole('Internal Faculty') || hasRole('Guest Faculty');
 
         // Role-scoped course IDs for "My Course Participant" ([] = all, [-1] = none, [pks] = restricted)
         $myCourseIds = get_Role_by_course();
 
         // Hardcoded card definitions: count, link, visibility
         $cardDefinitions = [
-            'pending_permanent_id'    => ['count' => $todayPendingPermanentIdCardRequests ?? 0,    'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
-            'pending_contractual_id'  => ['count' => $todayPendingContractualIdCardRequests ?? 0,  'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
-            'duplicate_permanent_id'  => ['count' => $todayDuplicatePermIdCardRequests ?? 0,       'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
-            'duplicate_contractual_id'=> ['count' => $todayDuplicateContractualIdCardRequests ?? 0,'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
-            'requested_family_id'     => ['count' => $todayFamilyApprovals ?? 0,                   'link' => route('admin.security.family_idcard_approval.index'),          'visible' => $isSecurityRole || $isSuperAdmin],
-            'requested_vehicle_pass'  => ['count' => $todayVehicleApprovals ?? 0,                  'link' => route('admin.security.vehicle_pass_approval.index'),           'visible' => $isSecurityRole || $isSuperAdmin],
-            'total_active_courses'    => ['count' => $totalActiveCourses,                          'link' => route('admin.dashboard.active_course'),                        'visible' => !$isSecurityRole],
-            'upcoming_courses'        => ['count' => $upcomingCourses,                             'link' => route('admin.dashboard.incoming_course'),                      'visible' => !$isSecurityRole],
-            'upcoming_events'         => ['count' => $upcomingEventsCount,                         'link' => route('admin.dashboard.upcoming_events'),                      'visible' => !$isSecurityRole],
-            'medical_exception'       => ['count' => $exemptionCount ?? 0,                         'link' => route('medical.exception.ot.view'),                            'visible' => !$isSecurityRole && $isStudentOT],
-            'total_guest_faculty'     => ['count' => $total_guest_faculty,                         'link' => route('admin.dashboard.guest_faculty'),                        'visible' => !$isSecurityRole && !$isStudentOT],
-            'pending_id_approval1'    => ['count' => $todayApproval1IdCardRequests ?? 0,           'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => !$isSecurityRole && ($todayApproval1IdCardRequests ?? 0) > 0],
-            'pending_dup_id_approval1'=> ['count' => $todayApproval1DuplicateIdCardRequests ?? 0,  'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => !$isSecurityRole && ($todayApproval1DuplicateIdCardRequests ?? 0) > 0],
-            'ot_mdo_escort'           => ['count' => $MDO_count ?? 0,                              'link' => route('ot.mdo.escrot.exemption.view'),                         'visible' => !$isSecurityRole && $isStudentOT],
-            'total_inhouse_faculty'   => ['count' => $total_internal_faculty,                      'link' => route('admin.dashboard.inhouse_faculty'),                      'visible' => !$isSecurityRole && !$isStudentOT],
-            'session_details'         => ['count' => $totalSessions,                               'link' => route('admin.dashboard.sessions'),                             'visible' => !$isSecurityRole && ($isFacultyRole || $isSuperAdmin)],
-            'total_students'          => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
-            'student_details'         => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
-            'my_course_participant'   => ['count' => StudentMasterCourseMap::query()->when(!empty($myCourseIds), fn($q) => $q->whereIn('course_master_pk', $myCourseIds))->count(), 'link' => route('my.course.participant'),                                'visible' => true],
+            'pending_permanent_id' => ['count' => $todayPendingPermanentIdCardRequests ?? 0,    'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
+            'pending_contractual_id' => ['count' => $todayPendingContractualIdCardRequests ?? 0,  'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
+            'duplicate_permanent_id' => ['count' => $todayDuplicatePermIdCardRequests ?? 0,       'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
+            'duplicate_contractual_id' => ['count' => $todayDuplicateContractualIdCardRequests ?? 0, 'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
+            'requested_family_id' => ['count' => $todayFamilyApprovals ?? 0,                   'link' => route('admin.security.family_idcard_approval.index'),          'visible' => $isSecurityRole || $isSuperAdmin],
+            'requested_vehicle_pass' => ['count' => $todayVehicleApprovals ?? 0,                  'link' => route('admin.security.vehicle_pass_approval.index'),           'visible' => $isSecurityRole || $isSuperAdmin],
+            'total_active_courses' => ['count' => $totalActiveCourses,                          'link' => route('admin.dashboard.active_course'),                        'visible' => ! $isSecurityRole],
+            'upcoming_courses' => ['count' => $upcomingCourses,                             'link' => route('admin.dashboard.incoming_course'),                      'visible' => ! $isSecurityRole],
+            'upcoming_events' => ['count' => $upcomingEventsCount,                         'link' => route('admin.dashboard.upcoming_events'),                      'visible' => ! $isSecurityRole],
+            'medical_exception' => ['count' => $exemptionCount ?? 0,                         'link' => route('medical.exception.ot.view'),                            'visible' => ! $isSecurityRole && $isStudentOT],
+            'total_guest_faculty' => ['count' => $total_guest_faculty,                         'link' => route('admin.dashboard.guest_faculty'),                        'visible' => ! $isSecurityRole && ! $isStudentOT],
+            'pending_id_approval1' => ['count' => $todayApproval1IdCardRequests ?? 0,           'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => ! $isSecurityRole && ($todayApproval1IdCardRequests ?? 0) > 0],
+            'pending_dup_id_approval1' => ['count' => $todayApproval1DuplicateIdCardRequests ?? 0,  'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => ! $isSecurityRole && ($todayApproval1DuplicateIdCardRequests ?? 0) > 0],
+            'ot_mdo_escort' => ['count' => $MDO_count ?? 0,                              'link' => route('ot.mdo.escrot.exemption.view'),                         'visible' => ! $isSecurityRole && $isStudentOT],
+            'total_inhouse_faculty' => ['count' => $total_internal_faculty,                      'link' => route('admin.dashboard.inhouse_faculty'),                      'visible' => ! $isSecurityRole && ! $isStudentOT],
+            'session_details' => ['count' => $totalSessions,                               'link' => route('admin.dashboard.sessions'),                             'visible' => ! $isSecurityRole && ($isFacultyRole || $isSuperAdmin)],
+            'total_students' => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => ! $isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
+            'student_details' => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => ! $isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
+            'my_course_participant' => ['count' => StudentMasterCourseMap::query()->when(! empty($myCourseIds), fn ($q) => $q->whereIn('course_master_pk', $myCourseIds))->count(), 'link' => route('my.course.participant'),                                'visible' => true],
         ];
 
         // Count map for custom cards added via UI.
@@ -381,8 +399,8 @@ class UserController extends Controller
         if ($userRoles->isNotEmpty()) {
             $roleIds = $userRoles->pluck('id')->toArray();
             $enabledCards = DashboardCard::whereHas('roles', function ($q) use ($roleIds) {
-                    $q->whereIn('roles.id', $roleIds);
-                })
+                $q->whereIn('roles.id', $roleIds);
+            })
                 ->orderBy('sort_order')
                 ->get();
         } else {
@@ -391,19 +409,20 @@ class UserController extends Controller
 
         $baseCards = $enabledCards;
 
-        $enabledWidgetKeys = $baseCards->filter(fn($c) => str_starts_with($c->key, 'widget_'))->pluck('key')->toArray();
+        $enabledWidgetKeys = $baseCards->filter(fn ($c) => str_starts_with($c->key, 'widget_'))->pluck('key')->toArray();
 
-        $issueReportModules = \App\Http\Controllers\Admin\IssueReportController::moduleOptions();
+        $issueReportModules = IssueReportController::moduleOptions();
 
-        $cardsToRender = $baseCards->filter(fn($c) => !str_starts_with($c->key, 'widget_'))->map(function ($card) use ($cardDefinitions, $cardCounts) {
+        $cardsToRender = $baseCards->filter(fn ($c) => ! str_starts_with($c->key, 'widget_'))->map(function ($card) use ($cardDefinitions, $cardCounts) {
             $def = $cardDefinitions[$card->key] ?? null;
+
             return [
-                'key'         => $card->key,
-                'label'       => $card->label,
-                'icon'        => $card->icon,
+                'key' => $card->key,
+                'label' => $card->label,
+                'icon' => $card->icon,
                 'color_class' => $card->color_class,
-                'link'        => $def['link'] ?? null,
-                'count'       => $def['count'] ?? ($cardCounts[$card->key] ?? 0),
+                'link' => $def['link'] ?? null,
+                'count' => $def['count'] ?? ($cardCounts[$card->key] ?? 0),
             ];
         })->values();
 
@@ -479,17 +498,17 @@ class UserController extends Controller
         // archive is wanted later, the expiry predicate has to relax first — the
         // control on its own would not deliver one.
         $filters = [
-            'type'     => trim((string) ($request?->query('notice_type') ?? '')),
-            'dept'     => trim((string) ($request?->query('notice_dept') ?? '')),
+            'type' => trim((string) ($request?->query('notice_type') ?? '')),
+            'dept' => trim((string) ($request?->query('notice_dept') ?? '')),
             'audience' => trim((string) ($request?->query('notice_audience') ?? '')),
-            'q'        => trim((string) ($request?->query('q') ?? '')),
+            'q' => trim((string) ($request?->query('q') ?? '')),
         ];
 
         $base = notice_feed_query_by_role();
 
-        if (!$base) {
-            $empty = new \Illuminate\Pagination\LengthAwarePaginator([], 0, self::NOTICE_FEED_PER_PAGE, 1, [
-                'path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(),
+        if (! $base) {
+            $empty = new LengthAwarePaginator([], 0, self::NOTICE_FEED_PER_PAGE, 1, [
+                'path' => Paginator::resolveCurrentPath(),
             ]);
 
             return [$empty, ['types' => collect(), 'depts' => collect(), 'audiences' => collect()], $filters];
@@ -518,8 +537,8 @@ class UserController extends Controller
             ->values();
 
         $filterOptions = [
-            'types'     => $distinctOf('notices_notification.notice_type'),
-            'depts'     => $distinctOf('notice_author_dept.department_name'),
+            'types' => $distinctOf('notices_notification.notice_type'),
+            'depts' => $distinctOf('notice_author_dept.department_name'),
             'audiences' => $distinctOf('notices_notification.target_audience'),
         ];
 
@@ -538,7 +557,7 @@ class UserController extends Controller
         if ($filters['q'] !== '') {
             // Escape LIKE metacharacters: a typed "%" should match a literal percent
             // sign, not every notice.
-            $like = '%' . addcslashes($filters['q'], '%_\\') . '%';
+            $like = '%'.addcslashes($filters['q'], '%_\\').'%';
             $base->where(function ($w) use ($like) {
                 $w->where('notices_notification.notice_title', 'like', $like)
                     ->orWhere('notices_notification.notice_type', 'like', $like)
@@ -585,7 +604,7 @@ class UserController extends Controller
         $birthdayWishCounts = [];
         if ($emp_dob_data->isNotEmpty()) {
             $birthdayPks = $emp_dob_data->pluck('pk')->toArray();
-            $birthdayWishCounts = \App\Models\Notification::whereIn('receiver_user_id', $birthdayPks)
+            $birthdayWishCounts = Notification::whereIn('receiver_user_id', $birthdayPks)
                 ->where('type', 'birthday')
                 ->whereDate('created_at', today())
                 ->selectRaw('receiver_user_id, COUNT(*) as wish_count')
@@ -628,7 +647,7 @@ class UserController extends Controller
         $notificationBadgeCount = 0;
 
         if ($user && $user->user_id) {
-            $feedNotificationsQuery = \App\Models\Notification::with('sender')
+            $feedNotificationsQuery = Notification::with('sender')
                 ->where('receiver_user_id', $user->user_id);
             if ($daysOld !== null) {
                 $feedNotificationsQuery->where('created_at', '>=', now()->subDays($daysOld));
@@ -685,8 +704,8 @@ class UserController extends Controller
         $start = Carbon::today()->startOfDay()->toDateTimeString();
         $end = Carbon::today()->endOfDay()->toDateTimeString();
 
-        $isApproval2 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isApproval3 = hasRole('Admin Security') && !hasRole('Security Card');
+        $isApproval2 = hasRole('Security Card') && ! hasRole('Admin Security');
+        $isApproval3 = hasRole('Admin Security') && ! hasRole('Security Card');
 
         // If user has both roles, fall back to Approval II "actionable" definition.
         if (! $isApproval2 && ! $isApproval3) {
@@ -787,8 +806,8 @@ class UserController extends Controller
             return 0;
         }
 
-        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') && !hasRole('Security Card');
+        $isLevel1 = hasRole('Security Card') && ! hasRole('Admin Security');
+        $isLevel2 = hasRole('Admin Security') && ! hasRole('Security Card');
         if (! $isLevel1 && ! $isLevel2) {
             return 0;
         }
@@ -805,7 +824,8 @@ class UserController extends Controller
 
         $groupKey = function ($r) {
             $date = $r->created_date ? Carbon::parse($r->created_date)->format('Y-m-d H:i:s') : '';
-            return $r->emp_id_apply . '|' . ($r->created_by ?? '') . '|' . $date;
+
+            return $r->emp_id_apply.'|'.($r->created_by ?? '').'|'.$date;
         };
 
         $groups = $rows->groupBy($groupKey);
@@ -844,8 +864,8 @@ class UserController extends Controller
             return 0;
         }
 
-        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') && !hasRole('Security Card');
+        $isLevel1 = hasRole('Security Card') && ! hasRole('Admin Security');
+        $isLevel2 = hasRole('Admin Security') && ! hasRole('Security Card');
         if (! $isLevel1 && ! $isLevel2) {
             return 0;
         }
@@ -863,10 +883,12 @@ class UserController extends Controller
 
         $rows = $twRows->map(function ($r) {
             $r->kind = 'tw';
+
             return $r;
         })->concat(
             $fwRows->map(function ($r) {
                 $r->kind = 'fw';
+
                 return $r;
             })
         );
@@ -906,6 +928,7 @@ class UserController extends Controller
     private function getTodayPendingIdCardRequestsCount(): int
     {
         $split = $this->getTodayPendingIdCardRequestsSplit();
+
         return (int) ($split['perm'] ?? 0) + (int) ($split['cont'] ?? 0);
     }
 
@@ -983,8 +1006,8 @@ class UserController extends Controller
 
         $start = Carbon::today()->startOfDay()->toDateTimeString();
         $end = Carbon::today()->endOfDay()->toDateTimeString();
-        $isApproval2 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isApproval3 = hasRole('Admin Security') && !hasRole('Security Card');
+        $isApproval2 = hasRole('Security Card') && ! hasRole('Admin Security');
+        $isApproval3 = hasRole('Admin Security') && ! hasRole('Security Card');
 
         // Permanent Duplicate (security_dup_perm_id_apply)
         $base = DB::table('security_dup_perm_id_apply as dup')
@@ -1040,8 +1063,8 @@ class UserController extends Controller
 
         $start = Carbon::today()->startOfDay()->toDateTimeString();
         $end = Carbon::today()->endOfDay()->toDateTimeString();
-        $isApproval2 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isApproval3 = hasRole('Admin Security') && !hasRole('Security Card');
+        $isApproval2 = hasRole('Security Card') && ! hasRole('Admin Security');
+        $isApproval3 = hasRole('Admin Security') && ! hasRole('Security Card');
 
         // Contractual Duplicate (security_dup_other_id_apply with depart_approval_status = 2)
         $base = DB::table('security_dup_other_id_apply as duo')
@@ -1085,7 +1108,7 @@ class UserController extends Controller
     /**
      * Display student list for CC/ACC faculty
      *
-     * @return \Illuminate\View\View
+     * @return View
      */
     public function studentList(Request $request)
     {
@@ -1222,7 +1245,7 @@ class UserController extends Controller
 
                 return (object) [
                     'faculty_pk' => $gmap->facility_id,
-                    'faculty_name' => $gmap->Faculty->full_name ?? ('Faculty #' . $gmap->facility_id),
+                    'faculty_name' => $gmap->Faculty->full_name ?? ('Faculty #'.$gmap->facility_id),
                 ];
             })
             ->filter()
@@ -1255,10 +1278,10 @@ class UserController extends Controller
             )
             ->distinct()
             ->get()
-            ->map(function($course) {
+            ->map(function ($course) {
                 return [
                     'pk' => $course->pk,
-                    'course_name' => $course->course_name
+                    'course_name' => $course->course_name,
                 ];
             });
 
@@ -1493,11 +1516,12 @@ class UserController extends Controller
                 if (! $s) {
                     return null;
                 }
-                $name = $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''));
+                $name = $s->display_name ?? trim(($s->first_name ?? '').' '.($s->last_name ?? ''));
                 $code = $s->generated_OT_code ?? '';
+
                 return (object) [
                     'pk' => (string) $s->pk,
-                    'label' => trim(($code !== '' ? $code . ' — ' : '') . $name),
+                    'label' => trim(($code !== '' ? $code.' — ' : '').$name),
                 ];
             })
             ->filter()->unique('pk')->sortBy('label')->values();
@@ -1622,7 +1646,7 @@ class UserController extends Controller
             if ($to < $from) {
                 continue; // no overlap with the filter window
             }
-            $rangesByKey[$r->student_master_pk . '|' . $r->leave_type][] = [$from, $to];
+            $rangesByKey[$r->student_master_pk.'|'.$r->leave_type][] = [$from, $to];
         }
 
         foreach ($rangesByKey as $key => $ranges) {
@@ -1741,7 +1765,7 @@ class UserController extends Controller
                 }
                 // A single haystack of every column's displayed value.
                 $haystack = strtolower(implode(' ', array_filter([
-                    $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? '')),
+                    $s->display_name ?? trim(($s->first_name ?? '').' '.($s->last_name ?? '')),
                     $s->generated_OT_code ?? '',
                     $s->email ?? '',
                     $s->cadre->cadre_name ?? '',
@@ -1750,6 +1774,7 @@ class UserController extends Controller
                     $meta['duty_type'] ?? '',
                     implode(' ', $counts),
                 ], fn ($v) => trim((string) $v) !== '')));
+
                 return str_contains($haystack, $search);
             })->values();
         }
@@ -1765,9 +1790,10 @@ class UserController extends Controller
         if ($sortKey !== null) {
             $rows = $rows->sortBy(function ($p) use ($sortKey) {
                 $s = $p->studentMaster;
+
                 return match ($sortKey) {
                     'ot_code' => (string) ($s->generated_OT_code ?? ''),
-                    'name' => (string) ($s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''))),
+                    'name' => (string) ($s->display_name ?? trim(($s->first_name ?? '').' '.($s->last_name ?? ''))),
                     'email' => (string) ($s->email ?? ''),
                     'cadre' => (string) ($s->cadre->cadre_name ?? ''),
                     'house' => (string) ($p->house_name ?? ''),
@@ -1786,10 +1812,10 @@ class UserController extends Controller
         $fdParam = (string) $request->input('from_date', '');
         $tdParam = (string) $request->input('to_date', '');
         if ($fdParam !== '') {
-            $linkDateQs .= '&from_date=' . urlencode($fdParam);
+            $linkDateQs .= '&from_date='.urlencode($fdParam);
         }
         if ($tdParam !== '') {
-            $linkDateQs .= '&to_date=' . urlencode($tdParam);
+            $linkDateQs .= '&to_date='.urlencode($tdParam);
         }
 
         $data = [];
@@ -1803,22 +1829,22 @@ class UserController extends Controller
                 'duty_count' => 0, 'duty_type' => '-', 'notice_memo' => 0, 'discipline_memo' => 0,
             ];
             $detailUrl = route('admin.dashboard.students.detail', encrypt($s->pk));
-            $name = $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''));
+            $name = $s->display_name ?? trim(($s->first_name ?? '').' '.($s->last_name ?? ''));
 
             $data[] = [
                 's_no' => $start + $idx + 1,
                 'ot_code' => e($s->generated_OT_code ?? 'N/A'),
-                'name' => '<a href="' . e($detailUrl) . '" class="sl-count">' . e($name) . '</a>',
+                'name' => '<a href="'.e($detailUrl).'" class="sl-count">'.e($name).'</a>',
                 'email' => e($s->email ?? 'N/A'),
                 'cadre' => e($s->cadre->cadre_name ?? 'N/A'),
                 'house' => e($p->house_name ?: 'N/A'),
-                'duty_count' => $this->otCountCell($meta['duty_count'], $detailUrl . '?section=dutiesSection' . $linkDateQs),
+                'duty_count' => $this->otCountCell($meta['duty_count'], $detailUrl.'?section=dutiesSection'.$linkDateQs),
                 'duty_type' => e($meta['duty_type'] ?: '-'),
-                'medical' => $this->otCountCell($meta['medical'], $detailUrl . '?section=medicalExceptionsSection' . $linkDateQs),
-                'pt' => $this->otCountCell($meta['pt'], $detailUrl . '?section=ptExemptionsSection' . $linkDateQs),
-                'stationed' => $this->otCountCell($meta['stationed'], $detailUrl . '?section=stationedLeavesSection' . $linkDateQs),
-                'notice_memo' => $this->otCountCell($meta['notice_memo'], $detailUrl . '?section=noticesSection' . $linkDateQs),
-                'discipline_memo' => $this->otCountCell($meta['discipline_memo'], $detailUrl . '?section=memosSection' . $linkDateQs),
+                'medical' => $this->otCountCell($meta['medical'], $detailUrl.'?section=medicalExceptionsSection'.$linkDateQs),
+                'pt' => $this->otCountCell($meta['pt'], $detailUrl.'?section=ptExemptionsSection'.$linkDateQs),
+                'stationed' => $this->otCountCell($meta['stationed'], $detailUrl.'?section=stationedLeavesSection'.$linkDateQs),
+                'notice_memo' => $this->otCountCell($meta['notice_memo'], $detailUrl.'?section=noticesSection'.$linkDateQs),
+                'discipline_memo' => $this->otCountCell($meta['discipline_memo'], $detailUrl.'?section=memosSection'.$linkDateQs),
             ];
         }
 
@@ -1844,10 +1870,10 @@ class UserController extends Controller
         $label = str_pad((string) $n, 2, '0', STR_PAD_LEFT);
 
         if ($url) {
-            return '<a href="' . e($url) . '" class="sl-count">' . $label . '</a>';
+            return '<a href="'.e($url).'" class="sl-count">'.$label.'</a>';
         }
 
-        return '<span class="sl-count">' . $label . '</span>';
+        return '<span class="sl-count">'.$label.'</span>';
     }
 
     /**
@@ -1917,8 +1943,13 @@ class UserController extends Controller
                 ->setOptions([
                     'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled' => true,
-                    'isPhpEnabled' => true,
+                    'isRemoteEnabled' => false,
+                    // Never true: isPhpEnabled makes the renderer a PHP
+                    // execution context for the whole view, so any raw
+                    // block that later appears in an export blade would
+                    // execute. Page numbers are stamped on the canvas
+                    // after render instead - see PdfPageNumbers.
+                    'isPhpEnabled' => false,
                     'dpi' => 96,
                 ]);
 
@@ -1970,7 +2001,7 @@ class UserController extends Controller
                 default => 'image/png',
             };
 
-            return 'data:' . $mime . ';base64,' . base64_encode($raw);
+            return 'data:'.$mime.';base64,'.base64_encode($raw);
         };
 
         $courseName = '';
@@ -1983,7 +2014,7 @@ class UserController extends Controller
                     ? Carbon::parse($course->start_date ?? $course->start_year)->format('j F Y') : '';
                 $end = ! empty($course->end_date)
                     ? Carbon::parse($course->end_date)->format('j F Y') : '';
-                $courseDuration = ($start && $end) ? $start . ' to ' . $end : '';
+                $courseDuration = ($start && $end) ? $start.' to '.$end : '';
             }
         }
 
@@ -1998,7 +2029,7 @@ class UserController extends Controller
     }
 
     /**
-     * @return array{students: \Illuminate\Support\Collection, availableCourses: \Illuminate\Support\Collection, facultyPk: int|null}
+     * @return array{students: Collection, availableCourses: Collection, facultyPk: int|null}
      */
     private function resolveDashboardStudentListPayload(?Request $request = null, bool $withTotals = true): array
     {
@@ -2058,7 +2089,7 @@ class UserController extends Controller
                         ->get();
 
                     foreach ($source1StudentMaps as $studentMap) {
-                        $stdObj = new \stdClass();
+                        $stdObj = new \stdClass;
                         $stdObj->student_master_pk = $studentMap->student_master_pk;
                         $stdObj->course_master_pk = $studentMap->course_master_pk;
                         $stdObj->studentMaster = $studentMap->studentMaster;
@@ -2110,7 +2141,7 @@ class UserController extends Controller
                                     $course = $groupMap->groupTypeMasterCourseMasterMap->courseGroup ?? null;
 
                                     if ($course) {
-                                        $studentMap = new \stdClass();
+                                        $studentMap = new \stdClass;
                                         $studentMap->student_master_pk = $studentPk;
                                         $studentMap->course_master_pk = $coursePk;
                                         $studentMap->studentMaster = $groupMap->student;
@@ -2138,9 +2169,9 @@ class UserController extends Controller
                         ->join('timetable as t', 'a.timetable_pk', '=', 't.pk')
                         ->where(function ($q) use ($facultyPk) {
                             $q->whereRaw('JSON_CONTAINS(t.faculty_master, ?)', [json_encode((string) $facultyPk)])
-                              ->orWhereRaw('FIND_IN_SET(?, t.faculty_master)', [$facultyPk])
-                              ->orWhereRaw('JSON_CONTAINS(t.internal_faculty, ?)', [json_encode((string) $facultyPk)])
-                              ->orWhereRaw('FIND_IN_SET(?, t.internal_faculty)', [$facultyPk]);
+                                ->orWhereRaw('FIND_IN_SET(?, t.faculty_master)', [$facultyPk])
+                                ->orWhereRaw('JSON_CONTAINS(t.internal_faculty, ?)', [json_encode((string) $facultyPk)])
+                                ->orWhereRaw('FIND_IN_SET(?, t.internal_faculty)', [$facultyPk]);
                         })
                         ->distinct()
                         ->get(['a.Student_master_pk as student_pk', 'a.course_master_pk as course_pk']);
@@ -2154,7 +2185,7 @@ class UserController extends Controller
 
                         if (! empty($activeTaughtSet)) {
                             $pairs = $taughtRows->filter(fn ($r) => in_array((string) $r->course_pk, $activeTaughtSet, true));
-                            $taughtStudents = \App\Models\StudentMaster::with('cadre')
+                            $taughtStudents = StudentMaster::with('cadre')
                                 ->whereIn('pk', $pairs->pluck('student_pk')->unique()->filter())
                                 ->get()->keyBy(fn ($m) => (string) $m->pk);
                             $taughtCourses = CourseMaster::whereIn('pk', $activeTaughtCourseIds)
@@ -2164,7 +2195,7 @@ class UserController extends Controller
                                 $student = $taughtStudents->get((string) $r->student_pk);
                                 $course = $taughtCourses->get((string) $r->course_pk);
                                 if ($student && $course) {
-                                    $o = new \stdClass();
+                                    $o = new \stdClass;
                                     $o->student_master_pk = $r->student_pk;
                                     $o->course_master_pk = $r->course_pk;
                                     $o->studentMaster = $student;
@@ -2183,7 +2214,7 @@ class UserController extends Controller
                 foreach ($source2Students->concat($source1Students)->concat($source3Students) as $studentMap) {
                     $studentPk = $studentMap->student_master_pk;
                     $coursePk = $studentMap->course_master_pk ?? 0;
-                    $studentCourseKey = $studentPk . '_' . $coursePk;
+                    $studentCourseKey = $studentPk.'_'.$coursePk;
 
                     if (! in_array($studentCourseKey, $seenStudentCourseKeys, true)) {
                         $seenStudentCourseKeys[] = $studentCourseKey;
@@ -2195,7 +2226,7 @@ class UserController extends Controller
                 // N+1 that only the student-list page needs; callers that compute
                 // their own counts (e.g. the OT participants page via
                 // otParticipantsRowMeta) pass $withTotals = false to skip it.
-                $noticeMemoService = $withTotals ? app(\App\Services\OTNoticeMemoService::class) : null;
+                $noticeMemoService = $withTotals ? app(OTNoticeMemoService::class) : null;
 
                 // Time Period + Duty Type filters scope the count columns.
                 $fromDate = $request?->input('from_date') ?: null;
@@ -2343,14 +2374,14 @@ class UserController extends Controller
             $uniqueStudents = collect([]);
 
             foreach ($superAdminStudentMaps as $studentMap) {
-                $stdObj = new \stdClass();
+                $stdObj = new \stdClass;
                 $stdObj->student_master_pk = $studentMap->student_master_pk;
                 $stdObj->course_master_pk = $studentMap->course_master_pk;
                 $stdObj->studentMaster = $studentMap->studentMaster;
                 $stdObj->course = $studentMap->course;
                 $stdObj->source = 'super_admin';
 
-                $key = $stdObj->student_master_pk . '_' . ($stdObj->course_master_pk ?? 0);
+                $key = $stdObj->student_master_pk.'_'.($stdObj->course_master_pk ?? 0);
                 if (! in_array($key, $seenStudentCourseKeys, true)) {
                     $seenStudentCourseKeys[] = $key;
                     $uniqueStudents->push($stdObj);
@@ -2389,11 +2420,10 @@ class UserController extends Controller
      * Super Admin sees every memo student; a faculty only sees memo students within
      * their remit (canFacultyViewStudent).
      *
-     * @param  \Illuminate\Support\Collection  $uniqueStudents
      * @param  array<int, string>  $seenStudentCourseKeys
      * @param  int|null  $facultyPk
      */
-    private function appendStudentsWithMemos(\Illuminate\Support\Collection $uniqueStudents, array &$seenStudentCourseKeys, bool $isSuperAdmin, $facultyPk): void
+    private function appendStudentsWithMemos(Collection $uniqueStudents, array &$seenStudentCourseKeys, bool $isSuperAdmin, $facultyPk): void
     {
         // Students carrying discipline memos (discipline_memo_status), scoped to
         // active disciplines — same source as /memo/discipline and the memo counts.
@@ -2439,14 +2469,14 @@ class UserController extends Controller
                 continue;
             }
 
-            $stdObj = new \stdClass();
+            $stdObj = new \stdClass;
             $stdObj->student_master_pk = $studentPk;
             $stdObj->course_master_pk = $courseMap->course_master_pk ?? null;
             $stdObj->studentMaster = $student;
             $stdObj->course = $courseMap?->course;
             $stdObj->source = 'memo';
 
-            $key = $studentPk . '_' . ($stdObj->course_master_pk ?? 0);
+            $key = $studentPk.'_'.($stdObj->course_master_pk ?? 0);
             if (in_array($key, $seenStudentCourseKeys, true)) {
                 continue;
             }
@@ -2456,9 +2486,9 @@ class UserController extends Controller
         }
     }
 
-    private function augmentStudentListEntries(\Illuminate\Support\Collection $uniqueStudents, ?Request $request = null): \Illuminate\Support\Collection
+    private function augmentStudentListEntries(Collection $uniqueStudents, ?Request $request = null): Collection
     {
-        $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
+        $noticeMemoService = app(OTNoticeMemoService::class);
 
         $fromDate = $request?->input('from_date') ?: null;
         $toDate = $request?->input('to_date') ?: null;
@@ -2549,7 +2579,7 @@ class UserController extends Controller
      * scope (faculty / course / date) is still enforced when a filter is applied.
      *
      * @param  array<int, int>  $studentPks
-     * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection}  [sessionOptions, topicOptions]
+     * @return array{0: Collection, 1: Collection} [sessionOptions, topicOptions]
      */
     private function dashboardStudentListFilterOptions(array $studentPks, ?string $fromDate, ?string $toDate, string $sessionValue = ''): array
     {
@@ -2575,8 +2605,8 @@ class UserController extends Controller
      * selected every in-scope participant is offered. Each option is a {pk, label}
      * pair — pk is the student, label is "OT code — Name".
      *
-     * @param  \Illuminate\Support\Collection  $students
-     * @return \Illuminate\Support\Collection
+     * @param  Collection  $students
+     * @return Collection
      */
     private function dashboardStudentListParticipantOptions($students, Request $request)
     {
@@ -2595,12 +2625,12 @@ class UserController extends Controller
             })
             ->map(function ($m) {
                 $s = $m->studentMaster;
-                $name = $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''));
+                $name = $s->display_name ?? trim(($s->first_name ?? '').' '.($s->last_name ?? ''));
                 $code = $s->generated_OT_code ?? '';
 
                 return (object) [
                     'pk' => (string) $s->pk,
-                    'label' => trim(($code !== '' ? $code . ' — ' : '') . $name),
+                    'label' => trim(($code !== '' ? $code.' — ' : '').$name),
                 ];
             })
             ->unique('pk')->sortBy('label')->values();
@@ -2612,7 +2642,7 @@ class UserController extends Controller
      *
      * @param  array<int, int>  $studentPks
      */
-    private function resolveScopedSessionOptions(array $studentPks, ?string $fromDate = null, ?string $toDate = null): \Illuminate\Support\Collection
+    private function resolveScopedSessionOptions(array $studentPks, ?string $fromDate = null, ?string $toDate = null): Collection
     {
         return $this->resolveScopedTimetableOptions($studentPks, 'class_session', $fromDate, $toDate);
     }
@@ -2624,7 +2654,7 @@ class UserController extends Controller
      *
      * @param  array<int, int>  $studentPks
      */
-    private function resolveScopedTopicOptions(array $studentPks, ?string $fromDate = null, ?string $toDate = null, ?string $sessionValue = null): \Illuminate\Support\Collection
+    private function resolveScopedTopicOptions(array $studentPks, ?string $fromDate = null, ?string $toDate = null, ?string $sessionValue = null): Collection
     {
         return $this->resolveScopedTimetableOptions($studentPks, 'subject_topic', $fromDate, $toDate, $sessionValue);
     }
@@ -2636,7 +2666,7 @@ class UserController extends Controller
      *
      * @param  array<int, int>  $studentPks
      */
-    private function resolveScopedTimetableOptions(array $studentPks, string $column, ?string $fromDate = null, ?string $toDate = null, ?string $sessionValue = null): \Illuminate\Support\Collection
+    private function resolveScopedTimetableOptions(array $studentPks, string $column, ?string $fromDate = null, ?string $toDate = null, ?string $sessionValue = null): Collection
     {
         if (empty($studentPks)) {
             return collect();
@@ -2673,7 +2703,7 @@ class UserController extends Controller
      * falls within [$fromDate, $toDate] are returned (Time Period filter).
      *
      * @param  array<int, int>  $studentPks
-     * @return array<int, array<int, array<string, mixed>>>  spk => list of sessions
+     * @return array<int, array<int, array<string, mixed>>> spk => list of sessions
      */
     private function resolveStudentAttendanceSessions(array $studentPks, ?string $fromDate = null, ?string $toDate = null): array
     {
@@ -2733,11 +2763,9 @@ class UserController extends Controller
      * no marked session keeps a single roster row (present by default) and is
      * flagged has_session_in_range = false so the Time Period filter drops it.
      *
-     * @param  \Illuminate\Support\Collection  $uniqueStudents
      * @param  array<int, array<int, array<string, mixed>>>  $attendanceSessions
-     * @return \Illuminate\Support\Collection
      */
-    private function expandStudentRowsBySession(\Illuminate\Support\Collection $uniqueStudents, array $attendanceSessions, $facultyScopePk = null, array $coordinatorCourseIds = []): \Illuminate\Support\Collection
+    private function expandStudentRowsBySession(Collection $uniqueStudents, array $attendanceSessions, $facultyScopePk = null, array $coordinatorCourseIds = []): Collection
     {
         $expanded = collect();
 
@@ -2804,6 +2832,7 @@ class UserController extends Controller
                 $studentMap->session_internal_faculty = null;
                 $studentMap->has_session_in_range = false;
                 $expanded->push($studentMap);
+
                 continue;
             }
 
@@ -2939,7 +2968,7 @@ class UserController extends Controller
             }
 
             if ($search !== '') {
-                $name = strtolower(trim((string) (($student->display_name ?? '') ?: trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')))));
+                $name = strtolower(trim((string) (($student->display_name ?? '') ?: trim(($student->first_name ?? '').' '.($student->last_name ?? '')))));
                 $otCode = strtolower((string) ($student->generated_OT_code ?? ''));
                 $username = strtolower((string) ($student->user_id ?? ''));
                 $email = strtolower((string) ($student->email ?? ''));
@@ -2979,7 +3008,7 @@ class UserController extends Controller
      * in others). The absent row carries its absent session's date so the Absent
      * Reason resolves against that day.
      *
-     * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection} [present, absent]
+     * @return array{0: Collection, 1: Collection} [present, absent]
      */
     private function collapseDateScopedAttendance($rows): array
     {
@@ -3026,7 +3055,7 @@ class UserController extends Controller
      * PT/Stationed-leave absentees — the single source of truth shared by the live
      * DataTable and the export/report so both stay in sync with the on-screen view.
      *
-     * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection, 2: \Illuminate\Support\Collection} [all, present, absent]
+     * @return array{0: Collection, 1: Collection, 2: Collection} [all, present, absent]
      */
     private function dashboardStudentListTabSets(Request $request, $students): array
     {
@@ -3176,10 +3205,10 @@ class UserController extends Controller
         $fdParam = (string) $request->input('from_date', '');
         $tdParam = (string) $request->input('to_date', '');
         if ($fdParam !== '') {
-            $linkDateQs .= '&from_date=' . urlencode($fdParam);
+            $linkDateQs .= '&from_date='.urlencode($fdParam);
         }
         if ($tdParam !== '') {
-            $linkDateQs .= '&to_date=' . urlencode($tdParam);
+            $linkDateQs .= '&to_date='.urlencode($tdParam);
         }
 
         $data = [];
@@ -3190,7 +3219,7 @@ class UserController extends Controller
             }
 
             $detailUrl = route('admin.dashboard.students.detail', encrypt($student->pk));
-            $displayName = $student->display_name ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
+            $displayName = $student->display_name ?? trim(($student->first_name ?? '').' '.($student->last_name ?? ''));
             $statusCode = (int) ($studentMap->attendance_status ?? 0);
             $isAbsent = ($studentMap->attendance_present ?? true) === false;
 
@@ -3207,11 +3236,12 @@ class UserController extends Controller
                 // OT code has no column of its own; it sits under the name so the
                 // listing stays narrower without losing the identifier.
                 'name' => (function () use ($detailUrl, $displayName, $student) {
-                    $html = '<a href="' . e($detailUrl) . '" class="sl-count">' . e($displayName) . '</a>';
+                    $html = '<a href="'.e($detailUrl).'" class="sl-count">'.e($displayName).'</a>';
                     $otCode = trim((string) ($student->generated_OT_code ?? ''));
                     if ($otCode !== '') {
-                        $html .= '<div class="sl-ot-code">' . e($otCode) . '</div>';
+                        $html .= '<div class="sl-ot-code">'.e($otCode).'</div>';
                     }
+
                     return $html;
                 })(),
                 // A faculty can be mapped to several courses, so each row names the
@@ -3238,13 +3268,14 @@ class UserController extends Controller
                     if ($statusCode === 2) {
                         $html = '<span class="sl-status-badge sl-status-late">Late</span>';
                     } else {
-                        $html = '<span class="sl-status-badge ' . ($present ? 'sl-status-present' : 'sl-status-absent')
-                            . '">' . ($present ? 'Present' : 'Absent') . '</span>';
+                        $html = '<span class="sl-status-badge '.($present ? 'sl-status-present' : 'sl-status-absent')
+                            .'">'.($present ? 'Present' : 'Absent').'</span>';
                     }
                     $reason = $isAbsent ? ($absentReasons[$idx] ?? '-') : '-';
                     if ($isAbsent && $reason !== '-') {
-                        $html .= '<div class="text-muted small mt-1">' . e($reason) . '</div>';
+                        $html .= '<div class="text-muted small mt-1">'.e($reason).'</div>';
                     }
+
                     return $html;
                 })(),
                 // MDO / Escort duties and Medical exemptions are clickable and open
@@ -3252,24 +3283,25 @@ class UserController extends Controller
                 // "Other" (status 7) has no dedicated section, so it links to the
                 // full detail page.
                 'mdo' => $showMdo
-                    ? '<a href="' . e($detailUrl . '?section=dutiesSection' . $linkDateQs) . '" class="sl-count">MDO</a>'
+                    ? '<a href="'.e($detailUrl.'?section=dutiesSection'.$linkDateQs).'" class="sl-count">MDO</a>'
                     : '-',
                 'escort' => $showEscort
-                    ? '<a href="' . e($detailUrl . '?section=dutiesSection' . $linkDateQs) . '" class="sl-count">Escort</a>'
+                    ? '<a href="'.e($detailUrl.'?section=dutiesSection'.$linkDateQs).'" class="sl-count">Escort</a>'
                     : '-',
                 'other_exempt' => (function () use ($showMedical, $showOther, $studentMap, $detailUrl, $linkDateQs) {
                     if ($showMedical) {
-                        return '<a href="' . e($detailUrl . '?section=medicalExceptionsSection' . $linkDateQs) . '" class="sl-count">Medical</a>';
+                        return '<a href="'.e($detailUrl.'?section=medicalExceptionsSection'.$linkDateQs).'" class="sl-count">Medical</a>';
                     }
                     if ($showOther) {
-                        return '<a href="' . e($detailUrl . ($linkDateQs !== '' ? '?' . ltrim($linkDateQs, '&') : '')) . '" class="sl-count">Other</a>';
+                        return '<a href="'.e($detailUrl.($linkDateQs !== '' ? '?'.ltrim($linkDateQs, '&') : '')).'" class="sl-count">Other</a>';
                     }
                     // Inline Other Exemption from the mark-attendance screen (Absent +
                     // a typed reason) — show the reason text in this column.
                     $otherComment = trim((string) ($studentMap->other_exemption_comments ?? ''));
                     if ($otherComment !== '') {
-                        return '<span class="text-muted small" title="Other Exemption">' . e($otherComment) . '</span>';
+                        return '<span class="text-muted small" title="Other Exemption">'.e($otherComment).'</span>';
                     }
+
                     return '-';
                 })(),
             ];
@@ -3299,7 +3331,7 @@ class UserController extends Controller
      * Exemptions" column, so showing it here too was redundant. Only absent rows
      * are considered.
      *
-     * @param  \Illuminate\Support\Collection  $pagedStudents
+     * @param  Collection  $pagedStudents
      * @return array<int, string>
      */
     /**
@@ -3346,7 +3378,7 @@ class UserController extends Controller
         return $out;
     }
 
-    private function dashboardAbsentReasons(\Illuminate\Support\Collection $pagedStudents): array
+    private function dashboardAbsentReasons(Collection $pagedStudents): array
     {
         $reasons = [];
 
@@ -3378,6 +3410,7 @@ class UserController extends Controller
             if (empty($to)) {
                 return true; // open-ended
             }
+
             return \Illuminate\Support\Carbon::parse($to)->toDateString() >= $date;
         };
 
@@ -3420,10 +3453,9 @@ class UserController extends Controller
      * both source tables here, keyed by student pk + date, and OR the result into the
      * columns. Duty type (mdo_duty_type_master.name) decides MDO vs Escort vs Other.
      *
-     * @param  \Illuminate\Support\Collection  $pagedStudents
      * @return array<int, array{mdo: bool, escort: bool, medical: bool, other: bool}>
      */
-    private function dashboardDutyExemptionFlags(\Illuminate\Support\Collection $pagedStudents): array
+    private function dashboardDutyExemptionFlags(Collection $pagedStudents): array
     {
         $flags = [];
 
@@ -3450,7 +3482,7 @@ class UserController extends Controller
         $dutyMap = []; // "spk|date" => ['mdo'=>bool,'escort'=>bool,'other'=>bool]
         foreach ($duties as $r) {
             $date = substr((string) $r->mdo_date, 0, 10);
-            $key = ((int) $r->spk) . '|' . $date;
+            $key = ((int) $r->spk).'|'.$date;
             if (! isset($dutyMap[$key])) {
                 $dutyMap[$key] = ['mdo' => false, 'escort' => false, 'other' => false];
             }
@@ -3483,6 +3515,7 @@ class UserController extends Controller
             if (empty($to)) {
                 return true; // open-ended
             }
+
             return \Illuminate\Support\Carbon::parse($to)->toDateString() >= $date;
         };
 
@@ -3492,7 +3525,7 @@ class UserController extends Controller
             $entry = ['mdo' => false, 'escort' => false, 'medical' => false, 'other' => false];
 
             if ($spk && $date) {
-                if ($d = ($dutyMap[$spk . '|' . $date] ?? null)) {
+                if ($d = ($dutyMap[$spk.'|'.$date] ?? null)) {
                     $entry['mdo'] = $d['mdo'];
                     $entry['escort'] = $d['escort'];
                     $entry['other'] = $d['other'];
@@ -3570,7 +3603,7 @@ class UserController extends Controller
         $cacheKey = implode(',', $ids);
 
         if (! array_key_exists($cacheKey, $cache)) {
-            $names = \App\Models\FacultyMaster::whereIn('pk', $ids)
+            $names = FacultyMaster::whereIn('pk', $ids)
                 ->pluck('full_name')
                 ->filter(static fn ($n) => $n !== null && trim((string) $n) !== '')
                 ->values();
@@ -3586,7 +3619,7 @@ class UserController extends Controller
 
         return match ($sortKey) {
             'ot_code' => strtolower((string) ($student->generated_OT_code ?? '')),
-            'name' => strtolower(trim((string) (($student->display_name ?? '') ?: trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''))))),
+            'name' => strtolower(trim((string) (($student->display_name ?? '') ?: trim(($student->first_name ?? '').' '.($student->last_name ?? ''))))),
             'username' => strtolower((string) ($student->user_id ?? '')),
             'email' => strtolower((string) ($student->email ?? '')),
             'cadre' => strtolower((string) ($student->cadre->cadre_name ?? '')),
@@ -3615,7 +3648,7 @@ class UserController extends Controller
      */
     private function dashboardStudentListExportData($students, string $attendance = 'all'): array
     {
-        $students = ($students instanceof \Illuminate\Support\Collection ? $students : collect($students))->values();
+        $students = ($students instanceof Collection ? $students : collect($students))->values();
 
         // Mirror the on-screen Student List exactly: the export must show the SAME
         // per-session columns a viewer sees in the table (Date / Session / Topic /
@@ -3649,7 +3682,7 @@ class UserController extends Controller
                 continue;
             }
 
-            $displayName = $student->display_name ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
+            $displayName = $student->display_name ?? trim(($student->first_name ?? '').' '.($student->last_name ?? ''));
             $statusCode = (int) ($studentMap->attendance_status ?? 0);
             $isAbsent = ($studentMap->attendance_present ?? true) === false;
 
@@ -3660,7 +3693,7 @@ class UserController extends Controller
             if ($isAbsent) {
                 $reason = $absentReasons[$index] ?? '-';
                 if ($reason !== '-') {
-                    $statusText .= ' (' . $reason . ')';
+                    $statusText .= ' ('.$reason.')';
                 }
             }
 
@@ -3710,7 +3743,7 @@ class UserController extends Controller
 
         if ($request->filled('course_id')) {
             $course = CourseMaster::find($request->course_id);
-            $parts[] = 'Course: ' . ($course->course_name ?? $request->course_id);
+            $parts[] = 'Course: '.($course->course_name ?? $request->course_id);
         }
 
         if ($request->filled('role_filter')) {
@@ -3718,22 +3751,22 @@ class UserController extends Controller
                 $parts[] = 'Role: CC/ACC';
             } else {
                 $type = DB::table('course_group_type_master')->where('pk', $request->role_filter)->value('type_name');
-                $parts[] = 'Role: ' . ($type ?? $request->role_filter);
+                $parts[] = 'Role: '.($type ?? $request->role_filter);
             }
         }
 
         if ($request->filled('faculty_filter')) {
             $facultyName = DB::table('faculty_master')->where('pk', $request->faculty_filter)->value('full_name');
-            $parts[] = 'Faculty: ' . ($facultyName ?? $request->faculty_filter);
+            $parts[] = 'Faculty: '.($facultyName ?? $request->faculty_filter);
         }
 
         if ($request->filled('group_pk')) {
             $group = DB::table('group_type_master_course_master_map')->where('pk', $request->group_pk)->value('group_name');
-            $parts[] = 'Group: ' . ($group ?? $request->group_pk);
+            $parts[] = 'Group: '.($group ?? $request->group_pk);
         }
 
         if ($request->filled('search')) {
-            $parts[] = 'Search: ' . $request->search;
+            $parts[] = 'Search: '.$request->search;
         }
 
         return $parts ? implode(' | ', $parts) : 'All students';
@@ -3742,7 +3775,7 @@ class UserController extends Controller
     /**
      * Display My Counselee list (counsellor's assigned counselees with phase progress).
      *
-     * @return \Illuminate\View\View
+     * @return View
      */
     public function myCounselee()
     {
@@ -3750,13 +3783,13 @@ class UserController extends Controller
 
         // Only faculty users should see dynamic counselee mapping
         $faculty = FacultyMaster::where('employee_master_pk', $userId)->first();
-        if (!$faculty) {
+        if (! $faculty) {
             return view('admin.dashboard.my_counselee', ['counselees' => []]);
         }
 
         $facultyPk = (int) $faculty->pk;
         $today = Carbon::now()->format('Y-m-d');
-        $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
+        $noticeMemoService = app(OTNoticeMemoService::class);
 
         // Find active group mappings assigned to this faculty for active courses
         $groupMappings = DB::table('group_type_master_course_master_map as gmap')
@@ -3789,10 +3822,10 @@ class UserController extends Controller
         $byStudent = [];
         foreach ($studentGroupRows as $row) {
             $studentPk = (int) $row->student_master_pk;
-            if (!$row->student) {
+            if (! $row->student) {
                 continue;
             }
-            if (!isset($byStudent[$studentPk])) {
+            if (! isset($byStudent[$studentPk])) {
                 $byStudent[$studentPk] = $row;
             }
         }
@@ -3804,7 +3837,7 @@ class UserController extends Controller
 
             // Course details (from relationship if loaded, else lookup from enrollment)
             $course = $row->groupTypeMasterCourseMasterMap?->courseGroup;
-            if (!$course && $coursePk) {
+            if (! $course && $coursePk) {
                 $course = CourseMaster::find($coursePk);
             }
 
@@ -3856,14 +3889,14 @@ class UserController extends Controller
             }
 
             $photo = null;
-            if (!empty($student->photo_path)) {
-                $photo = asset('storage/' . $student->photo_path);
+            if (! empty($student->photo_path)) {
+                $photo = asset('storage/'.$student->photo_path);
             }
 
-            $displayName = $student->display_name ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
+            $displayName = $student->display_name ?? trim(($student->first_name ?? '').' '.($student->last_name ?? ''));
             $counselees[] = [
-                'name' => $displayName ?: ('Student #' . $studentPk),
-                'id' => $student->generated_OT_code ?? ('STU-' . $studentPk),
+                'name' => $displayName ?: ('Student #'.$studentPk),
+                'id' => $student->generated_OT_code ?? ('STU-'.$studentPk),
                 'service' => $student->service?->service_name ?? 'N/A',
                 'cadre' => $student->cadre?->cadre_name ?? 'N/A',
                 'email' => $student->email ?? 'N/A',
@@ -3887,8 +3920,8 @@ class UserController extends Controller
     /**
      * Display complete student details
      *
-     * @param int $id Student ID (encrypted)
-     * @return \Illuminate\View\View
+     * @param  int  $id  Student ID (encrypted)
+     * @return View
      */
     public function studentDetail($id)
     {
@@ -3902,18 +3935,18 @@ class UserController extends Controller
         // Get student basic information
         $student = StudentMaster::with(['service', 'courses'])->find($studentPk);
 
-        if (!$student) {
+        if (! $student) {
             return redirect()->route('admin.dashboard.students')
                 ->with('error', 'Student not found.');
         }
 
         if (is_faculty_portal_user()
-            && !hasRole('Super Admin')
-            && !hasRole('Training Induction Admin')
-            && !hasRole('Training MCTP Admin')
-            && !hasRole('Training IST')) {
+            && ! hasRole('Super Admin')
+            && ! hasRole('Training Induction Admin')
+            && ! hasRole('Training MCTP Admin')
+            && ! hasRole('Training IST')) {
             $facultyPk = get_auth_faculty_master_pk();
-            if (!$facultyPk || !$this->canFacultyViewStudent($facultyPk, (int) $studentPk)) {
+            if (! $facultyPk || ! $this->canFacultyViewStudent($facultyPk, (int) $studentPk)) {
                 return redirect()->route('admin.dashboard.students')
                     ->with('error', 'You do not have access to view this student.');
             }
@@ -3982,6 +4015,7 @@ class UserController extends Controller
                     if ($clipDays) {
                         $row->total_days = 0;
                     }
+
                     return;
                 }
                 // Clip the displayed dates to the window.
@@ -4001,11 +4035,12 @@ class UserController extends Controller
         // single ranged row. The header still sums total_days, so the overall count is
         // unchanged (a 2-day leave → 2 rows, header count still 2). Respects the Time
         // Period window because the dates were already clipped above.
-        $expandLeavesByDay = function (\Illuminate\Support\Collection $leaves): \Illuminate\Support\Collection {
+        $expandLeavesByDay = function (Collection $leaves): Collection {
             $expanded = collect();
             foreach ($leaves as $leave) {
                 if (empty($leave->from_date)) {
                     $expanded->push($leave);
+
                     continue;
                 }
                 $start = Carbon::parse($leave->from_date)->startOfDay();
@@ -4021,6 +4056,7 @@ class UserController extends Controller
                     $expanded->push($row);
                 }
             }
+
             return $expanded;
         };
         $ptExemptions = $expandLeavesByDay($ptExemptions);
@@ -4037,7 +4073,7 @@ class UserController extends Controller
         // Get notices using OTNoticeMemoService; memos come from the Discipline Memo
         // module's source (discipline_memo_status) so the detail view matches
         // /memo/discipline and the list "Total Memo" count.
-        $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
+        $noticeMemoService = app(OTNoticeMemoService::class);
         $notices = $noticeMemoService->getNotices($studentPk);
         $memos = $noticeMemoService->getDisciplineMemos($studentPk);
 
@@ -4055,6 +4091,7 @@ class UserController extends Controller
                 if ($toDate && $d > $toDate) {
                     return false;
                 }
+
                 return true;
             };
             $notices = $notices->filter($inDateWindow)->values();
@@ -4093,7 +4130,7 @@ class UserController extends Controller
             ->toArray();
 
         $totalExpectedSessions = 0;
-        if (!empty($studentGroupPks)) {
+        if (! empty($studentGroupPks)) {
             // Count only timetables that actually EXIST and are active. The mapping
             // table keeps rows for timetables that were later deleted (orphans) and
             // for cancelled/inactive sessions; counting those inflated Total Sessions
@@ -4117,7 +4154,7 @@ class UserController extends Controller
             ->where('status', '!=', '0')
             ->selectRaw('COUNT(DISTINCT timetable_pk) as count')
             ->first();
-        $markedSessions = $markedResult ? (int)$markedResult->count : 0;
+        $markedSessions = $markedResult ? (int) $markedResult->count : 0;
 
         $notMarkedCount = max(0, $totalExpectedSessions - $markedSessions);
 
@@ -4147,14 +4184,50 @@ class UserController extends Controller
         ));
     }
 
+    /**
+     * The page sizes the User Management grid offers, and the only ones it will
+     * serve.
+     *
+     * `(int) $request->input('per_page', 10)` passed straight to paginate() had
+     * no ceiling and no allow-list, so `?per_page=20000` returned all 15,108
+     * rows - 16.4 MB and 2.9 s in one request, carrying 13,625 email addresses
+     * and 11,272 mobile numbers, and more of the directory than the capped
+     * export next to it. That made the export's row cap decorative: the same
+     * actor could ask the index for the rest.
+     *
+     * An allow-list rather than a max(): anything outside the dropdown is a
+     * value the screen never offers, so it falls back to the default instead of
+     * being silently rounded down to a number the user did not choose. The cache
+     * key is built from the resolved value, so an out-of-range request can no
+     * longer mint its own cache entry either.
+     *
+     * The footer's <select> is rendered FROM this list (index() passes it to the
+     * view) rather than hard-coding its own options. When the two were written
+     * out separately they drifted: the select offered 20, which is not on this
+     * list, so choosing it silently served 10 - while 25 and 200 were accepted
+     * here but never offered on screen.
+     *
+     * @var int[]
+     */
+    public const ADMIN_USERS_PER_PAGE_OPTIONS = [10, 20, 25, 50, 100, 200];
+
+    private static function resolveAdminUsersPerPage($raw): int
+    {
+        $value = is_scalar($raw) ? (int) $raw : 0;
+
+        return in_array($value, self::ADMIN_USERS_PER_PAGE_OPTIONS, true)
+            ? $value
+            : self::ADMIN_USERS_PER_PAGE_OPTIONS[0];
+    }
+
     public function index(Request $request)
     {
-        $perPage = (int) $request->input('per_page', 10);
+        $perPage = self::resolveAdminUsersPerPage($request->input('per_page'));
         $search = trim((string) ($request->input('search') ?? ''));
         $user_type = trim((string) $request->input('User_type', ''));
 
         $epoch = DataTableRedisCache::readListEpoch(self::ADMIN_USERS_INDEX_LIST_EPOCH_KEY);
-        $cacheKey = 'admin_users_index:v5:' . md5(json_encode([
+        $cacheKey = 'admin_users_index:v5:'.md5(json_encode([
             'epoch' => $epoch,
             'search' => $search,
             'user_type' => $user_type,
@@ -4172,7 +4245,7 @@ class UserController extends Controller
             fn () => $this->buildAdminUsersIndexPaginator($request, $perPage, $search, $user_type)
         );
 
-        $users = new \Illuminate\Pagination\LengthAwarePaginator(
+        $users = new LengthAwarePaginator(
             $cached['items'],
             $cached['total'],
             $cached['perPage'],
@@ -4182,10 +4255,14 @@ class UserController extends Controller
 
         // Live search / pagination: return only the table partial (no full reload).
         if ($request->ajax()) {
-            return view('admin.user_management.users._table', compact('users', 'perPage', 'search', 'user_type'));
+            return view('admin.user_management.users._table', compact('users', 'perPage', 'search', 'user_type') + [
+                'perPageOptions' => self::ADMIN_USERS_PER_PAGE_OPTIONS,
+            ]);
         }
 
-        return view('admin.user_management.users.index', compact('users', 'perPage', 'search', 'user_type'));
+        return view('admin.user_management.users.index', compact('users', 'perPage', 'search', 'user_type') + [
+            'perPageOptions' => self::ADMIN_USERS_PER_PAGE_OPTIONS,
+        ]);
     }
 
     /**
@@ -4256,9 +4333,9 @@ class UserController extends Controller
                     $like = "%{$term}%";
                     $outer->where(function ($q) use ($like) {
                         $q->whereRaw("LOWER(TRIM(COALESCE(uc.user_name, ''))) LIKE ?", [$like])
-                            ->orWhereRaw("LOWER(TRIM(uc.first_name)) LIKE ?", [$like])
-                            ->orWhereRaw("LOWER(TRIM(uc.last_name)) LIKE ?", [$like])
-                            ->orWhereRaw("LOWER(TRIM(uc.email_id)) LIKE ?", [$like])
+                            ->orWhereRaw('LOWER(TRIM(uc.first_name)) LIKE ?', [$like])
+                            ->orWhereRaw('LOWER(TRIM(uc.last_name)) LIKE ?', [$like])
+                            ->orWhereRaw('LOWER(TRIM(uc.email_id)) LIKE ?', [$like])
                             ->orWhereRaw("LOWER(CONCAT_WS(' ', TRIM(uc.first_name), TRIM(uc.last_name))) LIKE ?", [$like])
                             ->orWhereRaw("LOWER(CONCAT_WS(' ', TRIM(uc.last_name), TRIM(uc.first_name))) LIKE ?", [$like]);
                     });
@@ -4274,27 +4351,99 @@ class UserController extends Controller
 
     /**
      * Column definitions available for export, keyed by the toggle key used in
-     * the listing. Each entry maps to a heading and a value resolver.
+     * the listing. Each entry maps to a heading, a value resolver and the print /
+     * PDF column width, so all four formats lay the report out the same way.
      *
-     * @return array<string, array{label: string, value: callable}>
+     * Labels and order mirror _table.blade.php's headers: "User Role" is the
+     * Spatie role, "User Type" is the user_category code — two different things
+     * that the grid used to run under one heading.
+     *
+     * @return array<string, array{label: string, value: callable, width: string, centre: bool}>
      */
     private function adminUsersExportColumns(): array
     {
         return [
-            'username'    => ['label' => 'Username',  'value' => fn ($u) => $u->user_name ?? ''],
-            'name'        => ['label' => 'Name',      'value' => fn ($u) => trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? ''))],
-            'email'       => ['label' => 'Email',     'value' => fn ($u) => $u->email_id ?? ''],
-            'mobile'      => ['label' => 'Mobile',    'value' => fn ($u) => $u->mobile_no ?: '—'],
-            'usertype'    => ['label' => 'User Type', 'value' => fn ($u) => self::userTypeLabel($u->User_type ?? '')],
-            'roles'       => ['label' => 'Roles',     'value' => fn ($u) => $u->roles ?: 'No Role'],
+            'username' => ['label' => 'User Name', 'width' => '13%', 'centre' => false,
+                'value' => fn ($u) => $u->user_name ?? ''],
+            'name' => ['label' => 'Name', 'width' => '19%', 'centre' => false,
+                'value' => fn ($u) => trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? ''))],
+            'email' => ['label' => 'Email', 'width' => '22%', 'centre' => false,
+                'value' => fn ($u) => $u->email_id ?? ''],
+            'mobile' => ['label' => 'Contact Number', 'width' => '12%', 'centre' => true,
+                'value' => fn ($u) => $u->mobile_no ?: '—'],
+            'usertype' => ['label' => 'User Type', 'width' => '11%', 'centre' => true,
+                'value' => fn ($u) => self::userTypeLabel($u->User_type ?? '')],
+            'roles' => ['label' => 'User Role', 'width' => '17%', 'centre' => false,
+                'value' => fn ($u) => $u->roles ?: 'No Role'],
         ];
     }
 
     /**
-     * Export the users listing (csv / xlsx / pdf) honouring the active search,
-     * user-type filter and — where provided — the columns the user has left
-     * visible in the grid.
+     * The applied search / user-type filters, as a line for the report header.
+     *
+     * @return array{0: string|null, 1: string|null}  [plain text, HTML]
      */
+    private function adminUsersFilterLine(string $search, string $userType): array
+    {
+        $plain = [];
+        $html = [];
+
+        if ($userType !== '') {
+            $label = self::userTypeLabel($userType);
+            $plain[] = 'User Type: ' . $label;
+            $html[] = '<strong>User Type:</strong> ' . e($label);
+        }
+        if ($search !== '') {
+            $plain[] = 'Search: ' . $search;
+            $html[] = '<strong>Search:</strong> ' . e($search);
+        }
+
+        return [
+            empty($plain) ? null : implode('  |  ', $plain),
+            empty($html) ? null : implode(' &nbsp;|&nbsp; ', $html),
+        ];
+    }
+
+    /**
+     * Export the users listing — csv / xlsx / pdf / print, all four off ONE query
+     * and ONE column list so they cannot drift apart
+     * (docs/new-design-index-page.md §1).
+     *
+     * Honours the active search and user-type filter and, where provided, the
+     * columns still visible in the grid. Deliberately unpaginated: the grid's
+     * Print and Download used to scrape the rendered <table>, which is one page
+     * of 10 rows, so every export silently truncated to whatever was on screen.
+     */
+    /**
+     * Truncate a rendered export to $cap rows and say so on the sheet.
+     *
+     * One helper for both single-request renderers, so the PDF and the print
+     * sheet cannot end up with different truncation behaviour or a different
+     * wording for it - and so that a format which truncates can never do it
+     * silently. The streaming formats (CSV / XLSX) are deliberately uncapped:
+     * they are the complete list this note points the reader at.
+     *
+     * @param  array<string, mixed>  $reportData
+     * @return array<string, mixed>
+     */
+    private function capUserExportRows(array $reportData, int $cap): array
+    {
+        $total = count($reportData['rows']);
+
+        if ($total <= $cap) {
+            return $reportData;
+        }
+
+        $reportData['note'] = 'Showing the first '
+            . number_format($cap) . ' of '
+            . number_format($total)
+            . ' matching users. Narrow the filters, or use the Excel / CSV download for the complete list.';
+        $reportData['rows'] = array_slice($reportData['rows'], 0, $cap);
+        $reportData['totalRows'] = $total;
+
+        return $reportData;
+    }
+
     public function export(Request $request, string $format)
     {
         $search = trim((string) ($request->input('search') ?? ''));
@@ -4309,40 +4458,133 @@ class UserController extends Controller
             $requested = array_keys($allColumns);
         }
 
-        $headings = array_merge(['S. No.'], array_map(fn ($k) => $allColumns[$k]['label'], $requested));
+        // S. No. is generated by the export itself, so it leads every format.
+        $columns = array_merge(
+            [['label' => 'S. No.', 'width' => '6%', 'centre' => true]],
+            array_map(
+                fn ($key) => [
+                    'label' => $allColumns[$key]['label'],
+                    'width' => $allColumns[$key]['width'],
+                    'centre' => $allColumns[$key]['centre'],
+                ],
+                $requested
+            )
+        );
+        $headings = array_map(fn (array $c) => $c['label'], $columns);
 
+        // cursor(), not get(): the export stays deliberately unpaginated (scraping the
+        // rendered table truncated every download to the 10 rows on screen), but there
+        // is no reason to hold the full hydrated model collection AND the flat $rows
+        // array at the same time. cursor() hydrates one model at a time, so peak memory
+        // is the row array alone rather than both. Keys stay 0-based and sequential, so
+        // the S. No. column below is unaffected.
         $records = $this->adminUsersBaseQuery($search, $user_type)
             ->orderBy('uc.pk')
-            ->get();
+            ->cursor();
 
         $rows = [];
         foreach ($records as $i => $record) {
             $row = [$i + 1];
             foreach ($requested as $key) {
-                $row[] = $allColumns[$key]['value']($record);
+                $row[] = (string) $allColumns[$key]['value']($record);
             }
             $rows[] = $row;
         }
 
-        $timestamp = now()->format('Ymd_His');
-        $fileBase = "users_{$timestamp}";
+        [$filterLine, $filterHtml] = $this->adminUsersFilterLine($search, $user_type);
+        $generatedAt = now()->format('d-m-Y h:i A');
+        $fileBase = 'Users_' . now()->format('YmdHis');
 
-        if ($format === 'pdf') {
-            $pdf = Pdf::loadView('admin.user_management.users.partials.export_pdf', [
-                'headings' => $headings,
-                'rows' => $rows,
-                'generatedAt' => now()->format('d-m-Y H:i'),
-            ])->setPaper('a4', 'landscape');
+        // Print and PDF render the same branded sheet from the same data; only the
+        // renderer differs (a browser that can do @media print vs DomPDF, which
+        // cannot — see the note at the top of each blade).
+        $reportData = [
+            'columns' => $columns,
+            'headings' => $headings,
+            'rows' => $rows,
+            'filterLine' => $filterLine,
+            'filterHtml' => $filterHtml,
+            'exportDate' => $generatedAt,
+        ];
 
-            return $pdf->download("{$fileBase}.pdf");
+        if ($format === 'print') {
+            // Capped, where it used to say "no cap because the browser lays this
+            // out itself". That was true of the BROWSER and missed the server: an
+            // uncapped print of the whole directory is a 9.6 MB HTML document
+            // built, held and written in one request, by any user who asks, as
+            // often as they ask. The cap is higher than the PDF's because a
+            // browser really does handle more layout than DomPDF, and the sheet
+            // says plainly when it has been truncated rather than silently
+            // dropping rows.
+            $reportData = $this->capUserExportRows($reportData, self::ADMIN_USERS_PRINT_ROW_CAP);
+
+            return view('admin.user_management.users.partials.export_print', $reportData);
         }
 
-        $writerType = $format === 'csv' ? ExcelWriter::CSV : ExcelWriter::XLSX;
+        if ($format === 'pdf') {
+            $reportData = $this->capUserExportRows($reportData, self::ADMIN_USERS_PDF_ROW_CAP);
+
+            $pdf = Pdf::loadView('admin.user_management.users.partials.export_pdf', $reportData)
+                ->setPaper('a4', 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    // Never true: isPhpEnabled makes the renderer a PHP
+                    // execution context for the whole view, so any raw block
+                    // that later appears in an export blade would execute.
+                    // Page numbers are stamped on the canvas after render
+                    // instead — see PdfPageNumbers.
+                    'isPhpEnabled' => false,
+                ]);
+
+            return PdfPageNumbers::stamp($pdf, 20)->download("{$fileBase}.pdf");
+        }
+
+        if ($format === 'xlsx') {
+            // BrandedGridExport is what every other module's spreadsheet uses: it
+            // draws the LBSNAA logo over a navy institution band, then a navy
+            // header row over zebra rows with a frozen pane. UsersExport (below)
+            // only writes plain text, which is why this one export arrived with
+            // no logo while Roles / Menus / Topbar Category all had one.
+            //
+            // It resolves each cell through a column's `value` callable, but the
+            // rows here are already flat arrays — so each column just reads its
+            // own slot. `key` doubles as the centred-column marker.
+            $branded = [];
+            $centreKeys = [];
+            foreach ($columns as $index => $col) {
+                $key = 'col'.$index;
+                if (! empty($col['centre'])) {
+                    $centreKeys[] = $key;
+                }
+                $branded[] = [
+                    'key' => $key,
+                    'heading' => $col['label'],
+                    'class' => '',
+                    'value' => static fn ($row) => $row[$index] ?? '',
+                ];
+            }
+
+            return Excel::download(
+                BrandedGridExport::fromGrid($rows, $branded, 'Users', $generatedAt, $filterLine, $centreKeys),
+                "{$fileBase}.xlsx"
+            );
+        }
+
+        // CSV keeps the plain writer: it is text, so the .xlsx branding would be
+        // dropped anyway. These rows give it the same header band in words.
+        $metaRows = [
+            ['LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION'],
+            ['USERS'],
+            [implode('  |  ', array_filter([$filterLine, 'Generated: ' . $generatedAt]))],
+            ['Total Records: ' . number_format(count($rows))],
+            [],
+        ];
 
         return Excel::download(
-            new UsersExport($headings, $rows),
-            "{$fileBase}.{$format}",
-            $writerType
+            new UsersExport($headings, $rows, $metaRows),
+            "{$fileBase}.csv",
+            ExcelWriter::CSV
         );
     }
 
@@ -4354,19 +4596,19 @@ class UserController extends Controller
     /**
      * Show the form for creating a new user.
      *
-     * @return \Illuminate\View\View
+     * @return View
      */
     public function create()
     {
-       $roles = UserRoleMaster::orderBy('pk', 'DESC')->get();
+        $roles = UserRoleMaster::orderBy('pk', 'DESC')->get();
+
         return view('admin.user_management.users.create', compact('roles'));
     }
 
     /**
      * Store a newly created user in storage.
      *
-     * @param  \App\Http\Requests\Admin\User\StoreUserRequest  $request
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function store(StoreUserRequest $request)
     {
@@ -4391,7 +4633,7 @@ class UserController extends Controller
             }
 
             $assignedRoleNames = [];
-            if (!empty($roleIds)) {
+            if (! empty($roleIds)) {
                 // $user->assignRole($request->roles);
                 foreach ($roleIds as $roleId) {
                     EmployeeRoleMapping::create([
@@ -4410,12 +4652,12 @@ class UserController extends Controller
                 }
 
                 // Send notification to the user
-                if (!empty($assignedRoleNames) && $user->user_id) {
+                if (! empty($assignedRoleNames) && $user->user_id) {
                     try {
                         $notificationService = app(NotificationService::class);
                         $roleNames = implode(', ', $assignedRoleNames);
                         $notificationService->create(
-                            (int)$user->user_id,
+                            (int) $user->user_id,
                             'role_assignment',
                             'Role Assignment',
                             $user->pk,
@@ -4424,7 +4666,7 @@ class UserController extends Controller
                         );
                     } catch (\Exception $e) {
                         // Log error but don't fail the request
-                        \Log::error('Failed to send role assignment notification: ' . $e->getMessage());
+                        \Log::error('Failed to send role assignment notification: '.$e->getMessage());
                     }
                 }
             }
@@ -4437,42 +4679,41 @@ class UserController extends Controller
                 ->with('success', 'User created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()->route('admin.users.index')
-                ->with('error', 'Failed to create user: ' . $e->getMessage());
+                ->with('error', 'Failed to create user: '.$e->getMessage());
         }
     }
 
     /**
      * Display the specified user.
      *
-     * @param  \App\Models\User  $user
-     * @return \Illuminate\View\View
+     * @return View
      */
     public function show(User $user)
     {
         $user->load('roles', 'permissions');
+
         return view('admin.user_management.users.show', compact('user'));
     }
 
     /**
      * Show the form for editing the specified user.
      *
-     * @param  \App\Models\User  $user
-     * @return \Illuminate\View\View
+     * @return View
      */
     public function edit(User $user)
     {
         $roles = Role::all();
         $userRoles = $user->roles->pluck('id')->toArray();
+
         return view('admin.user_management.users.edit', compact('user', 'roles', 'userRoles'));
     }
 
     /**
      * Update the specified user in storage.
      *
-     * @param  \App\Http\Requests\Admin\User\UpdateUserRequest  $request
-     * @param  \App\Models\User  $user
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function update(UpdateUserRequest $request, User $user)
     {
@@ -4490,60 +4731,60 @@ class UserController extends Controller
 
             $user->update($userData);
 
-             if ($request->has('roles')) {
-            // Remove old roles
-           EmployeeRoleMapping::where('user_credentials_pk', $user->id)->delete();
+            if ($request->has('roles')) {
+                // Remove old roles
+                EmployeeRoleMapping::where('user_credentials_pk', $user->id)->delete();
 
-            // Assign new roles
-            $assignedRoleNames = [];
-            $roleIds = $request->input('roles', []);
+                // Assign new roles
+                $assignedRoleNames = [];
+                $roleIds = $request->input('roles', []);
 
-            if (empty($roleIds)) {
-                // Default RBAC role when roles are submitted empty.
-                $staffRole = UserRoleMaster::where('user_role_name', 'Staff')
-                    ->orWhere('user_role_display_name', 'Staff')
-                    ->first();
-                if ($staffRole) {
-                    $roleIds = [$staffRole->pk];
+                if (empty($roleIds)) {
+                    // Default RBAC role when roles are submitted empty.
+                    $staffRole = UserRoleMaster::where('user_role_name', 'Staff')
+                        ->orWhere('user_role_display_name', 'Staff')
+                        ->first();
+                    if ($staffRole) {
+                        $roleIds = [$staffRole->pk];
+                    }
                 }
-            }
 
-            if (!empty($roleIds)) {
-                foreach ($roleIds as $roleId) {
-                    EmployeeRoleMapping::create([
-                        'user_credentials_pk' => $user->id,
-                        'user_role_master_pk' => $roleId,
-                        'active_inactive' => 1,
-                        'created_date' => now(),
-                        'updated_date' => now(),
-                    ]);
-                    // Get role name for notification
-                    $role = UserRoleMaster::find($roleId);
-                    if ($role) {
-                        $assignedRoleNames[] = $role->user_role_display_name ?? $role->user_role_name;
+                if (! empty($roleIds)) {
+                    foreach ($roleIds as $roleId) {
+                        EmployeeRoleMapping::create([
+                            'user_credentials_pk' => $user->id,
+                            'user_role_master_pk' => $roleId,
+                            'active_inactive' => 1,
+                            'created_date' => now(),
+                            'updated_date' => now(),
+                        ]);
+                        // Get role name for notification
+                        $role = UserRoleMaster::find($roleId);
+                        if ($role) {
+                            $assignedRoleNames[] = $role->user_role_display_name ?? $role->user_role_name;
+                        }
+                    }
+                }
+
+                // Send notification to the user if roles were assigned
+                if (! empty($assignedRoleNames) && $user->user_id) {
+                    try {
+                        $notificationService = app(NotificationService::class);
+                        $roleNames = implode(', ', $assignedRoleNames);
+                        $notificationService->create(
+                            (int) $user->user_id,
+                            'role_assignment',
+                            'Role Assignment',
+                            $user->pk,
+                            'Role Assigned',
+                            "You have been assigned the following role(s): {$roleNames}."
+                        );
+                    } catch (\Exception $e) {
+                        // Log error but don't fail the request
+                        \Log::error('Failed to send role assignment notification: '.$e->getMessage());
                     }
                 }
             }
-
-            // Send notification to the user if roles were assigned
-            if (!empty($assignedRoleNames) && $user->user_id) {
-                try {
-                    $notificationService = app(NotificationService::class);
-                    $roleNames = implode(', ', $assignedRoleNames);
-                    $notificationService->create(
-                        (int)$user->user_id,
-                        'role_assignment',
-                        'Role Assignment',
-                        $user->pk,
-                        'Role Assigned',
-                        "You have been assigned the following role(s): {$roleNames}."
-                    );
-                } catch (\Exception $e) {
-                    // Log error but don't fail the request
-                    \Log::error('Failed to send role assignment notification: ' . $e->getMessage());
-                }
-            }
-        }
 
             DB::commit();
 
@@ -4553,16 +4794,16 @@ class UserController extends Controller
                 ->with('success', 'User updated successfully');
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()->route('admin.users.index')
-                ->with('error', 'Failed to update user: ' . $e->getMessage());
+                ->with('error', 'Failed to update user: '.$e->getMessage());
         }
     }
 
     /**
      * Remove the specified user from storage.
      *
-     * @param  \App\Models\User  $user
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function destroy(User $user)
     {
@@ -4581,7 +4822,7 @@ class UserController extends Controller
                 ->with('success', 'User deleted successfully');
         } catch (\Exception $e) {
             return redirect()->route('admin.users.index')
-                ->with('error', 'Failed to delete user: ' . $e->getMessage());
+                ->with('error', 'Failed to delete user: '.$e->getMessage());
         }
     }
 
@@ -4604,450 +4845,484 @@ class UserController extends Controller
      * Adding a status switch to a new screen means adding its row here.
      */
     private const TOGGLE_STATUS_ALLOWED = [
-        'appellation_master'                  => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'building_floor_room_mapping'         => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'building_master'                     => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'caste_category_master'               => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'city_master'                         => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'class_session_master'                => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'country_master'                      => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'course_master'                       => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'course_memo_decision_mapp'           => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'department_master'                   => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'designation_master'                  => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'discipline_master'                   => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'employee_group_master'               => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'employee_type_master'                => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'faculty_expertise_master'            => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'faculty_master'                      => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'faculty_type_master'                 => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'fc_exemption_master'                 => ['id_column' => 'pk', 'columns' => ['visible'], 'admin_only' => true],
-        'fc_registration_master'              => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'admin_only' => true],
-        'floor_master'                        => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'appellation_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'building_floor_room_mapping' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'building_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'caste_category_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'city_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'class_session_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'country_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'course_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'course_memo_decision_mapp' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'department_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'designation_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'discipline_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'employee_group_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'employee_type_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'faculty_expertise_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'faculty_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'faculty_type_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'fc_exemption_master' => ['id_column' => 'pk', 'columns' => ['visible'], 'admin_only' => true],
+        'fc_registration_master' => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'admin_only' => true],
+        'floor_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'group_type_master_course_master_map' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'hostel_building_floor_mapping'       => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'hostel_building_master'              => ['id_column' => 'pk', 'columns' => ['active_room']],
-        'hostel_floor_room_mapping'           => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'hostel_room_master'                  => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'issue_category_master'               => ['id_column' => 'pk', 'columns' => ['status']],
-        'issue_priority_master'               => ['id_column' => 'pk', 'columns' => ['status']],
-        'issue_sub_category_master'           => ['id_column' => 'pk', 'columns' => ['status']],
-        'memo_conclusion_master'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'memo_type_master'                    => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'news'                                => ['id_column' => 'pk', 'columns' => ['status'], 'admin_only' => true],
-        'notices_notification'                => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'admin_only' => true],
-        'ot_hostel_room_details'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'sec_id_cardno_config_map'            => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'sec_id_cardno_master'                => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'state_district_mapping'              => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'state_master'                        => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'states'                              => ['id_column' => 'pk', 'columns' => ['status']],
-        'stream_master'                       => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'subject_master'                      => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'subject_module_master'               => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'user_role_master'                    => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'admin_only' => true],
-        'venue_master'                        => ['id_column' => 'venue_id', 'columns' => ['active_inactive']],
+        'hostel_building_floor_mapping' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'hostel_building_master' => ['id_column' => 'pk', 'columns' => ['active_room']],
+        'hostel_floor_room_mapping' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'hostel_room_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'issue_category_master' => ['id_column' => 'pk', 'columns' => ['status']],
+        'issue_priority_master' => ['id_column' => 'pk', 'columns' => ['status']],
+        'issue_sub_category_master' => ['id_column' => 'pk', 'columns' => ['status']],
+        'memo_conclusion_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'memo_type_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'news' => ['id_column' => 'pk', 'columns' => ['status'], 'admin_only' => true],
+        'notices_notification' => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'admin_only' => true],
+        'ot_hostel_room_details' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'sec_id_cardno_config_map' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'sec_id_cardno_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'state_district_mapping' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'state_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'states' => ['id_column' => 'pk', 'columns' => ['status']],
+        'stream_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'subject_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'subject_module_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'user_role_master' => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'admin_only' => true],
+        'venue_master' => ['id_column' => 'venue_id', 'columns' => ['active_inactive']],
     ];
 
-public function toggleStatus(Request $request)
-{
-    try {
-        $table    = (string) $request->input('table', '');
-        $column   = (string) $request->input('column', '');
-        $idColumn = (string) ($request->input('id_column') ?: 'pk');
-        $id       = $request->input('id');
-        $status   = $request->input('status');
+    public function toggleStatus(Request $request)
+    {
+        try {
+            $table = (string) $request->input('table', '');
+            $column = (string) $request->input('column', '');
+            $idColumn = (string) ($request->input('id_column') ?: 'pk');
+            $id = $request->input('id');
+            $status = $request->input('status');
 
-        $allowed = self::TOGGLE_STATUS_ALLOWED[$table] ?? null;
+            $allowed = self::TOGGLE_STATUS_ALLOWED[$table] ?? null;
 
-        // Refuse anything the UI never asks for: an unlisted table, a column
-        // that is not that table's status column, a key column other than the
-        // one the screen uses, a non-numeric id, or a status outside 0/1.
-        if ($allowed === null
-            || ! in_array($column, $allowed['columns'], true)
-            || $idColumn !== $allowed['id_column']
-            || ! is_numeric($id)
-            || ! in_array((int) $status, [0, 1], true)) {
+            // Refuse anything the UI never asks for: an unlisted table, a column
+            // that is not that table's status column, a key column other than the
+            // one the screen uses, a non-numeric id, or a status outside 0/1.
+            if ($allowed === null
+                || ! in_array($column, $allowed['columns'], true)
+                || $idColumn !== $allowed['id_column']
+                || ! is_numeric($id)
+                || ! in_array((int) $status, [0, 1], true)) {
 
-            // Every value below is request text. Without LogSafe::context() a
-            // `table` containing %0A would close this record and open a forged
-            // one, so the log that exists to show refusals could be used to
-            // manufacture them.
-            \Log::warning('Rejected a toggle-status request outside the allow-list', \App\Support\LogSafe::context([
-                'user'      => optional(auth()->user())->getKey(),
-                'table'     => $table,
-                'column'    => $column,
-                'id_column' => $idColumn,
-                'status'    => $status,
-            ]));
+                // Every value below is request text. Without LogSafe::context() a
+                // `table` containing %0A would close this record and open a forged
+                // one, so the log that exists to show refusals could be used to
+                // manufacture them.
+                \Log::warning('Rejected a toggle-status request outside the allow-list', LogSafe::context([
+                    'user' => optional(auth()->user())->getKey(),
+                    'table' => $table,
+                    'column' => $column,
+                    'id_column' => $idColumn,
+                    'status' => $status,
+                ]));
 
-            return response()->json([
-                'message' => 'This status change is not permitted.',
-            ], 422);
-        }
-
-        // Most rows in this list are reference masters whose own screens are
-        // reachable by any signed-in user, so gating them here would only make
-        // the switch 403 on a page the user can still open. Five are different:
-        // flipping user_role_master or fc_registration_master changes who can do
-        // what, and news / notices_notification decide what the institute
-        // publishes. Those carry admin_only and are refused to everyone but the
-        // two roles the application already treats as administrators
-        // (authorizeAdmin() in the Setup controllers uses the same pair).
-        //
-        // This closes the escalation path, not the whole of Trap 29: the
-        // remaining tables stay behind `auth` alone until the sidebar permission
-        // model covers their screens, and that is still the Engineering lead's
-        // call to make rather than this endpoint's.
-        //
-        // The check reads the role tables, not hasRole(): that helper answers
-        // from the session list written at login, so an administrator whose
-        // role is revoked would keep these switches until they log out. The
-        // Admin / Super Admin entries in that session list are copied from
-        // these same Spatie roles at login, so a current administrator gets
-        // the same answer either way.
-        $actor = auth()->user();
-        $isAdministrator = $actor !== null
-            && $actor->roles()->whereIn('name', ['Admin', 'Super Admin', 'SuperAdmin'])->exists();
-
-        if (($allowed['admin_only'] ?? false) && ! $isAdministrator) {
-            \Log::warning('Refused a toggle-status request on a privileged table', \App\Support\LogSafe::context([
-                'user'   => optional(auth()->user())->getKey(),
-                'table'  => $table,
-                'column' => $column,
-            ]));
-
-            return response()->json([
-                'message' => 'You do not have permission to change this record.',
-            ], 403);
-        }
-
-        $status = (int) $status;
-
-        $previous = DB::table($table)->where($idColumn, $id)->value($column);
-
-        DB::table($table)
-            ->where($idColumn, $id)
-            ->update([$column => $status]);
-
-        // The refusals above are logged; so is every change that goes through,
-        // or the log would show only the requests that changed nothing. Table
-        // and column are allow-listed by now; id is still request text.
-        \Log::info('Toggle-status change', \App\Support\LogSafe::context([
-            'user'       => optional($actor)->getKey(),
-            'table'      => $table,
-            'column'     => $column,
-            'id'         => (string) $id,
-            'from'       => $previous,
-            'to'         => $status,
-            'privileged' => (bool) ($allowed['admin_only'] ?? false),
-        ]));
-
-        if ($table === 'employee_type_master') {
-            EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
-        }
-        if ($table === 'faculty_expertise_master') {
-            FacultyExpertiseMasterController::bumpListCacheEpoch();
-        }
-        if ($table === 'faculty_master') {
-            FacultyDataTable::bumpListingCacheEpoch();
-        }
-        if ($table === 'user_role_master') {
-            RoleDataTable::bumpListingCacheEpoch();
-        }
-        if ($table === 'venue_master') {
-            VenueMasterController::bumpIndexCacheEpoch();
-        }
-        if ($table === 'course_master') {
-            CourseMasterDataTable::bumpListingCacheEpoch();
-        }
-        if ($table === 'group_type_master_course_master_map') {
-            GroupMappingDataTable::bumpListingCacheEpoch();
-        }
-        if ($table === 'faculty_type_master') {
-            FacultyTypeMasterController::bumpListCacheEpoch();
-        }
-        /* CENTCOM grids are server-side: their cached page snapshots are keyed by
-           search + sort, and both can depend on status (sorting by the Status
-           column, or a search term that matches the status pill). Without these
-           bumps a toggled row keeps its old position until the TTL expires. */
-        if ($table === 'issue_category_master') {
-            IssueCategoryController::bumpIndexListCacheEpoch();
-            // The matrix lists ACTIVE categories only, so it changes shape too.
-            IssueEscalationMatrixController::bumpEscalationMatrixListCacheEpoch();
-        }
-        if ($table === 'issue_sub_category_master') {
-            IssueSubCategoryController::bumpIndexListCacheEpoch();
-        }
-        if ($table === 'issue_priority_master') {
-            IssuePriorityController::bumpIndexListCacheEpoch();
-        }
-
-        $newState = ((int) $status === 1) ? 'Active' : 'Inactive';
-        session()->flash('success', "Status updated to {$newState}.");
-
-        return response()->json([
-            'message' => "Status updated to {$newState}.",
-            'state' => $newState,
-        ]);
-    } catch (\Exception $e) {
-        \Log::error('Toggle status error: ' . $e->getMessage());
-
-        // The exception text stays in the log only: a QueryException message
-        // carries the rendered SQL, the bound values and the server's error.
-        return response()->json([
-            'message' => 'Status could not be updated.',
-        ], 500);
-    }
-}
-public function assignRole($id)
-{
-    try {
-        $decryptedId = decrypt($id);
-    } catch (\Exception $e) {
-        return redirect()->route('admin.users.index')
-            ->with('error', 'Invalid user ID. Please try again.');
-    }
-
-    $user = User::findOrFail($decryptedId);
-   
-    $userRoles = $user->roles()->pluck('id')->toArray();    
-    
-    return view('admin.user_management.users.assign_role',
-        compact('user', 'userRoles'));
-}
-public function getAllRoles()
-{
-    $roles = Role::all();
-    return response()->json($roles);
-}
-
-public function assignRoleSave(Request $request)
-{
-    $request->validate([
-        'user_id' => 'required|integer|exists:user_credentials,pk',
-        'roles'   => 'nullable|array',
-        'roles.*' => 'exists:roles,id',
-    ]);
-
-    try {
-        DB::beginTransaction();
-
-        $user = User::findOrFail($request->user_id);
-        $roleNames = Role::whereIn('id', $request->input('roles', []))->pluck('name')->toArray();
-        $user->syncRoles($roleNames);
-
-        DB::commit();
-
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
-        self::bumpAdminUsersIndexCacheEpoch();
-
-        // Send notification to the user if roles were assigned
-        if (!empty($assignedRoleNames)) {
-            try {
-                // Get user_id from user_credentials table
-                $userCredential = \DB::table('user_credentials')
-                    ->where('pk', $userId)
-                    ->first();
-
-                if ($userCredential && $userCredential->user_id) {
-                    $notificationService = app(NotificationService::class);
-                    $roleNames = implode(', ', $assignedRoleNames);
-                    $notificationService->create(
-                        (int)$userCredential->user_id,
-                        'role_assignment',
-                        'Role Assignment',
-                        $userId,
-                        'Role Assigned',
-                        "You have been assigned the following role(s): {$roleNames}."
-                    );
-                }
-            } catch (\Exception $e) {
-                // Log error but don't fail the request
-                \Log::error('Failed to send role assignment notification: ' . $e->getMessage());
+                return response()->json([
+                    'message' => 'This status change is not permitted.',
+                ], 422);
             }
+
+            // Most rows in this list are reference masters whose own screens are
+            // reachable by any signed-in user, so gating them here would only make
+            // the switch 403 on a page the user can still open. Five are different:
+            // flipping user_role_master or fc_registration_master changes who can do
+            // what, and news / notices_notification decide what the institute
+            // publishes. Those carry admin_only and are refused to everyone but the
+            // two roles the application already treats as administrators
+            // (authorizeAdmin() in the Setup controllers uses the same pair).
+            //
+            // This closes the escalation path, not the whole of Trap 29: the
+            // remaining tables stay behind `auth` alone until the sidebar permission
+            // model covers their screens, and that is still the Engineering lead's
+            // call to make rather than this endpoint's.
+            //
+            // The check reads the role tables, not hasRole(): that helper answers
+            // from the session list written at login, so an administrator whose
+            // role is revoked would keep these switches until they log out. The
+            // Admin / Super Admin entries in that session list are copied from
+            // these same Spatie roles at login, so a current administrator gets
+            // the same answer either way.
+            $actor = auth()->user();
+            $isAdministrator = $actor !== null
+                && $actor->roles()->whereIn('name', ['Admin', 'Super Admin', 'SuperAdmin'])->exists();
+
+            if (($allowed['admin_only'] ?? false) && ! $isAdministrator) {
+                \Log::warning('Refused a toggle-status request on a privileged table', LogSafe::context([
+                    'user' => optional(auth()->user())->getKey(),
+                    'table' => $table,
+                    'column' => $column,
+                ]));
+
+                return response()->json([
+                    'message' => 'You do not have permission to change this record.',
+                ], 403);
+            }
+
+            $status = (int) $status;
+
+            $previous = DB::table($table)->where($idColumn, $id)->value($column);
+
+            DB::table($table)
+                ->where($idColumn, $id)
+                ->update([$column => $status]);
+
+            // The refusals above are logged; so is every change that goes through,
+            // or the log would show only the requests that changed nothing. Table
+            // and column are allow-listed by now; id is still request text.
+            \Log::info('Toggle-status change', LogSafe::context([
+                'user' => optional($actor)->getKey(),
+                'table' => $table,
+                'column' => $column,
+                'id' => (string) $id,
+                'from' => $previous,
+                'to' => $status,
+                'privileged' => (bool) ($allowed['admin_only'] ?? false),
+            ]));
+
+            if ($table === 'employee_type_master') {
+                EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
+            }
+            if ($table === 'faculty_expertise_master') {
+                FacultyExpertiseMasterController::bumpListCacheEpoch();
+            }
+            if ($table === 'faculty_master') {
+                FacultyDataTable::bumpListingCacheEpoch();
+            }
+            if ($table === 'user_role_master') {
+                RoleDataTable::bumpListingCacheEpoch();
+            }
+            if ($table === 'venue_master') {
+                VenueMasterController::bumpIndexCacheEpoch();
+            }
+            if ($table === 'course_master') {
+                CourseMasterDataTable::bumpListingCacheEpoch();
+            }
+            if ($table === 'group_type_master_course_master_map') {
+                GroupMappingDataTable::bumpListingCacheEpoch();
+            }
+            if ($table === 'faculty_type_master') {
+                FacultyTypeMasterController::bumpListCacheEpoch();
+            }
+            /* CENTCOM grids are server-side: their cached page snapshots are keyed by
+               search + sort, and both can depend on status (sorting by the Status
+               column, or a search term that matches the status pill). Without these
+               bumps a toggled row keeps its old position until the TTL expires. */
+            if ($table === 'issue_category_master') {
+                IssueCategoryController::bumpIndexListCacheEpoch();
+                // The matrix lists ACTIVE categories only, so it changes shape too.
+                IssueEscalationMatrixController::bumpEscalationMatrixListCacheEpoch();
+            }
+            if ($table === 'issue_sub_category_master') {
+                IssueSubCategoryController::bumpIndexListCacheEpoch();
+            }
+            if ($table === 'issue_priority_master') {
+                IssuePriorityController::bumpIndexListCacheEpoch();
+            }
+
+            $newState = ((int) $status === 1) ? 'Active' : 'Inactive';
+            session()->flash('success', "Status updated to {$newState}.");
+
+            return response()->json([
+                'message' => "Status updated to {$newState}.",
+                'state' => $newState,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Toggle status error: '.$e->getMessage());
+
+            // The exception text stays in the log only: a QueryException message
+            // carries the rendered SQL, the bound values and the server's error.
+            return response()->json([
+                'message' => 'Status could not be updated.',
+            ], 500);
+        }
+    }
+
+    public function assignRole($id)
+    {
+        try {
+            $decryptedId = decrypt($id);
+        } catch (\Exception $e) {
+            return redirect()->route('admin.users.index')
+                ->with('error', 'Invalid user ID. Please try again.');
         }
 
-        return redirect()->route('admin.users.index')
-            ->with('success', 'Roles assigned successfully.');
-    } catch (\Exception $e) {
-        DB::rollBack();
+        $user = User::findOrFail($decryptedId);
 
-        return back()->with('error', 'Error: ' . $e->getMessage());
+        $userRoles = $user->roles()->pluck('id')->toArray();
+
+        return view('admin.user_management.users.assign_role',
+            compact('user', 'userRoles'));
     }
-}
 
-// public function assignRoleSave(Request $request)
-// {
-//     dd($request->all());
-//     $request->validate([
-//         'user_id' => 'required|integer',
-//         'roles'   => 'nullable|array',
-//     ]);
+    public function getAllRoles()
+    {
+        $roles = Role::all();
 
-//     $userId = $request->user_id;
+        return response()->json($roles);
+    }
 
-//     \DB::beginTransaction();
+    public function assignRoleSave(Request $request)
+    {
+        // The route carries EnsureMenuPermission:users. This re-check is here because
+        // the method grants any role, Super Admin included, and a controller is the
+        // one place a later route edit cannot quietly un-gate (PR #309 review F-073:
+        // on `main` this route carries `auth` alone and any account can make itself
+        // Super Admin).
+        abort_unless(hasMenuPermission('users'), 403, 'You do not have permission to assign roles.');
 
-//     try {
+        $request->validate([
+            'user_id' => 'required|integer|exists:user_credentials,pk',
+            'roles' => 'nullable|array',
+            'roles.*' => 'exists:roles,id',
+        ]);
 
-//         // Remove old roles
-//         \DB::table('employee_role_mapping')
-//             ->where('user_credentials_pk', $userId)
-//             ->delete();
+        // The `users` permission admits more than Super Admin, and syncRoles() below
+        // writes whatever role ids are posted - so without this a `users` holder could
+        // post its own pk with the Super Admin role id and become Super Admin, which
+        // then bypasses every EnsureMenuPermission gate (it admits
+        // isSidebarPrivilegedUser() before it reads a permission). Same guard as PR #311
+        // (18a676afb). Deliberately narrow: a caller who is not Super Admin may not
+        // CHANGE anyone's Super Admin membership in either direction - removing it
+        // would let a `users` holder strand the only accounts able to undo that.
+        //
+        // `users` IS A SUPER-ADMIN-GRADE PERMISSION (PR #309 review F-076, decided
+        // 2026-09-25: keep and document). Apart from Super Admin itself, a holder may
+        // give ANY role to ANY account, its own included, so it effectively holds every
+        // permission any role carries. Grant it only to accounts you would make Super
+        // Admin.
+        if (! isSidebarPrivilegedUser()) {
+            $target = User::find($request->user_id);
+            $requestedRoleNames = Role::whereIn('id', $request->input('roles', []))->pluck('name')->toArray();
 
-//         // Insert new roles
-//         $assignedRoleNames = [];
-//         $roleIds = $request->input('roles', []);
+            $wouldHoldSuperAdmin = in_array('Super Admin', $requestedRoleNames, true);
+            $holdsSuperAdmin = $target ? $target->hasRole('Super Admin') : false;
 
-//         if (empty($roleIds)) {
-//             // Default RBAC role when roles are submitted empty.
-//             $staffRole = UserRoleMaster::where('user_role_name', 'Staff')
-//                 ->orWhere('user_role_display_name', 'Staff')
-//                 ->first();
-//             if ($staffRole) {
-//                 $roleIds = [$staffRole->pk];
-//             }
-//         }
+            abort_if($wouldHoldSuperAdmin !== $holdsSuperAdmin, 403, 'Only a Super Admin may grant or revoke the Super Admin role.');
+        }
 
-//         if (!empty($roleIds)) {
-//             foreach ($roleIds as $roleId) {
-//                 \DB::table('employee_role_mapping')->insert([
-//                     'user_credentials_pk'  => $userId,
-//                     'user_role_master_pk'  => $roleId,
-//                     'active_inactive'      => 1,
-//                     'created_date'         => now(),
-//                     'updated_date'        => now(),
-//                 ]);
-//                 // Get role name for notification
-//                 $role = UserRoleMaster::find($roleId);
-//                 if ($role) {
-//                     $assignedRoleNames[] = $role->user_role_display_name ?? $role->user_role_name;
-//                 }
-//             }
-//         }
+        try {
+            DB::beginTransaction();
 
-//         \DB::commit();
-        
-//         // Send notification to the user if roles were assigned
-//         if (!empty($assignedRoleNames)) {
-//             try {
-//                 // Get user_id from user_credentials table
-//                 $userCredential = \DB::table('user_credentials')
-//                     ->where('pk', $userId)
-//                     ->first();
-                
-//                 if ($userCredential && $userCredential->user_id) {
-//                     $notificationService = app(NotificationService::class);
-//                     $roleNames = implode(', ', $assignedRoleNames);
-//                     $notificationService->create(
-//                         (int)$userCredential->user_id,
-//                         'role_assignment',
-//                         'Role Assignment',
-//                         $userId,
-//                         'Role Assigned',
-//                         "You have been assigned the following role(s): {$roleNames}."
-//                     );
-//                 }
-//             } catch (\Exception $e) {
-//                 // Log error but don't fail the request
-//                 \Log::error('Failed to send role assignment notification: ' . $e->getMessage());
-//             }
-//         }
+            $user = User::findOrFail($request->user_id);
+            $roleNames = Role::whereIn('id', $request->input('roles', []))->pluck('name')->toArray();
+            $user->syncRoles($roleNames);
 
-//         return redirect()->route('admin.users.index')
-//                          ->with('success', 'Roles assigned successfully.');
+            DB::commit();
 
-//     } catch (\Exception $e) {
-//         \DB::rollBack();
-//         return back()->with('error', 'Error: '.$e->getMessage());
-//     }
-// }
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
+            self::bumpAdminUsersIndexCacheEpoch();
 
-public function uploadPdf(Request $request)
+            // A role-assignment notification block stood here and had never fired: it was
+            // guarded by `if (!empty($assignedRoleNames))` and read `$userId`, and neither
+            // variable is ever assigned in this method — the names belong to the older
+            // employee_role_mapping implementation still commented out below. empty() on an
+            // undefined variable is true and raises no warning, so the guard was silently
+            // false on every call and the block was unreachable. Identical at the merge-base.
+            //
+            // Removed rather than repaired: switching on notifications that have never been
+            // sent is a behaviour change, and this is a permissions PR. If the notification
+            // is wanted, it belongs in its own change, with $user and $roleNames (which DO
+            // exist here) and a test.
+
+            return redirect()->route('admin.users.index')
+                ->with('success', 'Roles assigned successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()->with('error', 'Error: '.$e->getMessage());
+        }
+    }
+
+    // public function assignRoleSave(Request $request)
+    // {
+    //     dd($request->all());
+    //     $request->validate([
+    //         'user_id' => 'required|integer',
+    //         'roles'   => 'nullable|array',
+    //     ]);
+
+    //     $userId = $request->user_id;
+
+    //     \DB::beginTransaction();
+
+    //     try {
+
+    //         // Remove old roles
+    //         \DB::table('employee_role_mapping')
+    //             ->where('user_credentials_pk', $userId)
+    //             ->delete();
+
+    //         // Insert new roles
+    //         $assignedRoleNames = [];
+    //         $roleIds = $request->input('roles', []);
+
+    //         if (empty($roleIds)) {
+    //             // Default RBAC role when roles are submitted empty.
+    //             $staffRole = UserRoleMaster::where('user_role_name', 'Staff')
+    //                 ->orWhere('user_role_display_name', 'Staff')
+    //                 ->first();
+    //             if ($staffRole) {
+    //                 $roleIds = [$staffRole->pk];
+    //             }
+    //         }
+
+    //         if (!empty($roleIds)) {
+    //             foreach ($roleIds as $roleId) {
+    //                 \DB::table('employee_role_mapping')->insert([
+    //                     'user_credentials_pk'  => $userId,
+    //                     'user_role_master_pk'  => $roleId,
+    //                     'active_inactive'      => 1,
+    //                     'created_date'         => now(),
+    //                     'updated_date'        => now(),
+    //                 ]);
+    //                 // Get role name for notification
+    //                 $role = UserRoleMaster::find($roleId);
+    //                 if ($role) {
+    //                     $assignedRoleNames[] = $role->user_role_display_name ?? $role->user_role_name;
+    //                 }
+    //             }
+    //         }
+
+    //         \DB::commit();
+
+    //         // Send notification to the user if roles were assigned
+    //         if (!empty($assignedRoleNames)) {
+    //             try {
+    //                 // Get user_id from user_credentials table
+    //                 $userCredential = \DB::table('user_credentials')
+    //                     ->where('pk', $userId)
+    //                     ->first();
+
+    //                 if ($userCredential && $userCredential->user_id) {
+    //                     $notificationService = app(NotificationService::class);
+    //                     $roleNames = implode(', ', $assignedRoleNames);
+    //                     $notificationService->create(
+    //                         (int)$userCredential->user_id,
+    //                         'role_assignment',
+    //                         'Role Assignment',
+    //                         $userId,
+    //                         'Role Assigned',
+    //                         "You have been assigned the following role(s): {$roleNames}."
+    //                     );
+    //                 }
+    //             } catch (\Exception $e) {
+    //                 // Log error but don't fail the request
+    //                 \Log::error('Failed to send role assignment notification: ' . $e->getMessage());
+    //             }
+    //         }
+
+    //         return redirect()->route('admin.users.index')
+    //                          ->with('success', 'Roles assigned successfully.');
+
+    //     } catch (\Exception $e) {
+    //         \DB::rollBack();
+    //         return back()->with('error', 'Error: '.$e->getMessage());
+    //     }
+    // }
+
+    public function uploadPdf(Request $request)
     {
         if ($request->hasFile('file')) {
 
             $file = $request->file('file');
 
-            // Allow only PDF
-            if ($file->getClientOriginalExtension() != 'pdf') {
+            // Allow only PDF — checked against the file's CONTENT, not its name.
+            //
+            // The previous check read getClientOriginalExtension(), which the uploader
+            // controls, while store() below names the saved file from guessExtension(),
+            // which it does not. The two disagreeing meant an HTML document uploaded as
+            // "notes.pdf" passed this gate and was then written as <hash>.html onto the
+            // PUBLIC disk, where the browser renders it as markup on our own origin.
+            // Validating the content closes both halves at once.
+            $validator = \Illuminate\Support\Facades\Validator::make(
+                ['file' => $file],
+                ['file' => ['required', 'file', 'mimes:pdf', 'max:20480']]
+            );
+
+            if ($validator->fails()) {
                 return response()->json(['error' => 'Only PDF files allowed'], 422);
             }
 
             $path = $file->store('summernote/pdf', 'public');
 
             return response()->json([
-                'location' => asset('storage/' . $path)
+                'location' => asset('storage/'.$path),
             ]);
         }
 
         return response()->json(['error' => 'No file uploaded'], 400);
     }
-    function change_password(){
-    return view('admin.password.change_password');
+
+    public function change_password()
+    {
+        return view('admin.password.change_password');
 
     }
-    function submit_change_password(Request $request) {
-    $request->validate([
-        'current_password' => 'required',
-        'new_password' => [
-            'required',
-            'confirmed',
-            'min:8',
-            // Strong password policy (CWE-521): upper + lower + number + special char.
-            'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/',
-        ],
-    ], [
-        'new_password.regex' => 'Password must include uppercase, lowercase, a number and a special character.',
-    ]);
-    try {
-      $user = Auth::user();
-    $username = $user->user_name;
 
-    // 🔹 Verify old password first
-  if (!Adldap::auth()->attempt($username, $request->current_password)) {
-    return back()
-        ->withErrors([
-            'current_password' => 'Current password is incorrect'
+    public function submit_change_password(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => [
+                'required',
+                'confirmed',
+                'min:8',
+                // Strong password policy (CWE-521): upper + lower + number + special char.
+                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/',
+            ],
+        ], [
+            'new_password.regex' => 'Password must include uppercase, lowercase, a number and a special character.',
         ]);
-}
+        try {
+            $user = Auth::user();
+            $username = $user->user_name;
 
+            // 🔹 Verify old password first
+            if (! Adldap::auth()->attempt($username, $request->current_password)) {
+                return back()
+                    ->withErrors([
+                        'current_password' => 'Current password is incorrect',
+                    ]);
+            }
 
-    // 🔹 Find LDAP user
-    $ldapUser = Adldap::search()->users()->find($username);
+            // 🔹 Find LDAP user
+            $ldapUser = Adldap::search()->users()->find($username);
 
-    if (!$ldapUser) {
-        return back()->withErrors(['error' => 'LDAP user not found']);
-    }
+            if (! $ldapUser) {
+                return back()->withErrors(['error' => 'LDAP user not found']);
+            }
 
+            // 🔹 Change password in LDAP
+            $ldapUser->setPassword($request->new_password);
 
-        // 🔹 Change password in LDAP
-        $ldapUser->setPassword($request->new_password);
+            // 🔹 OPTIONAL: Update local password if stored
+            $user->jbp_password = Hash::make($request->new_password);
+            $user->save();
 
-        // 🔹 OPTIONAL: Update local password if stored
-        $user->jbp_password = Hash::make($request->new_password);
-        $user->save();
-
-        // return redirect()
-        //     ->route('profile')
-        //     ->with('success', 'Password changed successfully');
+            // return redirect()
+            //     ->route('profile')
+            //     ->with('success', 'Password changed successfully');
             return back()->with('success', 'Password changed successfully');
- } catch (\Exception $e) {
-    return back()
-        ->withInput()
-        ->withErrors([
-            'ldap_error' => 'LDAP Error: ' . $e->getMessage()
-        ]);
-}
+        } catch (\Exception $e) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'ldap_error' => 'LDAP Error: '.$e->getMessage(),
+                ]);
+        }
 
     }
 
     /**
      * Get today's timetable for a specific faculty member
      *
-     * @param int $facultyUserId
-     * @return \Illuminate\Support\Collection
+     * @param  int  $facultyUserId
+     * @return Collection
      */
     private function getTodayTimetableForFaculty($facultyUserId)
     {
@@ -5056,7 +5331,7 @@ public function uploadPdf(Request $request)
         // Get faculty_master.pk from user_id
         $faculty = FacultyMaster::where('employee_master_pk', $facultyUserId)->first();
 
-        if (!$faculty) {
+        if (! $faculty) {
             return collect([]);
         }
 
@@ -5068,7 +5343,7 @@ public function uploadPdf(Request $request)
             ->whereDate('END_DATE', '>=', $today)
             ->where(function ($query) use ($facultyPk) {
                 $query->whereRaw('JSON_CONTAINS(faculty_master, ?)', ['"'.$facultyPk.'"'])
-                      ->orWhere('faculty_master', $facultyPk);
+                    ->orWhere('faculty_master', $facultyPk);
             })
             ->with(['faculty', 'venue', 'classSession'])
             ->orderBy('class_session')
@@ -5083,7 +5358,7 @@ public function uploadPdf(Request $request)
                 if ($entry->classSession) {
                     // Try to get time from class_session_master
                     if (isset($entry->classSession->start_time) && isset($entry->classSession->end_time)) {
-                        $sessionTime = $entry->classSession->start_time . ' - ' . $entry->classSession->end_time;
+                        $sessionTime = $entry->classSession->start_time.' - '.$entry->classSession->end_time;
                     } elseif (isset($entry->classSession->shift_time)) {
                         $sessionTime = $entry->classSession->shift_time;
                     } else {
@@ -5105,13 +5380,13 @@ public function uploadPdf(Request $request)
             if ($entry->faculty_master) {
                 // Check if it's JSON array
                 $facultyIds = json_decode($entry->faculty_master, true);
-                if (is_array($facultyIds) && !empty($facultyIds)) {
+                if (is_array($facultyIds) && ! empty($facultyIds)) {
                     // Get all faculty names from JSON array
                     $facultyNames = FacultyMaster::whereIn('pk', $facultyIds)
                         ->pluck('full_name')
                         ->filter()
                         ->toArray();
-                    $facultyName = !empty($facultyNames) ? implode(', ', $facultyNames) : 'N/A';
+                    $facultyName = ! empty($facultyNames) ? implode(', ', $facultyNames) : 'N/A';
                 } elseif ($entry->faculty) {
                     // Single ID - use relationship
                     $facultyName = $entry->faculty->full_name ?? 'N/A';
@@ -5132,8 +5407,8 @@ public function uploadPdf(Request $request)
     /**
      * Get today's timetable for a specific student
      *
-     * @param int $studentId
-     * @return \Illuminate\Support\Collection
+     * @param  int  $studentId
+     * @return Collection
      */
     private function getTodayTimetableForStudent($studentId)
     {
@@ -5143,7 +5418,6 @@ public function uploadPdf(Request $request)
         $studentGroupMaps = StudentCourseGroupMap::with('groupTypeMasterCourseMasterMap')
             ->where('student_master_pk', $studentId)
             ->get();
-
 
         if ($studentGroupMaps->isEmpty()) {
             return collect([]);
@@ -5182,7 +5456,7 @@ public function uploadPdf(Request $request)
                 if ($entry->classSession) {
                     // Try to get time from class_session_master
                     if (isset($entry->classSession->start_time) && isset($entry->classSession->end_time)) {
-                        $sessionTime = $entry->classSession->start_time . ' - ' . $entry->classSession->end_time;
+                        $sessionTime = $entry->classSession->start_time.' - '.$entry->classSession->end_time;
                     } elseif (isset($entry->classSession->shift_time)) {
                         $sessionTime = $entry->classSession->shift_time;
                     } else {
@@ -5204,13 +5478,13 @@ public function uploadPdf(Request $request)
             if ($entry->faculty_master) {
                 // Check if it's JSON array
                 $facultyIds = json_decode($entry->faculty_master, true);
-                if (is_array($facultyIds) && !empty($facultyIds)) {
+                if (is_array($facultyIds) && ! empty($facultyIds)) {
                     // Get all faculty names from JSON array
                     $facultyNames = FacultyMaster::whereIn('pk', $facultyIds)
                         ->pluck('full_name')
                         ->filter()
                         ->toArray();
-                    $facultyName = !empty($facultyNames) ? implode(', ', $facultyNames) : 'N/A';
+                    $facultyName = ! empty($facultyNames) ? implode(', ', $facultyNames) : 'N/A';
                 } elseif ($entry->faculty) {
                     // Single ID - use relationship
                     $facultyName = $entry->faculty->full_name ?? 'N/A';
@@ -5235,8 +5509,8 @@ public function uploadPdf(Request $request)
     {
         return CourseCordinatorMaster::where(function ($query) use ($facultyPk) {
             $query->where('Coordinator_name', $facultyPk)
-                  ->orWhere('Assistant_Coordinator_name', $facultyPk)
-                  ->orWhereRaw('FIND_IN_SET(?, Assistant_Coordinator_name)', [$facultyPk]);
+                ->orWhere('Assistant_Coordinator_name', $facultyPk)
+                ->orWhereRaw('FIND_IN_SET(?, Assistant_Coordinator_name)', [$facultyPk]);
         })->pluck('courses_master_pk')->unique();
     }
 
@@ -5301,8 +5575,4 @@ public function uploadPdf(Request $request)
             ->where('active_inactive', 1)
             ->exists();
     }
-
-
 }
-
-

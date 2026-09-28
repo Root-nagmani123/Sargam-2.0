@@ -109,12 +109,27 @@
     @include('admin.layouts.pre_header')
     <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }} - Sargam 2.0 | Lal Bahadur Shastri National Academy of
         Administration</title>
-    {{-- Deliberately NOT a @section. This was an unclosed @section('css'): it opened an
-     output buffer that was never closed, so every page built on this layout leaked
-     one buffer level. A child page's own @section('css') is still emitted, by the
-     @yield('css') at the end of admin.layouts.pre_header (included above) - keep
-     that yield. The styles below are emitted inline, which is where they already
-     ended up. --}}
+    {{-- These styles are emitted here, in <head>, with no @section wrapper.
+
+         They used to open @section('css') and never close it. @section compiles
+         to startSection(), which calls ob_start(), so an unclosed section leaked
+         one output buffer on EVERY admin page render - which is why every
+         feature test that rendered an admin page was reported "risky" by PHPUnit
+         rather than passing. PR #309 F-007.
+
+         Closing it with @endsection or @show is NOT the fix, and this comment
+         exists so nobody tries: three child views (mdo_escrot_exemption/create
+         and /edit, registration/createform) declare their own @section('css'),
+         and with @extends the child renders first. stopSection() then calls
+         extendSection(), which keeps the CHILD's content when the child has no
+         @parent - so closing the section here hands those three pages the
+         child's CSS INSTEAD OF this block, silently dropping ~11 KB of layout
+         styling from them. Measured: the page loses .mini-bottom and
+         .nav-item .tab-item .active.
+
+         Having no section at all avoids both problems: nothing is buffered, and
+         nothing competes with the child's 'css' section, which pre_header still
+         renders through @yield('css'). --}}
     <style>
         .nav-item .tab-item .active {
             background-color: #bbd9f7;
@@ -717,6 +732,7 @@
 
     {{-- Page-specific styles stack --}}
     @stack('styles')
+
 </head>
 
 <body data-sidebartype="full" @class(['has-dynamic-sidebar', 'admin-mess-module' => request()->routeIs('admin.mess.*')])>

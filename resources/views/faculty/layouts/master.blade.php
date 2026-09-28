@@ -4,12 +4,11 @@
 <head>
     @include('admin.layouts.pre_header')
     <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
-    {{-- Deliberately NOT a @section. This was an unclosed @section('css'): it opened an
-     output buffer that was never closed, so every page built on this layout leaked
-     one buffer level. A child page's own @section('css') is still emitted, by the
-     @yield('css') at the end of admin.layouts.pre_header (included above) - keep
-     that yield. The styles below are emitted inline, which is where they already
-     ended up. --}}
+    {{-- No @section wrapper: these styles belong in <head> where they are.
+         This opened @section('css') and never closed it, and @section compiles
+         to startSection() -> ob_start(), so every faculty page render leaked an
+         output buffer. Same defect as admin/layouts/master. PR #309 F-007.
+         Do not "fix" it with @endsection/@show - see the note in that file. --}}
     <style>
     .nav-item .tab-item .active {
         background-color: #bbd9f7;

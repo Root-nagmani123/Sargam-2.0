@@ -1,27 +1,24 @@
 <?php
+
+use App\Http\Controllers\Admin\LocationController;
+use App\Http\Controllers\Admin\Master\CasteCategoryMasterController;
+use App\Http\Controllers\Admin\Master\ClassSessionMasterController;
+use App\Http\Controllers\Admin\Master\CourseGroupTypeController;
+use App\Http\Controllers\Admin\Master\DepartmentMasterController;
+use App\Http\Controllers\Admin\Master\DesignationMasterController;
+use App\Http\Controllers\Admin\Master\EmployeeGroupMasterController;
+use App\Http\Controllers\Admin\Master\EmployeeTypeMasterController;
+use App\Http\Controllers\Admin\Master\ExemptionCategoryController;
+use App\Http\Controllers\Admin\Master\FacultyExpertiseMasterController;
+use App\Http\Controllers\Admin\Master\FacultyTypeMasterController;
+use App\Http\Controllers\Admin\Master\HostelBuildingMasterController;
+use App\Http\Controllers\Admin\Master\HostelFloorMasterController;
+use App\Http\Controllers\Admin\Master\HostelRoomMasterController;
+use App\Http\Controllers\Admin\Master\MDODutyTypeController;
+use App\Http\Controllers\Admin\Master\MedicalCaseMasterController;
+use App\Http\Controllers\Admin\Master\MemoConclusionMasterController;
+use App\Http\Controllers\Admin\Master\MemoTypeMasterController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\{
-    LocationController
-};
-use App\Http\Controllers\Admin\Master\{
-    FacultyTypeMasterController,
-    MDODutyTypeController,
-    CourseGroupTypeController,
-    ClassSessionMasterController,
-    FacultyExpertiseMasterController,
-    ExemptionCategoryController,
-    MemoTypeMasterController,
-    DepartmentMasterController,
-    DesignationMasterController,
-    EmployeeTypeMasterController,
-    EmployeeGroupMasterController,
-    CasteCategoryMasterController,
-    MemoConclusionMasterController,
-    HostelBuildingMasterController,
-    HostelFloorMasterController,
-    HostelRoomMasterController,
-    MedicalCaseMasterController,
-};
 
 Route::prefix('master')->name('master.')->middleware('auth')->group(function () {
 
@@ -94,19 +91,19 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
     });
 
     // Course Group Type Master Routes
-  Route::prefix('course-group-type')->name('course.group.type.')->controller(CourseGroupTypeController::class)
-    ->group(function () {
+    Route::prefix('course-group-type')->name('course.group.type.')->controller(CourseGroupTypeController::class)
+        ->group(function () {
 
-        Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::post('/store', 'store')->name('store');
-        Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::delete('/delete/{id}', 'delete')->name('delete');
+            Route::get('/', 'index')->name('index');
+            Route::get('/create', 'create')->name('create');
+            Route::post('/store', 'store')->name('store');
+            Route::get('/edit/{id}', 'edit')->name('edit');
+            Route::delete('/delete/{id}', 'delete')->name('delete');
 
-        // Ajax & Datatable
-        Route::get('/grouptypeview', 'grouptypeview')->name('grouptypeview');
-        Route::post('/updatestatus','updateStatus')->name('updatestatus');
-    });
+            // Ajax & Datatable
+            Route::get('/grouptypeview', 'grouptypeview')->name('grouptypeview');
+            Route::post('/updatestatus', 'updateStatus')->name('updatestatus');
+        });
 
     Route::prefix('mdo')->name('mdo_duty_type.')->controller(MDODutyTypeController::class)->group(function () {
         Route::get('/', 'index')->name('index');
@@ -116,7 +113,6 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
         Route::post('/delete', 'delete')->name('delete');
         Route::post('/changeStatus', 'changeStatus')->name('status');
     });
-
 
     // Faculty Type Master Routes
     Route::prefix('faculty-type-master')->name('faculty.type.master.')->controller(FacultyTypeMasterController::class)->group(function () {
@@ -129,7 +125,7 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
         Route::delete('/delete/{id}', 'delete')->name('delete');
     });
 
- Route::prefix('exemption-category-master')->name('exemption.category.master.')->controller(ExemptionCategoryController::class)->group(function () {
+    Route::prefix('exemption-category-master')->name('exemption.category.master.')->controller(ExemptionCategoryController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
@@ -141,28 +137,28 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
     });
 
     Route::prefix('exemption-medical-speciality-master')->name('exemption.medical.speciality.')->controller(ExemptionCategoryController::class)->group(function () {
-    Route::get('/', 'medicalSpecialityIndex')->name('index');
-    Route::get('/create', 'medicalSpecialityCreate')->name('create');
-    Route::post('/store', 'medicalSpecialityStore')->name('store');
-    Route::get('/edit/{id}', 'medicalSpecialityEdit')->name('edit');
-    Route::delete('/delete/{id}', 'medicalSpecialityDelete')->name('delete');
-    Route::get('/exemption_med_spec_mst', 'exemption_med_spec_mst')->name('exemption_med_spec_mst');
-    Route::post('/MedSpecExupdate', 'MedSpecExupdate')->name('MedSpecExupdate');
-});
-Route::prefix('memo-type-master')->name('memo.type.master.')->controller(MemoTypeMasterController::class)->group(function () {
-    Route::get('/', 'index')->name('index');
-    Route::get('/create', 'create')->name('create');
-    Route::post('/store', 'store')->name('store');
-    Route::get('/edit/{id}', 'edit')->name('edit');
-    Route::delete('/delete/{id}', 'delete')->name('delete');
-});
-Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->controller(MemoConclusionMasterController::class)->group(function () {
-    Route::get('/', 'index')->name('index');
-    Route::get('/create', 'create')->name('create');
-    Route::post('/store', 'store')->name('store');
-    Route::get('/edit/{id}', 'edit')->name('edit');
-    Route::delete('/delete/{id}', 'destroy')->name('delete');
-});
+        Route::get('/', 'medicalSpecialityIndex')->name('index');
+        Route::get('/create', 'medicalSpecialityCreate')->name('create');
+        Route::post('/store', 'medicalSpecialityStore')->name('store');
+        Route::get('/edit/{id}', 'medicalSpecialityEdit')->name('edit');
+        Route::delete('/delete/{id}', 'medicalSpecialityDelete')->name('delete');
+        Route::get('/exemption_med_spec_mst', 'exemption_med_spec_mst')->name('exemption_med_spec_mst');
+        Route::post('/MedSpecExupdate', 'MedSpecExupdate')->name('MedSpecExupdate');
+    });
+    Route::prefix('memo-type-master')->name('memo.type.master.')->controller(MemoTypeMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+    Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->controller(MemoConclusionMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::delete('/delete/{id}', 'destroy')->name('delete');
+    });
 
     // Department Master
     Route::prefix('department-master')->name('department.master.')->controller(DepartmentMasterController::class)->group(function () {
@@ -171,6 +167,9 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::delete('/delete/{id}', 'delete')->name('delete');
+        // Grid exports: one query, one column list, four formats.
+        Route::get('/export/{format}', 'export')->name('export')
+            ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
     });
 
     // Designation Master
@@ -180,6 +179,9 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::delete('/delete/{id}', 'delete')->name('delete');
+        // Grid exports: one query, one column list, four formats.
+        Route::get('/export/{format}', 'export')->name('export')
+            ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
     });
 
     // Caste Category
@@ -189,6 +191,9 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::delete('/delete/{id}', 'delete')->name('delete');
+        // Grid exports: one query, one column list, four formats.
+        Route::get('/export/{format}', 'export')->name('export')
+            ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
     });
 
     // Employee Type Master
@@ -197,14 +202,20 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
+        // Grid exports: one query, one column list, four formats.
+        Route::get('/export/{format}', 'export')->name('export')
+            ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
     });
 
     // Employee Group Master
-    Route::prefix('employee-group')->name('employee.group.')->controller(EmployeeGroupMasterController::class)->group(function(){
+    Route::prefix('employee-group')->name('employee.group.')->controller(EmployeeGroupMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
+        // Grid exports: one query, one column list, four formats.
+        Route::get('/export/{format}', 'export')->name('export')
+            ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
     });
 
     Route::prefix('exemption-medical-speciality-master')->name('exemption.medical.speciality.')->controller(ExemptionCategoryController::class)->group(function () {
@@ -228,8 +239,6 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::delete('/delete/{id}', 'destroy')->name('delete');
     });
-
-
 
     // Hostel Building Master
     Route::prefix('hostel-building-master')->name('hostel.building.')->controller(HostelBuildingMasterController::class)->group(function () {
@@ -268,7 +277,5 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::delete('/delete/{id}', 'delete')->name('delete');
     });
-
-
 
 });
