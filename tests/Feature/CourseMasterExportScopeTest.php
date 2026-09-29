@@ -162,6 +162,32 @@ class CourseMasterExportScopeTest extends TestCase
         $this->assertStringNotContainsString('Course: ', $this->csv($actor, $query), 'course_filter=0 must not produce a label');
     }
 
+    /**
+     * F-008: an array-valued course_filter or q is treated as absent - the
+     * export answers 200 with the unfiltered view, not a 500.
+     *
+     * @dataProvider arrayValuedParameters
+     */
+    public function test_an_array_valued_filter_is_ignored_not_a_server_error(string $param): void
+    {
+        [$actor, $roleIds] = $this->scopedActor();
+
+        $query = ['status_filter' => 'active', $param => ['x']];
+
+        $this->assertSame(
+            $this->expectedCourseNames($roleIds, 'active'),
+            $this->exportedCourseNames($actor, $query),
+            "{$param}[]=x must not filter the rows"
+        );
+        $this->assertStringNotContainsString('Course: ', $this->csv($actor, $query));
+        $this->assertStringNotContainsString('Search: ', $this->csv($actor, $query));
+    }
+
+    public static function arrayValuedParameters(): array
+    {
+        return ['course_filter' => ['course_filter'], 'q' => ['q']];
+    }
+
     public static function statusViews(): array
     {
         return ['active' => ['active'], 'archived' => ['archive']];

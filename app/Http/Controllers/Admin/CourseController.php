@@ -96,9 +96,13 @@ class CourseController extends Controller
         $statusFilter = $request->query('status_filter') === 'archive' ? 'archive' : 'active';
         // Normalised once, the way applyListingScope() reads it: a value it
         // ignores ("", "0") filters no rows and so must name no course either.
-        $courseFilter = trim((string) $request->query('course_filter', ''));
+        // A non-string value (course_filter[]=x) is treated as absent rather
+        // than cast, which would raise "Array to string conversion".
+        $courseFilter = $request->query('course_filter', '');
+        $courseFilter = is_string($courseFilter) ? trim($courseFilter) : '';
         $courseFilter = empty($courseFilter) ? null : $courseFilter;
-        $search = trim((string) $request->query('q', ''));
+        $search = $request->query('q', '');
+        $search = is_string($search) ? trim($search) : '';
 
         $query = CourseMaster::query();
         CourseMasterDataTable::applyListingScope($query, $statusFilter, $courseFilter);
