@@ -13,8 +13,25 @@ use Illuminate\Database\Eloquent\Model;
 class OtParticipantComment extends Model
 {
     protected $table = 'ot_participant_comment';
-    protected $guarded = [];
     protected $primaryKey = 'pk';
+
+    /**
+     * Only the fields the modal actually submits.
+     *
+     * The attribution columns — comment_by_user_id, comment_by_name, created_by —
+     * and active_inactive are deliberately ABSENT: they are what makes a comment
+     * attributable and removable, so they are set explicitly by the controller
+     * after construction and can never arrive from request input. A later
+     * create($request->all()) on this model therefore cannot forge an author or
+     * hide a comment.
+     */
+    protected $fillable = [
+        'student_master_pk',
+        'course_master_pk',
+        'message',
+        'notify_ot',
+        'comment_date',
+    ];
 
     // The table carries created_date / modified_date, not Laravel's created_at pair.
     public $timestamps = false;

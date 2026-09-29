@@ -1616,6 +1616,10 @@ class UserController extends Controller
 
     public function otParticipantsList(Request $request)
     {
+        if (! $this->canUseOtParticipants()) {
+            abort(403, 'You are not authorized to view the OT / Participants list.');
+        }
+
         // Skip the payload's per-student total_* / notice-memo N+1 loop — this page
         // computes its counts separately via otParticipantsRowMeta (batched).
         //
@@ -2526,6 +2530,140 @@ class UserController extends Controller
             || ($facultyPk && ! hasRole('Student-OT'));
     }
 
+    /** Memoised otParticipantRosterPks() result; null is a meaningful value here. */
+    private ?array $otParticipantRoster = null;
+
+    private bool $otParticipantRosterResolved = false;
+
+    /**
+     * The participant roster this viewer may act on — the SAME set
+     * otParticipantsList() shows: the students of the courses they coordinate
+     * (CC / ACC) plus the students of the course groups they own (House /
+     * Counsellor group faculty).
+     *
+     * canUseOtParticipants() answers "may this user use the feature at all"; this
+     * answers "about WHICH participants", which is the part the list enforces and
+     * the endpoints behind it must enforce too.
+     *
+     * Resolved here rather than from resolveDashboardStudentListPayload() on
+     * purpose. That walks the entire payload — group maps, cadres, attendance
+     * sessions — to answer a yes/no question, and it is scoped both to the
+     * Active / Archive tab and to whatever filters the request carries. Reading
+     * either into an authorization decision would refuse a legitimate comment on
+     * a participant whose course has finished, or one hidden by a Course filter
+     * that happened to be posted. This reads neither: course end dates and
+     * request filters are presentation, not permission.
+     *
+     * @return array<int, true>|null  student_master_pk => true, or null for a
+     *                                viewer who oversees every course
+     */
+    private function otParticipantRosterPks(): ?array
+    {
+        if ($this->otParticipantRosterResolved) {
+            return $this->otParticipantRoster;
+        }
+
+        $this->otParticipantRosterResolved = true;
+
+        // Training authorities oversee every course and have no faculty pk of
+        // their own — same treatment resolveDashboardStudentListPayload() gives
+        // them, so their list and their endpoints agree.
+        if (hasRole('Super Admin')
+            || hasRole('Training Induction Admin')
+            || hasRole('Training MCTP Admin')
+            || hasRole('Training IST')) {
+            return $this->otParticipantRoster = null;
+        }
+
+        $facultyPk = get_auth_faculty_master_pk();
+        if (! $facultyPk || hasRole('Student-OT')) {
+            // No faculty record ⇒ no roster of their own, whatever portal role
+            // they carry. An empty set refuses every participant.
+            return $this->otParticipantRoster = [];
+        }
+
+        $pks = [];
+
+        // Source 1 — enrolments of the courses they coordinate.
+        $coordinatorCourses = $this->getCoordinatorCourseIds((int) $facultyPk);
+        if ($coordinatorCourses->isNotEmpty()) {
+            $courseIds = CourseMaster::whereIn('pk', $coordinatorCourses)
+                ->where('active_inactive', 1)
+                ->pluck('pk');
+
+            if ($courseIds->isNotEmpty()) {
+                foreach (StudentMasterCourseMap::whereIn('course_master_pk', $courseIds)
+                    ->where('active_inactive', 1)
+                    ->pluck('student_master_pk') as $spk) {
+                    $pks[(int) $spk] = true;
+                }
+            }
+        }
+
+        // Source 2 — students of the course groups this faculty owns. Kept in
+        // step with the payload's source 2: leaving these out is what showed a
+        // House Group warden an empty list.
+        $groupMapPks = DB::table('group_type_master_course_master_map')
+            ->where('facility_id', $facultyPk)
+            ->where('active_inactive', 1)
+            ->pluck('pk');
+
+        if ($groupMapPks->isNotEmpty()) {
+            foreach (StudentCourseGroupMap::whereIn('group_type_master_course_master_map_pk', $groupMapPks)
+                ->where('active_inactive', 1)
+                ->pluck('student_master_pk') as $spk) {
+                $pks[(int) $spk] = true;
+            }
+        }
+
+        return $this->otParticipantRoster = $pks;
+    }
+
+    /**
+     * Whether this viewer may read or write feedback about one participant.
+     *
+     * Every comment endpoint asserts this. Without it the page is scoped to the
+     * viewer's own roster while the endpoints behind it accept any participant in
+     * the institute — and the store endpoint also pushes the text to them as a
+     * notification.
+     */
+    private function canActOnOtParticipant(int $studentPk): bool
+    {
+        $roster = $this->otParticipantRosterPks();
+
+        return $roster === null || isset($roster[$studentPk]);
+    }
+
+    /**
+     * Every cell of a spreadsheet export through sanitize_export_cell().
+     *
+     * A cell beginning = + - @ (or a tab / CR) is evaluated as a formula by Excel,
+     * LibreOffice and Sheets, so free text a user typed has to be neutralised
+     * before it reaches the file. Spreadsheet paths only — the print and PDF views
+     * render HTML and would show the guard's leading apostrophe.
+     *
+     * @param  array<int, array<int, mixed>>  $rows
+     * @return array<int, array<int, string>>
+     */
+    private function sanitizeExportRows(array $rows): array
+    {
+        $cell = function ($value): string {
+            $value = (string) $value;
+
+            // A lone placeholder character cannot begin a formula, and these exports
+            // write '-' for "none" in eight count columns of every row — sending it
+            // through the guard would print a literal apostrophe in all of them.
+            // Anything longer still goes through.
+            if ($value === '-' || $value === '+' || $value === '@') {
+                return $value;
+            }
+
+            return sanitize_export_cell($value);
+        };
+
+        return array_map(fn (array $row) => array_map($cell, $row), $rows);
+    }
+
     /**
      * Comment / feedback counts for a page of participants, in one query.
      *
@@ -2568,22 +2706,39 @@ class UserController extends Controller
             return response()->json(['success' => false, 'message' => 'Participant not found.'], 404);
         }
 
+        // student_master_pk arrives as a plain integer, so the roster check is the
+        // whole authorization boundary here — canUseOtParticipants() above is
+        // satisfied by any faculty-portal user and says nothing about WHICH
+        // participant. Without this, a faculty member could store attributed
+        // feedback about anyone in the institute and notify them.
+        if (! $this->canActOnOtParticipant((int) $data['student_master_pk'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This participant is not on your roster.',
+            ], 403);
+        }
+
         $author = Auth::user();
         $authorName = trim((string) (($author->first_name ?? '') . ' ' . ($author->last_name ?? '')));
 
         $message = trim($data['message']);
 
-        $comment = OtParticipantComment::create([
+        $comment = new OtParticipantComment([
             'student_master_pk' => (int) $data['student_master_pk'],
             'course_master_pk' => $data['course_master_pk'] ?? null,
             'message' => $message,
             'notify_ot' => (int) $data['notify_ot'],
-            'comment_by_user_id' => $author->user_id ?? null,
-            'comment_by_name' => $authorName !== '' ? $authorName : ($author->user_name ?? null),
             'comment_date' => now()->toDateString(),
-            'active_inactive' => 1,
-            'created_by' => $author->user_id ?? null,
         ]);
+
+        // Attribution is assigned, never mass-assigned — these columns are outside
+        // the model's $fillable so that no present or future request payload can
+        // forge an author or deactivate a comment. See OtParticipantComment.
+        $comment->comment_by_user_id = $author->user_id ?? null;
+        $comment->comment_by_name = $authorName !== '' ? $authorName : ($author->user_name ?? null);
+        $comment->active_inactive = 1;
+        $comment->created_by = $author->user_id ?? null;
+        $comment->save();
 
         // Notify OT = Yes. Resolved through NotificationReceiverService because
         // student_master.user_id is a login string, not the numeric receiver id
@@ -2651,6 +2806,12 @@ class UserController extends Controller
         if (! $student) {
             return redirect()->route('admin.dashboard.ot-participants')
                 ->with('error', 'Participant not found.');
+        }
+
+        // The encrypted id raises the bar on guessing a participant; it is not an
+        // authorization check. This is — same roster the list is built from.
+        if (! $this->canActOnOtParticipant($studentPk)) {
+            abort(403, 'This participant is not on your roster.');
         }
 
         $rows = $this->otParticipantCommentRows($request, $studentPk);
@@ -2762,6 +2923,11 @@ class UserController extends Controller
             abort(404);
         }
 
+        // Same roster boundary as the history page this file is downloaded from.
+        if (! $this->canActOnOtParticipant($studentPk)) {
+            abort(403, 'This participant is not on your roster.');
+        }
+
         $studentName = $student->display_name
             ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
 
@@ -2816,22 +2982,33 @@ class UserController extends Controller
                 ->setOptions([
                     'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled' => true,
-                    'isPhpEnabled' => true,
+                    // Both deliberately OFF. isPhpEnabled makes the renderer a PHP
+                    // execution context for any raw block that reaches the template, and
+                    // isRemoteEnabled lets the document fetch arbitrary URLs from the
+                    // server (SSRF). This view needs neither — it has no <script
+                    // type="text/php"> block and no remote asset. Copied from
+                    // studentListExport(), which still has them on; do not copy them back.
+                    'isRemoteEnabled' => false,
+                    'isPhpEnabled' => false,
                     'dpi' => 96,
                 ]);
 
             return $pdf->download("{$fileBase}.pdf");
         }
 
+        // CWE-1236: the message is free text the commenter typed, so every cell of
+        // the workbook goes through sanitize_export_cell() — a message starting "="
+        // would otherwise open in Excel as a live formula. This branch only:
+        // print/pdf render HTML, where the guard's leading apostrophe would just be
+        // visible noise.
         return Excel::download(
             new StudentListReportExport(
                 $headings,
-                $body,
-                $reportTitle,
-                (string) ($header['courseName'] ?? ''),
-                (string) ($header['courseDuration'] ?? ''),
-                $filterSummary,
+                $this->sanitizeExportRows($body),
+                sanitize_export_cell($reportTitle),
+                sanitize_export_cell((string) ($header['courseName'] ?? '')),
+                sanitize_export_cell((string) ($header['courseDuration'] ?? '')),
+                sanitize_export_cell($filterSummary),
                 now()->format('d-m-Y H:i'),
                 count($body),
             ),
@@ -2853,15 +3030,10 @@ class UserController extends Controller
             abort(404);
         }
 
-        // Anyone who can VIEW the list may export it — same guard as the student
-        // list export, so the download never 403s for someone the table works for.
-        $exportFacultyPk = get_auth_faculty_master_pk();
-        if (! hasRole('Super Admin')
-            && ! hasRole('Training Induction Admin')
-            && ! hasRole('Training MCTP Admin')
-            && ! hasRole('Training IST')
-            && ! is_faculty_portal_user()
-            && ! ($exportFacultyPk && ! hasRole('Student-OT'))) {
+        // Anyone who can VIEW the list may export it — the same gate the list
+        // itself uses, so the download never 403s for someone the table works
+        // for, and never succeeds for someone the table would refuse.
+        if (! $this->canUseOtParticipants()) {
             abort(403, 'You are not authorized to export the OT / Participants list.');
         }
 
@@ -2914,8 +3086,14 @@ class UserController extends Controller
                 ->setOptions([
                     'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled' => true,
-                    'isPhpEnabled' => true,
+                    // Both deliberately OFF. isPhpEnabled makes the renderer a PHP
+                    // execution context for any raw block that reaches the template, and
+                    // isRemoteEnabled lets the document fetch arbitrary URLs from the
+                    // server (SSRF). This view needs neither — it has no <script
+                    // type="text/php"> block and no remote asset. Copied from
+                    // studentListExport(), which still has them on; do not copy them back.
+                    'isRemoteEnabled' => false,
+                    'isPhpEnabled' => false,
                     'dpi' => 96,
                 ]);
 
@@ -2924,14 +3102,17 @@ class UserController extends Controller
 
         // Delivered as a branded .xlsx rather than a flat CSV — see the note on
         // studentListExport().
+        // Same formula-injection guard as the comment export. The filter summary
+        // matters here too: otParticipantsFilterSummary() echoes raw
+        // $request->input() back into that line whenever a name lookup misses.
         return Excel::download(
             new StudentListReportExport(
                 $exportData['headings'],
-                $exportData['rows'],
-                $reportTitle,
-                (string) ($header['courseName'] ?? ''),
-                (string) ($header['courseDuration'] ?? ''),
-                $filterSummary,
+                $this->sanitizeExportRows($exportData['rows']),
+                sanitize_export_cell($reportTitle),
+                sanitize_export_cell((string) ($header['courseName'] ?? '')),
+                sanitize_export_cell((string) ($header['courseDuration'] ?? '')),
+                sanitize_export_cell($filterSummary),
                 now()->format('d-m-Y H:i'),
                 count($exportData['rows']),
             ),
