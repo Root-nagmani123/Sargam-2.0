@@ -1211,6 +1211,14 @@ class MemberController extends Controller
 
     function editStep($step, $id)
     {
+        // This is the endpoint both the admin 6-step wizard and the self-service
+        // profile page fetch step content from — same check update()/updateValidateStep()
+        // already use, previously missing here entirely. Without it, any authenticated
+        // account could request /member/edit-step/{step}/{id} for an id that is not
+        // their own and read that employee's data, including step 3's Role Assignment
+        // checkbox state (independent review of PR #319).
+        $this->authorizeMemberWrite($id);
+
         $member = EmployeeMaster::findOrFail($id);
         $appellationMasterList = AppellationMaster::where('active_inactive', 1)
             ->pluck('appettation_name', 'pk')

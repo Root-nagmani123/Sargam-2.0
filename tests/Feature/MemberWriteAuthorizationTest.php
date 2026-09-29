@@ -205,6 +205,38 @@ class MemberWriteAuthorizationTest extends TestCase
     }
 
     /**
+     * Independent re-review of the F-001/F-002 fix: MemberController::editStep() — the
+     * endpoint both the admin wizard and the self-service profile page fetch step content
+     * from — had no ownership check at all. Any authenticated account could request
+     * /member/edit-step/{step}/{id} for an id that was not their own, including step 3's
+     * Role Assignment checkbox state for a stranger. Fixed by adding the same
+     * authorizeMemberWrite($id) gate update()/updateValidateStep() already use.
+     */
+    public function test_edit_step_content_is_scoped_to_the_same_ownership_rule_as_writes(): void
+    {
+        $victimPk = $this->makeEmployee('Victim');
+        $strangerPk = $this->makeEmployee('Stranger');
+        $stranger = $this->makeZeroRoleActor($strangerPk);
+
+        $this->actingAs($stranger)
+            ->get(route('member.edit-step', ['step' => 1, 'id' => $victimPk]))
+            ->assertForbidden();
+
+        // Must not regress the two legitimate callers of this same endpoint.
+        $this->actingAs($stranger)
+            ->get(route('member.edit-step', ['step' => 1, 'id' => $strangerPk]))
+            ->assertOk();
+
+        $adminEmployeePk = $this->makeEmployee();
+        $admin = $this->makeZeroRoleActor($adminEmployeePk);
+        $admin->assignRole('Super Admin');
+
+        $this->actingAs($admin)
+            ->get(route('member.edit-step', ['step' => 1, 'id' => $victimPk]))
+            ->assertOk();
+    }
+
+    /**
      * F-001 (independent review): the self-service Edit Profile form never renders the
      * Role Assignment step and so never posts userrole[] at all — but combinedMemberRules()
      * used to mark it unconditionally required, so a zero-role employee's own save 422'd
