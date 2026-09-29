@@ -1,20 +1,21 @@
+@php
+    $userRoleOptions = App\Models\UserRoleMaster::getUserRoleList();
+    $memberRoles = optional($member->employeeRoleMapping())->toArray();
+    $selectedRoles = old('userrole', $memberRoles);
+@endphp
 <div class="row">
-    @php
-        $userRoleOptions = App\Models\UserRoleMaster::getUserRoleList();
-        $memberRoles = optional($member->employeeRoleMapping())->toArray();
-    @endphp
-    <div class="col-md-12">
+    <div class="col-12">
         <div class="mb-3">
-            <label class="form-label" for="role">Role Options : <span class="text-danger">*</span></label>
+            <label class="form-label" for="role">Role Option <span class="text-danger">*</span></label>
             <div class="controls">
-                <div class="row">
+                <div class="mbrw-role-grid">
                     @foreach ($userRoleOptions as $key => $value)
-                        <div class="col-md-4">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="userrole[]" id="userrole{{ $key }}" value="{{ $key }}" {{ in_array($key, old('userrole', $memberRoles)) ? 'checked' : '' }}>
-                                <label class="form-check-label" for="userrole{{ $key }}">{{ $value }}</label>
-                            </div>
-                        </div>
+                        <label class="mbrw-role-chip" for="userrole{{ $key }}">
+                            <input class="form-check-input" type="checkbox" name="userrole[]"
+                                id="userrole{{ $key }}" value="{{ $key }}"
+                                {{ in_array($key, $selectedRoles) ? 'checked' : '' }}>
+                            <span>{{ $value }}</span>
+                        </label>
                     @endforeach
                 </div>
             </div>

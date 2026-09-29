@@ -3,16 +3,20 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FacultyMaster extends Model
 {
-    protected $table = "faculty_master";
+    protected $table = 'faculty_master';
+
     protected $guarded = [];
+
     public $timestamps = false;
-    public $primaryKey = "pk";
+
+    public $primaryKey = 'pk';
 
     protected $casts = [
-        'joining_date' => 'date'
+        'joining_date' => 'date',
     ];
 
     public function facultyQualificationMap()
@@ -65,19 +69,18 @@ class FacultyMaster extends Model
         return $this->hasMany(MDOEscotDutyMap::class, 'faculty_master_pk', 'pk');
     }
 
-   /*  public function setCurrentDesignationAttribute($value)
-    {
-        $this->attributes['current_designation_name'] = $value;
-    }
+    /*  public function setCurrentDesignationAttribute($value)
+     {
+         $this->attributes['current_designation_name'] = $value;
+     }
 
-    public function setCurrentDepartmentAttribute($value)
-    {
-        $this->attributes['current_department_name'] = $value;
-    }*/
+     public function setCurrentDepartmentAttribute($value)
+     {
+         $this->attributes['current_department_name'] = $value;
+     }*/
 
-   public function createdByUser()
+    public function createdByUser(): BelongsTo
     {
         return $this->belongsTo(EmployeeMaster::class, 'created_by', 'pk');
-    } 
-        
+    }
 }
