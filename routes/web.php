@@ -38,6 +38,7 @@ use App\Http\Controllers\Admin\IssueReportController;
 use App\Http\Controllers\Admin\LeaveApplicationController;
 use App\Http\Controllers\Admin\Master\AppellationMasterController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
+use App\Http\Controllers\Admin\Master\LeaveNatureMasterController;
 use App\Http\Controllers\Admin\MDOEscrotExemptionController;
 use App\Http\Controllers\Admin\MedicalExceptionFacultyViewController;
 use App\Http\Controllers\Admin\MedicalExceptionOTViewController;
