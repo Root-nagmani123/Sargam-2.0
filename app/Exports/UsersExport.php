@@ -35,7 +35,15 @@ class UsersExport implements FromArray, WithHeadings, ShouldAutoSize, WithStrict
 
     public function array(): array
     {
-        return $this->rows;
+        // This class now serves the CSV writer only (the .xlsx path goes through
+        // BrandedGridExport), and a CSV has no cell types — so the apostrophe
+        // prefix is the only way to stop Excel evaluating a stored name like
+        // =HYPERLINK("http://evil","Open") when the file is opened. User names
+        // and e-mail addresses carry no character restriction.
+        return array_map(
+            fn (array $row) => array_map(fn ($cell) => sanitize_export_cell($cell), $row),
+            $this->rows
+        );
     }
 
     public function headings(): array

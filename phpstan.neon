@@ -1,0 +1,57 @@
+# Static analysis baseline for Sargam 2.0.
+#
+# Supplied for PR #309 condition 6, which asks for this file or a recorded
+# decision not to have one.
+#
+# RUNNABLE as of PR #309 round 21. phpstan/phpstan and larastan/larastan are
+# now in composer.json's require-dev and in vendor/ - closing the gap this
+# file used to describe. Getting here required reconciling composer.lock with
+# an already-ahead vendor/ (see the round-21 report section for the dry-run
+# evidence and what it actually touched: one superseded transitive dependency
+# dropped, ~40 patch/minor bumps, yajra/laravel-datatables-buttons and -html
+# made direct requirements since they were only reachable through a
+# never-installed yajra/laravel-datatables-export before). Full suite
+# reproduced at 344/2,087/0 failures after the reconciliation, matching the
+# pre-reconciliation baseline exactly.
+includes:
+    - vendor/larastan/larastan/extension.neon
+    # The errors that already existed when this codebase was first analysed
+    # (PR #309 round 24). Parked, NOT fixed and NOT ignored: each is listed
+    # individually with its message and count, so anything NEW still fails the
+    # run while the backlog stays visible and countable. Round 23 measured this
+    # set at 667 and triaged the 5 that touch PR #309's own files - all Larastan
+    # relation-existence false positives on relations that demonstrably exist as
+    # methods on the model, plus hits on lines outside the PR's diff hunks.
+    #
+    # To work the backlog down: delete a block from phpstan-baseline.neon, fix
+    # what it was hiding, re-run. Do NOT regenerate the whole baseline to make a
+    # new error go away - that is how a gate becomes decoration.
+    - phpstan-baseline.neon
+
+parameters:
+    # Deliberately the lowest useful level. This codebase has never been
+    # analysed, so the first run is an inventory, not a gate. Raise it one level
+    # at a time, fixing or baselining as you go - starting at level 5+ produces
+    # a number large enough that the result gets ignored, which is how a gate
+    # becomes decoration.
+    level: 0
+
+    paths:
+        - app
+        - database
+        - routes
+
+    # Generated, vendored or intentionally dynamic code.
+    excludePaths:
+        analyseAndScan:
+            - app/Console/Kernel.php
+            - database/migrations/*_create_failed_jobs_table.php
+
+    # Keep the run honest: an unmatched ignore should be reported rather than
+    # quietly accumulating as the code changes.
+    reportUnmatchedIgnoredErrors: true
+
+    # Nothing is ignored yet, on purpose. When the first run is triaged, prefer
+    # a committed baseline file (phpstan-baseline.neon) over broad ignores here,
+    # so new violations are still caught while existing ones are parked.
+    ignoreErrors: []

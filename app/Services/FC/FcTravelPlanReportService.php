@@ -53,8 +53,13 @@ class FcTravelPlanReportService
             $query->leftJoin('fc_registration_master as frm', 'frm.pk', '=', "tp.{$tpCol}");
         }
 
+        // Roster-first when the id is demonstrably a roster pk — same rule as
+        // fc_report_login_username_sql(), shared so the two cannot drift. Reading uc first
+        // unconditionally rendered a STRANGER's username wherever the two id spaces collide.
+        // The shared CASE names only `frm`, so it is safe without the uc_frm join above.
         $usernameSql = $hasRoster
-            ? "COALESCE(NULLIF(TRIM(uc.user_name),''), NULLIF(TRIM(frm.user_id),''), CAST(tp.{$tpCol} AS CHAR))"
+            ? 'COALESCE('.fc_report_roster_username_case('frm').", NULLIF(TRIM(uc.user_name),''), "
+                ."NULLIF(TRIM(frm.user_id),''), CAST(tp.{$tpCol} AS CHAR))"
             : "COALESCE(NULLIF(TRIM(uc.user_name),''), CAST(tp.{$tpCol} AS CHAR))";
 
         return $query
@@ -140,7 +145,14 @@ class FcTravelPlanReportService
         $search = trim((string) $request->input('search.value', ''));
         if ($search !== '') {
             $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $search) . '%';
-            $query->where(function ($q) use ($like) {
+
+            // The Username column is not always uc.user_name: for a trainee who registered
+            // through /fc/login the id is a roster pk, so the roster username is what is
+            // displayed. Without this, searching the exact text shown in the column matched
+            // nothing, while a credentials name that is NOT displayed did match.
+            $rosterJoined = fc_report_roster_alias_joined($query);
+
+            $query->where(function ($q) use ($like, $rosterJoined) {
                 $q->where('tp.' . fc_user_col('student_travel_plan_masters'), 'like', $like)
                     ->orWhere('uc.user_name', 'like', $like)
                     ->orWhere('s1.full_name', 'like', $like)
@@ -148,6 +160,10 @@ class FcTravelPlanReportService
                     ->orWhere('s1.roll_no', 'like', $like)
                     ->orWhere('s1.mobile_no', 'like', $like)
                     ->orWhere('sm.roll_no', 'like', $like);
+
+                if ($rosterJoined) {
+                    $q->orWhere('frm.user_id', 'like', $like);
+                }
             });
         }
     }

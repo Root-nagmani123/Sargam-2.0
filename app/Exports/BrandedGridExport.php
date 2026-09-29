@@ -2,13 +2,17 @@
 
 namespace App\Exports;
 
+use App\Http\Controllers\Concerns\ExportsBrandedGrid;
+use App\Support\Concerns\BindsExportCellsAsText;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithCustomStartCell;
+use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\DefaultValueBinder;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -20,30 +24,26 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
  * Branded .xlsx for any admin listing.
  *
  * Columns are handed in already resolved by the caller (see
- * {@see \App\Http\Controllers\Concerns\ExportsBrandedGrid}), the same array the
+ * {@see ExportsBrandedGrid}), the same array the
  * CSV, the PDF and the print view use — so hiding a column in the grid's Columns
  * modal drops it from every format, and the four can't drift apart.
  *
  * Styled to match the print/PDF header: logo, navy institution band, report
  * title, generated stamp, record count, then a navy table header over zebra rows.
  */
-class BrandedGridExport implements
-    FromArray,
-    WithHeadings,
-    ShouldAutoSize,
-    WithEvents,
-    WithTitle,
-    WithCustomStartCell
+class BrandedGridExport extends DefaultValueBinder implements FromArray, ShouldAutoSize, WithCustomStartCell, WithCustomValueBinder, WithEvents, WithHeadings, WithTitle
 {
+    use BindsExportCellsAsText;
+
     /** Rows the branded header occupies before the data table starts. */
     private const HEADER_ROWS = 5;
 
     /**
      * @param  array<string, array{heading:string, class:string, value:callable}>  $columns
      * @param  list<string>  $centeredKeys  columns the grid centres
-     * @param  list<string>  $textKeys      columns Excel must not treat as numbers
-     *                                      (IDs and phone numbers lose leading zeros
-     *                                      and turn into scientific notation otherwise)
+     * @param  list<string>  $textKeys  columns Excel must not treat as numbers
+     *                                  (IDs and phone numbers lose leading zeros
+     *                                  and turn into scientific notation otherwise)
      */
     public function __construct(
         private string $reportTitle,
@@ -53,7 +53,41 @@ class BrandedGridExport implements
         private ?string $filterLine = null,
         private array $centeredKeys = [],
         private array $textKeys = []
-    ) {
+    ) {}
+
+    /**
+     * The grid calling convention used by the Roles, Sidebar and Users screens:
+     * rows first, and columns as a LIST whose entries may carry their own 'key'.
+     *
+     * Those callers were written against an earlier constructor with that
+     * shape; merging main replaced the constructor under them, so every one of
+     * their Excel exports threw a TypeError (PR #311 review round 7, F-029). This
+     * adapts the shape rather than keeping two classes that format the same
+     * report two ways. Values are cast to string here, as that constructor did;
+     * BindsExportCellsAsText still decides numeric vs text by cell type.
+     *
+     * @param  array<int, array{key?:string, heading:string, class?:string, value:callable}>  $columns
+     * @param  list<string>  $centreKeys
+     */
+    public static function fromGrid(
+        iterable $rows,
+        array $columns,
+        string $title,
+        string $exportDate,
+        ?string $filterLine = null,
+        array $centreKeys = ['sno', 'permissions_count', 'created_at', 'status', 'sort_order', 'order']
+    ): self {
+        $keyed = [];
+        foreach (array_values($columns) as $i => $col) {
+            $value = $col['value'];
+            $keyed[$col['key'] ?? 'col'.$i] = [
+                'heading' => $col['heading'],
+                'class' => $col['class'] ?? '',
+                'value' => static fn ($row, $index) => (string) $value($row, $index),
+            ];
+        }
+
+        return new self($title, collect($rows)->values(), $keyed, $exportDate, $filterLine, $centreKeys);
     }
 
     public function title(): string
@@ -66,7 +100,7 @@ class BrandedGridExport implements
 
     public function startCell(): string
     {
-        return 'A' . (self::HEADER_ROWS + 1);
+        return 'A'.(self::HEADER_ROWS + 1);
     }
 
     public function headings(): array
@@ -80,6 +114,16 @@ class BrandedGridExport implements
 
         foreach ($this->rows as $index => $row) {
             $out[] = array_values(array_map(
+                // Raw value: formula neutralisation on this path is done by CELL
+                // TYPE (BindsExportCellsAsText), not by an apostrophe prefix.
+                // PhpSpreadsheet stores a leading apostrophe as DATA, so the
+                // helper used here put a visible ' in front of every "+91 ..."
+                // mobile; and it left digit-only strings numeric, so a long
+                // employee id was rounded to 15 significant digits. Binding the
+                // string as TYPE_STRING fixes both at once, and still means a
+                // stored =HYPERLINK(...) is text rather than a live formula.
+                // sanitize_export_cell() stays on the CSV path, which has no
+                // cell types and where the apostrophe is the only mitigation.
                 fn ($col) => $col['value']($row, $index),
                 $this->columns
             ));
@@ -120,9 +164,9 @@ class BrandedGridExport implements
                 $sheet->getRowDimension(2)->setRowHeight(22);
 
                 $sheet->mergeCells("A3:{$last}3");
-                $meta = 'Generated: ' . $this->exportDate;
+                $meta = 'Generated: '.$this->exportDate;
                 if (filled($this->filterLine)) {
-                    $meta = $this->filterLine . '  |  ' . $meta;
+                    $meta = $this->filterLine.'  |  '.$meta;
                 }
                 $sheet->setCellValue('A3', $meta);
                 $sheet->getStyle('A3')->applyFromArray([
@@ -131,7 +175,7 @@ class BrandedGridExport implements
                 ]);
 
                 $sheet->mergeCells("A4:{$last}4");
-                $sheet->setCellValue('A4', 'Total Records: ' . number_format($this->rows->count()));
+                $sheet->setCellValue('A4', 'Total Records: '.number_format($this->rows->count()));
                 $sheet->getStyle('A4')->applyFromArray([
                     'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => '003366']],
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
@@ -166,7 +210,7 @@ class BrandedGridExport implements
                         }
                     }
 
-                    $sheet->getStyle('A' . ($dataHeaderRow + 1) . ":{$last}{$lastRow}")
+                    $sheet->getStyle('A'.($dataHeaderRow + 1).":{$last}{$lastRow}")
                         ->getAlignment()->setVertical(Alignment::VERTICAL_TOP)->setWrapText(true);
 
                     // Identifiers are text, not quantities.
@@ -174,7 +218,7 @@ class BrandedGridExport implements
                     foreach ($this->columns as $key => $col) {
                         if (in_array($key, $this->textKeys, true)) {
                             $letter = Coordinate::stringFromColumnIndex($index);
-                            $sheet->getStyle("{$letter}" . ($dataHeaderRow + 1) . ":{$letter}{$lastRow}")
+                            $sheet->getStyle("{$letter}".($dataHeaderRow + 1).":{$letter}{$lastRow}")
                                 ->getNumberFormat()->setFormatCode('@');
                         }
                         $index++;
@@ -195,7 +239,7 @@ class BrandedGridExport implements
                 // ── Logo, floated over the header band ──
                 $logoPath = public_path('images/lbsnaa_logo.jpg');
                 if (is_file($logoPath) && is_readable($logoPath)) {
-                    $drawing = new Drawing();
+                    $drawing = new Drawing;
                     $drawing->setName('LBSNAA');
                     $drawing->setDescription('LBSNAA');
                     $drawing->setPath($logoPath);
@@ -207,7 +251,7 @@ class BrandedGridExport implements
                 }
 
                 // Keep the branded header and the column titles on screen while scrolling.
-                $sheet->freezePane('A' . ($dataHeaderRow + 1));
+                $sheet->freezePane('A'.($dataHeaderRow + 1));
             },
         ];
     }
