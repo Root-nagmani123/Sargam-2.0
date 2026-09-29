@@ -236,16 +236,16 @@ class EnsureMemberRecordAccess
             ->where('uc.pk', $user->pk)
             ->where(function ($q) {
                 $q->where(function ($e) {
-                    $e->whereRaw("TRIM(uc.email_id) COLLATE utf8mb4_unicode_ci <> '' COLLATE utf8mb4_unicode_ci")
+                    $e->whereRaw("CONVERT(TRIM(uc.email_id) USING utf8mb4) COLLATE utf8mb4_unicode_ci <> CONVERT('' USING utf8mb4) COLLATE utf8mb4_unicode_ci")
                         ->where(function ($m) {
-                            $m->whereRaw('LOWER(TRIM(uc.email_id)) COLLATE utf8mb4_unicode_ci = LOWER(TRIM(em.email)) COLLATE utf8mb4_unicode_ci')
-                                ->orWhereRaw('LOWER(TRIM(uc.email_id)) COLLATE utf8mb4_unicode_ci = LOWER(TRIM(em.officalemail)) COLLATE utf8mb4_unicode_ci');
+                            $m->whereRaw('LOWER(CONVERT(TRIM(uc.email_id) USING utf8mb4)) COLLATE utf8mb4_unicode_ci = LOWER(CONVERT(TRIM(em.email) USING utf8mb4)) COLLATE utf8mb4_unicode_ci')
+                                ->orWhereRaw('LOWER(CONVERT(TRIM(uc.email_id) USING utf8mb4)) COLLATE utf8mb4_unicode_ci = LOWER(CONVERT(TRIM(em.officalemail) USING utf8mb4)) COLLATE utf8mb4_unicode_ci');
                         });
                 })->orWhere(function ($m) {
                     // Ten digits minimum: two blank or truncated numbers must
                     // not be able to match each other.
                     $m->whereRaw('CHAR_LENGTH(TRIM(uc.mobile_no)) >= 10')
-                        ->whereRaw('TRIM(uc.mobile_no) COLLATE utf8mb4_unicode_ci = TRIM(em.mobile) COLLATE utf8mb4_unicode_ci');
+                        ->whereRaw('CONVERT(TRIM(uc.mobile_no) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(TRIM(em.mobile) USING utf8mb4) COLLATE utf8mb4_unicode_ci');
                 });
             })
             ->exists());
