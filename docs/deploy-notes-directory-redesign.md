@@ -375,11 +375,12 @@ after the merges:
 | `e5299f834` | Restricts the route to **Faculty and Super Admin**; every other role gets 403 (review finding F-019). `routes/web.php` |
 | the F-024 fix commit | Renders the page on the admin layout, whose sidebar is filtered by the RBAC menu table, instead of the faculty layout's unfiltered static admin partials, so a Faculty account sees only the menus its roles are granted (review finding F-024). `faculty/dashboard.blade.php` |
 
-**Do not merge #322 or #326 to `main` on their own.** #326 without #317 puts the 500 fix on
-`main` with no restriction, which serves the unfiltered admin menu to every logged-in account,
-Officer Trainees included. Merge #317 first. #322 and #326 are **not** simply superseded: at
-2026-09-28 each carries commits #317 lacks (#326: `4d398888b`; #322: `9e3c9334e`, `7c21279f3`,
-`d26560bc8`), so before closing either, decide whether those commits are wanted.
+**#322 and #326 were closed, unmerged, on 2026-09-28.** Neither can reach `main` independently
+any more. Each carried commits this PR does not contain and which are not on `main` (#326:
+`4d398888b`; #322: `9e3c9334e`, `7c21279f3`, `d26560bc8`); whether `main` needs any of them is
+the Engineering lead's decision, outside this PR. If either PR is reopened, do not merge it
+before #317: #326 without #317 puts the 500 fix on `main` with no restriction, serving the
+unfiltered admin menu to every logged-in account, Officer Trainees included.
 
 **Rollback.** The section 3 revert of the merge commit also reverts both fixes and the
 restriction. Expect the stray pre-doctype output to return on every admin page, and
