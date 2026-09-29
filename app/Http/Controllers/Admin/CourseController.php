@@ -111,9 +111,17 @@ class CourseController extends Controller
 
         $rows = $query->orderBy('pk', 'desc')->get();
 
+        // The label is resolved through the same scope as the rows, so a
+        // course_filter outside the actor's courses names nothing (and a
+        // non-numeric value is never echoed back).
+        $courseLabel = $courseFilter !== ''
+            ? CourseMasterDataTable::applyListingScope(CourseMaster::query(), $statusFilter, $courseFilter)
+                ->value('course_name')
+            : null;
+
         $filterParts = array_filter([
             'Status: ' . ($statusFilter === 'archive' ? 'Archived' : 'Active'),
-            $courseFilter !== '' ? 'Course: ' . (CourseMaster::find($courseFilter)->course_name ?? $courseFilter) : null,
+            $courseLabel !== null ? 'Course: ' . $courseLabel : null,
             $search !== '' ? 'Search: ' . $search : null,
         ]);
 

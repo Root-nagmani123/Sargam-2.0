@@ -82,9 +82,10 @@ class CourseGroupTypeController extends Controller
 
             // Action: Edit - switch - Delete as equal-width icon-over-label stacks.
             // The switch carries NO .form-check.form-switch wrapper: that rule yanks
-            // the input -2.375rem left of its caption (3b, trap 1). Delete is guarded
-            // the way the server guards it - an active row cannot be deleted, so the
-            // control is rendered disabled rather than red-and-always-failing.
+            // the input -2.375rem left of its caption (3b, trap 1). Delete is rendered
+            // disabled for an active row. This is a UI guard ONLY: neither delete()
+            // nor grouptypeview() checks active_inactive, so a crafted request still
+            // deletes an active row.
             ->addColumn('action', function ($row) {
                 $isActive = (int) $row->active_inactive === 1;
                 $checked = $isActive ? 'checked' : '';

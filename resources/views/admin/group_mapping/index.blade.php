@@ -282,7 +282,6 @@
                         </select>
                         <small class="text-muted d-block mt-1" id="groupNameHelp">Please select a group type first</small>
                     </div>
-                    </div>
                 </div>
                 <div class="prog-modal-footer">
                     <button type="button" class="btn prog-btn-cancel btn-cancel" data-bs-dismiss="modal">Cancel</button>

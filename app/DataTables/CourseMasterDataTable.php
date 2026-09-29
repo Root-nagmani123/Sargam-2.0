@@ -90,6 +90,8 @@ class CourseMasterDataTable extends DataTable
                 // NOTE the deliberate absence of a .form-check.form-switch wrapper
                 // around the switch — it would yank the input -2.375rem left of its
                 // caption (§3b, trap 1).
+                // Delete is disabled for an active course. UI guard ONLY:
+                // CourseController::destroy() does not check active_inactive.
                 if ($isActive) {
                     $deleteHtml = '<span class="prog-act prog-act--del is-disabled" aria-disabled="true" title="Deactivate the course before deleting">'
                             .'<span class="prog-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
@@ -168,6 +170,11 @@ class CourseMasterDataTable extends DataTable
      *
      * Shared with CourseController::export() so a download can never show a
      * different set of rows than the screen it was started from.
+     *
+     * $statusFilter is 'archive' or anything else, and anything else means
+     * Active - including an empty or unrecognised value such as 'all'. Before
+     * this method existed, an unrecognised value applied no date filter at all;
+     * the screens only ever send 'active' or 'archive'.
      *
      * @param  QueryBuilder  $query
      */

@@ -100,8 +100,10 @@ class GroupMappingDataTable extends DataTable
                     . '<span class="prog-act__icon"><i class="bi bi-download" aria-hidden="true"></i></span>'
                     . '<span class="prog-act__label">Download</span></a>';
 
-                // Delete mirrors the server's own refusal: an active mapping cannot
-                // be deleted, so the control is disabled rather than always-failing.
+                // Delete is disabled for an active mapping. This is a UI guard ONLY:
+                // GroupMappingController::delete() does not check active_inactive, so
+                // a crafted request still deletes an active mapping. Do not treat
+                // this as the control, and do not drop it as "redundant" either.
                 $deleteHtml = $isActive
                     ? '<span class="prog-act prog-act--del is-disabled" aria-disabled="true" title="Deactivate this group mapping before deleting">'
                         . '<span class="prog-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
