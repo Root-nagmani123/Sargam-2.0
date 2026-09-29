@@ -145,11 +145,20 @@
     color: var(--bs-danger, #b12923);
 }
 
-/* Delete disabled by the server's own rule — muted, not red-and-always-failing. */
+/* Delete disabled by the server's own rule — muted, not red-and-always-failing.
+   When rendered as a standalone <span> (no inner .prog-act__btn), the .prog-act--del
+   override of align-items:flex-start must be reversed so the icon+label column
+   aligns with the other action stacks. */
 :is(.prog-page, .prog-modal) .prog-act--del.is-disabled {
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    min-width: 62px;
     color: #98a2b3;
     opacity: 0.65;
     cursor: not-allowed;
+    pointer-events: none;
 }
 
 

@@ -90,14 +90,21 @@ class CourseMasterDataTable extends DataTable
                 // NOTE the deliberate absence of a .form-check.form-switch wrapper
                 // around the switch — it would yank the input -2.375rem left of its
                 // caption (§3b, trap 1).
-                $deleteHtml = '<form action="'.$deleteUrl.'" method="POST" class="prog-act prog-act--del programme-delete-form">'
-                        .'<input type="hidden" name="_token" value="'.$csrf.'">'
-                        .'<input type="hidden" name="_method" value="DELETE">'
-                        .'<button type="submit" class="prog-act__btn programme-delete-btn" aria-label="Delete course">'
-                        .'<span class="prog-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
-                        .'<span class="prog-act__label">Delete</span>'
-                        .'</button>'
-                        .'</form>';
+                if ($isActive) {
+                    $deleteHtml = '<span class="prog-act prog-act--del is-disabled" aria-disabled="true" title="Deactivate the course before deleting">'
+                            .'<span class="prog-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
+                            .'<span class="prog-act__label">Delete</span>'
+                            .'</span>';
+                } else {
+                    $deleteHtml = '<form action="'.$deleteUrl.'" method="POST" class="prog-act prog-act--del programme-delete-form">'
+                            .'<input type="hidden" name="_token" value="'.$csrf.'">'
+                            .'<input type="hidden" name="_method" value="DELETE">'
+                            .'<button type="submit" class="prog-act__btn programme-delete-btn" aria-label="Delete course">'
+                            .'<span class="prog-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
+                            .'<span class="prog-act__label">Delete</span>'
+                            .'</button>'
+                            .'</form>';
+                }
 
                 return '
                 <div class="prog-act-group" role="group" aria-label="Row actions">
