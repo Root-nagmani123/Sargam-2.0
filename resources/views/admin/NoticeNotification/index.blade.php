@@ -93,13 +93,20 @@
                             </select>
                         </div>
 
+                        {{-- Every comparison below is strict on strings. With loose ==,
+                             an unset filter (null) equals the department whose pk is 0
+                             — the real "NIAR" row — so NIAR was pre-selected on page
+                             load and "All" could never win. --}}
                         <div class="col-12 col-sm-6 col-md">
                             <label class="form-label fw-semibold mb-1">Course</label>
                             <select name="course_id" class="form-select form-select-sm js-choice"
                                 onchange="this.form.submit()">
                                 <option value="">All</option>
+                                <option value="{{ $allTargets }}" {{ (string) request('course_id') === $allTargets ? 'selected' : '' }}>
+                                    All courses (not course-specific)
+                                </option>
                                 @foreach($courses as $c)
-                                <option value="{{ $c->pk }}" {{ request('course_id') == $c->pk ? 'selected' : '' }}>
+                                <option value="{{ $c->pk }}" {{ (string) request('course_id') === (string) $c->pk ? 'selected' : '' }}>
                                     {{ $c->course_name }}
                                 </option>
                                 @endforeach
@@ -111,8 +118,14 @@
                             <select name="department_id" class="form-select form-select-sm js-choice"
                                 onchange="this.form.submit()">
                                 <option value="">All</option>
+                                {{-- Finds the notices the Department column shows as
+                                     "All departments". They carry no department rows,
+                                     so no ordinary value could ever match them. --}}
+                                <option value="{{ $allTargets }}" {{ (string) request('department_id') === $allTargets ? 'selected' : '' }}>
+                                    All departments (not department-specific)
+                                </option>
                                 @foreach($departments as $d)
-                                <option value="{{ $d->pk }}" {{ request('department_id') == $d->pk ? 'selected' : '' }}>
+                                <option value="{{ $d->pk }}" {{ (string) request('department_id') === (string) $d->pk ? 'selected' : '' }}>
                                     {{ $d->department_name }}
                                 </option>
                                 @endforeach
@@ -120,18 +133,30 @@
                         </div>
 
                         <div class="col-12 col-sm-6 col-md">
-                            {{-- Named for the column it filters: "Year" alone, next to
-                                 Created / Display / Expiry columns, was a guess. --}}
-                            <label class="form-label fw-semibold mb-1">Display Year</label>
-                            <select name="year" class="form-select form-select-sm js-choice"
-                                onchange="this.form.submit()">
-                                <option value="">All</option>
-                                @foreach($years as $y)
-                                <option value="{{ $y }}" {{ request('year') == $y ? 'selected' : '' }}>
-                                    {{ $y }}
-                                </option>
-                                @endforeach
-                            </select>
+                            {{-- The year on its own never said which of the three date
+                                 columns it applied to, so the date column is picked
+                                 here rather than assumed. --}}
+                            <label class="form-label fw-semibold mb-1">Year of</label>
+                            <div class="d-flex gap-1">
+                                <select name="year_field" class="form-select form-select-sm"
+                                    aria-label="Which date the year applies to"
+                                    onchange="this.form.submit()">
+                                    @foreach($yearFields as $key => $column)
+                                    <option value="{{ $key }}" {{ (string) request('year_field', 'display') === (string) $key ? 'selected' : '' }}>
+                                        {{ ucfirst($key) }} Date
+                                    </option>
+                                    @endforeach
+                                </select>
+                                <select name="year" class="form-select form-select-sm"
+                                    aria-label="Year" onchange="this.form.submit()">
+                                    <option value="">All</option>
+                                    @foreach($years as $y)
+                                    <option value="{{ $y }}" {{ (string) request('year') === (string) $y ? 'selected' : '' }}>
+                                        {{ $y }}
+                                    </option>
+                                    @endforeach
+                                </select>
+                            </div>
                         </div>
 
                         <div class="col-12 col-sm-6 col-md">
@@ -269,11 +294,14 @@
                                 @endif
                             </td>
                             <td class="col-created_by">{{ $n->user->first_name }} {{ $n->user->last_name }}</td>
-                            <td class="col-created_date">{{ \Carbon\Carbon::parse($n->created_date)->format('d-m-Y') }}
+                            {{-- created_at, not created_date: this table has no
+                                 created_date column, so Carbon::parse(null) was
+                                 returning "now" and every row showed today. --}}
+                            <td class="col-created_date">{{ $n->created_at ? \Carbon\Carbon::parse($n->created_at)->format('d-m-Y') : '—' }}
                             </td>
-                            <td class="col-display_date">{{ \Carbon\Carbon::parse($n->display_date)->format('d-m-Y') }}
+                            <td class="col-display_date">{{ $n->display_date ? \Carbon\Carbon::parse($n->display_date)->format('d-m-Y') : '—' }}
                             </td>
-                            <td class="col-expiry_date">{{ \Carbon\Carbon::parse($n->expiry_date)->format('d-m-Y') }}
+                            <td class="col-expiry_date">{{ $n->expiry_date ? \Carbon\Carbon::parse($n->expiry_date)->format('d-m-Y') : '—' }}
                             </td>
 
                             <td class="text-center col-status">

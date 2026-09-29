@@ -39,8 +39,12 @@ class NoticeNotificationController extends Controller
 
         // Course and Department are both multi-valued now, so both filters ask the
         // audience map rather than the scalar column.
+        //
+        // The ALL_TARGETS sentinel finds the notices the list renders as
+        // "All courses" / "All departments" — those carry no audience rows at
+        // all, so no ordinary value could ever match them.
         if ($request->filled('course_id')) {
-            $this->whereTargets($query, NoticeAudienceMap::TYPE_COURSE, $request->input('course_id'));
+            $this->whereTargets($query, NoticeAudienceMap::TYPE_COURSE, $request->input('course_id'), 'Office trainee');
         }
 
         if ($request->status != "") {
@@ -51,14 +55,16 @@ class NoticeNotificationController extends Controller
         // department, not also every "all departments" notice. A filter that
         // widens its own result set reads as broken.
         if ($request->filled('department_id')) {
-            $this->whereTargets($query, NoticeAudienceMap::TYPE_DEPARTMENT, $request->input('department_id'));
+            $this->whereTargets($query, NoticeAudienceMap::TYPE_DEPARTMENT, $request->input('department_id'), 'Staff/Faculty');
         }
 
-        // Year applies to display_date — the date the notice goes up, and what
-        // the feed sorts on. The filter label says so, because "Year" next to
-        // three date columns is otherwise a guess.
+        // Which date the year applies to is the user's choice. "Year" sitting
+        // beside Created / Display / Expiry columns was a guess, and naming one
+        // of them in the label still left the other two unreachable.
+        $yearField = $this->yearColumn($request->input('year_field'));
+
         if ($request->filled('year')) {
-            $query->whereYear('display_date', $request->input('year'));
+            $query->whereYear($yearField, $request->input('year'));
         }
 
         // 🔍 Free-text search across title, type, course name and creator name
@@ -93,21 +99,63 @@ class NoticeNotificationController extends Controller
             ->orderBy('department_name')
             ->get();
 
-        // Only the years that actually carry notices — an open-ended range would
-        // list years the filter can never match.
-        $years = Notice::selectRaw('DISTINCT YEAR(display_date) as year')
-            ->whereNotNull('display_date')
+        // Only the years that actually carry notices on the chosen date column —
+        // an open-ended range would list years the filter can never match.
+        $years = Notice::selectRaw("DISTINCT YEAR({$yearField}) as year")
+            ->whereNotNull($yearField)
             ->orderByDesc('year')
             ->pluck('year')
             ->filter()
             ->values();
 
-        return view('admin.NoticeNotification.index', compact('notices', 'courses', 'types', 'departments', 'years'));
+        $yearFields = self::YEAR_FIELDS;
+        $allTargets = self::ALL_TARGETS;
+
+        return view('admin.NoticeNotification.index', compact(
+            'notices',
+            'courses',
+            'types',
+            'departments',
+            'years',
+            'yearFields',
+            'allTargets'
+        ));
     }
 
-    /** Notices carrying an audience row of $type pointing at $referencePk. */
-    private function whereTargets($query, string $type, $referencePk): void
+    /**
+     * Whitelist for the "Year of" selector. Keys are what the form posts; values
+     * are interpolated into SQL, so they may only ever come from this map.
+     */
+    private const YEAR_FIELDS = [
+        'display' => 'display_date',
+        'created' => 'created_at',
+        'expiry'  => 'expiry_date',
+    ];
+
+    /** Filter value meaning "addressed to every course / department". */
+    public const ALL_TARGETS = '__all__';
+
+    private function yearColumn($key): string
     {
+        return self::YEAR_FIELDS[$key] ?? self::YEAR_FIELDS['display'];
+    }
+
+    /**
+     * Narrow to notices addressed to $referencePk — or, for the ALL_TARGETS
+     * sentinel, to those addressed to every course / department, which is stored
+     * as the absence of rows of that type.
+     */
+    private function whereTargets($query, string $type, $referencePk, string $audience): void
+    {
+        if ((string) $referencePk === self::ALL_TARGETS) {
+            $query->where('target_audience', 'like', '%' . $audience . '%')
+                ->whereDoesntHave('audienceMaps', function ($q) use ($type) {
+                    $q->where('audience_type', $type);
+                });
+
+            return;
+        }
+
         $query->whereHas('audienceMaps', function ($q) use ($type, $referencePk) {
             $q->where('audience_type', $type)->where('reference_pk', $referencePk);
         });
