@@ -1653,6 +1653,9 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
     const editPoBaseUrl = "{{ url('admin/mess/purchaseorders') }}";
     let itemRowIndex = 1;
     let editItemRowIndex = 0;
+    // Line items of a large PO not yet rendered in the edit modal; appended as the user scrolls.
+    let editPendingItems = [];
+    const EDIT_ROW_CHUNK = 50;
     let currentVendorId = null;
     let editCurrentVendorId = null;
     let hasInitialCreateErrors = {{ $errors->any() ? 'true' : 'false' }};
@@ -2103,7 +2106,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 
     function initItemDropdownInRow(row) {
         var select = row.querySelector('.po-item-select');
-        if (select && !select.tomselect) {
+        if (select && !select.tomselect && !select.hasAttribute('data-lazy-items')) {
             var hadValueBefore = select.multiple ?
                 (select.selectedOptions && select.selectedOptions.length > 0) :
                 !!select.value;
@@ -2130,6 +2133,32 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                 // Note: Change event is already handled by delegated listener on tbody
             }
         }
+    }
+
+    // Fill a lazily rendered edit-modal item select with the full list and turn it into a Choices dropdown.
+    function activateLazyItemSelect(select) {
+        if (!select || !select.hasAttribute('data-lazy-items')) return null;
+        select.removeAttribute('data-lazy-items');
+        var currentValue = select.value;
+        var itemsToUse = editModalItems && editModalItems.length ? editModalItems : itemSubcategories;
+        if (currentValue && !itemsToUse.some(function(s) {
+                return String(s.id) === String(currentValue);
+            })) {
+            var own = itemSubcategories.find(function(s) {
+                return String(s.id) === String(currentValue);
+            });
+            if (own) itemsToUse = itemsToUse.concat([own]);
+        }
+        var html = '<option value="">Select Item</option>';
+        itemsToUse.forEach(function(s) {
+            html += '<option value="' + s.id + '" data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') +
+                '" data-code="' + (s.item_code || '').replace(/"/g, '&quot;') + '"' +
+                (String(s.id) === String(currentValue) ? ' selected' : '') + '>' +
+                (s.item_name || '—').replace(/</g, '&lt;') + '</option>';
+        });
+        select.innerHTML = html;
+        initItemDropdownInRow(select.closest('.po-item-row'));
+        return select.tomselect || null;
     }
 
     function initAllItemDropdowns(tbody) {
@@ -2222,10 +2251,18 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
         return true;
     }
 
-    function getItemRowHtml(index, editItem, isEditModal) {
+    // Above this many lines the edit modal renders item selects lazily (only the selected option,
+    // no Choices) and builds the full list on first click/focus; otherwise large POs freeze the tab.
+    const LAZY_ITEM_ROW_THRESHOLD = 30;
+
+    function getItemRowHtml(index, editItem, isEditModal, lazy) {
         const selected = editItem && editItem.item_subcategory_id ? editItem.item_subcategory_id : '';
-        const itemsToUse = isEditModal ? (editModalItems && editModalItems.length ? editModalItems :
+        let itemsToUse = isEditModal ? (editModalItems && editModalItems.length ? editModalItems :
             itemSubcategories) : filteredItems;
+        if (lazy) {
+            const own = itemsToUse.find(s => s.id == selected) || itemSubcategories.find(s => s.id == selected);
+            itemsToUse = own ? [own] : [];
+        }
         const options = itemsToUse.map(s =>
             `<option value="${s.id}" data-unit="${(s.unit_measurement || '').replace(/"/g, '&quot;')}" data-code="${(s.item_code || '').replace(/"/g, '&quot;')}" ${s.id == selected ? 'selected' : ''}>${(s.item_name || '—').replace(/</g, '&lt;')}</option>`
         ).join('');
@@ -2238,7 +2275,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
         return `
         <tr class="po-item-row ${isEditModal ? 'edit-po-item-row' : ''}">
             <td class="py-2">
-                <select name="items[${index}][item_subcategory_id]" class="form-select form-select-sm po-item-select rounded-3 shadow-sm border-2" required aria-label="Select item for this line">
+                <select name="items[${index}][item_subcategory_id]" class="form-select form-select-sm po-item-select rounded-3 shadow-sm border-2" required aria-label="Select item for this line"${lazy ? ' data-lazy-items="1"' : ''}>
                     <option value="">Select Item</option>
                     ${options}
                 </select>
@@ -2284,7 +2321,8 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
             itemSubcategories) : filteredItems;
         rows.forEach(function(row) {
             var select = row.querySelector('.po-item-select');
-            if (!select) return;
+            // Lazy selects read editModalItems when activated, so there is nothing to refresh yet.
+            if (!select || select.hasAttribute('data-lazy-items')) return;
             var currentValue;
             if (select.multiple) {
                 currentValue = Array.from(select.selectedOptions).map(function(o) {
@@ -2463,11 +2501,24 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
     });
 
     // Edit modal: grand total and remove buttons
+    // Append the next `count` pending edit rows (all of them when count is omitted).
+    function renderPendingEditRows(count) {
+        if (!editPendingItems.length) return;
+        const batch = editPendingItems.splice(0, count || editPendingItems.length);
+        const tbody = document.getElementById('editPoItemsBody');
+        tbody.insertAdjacentHTML('beforeend', batch.map(item => getItemRowHtml(editItemRowIndex++, item, true, true))
+            .join(''));
+        updateEditRemoveButtons();
+    }
+
     function updateEditGrandTotal() {
         let sum = 0;
         document.querySelectorAll('#editPoItemsBody .po-item-row').forEach(row => {
             const totalInput = row.querySelector('.po-line-total');
             if (totalInput && totalInput.value) sum += parseFloat(totalInput.value) || 0;
+        });
+        editPendingItems.forEach(item => {
+            sum += parseFloat(item.total_price) || 0;
         });
         const el = document.getElementById('editPoGrandTotal');
         if (el) el.textContent = '₹' + sum.toFixed(2);
@@ -2585,6 +2636,9 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                             if (v) currentIds.push(v);
                         }
                     });
+                    editPendingItems.forEach(item => {
+                        if (item.item_subcategory_id) currentIds.push(String(item.item_subcategory_id));
+                    });
                     const merged = (filteredItems || []).slice();
                     currentIds.forEach(id => {
                         if (id && !merged.some(m => m.id == id)) {
@@ -2680,15 +2734,17 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                     destroyAllItemDropdowns();
 
                     const tbody = document.getElementById('editPoItemsBody');
-                    tbody.innerHTML = '';
+                    editPendingItems = [];
                     if (items.length === 0) {
-                        tbody.insertAdjacentHTML('beforeend', getItemRowHtml(0, null, true));
+                        tbody.innerHTML = getItemRowHtml(0, null, true);
                         editItemRowIndex = 1;
+                    } else if (items.length > LAZY_ITEM_ROW_THRESHOLD) {
+                        tbody.innerHTML = '';
+                        editItemRowIndex = 0;
+                        editPendingItems = items.slice();
+                        renderPendingEditRows(EDIT_ROW_CHUNK);
                     } else {
-                        items.forEach((item, i) => {
-                            tbody.insertAdjacentHTML('beforeend', getItemRowHtml(i, item,
-                            true));
-                        });
+                        tbody.innerHTML = items.map((item, i) => getItemRowHtml(i, item, true)).join('');
                         editItemRowIndex = items.length;
                     }
 
@@ -2720,6 +2776,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
     }, true);
 
     document.getElementById('addEditPoItemRow').addEventListener('click', function() {
+        renderPendingEditRows(); // so the new line lands after every existing line
         const tbody = document.getElementById('editPoItemsBody');
         tbody.insertAdjacentHTML('beforeend', getItemRowHtml(editItemRowIndex, null, true));
         const newRow = tbody.lastElementChild;
@@ -2815,6 +2872,19 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
             calcLineTotal(row);
             updateEditGrandTotal();
         }
+    });
+    document.getElementById('editPoItemsBody').addEventListener('mousedown', function(e) {
+        const select = e.target.closest('select.po-item-select[data-lazy-items]');
+        if (!select) return;
+        e.preventDefault();
+        const api = activateLazyItemSelect(select);
+        if (api && api._choices) api._choices.showDropdown();
+    });
+    document.getElementById('editPoItemsBody').addEventListener('focusin', function(e) {
+        const select = e.target.closest('select.po-item-select[data-lazy-items]');
+        if (!select) return;
+        const api = activateLazyItemSelect(select);
+        if (api && api.wrapper) safeFocus(api.wrapper);
     });
     document.getElementById('editPoItemsBody').addEventListener('input', function(e) {
         if (e.target.classList.contains('po-qty') || e.target.classList.contains('po-unit-price') || e
@@ -3138,7 +3208,19 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
             input.focus();
             return false;
         }
+        // Lines not yet scrolled into view must still be posted.
+        renderPendingEditRows();
     });
+
+    // Large POs: append the next chunk of line items as the modal nears the bottom.
+    document.getElementById('editPurchaseOrderModal').addEventListener('scroll', function(e) {
+        if (!editPendingItems.length) return;
+        const el = e.target;
+        if (!el || el.nodeType !== 1 || el.scrollHeight <= el.clientHeight) return;
+        if (el.scrollHeight - el.scrollTop - el.clientHeight < 400) {
+            renderPendingEditRows(EDIT_ROW_CHUNK);
+        }
+    }, true);
 
     // Auto-open create modal when validation errors exist (e.g. after failed submit)
     @if($errors->any() || session('open_create_po_modal'))
