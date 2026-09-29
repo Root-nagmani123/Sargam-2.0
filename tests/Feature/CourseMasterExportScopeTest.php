@@ -141,6 +141,27 @@ class CourseMasterExportScopeTest extends TestCase
         $this->assertStringNotContainsString('Course: ', $csv, 'an out-of-scope course_filter must not produce a label');
     }
 
+    /**
+     * F-007: applyListingScope() treats course_filter=0 as "no filter", so the
+     * label must not name a course either - the rows are the whole view.
+     */
+    public function test_a_course_filter_of_zero_filters_nothing_and_names_no_course(): void
+    {
+        [$actor, $roleIds] = $this->scopedActor();
+
+        $expected = $this->expectedCourseNames($roleIds, 'archive');
+
+        if ($expected === []) {
+            // With no in-scope archived course there is nothing to mislabel.
+            $this->markTestSkipped('the fixture actor has no archived course');
+        }
+
+        $query = ['status_filter' => 'archive', 'course_filter' => '0'];
+
+        $this->assertSame($expected, $this->exportedCourseNames($actor, $query), 'course_filter=0 must not filter the rows');
+        $this->assertStringNotContainsString('Course: ', $this->csv($actor, $query), 'course_filter=0 must not produce a label');
+    }
+
     public static function statusViews(): array
     {
         return ['active' => ['active'], 'archived' => ['archive']];

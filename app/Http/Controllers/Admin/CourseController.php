@@ -94,11 +94,14 @@ class CourseController extends Controller
         abort_unless(in_array($format, ['csv', 'excel', 'pdf', 'print'], true), 404);
 
         $statusFilter = $request->query('status_filter') === 'archive' ? 'archive' : 'active';
+        // Normalised once, the way applyListingScope() reads it: a value it
+        // ignores ("", "0") filters no rows and so must name no course either.
         $courseFilter = trim((string) $request->query('course_filter', ''));
+        $courseFilter = empty($courseFilter) ? null : $courseFilter;
         $search = trim((string) $request->query('q', ''));
 
         $query = CourseMaster::query();
-        CourseMasterDataTable::applyListingScope($query, $statusFilter, $courseFilter ?: null);
+        CourseMasterDataTable::applyListingScope($query, $statusFilter, $courseFilter);
 
         if ($search !== '') {
             // The same columns the grid's own search covers.
@@ -114,7 +117,7 @@ class CourseController extends Controller
         // The label is resolved through the same scope as the rows, so a
         // course_filter outside the actor's courses names nothing (and a
         // non-numeric value is never echoed back).
-        $courseLabel = $courseFilter !== ''
+        $courseLabel = $courseFilter !== null
             ? CourseMasterDataTable::applyListingScope(CourseMaster::query(), $statusFilter, $courseFilter)
                 ->value('course_name')
             : null;
