@@ -1,0 +1,774 @@
+/* ============================================================================
+   COE module — admin screens
+   ----------------------------------------------------------------------------
+   The `coe-*` layer shared by every COE screen: Question Paper Management
+   (My Question Paper ×2, Question Paper) and Laptop Management (OT Laptop
+   Status), plus their modals — Upload, Import, Confirm Delete, Confirm Freeze.
+   Behaviour lives in public/js/coe-grid.js; shared modal markup in
+   resources/views/admin/coe/partials/.
+   Page chrome (toolbar, table panel, footer) is the shared `programme-dt-*`
+   layer in custom.css — see docs/new-design-index-page.md. Colours come from
+   the --ds-* tokens in sargam-app.css (docs/design.md); the few state tints
+   with no token are declared once below as --coe-* so nothing is repeated.
+
+   Scoping:
+     .coe-page   — page root, on the container-fluid
+     .coe-modal  — modal root, on .modal-content
+
+   Load with:
+     <link rel="stylesheet" href="{{ asset('css/coe-admin.css') }}?v={{ @filemtime(public_path('css/coe-admin.css')) ?: time() }}">
+   ========================================================================= */
+
+.coe-page,
+.coe-modal {
+    --coe-brand: #004384;          /* canonical brand navy */
+    --coe-brand-hover: #00356a;
+    --coe-danger: #e31b54;
+    --coe-danger-soft: #fde4ea;
+    --coe-danger-line: #fda4b8;
+    --coe-success: #17b26a;
+    --coe-warn: #f79009;          /* Deactivate — amber */
+    --coe-warn-strong: #dc6803;
+    --coe-warn-soft: #fef0c7;
+    --coe-success-soft: #dcfae6;
+    --coe-control-line: #d0d5dd;
+}
+
+/* ── Secondary actions above the card (Download / Print) ── */
+.coe-page .coe-secondary-actions .btn {
+    border: 1px solid var(--ds-line);
+    background: var(--ds-surface);
+    color: var(--ds-ink);
+}
+
+.coe-page .coe-secondary-actions .btn i { color: var(--coe-brand); }
+
+.coe-page .coe-secondary-actions .btn:hover {
+    background: var(--ds-surface-2);
+    color: var(--ds-ink);
+}
+
+/* ── Toolbar ── */
+.coe-page .coe-toolbar .programme-dt-filter-select { width: 150px; }
+
+/* Four filters + Remove Filter + Columns + search overflow one line at 150px
+   each on a 1440 screen with the sidebar open. */
+.coe-page .coe-toolbar--compact .programme-dt-filter-select { width: 128px; }
+/* …except the first ("Drive Name"), which would truncate. */
+.coe-page .coe-toolbar--compact .programme-dt-filter-select:first-of-type { width: 150px; }
+
+/* Search: an icon button reveals the DataTables filter slot (mockup has the
+   icon only; the input appears on demand). */
+.coe-page .coe-search-toggle {
+    width: var(--ds-control-h);
+    height: var(--ds-control-h);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: var(--ds-radius-2);
+    background: #e7eefb;
+    color: var(--coe-brand);
+}
+
+.coe-page .coe-search-toggle:hover,
+.coe-page .coe-search-toggle[aria-expanded="true"] {
+    background: var(--coe-brand);
+    color: #fff;
+}
+
+/* ── Table cells ──
+   Eleven columns: the default 16px cell padding needs ~1310px, wider than the
+   content area at 1366–1600 with the sidebar open. Tighter padding + a
+   wrapping Drive column keep Action on screen without horizontal scroll. */
+.coe-page .programme-dt-table th { white-space: normal; vertical-align: middle; }
+
+/* !important only because custom.css:531/540 set the global padding with it. */
+.coe-page .programme-dt-table > thead > tr > th,
+.coe-page .programme-dt-table > tbody > tr > td {
+    padding: 0.75rem 0.5rem !important;
+}
+
+.coe-page .programme-dt-table td.coe-col-wrap {
+    white-space: normal;
+    min-width: 64px;
+}
+
+.coe-page .coe-deadline {
+    font-weight: 700;
+    color: var(--ds-ink);
+    white-space: nowrap;
+}
+
+.coe-page .coe-deadline.is-overdue { color: var(--coe-danger); }
+
+.coe-page .coe-attach {
+    color: var(--coe-brand);
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    white-space: nowrap;
+}
+
+.coe-page .coe-attach:hover { color: var(--coe-brand-hover); }
+
+.coe-page .coe-muted { color: var(--ds-ink-muted); }
+
+/* Status column: centred workflow badge. One modifier per state so an
+   unknown value falls back to the plain grey default. */
+.coe-page .programme-dt-table th.coe-col-center,
+.coe-page .programme-dt-table td.coe-col-center { text-align: center; }
+
+.coe-page .coe-state {
+    display: inline-block;
+    padding: 0.35em 0.7em;
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-1);
+    background: var(--ds-surface-2);
+    color: var(--ds-ink-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.25;
+    text-align: center;
+    white-space: normal;
+    min-width: 88px;              /* "Pending at / Rajbhasha" on two lines */
+    max-width: 110px;
+}
+
+.coe-page .coe-state--pending,
+.coe-page .coe-state--pending-faculty,
+.coe-page .coe-state--pending-rajbhasha { background: #fef7c3; border-color: #fde68a; color: #b54708; }
+.coe-page .coe-state--translated,
+.coe-page .coe-state--draft      { background: #e7eefb; border-color: #c7d7fe; color: var(--coe-brand); }
+
+/* Free-text reviewer comments: wrap, and cap the width so one long note
+   can't push Action off the row. */
+.coe-page .programme-dt-table td.coe-col-comment {
+    white-space: normal;
+    min-width: 110px;
+    max-width: 180px;
+    font-size: 0.8125rem;
+    color: #475467;
+}
+.coe-page .coe-state--frozen,
+.coe-page .coe-state--published  { background: var(--coe-success-soft); border-color: #abefc6; color: #067647; }
+
+/* ── Scope tabs (All / Translated) — links, one URL per scope ── */
+.coe-page .coe-tabs {
+    display: inline-flex;
+    gap: var(--ds-space-1);
+    padding: var(--ds-space-1);
+    border-radius: var(--ds-radius-2);
+    background: #e4e7ec;
+}
+
+.coe-page .coe-tab {
+    min-width: 96px;
+    padding: 0.5rem 1.25rem;
+    border-radius: var(--ds-radius-2);
+    background: var(--ds-surface);
+    color: var(--ds-ink);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    text-align: center;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.coe-page .coe-tab:hover { color: var(--coe-brand); }
+
+.coe-page .coe-tab.is-active {
+    background: var(--coe-brand);
+    color: #fff;
+    font-weight: 600;
+}
+
+/* ── Row actions: icon over label (docs/new-design-index-page.md §3b) ── */
+.coe-page .programme-dt-table th:last-child,
+.coe-page .programme-dt-table td:last-child { text-align: center; }
+
+.coe-page .coe-act-group {
+    display: inline-flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: var(--ds-space-1);
+}
+
+.coe-page .coe-act {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    width: 58px;                  /* captions wrap: "Upload / Translated / Paper" */
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    color: var(--coe-brand);
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.coe-page .coe-act:hover { color: var(--coe-brand-hover); }
+.coe-page .coe-act:hover .coe-act__label { text-decoration: underline; }
+
+.coe-page .coe-act__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+}
+
+.coe-page .coe-act__icon > i { font-size: 1.15rem; line-height: 1; }
+
+/* A lone action with a long caption ("Upload or Create Original Paper"). */
+.coe-page .coe-act--wide { width: 96px; }
+
+.coe-page .coe-act--del { color: var(--coe-danger); }
+
+/* No file on record yet: shown, but greyed and inert (a live link that always
+   fails is worse than a muted one — docs/new-design-index-page.md §3b). */
+.coe-page .coe-act.is-disabled {
+    color: #98a2b3;
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.coe-page .coe-act.is-disabled:hover .coe-act__label { text-decoration: none; }
+.coe-page .coe-act--freeze { color: #0e9384; }
+
+/* ── Empty state ── */
+.coe-page .coe-empty {
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: var(--ds-ink-muted);
+}
+
+.coe-page .coe-empty i { font-size: 2.5rem; opacity: 0.35; }
+
+/* ============================================================================
+   Modals
+   ========================================================================= */
+.coe-modal { border-radius: 12px; }
+
+.coe-modal .coe-modal-header {
+    border-bottom: 0;
+    padding: 1.25rem 1.5rem 0.5rem;
+}
+
+.coe-modal .coe-modal-header .modal-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #101828;
+}
+
+.coe-modal .coe-modal-body { padding: 0.75rem 1.5rem 1.25rem; }
+
+.coe-modal .coe-modal-footer {
+    border-top: 0;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 0 1.5rem 1.5rem;
+}
+
+/* Buttons shared by every qp modal. */
+.coe-modal .coe-btn {
+    min-height: var(--ds-control-h);
+    padding: 0 1.25rem;
+    border-radius: var(--ds-radius-2);
+    font-weight: 600;
+    font-size: 0.9375rem;
+}
+
+.coe-modal .coe-btn-cancel {
+    min-width: 108px;
+    border: 1px solid var(--coe-danger);
+    background: #fff;
+    color: var(--coe-danger);
+}
+
+.coe-modal .coe-btn-cancel:hover { background: #fff1f3; color: var(--coe-danger); }
+
+/* The Freeze dialog's Cancel is navy, per the design. */
+.coe-modal .coe-btn-cancel--brand {
+    border-color: var(--coe-brand);
+    color: var(--coe-brand);
+}
+
+.coe-modal .coe-btn-cancel--brand:hover { background: #eef3fb; color: var(--coe-brand); }
+
+.coe-modal .coe-btn-primary {
+    min-width: 140px;
+    border: 1px solid var(--coe-brand);
+    background: var(--coe-brand);
+    color: #fff;
+}
+
+.coe-modal .coe-btn-primary:hover:not(:disabled) {
+    background: var(--coe-brand-hover);
+    border-color: var(--coe-brand-hover);
+    color: #fff;
+}
+
+.coe-modal .coe-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.coe-modal .coe-btn-danger {
+    min-width: 140px;
+    border: 1px solid var(--coe-danger);
+    background: var(--coe-danger);
+    color: #fff;
+}
+
+.coe-modal .coe-btn-danger:hover { filter: brightness(0.92); color: #fff; }
+
+/* ── Confirm dialogs (Delete / Freeze): icon medallion + centred copy ── */
+.coe-modal .coe-confirm {
+    padding: 1.75rem 1.5rem 1.5rem;
+    text-align: center;
+}
+
+.coe-modal .coe-confirm__icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 1.9rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.coe-modal .coe-confirm__icon--danger { background: var(--coe-danger-soft); color: var(--coe-danger); }
+.coe-modal .coe-confirm__icon--freeze { background: var(--coe-success-soft); color: var(--coe-success); }
+
+.coe-modal .coe-confirm__title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #101828;
+    margin: 0 0 0.35rem;
+}
+
+.coe-modal .coe-confirm__text {
+    font-size: 0.9375rem;
+    color: #344054;
+    margin: 0;
+}
+
+.coe-modal .coe-confirm__hint {
+    font-size: 0.9375rem;
+    color: var(--coe-brand);
+    margin: 0.15rem 0 0;
+}
+
+.coe-modal .coe-confirm__actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+/* ── OTP boxes ── */
+.coe-modal .coe-otp {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+.coe-modal .coe-otp__box {
+    width: 52px;
+    height: 56px;
+    padding: 0;
+    border: 1px solid var(--coe-control-line);
+    border-radius: var(--ds-radius-2);
+    background: #fff;
+    color: #101828;
+    font-size: 1.5rem;
+    font-weight: 500;
+    text-align: center;
+    caret-color: var(--coe-brand);
+}
+
+.coe-modal .coe-otp__box:focus {
+    outline: 0;
+    border-color: var(--coe-brand);
+    box-shadow: var(--ds-focus-ring);
+}
+
+.coe-modal .coe-otp__box.is-invalid { border-color: var(--coe-danger); }
+
+.coe-modal .coe-otp-meta {
+    display: flex;
+    justify-content: flex-end;
+    min-height: 1.5rem;
+    margin-top: 0.5rem;
+    font-size: 0.8125rem;
+}
+
+.coe-modal .coe-otp-resend {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--coe-brand);
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.coe-modal .coe-otp-wait { color: #98a2b3; }
+.coe-modal .coe-otp-wait strong { color: #101828; font-weight: 700; }
+
+.coe-modal .coe-otp-error {
+    color: var(--coe-danger);
+    font-size: 0.8125rem;
+    margin: 0.5rem 0 0;
+}
+
+/* ── Upload dropzone ── */
+.coe-modal .coe-dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 260px;
+    padding: 2rem 1.5rem;
+    border: 2px dashed var(--coe-brand);
+    border-radius: var(--ds-radius-1);
+    background: #fff;
+    text-align: center;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.coe-modal .coe-dropzone.is-dragover { background: #eef3fb; }
+.coe-modal .coe-dropzone.is-invalid  { border-color: var(--coe-danger); }
+
+.coe-modal .coe-dropzone__icon {
+    font-size: 1.75rem;
+    color: var(--coe-brand);
+    line-height: 1;
+    margin-bottom: 0.75rem;
+}
+
+.coe-modal .coe-dropzone__title {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: #101828;
+    margin: 0;
+}
+
+.coe-modal .coe-dropzone__hint {
+    font-size: 0.8125rem;
+    color: #475467;
+    margin: 0.25rem 0 0;
+}
+
+.coe-modal .coe-dropzone__or {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    margin: 0.85rem 0;
+    font-size: 0.8125rem;
+    color: #667085;
+}
+
+.coe-modal .coe-dropzone__or::before,
+.coe-modal .coe-dropzone__or::after {
+    content: "";
+    flex: 1;
+    border-top: 1px solid var(--ds-line);
+}
+
+.coe-modal .coe-dropzone__pick {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 36px;
+    padding: 0 1rem;
+    border: 1px solid var(--coe-brand);
+    border-radius: var(--ds-radius-2);
+    background: #fff;
+    color: var(--coe-brand);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.coe-modal .coe-dropzone__pick:hover { background: #eef3fb; }
+
+.coe-modal .coe-dropzone__file {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 100%;
+    margin-top: 1rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: var(--ds-radius-2);
+    background: var(--ds-surface-2);
+    border: 1px solid var(--ds-line);
+    font-size: 0.8125rem;
+    color: #344054;
+}
+
+.coe-modal .coe-dropzone__file span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.coe-modal .coe-dropzone__clear {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #667085;
+    line-height: 1;
+}
+
+.coe-modal .coe-dropzone__error {
+    color: var(--coe-danger);
+    font-size: 0.8125rem;
+    margin: 0.5rem 0 0;
+}
+
+.coe-modal .coe-modal-meta {
+    font-size: 0.8125rem;
+    color: #475467;
+    margin: 0 0 0.75rem;
+}
+
+@media (max-width: 575.98px) {
+    .coe-modal .coe-otp { gap: 0.4rem; }
+    .coe-modal .coe-otp__box { width: 44px; height: 50px; font-size: 1.25rem; }
+    .coe-modal .coe-confirm__actions .coe-btn { flex: 1; min-width: 0; }
+}
+
+/* ============================================================================
+   Laptop Management (OT Laptop Status)
+   ========================================================================= */
+
+/* Primary action in the page header ("+ Import Laptop Status"). */
+.coe-page .coe-btn-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0 1.5rem;
+    border: 1px solid var(--coe-brand);
+    border-radius: var(--ds-radius-2);
+    background: var(--coe-brand);
+    color: #fff;
+    font-weight: 600;
+}
+
+.coe-page .coe-btn-header:hover { background: var(--coe-brand-hover); color: #fff; }
+
+/* Bulk action — appears once rows are ticked. */
+.coe-page .coe-btn-bulk-del {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    height: var(--ds-control-h);
+    padding: 0 1rem;
+    border: 1px solid var(--coe-danger);
+    border-radius: var(--ds-radius-2);
+    background: var(--coe-danger);
+    color: #fff;
+    font-size: 0.9375rem;
+    font-weight: 600;
+}
+
+.coe-page .coe-btn-bulk-del.d-none { display: none; }
+.coe-page .coe-btn-bulk-del:hover { filter: brightness(0.92); color: #fff; }
+
+.coe-page .programme-dt-table th.coe-col-check,
+.coe-page .programme-dt-table td.coe-col-check { width: 36px; text-align: center; }
+
+/* !important only because the admin theme (admin_assets styles.css) sets
+   `td { font-weight: 500 !important }` on every table cell. */
+.coe-page .programme-dt-table td.coe-strong { font-weight: 600 !important; color: var(--ds-ink); }
+.coe-page .programme-dt-table td.coe-yesno  { font-weight: 700 !important; color: #101828; }
+.coe-page .programme-dt-table td.coe-nowrap { white-space: nowrap; }
+
+/* One line with an ellipsis; the full text is on the cell's title. */
+.coe-page .programme-dt-table td.coe-col-truncate {
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Segmented switch inside a modal (Import In Bulk / Add Single Record) ── */
+.coe-modal .coe-seg {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--ds-space-1);
+    padding: var(--ds-space-1);
+    margin-bottom: 1.25rem;
+    border-radius: var(--ds-radius-2);
+    background: #e4e7ec;
+}
+
+.coe-modal .coe-seg__btn {
+    flex: 1;
+    min-height: 38px;
+    border: 0;
+    border-radius: var(--ds-radius-2);
+    background: var(--ds-surface);
+    color: var(--ds-ink);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.coe-modal .coe-seg__btn.active {
+    background: var(--coe-brand);
+    color: #fff;
+    font-weight: 600;
+}
+
+/* ── Form fields inside a coe modal ── */
+.coe-modal .coe-form-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #344054;
+}
+
+.coe-modal .coe-req { color: var(--coe-danger); margin-left: 1px; }
+
+.coe-modal .coe-control {
+    border: 1px solid var(--coe-control-line);
+    border-radius: var(--ds-radius-2);
+    font-size: 0.875rem;
+    color: #101828;
+    box-shadow: none;
+}
+
+.coe-modal .coe-control:focus { border-color: var(--coe-brand); box-shadow: var(--ds-focus-ring); }
+.coe-modal textarea.coe-control { resize: vertical; min-height: 64px; }
+.coe-modal textarea.coe-control:disabled { background: var(--ds-surface-2); }
+
+/* Select2 inside the modal follows the same control look. */
+.coe-modal .select2-container--default .select2-selection--single {
+    height: var(--ds-control-h);
+    border: 1px solid var(--coe-control-line);
+    border-radius: var(--ds-radius-2);
+}
+
+.coe-modal .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: calc(var(--ds-control-h) - 2px);
+    font-size: 0.875rem;
+    color: #101828;
+}
+
+.coe-modal .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: calc(var(--ds-control-h) - 2px);
+}
+
+.coe-modal .select2-selection.is-invalid,
+.coe-modal .coe-control.is-invalid { border-color: var(--coe-danger); }
+
+.coe-modal .coe-radio-row { display: flex; gap: 1.5rem; min-height: 28px; align-items: center; }
+
+.coe-modal .coe-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0;
+    font-size: 0.875rem;
+    color: #344054;
+    cursor: pointer;
+}
+
+.coe-modal .coe-radio input { accent-color: var(--coe-brand); width: 16px; height: 16px; margin: 0; }
+
+.coe-modal .coe-field-error { margin-top: 0.25rem; font-size: 0.75rem; color: var(--coe-danger); }
+
+/* ── Import instructions under the dropzone ── */
+.coe-modal .coe-instructions { margin-top: 1.25rem; }
+
+.coe-modal .coe-instructions__title {
+    padding-bottom: 0.5rem;
+    margin: 0 0 0.75rem;
+    border-bottom: 1px solid var(--ds-line);
+    font-size: 1rem;
+    font-weight: 600;
+    color: #101828;
+}
+
+.coe-modal .coe-instructions__list {
+    padding-left: 1.1rem;
+    margin: 0;
+    font-size: 0.875rem;
+    color: #344054;
+}
+
+.coe-modal .coe-instructions__list li + li { margin-top: 0.5rem; }
+.coe-modal .coe-instructions__list li::marker { color: var(--coe-brand); }
+.coe-modal .coe-instructions__list a { color: var(--coe-brand); text-decoration: underline; }
+.coe-modal .coe-tip { color: #dc6803; font-weight: 500; }
+
+/* ============================================================================
+   Master Data (Examination Type Master, …)
+   ========================================================================= */
+
+.coe-page .coe-state--active   { background: var(--coe-success-soft); border-color: #abefc6; color: #067647; }
+.coe-page .coe-state--inactive { background: var(--coe-warn-soft); border-color: #fedf89; color: #b54708; }
+
+.coe-page .programme-dt-table th.coe-col-sno { width: 90px; }
+
+/* Row actions: Edit (navy) · toggle (amber to deactivate, green to activate) · Delete. */
+.coe-page .coe-act--edit { color: var(--coe-brand); }
+.coe-page .coe-act--toggle.is-on  { color: var(--coe-warn); }
+.coe-page .coe-act--toggle.is-off { color: var(--coe-success); }
+.coe-page .coe-act--toggle .coe-act__icon > i { font-size: 1.35rem; }
+
+/* Form dialog: a hairline under the title, as designed. */
+.coe-modal .coe-modal-header--rule {
+    margin: 0 1.5rem;
+    padding: 1.25rem 0 0.75rem;
+    border-bottom: 1px solid var(--ds-line);
+}
+
+.coe-modal .coe-modal-header--rule + .coe-modal-body { padding-top: 1rem; }
+.coe-modal .coe-btn--narrow { min-width: 96px; }
+
+/* ── Activate / Deactivate confirm variants ── */
+.coe-modal .coe-status-confirm__icon { font-size: 2rem; }
+
+.coe-modal .coe-status-confirm.is-activate .coe-status-confirm__icon { background: var(--coe-success-soft); color: var(--coe-success); }
+.coe-modal .coe-status-confirm.is-activate .coe-status-confirm__cancel {
+    border: 1px solid var(--coe-brand); background: #fff; color: var(--coe-brand);
+}
+.coe-modal .coe-status-confirm.is-activate .coe-status-confirm__ok {
+    border: 1px solid var(--coe-brand); background: var(--coe-brand); color: #fff;
+}
+
+.coe-modal .coe-status-confirm.is-deactivate .coe-status-confirm__icon { background: var(--coe-warn-soft); color: var(--coe-warn); }
+.coe-modal .coe-status-confirm.is-deactivate .coe-status-confirm__cancel {
+    border: 1px solid var(--coe-warn); background: #fff; color: var(--coe-warn-strong);
+}
+.coe-modal .coe-status-confirm.is-deactivate .coe-status-confirm__ok {
+    border: 1px solid var(--coe-warn); background: var(--coe-warn); color: #fff;
+}
+
+.coe-modal .coe-status-confirm__cancel,
+.coe-modal .coe-status-confirm__ok { min-width: 140px; }
+.coe-modal .coe-status-confirm__ok:hover { filter: brightness(0.94); }
+
+/* A lone short filter (Status) doesn't need the 150px filter width. */
+.coe-page .coe-toolbar .programme-dt-filter-select.coe-filter-narrow { width: 128px; }
+
+/* Grid with no running-number column: the first column is real data, so undo
+   the muted S. No. styling custom.css gives every first cell. */
+.coe-page .programme-dt-table.coe-table--no-sno tbody td:first-child { color: #344054; }
+
+/* A filter whose placeholder is long ("Number of Rooms") — 150px truncates it. */
+.coe-page .coe-toolbar .programme-dt-filter-select.coe-filter-wide { width: 180px; }

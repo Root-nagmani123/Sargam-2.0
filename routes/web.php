@@ -1987,3 +1987,27 @@ Route::middleware(['auth'])->prefix('sidebar')->name('sidebar.')->group(function
     Route::get('getGroups/{category_id}', [SidebarController::class, 'getCategoryGroups'])->name('getGroups');
     Route::get('getMenus/{group_id}', [SidebarController::class, 'getGroupMenus'])->name('getMenus');
 });
+
+// COE -> Question Paper Management (design-first screens, sample rows).
+Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(function () {
+    Route::get('my-question-paper', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'index'])
+        ->name('my-question-paper.index');
+    Route::get('question-paper', [\App\Http\Controllers\Admin\COE\QuestionPaperListController::class, 'index'])
+        ->name('question-paper.index');
+    Route::get('faculty-question-paper', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'index'])
+        ->name('faculty-question-paper.index');
+    // COE -> Master Data
+    Route::get('examination-type', [\App\Http\Controllers\Admin\COE\ExaminationTypeController::class, 'index'])
+        ->name('examination-type.index');
+    Route::get('examination-term', [\App\Http\Controllers\Admin\COE\ExaminationTermController::class, 'index'])
+        ->name('examination-term.index');
+    Route::get('building', [\App\Http\Controllers\Admin\COE\BuildingController::class, 'index'])
+        ->name('building.index');
+    Route::get('floor', [\App\Http\Controllers\Admin\COE\FloorController::class, 'index'])
+        ->name('floor.index');
+    Route::get('room', [\App\Http\Controllers\Admin\COE\RoomController::class, 'index'])
+        ->name('room.index');
+    // COE -> Laptop Management
+    Route::get('ot-laptop-status', [\App\Http\Controllers\Admin\COE\OtLaptopStatusController::class, 'index'])
+        ->name('ot-laptop-status.index');
+});

@@ -364,7 +364,16 @@ body.custom-loaded {
 #applColumnToggleGrid .colvis-item,
 #fexColumnToggleGrid .colvis-item,
 #ftmColumnToggleGrid .colvis-item,
-#facultyColumnToggleGrid .colvis-item {
+#facultyColumnToggleGrid .colvis-item,
+#qpColumnToggleGrid .colvis-item,
+#qplColumnToggleGrid .colvis-item,
+#qpfColumnToggleGrid .colvis-item,
+#olsColumnToggleGrid .colvis-item,
+#extColumnToggleGrid .colvis-item,
+#etrColumnToggleGrid .colvis-item,
+#ebmColumnToggleGrid .colvis-item,
+#efmColumnToggleGrid .colvis-item,
+#exrColumnToggleGrid .colvis-item {
     cursor: pointer;
     transition: border-color 0.15s ease, background-color 0.15s ease;
 }
@@ -391,7 +400,16 @@ body.custom-loaded {
 #applColumnToggleGrid .colvis-item:hover,
 #fexColumnToggleGrid .colvis-item:hover,
 #ftmColumnToggleGrid .colvis-item:hover,
-#facultyColumnToggleGrid .colvis-item:hover {
+#facultyColumnToggleGrid .colvis-item:hover,
+#qpColumnToggleGrid .colvis-item:hover,
+#qplColumnToggleGrid .colvis-item:hover,
+#qpfColumnToggleGrid .colvis-item:hover,
+#olsColumnToggleGrid .colvis-item:hover,
+#extColumnToggleGrid .colvis-item:hover,
+#etrColumnToggleGrid .colvis-item:hover,
+#ebmColumnToggleGrid .colvis-item:hover,
+#efmColumnToggleGrid .colvis-item:hover,
+#exrColumnToggleGrid .colvis-item:hover {
     border-color: #004a93 !important;
     background-color: rgba(0, 74, 147, 0.04);
 }
@@ -418,7 +436,16 @@ body.custom-loaded {
 #applColumnToggleGrid .colvis-item .form-check-input,
 #fexColumnToggleGrid .colvis-item .form-check-input,
 #ftmColumnToggleGrid .colvis-item .form-check-input,
-#facultyColumnToggleGrid .colvis-item .form-check-input {
+#facultyColumnToggleGrid .colvis-item .form-check-input,
+#qpColumnToggleGrid .colvis-item .form-check-input,
+#qplColumnToggleGrid .colvis-item .form-check-input,
+#qpfColumnToggleGrid .colvis-item .form-check-input,
+#olsColumnToggleGrid .colvis-item .form-check-input,
+#extColumnToggleGrid .colvis-item .form-check-input,
+#etrColumnToggleGrid .colvis-item .form-check-input,
+#ebmColumnToggleGrid .colvis-item .form-check-input,
+#efmColumnToggleGrid .colvis-item .form-check-input,
+#exrColumnToggleGrid .colvis-item .form-check-input {
     cursor: pointer;
     flex-shrink: 0;
 }
