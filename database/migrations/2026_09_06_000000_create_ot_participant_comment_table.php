@@ -27,11 +27,8 @@ return new class extends Migration
 
     public function up(): void
     {
-        if (Schema::hasTable(self::TABLE)) {
-            return;
-        }
-
         Schema::create(self::TABLE, function (Blueprint $table) {
+
             $table->bigIncrements('pk');
 
             // The OT the comment is about. Not a DB-level FK: student_master is
