@@ -298,7 +298,10 @@ class FacultyLeaveApprovalController extends Controller
                 : '';
         }
 
-        $name = $actionedRows->first()->action_by_faculty_name;
+        // Auto-approved rows have no approver, so take the name from a row the approver
+        // actually actioned rather than whichever row happens to sort first.
+        $name = $actionedRows->firstWhere('approved_by_faculty_pk', $approverPks->first())
+            ?->action_by_faculty_name;
 
         return $name && $name !== '-' ? 'Approved/Rejected By: ' . $name : '';
     }
