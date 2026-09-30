@@ -351,6 +351,182 @@ class ToggleStatusEndpointTest extends TestCase
     }
 
     /**
+     * PR #330 F-002: Course Master and Group Mapping switches reach only the
+     * rows the actor's own grid shows. A course-scoped account is refused on a
+     * course outside its roles, and the row is untouched.
+     *
+     * @dataProvider courseScopedTables
+     */
+    public function test_a_course_scoped_account_is_refused_outside_its_courses(string $table): void
+    {
+        [$actor, $roleIds] = $this->courseScopedActor();
+
+        $row = $this->courseScopedRow($table, $roleIds, false);
+
+        if (! $row) {
+            $this->markTestSkipped("no {$table} row outside the fixture actor's courses");
+        }
+
+        $this->withSession(['user_roles' => []])
+            ->actingAs($actor)
+            ->post('/admin/toggle-status', [
+                'table'  => $table,
+                'column' => 'active_inactive',
+                'id'     => $row->pk,
+                'status' => (int) $row->active_inactive === 1 ? 0 : 1,
+            ])
+            ->assertForbidden();
+
+        $this->assertSame(
+            (int) $row->active_inactive,
+            (int) DB::table($table)->where('pk', $row->pk)->value('active_inactive'),
+            'an out-of-scope toggle must not reach the row'
+        );
+    }
+
+    /**
+     * The must-succeed half: the same account still toggles a row inside its
+     * courses, so the scope check narrows the switch rather than closing it.
+     *
+     * @dataProvider courseScopedTables
+     */
+    public function test_a_course_scoped_account_still_toggles_its_own_courses(string $table): void
+    {
+        [$actor, $roleIds] = $this->courseScopedActor();
+
+        $row = $this->courseScopedRow($table, $roleIds, true);
+
+        if (! $row) {
+            $this->markTestSkipped("no {$table} row inside the fixture actor's courses");
+        }
+
+        $target = (int) $row->active_inactive === 1 ? 0 : 1;
+
+        $this->withSession(['user_roles' => []])
+            ->actingAs($actor)
+            ->post('/admin/toggle-status', [
+                'table'  => $table,
+                'column' => 'active_inactive',
+                'id'     => $row->pk,
+                'status' => $target,
+            ])
+            ->assertOk();
+
+        $this->assertSame(
+            $target,
+            (int) DB::table($table)->where('pk', $row->pk)->value('active_inactive'),
+            'an in-scope toggle must still reach the row'
+        );
+    }
+
+    /**
+     * An administrator's grid shows every course, so the switch reaches a
+     * course outside the scoped actor's roles too.
+     *
+     * @dataProvider courseScopedTables
+     */
+    public function test_an_administrator_toggles_any_course(string $table): void
+    {
+        [, $roleIds] = $this->courseScopedActor();
+
+        $row = $this->courseScopedRow($table, $roleIds, false);
+
+        if (! $row) {
+            $this->markTestSkipped("no {$table} row outside the fixture actor's courses");
+        }
+
+        $target = (int) $row->active_inactive === 1 ? 0 : 1;
+
+        $this->withSession(['user_roles' => []])
+            ->actingAs($this->administrator())
+            ->post('/admin/toggle-status', [
+                'table'  => $table,
+                'column' => 'active_inactive',
+                'id'     => $row->pk,
+                'status' => $target,
+            ])
+            ->assertOk();
+
+        $this->assertSame($target, (int) DB::table($table)->where('pk', $row->pk)->value('active_inactive'));
+    }
+
+    public static function courseScopedTables(): array
+    {
+        return [
+            'course master' => ['course_master'],
+            'group mapping' => ['group_type_master_course_master_map'],
+        ];
+    }
+
+    /**
+     * A non-administrator whose Spatie roles map to some but not all courses -
+     * the one actor for whom a missing scope check changes the answer.
+     *
+     * @return array{0: User, 1: list<int>}
+     */
+    private function courseScopedActor(): array
+    {
+        $adminIds = DB::table('model_has_roles as m')
+            ->join('roles as r', 'r.id', '=', 'm.role_id')
+            ->where('m.model_type', User::class)
+            ->whereIn('r.name', ['Admin', 'Super Admin', 'SuperAdmin', 'PA'])
+            ->pluck('m.model_id');
+
+        $candidates = DB::table('model_has_roles as m')
+            ->join('course_master as cm', 'cm.user_role_master_pk', '=', 'm.role_id')
+            ->where('m.model_type', User::class)
+            ->whereNotIn('m.model_id', $adminIds)
+            ->distinct()
+            ->orderBy('m.model_id')
+            ->pluck('m.model_id');
+
+        $total = DB::table('course_master')->count();
+
+        foreach ($candidates as $id) {
+            $user = User::find($id);
+
+            if (! $user) {
+                continue;
+            }
+
+            $roleIds = DB::table('model_has_roles')
+                ->where('model_type', User::class)
+                ->where('model_id', $id)
+                ->pluck('role_id')
+                ->map(fn ($v) => (int) $v)
+                ->all();
+
+            $mine = DB::table('course_master')->whereIn('user_role_master_pk', $roleIds)->count();
+
+            if ($mine > 0 && $mine < $total) {
+                return [$user, $roleIds];
+            }
+        }
+
+        $this->markTestSkipped('no non-administrator whose roles map to some but not all courses');
+    }
+
+    /**
+     * A row of $table whose course is (or is not) mapped to one of $roleIds,
+     * computed here from course_master.user_role_master_pk rather than by the
+     * code under test.
+     */
+    private function courseScopedRow(string $table, array $roleIds, bool $inScope): ?object
+    {
+        $courses = DB::table('course_master')
+            ->when(
+                $inScope,
+                fn ($q) => $q->whereIn('user_role_master_pk', $roleIds),
+                fn ($q) => $q->where(fn ($w) => $w->whereNotIn('user_role_master_pk', $roleIds)->orWhereNull('user_role_master_pk'))
+            )
+            ->pluck('pk');
+
+        $key = $table === 'course_master' ? 'pk' : 'course_name';
+
+        return DB::table($table)->whereIn($key, $courses)->orderBy('pk')->first(['pk', 'active_inactive']);
+    }
+
+    /**
      * A real user_credentials row: the endpoint is gated by auth only, but the
      * sidebar view composer that runs while a response renders reads the
      * actor's permissions, so a stub actor cannot get through the stack.
