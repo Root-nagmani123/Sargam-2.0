@@ -7,7 +7,7 @@
     // unconditionally would put the PNG back and abort the whole download.
     if (! isset($emblemSrc)) {
         $emblemSrc = extension_loaded('gd')
-            ? 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png'
+            ? pdf_emblem_src()
             : '';
         foreach ([
             public_path('admin_assets/images/logos/ashoka.png'),
@@ -28,7 +28,7 @@
 
     if (! isset($lbsnaaLogoSrc)) {
         $lbsnaaLogoSrc = extension_loaded('gd')
-            ? 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png'
+            ? pdf_lbsnaa_logo_src()
             : '';
         foreach ([
             public_path('images/lbsnaa_logo.jpg'),
