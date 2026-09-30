@@ -107,8 +107,15 @@ class ExemptionMasterController extends Controller
 
         $this->assertCourseAllowed((int) $validated['course_master_pk']);
 
-        $maxAllowedPerMonth = min((float) $validated['male_exemption_days'], (float) $validated['female_exemption_days']);
-        if ((float) $validated['max_exemption_per_month'] > $maxAllowedPerMonth) {
+        // The per-month cap is shared by both genders, so it may not exceed either yearly
+        // allocation. A gender allotted 0 days gets no PT exemption at all and is left out:
+        // otherwise min() would be 0 and no cap (min 0.1) could ever be saved.
+        $yearlyAllocations = array_filter(
+            [(float) $validated['male_exemption_days'], (float) $validated['female_exemption_days']],
+            fn (float $days) => $days > 0
+        );
+        if ($yearlyAllocations !== []
+            && (float) $validated['max_exemption_per_month'] > min($yearlyAllocations)) {
             return back()->withInput()->withErrors([
                 'max_exemption_per_month' => 'Max exemption per month cannot exceed the PT exemption count allocated per academic year.',
             ]);
