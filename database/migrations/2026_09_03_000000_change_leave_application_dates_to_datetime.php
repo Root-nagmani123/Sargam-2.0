@@ -13,7 +13,8 @@ return new class extends Migration
 
     public function down(): void
     {
-        DB::statement('ALTER TABLE leave_application MODIFY from_date DATE NOT NULL');
-        DB::statement('ALTER TABLE leave_application MODIFY to_date DATE NOT NULL');
+        // Deliberately one-way. Narrowing DATETIME back to DATE would silently drop
+        // the time on every leave row (stationed leave depends on it). If this change
+        // must be reverted, restore leave_application from a backup instead.
     }
 };
