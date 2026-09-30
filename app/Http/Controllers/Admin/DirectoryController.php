@@ -298,15 +298,20 @@ class DirectoryController extends Controller
             ->where('employee_master.status', 1)
             ->when($filters['section'] !== null, fn ($q) => $q->where('employee_master.department_master_pk', $filters['section']))
             ->when($filters['designation'] !== null, fn ($q) => $q->where('employee_master.designation_master_pk', $filters['designation']))
+            // Each text column is compared in utf8mb4. Some of them are stored as
+            // latin1, and a term latin1 cannot hold (Devanagari, emoji) is otherwise
+            // a hard SQL error (3988) rather than an empty result. A leading-%
+            // LIKE uses no index, so the conversion costs no index either.
             ->when($search !== '', fn ($q) => $q->where(function ($inner) use ($search) {
-                $inner->where('employee_master.first_name', 'like', "%{$search}%")
-                    ->orWhere('employee_master.middle_name', 'like', "%{$search}%")
-                    ->orWhere('employee_master.last_name', 'like', "%{$search}%")
-                    ->orWhere('employee_master.email', 'like', "%{$search}%")
-                    ->orWhere('employee_master.officalemail', 'like', "%{$search}%")
-                    ->orWhere('employee_master.mobile', 'like', "%{$search}%")
-                    ->orWhere('d.designation_name', 'like', "%{$search}%")
-                    ->orWhere('dept.department_name', 'like', "%{$search}%");
+                $like = "%{$search}%";
+                $inner->whereRaw('CONVERT(employee_master.first_name USING utf8mb4) LIKE ?', [$like])
+                    ->orWhereRaw('CONVERT(employee_master.middle_name USING utf8mb4) LIKE ?', [$like])
+                    ->orWhereRaw('CONVERT(employee_master.last_name USING utf8mb4) LIKE ?', [$like])
+                    ->orWhereRaw('CONVERT(employee_master.email USING utf8mb4) LIKE ?', [$like])
+                    ->orWhereRaw('CONVERT(employee_master.officalemail USING utf8mb4) LIKE ?', [$like])
+                    ->orWhere('employee_master.mobile', 'like', $like)
+                    ->orWhereRaw('CONVERT(d.designation_name USING utf8mb4) LIKE ?', [$like])
+                    ->orWhereRaw('CONVERT(dept.department_name USING utf8mb4) LIKE ?', [$like]);
             }))
             ->select([
                 'employee_master.pk',
@@ -553,11 +558,14 @@ class DirectoryController extends Controller
             ->where('sm.status', 1)
             ->where('cm.active_inactive', 1)
             ->where('cm.pk', $courseId)
+            // Compared in utf8mb4 for the same reason as lbsnaaEmployeesQuery():
+            // these columns mix latin1, utf8mb3 and utf8mb4.
             ->when($search !== '', fn ($query) => $query->where(function ($inner) use ($search) {
-                $inner->where('sm.display_name', 'like', "%{$search}%")
-                    ->orWhere('sm.generated_OT_code', 'like', "%{$search}%")
-                    ->orWhere('sm.email', 'like', "%{$search}%")
-                    ->orWhere('cad.cadre_name', 'like', "%{$search}%");
+                $like = "%{$search}%";
+                $inner->whereRaw('CONVERT(sm.display_name USING utf8mb4) LIKE ?', [$like])
+                    ->orWhereRaw('CONVERT(sm.generated_OT_code USING utf8mb4) LIKE ?', [$like])
+                    ->orWhereRaw('CONVERT(sm.email USING utf8mb4) LIKE ?', [$like])
+                    ->orWhereRaw('CONVERT(cad.cadre_name USING utf8mb4) LIKE ?', [$like]);
             }))
             ->select([
                 'sm.pk',

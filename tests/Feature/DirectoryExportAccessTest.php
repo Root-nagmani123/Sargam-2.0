@@ -246,6 +246,11 @@ class DirectoryExportAccessTest extends TestCase
     public function test_an_export_writes_an_audit_line(): void
     {
         $this->actAsSuperAdmin();
+
+        // Counted before the insert, as the filter test does: NIAR may already
+        // hold employees on the shared development database.
+        $before = (int) $this->getJson(route('admin.directory.lbsnaa.data', ['section' => self::NIAR_SECTION_PK]))
+            ->json('recordsFiltered');
         $surname = $this->employeeInNiar();
 
         Log::spy();
@@ -254,18 +259,40 @@ class DirectoryExportAccessTest extends TestCase
             'format' => 'csv', 'section' => self::NIAR_SECTION_PK,
         ]))->assertOk();
 
-        Log::shouldHaveReceived('info')->withArgs(function ($message, $context = null) use ($surname) {
+        Log::shouldHaveReceived('info')->withArgs(function ($message, $context = null) use ($surname, $before) {
             if ($message !== 'directory.export' || ! is_array($context)) {
                 return false;
             }
 
             return $context['grid'] === 'lbsnaa'
                 && $context['format'] === 'csv'
-                && $context['rows'] === 1
+                && $context['rows'] === $before + 1
                 && $context['capped'] === false
                 && $context['filters'] === 'Section: NIAR'
                 && ! str_contains(json_encode($context), $surname);
         })->once();
+    }
+
+    /**
+     * A search term the latin1 name columns cannot hold is an empty result,
+     * not a server error. Compared as latin1, MySQL raised error 3988
+     * ("Conversion from collation ... impossible") on every grid and export.
+     */
+    public function test_a_search_term_outside_latin1_returns_no_rows_rather_than_an_error(): void
+    {
+        $this->actAsSuperAdmin();
+        $term = "\u{0908}"; // DEVANAGARI LETTER II
+
+        // The feeds are driven by DataTables, which sends search[value].
+        $this->getJson(route('admin.directory.lbsnaa.data', ['search' => ['value' => $term]]))
+            ->assertOk()
+            ->assertJsonPath('recordsFiltered', 0);
+        $this->getJson(route('admin.directory.ot.data', ['search' => ['value' => $term]]))
+            ->assertOk();
+
+        // An export link carries the term as ?q.
+        $this->get(route('admin.directory.lbsnaa.export', ['format' => 'csv', 'q' => $term]))->assertOk();
+        $this->get(route('admin.directory.ot.export', ['format' => 'csv', 'q' => $term]))->assertOk();
     }
 
     /**

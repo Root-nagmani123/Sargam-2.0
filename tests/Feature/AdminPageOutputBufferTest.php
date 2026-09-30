@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /**
@@ -21,6 +23,34 @@ use Tests\TestCase;
  */
 class AdminPageOutputBufferTest extends TestCase
 {
+    /** The route the render is taken from is gated on this permission (can: middleware). */
+    private const PAGE_PERMISSION = 'bank_detail_report';
+
+    private bool $inTransaction = false;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // superAdmin() grants the page's permission, so the grant must not
+        // outlive the test: this suite runs against the development schema.
+        DB::beginTransaction();
+        $this->inTransaction = true;
+    }
+
+    protected function tearDown(): void
+    {
+        if ($this->inTransaction) {
+            DB::rollBack();
+            $this->inTransaction = false;
+            // The permission cache outlives the rollback; drop it so no later
+            // request sees the grant that was just undone.
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
+        }
+
+        parent::tearDown();
+    }
+
     public function test_an_admin_page_leaves_no_output_buffer_open(): void
     {
         $superAdmin = $this->superAdmin();
@@ -90,6 +120,12 @@ class AdminPageOutputBufferTest extends TestCase
             $this->markTestSkipped('no Super Admin in this database');
         }
 
-        return $user;
+        // can: has no Super Admin bypass, so a database without this grant
+        // answers 403 and the buffers are never exercised. Grant it here,
+        // inside the transaction, rather than depend on the schema's rows.
+        $user->givePermissionTo(Permission::findOrCreate(self::PAGE_PERMISSION, 'web'));
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        return $user->fresh();
     }
 }
