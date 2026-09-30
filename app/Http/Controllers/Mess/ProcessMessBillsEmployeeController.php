@@ -736,8 +736,16 @@ class ProcessMessBillsEmployeeController extends Controller
      */
     private function combinedBillsCacheKey(string $dateFrom, string $dateTo, array $filters): string
     {
+        // The "Invoice sent" list is pre-filtered to buyers who have been invoiced, so it must
+        // change when an invoice goes out. Sending bumps only the notification version (see
+        // bumpProcessMessBillsNotificationCache()), which leaves the "All" list and the modal
+        // summaries warm while this list is rebuilt.
+        $version = ($filters['invoice_sent_filter'] ?? null) === 'sent'
+            ? $this->processMessBillsNotificationCacheVersion()
+            : $this->processMessBillsCombinedCacheVersion();
+
         return 'process_mess_bills_combined_v8:'
-            . $this->processMessBillsCombinedCacheVersion()
+            . $version
             . ':'
             . md5(json_encode([
                 'from' => $dateFrom,
