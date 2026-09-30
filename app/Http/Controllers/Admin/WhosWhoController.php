@@ -161,6 +161,7 @@ class WhosWhoController extends Controller
                         ->exists()
                     : CourseMaster::where('pk', $courseId)
                         ->where('active_inactive', 1)
+                        ->where('start_year', '<=', $currentDate)
                         ->where('end_date', '>=', $currentDate)
                         ->exists();
 
@@ -275,7 +276,8 @@ class WhosWhoController extends Controller
                 if ($status === 'archive') {
                     $q->where('end_date', '<', $currentDate); // Only courses that have already ended
                 } else {
-                    $q->where('end_date', '>=', $currentDate); // Exclude courses that have already ended
+                    $q->where('start_year', '<=', $currentDate) // Exclude upcoming courses not yet started
+                        ->where('end_date', '>=', $currentDate); // Exclude courses that have already ended
                 }
             });
 
@@ -530,7 +532,8 @@ class WhosWhoController extends Controller
                         if ($status === 'archive') {
                             $q->where('end_date', '<', $currentDate);
                         } else {
-                            $q->where('end_date', '>=', $currentDate);
+                            $q->where('start_year', '<=', $currentDate)
+                                ->where('end_date', '>=', $currentDate);
                         }
                     })
                     ->first();
@@ -556,7 +559,8 @@ class WhosWhoController extends Controller
                         if ($status === 'archive') {
                             $q->where('end_date', '<', $currentDate);
                         } else {
-                            $q->where('end_date', '>=', $currentDate);
+                            $q->where('start_year', '<=', $currentDate)
+                                ->where('end_date', '>=', $currentDate);
                         }
                     })
                     ->get();
