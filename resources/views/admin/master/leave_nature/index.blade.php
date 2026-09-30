@@ -5,6 +5,8 @@
 @section('setup_content')
 <div class="container-fluid">
 <x-breadcrum title="Leave Nature Master"></x-breadcrum>
+
+    <x-session_message />
     <div class="card" >
         <div class="card-body">
             <div class="row">

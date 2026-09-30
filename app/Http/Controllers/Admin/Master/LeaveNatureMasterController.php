@@ -120,6 +120,12 @@ class LeaveNatureMasterController extends Controller
                 return redirect()->back()->with('error', 'Active records cannot be deleted. Please deactivate it first.');
             }
 
+            // No FK guards leave_application.leave_nature_master_pk, so deleting a nature still
+            // in use would blank the nature on those applications in approvals and exports.
+            if (LeaveApplication::where('leave_nature_master_pk', $leaveNature->pk)->exists()) {
+                return redirect()->back()->with('error', 'This leave nature is used by existing leave applications and cannot be deleted. Keep it inactive instead.');
+            }
+
             $leaveNature->delete();
 
             return redirect()->route('master.leave-nature.index')
