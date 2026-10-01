@@ -117,6 +117,28 @@
 
         .empty { text-align: center; padding: 28pt; }
         .pto   { text-align: right; font-weight: bold; margin-top: 4pt; }
+        .contd { font-size: 7.5pt; font-style: italic; margin-bottom: 2pt; }
+
+        /* ===== Info sheet (the P.T.O. page) ===== */
+        .is-cols { width: 100%; border-collapse: collapse; }
+        .is-col  { width: 50%; vertical-align: top; padding: 0; }
+        .is-box  { width: 100%; border-collapse: collapse; }
+        .is-box th, .is-box td { border: 0.5pt solid #000; padding: 1.5pt 4pt; vertical-align: top; }
+        .is-box th { background: #EAF1DD; text-align: center; font-size: 9pt; font-weight: bold; }
+        .is-c    { text-align: center; font-size: 8pt; }
+        .is-l    { text-align: left; font-size: 8pt; }
+        .is-abbr { text-align: left; font-size: 8pt; white-space: nowrap; width: 62pt; }
+        .is-free { font-size: 9.5pt; line-height: 1.35; padding: 6pt 6pt; }
+        .is-guests { padding: 4pt 6pt; }
+        .is-guest-list { width: 100%; border-collapse: collapse; }
+        .is-guest-list td { border: none; vertical-align: top; padding: 1pt 0; font-size: 9pt; line-height: 1.25; }
+        .is-guest-num  { width: 14pt; font-weight: bold; }
+        .is-guest-name { font-weight: bold; }
+        .is-sign { width: 100%; border-collapse: collapse; margin-top: 24pt; }
+        .is-sign td { border: none; font-size: 9pt; vertical-align: bottom; }
+        .is-sign-date { text-align: left; font-weight: bold; }
+        .is-sign-who  { text-align: right; }
+        .is-sign-name { font-weight: bold; }
     </style>
 </head>
 <body>
@@ -145,7 +167,10 @@
                     <td class="mid">
                         @if($titleHindi)<img class="inst-hi-img" src="{{ $titleHindi }}" alt="">@endif
                         <div class="inst-en">Lal Bahadur Shastri National Academy of Administration, Mussoorie</div>
-                        @if($course && $course->course_name)
+                        @if($course && trim((string) ($course->sheet_title ?? '')) !== '')
+                            {{-- The title the course prints its sheets under, set in the info-sheet editor. --}}
+                            <div class="course-line">{{ $course->sheet_title }}</div>
+                        @elseif($course && $course->course_name)
                             <div class="course-line">
                                 {{ $course->course_name }}@if(!empty($course->couse_short_name) && $course->couse_short_name !== $course->course_name) ({{ $course->couse_short_name }})@endif
                             </div>
@@ -159,6 +184,15 @@
                 </tr>
             </table>
 
+            {{-- The grid arrives cut into page-sized segments (paginateWeeks()):
+                 DomPDF cannot carry a rowspan over a page break, so each
+                 segment is a table of its own under a repeated column head,
+                 and a session continued from the page before says so. --}}
+            @php $pages = $week['pages'] ?? [$week['rows']]; @endphp
+            @foreach($pages as $pageRows)
+            {{-- In measure mode (paginateWeeks()) the segments stack on one tall page. --}}
+            @if(!$loop->first && empty($measure))<div style="page-break-before: always;"></div>@endif
+            @php $lastPage = $loop->last; @endphp
             <table class="grid">
                 {{-- Widths ride on the header cells: DomPDF ignores
                      <colgroup> widths but honours these. --}}
@@ -172,7 +206,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($week['rows'] as $row)
+                    @foreach($pageRows as $row)
                         <tr>
                             @if($row['type'] === 'band')
                                 {{-- A break band covers TIME, GROUP and every day column
@@ -201,6 +235,7 @@
                                     @continue($c['state'] === 'skip')
                                     @php $n = count($c['events']); @endphp
                                     <td class="day @if($n > 8) dense denser @elseif($n > 2) dense @endif" rowspan="{{ $c['rowspan'] }}">
+                                        @if(!empty($c['contd']))<div class="contd">(contd.)</div>@endif
                                         @foreach($c['events'] as $ev)
                                             <div class="cell">
                                                 <div>{{ $ev['topic'] }}@if(!empty($ev['groupNames']))<span class="grp-line"> [{{ $ev['groupNames'] }}]</span>@endif</div>
@@ -229,17 +264,20 @@
                     {{-- The issued sheet closes the grid with these two rows,
                          inside its border and full width: where each group sits,
                          then the week's notes. --}}
+                    @if($lastPage)
                     @php $cols = 1 + ($week['showGroupCol'] ? 1 : 0) + count($week['days']); @endphp
                     @if(!empty($week['venueLine']))
                         <tr><td class="venues" colspan="{{ $cols }}"><b>VENUES:</b> {{ $week['venueLine'] }}</td></tr>
                     @endif
-                    @if(!empty($footerNote))
+                    {{-- The week's own notes, unless the download typed its own. --}}
+                    @php $weekNote = trim((string) ($footerNote ?? '')) !== '' ? $footerNote : ($week['footerNote'] ?? ''); @endphp
+                    @if(trim((string) $weekNote) !== '')
                         <tr>
                             <td class="note-cell" colspan="{{ $cols }}">
                                 @php
                                     // One <div> per note, so a numbered list keeps
                                     // its hanging indent instead of running on.
-                                    $notes = preg_split('/\r\n|\r|\n/', trim($footerNote));
+                                    $notes = preg_split('/\r\n|\r|\n/', trim($weekNote));
                                     $notes = array_values(array_filter(array_map('trim', $notes), static fn ($n) => $n !== ''));
                                 @endphp
                                 @foreach($notes as $i => $noteLine)
@@ -248,12 +286,19 @@
                             </td>
                         </tr>
                     @endif
+                    @endif
                 </tbody>
             </table>
-            @if(!$loop->last)
+            @endforeach
+            @if(empty($measure) && (!$loop->last || !empty($week['sheet'])))
                 <div class="pto">P.T.O.</div>
             @endif
         </div>
+        @if(empty($measure) && !empty($week['sheet']))
+            <div style="page-break-before: always;">
+                <x-timetable.info-sheet :sheet="$week['sheet']" />
+            </div>
+        @endif
     @endforeach
 @endif
 </body>

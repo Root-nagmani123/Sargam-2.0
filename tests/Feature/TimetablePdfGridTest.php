@@ -623,4 +623,149 @@ class TimetablePdfGridTest extends TestCase
         $this->assertSame('Full Day', $rows[0]['from']);
         $this->assertGridIsSquare($weeks[0]);
     }
+
+    /**
+     * The printed grid is cut into page-sized tables (DomPDF cannot carry a
+     * rowspan over a page break). Wherever the cut falls, every page must be a
+     * square table of its own: a session running across the cut is closed on
+     * one page and reopened on the next, and so is its TIME label.
+     */
+    public function test_every_page_of_a_cut_week_is_a_square_table(): void
+    {
+        $ab = json_encode([self::GROUP_A_PK, self::GROUP_B_PK]);
+        $weeks = $this->buildWeeks([
+            $this->event(['class_session' => '09:40 AM - 04:30 PM', 'group_name' => $ab, 'subject_topic' => 'All day']),
+            $this->event(['class_session' => '09:40 AM - 10:40 AM', 'group_name' => $ab, 'START_DATE' => '2026-01-20',
+                'is_break' => 1, 'break_type' => 'tea', 'break_start_time' => '11:50', 'break_end_time' => '12:20']),
+            $this->event(['class_session' => '10:50 AM - 01:20 PM', 'group_name' => $ab, 'START_DATE' => '2026-01-20']),
+            $this->event(['class_session' => '02:20 PM - 04:30 PM', 'group_name' => json_encode([self::GROUP_A_PK]), 'START_DATE' => '2026-01-21']),
+        ], '2026-01-19', '2026-01-25');
+        $week = $weeks[0];
+
+        $apply = new ReflectionMethod(CalendarController::class, 'applyCuts');
+        $apply->setAccessible(true);
+
+        $cutPoints = [];
+        foreach ($week['rows'] as $i => $row) {
+            if ($i > 0 && $row['type'] === 'row') {
+                $cutPoints[] = $i;
+            }
+        }
+        $this->assertNotEmpty($cutPoints);
+
+        foreach ($cutPoints as $cut) {
+            $pages = $apply->invoke(app(CalendarController::class), $week, [$cut]);
+            $this->assertCount(2, $pages);
+            foreach ($pages as $p => $rows) {
+                $this->assertGridIsSquare(array_merge($week, ['rows' => $rows]), "cut at $cut, page $p");
+            }
+            // The all-day Monday session reaches both pages, the second marked continued.
+            $monday = array_values(array_filter($pages[1], fn ($r) => $r['type'] === 'row'))[0]['cells'][1];
+            $this->assertSame('All day', $monday['events'][0]['topic'] ?? null, "cut at $cut");
+            $this->assertTrue(!empty($monday['contd']), "cut at $cut");
+        }
+
+        // Every cut at once as well.
+        foreach ($apply->invoke(app(CalendarController::class), $week, $cutPoints) as $p => $rows) {
+            $this->assertGridIsSquare(array_merge($week, ['rows' => $rows]), "all cuts, page $p");
+        }
+    }
+
+    /** TIME labels of the printed rows, one per band. */
+    private function timeLabels(array $week): array
+    {
+        $out = [];
+        foreach ($week['rows'] as $row) {
+            if ($row['type'] === 'row' && $row['showTime']) {
+                $out[] = $row['from'] . '-' . $row['to'];
+            }
+        }
+        return $out;
+    }
+
+    private function bands(array $week): array
+    {
+        return array_values(array_filter($week['rows'], static fn ($r) => $r['type'] === 'band'));
+    }
+
+    /** The ten-minute changeover is not a row of its own, even under a longer session. */
+    public function test_a_changeover_gap_nobody_starts_in_is_not_printed(): void
+    {
+        $ab = json_encode([self::GROUP_A_PK, self::GROUP_B_PK]);
+        $weeks = $this->buildWeeks([
+            $this->event(['class_session' => '09:40 AM - 10:40 AM', 'group_name' => $ab]),
+            $this->event(['class_session' => '10:50 AM - 11:50 AM', 'group_name' => $ab]),
+            $this->event(['class_session' => '09:40 AM - 11:50 AM', 'group_name' => $ab, 'START_DATE' => '2026-01-20',
+                'subject_topic' => 'Runs through the changeover']),
+        ], '2026-01-19', '2026-01-25');
+
+        $this->assertSame(['0940-1040', '1050-1150'], $this->timeLabels($weeks[0]));
+        $this->assertGridIsSquare($weeks[0]);
+    }
+
+    /** A short band some session starts in is real and stays. */
+    public function test_a_short_band_with_a_session_in_it_is_kept(): void
+    {
+        $weeks = $this->buildWeeks([
+            $this->event(['class_session' => '09:40 AM - 10:40 AM']),
+            $this->event(['class_session' => '10:50 AM - 11:50 AM']),
+            $this->event(['class_session' => '10:40 AM - 10:50 AM', 'START_DATE' => '2026-01-20', 'subject_topic' => 'Briefing']),
+        ], '2026-01-19', '2026-01-25');
+
+        $this->assertContains('1040-1050', $this->timeLabels($weeks[0]));
+        $this->assertGridIsSquare($weeks[0]);
+    }
+
+    /**
+     * A break across the A and B rows prints as one band, as on the issued
+     * sheet, and stops short of a day a longer session holds through it.
+     */
+    public function test_a_break_split_by_group_prints_as_one_band(): void
+    {
+        $ab = json_encode([self::GROUP_A_PK, self::GROUP_B_PK]);
+        $weeks = $this->buildWeeks([
+            $this->event(['class_session' => '09:00 AM - 10:00 AM', 'group_name' => $ab,
+                'is_break' => 1, 'break_type' => 'tea', 'break_start_time' => '10:00', 'break_end_time' => '10:30']),
+            $this->event(['class_session' => '10:30 AM - 11:30 AM', 'group_name' => $ab]),
+            $this->event(['class_session' => '09:00 AM - 11:30 AM', 'group_name' => $ab, 'START_DATE' => '2026-01-20',
+                'subject_topic' => 'Held through the break']),
+        ], '2026-01-19', '2026-01-25');
+
+        $bands = $this->bands($weeks[0]);
+        $this->assertCount(1, $bands);
+        $this->assertSame('Tea Break  1000 to 1030 hrs', $bands[0]['segments'][0]['label']);
+        $this->assertGridIsSquare($weeks[0]);
+    }
+
+    /** With Monday held through the break, TIME and GROUP are a cell of their own. */
+    public function test_a_band_does_not_claim_a_held_first_day(): void
+    {
+        $ab = json_encode([self::GROUP_A_PK, self::GROUP_B_PK]);
+        $weeks = $this->buildWeeks([
+            $this->event(['class_session' => '09:00 AM - 11:30 AM', 'group_name' => $ab, 'subject_topic' => 'Held through the break']),
+            $this->event(['class_session' => '09:00 AM - 10:00 AM', 'group_name' => $ab, 'START_DATE' => '2026-01-20',
+                'is_break' => 1, 'break_type' => 'tea', 'break_start_time' => '10:00', 'break_end_time' => '10:30']),
+            $this->event(['class_session' => '10:30 AM - 11:30 AM', 'group_name' => $ab, 'START_DATE' => '2026-01-20']),
+        ], '2026-01-19', '2026-01-25');
+
+        $bands = $this->bands($weeks[0]);
+        $this->assertCount(1, $bands);
+        $this->assertSame(['colspan' => 2, 'label' => ''], $bands[0]['segments'][0]);
+        $this->assertGridIsSquare($weeks[0]);
+    }
+
+    /** A session taker with a curated code is printed by it - "(KP)" - others in full. */
+    public function test_a_session_taker_with_a_curated_code_is_printed_by_it(): void
+    {
+        DB::table('faculty_master')->where('pk', self::FACULTY_2_PK)->update(['abbreviation' => 'DK']);
+
+        $weeks = $this->buildWeeks([
+            $this->event(['faculty_details' => json_encode([
+                ['faculty_pk' => self::FACULTY_1_PK, 'faculty_type' => 2, 'role' => 'Teaching'],
+                ['faculty_pk' => self::FACULTY_2_PK, 'faculty_type' => 1, 'role' => 'Teaching'],
+            ])]),
+        ], '2026-01-19', '2026-01-25');
+
+        $this->assertSame(['Asha Sharma', 'DK'], $this->cells($weeks[0])[0]['faculty']);
+    }
 }
