@@ -4891,6 +4891,31 @@ class UserController extends Controller
         'venue_master' => ['id_column' => 'venue_id', 'columns' => ['active_inactive']],
     ];
 
+    /**
+     * Whether a course-scoped table's row lies inside the actor's course scope,
+     * using the same rule as CourseMasterDataTable and GroupMappingDataTable.
+     * Tables that are not course-scoped always pass.
+     */
+    private function toggleTargetInCourseScope(string $table, $id): bool
+    {
+        if ($table === 'course_master') {
+            $coursePk = $id;
+        } elseif ($table === 'group_type_master_course_master_map') {
+            // course_name holds the course pk (see GroupTypeMasterCourseMasterMap::courseGroup()).
+            $coursePk = DB::table($table)->where('pk', $id)->value('course_name');
+        } else {
+            return true;
+        }
+
+        $scope = get_Role_by_course();
+
+        if (empty($scope)) {
+            return true;
+        }
+
+        return $coursePk !== null && in_array((int) $coursePk, array_map('intval', $scope), true);
+    }
+
     public function toggleStatus(Request $request)
     {
         try {
@@ -4957,6 +4982,22 @@ class UserController extends Controller
                     'user' => optional(auth()->user())->getKey(),
                     'table' => $table,
                     'column' => $column,
+                ]));
+
+                return response()->json([
+                    'message' => 'You do not have permission to change this record.',
+                ], 403);
+            }
+
+            // Course Master and Group Mapping rows are scoped per account: their
+            // grids show only the courses get_Role_by_course() returns (empty means
+            // every course). The switch must not reach further than the grid does,
+            // or a course-scoped account could deactivate a course it cannot see.
+            if (! $this->toggleTargetInCourseScope($table, $id)) {
+                \Log::warning('Refused a toggle-status request outside the actor\'s course scope', LogSafe::context([
+                    'user' => optional(auth()->user())->getKey(),
+                    'table' => $table,
+                    'id' => (string) $id,
                 ]));
 
                 return response()->json([

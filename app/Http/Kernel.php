@@ -8,6 +8,7 @@ use App\Http\Middleware\BlockFcFormBuilderAction;
 use App\Http\Middleware\BlockFcFormBuilderDelete;
 use App\Http\Middleware\CompressResponse;
 use App\Http\Middleware\EncryptCookies;
+use App\Http\Middleware\EnsureDirectoryExportAccess;
 use App\Http\Middleware\EnsureFcActivityCoordinator;
 use App\Http\Middleware\EnsureFcActivityMatrixAccess;
 use App\Http\Middleware\EnsureFcRegAdmin;
@@ -113,6 +114,9 @@ class Kernel extends HttpKernel
         'fc.reg.admin' => EnsureFcRegAdmin::class,
         'fc.builder.delete' => BlockFcFormBuilderDelete::class,
         'issue.reports.admin' => EnsureIssueReportsAdmin::class,
+        // Convenience alias only. routes/web.php references EnsureDirectoryExportAccess
+        // by class (PR #317 F-028: a merge dropped this line and every export 500'd).
+        'directory.export' => EnsureDirectoryExportAccess::class,
         'member.pii' => EnsureMemberPiiAccess::class,
         'member.record' => EnsureMemberRecordAccess::class,
         'memo.notice.manager' => EnsureMemoNoticeManager::class,
