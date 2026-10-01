@@ -596,6 +596,16 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
+     * Called by the Kitchen Issue and Selling Voucher (Date Range) controllers after every
+     * write, so a new, edited, deleted or returned voucher shows on Process Mess Bills
+     * at once instead of after the cache TTL.
+     */
+    public static function invalidateCombinedBillsCache(): void
+    {
+        (new static())->bumpProcessMessBillsCombinedCache();
+    }
+
+    /**
      * Invalidate only the notification-derived caches. Used when an invoice notification is sent:
      * bills, totals and payments are unchanged, so the grouped-bill and modal summary caches stay
      * warm and the next modal load does not have to re-run the union query.
