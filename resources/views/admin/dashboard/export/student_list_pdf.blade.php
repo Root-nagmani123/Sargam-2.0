@@ -9,7 +9,7 @@
 
     // Optional per-column weights. When supplied the table switches to a FIXED
     // layout with explicit widths, which is what stops a wide report (the OT /
-    // Participants List has 15 columns) from pushing its last columns off the
+    // Participants List has 18 columns) from pushing its last columns off the
     // right edge of the page — DomPDF will not shrink an auto-layout table below
     // its content's natural width, so it simply overflows and clips.
     $columnWidths = $columnWidths ?? null;

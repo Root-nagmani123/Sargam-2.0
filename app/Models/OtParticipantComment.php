@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 class OtParticipantComment extends Model
 {
     protected $table = 'ot_participant_comment';
+
     protected $primaryKey = 'pk';
 
     /**

@@ -1672,6 +1672,16 @@ class UserController extends Controller
             abort(403, 'You are not authorized to view the OT / Participants list.');
         }
 
+        // from_date / to_date come straight off the query string, and on the export
+        // paths they reach Carbon::parse(), which throws on a malformed value. Validate
+        // on all three paths so the table and its exports agree on what a date is. The
+        // rule accepts everything the UI sends (YYYY-MM-DD), an empty string and an
+        // absent key, so an unfiltered view or export is unaffected.
+        $request->validate([
+            'from_date' => ['nullable', 'date'],
+            'to_date' => ['nullable', 'date'],
+        ]);
+
         // Skip the payload's per-student total_* / notice-memo N+1 loop — this page
         // computes its counts separately via otParticipantsRowMeta (batched).
         //
@@ -2965,6 +2975,13 @@ class UserController extends Controller
             abort(403, 'You are not authorized to export participant feedback.');
         }
 
+        // Same date rule as the list page — the filter summary below calls
+        // Carbon::parse() on these, which 500s on a malformed value.
+        $request->validate([
+            'from_date' => ['nullable', 'date'],
+            'to_date' => ['nullable', 'date'],
+        ]);
+
         try {
             $studentPk = (int) decrypt($id);
         } catch (\Throwable $e) {
@@ -3090,6 +3107,13 @@ class UserController extends Controller
             abort(403, 'You are not authorized to export the OT / Participants list.');
         }
 
+        // Same date rule as the list page — otParticipantsFilterSummary() below calls
+        // Carbon::parse() on these, which 500s on a malformed value.
+        $request->validate([
+            'from_date' => ['nullable', 'date'],
+            'to_date' => ['nullable', 'date'],
+        ]);
+
         $payload = $this->resolveDashboardStudentListPayload($request, false, true);
         $rows = $this->otParticipantsRowsFor($request, $payload['students']);
 
@@ -3129,7 +3153,7 @@ class UserController extends Controller
                 'generatedAt' => now()->format('d-m-Y H:i'),
                 'filterSummary' => $filterSummary,
                 'reportTitle' => $reportTitle,
-                // 15 columns do not fit an auto-layout table: DomPDF lets it grow
+                // 18 columns do not fit an auto-layout table: DomPDF lets it grow
                 // past the page and clips the right-hand columns. These weights
                 // switch the table to a fixed layout so every column lands on the
                 // page. They mirror the on-screen Print widths.
