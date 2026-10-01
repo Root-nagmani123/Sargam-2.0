@@ -436,18 +436,22 @@
 
         var COPY = {
             on: { title: 'Activate this record?', text: 'Are you sure you want to activate this record?',
-                  cancel: 'Cancel, Keep it Inactive', ok: 'Yes, Activate', icon: 'bi-toggle-on' },
+                  cancel: 'Cancel, Keep it Inactive', ok: 'Yes, Activate' },
             off: { title: 'Deactivate this record?', text: 'Are you sure you want to deactivate this record?',
-                   cancel: 'Cancel, Keep it active', ok: 'Yes, Deactivate', icon: 'bi-toggle-off' }
+                   cancel: 'Cancel, Keep it active', ok: 'Yes, Deactivate' }
         };
 
-        $(o.table).on('click', o.trigger || '.coe-act--toggle', function () {
+        $(o.table).on('click', o.trigger || '.coe-act--toggle', function (e) {
+            // The switch must not flip until the change is confirmed: cancelling
+            // the click (on the input or its label) keeps it where it was.
+            e.preventDefault();
             $row = $(this).closest('tr');
             makeActive = $row.attr('data-coe-active') !== '1';
             var c = makeActive ? COPY.on : COPY.off;
 
             $root.toggleClass('is-activate', makeActive).toggleClass('is-deactivate', !makeActive);
-            $root.find('.coe-status-confirm__icon i').attr('class', 'bi ' + c.icon);
+            // The medallion shows the state the record will be IN: on = Activate.
+            $root.find('.coe-status-confirm__icon .coe-switch').prop('checked', makeActive);
             $('#coeStatusModalLabel').text(c.title);
             $('#coeStatusModalText').text(c.text);
             $root.find('.coe-status-confirm__cancel').text(c.cancel);
@@ -502,9 +506,14 @@
                 '<button type="button" class="coe-act coe-act--edit">' +
                     '<span class="coe-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>' +
                     '<span class="coe-act__label">Edit</span></button>' +
-                '<button type="button" class="coe-act coe-act--toggle ' + (active ? 'is-on' : 'is-off') + '">' +
-                    '<span class="coe-act__icon"><i class="bi ' + (active ? 'bi-toggle-off' : 'bi-toggle-on') + '" aria-hidden="true"></i></span>' +
-                    '<span class="coe-act__label">' + (active ? 'Deactivate' : 'Activate') + '</span></button>' +
+                // A real switch, checked = Active, in the app's own skin
+                // (plain-status-toggle: custom.css styles it, no global script binds it).
+                // No .form-check wrapper — it pulls the input off-centre (docs §3b).
+                '<label class="coe-act coe-act--toggle ' + (active ? 'is-on' : 'is-off') + '">' +
+                    '<span class="coe-act__icon"><input type="checkbox" role="switch" ' +
+                        'class="form-check-input plain-status-toggle coe-switch"' + (active ? ' checked' : '') +
+                        ' aria-label="' + (active ? 'Deactivate' : 'Activate') + '"></span>' +
+                    '<span class="coe-act__label">' + (active ? 'Deactivate' : 'Activate') + '</span></label>' +
                 '<button type="button" class="coe-act coe-act--del">' +
                     '<span class="coe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>' +
                     '<span class="coe-act__label">Delete</span></button>' +

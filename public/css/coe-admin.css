@@ -724,11 +724,16 @@
 
 .coe-page .programme-dt-table th.coe-col-sno { width: 90px; }
 
-/* Row actions: Edit (navy) · toggle (amber to deactivate, green to activate) · Delete. */
+/* Row actions: Edit (navy) · status switch · Delete (red). */
 .coe-page .coe-act--edit { color: var(--coe-brand); }
-.coe-page .coe-act--toggle.is-on  { color: var(--coe-warn); }
-.coe-page .coe-act--toggle.is-off { color: var(--coe-success); }
-.coe-page .coe-act--toggle .coe-act__icon > i { font-size: 1.35rem; }
+/* The switch carries the colour (green = active, amber = inactive); the caption
+   stays neutral, as in the design — a coloured caption beside an opposite-coloured
+   switch reads as a contradiction. */
+.coe-page .coe-act--toggle { color: #344054; }
+/* The row switch (plain-status-toggle skin from custom.css): pinned in the
+   icon strip so it sits on the same baseline as the Edit / Delete glyphs. */
+.coe-page .coe-act--toggle .coe-switch { margin: 0; float: none; }
+.coe-page .coe-act--toggle:focus-within .coe-act__label { text-decoration: underline; }
 
 /* Form dialog: a hairline under the title, as designed. */
 .coe-modal .coe-modal-header--rule {
@@ -741,7 +746,13 @@
 .coe-modal .coe-btn--narrow { min-width: 96px; }
 
 /* ── Activate / Deactivate confirm variants ── */
-.coe-modal .coe-status-confirm__icon { font-size: 2rem; }
+/* The medallion's switch is display only, drawn larger. */
+.coe-modal .coe-status-confirm__icon .coe-switch {
+    margin: 0;
+    float: none;
+    pointer-events: none;
+    transform: scale(1.45);
+}
 
 .coe-modal .coe-status-confirm.is-activate .coe-status-confirm__icon { background: var(--coe-success-soft); color: var(--coe-success); }
 .coe-modal .coe-status-confirm.is-activate .coe-status-confirm__cancel {

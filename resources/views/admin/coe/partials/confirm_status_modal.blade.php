@@ -6,7 +6,8 @@
         <div class="modal-content coe-modal border-0 shadow">
             <div class="coe-confirm coe-status-confirm">
                 <div class="coe-confirm__icon coe-status-confirm__icon" aria-hidden="true">
-                    <i class="bi bi-toggle-on"></i>
+                    {{-- Same switch as the row action, display only. --}}
+                    <input type="checkbox" class="form-check-input plain-status-toggle coe-switch" tabindex="-1" checked>
                 </div>
                 <h5 class="coe-confirm__title" id="coeStatusModalLabel">Activate this record?</h5>
                 <p class="coe-confirm__text" id="coeStatusModalText">Are you sure you want to activate this record?</p>
