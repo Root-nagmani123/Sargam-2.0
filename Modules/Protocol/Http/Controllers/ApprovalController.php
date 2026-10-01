@@ -18,6 +18,7 @@ use Modules\Protocol\Http\Requests\ReviewProtocolRequest;
 use App\Models\HostelBuildingMaster;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Http\Request;
+use App\Models\User;
 use Modules\Protocol\Services\ApprovalService;
 
 class ApprovalController extends Controller
@@ -69,11 +70,9 @@ class ApprovalController extends Controller
 
         // Supply the list of managers/staff that can be recommended to.
         // Swap this for your own role-based user query.
-        // $managers = config('auth.providers.users.model')::role(config('protocol.roles.manager'))
-        //     ->get(['id', 'name']);
-
-        $managers = null;
-
+        $managers =  User::whereHas('roles', function ($query) {
+                    $query->where('name', 'Protocol Approver');
+                })->get();
         return view('protocol::approval.review', compact('protocolRequest', 'managers','GuestHouse'));
     }
 
