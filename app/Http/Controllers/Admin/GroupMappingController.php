@@ -18,6 +18,7 @@ use App\Http\Requests\Admin\GroupMapping\BulkMessageRequest;
 use App\Services\Messaging\EmailService;
 use App\Services\Messaging\SmsService;
 use App\Services\NotificationService;
+use App\Support\PdfPageNumbers;
 
 class GroupMappingController extends Controller
 {
@@ -1063,7 +1064,8 @@ class GroupMappingController extends Controller
                     'dpi'                  => 96,
                 ]);
 
-            return $pdf->download($this->studentListFileName($group, 'pdf'));
+            return PdfPageNumbers::stamp($pdf, 18, 20, [0.4, 0.4, 0.4])
+                ->download($this->studentListFileName($group, 'pdf'));
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }
@@ -1280,7 +1282,7 @@ class GroupMappingController extends Controller
                 ->setOptions([
                     'defaultFont'          => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled'      => true,
+                    'isRemoteEnabled'      => false,
                     'dpi'                  => 96,
                 ]);
 
@@ -1478,16 +1480,9 @@ class GroupMappingController extends Controller
             return '';
         }
 
-        $url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
-        try {
-            $response = \Illuminate\Support\Facades\Http::timeout(20)->connectTimeout(8)->get($url);
-            if ($response->successful() && strlen($response->body()) > 100) {
-                return 'data:image/png;base64,' . base64_encode($response->body());
-            }
-        } catch (\Throwable $e) {
-        }
-
-        return $url;
+        // F-027: local assets only. This used to fetch a remote image while dompdf was
+        // building the document, then hand dompdf the raw URL when that call failed.
+        return pdf_emblem_src();
     }
 
     /**
@@ -1532,8 +1527,8 @@ class GroupMappingController extends Controller
         }
 
         // The remote fallback is a PNG — unusable on a PHP build without GD.
-        return extension_loaded('gd')
-            ? 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png'
-            : '';
+        // F-027: local assets only. This used to fetch a remote image while dompdf was
+        // building the document, then hand dompdf the raw URL when that call failed.
+        return pdf_lbsnaa_logo_src();
     }
 }

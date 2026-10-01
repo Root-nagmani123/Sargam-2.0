@@ -121,6 +121,8 @@
 </head>
 <body>
 
+    {{-- Page numbers drawn on every page (reliable DomPDF method; needs isPhpEnabled). --}}
+
 @if(count($weeks) === 0)
     <div class="empty">No sessions scheduled for this period.</div>
 @else

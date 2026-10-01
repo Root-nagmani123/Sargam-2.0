@@ -140,6 +140,30 @@ apart (`IssueCategoryController@export`, `categories/export_print.blade.php` —
 Carry the grid's own `q` / `sort` / `dir` into the export links so the user gets
 what they are looking at, not the unfiltered table.
 
+### Master module: don't hand-roll it, use the trait
+
+`admin/master/*` listings share one implementation — copy nothing:
+
+- `App\Http\Controllers\Concerns\ExportsMasterGrid` — `resolveExportColumns()`
+  (intersects `?cols=` against the canonical list) + `renderMasterExport()`, which
+  serves all four formats.
+- `App\Exports\MasterGridExport` — the branded `.xlsx`, parameterised by report title.
+- `admin/master/partials/export_print.blade.php` / `export_pdf.blade.php` —
+  the printout and the PDF, driven entirely by the column defs.
+
+A new master export is therefore a controller `exportColumnDefs()` + `export()`, one
+route, and the toolbar markup — no new blades, no new Export class. Each column def
+carries its own `width` and `align`; both are emitted **inline** because DomPDF ignores
+`<colgroup>` widths *and* lets its element rule beat a class selector, so a class-driven
+`text-align: center` silently comes out left. Worked examples: `AppellationMasterController`
+(Yajra, server-side — its grid search only covers the one `Column::make()`) and
+`FacultyExpertiseMasterController` / `FacultyTypeMasterController` (client-side
+DataTables — their search covers **every** searchable column, the rendered Status label
+included, so the export query has to match those labels too, substring semantics and all,
+or "Inactive" exports nothing while the screen shows rows). Read the grid's `columnDefs`
+for which columns are `searchable` and mirror exactly that set — Faculty Type has two
+text columns, so its export matches the short name as well.
+
 **Never drop an export the page already had.** All Requests already shipped Excel
 and PDF, so its Download became a dropdown (CSV · Excel · PDF) rather than a
 single button — same chrome, no lost feature. And keep the export's first column
@@ -204,6 +228,55 @@ Key classes (`custom.css`):
 More than ~4 filters gets crowded. Attendance moves the tail into a `+N Filters`
 dropdown (`attendance/index.blade.php`, `#attendanceMoreFiltersWrap`) rather than
 wrapping to a second row.
+
+### Every dropdown is searchable
+
+**Every `<select>` a user picks from gets a search box.** Filter selects in the
+toolbar, selects inside a Create/Edit modal, selects on a full-page form — all of
+them, including two-option ones like Status (Active/Inactive) and Opens in
+(Same tab/New tab). Uniform beats clever here: a reader should never have to
+work out which dropdowns happen to be searchable.
+
+You do not have to wire anything up. `public/js/dropdown-search.js` is loaded
+**globally** (`footer.blade.php:73`) and on `DOMContentLoaded` it Select2-ifies
+every element matching either hook:
+
+```html
+<!-- either -->
+<select class="form-select select2" name="category_id">…</select>
+
+<!-- or, when you want a custom prompt / a clear button -->
+<select class="form-select"
+        data-searchable="true"
+        data-placeholder="Search category…"
+        data-allow-clear="true">…</select>
+```
+
+It does **not** set `minimumResultsForSearch`, so Select2's default applies and
+the search box is always rendered — which is the point. Defaults it supplies:
+`width: 100%`, `placeholder: "Search and select…"`, `allowClear: false`, and
+`dropdownParent` = the nearest `.card-body` / `.modal-body` / `body`, so the panel
+is not clipped inside a toolbar or a modal.
+
+Three things that bite:
+
+- **⚠️ Select2 fires a jQuery `change`, so `addEventListener` never hears it.**
+  This is the one that silently breaks filters. A toolbar select wired with
+  `el.addEventListener('change', …)` stops reloading the grid the moment it
+  becomes searchable; one wired with `$(el).on('change', …)` keeps working. Check
+  the handler **before** you add the hook, and bridge it if it is vanilla — see
+  "⚠️ Select2 fires a jQuery event" in §3c for the bridge.
+- **Options added later are not auto-initialised.** `autoInit()` runs once on
+  DOMContentLoaded. A select that is built or refilled by JS (a cascading Group /
+  Parent list, a modal filled on `shown.bs.modal`) needs
+  `DropdownSearch.reinit('#sel')`, and a rebuilt option list needs
+  `$(el).trigger('change.select2')` for the rendered selection to catch up.
+- **Cascading selects still detach, not hide.** The narrowing rules in this doc
+  are unchanged: rebuild the option list, then re-init. `display:none` on an
+  `<option>` is ignored by several browsers whether or not Select2 is on top.
+
+Long option lists have a second requirement — don't server-render them; see
+§3c "Long option lists → Select2, and don't server-render them".
 
 ### Two search variants
 
@@ -409,7 +482,7 @@ modal-content (radius 12)
 │   └── .ic-field-card    #eef1fc, radius 10, padding 1rem   ← one per record
 │       ├── .ic-form-label + .ic-req ("*")  → .form-control.ic-control
 │       └── .ic-field-actions               → − / +   (Add only)
-└── .ic-modal-footer      centred · .ic-btn-cancel (red outline) · .ic-btn-submit (#004384)
+└── .ic-modal-footer      RIGHT-aligned · .ic-btn-cancel (red outline) · .ic-btn-submit (#004384)
 ```
 
 Tokens: card `#eef1fc`; label `.8125rem/600 #1f2937`; asterisk `#dc2626`;
@@ -457,9 +530,13 @@ its CSS is per-page by convention:
 $sel.select2({
     width: '100%',
     dropdownParent: $modal,        // without this the search box in a modal can't be focused
-    minimumResultsForSearch: 10,   // short lists don't need a search box
 });
 ```
+
+Do **not** pass `minimumResultsForSearch` — every dropdown keeps its search box
+(§2 "Every dropdown is searchable"). Hand-initialising like this is only for
+selects you fill from JSON; anything server-rendered can just carry the
+`.select2` / `data-searchable` hook and be picked up globally.
 
 **Feed it from one JSON array, not from server-rendered `<option>`s.** Escalation
 Matrix rendered its ~1,800 employees into six selects *and* embedded the list
@@ -822,7 +899,14 @@ still differ (`#issueCategoriesTable` vs `#issueSubCategoriesTable`,
 10. CSS namespaced under a page root, or the module stylesheet if a sibling page
     shares it ("Where the CSS lives"). Tokens from [design.md](design.md),
     `?v={{ @filemtime(...) }}` on the link tag.
-11. Use only **one** of `@push('scripts')` / `@section('scripts')` — the master
+11. Every `<select>` carries `.select2` or `data-searchable="true"` so it gets a
+    search box (§2), and the page `@include`s
+    `admin.layouts.partials.select2-assets` at the top of its `@push('styles')`.
+    Wire `change` with jQuery, not `addEventListener`. Anything that sets a value
+    in JS — Edit prefill, `form.reset()`, a rebuilt option list, Reset Filters —
+    needs `.trigger('change.select2')` after it, or the box keeps painting the
+    old value.
+12. Use only **one** of `@push('scripts')` / `@section('scripts')` — the master
     layout renders both, so using both double-renders your script.
 
 ---
