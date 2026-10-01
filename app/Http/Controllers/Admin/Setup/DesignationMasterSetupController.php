@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\DesignationMaster;
 use Illuminate\Validation\Rule;
+use App\DataTables\MemberDataTable;
 
 class DesignationMasterSetupController extends Controller
 {
@@ -42,6 +43,9 @@ class DesignationMasterSetupController extends Controller
         $model->designation_name = $validated['designation_name'];
         $model->active_inactive = 1;
         $model->save();
+        // The Member listing renders/caches this designation's name (see F-011,
+        // PR #319 review) — bump so a rename/create there isn't shown stale.
+        MemberDataTable::bumpListingCacheEpoch();
         if($request->ajax()) {
             return response()->json([
                 'success'=>true,
@@ -66,6 +70,7 @@ class DesignationMasterSetupController extends Controller
         ]);
         $model->designation_name = $validated['designation_name'];
         $model->save();
+        MemberDataTable::bumpListingCacheEpoch();
         if($request->ajax()) {
             return response()->json([
                 'success'=>true,
@@ -86,6 +91,7 @@ class DesignationMasterSetupController extends Controller
         try { $pk = decrypt($id); } catch(\Exception $e){ abort(404); }
         $model = DesignationMaster::findOrFail($pk);
         $model->delete();
+        MemberDataTable::bumpListingCacheEpoch();
         if($request->ajax()) { return response()->json(['success'=>true,'deleted'=>true]); }
         return redirect()->route('admin.setup.designation_master.index')->with('success','Deleted');
     }

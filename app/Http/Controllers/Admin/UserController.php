@@ -7,6 +7,7 @@ use App\DataTables\CourseMasterDataTable;
 use App\DataTables\FacultyDataTable;
 use App\DataTables\GroupMappingDataTable;
 use App\DataTables\Master\EmployeeTypeMasterDataTable;
+use App\DataTables\MemberDataTable;
 use App\DataTables\RoleDataTable;
 use App\Exports\StudentListReportExport;
 use App\Exports\BrandedGridExport;
@@ -5028,6 +5029,9 @@ class UserController extends Controller
             if ($table === 'employee_type_master') {
                 EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
             }
+            if ($table === 'employee_master') {
+                MemberDataTable::bumpListingCacheEpoch();
+            }
             if ($table === 'faculty_expertise_master') {
                 FacultyExpertiseMasterController::bumpListCacheEpoch();
             }
@@ -5158,17 +5162,29 @@ class UserController extends Controller
             app(PermissionRegistrar::class)->forgetCachedPermissions();
             self::bumpAdminUsersIndexCacheEpoch();
 
-            // A role-assignment notification block stood here and had never fired: it was
-            // guarded by `if (!empty($assignedRoleNames))` and read `$userId`, and neither
-            // variable is ever assigned in this method — the names belong to the older
-            // employee_role_mapping implementation still commented out below. empty() on an
-            // undefined variable is true and raises no warning, so the guard was silently
-            // false on every call and the block was unreachable. Identical at the merge-base.
-            //
-            // Removed rather than repaired: switching on notifications that have never been
-            // sent is a behaviour change, and this is a permissions PR. If the notification
-            // is wanted, it belongs in its own change, with $user and $roleNames (which DO
-            // exist here) and a test.
+            // PR #319 review, F-031, restored after the merge with main's permissions
+            // rewrite (which removed the block below's original, permanently-dead
+            // version — see git history — rather than repair it, and left a note that
+            // it belongs in its own change with $user/$roleNames, which already exist
+            // in this scope).
+            if (! empty($roleNames) && $user->user_id) {
+                try {
+                    $notificationService = app(NotificationService::class);
+                    $assignedRoleList = implode(', ', $roleNames);
+                    $notificationService->create(
+                        (int) $user->user_id,
+                        'role_assignment',
+                        'Role Assignment',
+                        $user->pk,
+                        'Role Assigned',
+                        "You have been assigned the following role(s): {$assignedRoleList}."
+                    );
+                } catch (\Throwable $e) {
+                    // Log error but don't fail the request. \Log (root-namespace alias)
+                    // rather than Log:: — this class does not import the Log facade.
+                    \Log::error('Failed to send role assignment notification: '.$e->getMessage());
+                }
+            }
 
             return redirect()->route('admin.users.index')
                 ->with('success', 'Roles assigned successfully.');

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Master;
 
 use App\DataTables\Master\DesignationMasterDataTable;
+use App\DataTables\MemberDataTable;
 use App\Http\Controllers\Concerns\ExportsBrandedGrid;
 use App\Http\Controllers\Controller;
 use App\Models\DesignationMaster;
@@ -51,6 +52,11 @@ class DesignationMasterController extends Controller
 
         $designation->designation_name = $request->designation_name;
         $designation->save();
+
+        // The Member listing renders/caches this designation's name (see F-011/F-021,
+        // PR #319 review) — this controller is a second, separately-routed write path
+        // to designation_master alongside the Setup one, so it needs the same bump.
+        MemberDataTable::bumpListingCacheEpoch();
 
         $message = $id ? 'Designation updated successfully.' : 'Designation created successfully.';
 
