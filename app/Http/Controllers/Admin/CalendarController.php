@@ -2854,14 +2854,20 @@ class CalendarController extends Controller
     /** Bump when the layout logic changes, so cached plans are not reused. */
     private const TT_FIT_VERSION = 2;
 
-    /** fitPages(), remembered for an hour against everything it measured. */
+    /**
+     * fitPages(), remembered for an hour against everything it measured.
+     *
+     * studentName is not printed, and footerNote prints below the grid, past
+     * the rows measureWeek() reads - so neither enters the key, and a plan
+     * measured for one user's download serves every other user's.
+     */
     private function cachedFit(array $data, array $week): ?array
     {
         try {
             $key = 'timetable-pdf-fit:' . md5(serialize([
                 self::TT_FIT_VERSION,
                 @filemtime(resource_path('views/admin/calendar/pdf/ot-timetable-pdf.blade.php')),
-                array_diff_key($data, ['weeks' => true]),
+                array_diff_key($data, ['weeks' => true, 'studentName' => true, 'footerNote' => true]),
                 $week,
             ]));
             $hit = \Illuminate\Support\Facades\Cache::get($key);
@@ -3856,14 +3862,14 @@ class CalendarController extends Controller
     }
 
     /**
-     * Who may edit a course's weekly info sheet: the roles that may add
-     * timetable events (store()), and the course's own Coordinator and
-     * Assistant Coordinators - the sheet's owners. Without a course only the
-     * roles qualify.
+     * Who may edit a course's weekly info sheet: Training, Super Admin, Admin,
+     * Training MCTP Admin, Training IST and Training-Induction for any course,
+     * and the course's own Coordinator and Assistant Coordinators (employee
+     * logins only - see CourseCordinatorMaster::courseIdsForUser()). Keep in
+     * step with $canEditInfoSheet in admin/calendar/index.blade.php.
      */
     private function canEditWeeklyInfo(?int $courseId = null): bool
     {
-        // The names the roles table actually holds; 'Training-MCTP' and 'IST' match no role.
         if (hasRole('Training') || hasRole('Super Admin') || hasRole('Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Training-Induction')) {
             return true;
         }
@@ -4196,7 +4202,7 @@ class CalendarController extends Controller
         abort_unless(
             $this->canEditWeeklyInfo((int) $request->input('course_id')),
             403,
-            'You can edit info-sheet details only for courses you coordinate.'
+            'You do not have permission to edit this course\'s info sheet.'
         );
 
         $validated = $request->validate([
@@ -4302,8 +4308,10 @@ class CalendarController extends Controller
         ];
 
         // One sheet is saved as a whole or not at all: the three tables are
-        // written together, and the week's row is locked while it is upserted
-        // so two saves of the same week cannot both take the insert branch.
+        // written together. Two first saves of the same week can both find no
+        // row (the lock on a missing row is only a gap lock) and both insert;
+        // InnoDB then fails one with a deadlock. The transaction is retried, and
+        // the retry waits on the other save's row and takes the update branch.
         DB::transaction(function () use ($validated, $courseId, $weekStart, $payload) {
             // Course-level personnel — update existing coordinator row(s) or create one.
             // created_date has no default, so a course without a coordinator row
@@ -4341,7 +4349,7 @@ class CalendarController extends Controller
                     'created_at'       => now(),
                 ]);
             }
-        });
+        }, 3);
 
         return response()->json(['status' => 'success', 'message' => 'Info-sheet details saved.']);
     }

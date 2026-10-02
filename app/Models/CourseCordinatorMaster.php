@@ -33,11 +33,18 @@ class CourseCordinatorMaster extends Model
      * is matched to their faculty record by faculty_master.employee_master_pk
      * = user_credentials.user_id; a user with no faculty record gets none.
      *
+     * Only employee logins (user_category 'E') qualify: for other categories
+     * user_id is not an employee pk, and on trainee logins it can equal a
+     * stranger's, which would hand them that person's courses.
+     *
      * @return int[]
      */
     public static function courseIdsForUser($user = null): array
     {
         $user ??= auth()->user();
+        if (($user->user_category ?? null) !== 'E') {
+            return [];
+        }
         $employeePk = $user->user_id ?? null;
         if (!$employeePk) {
             return [];

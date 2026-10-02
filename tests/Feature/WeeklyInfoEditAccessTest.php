@@ -15,9 +15,11 @@ use Tests\TestCase;
 
 /**
  * Who may save a course's weekly info sheet (CalendarController::saveWeeklyInfo):
- * the timetable roles, and the course's own Coordinator and Assistant
- * Coordinators. Everyone else is refused, including a coordinator of a
- * different course. Engineering decision of 2026-10-02 on review finding F-004.
+ * Training, Super Admin, Admin, Training MCTP Admin, Training IST and
+ * Training-Induction for any course, and the course's own Coordinator and
+ * Assistant Coordinators. Everyone else is refused - including a coordinator
+ * of a different course, and a trainee login whose user_id happens to equal
+ * a coordinator's employee pk.
  *
  * Writes run inside DatabaseTransactions and are rolled back.
  */
@@ -25,7 +27,9 @@ class WeeklyInfoEditAccessTest extends TestCase
 {
     use DatabaseTransactions;
 
-    private const COURSE_OWN = 90300001;   // the actor coordinates this one
+    private const EDITING_ROLES = ['Training', 'Super Admin', 'Admin', 'Training MCTP Admin', 'Training IST', 'Training-Induction'];
+
+    private const COURSE_OWN = 90300001;   // the fixture faculty coordinates this one
 
     private const COURSE_ASSIST = 90300002;   // ...assists on this one
 
@@ -33,7 +37,7 @@ class WeeklyInfoEditAccessTest extends TestCase
 
     private const FACULTY_PK = 90300011;
 
-    private const EMPLOYEE_PK = 90300021;   // user_credentials.user_id of the actor
+    private const EMPLOYEE_PK = 90300021;   // user_credentials.user_id of the coordinator
 
     protected function setUp(): void
     {
@@ -56,29 +60,19 @@ class WeeklyInfoEditAccessTest extends TestCase
             'country_master_pk' => 0, 'state_master_pk' => 0, 'state_district_mapping_pk' => 0, 'city_master_pk' => 0,
         ]);
 
-        $now = now();
         DB::table('course_coordinator_master')->insert([
-            ['courses_master_pk' => self::COURSE_OWN, 'Coordinator_name' => (string) self::FACULTY_PK, 'Assistant_Coordinator_name' => '1', 'created_date' => $now],
+            ['courses_master_pk' => self::COURSE_OWN, 'Coordinator_name' => (string) self::FACULTY_PK, 'Assistant_Coordinator_name' => '1', 'created_date' => now()],
             // Assistant coordinators are a comma-separated list.
-            ['courses_master_pk' => self::COURSE_ASSIST, 'Coordinator_name' => '1', 'Assistant_Coordinator_name' => '2,'.self::FACULTY_PK, 'created_date' => $now],
-            ['courses_master_pk' => self::COURSE_OTHER, 'Coordinator_name' => '1', 'Assistant_Coordinator_name' => '2', 'created_date' => $now],
+            ['courses_master_pk' => self::COURSE_ASSIST, 'Coordinator_name' => '1', 'Assistant_Coordinator_name' => '2,'.self::FACULTY_PK, 'created_date' => now()],
+            ['courses_master_pk' => self::COURSE_OTHER, 'Coordinator_name' => '1', 'Assistant_Coordinator_name' => '2', 'created_date' => now()],
         ]);
     }
 
-    /** created_date has no default; the save must still work for a course with no coordinator row. */
-    public function test_a_course_without_a_coordinator_row_can_be_saved(): void
-    {
-        DB::table('course_coordinator_master')->where('courses_master_pk', self::COURSE_OTHER)->delete();
-
-        $this->assertSame(200, $this->saveAs(['Training'], null, self::COURSE_OTHER));
-        $this->assertSame(1, DB::table('course_coordinator_master')->where('courses_master_pk', self::COURSE_OTHER)->count());
-    }
-
-    /** Status of a save by an actor with the given session roles and employee pk. */
-    private function saveAs(array $roles, ?int $employeePk, int $courseId): int
+    /** Status of a save by an actor with the given session roles, user_id and login category. */
+    private function saveAs(array $roles, ?int $userId, int $courseId, ?string $category = 'E'): int
     {
         $user = new User;
-        $user->forceFill(['pk' => 90300099, 'user_id' => $employeePk]);
+        $user->forceFill(['pk' => 90300099, 'user_id' => $userId, 'user_category' => $category]);
         Auth::setUser($user);
         Session::put('user_roles', $roles);
 
@@ -93,11 +87,25 @@ class WeeklyInfoEditAccessTest extends TestCase
         }
     }
 
+    private function savedNote(int $courseId): ?string
+    {
+        return DB::table('course_week_notes')->where('course_master_pk', $courseId)->value('mention_of_week');
+    }
+
+    public function test_each_editing_role_may_save_any_course(): void
+    {
+        foreach (self::EDITING_ROLES as $role) {
+            DB::table('course_week_notes')->where('course_master_pk', self::COURSE_OTHER)->delete();
+
+            $this->assertSame(200, $this->saveAs([$role], null, self::COURSE_OTHER), $role);
+            $this->assertSame('access test', $this->savedNote(self::COURSE_OTHER), $role);
+        }
+    }
+
     public function test_the_course_coordinator_may_save(): void
     {
         $this->assertSame(200, $this->saveAs([], self::EMPLOYEE_PK, self::COURSE_OWN));
-        $this->assertSame('access test', DB::table('course_week_notes')
-            ->where('course_master_pk', self::COURSE_OWN)->value('mention_of_week'));
+        $this->assertSame('access test', $this->savedNote(self::COURSE_OWN));
     }
 
     public function test_an_assistant_coordinator_may_save(): void
@@ -108,16 +116,32 @@ class WeeklyInfoEditAccessTest extends TestCase
     public function test_a_coordinator_of_another_course_is_refused(): void
     {
         $this->assertSame(403, $this->saveAs([], self::EMPLOYEE_PK, self::COURSE_OTHER));
-        $this->assertNull(DB::table('course_week_notes')->where('course_master_pk', self::COURSE_OTHER)->value('id'));
+        $this->assertNull($this->savedNote(self::COURSE_OTHER));
     }
 
-    public function test_a_user_with_no_role_and_no_faculty_record_is_refused(): void
+    /**
+     * user_credentials.user_id is a per-category id: on a trainee login (no
+     * user_category) it is not an employee pk, but it can equal one. Such a
+     * login must not inherit that employee's coordinator courses.
+     */
+    public function test_a_trainee_login_whose_user_id_matches_a_coordinator_is_refused(): void
+    {
+        $this->assertSame(403, $this->saveAs([], self::EMPLOYEE_PK, self::COURSE_OWN, null));
+        $this->assertSame(403, $this->saveAs([], self::EMPLOYEE_PK, self::COURSE_ASSIST, 'S'));
+        $this->assertNull($this->savedNote(self::COURSE_OWN));
+    }
+
+    public function test_a_user_with_no_editing_role_and_no_coordinator_record_is_refused(): void
     {
         $this->assertSame(403, $this->saveAs(['FC Reports Viewer'], null, self::COURSE_OWN));
     }
 
-    public function test_a_training_role_may_save_any_course(): void
+    /** created_date has no default; the save must still work for a course with no coordinator row. */
+    public function test_a_course_without_a_coordinator_row_can_be_saved(): void
     {
-        $this->assertSame(200, $this->saveAs(['Training'], null, self::COURSE_OTHER));
+        DB::table('course_coordinator_master')->where('courses_master_pk', self::COURSE_OTHER)->delete();
+
+        $this->assertSame(200, $this->saveAs(['Training IST'], null, self::COURSE_OTHER));
+        $this->assertSame(1, DB::table('course_coordinator_master')->where('courses_master_pk', self::COURSE_OTHER)->count());
     }
 }

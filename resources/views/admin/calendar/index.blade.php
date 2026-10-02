@@ -426,10 +426,14 @@
                                     <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" id="btnWeekInfoPdf" title="Course information & faculty for the week (PDF)">
                                         <i class="bi bi-people"></i><span>Info Sheet</span>
                                     </button>
-                                    {{-- Same roles as adding a timetable event (CalendarController::store), plus
-                                         anyone coordinating a course - canEditWeeklyInfo() decides per course. --}}
-                                    @if(hasRole('Training') || hasRole('Super Admin') || hasRole('Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Training-Induction')
-                                        || \App\Models\CourseCordinatorMaster::courseIdsForUser())
+                                    {{-- The roles CalendarController::canEditWeeklyInfo() admits, plus anyone
+                                         coordinating a course - the controller decides per course. The
+                                         editor modal below is included on the same condition. --}}
+                                    @php
+                                        $canEditInfoSheet = hasRole('Training') || hasRole('Super Admin') || hasRole('Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Training-Induction')
+                                            || \App\Models\CourseCordinatorMaster::courseIdsForUser();
+                                    @endphp
+                                    @if($canEditInfoSheet)
                                         <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" id="btnEditWeekInfo" title="Edit this week's venues line, notes and P.T.O. page">
                                             <i class="bi bi-pencil-square"></i><span>Edit Info Sheet</span>
                                         </button>
@@ -493,7 +497,7 @@
 @include('admin.calendar.partials.events_details')
 @include('admin.calendar.partials.event_hover_card')
 @include('admin.calendar.partials.confirmation')
-@if(hasRole('Training') || hasRole('Super Admin') || hasRole('Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Training-Induction'))
+@if($canEditInfoSheet ?? false)
 @include('admin.calendar.partials.weekly_info_editor')
 @endif
 
@@ -2868,7 +2872,7 @@ async setInternalFaculty(internalFacultyIds) {
                 throw new Error(data.error || 'Failed to load details.');
             }
             if (!data.can_edit) {
-                this.showNotification('You can edit info-sheet details only for courses you coordinate.', 'warning');
+                this.showNotification('You can edit the info sheet only for courses you coordinate.', 'warning');
                 return;
             }
 
