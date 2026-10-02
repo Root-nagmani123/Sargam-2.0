@@ -144,6 +144,26 @@ class TimetableInfoSheetTest extends TestCase
         $this->assertSame('Secretary, Dept of Fixtures', $guests[1]['designation'], 'a trailing comma in the master is not doubled');
     }
 
+    /**
+     * Through the real PDF action and its own query: a speaker named only in
+     * timetable.internal_faculty, with a stored moderator, prints under Guest
+     * Speakers. The editor offers these speakers for a moderator, so the PDF's
+     * select list must carry the column the builder reads them from.
+     */
+    public function test_an_internal_faculty_only_speaker_with_a_moderator_prints(): void
+    {
+        $this->storeNote(['guest_moderators' => json_encode([(string) self::INHOUSE_PK => 'Moderator Three, B03'])]);
+
+        $this->insertTimetableRow([
+            'subject_topic' => 'In-house talk', 'class_session' => '12:20 PM - 01:20 PM',
+            'internal_faculty' => json_encode([(string) self::INHOUSE_PK]),
+        ]);
+
+        $guests = $this->printViaWeeklyPdf()['weeks'][0]['sheet']['guestSpeakers'] ?? [];
+        $this->assertSame(['Chitra Lal'], array_column($guests, 'name'));
+        $this->assertSame('Moderator Three, B03', $guests[0]['moderator']);
+    }
+
     public function test_a_week_without_moderators_lists_every_guest_in_teaching_order(): void
     {
         $this->storeNote(['outdoor_activities' => 'PT at 0630']);
@@ -215,26 +235,59 @@ class TimetableInfoSheetTest extends TestCase
         $this->assertSame(['AH', 'TH'], array_column($venues, 'abbreviation'));
     }
 
-    public function test_outdoor_rows_leave_the_grid_only_when_the_back_page_describes_them(): void
+    /**
+     * Physical Activity sessions always print on the grid, also in a week whose
+     * back page fills "Outdoor and Other Activities" (product decision, F-008a).
+     */
+    public function test_physical_activity_prints_even_when_the_back_page_describes_it(): void
     {
         $outdoor = (int) (DB::table('subject_master')->where('subject_name', 'Physical Activity')->value('pk') ?? 0);
         if (!$outdoor) {
             $this->markTestSkipped('No "Physical Activity" subject on this database.');
         }
-        $events = collect([
-            $this->event(['subject_master_pk' => $outdoor, 'subject_topic' => 'Morning Activity', 'class_session' => '06:30 AM - 07:30 AM']),
-            $this->event(['subject_master_pk' => 1, 'subject_topic' => 'Lecture']),
-        ]);
-        $course = DB::table('course_master')->where('pk', self::COURSE_PK)->first();
-        $drop   = new ReflectionMethod(CalendarController::class, 'dropCoveredOutdoorRows');
-        $drop->setAccessible(true);
-
-        $kept = $drop->invoke(app(CalendarController::class), $events, $course);
-        $this->assertCount(2, $kept, 'no outdoor box stored - the morning row stays on the grid');
-
         $this->storeNote(['outdoor_activities' => 'Time: Outdoors- Morning 06:30 - 07:30']);
-        $kept = $drop->invoke(app(CalendarController::class), $events, $course);
-        $this->assertSame(['Lecture'], collect($kept)->pluck('subject_topic')->all());
+        $this->insertTimetableRow(['subject_master_pk' => $outdoor, 'subject_topic' => 'Morning Activity', 'class_session' => '06:30 AM - 07:30 AM']);
+        $this->insertTimetableRow(['subject_topic' => 'Lecture', 'class_session' => '09:40 AM - 10:40 AM']);
+
+        $topics = [];
+        foreach ($this->printViaWeeklyPdf()['weeks'][0]['rows'] as $row) {
+            foreach ($row['cells'] ?? [] as $cell) {
+                $topics = array_merge($topics, array_column($cell['events'] ?? [], 'topic'));
+            }
+        }
+
+        $this->assertContains('Morning Activity', $topics);
+        $this->assertContains('Lecture', $topics);
+    }
+
+    private function insertTimetableRow(array $attrs): void
+    {
+        DB::table('timetable')->insert(array_merge([
+            'course_master_pk' => self::COURSE_PK, 'subject_master_pk' => 0, 'subject_module_master_pk' => 0,
+            'venue_id' => 0, 'course_group_type_master' => self::TYPE_PK,
+            'group_name' => json_encode([(string) self::GROUP_A_PK, (string) self::GROUP_B_PK]),
+            'subject_topic' => 'Session', 'START_DATE' => self::WEEK, 'class_session' => '09:40 AM - 10:40 AM',
+            'faculty_master' => '[]',
+        ], $attrs));
+    }
+
+    /** The data the printed sheet is rendered from, via the real weekly PDF action and its own query. */
+    private function printViaWeeklyPdf(): array
+    {
+        $printed = null;
+        \Illuminate\Support\Facades\View::composer('admin.calendar.pdf.ot-timetable-pdf', function ($view) use (&$printed) {
+            if (empty($view->getData()['measure'])) {
+                $printed = $view->getData();
+            }
+        });
+
+        app(CalendarController::class)->weeklyTimetablePdf(\Illuminate\Http\Request::create('/calendar/weekly-timetable/pdf', 'GET', [
+            'course_id' => self::COURSE_PK, 'week_start' => self::WEEK,
+        ]));
+
+        $this->assertNotNull($printed, 'the PDF view was rendered');
+
+        return $printed;
     }
 
     public function test_a_week_with_no_stored_note_keeps_its_derived_venue_line(): void

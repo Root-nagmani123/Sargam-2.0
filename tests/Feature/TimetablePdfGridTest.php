@@ -671,6 +671,124 @@ class TimetablePdfGridTest extends TestCase
         }
     }
 
+    /**
+     * A week where Tuesday holds $parallel sessions over the whole afternoon
+     * while Monday cuts the afternoon into five bands - the shape of an
+     * all-course sheet, where one cell spans many rows.
+     */
+    private function crowdedWeek(int $parallel, string $topic = 'Parallel session'): array
+    {
+        $events = [];
+        foreach (['02:20 PM - 02:40 PM', '02:40 PM - 03:00 PM', '03:00 PM - 03:30 PM', '03:30 PM - 04:00 PM', '04:00 PM - 04:30 PM'] as $slot) {
+            $events[] = $this->event(['class_session' => $slot, 'subject_topic' => 'Monday ' . substr($slot, 0, 5)]);
+        }
+        for ($i = 1; $i <= $parallel; $i++) {
+            $events[] = $this->event([
+                'class_session' => '02:20 PM - 04:30 PM',
+                'START_DATE'    => '2026-01-20',
+                'subject_topic' => sprintf('%s %02d', $topic, $i),
+            ]);
+        }
+
+        return $this->buildWeeks($events, '2026-01-19', '2026-01-25')[0];
+    }
+
+    /**
+     * A cell continued over a cut is dealt between the pages, not repeated:
+     * repeated whole, a cell of many sessions was taller than a page on every
+     * page it reached, and DomPDF printed a column head alone and a blank page
+     * each time. Every session must still print exactly once.
+     */
+    public function test_a_crowded_cell_is_dealt_across_a_cut_not_repeated(): void
+    {
+        $week = $this->crowdedWeek(12);
+
+        $apply = new ReflectionMethod(CalendarController::class, 'applyCuts');
+        $apply->setAccessible(true);
+
+        $cutPoints = [];
+        foreach ($week['rows'] as $i => $row) {
+            if ($i > 0 && $row['type'] === 'row') {
+                $cutPoints[] = $i;
+            }
+        }
+        $this->assertGreaterThanOrEqual(2, count($cutPoints));
+
+        foreach (array_merge(array_map(fn ($c) => [$c], $cutPoints), [$cutPoints]) as $cuts) {
+            $context = 'cuts ' . implode(',', $cuts);
+            $topics  = [];
+            foreach ($apply->invoke(app(CalendarController::class), $week, $cuts) as $p => $rows) {
+                $this->assertGridIsSquare(array_merge($week, ['rows' => $rows]), "$context, page $p");
+                foreach ($rows as $row) {
+                    if ($row['type'] === 'row' && $row['cells'][2]['state'] === 'show') {
+                        $topics = array_merge($topics, array_column($row['cells'][2]['events'], 'topic'));
+                    }
+                }
+            }
+            $expected = array_map(fn ($i) => sprintf('Parallel session %02d', $i), range(1, 12));
+            sort($topics);
+            $this->assertSame($expected, $topics, "$context: every Tuesday session prints once");
+        }
+    }
+
+    /**
+     * End to end through DomPDF: a week with a cell far taller than a page
+     * prints on exactly the pages paginateWeeks() planned - no page holding
+     * only the column head, no blank page - and every page carries rows.
+     */
+    public function test_a_crowded_week_prints_on_exactly_the_pages_planned(): void
+    {
+        $week = $this->crowdedWeek(30, 'A parallel session with a title long enough to wrap over several lines');
+
+        $data = [
+            'weeks' => [$week], 'rangeStart' => '19 Jan 2026', 'rangeEnd' => '25 Jan 2026',
+            'course' => null, 'courseStartDate' => null, 'courseEndDate' => null, 'courseDuration' => null,
+            'multiCourse' => true, 'primaryVenue' => '', 'footerNote' => '', 'studentName' => null,
+            'logoLeft' => null, 'logoRight' => null, 'titleHindi' => null,
+        ];
+
+        $paginate = new ReflectionMethod(CalendarController::class, 'paginateWeeks');
+        $paginate->setAccessible(true);
+        $data['weeks'] = $paginate->invoke(app(CalendarController::class), $data);
+
+        $pages = $data['weeks'][0]['pages'];
+        $this->assertGreaterThan(1, count($pages), 'the fixture is taller than one page');
+        foreach ($pages as $p => $rows) {
+            $this->assertNotEmpty($rows, "page $p carries rows");
+            $this->assertGridIsSquare(array_merge($data['weeks'][0], ['rows' => $rows]), "page $p");
+        }
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.calendar.pdf.ot-timetable-pdf', $data)
+            ->setPaper('legal', 'portrait')
+            ->setOptions(['defaultFont' => 'DejaVu Sans', 'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => false, 'isPhpEnabled' => false, 'dpi' => 96]);
+        $dompdf = $pdf->getDomPDF();
+        $dompdf->render();
+
+        $this->assertSame(count($pages), $dompdf->getCanvas()->get_page_count(),
+            'DomPDF added pages of its own: a planned page overflowed');
+    }
+
+    /**
+     * Before migration 2026_09_22_090000 adds faculty_master.abbreviation the
+     * sheet must still build: the column is read only once it exists, and the
+     * names fall back to derived initials. (The column cannot be dropped here -
+     * DDL would commit on the shared database - so its absence is simulated.)
+     */
+    public function test_the_sheet_builds_before_the_abbreviation_column_exists(): void
+    {
+        $flag = new \ReflectionProperty(\App\Models\FacultyMaster::class, 'hasAbbreviation');
+        $flag->setAccessible(true);
+        $flag->setValue(null, false);
+        try {
+            $weeks = $this->buildWeeks([$this->event([])], '2026-01-19', '2026-01-25');
+            $this->assertSame('Session', $this->cells($weeks[0])[0]['topic']);
+            $this->assertNotEmpty($this->cells($weeks[0])[0]['faculty']);
+        } finally {
+            $flag->setValue(null, null);
+        }
+    }
+
     /** TIME labels of the printed rows, one per band. */
     private function timeLabels(array $week): array
     {

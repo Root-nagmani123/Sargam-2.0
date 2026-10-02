@@ -233,7 +233,8 @@
                                 @foreach($week['days'] as $day)
                                     @php $c = $row['cells'][$day['key']]; @endphp
                                     @continue($c['state'] === 'skip')
-                                    @php $n = count($c['events']); @endphp
+                                    {{-- A cell spread over continued rows keeps the type size of the whole. --}}
+                                    @php $n = $c['density'] ?? count($c['events']); @endphp
                                     <td class="day @if($n > 8) dense denser @elseif($n > 2) dense @endif" rowspan="{{ $c['rowspan'] }}">
                                         @if(!empty($c['contd']))<div class="contd">(contd.)</div>@endif
                                         @foreach($c['events'] as $ev)

@@ -426,8 +426,10 @@
                                     <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" id="btnWeekInfoPdf" title="Course information & faculty for the week (PDF)">
                                         <i class="bi bi-people"></i><span>Info Sheet</span>
                                     </button>
-                                    {{-- Same roles as adding a timetable event (CalendarController::store) and canEditWeeklyInfo(). --}}
-                                    @if(hasRole('Training') || hasRole('Super Admin') || hasRole('Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Training-Induction'))
+                                    {{-- Same roles as adding a timetable event (CalendarController::store), plus
+                                         anyone coordinating a course - canEditWeeklyInfo() decides per course. --}}
+                                    @if(hasRole('Training') || hasRole('Super Admin') || hasRole('Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Training-Induction')
+                                        || \App\Models\CourseCordinatorMaster::courseIdsForUser())
                                         <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" id="btnEditWeekInfo" title="Edit this week's venues line, notes and P.T.O. page">
                                             <i class="bi bi-pencil-square"></i><span>Edit Info Sheet</span>
                                         </button>
@@ -2864,6 +2866,10 @@ async setInternalFaculty(internalFacultyIds) {
             const data = await res.json();
             if (!res.ok) {
                 throw new Error(data.error || 'Failed to load details.');
+            }
+            if (!data.can_edit) {
+                this.showNotification('You can edit info-sheet details only for courses you coordinate.', 'warning');
+                return;
             }
 
             document.getElementById('wi_course_id').value = data.course_id;

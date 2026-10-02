@@ -1591,6 +1591,8 @@ class CalendarController extends Controller
                 'timetable.START_DATE',
                 'timetable.faculty_master',
                 'timetable.faculty_details',
+                // In-house speakers for the P.T.O. sheet (WeeklyInfoSheetBuilder::facultyPksIn()).
+                'timetable.internal_faculty',
                 'timetable.group_name',
                 'timetable.is_break',
                 'timetable.break_type',
@@ -1617,8 +1619,6 @@ class CalendarController extends Controller
             $mime = in_array($ext, ['jpg', 'jpeg']) ? 'image/jpeg' : 'image/png';
             return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($path));
         };
-
-        $events = $this->dropCoveredOutdoorRows($events, $course, $courseCtx['multiCourse']);
 
         $weeks = $this->attachWeekSheets(
             $this->buildWeeksGrid($events, $rangeStartDate, $rangeEndDate, $course),
@@ -1652,7 +1652,7 @@ class CalendarController extends Controller
             'footerNote'     => '',
             'studentName'    => hasRole('Student-OT') ? (auth()->user()->user_name ?? null) : null,
             'logoLeft'       => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
-            'logoRight'      => $toDataUri(public_path('admin_assets/images/logos/constitution-75.png'))
+            'logoRight'      => $toDataUri(public_path('admin_assets/images/logos/timetable-constitution-75.png'))
                 ?: $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
             'titleHindi'     => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
         ];
@@ -1726,6 +1726,8 @@ class CalendarController extends Controller
                 'timetable.START_DATE',
                 'timetable.faculty_master',
                 'timetable.faculty_details',
+                // In-house speakers for the P.T.O. sheet (WeeklyInfoSheetBuilder::facultyPksIn()).
+                'timetable.internal_faculty',
                 'timetable.group_name',
                 'timetable.is_break',
                 'timetable.break_type',
@@ -1753,8 +1755,6 @@ class CalendarController extends Controller
             $mime = in_array($ext, ['jpg', 'jpeg']) ? 'image/jpeg' : 'image/png';
             return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($path));
         };
-
-        $events = $this->dropCoveredOutdoorRows($events, $course, $courseCtx['multiCourse']);
 
         $weeks = $this->attachWeekSheets(
             $this->buildWeeksGrid($events, $rangeStartDate, $rangeEndDate, $course),
@@ -1788,7 +1788,7 @@ class CalendarController extends Controller
             'footerNote'     => '',
             'studentName'    => auth()->user()->user_name ?? null,
             'logoLeft'       => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
-            'logoRight'      => $toDataUri(public_path('admin_assets/images/logos/constitution-75.png'))
+            'logoRight'      => $toDataUri(public_path('admin_assets/images/logos/timetable-constitution-75.png'))
                 ?: $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
             'titleHindi'     => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
         ];
@@ -1870,6 +1870,8 @@ class CalendarController extends Controller
                 'timetable.START_DATE',
                 'timetable.faculty_master',
                 'timetable.faculty_details',
+                // In-house speakers for the P.T.O. sheet (WeeklyInfoSheetBuilder::facultyPksIn()).
+                'timetable.internal_faculty',
                 'timetable.group_name',
                 'timetable.is_break',
                 'timetable.break_type',
@@ -1886,7 +1888,6 @@ class CalendarController extends Controller
         $courseCtx       = $this->timetableCourseContext($weekRows, $courseId);
         $course          = $courseCtx['course'];
         $multiCourse     = $courseCtx['multiCourse'];
-        $weekRows        = $this->dropCoveredOutdoorRows($weekRows, $course, $multiCourse);
         $courseStartDate = $courseCtx['startDate'];
         $courseEndDate   = $courseCtx['endDate'];
         $courseDuration  = $courseCtx['duration'];
@@ -1933,7 +1934,7 @@ class CalendarController extends Controller
             'footerNote'      => trim((string) $request->input('note', '')),
             'studentName'     => auth()->user()->user_name ?? '',
             'logoLeft'        => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
-            'logoRight'       => $toDataUri(public_path('admin_assets/images/logos/constitution-75.png'))
+            'logoRight'       => $toDataUri(public_path('admin_assets/images/logos/timetable-constitution-75.png'))
                 ?: $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
             'titleHindi'      => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
         ];
@@ -2826,40 +2827,87 @@ class CalendarController extends Controller
      * very tall page and the row heights read back, then laid out again with
      * the cuts applied (a repeated cell can make its row taller) until the
      * cuts stop moving.
+     *
+     * Each layout is a full DomPDF render paid inside the request, so the
+     * passes are bounded (TT_MAX_FIT_PASSES) and the finished plan is cached
+     * against the exact rows and header it was measured from: the preview
+     * page's iframe and its Download button ask for the same PDF twice.
      */
     private function paginateWeeks(array $data): array
     {
         $weeks = $data['weeks'] ?? [];
         foreach ($weeks as $i => $week) {
             $weeks[$i]['pages'] = [$week['rows']];
-            if (count($week['rows']) < 2) {
+            if (!$week['rows']) {
                 continue;
             }
-            $cuts = $this->fitPages($data, $week);
-            if ($cuts !== null) {
-                $weeks[$i]['pages'] = $this->applyCuts($week, $cuts);
+            $plan = $this->cachedFit($data, $week);
+            if ($plan !== null) {
+                $weeks[$i]['rows']  = $plan['rows'];
+                $weeks[$i]['pages'] = $this->applyCuts($weeks[$i], $plan['cuts']);
             }
         }
 
         return $weeks;
     }
 
+    /** Bump when the layout logic changes, so cached plans are not reused. */
+    private const TT_FIT_VERSION = 2;
+
+    /** fitPages(), remembered for an hour against everything it measured. */
+    private function cachedFit(array $data, array $week): ?array
+    {
+        try {
+            $key = 'timetable-pdf-fit:' . md5(serialize([
+                self::TT_FIT_VERSION,
+                @filemtime(resource_path('views/admin/calendar/pdf/ot-timetable-pdf.blade.php')),
+                array_diff_key($data, ['weeks' => true]),
+                $week,
+            ]));
+            $hit = \Illuminate\Support\Facades\Cache::get($key);
+            if (is_array($hit) && isset($hit['rows'], $hit['cuts'])) {
+                return $hit;
+            }
+        } catch (\Throwable $e) {
+            return $this->fitPages($data, $week);
+        }
+
+        $plan = $this->fitPages($data, $week);
+        if ($plan !== null) {
+            try {
+                \Illuminate\Support\Facades\Cache::put($key, $plan, now()->addHour());
+            } catch (\Throwable $e) {
+                // An unwritable cache only costs the next request a re-measure.
+            }
+        }
+
+        return $plan;
+    }
+
+    /*
+     * Room a cut can add to the row it lands on - the "(contd.)" line of a
+     * reopened cell - held back when planning, so a plan usually fits on its
+     * first layout instead of costing another.
+     */
+    private const TT_CONTD_ALLOWANCE = 12.0;
+
+    /** A cell continued over a cut repeats its sessions only up to this many. */
+    private const TT_REPEAT_MAX_EVENTS = 3;
+    private const TT_MAX_FIT_PASSES  = 6;
+
     /**
-     * Cuts that let every page of the week fit, verified against DomPDF's own
-     * layout. Pages are settled front to back: a page is kept once its rows -
-     * laid out with the cuts applied, repeated cells included - measure within
-     * the page; the rows after it are then planned again from the new layout.
+     * Rows (possibly with over-tall rows split) and the cuts that let every
+     * page of the week fit, verified against DomPDF's own layout. Pages are
+     * settled front to back: a page is kept once its rows - laid out with the
+     * cuts applied, repeated cells included - measure within the page; the
+     * rows after it are then planned again from the new layout.
      * Null when the week cannot be measured, so it prints unsplit as before.
+     *
+     * @return array{rows: array, cuts: int[]}|null
      */
     private function fitPages(array $data, array $week): ?array
     {
-        $rows  = $week['rows'];
-        $n     = count($rows);
-        $fixed = [];          // cuts already proven to fit
-        $from  = 0;           // first row of the page being settled
-        $lastTry = null;
-
-        $measure = $this->measureWeek($data, array_merge($week, ['pages' => [$rows]]));
+        $measure = $this->measureWeek($data, array_merge($week, ['pages' => [$week['rows']]]));
         if (!$measure) {
             return null;
         }
@@ -2868,8 +2916,44 @@ class CalendarController extends Controller
             ? $page - $measure['firstTop'] - $measure['head']
             : $page - self::TT_TABLE_GAP - $measure['head'];
 
-        for ($guard = 0; $guard < 3 * $n + 4; $guard++) {
-            $plan = array_merge($fixed, $this->chooseCuts($rows, $measure['rows'], $from, $capOf($from === 0), $capOf(false)));
+        // A row taller than a page cannot be cut between rows, and DomPDF then
+        // prints the column head alone, a blank page, and the row with no day
+        // header - a multi-course band can run dozens of parallel sessions. Its
+        // sessions are spread over continued rows first.
+        for ($round = 0; $round < 3; $round++) {
+            $split = $this->splitTallRows($week, $measure['rows'], $capOf(false) - self::TT_CONTD_ALLOWANCE);
+            if ($split === null) {
+                break;
+            }
+            $week['rows'] = $split;
+            $remeasured = $this->measureWeek($data, array_merge($week, ['pages' => [$week['rows']]]));
+            if (!$remeasured) {
+                return null;
+            }
+            $measure['rows'] = $remeasured['rows'];
+        }
+
+        $rows  = $week['rows'];
+        $n     = count($rows);
+        $fixed = [];          // cuts already proven to fit
+        $from  = 0;           // first row of the page being settled
+        $lastTry = null;
+
+        // A week that fits its first page needs no cut and no second layout.
+        if (array_sum($measure['rows']) <= $capOf(true)) {
+            return ['rows' => $rows, 'cuts' => []];
+        }
+
+        $planFrom = fn (array $heights, int $at) => $this->chooseCuts(
+            $rows,
+            $heights,
+            $at,
+            $capOf($at === 0) - self::TT_CONTD_ALLOWANCE,
+            $capOf(false) - self::TT_CONTD_ALLOWANCE
+        );
+
+        for ($guard = 0; $guard < self::TT_MAX_FIT_PASSES; $guard++) {
+            $plan = array_merge($fixed, $planFrom($measure['rows'], $from));
 
             $check = $this->measureWeek($data, array_merge($week, ['pages' => $this->applyCuts($week, $plan)]));
             if (!$check) {
@@ -2896,13 +2980,13 @@ class CalendarController extends Controller
                 $from = $b;
             }
             if ($overflow === null) {
-                return $fixed;
+                return ['rows' => $rows, 'cuts' => $fixed];
             }
 
             // Re-plan from the overflowing page with the heights just measured.
             // If that would choose the same end again, end it a row earlier.
             [$a, $b] = $overflow;
-            $retry = $this->chooseCuts($rows, $check['rows'], $a, $capOf($a === 0), $capOf(false));
+            $retry = $planFrom($check['rows'], $a);
             if (($retry[0] ?? $n) >= $b && $lastTry === [$a, $b]) {
                 $end = $b - 1;
                 while ($end > $a + 1 && $rows[$end]['type'] !== 'row') {
@@ -2914,7 +2998,121 @@ class CalendarController extends Controller
             $lastTry = [$a, $b];
         }
 
-        return $fixed;
+        // Out of passes: keep the pages already proven and plan the rest from the
+        // latest heights, rather than leaving it to DomPDF to break unplanned.
+        $cuts = array_values(array_unique(array_merge($fixed, $planFrom($measure['rows'], $from))));
+        sort($cuts);
+
+        return ['rows' => $rows, 'cuts' => $cuts];
+    }
+
+    /**
+     * Spread the sessions of every row taller than $limit over continued rows,
+     * so each fits a page. Null when no row needed it.
+     */
+    private function splitTallRows(array $week, array $heights, float $limit): ?array
+    {
+        if ($limit <= 0) {
+            return null;
+        }
+        $rows    = $week['rows'];
+        $changed = false;
+        // Last row first, so the indices of the rows still to visit hold.
+        for ($r = count($rows) - 1; $r >= 0; $r--) {
+            $h = $heights[$r] ?? 0.0;
+            if ($rows[$r]['type'] !== 'row' || $h <= $limit) {
+                continue;
+            }
+            $parts = min($this->mostEventsIn($rows[$r]), (int) ceil($h / $limit));
+            if ($parts < 2) {
+                continue;   // one session taller than a page: nothing to spread
+            }
+            $rows    = $this->splitRow($rows, $r, $parts, $week['days']);
+            $changed = true;
+        }
+
+        return $changed ? $rows : null;
+    }
+
+    private function mostEventsIn(array $row): int
+    {
+        $most = 0;
+        foreach ($row['cells'] as $cell) {
+            if ($cell['state'] === 'show') {
+                $most = max($most, count($cell['events']));
+            }
+        }
+
+        return $most;
+    }
+
+    /**
+     * Replace row $r with $k rows carrying its sessions in order. A day's
+     * sessions are dealt in chunks sized for the fullest day, so a day with
+     * few sessions keeps them in one cell spanning the new rows; every later
+     * chunk opens with "(contd.)" and keeps the type size of the whole cell.
+     * Cells and the TIME label held open from above are stretched over the
+     * new rows, and a cell that spanned rows below still ends where it did.
+     */
+    private function splitRow(array $rows, int $r, int $k, array $days): array
+    {
+        $row    = $rows[$r];
+        $per    = max(1, (int) ceil($this->mostEventsIn($row) / $k));
+        $copies = array_fill(0, $k, $row);
+        for ($i = 1; $i < $k; $i++) {
+            $copies[$i]['showTime'] = false;
+        }
+
+        foreach ($days as $day) {
+            $key  = $day['key'];
+            $cell = $row['cells'][$key];
+
+            if ($cell['state'] !== 'show') {
+                for ($h = $r - 1; $h >= 0; $h--) {
+                    if ($rows[$h]['type'] !== 'row' || $rows[$h]['cells'][$key]['state'] !== 'show') {
+                        continue;
+                    }
+                    if ($h + $rows[$h]['cells'][$key]['rowspan'] - 1 >= $r) {
+                        $rows[$h]['cells'][$key]['rowspan'] += $k - 1;
+                    }
+                    break;
+                }
+                continue;
+            }
+
+            $chunks = $cell['events'] ? array_chunk($cell['events'], $per) : [[]];
+            $m      = count($chunks);
+            for ($i = 0; $i < $k; $i++) {
+                if ($i >= $m) {
+                    $copies[$i]['cells'][$key] = array_merge($cell, ['state' => 'skip', 'events' => []]);
+                    continue;
+                }
+                $copies[$i]['cells'][$key] = array_merge($cell, [
+                    'events'  => $chunks[$i],
+                    'rowspan' => $i === $m - 1 ? $cell['rowspan'] + $k - $m : 1,
+                    'contd'   => $i > 0 || !empty($cell['contd']),
+                    'density' => $cell['density'] ?? count($cell['events']),
+                ]);
+            }
+        }
+
+        if (!empty($row['showTime'])) {
+            $copies[0]['timeRowspan'] = $row['timeRowspan'] + $k - 1;
+        } else {
+            for ($h = $r - 1; $h >= 0; $h--) {
+                if ($rows[$h]['type'] !== 'row' || empty($rows[$h]['showTime'])) {
+                    continue;
+                }
+                if ($h + $rows[$h]['timeRowspan'] - 1 >= $r) {
+                    $rows[$h]['timeRowspan'] += $k - 1;
+                }
+                break;
+            }
+        }
+
+        array_splice($rows, $r, 1, $copies);
+
+        return $rows;
     }
 
     /** @return array<int, array> the week's rows, split at each cut, one array per page */
@@ -3052,11 +3250,31 @@ class CalendarController extends Controller
                 }
                 $end = $h + $cell['rowspan'] - 1;
                 if ($end >= $cut) {
-                    $rows[$h]['cells'][$key]['rowspan'] = $cut - $h;
+                    $before = $cut - $h;
+                    $events = $cell['events'];
+                    $kept   = $events;
+                    // A short cell is repeated, so the next page says what
+                    // continues. A long one - a multi-course band can hold
+                    // dozens of parallel sessions over a dozen rows - is
+                    // dealt between the pages in proportion to its rows:
+                    // repeated whole it is taller than a page on every page
+                    // it reaches, and DomPDF prints a lone column head and a
+                    // blank page each time.
+                    if (count($events) > self::TT_REPEAT_MAX_EVENTS) {
+                        $take   = max(1, min(count($events) - 1, (int) ceil(count($events) * $before / $cell['rowspan'])));
+                        $kept   = array_slice($events, 0, $take);
+                        $events = array_slice($events, $take);
+                    }
+                    $density = $cell['density'] ?? count($cell['events']);
+                    $rows[$h]['cells'][$key]['rowspan'] = $before;
+                    $rows[$h]['cells'][$key]['events']  = $kept;
+                    $rows[$h]['cells'][$key]['density'] = $density;
                     $rows[$cut]['cells'][$key] = array_merge($cell, [
                         'state'   => 'show',
                         'rowspan' => $end - $cut + 1,
                         'contd'   => true,
+                        'events'  => $events,
+                        'density' => $density,
                     ]);
                 }
                 break;
@@ -3134,49 +3352,6 @@ class CalendarController extends Controller
         unset($week);
 
         return $weeks;
-    }
-
-    /**
-     * The issued sheet keeps the morning PT/outdoor sessions off the grid and
-     * describes them once in the "Outdoor and Other Activities" box on the back.
-     * So for a week whose info sheet carries that box, the Physical Activity rows
-     * are left off the printed grid - they stay in the timetable, the calendar and
-     * attendance. A week without the box prints them as before.
-     */
-    private function dropCoveredOutdoorRows($events, $course, bool $multiCourse = false)
-    {
-        if (!$course || empty($course->pk) || $multiCourse
-            || !Schema::hasTable('course_week_notes') || !Schema::hasColumn('course_week_notes', 'outdoor_activities')) {
-            return $events;
-        }
-
-        $covered = DB::table('course_week_notes')
-            ->where('course_master_pk', $course->pk)
-            ->whereNotNull('outdoor_activities')
-            ->where('outdoor_activities', '<>', '')
-            ->pluck('week_start')
-            ->map(fn ($d) => Carbon::parse($d)->toDateString())
-            ->all();
-        if (!$covered) {
-            return $events;
-        }
-
-        $outdoorSubjects = DB::table('subject_master')
-            ->where('subject_name', 'Physical Activity')
-            ->pluck('pk')
-            ->map(fn ($pk) => (int) $pk)
-            ->all();
-        if (!$outdoorSubjects) {
-            return $events;
-        }
-
-        return collect($events)->reject(function ($e) use ($covered, $outdoorSubjects) {
-            if (!in_array((int) ($e->subject_master_pk ?? 0), $outdoorSubjects, true) || empty($e->START_DATE)) {
-                return false;
-            }
-            $monday = Carbon::parse($e->START_DATE)->startOfWeek(Carbon::MONDAY)->toDateString();
-            return in_array($monday, $covered, true);
-        })->values();
     }
 
     private function timetableCourseContext($events, $courseId): array
@@ -3454,7 +3629,7 @@ class CalendarController extends Controller
 
         return DB::table('faculty_master')
             ->whereIn('pk', array_keys($ids))
-            ->get(['pk', 'full_name', 'abbreviation'])
+            ->get(['pk', 'full_name', FacultyMaster::abbreviationSelect()])
             ->keyBy('pk')
             ->all();
     }
@@ -3681,13 +3856,20 @@ class CalendarController extends Controller
     }
 
     /**
-     * Roles allowed to edit the weekly info-sheet details (same as event authoring).
+     * Who may edit a course's weekly info sheet: the roles that may add
+     * timetable events (store()), and the course's own Coordinator and
+     * Assistant Coordinators - the sheet's owners. Without a course only the
+     * roles qualify.
      */
-    private function canEditWeeklyInfo(): bool
+    private function canEditWeeklyInfo(?int $courseId = null): bool
     {
-        // The roles that may add timetable events (store()) - the names the
-        // roles table actually holds; 'Training-MCTP' and 'IST' match no role.
-        return hasRole('Training') || hasRole('Super Admin') || hasRole('Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Training-Induction');
+        // The names the roles table actually holds; 'Training-MCTP' and 'IST' match no role.
+        if (hasRole('Training') || hasRole('Super Admin') || hasRole('Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Training-Induction')) {
+            return true;
+        }
+
+        return $courseId !== null && $courseId > 0
+            && in_array($courseId, \App\Models\CourseCordinatorMaster::courseIdsForUser(), true);
     }
 
     /**
@@ -3921,7 +4103,7 @@ class CalendarController extends Controller
             'venue_legend'          => $decode($note->venue_legend ?? null),
             'faculty_legend_order'  => $decode($note->faculty_legend_order ?? null),
             // Every curated code, in the order the legend falls back to.
-            'faculty_codes'         => DB::table('faculty_master')
+            'faculty_codes'         => !FacultyMaster::hasAbbreviationColumn() ? [] : DB::table('faculty_master')
                 ->where('faculty_type', 1)->where('active_inactive', 1)
                 ->whereNotNull('abbreviation')->where('abbreviation', '<>', '')
                 ->orderBy('abbreviation')->pluck('abbreviation')->values()->all(),
@@ -3935,7 +4117,7 @@ class CalendarController extends Controller
             // form follows whoever is on the course and teaching that week.
             'counsellors'          => $this->weeklyInfoCounsellors($courseId),
             'speakers'             => $this->weeklyInfoSpeakers($courseId, $weekStart),
-            'can_edit'             => $this->canEditWeeklyInfo(),
+            'can_edit'             => $this->canEditWeeklyInfo((int) $courseId),
         ]);
     }
 
@@ -3944,11 +4126,11 @@ class CalendarController extends Controller
     {
         return DB::table('group_type_master_course_master_map as g')
             ->join('faculty_master as f', 'g.facility_id', '=', 'f.pk')
-            ->where('g.type_name', 8) // Counsellor Group
+            ->where('g.type_name', (int) config('timetable.counsellor_group_type', 8)) // Counsellor Group
             ->where('g.course_name', $courseId)
             ->where('g.active_inactive', 1)
             ->orderBy('g.group_name')
-            ->get(['g.group_name', 'f.pk as faculty_pk', 'f.full_name', 'f.abbreviation'])
+            ->get(['g.group_name', 'f.pk as faculty_pk', 'f.full_name', FacultyMaster::abbreviationSelect('f')])
             ->groupBy('faculty_pk')
             ->map(fn ($rows, $pk) => [
                 'faculty_pk'   => (int) $pk,
@@ -4011,7 +4193,11 @@ class CalendarController extends Controller
      */
     public function saveWeeklyInfo(Request $request)
     {
-        abort_unless($this->canEditWeeklyInfo(), 403, 'You do not have permission to edit info-sheet details.');
+        abort_unless(
+            $this->canEditWeeklyInfo((int) $request->input('course_id')),
+            403,
+            'You can edit info-sheet details only for courses you coordinate.'
+        );
 
         $validated = $request->validate([
             'course_id'            => 'required|integer',
@@ -4053,21 +4239,6 @@ class CalendarController extends Controller
 
         $courseId = (int) $validated['course_id'];
         $weekStart = Carbon::parse($validated['week_start'])->startOfWeek(Carbon::MONDAY)->toDateString();
-
-        // Course-level personnel — update existing coordinator row or create one.
-        DB::table('course_coordinator_master')->updateOrInsert(
-            ['courses_master_pk' => $courseId],
-            [
-                'director_name'       => $validated['director_name'] ?? null,
-                'joint_director_name' => $validated['joint_director_name'] ?? null,
-            ]
-        );
-
-        // Participants profile lives on the course.
-        DB::table('course_master')->where('pk', $courseId)->update([
-            'participants_profile' => $validated['participants_profile'] ?? null,
-            'sheet_title'          => trim((string) ($validated['sheet_title'] ?? '')) ?: null,
-        ]);
 
         // Blanks are dropped before storing: an empty row would otherwise print as
         // a numbered note with no text, or a language with no venue.
@@ -4130,19 +4301,47 @@ class CalendarController extends Controller
             'updated_at'            => now(),
         ];
 
-        $existingNote = DB::table('course_week_notes')
-            ->where('course_master_pk', $courseId)
-            ->where('week_start', $weekStart)
-            ->first();
-        if ($existingNote) {
-            DB::table('course_week_notes')->where('id', $existingNote->id)->update($payload);
-        } else {
-            DB::table('course_week_notes')->insert($payload + [
-                'course_master_pk' => $courseId,
-                'week_start'       => $weekStart,
-                'created_at'       => now(),
+        // One sheet is saved as a whole or not at all: the three tables are
+        // written together, and the week's row is locked while it is upserted
+        // so two saves of the same week cannot both take the insert branch.
+        DB::transaction(function () use ($validated, $courseId, $weekStart, $payload) {
+            // Course-level personnel — update existing coordinator row(s) or create one.
+            // created_date has no default, so a course without a coordinator row
+            // could not be saved at all while the insert left it out.
+            $personnel = [
+                'director_name'       => $validated['director_name'] ?? null,
+                'joint_director_name' => $validated['joint_director_name'] ?? null,
+            ];
+            if (DB::table('course_coordinator_master')->where('courses_master_pk', $courseId)->exists()) {
+                DB::table('course_coordinator_master')->where('courses_master_pk', $courseId)->update($personnel);
+            } else {
+                DB::table('course_coordinator_master')->insert($personnel + [
+                    'courses_master_pk' => $courseId,
+                    'created_date'      => now(),
+                ]);
+            }
+
+            // Participants profile lives on the course.
+            DB::table('course_master')->where('pk', $courseId)->update([
+                'participants_profile' => $validated['participants_profile'] ?? null,
+                'sheet_title'          => trim((string) ($validated['sheet_title'] ?? '')) ?: null,
             ]);
-        }
+
+            $existingNote = DB::table('course_week_notes')
+                ->where('course_master_pk', $courseId)
+                ->where('week_start', $weekStart)
+                ->lockForUpdate()
+                ->first();
+            if ($existingNote) {
+                DB::table('course_week_notes')->where('id', $existingNote->id)->update($payload);
+            } else {
+                DB::table('course_week_notes')->insert($payload + [
+                    'course_master_pk' => $courseId,
+                    'week_start'       => $weekStart,
+                    'created_at'       => now(),
+                ]);
+            }
+        });
 
         return response()->json(['status' => 'success', 'message' => 'Info-sheet details saved.']);
     }

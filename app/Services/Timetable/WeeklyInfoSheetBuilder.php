@@ -2,6 +2,7 @@
 
 namespace App\Services\Timetable;
 
+use App\Models\FacultyMaster;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -25,9 +26,6 @@ class WeeklyInfoSheetBuilder
     /** faculty_master.faculty_type: 1 = Internal, 2 = Guest, 3 = Research. */
     private const FACULTY_TYPE_INTERNAL = 1;
     private const FACULTY_TYPE_GUEST    = 2;
-
-    /** course_group_type_master.pk for the Counsellor Group. */
-    private const GROUP_TYPE_COUNSELLOR = 8;
 
     /**
      * @param  iterable  $weekEvents  the same timetable rows the grid was built from
@@ -115,7 +113,7 @@ class WeeklyInfoSheetBuilder
         return DB::table('faculty_master')
             ->whereIn('pk', $pks)
             ->orderBy('full_name')
-            ->get(['pk', 'full_name', 'faculty_code', 'abbreviation', 'faculty_type',
+            ->get(['pk', 'full_name', 'faculty_code', FacultyMaster::abbreviationSelect(), 'faculty_type',
                    'current_designation', 'current_department'])
             ->keyBy('pk');
     }
@@ -134,11 +132,12 @@ class WeeklyInfoSheetBuilder
 
         $rows = DB::table('group_type_master_course_master_map as g')
             ->join('faculty_master as f', 'g.facility_id', '=', 'f.pk')
-            ->where('g.type_name', self::GROUP_TYPE_COUNSELLOR)
+            // course_group_type_master.pk of the Counsellor Group.
+            ->where('g.type_name', (int) config('timetable.counsellor_group_type', 8))
             ->where('g.course_name', $course->pk)
             ->where('g.active_inactive', 1)
             ->orderBy('g.group_name')
-            ->get(['g.group_name', 'f.pk as faculty_pk', 'f.full_name', 'f.abbreviation']);
+            ->get(['g.group_name', 'f.pk as faculty_pk', 'f.full_name', FacultyMaster::abbreviationSelect('f')]);
 
         $byFaculty = [];
         foreach ($rows as $row) {
@@ -193,6 +192,9 @@ class WeeklyInfoSheetBuilder
      */
     private function facultyLegend(array $order = []): array
     {
+        if (!FacultyMaster::hasAbbreviationColumn()) {
+            return [];
+        }
         $rank = array_flip(array_map('strtoupper', $order));
 
         return DB::table('faculty_master')

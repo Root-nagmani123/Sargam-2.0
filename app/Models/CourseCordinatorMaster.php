@@ -26,4 +26,38 @@ class CourseCordinatorMaster extends Model
     {
         return $this->belongsTo(CourseMaster::class, 'courses_master_pk', 'pk');
     }
+
+    /**
+     * Courses the user coordinates (Coordinator_name) or assists
+     * (Assistant_Coordinator_name), both holding faculty_master pks. The user
+     * is matched to their faculty record by faculty_master.employee_master_pk
+     * = user_credentials.user_id; a user with no faculty record gets none.
+     *
+     * @return int[]
+     */
+    public static function courseIdsForUser($user = null): array
+    {
+        $user ??= auth()->user();
+        $employeePk = $user->user_id ?? null;
+        if (!$employeePk) {
+            return [];
+        }
+
+        $facultyPk = FacultyMaster::where('employee_master_pk', $employeePk)->value('pk');
+        if (!$facultyPk) {
+            return [];
+        }
+
+        return static::query()
+            ->where(function ($q) use ($facultyPk) {
+                $q->where('Coordinator_name', $facultyPk)
+                  ->orWhereRaw('FIND_IN_SET(?, Assistant_Coordinator_name)', [$facultyPk]);
+            })
+            ->pluck('courses_master_pk')
+            ->map(fn ($pk) => (int) $pk)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
 }

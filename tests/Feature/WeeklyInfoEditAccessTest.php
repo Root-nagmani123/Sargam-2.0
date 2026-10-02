@@ -1,0 +1,123 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Http\Controllers\Admin\CalendarController;
+use App\Models\User;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Session;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Tests\TestCase;
+
+/**
+ * Who may save a course's weekly info sheet (CalendarController::saveWeeklyInfo):
+ * the timetable roles, and the course's own Coordinator and Assistant
+ * Coordinators. Everyone else is refused, including a coordinator of a
+ * different course. Engineering decision of 2026-10-02 on review finding F-004.
+ *
+ * Writes run inside DatabaseTransactions and are rolled back.
+ */
+class WeeklyInfoEditAccessTest extends TestCase
+{
+    use DatabaseTransactions;
+
+    private const COURSE_OWN = 90300001;   // the actor coordinates this one
+
+    private const COURSE_ASSIST = 90300002;   // ...assists on this one
+
+    private const COURSE_OTHER = 90300003;   // ...and has nothing to do with this one
+
+    private const FACULTY_PK = 90300011;
+
+    private const EMPLOYEE_PK = 90300021;   // user_credentials.user_id of the actor
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        if (! Schema::hasTable('course_week_notes')) {
+            $this->markTestSkipped('course_week_notes is not migrated on this database.');
+        }
+
+        foreach ([self::COURSE_OWN, self::COURSE_ASSIST, self::COURSE_OTHER] as $pk) {
+            DB::table('course_master')->insert([
+                'pk' => $pk, 'course_name' => "Fixture course $pk", 'couse_short_name' => "FC$pk",
+                'course_year' => 2026, 'start_year' => '2026-01-05', 'end_date' => '2026-01-30',
+            ]);
+        }
+
+        DB::table('faculty_master')->insert([
+            'pk' => self::FACULTY_PK, 'faculty_type' => '1', 'first_name' => 'Owner', 'full_name' => 'Sheet Owner',
+            'employee_master_pk' => self::EMPLOYEE_PK,
+            'country_master_pk' => 0, 'state_master_pk' => 0, 'state_district_mapping_pk' => 0, 'city_master_pk' => 0,
+        ]);
+
+        $now = now();
+        DB::table('course_coordinator_master')->insert([
+            ['courses_master_pk' => self::COURSE_OWN, 'Coordinator_name' => (string) self::FACULTY_PK, 'Assistant_Coordinator_name' => '1', 'created_date' => $now],
+            // Assistant coordinators are a comma-separated list.
+            ['courses_master_pk' => self::COURSE_ASSIST, 'Coordinator_name' => '1', 'Assistant_Coordinator_name' => '2,'.self::FACULTY_PK, 'created_date' => $now],
+            ['courses_master_pk' => self::COURSE_OTHER, 'Coordinator_name' => '1', 'Assistant_Coordinator_name' => '2', 'created_date' => $now],
+        ]);
+    }
+
+    /** created_date has no default; the save must still work for a course with no coordinator row. */
+    public function test_a_course_without_a_coordinator_row_can_be_saved(): void
+    {
+        DB::table('course_coordinator_master')->where('courses_master_pk', self::COURSE_OTHER)->delete();
+
+        $this->assertSame(200, $this->saveAs(['Training'], null, self::COURSE_OTHER));
+        $this->assertSame(1, DB::table('course_coordinator_master')->where('courses_master_pk', self::COURSE_OTHER)->count());
+    }
+
+    /** Status of a save by an actor with the given session roles and employee pk. */
+    private function saveAs(array $roles, ?int $employeePk, int $courseId): int
+    {
+        $user = new User;
+        $user->forceFill(['pk' => 90300099, 'user_id' => $employeePk]);
+        Auth::setUser($user);
+        Session::put('user_roles', $roles);
+
+        $request = Request::create('/calendar/weekly-info/save', 'POST', [
+            'course_id' => $courseId, 'week_start' => '2026-01-19', 'mention_of_week' => 'access test',
+        ]);
+
+        try {
+            return app(CalendarController::class)->saveWeeklyInfo($request)->getStatusCode();
+        } catch (HttpException $e) {
+            return $e->getStatusCode();
+        }
+    }
+
+    public function test_the_course_coordinator_may_save(): void
+    {
+        $this->assertSame(200, $this->saveAs([], self::EMPLOYEE_PK, self::COURSE_OWN));
+        $this->assertSame('access test', DB::table('course_week_notes')
+            ->where('course_master_pk', self::COURSE_OWN)->value('mention_of_week'));
+    }
+
+    public function test_an_assistant_coordinator_may_save(): void
+    {
+        $this->assertSame(200, $this->saveAs([], self::EMPLOYEE_PK, self::COURSE_ASSIST));
+    }
+
+    public function test_a_coordinator_of_another_course_is_refused(): void
+    {
+        $this->assertSame(403, $this->saveAs([], self::EMPLOYEE_PK, self::COURSE_OTHER));
+        $this->assertNull(DB::table('course_week_notes')->where('course_master_pk', self::COURSE_OTHER)->value('id'));
+    }
+
+    public function test_a_user_with_no_role_and_no_faculty_record_is_refused(): void
+    {
+        $this->assertSame(403, $this->saveAs(['FC Reports Viewer'], null, self::COURSE_OWN));
+    }
+
+    public function test_a_training_role_may_save_any_course(): void
+    {
+        $this->assertSame(200, $this->saveAs(['Training'], null, self::COURSE_OTHER));
+    }
+}
