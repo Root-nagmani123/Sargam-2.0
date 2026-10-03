@@ -204,7 +204,9 @@ class CalendarController extends Controller
      */
     private function canViewCourseInfoSheet(int $courseId): bool
     {
-        if ($courseId <= 0) {
+        // Fail closed without a signed-in user: get_Role_by_course() returns []
+        // - "every course" - when nobody is authenticated.
+        if ($courseId <= 0 || !auth()->check()) {
             return false;
         }
         if ($this->canEditWeeklyInfo($courseId)) {
@@ -3389,6 +3391,16 @@ class CalendarController extends Controller
             return $weeks;
         }
 
+        // The week's stored notes and its P.T.O. sheet (counsellors, faculty codes,
+        // guest speakers and their moderators, signatory) print only for a reader
+        // of the course - the rule weeklyInfoPdf() applies. Three routes reach this
+        // with a course taken from ?course_id or from the sessions, whatever the
+        // reader's scope (calendar/weekly-timetable/pdf, calendar/timetable/pdf,
+        // calendar/ot/download); anyone else gets the timetable without them.
+        if (!$this->canViewCourseInfoSheet((int) $course->pk)) {
+            return $weeks;
+        }
+
         $notesByWeek = DB::table('course_week_notes')
             ->where('course_master_pk', $course->pk)
             ->get()
@@ -3942,6 +3954,96 @@ class CalendarController extends Controller
     }
 
     /**
+     * The people course_coordinator_master records for a course, as the Course
+     * Information sheet prints them.
+     *
+     * The table holds one row per assistant coordinator - every row repeats the
+     * course coordinator - so all of the course's rows are read, not one.
+     * Coordinator_name and Assistant_Coordinator_name hold a faculty_master pk
+     * on current rows and a typed name on older ones; a pk prints as the faculty
+     * member's name. A comma list of pks (which courseIdsForUser()'s FIND_IN_SET
+     * also accepts) names each of them.
+     *
+     * Order: the order the rows were entered (pk), then the order within a
+     * row's list. A person prints once - a faculty member by pk, a typed name
+     * by its text - so two different faculty members who share a name both
+     * print. Director and Joint Director are course-level values that
+     * saveWeeklyInfo() writes to every row; the first row that has one is used.
+     *
+     * @return array{coordinators: string[], assistants: string[], director: ?string, jointDirector: ?string}
+     */
+    private function courseCoordinatorPeople(int $courseId): array
+    {
+        $rows = DB::table('course_coordinator_master')
+            ->where('courses_master_pk', $courseId)
+            ->orderBy('pk')
+            ->get(['Coordinator_name', 'Assistant_Coordinator_name', 'director_name', 'joint_director_name']);
+
+        // A comma list is split only when every part is a pk; a typed name that
+        // contains a comma ("Sharma, R.") stays one person, as it always printed.
+        $split = function ($value): array {
+            $value = trim((string) $value);
+            $parts = array_values(array_filter(array_map('trim', explode(',', $value)), fn ($part) => $part !== ''));
+            foreach ($parts as $part) {
+                if (!ctype_digit($part)) {
+                    return $value !== '' ? [$value] : [];
+                }
+            }
+            return $parts;
+        };
+
+        $facultyPks = [];
+        foreach ($rows as $row) {
+            foreach (array_merge($split($row->Coordinator_name), $split($row->Assistant_Coordinator_name)) as $part) {
+                if (ctype_digit($part)) {
+                    $facultyPks[(int) $part] = true;
+                }
+            }
+        }
+        $facultyNames = $facultyPks
+            ? FacultyMaster::whereIn('pk', array_keys($facultyPks))->pluck('full_name', 'pk')->all()
+            : [];
+
+        $people = function (string $column) use ($rows, $split, $facultyNames): array {
+            $out = [];
+            foreach ($rows as $row) {
+                foreach ($split($row->{$column}) as $part) {
+                    if (ctype_digit($part)) {
+                        $key  = 'pk:' . (int) $part;
+                        $name = isset($facultyNames[(int) $part])
+                            ? preg_replace('/\s+/', ' ', trim((string) $facultyNames[(int) $part]))
+                            : $part;
+                    } else {
+                        $key  = 'name:' . mb_strtolower(preg_replace('/\s+/', ' ', $part));
+                        $name = $part;
+                    }
+                    if ($name !== '' && !isset($out[$key])) {
+                        $out[$key] = $name;
+                    }
+                }
+            }
+            return array_values($out);
+        };
+
+        $first = function (string $column) use ($rows): ?string {
+            foreach ($rows as $row) {
+                $value = trim((string) ($row->{$column} ?? ''));
+                if ($value !== '') {
+                    return $value;
+                }
+            }
+            return null;
+        };
+
+        return [
+            'coordinators'  => $people('Coordinator_name'),
+            'assistants'    => $people('Assistant_Coordinator_name'),
+            'director'      => $first('director_name'),
+            'jointDirector' => $first('joint_director_name'),
+        ];
+    }
+
+    /**
      * Who may edit a course's weekly info sheet: Training, Super Admin, Admin,
      * Training MCTP Admin, Training IST and Training-Induction for any course,
      * and the course's own Coordinator and Assistant Coordinators (employee
@@ -4070,6 +4172,7 @@ class CalendarController extends Controller
         $participants = null;
         $coordinator = null;
         $assistantCoordinator = null;
+        $assistantCoordinators = [];
         $director = null;
         $jointDirector = null;
         $participantsProfile = null;
@@ -4100,23 +4203,12 @@ class CalendarController extends Controller
                 ->where('course_master_pk', $courseId)
                 ->where('active_inactive', 1)
                 ->count();
-            $cc = DB::table('course_coordinator_master')->where('courses_master_pk', $courseId)->first();
-            if ($cc) {
-                // These columns hold a faculty pk ("364") on current rows and a
-                // typed name on older ones; print the name either way.
-                $personName = function ($value) {
-                    $value = trim((string) $value);
-                    if ($value !== '' && ctype_digit($value)) {
-                        $name = DB::table('faculty_master')->where('pk', (int) $value)->value('full_name');
-                        return $name !== null ? preg_replace('/\s+/', ' ', trim($name)) : $value;
-                    }
-                    return $value !== '' ? $value : null;
-                };
-                $coordinator = $personName($cc->Coordinator_name ?? null);
-                $assistantCoordinator = $personName($cc->Assistant_Coordinator_name ?? null);
-                $director = $cc->director_name ?? null;
-                $jointDirector = $cc->joint_director_name ?? null;
-            }
+            $people = $this->courseCoordinatorPeople((int) $courseId);
+            $coordinator = $people['coordinators'] ? implode(', ', $people['coordinators']) : null;
+            $assistantCoordinators = $people['assistants'];
+            $assistantCoordinator = $assistantCoordinators ? implode(', ', $assistantCoordinators) : null;
+            $director = $people['director'];
+            $jointDirector = $people['jointDirector'];
             $mentionOfWeek = DB::table('course_week_notes')
                 ->where('course_master_pk', $courseId)
                 ->where('week_start', $weekStart->toDateString())
@@ -4135,6 +4227,7 @@ class CalendarController extends Controller
             'participants'         => $participants,
             'coordinator'          => $coordinator,
             'assistantCoordinator' => $assistantCoordinator,
+            'assistantCoordinators' => $assistantCoordinators,
             'director'             => $director,
             'jointDirector'        => $jointDirector,
             'participantsProfile'  => $participantsProfile,

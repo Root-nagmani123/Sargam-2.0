@@ -5,7 +5,10 @@ namespace Tests\Feature;
 use App\Http\Controllers\Admin\CalendarController;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Schema;
 use ReflectionMethod;
 use Tests\TestCase;
@@ -38,6 +41,14 @@ class TimetableInfoSheetTest extends TestCase
         if (!Schema::hasTable('course_week_notes') || !Schema::hasColumn('course_week_notes', 'counsellor_meta')) {
             $this->markTestSkipped('course_week_notes info-sheet columns are not migrated on this database.');
         }
+
+        // The sheet prints only for a reader of the course (review finding F-019,
+        // TimetablePdfInfoSheetAccessTest); these tests are about its content, so
+        // they read as an editor.
+        $editor = new User;
+        $editor->forceFill(['pk' => 90200099, 'user_id' => null, 'user_category' => 'E']);
+        Auth::setUser($editor);
+        Session::put('user_roles', ['Super Admin']);
 
         DB::table('course_master')->insert([
             'pk' => self::COURSE_PK, 'course_name' => 'Fixture Phase', 'couse_short_name' => 'FP',
