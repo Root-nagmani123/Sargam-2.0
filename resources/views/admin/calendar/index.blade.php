@@ -16,6 +16,230 @@
 <link rel="stylesheet" href="{{ asset('css/calendar-admin.css') }}?v={{ @filemtime(public_path('css/calendar-admin.css')) ?: time() }}">
 <link rel="stylesheet" href="{{ asset('css/cal-event-pill.css') }}">
 <link rel="stylesheet" href="{{ asset('css/cal-portal-master.css') }}">
+{{-- Weekly timetable (#eventListView) on the design-system tokens (docs/design.md).
+     Inline next to the page's own stylesheets rather than @push('styles'): the
+     Officer Trainee layout (admin.layouts.timetable) renders no styles stack. --}}
+<style>
+    #eventListView { --tt-time-w: 6.5rem; --tt-day-min: 11rem; --tt-accent: rgba(var(--bs-primary-rgb, 0 67 132), .45); }
+
+    /* Header */
+    #eventListView .tt-header {
+        background: var(--ds-surface);
+        border: 1px solid var(--ds-line);
+        border-radius: var(--ds-radius-card);
+        box-shadow: var(--ds-shadow-sm);
+        padding: var(--ds-space-3);
+        margin-bottom: var(--ds-space-3);
+    }
+    #eventListView .tt-header-main {
+        display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+        gap: var(--ds-space-3);
+    }
+    #eventListView .tt-title-block { display: flex; align-items: center; gap: var(--ds-space-3); min-width: 0; }
+    #eventListView .tt-title-icon {
+        width: 2.75rem; height: 2.75rem; flex-shrink: 0;
+        display: inline-flex; align-items: center; justify-content: center;
+        border-radius: var(--ds-radius-card);
+        background: rgba(var(--bs-primary-rgb, 0 67 132), .1);
+        color: var(--ds-primary); font-size: 1.25rem;
+    }
+    #eventListView .tt-title { font-size: 1.25rem; font-weight: 600; color: var(--ds-ink); margin: 0; letter-spacing: -.01em; }
+    #eventListView .tt-subtitle { font-size: .875rem; color: var(--ds-ink-muted); margin: var(--ds-space-1) 0 0; }
+    #eventListView .tt-week-badge {
+        font-size: .75rem; font-weight: 600; color: var(--ds-primary);
+        background: rgba(var(--bs-primary-rgb, 0 67 132), .1);
+        border-radius: var(--ds-radius); padding: .125rem var(--ds-space-2);
+    }
+    #eventListView .tt-weeknav .btn { border-radius: var(--ds-radius); min-height: var(--ds-control-h-sm); }
+    #eventListView .tt-weeknav .btn + .btn { margin-left: var(--ds-space-1); }
+    #eventListView .tt-actions {
+        display: flex; flex-wrap: wrap; align-items: center; gap: var(--ds-space-2);
+        margin-top: var(--ds-space-3); padding-top: var(--ds-space-3);
+        border-top: 1px solid var(--ds-line);
+    }
+    #eventListView .tt-actions .btn { border-radius: var(--ds-radius); }
+    #eventListView .tt-legend { display: inline-flex; flex-wrap: wrap; gap: var(--ds-space-3); font-size: .8125rem; color: var(--ds-ink-muted); }
+    #eventListView .tt-legend-item { display: inline-flex; align-items: center; gap: var(--ds-space-1); }
+    #eventListView .tt-swatch { width: .75rem; height: .75rem; border-radius: 2px; background: var(--tt-accent); }
+    #eventListView .tt-swatch--a { background: var(--ds-primary); }
+    #eventListView .tt-swatch--b { background: var(--ds-secondary); }
+    #eventListView .tt-swatch--ab { background: linear-gradient(var(--ds-primary) 0 50%, var(--ds-secondary) 50% 100%); }
+    #eventListView .tt-swatch--break { background: var(--bs-warning-border-subtle, #ffe69c); }
+
+    /* Day navigation */
+    #eventListView .tt-daynav { margin-bottom: var(--ds-space-3); }
+    #eventListView .tt-daynav .row {
+        display: flex; flex-wrap: nowrap; gap: var(--ds-space-2);
+        margin: 0; overflow-x: auto; padding-bottom: var(--ds-space-1);
+        scrollbar-width: thin;
+    }
+    #eventListView .tt-daynav .row > * { width: auto; margin: 0; }
+    #eventListView .tt-day {
+        flex: 1 0 7.5rem;
+        display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto;
+        column-gap: var(--ds-space-2); align-items: center; text-align: left;
+        padding: var(--ds-space-2) var(--ds-space-3);
+        background: var(--ds-surface); color: var(--ds-ink);
+        border: 1px solid var(--ds-line); border-radius: var(--ds-radius-card);
+        box-shadow: var(--ds-shadow-sm);
+        transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+    }
+    #eventListView .tt-day:hover { border-color: rgba(var(--bs-primary-rgb, 0 67 132), .4); box-shadow: var(--ds-shadow); }
+    #eventListView .tt-day:focus-visible { outline: 0; box-shadow: var(--ds-focus-ring); }
+    #eventListView .tt-day-date { grid-row: 1 / span 2; font-size: 1.5rem; font-weight: 600; line-height: 1; }
+    #eventListView .tt-day-name { grid-column: 2; font-size: .8125rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ds-ink-muted); }
+    #eventListView .tt-day-month { display: none; }
+    #eventListView .tt-day-count { grid-column: 2; font-size: .75rem; color: var(--ds-ink-muted); }
+    #eventListView .tt-day.is-today .tt-day-name::after { content: ' · Today'; color: var(--ds-secondary); }
+    #eventListView .tt-day.is-active { background: var(--ds-primary); border-color: var(--ds-primary); color: #fff; }
+    #eventListView .tt-day.is-active .tt-day-name,
+    #eventListView .tt-day.is-active .tt-day-count,
+    #eventListView .tt-day.is-active.is-today .tt-day-name::after { color: rgba(255, 255, 255, .85); }
+
+    /* Grid */
+    #eventListView .tt-grid-wrap {
+        background: var(--ds-surface);
+        border: 1px solid var(--ds-line); border-radius: var(--ds-radius-card);
+        box-shadow: var(--ds-shadow-sm); overflow: hidden;
+    }
+    #eventListView .tt-scroll { max-height: 75vh; overflow: auto; margin: 0; }
+    #eventListView .tt-scroll:focus-visible { outline: 0; box-shadow: inset var(--ds-focus-ring); }
+    #eventListView .tt-grid {
+        width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; table-layout: fixed;
+        /* Not .table: the theme forces .table th to #787878 on #F3F3F3 (!important), below AA contrast. */
+        min-width: calc(var(--tt-time-w) + 5 * var(--tt-day-min));
+    }
+    #eventListView .tt-grid thead th {
+        position: sticky; top: 0; z-index: 3;
+        background: var(--ds-surface-2); color: var(--ds-ink);
+        border: 0; border-bottom: 1px solid var(--ds-line);
+        padding: var(--ds-space-2) var(--ds-space-3);
+        text-align: left; vertical-align: middle; font-weight: 600;
+    }
+    #eventListView .tt-grid thead th.time-column { width: var(--tt-time-w); left: 0; z-index: 4; color: var(--ds-ink-muted); font-size: .8125rem; }
+    #eventListView .tt-grid .tt-th-day { display: block; font-size: .875rem; }
+    #eventListView .tt-grid .tt-th-date { display: block; font-size: .75rem; font-weight: 500; color: var(--ds-ink-muted); }
+    #eventListView .tt-grid thead th.is-today .tt-th-day { color: var(--ds-secondary); }
+    #eventListView .tt-grid thead th.tt-col-active { box-shadow: inset 0 -3px 0 var(--ds-primary); }
+    #eventListView .tt-grid tbody th.time-slot {
+        position: sticky; left: 0; z-index: 2;
+        width: var(--tt-time-w);
+        background: var(--ds-surface); color: var(--ds-ink);
+        border: 0; border-right: 1px solid var(--ds-line); border-bottom: 1px solid var(--ds-line);
+        padding: var(--ds-space-2) var(--ds-space-3); vertical-align: top; font-weight: 600;
+    }
+    #eventListView .tt-time-start { display: block; font-size: .8125rem; white-space: nowrap; }
+    #eventListView .tt-time-end { display: block; font-size: .75rem; font-weight: 500; color: var(--ds-ink-muted); white-space: nowrap; }
+    #eventListView .tt-grid td.event-cell {
+        border: 0; border-bottom: 1px solid var(--ds-line); border-right: 1px dashed var(--ds-line);
+        padding: var(--ds-space-2); vertical-align: top;
+        max-height: none; overflow: visible; background: transparent;
+    }
+    #eventListView .tt-grid td.event-cell:hover { background: transparent; }
+    #eventListView .tt-grid td.event-cell.tt-col-active { background: rgba(var(--bs-primary-rgb, 0 67 132), .03); }
+    #eventListView .tt-grid td.event-cell::before,
+    #eventListView .tt-grid td.event-cell::after { display: none; }
+
+    /* Break band */
+    #eventListView .tt-break-row th.time-slot { background: var(--bs-warning-bg-subtle, #fff3cd); }
+    #eventListView .tt-break-band {
+        background: var(--bs-warning-bg-subtle, #fff3cd);
+        color: var(--bs-warning-text-emphasis, #664d03);
+        border: 0; border-bottom: 1px solid var(--bs-warning-border-subtle, #ffe69c);
+        padding: var(--ds-space-2) var(--ds-space-3);
+        font-weight: 600; font-size: .875rem; vertical-align: middle;
+    }
+    #eventListView .tt-break-band i { margin-right: var(--ds-space-2); }
+    #eventListView .tt-break-time { margin-left: var(--ds-space-2); font-weight: 500; opacity: .85; }
+
+    /* Session card */
+    #eventListView .tt-card {
+        position: relative;
+        background: var(--ds-surface);
+        border: 1px solid var(--ds-line); border-left: 3px solid var(--tt-accent);
+        border-radius: var(--ds-radius);
+        padding: var(--ds-space-2);
+        transition: box-shadow .15s ease, transform .15s ease, border-color .15s ease;
+    }
+    #eventListView .tt-card + .tt-card { margin-top: var(--ds-space-2); }
+    #eventListView .tt-card[role="button"] { cursor: pointer; }
+    #eventListView .tt-card[role="button"]:hover { box-shadow: var(--ds-shadow); transform: translateY(-1px); }
+    #eventListView .tt-card:focus-visible { outline: 0; box-shadow: var(--ds-focus-ring); }
+    #eventListView .tt-card--group-a { border-left-color: var(--ds-primary); background: rgba(var(--bs-primary-rgb, 0 67 132), .04); }
+    #eventListView .tt-card--group-b { border-left-color: var(--ds-secondary); background: rgba(177, 41, 35, .04); }
+    #eventListView .tt-card--break {
+        border-color: var(--bs-warning-border-subtle, #ffe69c);
+        border-left-color: var(--bs-warning-border-subtle, #ffe69c);
+        background: var(--bs-warning-bg-subtle, #fff3cd);
+    }
+    #eventListView .tt-card-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--ds-space-1); margin-bottom: var(--ds-space-1); }
+    #eventListView .tt-card-time { font-size: .75rem; font-weight: 600; color: var(--ds-ink-muted); white-space: nowrap; }
+    #eventListView .tt-card-time i { margin-right: .25rem; }
+    #eventListView .tt-card-group {
+        font-size: .6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; white-space: nowrap;
+        padding: 0 .375rem; border-radius: var(--ds-radius);
+        background: rgba(var(--bs-primary-rgb, 0 67 132), .1); color: var(--ds-primary);
+    }
+    #eventListView .tt-card--group-b .tt-card-group { background: rgba(177, 41, 35, .1); color: var(--ds-secondary); }
+    /* Both groups attend: a split accent - Group A over Group B. */
+    #eventListView .tt-card--group-ab {
+        border-left-color: transparent;
+        background:
+            linear-gradient(var(--ds-primary) 0 50%, var(--ds-secondary) 50% 100%) left / 3px 100% no-repeat,
+            var(--ds-surface);
+    }
+    #eventListView .tt-card-title { font-size: .875rem; font-weight: 600; line-height: 1.35; color: var(--ds-ink); overflow-wrap: anywhere; }
+    #eventListView .tt-card-meta,
+    #eventListView .tt-card-venue {
+        display: flex; align-items: flex-start; gap: .375rem;
+        margin-top: var(--ds-space-1); font-size: .8125rem; line-height: 1.35; color: var(--ds-ink-muted);
+        overflow-wrap: anywhere;
+    }
+    #eventListView .tt-card-venue span {
+        background: var(--ds-surface-2); border: 1px solid var(--ds-line);
+        border-radius: var(--ds-radius); padding: 0 .375rem; color: var(--ds-ink);
+    }
+    #eventListView .tt-card-meta i, #eventListView .tt-card-venue i { margin-top: .1rem; }
+
+    #eventListView .tt-empty-cell { border: 0; padding: var(--ds-space-6) var(--ds-space-3); }
+    #eventListView .tt-empty { text-align: center; color: var(--ds-ink-muted); }
+    #eventListView .tt-empty i { display: block; font-size: 2rem; margin-bottom: var(--ds-space-2); }
+
+    /* Tablet: the grid scrolls sideways under a pinned time column. */
+    @media (max-width: 991.98px) {
+        #eventListView { --tt-time-w: 5.5rem; --tt-day-min: 10rem; }
+    }
+
+    /* Phone: one day at a time, picked from the day chips. */
+    @media (max-width: 767.98px) {
+        #eventListView .tt-header { padding: var(--ds-space-2) var(--ds-space-3); }
+        #eventListView .tt-weeknav { width: 100%; }
+        #eventListView .tt-weeknav .btn { flex: 1; }
+        #eventListView .tt-actions .btn span { display: none; }
+        #eventListView .tt-legend { display: none; }
+        #eventListView .tt-day { flex: 0 0 5.5rem; grid-template-columns: 1fr; text-align: center; padding: var(--ds-space-2); }
+        #eventListView .tt-day-date { grid-row: auto; }
+        #eventListView .tt-day-name, #eventListView .tt-day-count { grid-column: 1; }
+        #eventListView .tt-day.is-today .tt-day-name::after { content: ''; }
+        /* One day: each row becomes a two-column grid (time | sessions). */
+        #eventListView .tt-grid { min-width: 0; table-layout: auto; }
+        #eventListView .tt-grid, #eventListView .tt-grid thead, #eventListView .tt-grid tbody { display: block; }
+        #eventListView .tt-grid tr { display: grid; grid-template-columns: var(--tt-time-w) minmax(0, 1fr); }
+        #eventListView .tt-grid thead th, #eventListView .tt-grid tbody th.time-slot { position: static; width: auto; }
+        #eventListView .tt-grid[data-active-day] thead th[data-day]:not(.tt-col-active),
+        #eventListView .tt-grid[data-active-day] td.event-cell:not(.tt-col-active),
+        #eventListView .tt-grid[data-active-day] tr.tt-row-empty-day { display: none; }
+        #eventListView .tt-grid td.event-cell, #eventListView .tt-break-band { display: block; border-right: 0; }
+        #eventListView .tt-grid td.event-cell.tt-col-active { background: transparent; }
+        #eventListView .tt-grid thead th.tt-col-active { box-shadow: none; }
+        #eventListView .tt-scroll { max-height: none; overflow: visible; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        #eventListView .tt-card, #eventListView .tt-day { transition: none; }
+        #eventListView .tt-card[role="button"]:hover { transform: none; }
+    }
+</style>
 
 <div class="container-fluid calendar-admin-page cal-master-page">
     @if(!isset($courseMaster) || $courseMaster->isEmpty())
@@ -162,76 +386,80 @@
 
                     <!-- List View -->
                     <div id="eventListView" class="mt-4 d-none" role="region" aria-label="Weekly timetable">
-                        <div class="timetable-wrapper">
-                            <!-- Timetable Header -->
-                            <div class="timetable-header bg-gradient shadow-sm border rounded-4 p-4 mb-4">
-                                <div class="row align-items-center g-4">
-                                    <div class="col-md-2 text-center text-md-start">
-                                        <div class="logo-wrapper p-2 bg-white rounded-3 shadow-sm d-inline-block">
-                                            <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo"
-                                                class="img-fluid" width="70" height="70">
+                        <div class="timetable-wrapper tt">
+                            {{-- Header: title, week, navigation and the week's exports --}}
+                            <header class="tt-header">
+                                <div class="tt-header-main">
+                                    <div class="tt-title-block">
+                                        <span class="tt-title-icon" aria-hidden="true"><i class="bi bi-calendar3-week"></i></span>
+                                        <div class="min-w-0">
+                                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                                <h1 class="tt-title">Weekly Timetable</h1>
+                                                <span class="tt-week-badge">Week <span id="currentWeekNumber">—</span></span>
+                                            </div>
+                                            <p class="tt-subtitle" id="weekRangeText" aria-live="polite">
+                                                <i class="bi bi-calendar-week me-2" aria-hidden="true"></i>—
+                                            </p>
                                         </div>
                                     </div>
-
-                                    <div class="col-md-6 text-center">
-                                        <h1 class="h3 mb-2 fw-bold text-primary">Weekly Timetable</h1>
-                                        <p class="text-muted mb-0 fw-medium" id="weekRangeText" aria-live="polite">
-                                            <i class="bi bi-calendar-week me-2" aria-hidden="true"></i>—
-                                        </p>
-                                    </div>
-
-                                    <div class="col-md-4 text-center text-md-end">
-                                        <div class="week-controls bg-white rounded-3 p-3 shadow-sm d-inline-block">
-                                            <div class="btn-group mb-2" role="group" aria-label="Week navigation">
-                                                <button type="button" class="btn btn-outline-primary" id="prevWeekBtn"
-                                                    aria-label="Previous week">
-                                                    <i class="bi bi-chevron-left"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-primary px-4" id="currentWeekBtn"
-                                                    aria-label="Current week">
-                                                    <i class="bi bi-calendar-check me-2"></i>Today
-                                                </button>
-                                                <button type="button" class="btn btn-outline-primary" id="nextWeekBtn"
-                                                    aria-label="Next week">
-                                                    <i class="bi bi-chevron-right"></i>
-                                                </button>
-                                            </div>
-
-                                            <div class="week-badge">
-                                                <span class="badge bg-primary-subtle text-primary fs-6 px-3 py-2">
-                                                    Week <span id="currentWeekNumber" class="fw-bold">—</span>
-                                                </span>
-                                            </div>
-
-                                            {{-- Whole-week timetable: download / print PDF --}}
-                                            <div class="btn-group btn-group-sm mt-2" role="group" aria-label="Timetable export">
-                                                <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-1" id="btnWeekTimetablePdf" title="Download the whole week as a PDF">
-                                                    <i class="bi bi-download"></i><span>Download</span>
-                                                </button>
-                                                <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-1" id="btnWeekTimetablePrint" title="Print the whole week timetable">
-                                                    <i class="bi bi-printer"></i><span>Print</span>
-                                                </button>
-                                                <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1" id="btnWeekInfoPdf" title="Course information & faculty for the week (PDF)">
-                                                    <i class="bi bi-people"></i><span>Info Sheet</span>
-                                                </button>
-                                            </div>
-                                        </div>
+                                    <div class="btn-group tt-weeknav" role="group" aria-label="Week navigation">
+                                        <button type="button" class="btn btn-outline-primary" id="prevWeekBtn" aria-label="Previous week">
+                                            <i class="bi bi-chevron-left"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-primary" id="currentWeekBtn" aria-label="Current week">
+                                            <i class="bi bi-calendar-check me-1"></i>Today
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary" id="nextWeekBtn" aria-label="Next week">
+                                            <i class="bi bi-chevron-right"></i>
+                                        </button>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Week Cards (Accessible, GIGW-friendly) -->
-                            <div id="weekCards" class="week-cards mb-4" role="region" aria-labelledby="weekCardsTitle">
-                                <h2 id="weekCardsTitle" class="h5 fw-bold text-primary mb-3">Week at a glance</h2>
-                                <div class="row g-3" role="list" aria-label="Days of the week">
-                                    <!-- JS will render day cards here -->
+                                {{-- Whole-week timetable: download / print PDF, info sheet --}}
+                                <div class="tt-actions" role="group" aria-label="Timetable export">
+                                    <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" id="btnWeekTimetablePdf" title="Download the whole week as a PDF">
+                                        <i class="bi bi-download"></i><span>Download</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" id="btnWeekTimetablePrint" title="Print the whole week timetable">
+                                        <i class="bi bi-printer"></i><span>Print</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" id="btnWeekInfoPdf" title="Course information & faculty for the week (PDF)">
+                                        <i class="bi bi-people"></i><span>Info Sheet</span>
+                                    </button>
+                                    {{-- The roles CalendarController::canEditWeeklyInfo() admits, plus anyone
+                                         coordinating a course - the controller decides per course. The
+                                         editor modal below is included on the same condition. --}}
+                                    @php
+                                        $canEditInfoSheet = hasRole('Training') || hasRole('Super Admin') || hasRole('Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Training-Induction')
+                                            || \App\Models\CourseCordinatorMaster::courseIdsForUser();
+                                    @endphp
+                                    @if($canEditInfoSheet)
+                                        <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" id="btnEditWeekInfo" title="Edit this week's venues line, notes and P.T.O. page">
+                                            <i class="bi bi-pencil-square"></i><span>Edit Info Sheet</span>
+                                        </button>
+                                    @endif
+                                    <span class="tt-legend ms-lg-auto" aria-label="Legend">
+                                        <span class="tt-legend-item"><span class="tt-swatch tt-swatch--session"></span>Session</span>
+                                        <span class="tt-legend-item"><span class="tt-swatch tt-swatch--a"></span>Group A</span>
+                                        <span class="tt-legend-item"><span class="tt-swatch tt-swatch--b"></span>Group B</span>
+                                        <span class="tt-legend-item"><span class="tt-swatch tt-swatch--ab"></span>Groups A &amp; B</span>
+                                        <span class="tt-legend-item"><span class="tt-swatch tt-swatch--break"></span>Break</span>
+                                    </span>
                                 </div>
-                            </div>
+                            </header>
 
-                            <!-- Timetable table -->
-                            <div class="timetable-container border rounded-3 overflow-hidden">
-                                <div class="table-responsive" role="region" aria-label="Weekly timetable">
-                                    <table class="table table-bordered timetable-grid" id="timetableTable"
+                            {{-- Day navigation: one chip per day (date + sessions). On a phone it picks the day shown. --}}
+                            <nav id="weekCards" class="tt-daynav" aria-labelledby="weekCardsTitle">
+                                <h2 id="weekCardsTitle" class="visually-hidden">Days of the week</h2>
+                                <div class="row" role="tablist" aria-label="Days of the week">
+                                    <!-- JS renders the day chips here -->
+                                </div>
+                            </nav>
+
+                            <!-- Timetable grid -->
+                            <div class="timetable-container tt-grid-wrap">
+                                <div class="table-responsive tt-scroll" role="region" aria-label="Weekly timetable" tabindex="0">
+                                    <table class="timetable-grid tt-grid" id="timetableTable"
                                         aria-describedby="timetableDescription">
                                         <caption class="visually-hidden" id="timetableDescription">
                                             Weekly academic timetable showing events
@@ -269,7 +497,7 @@
 @include('admin.calendar.partials.events_details')
 @include('admin.calendar.partials.event_hover_card')
 @include('admin.calendar.partials.confirmation')
-@if(hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST'))
+@if($canEditInfoSheet ?? false)
 @include('admin.calendar.partials.weekly_info_editor')
 @endif
 
@@ -1548,6 +1776,9 @@ class CalendarManager {
         document.getElementById('btnWeekInfoPdf')?.addEventListener('click', () => this.openWeeklyInfoPdf(false));
         document.getElementById('btnEditWeekInfo')?.addEventListener('click', () => this.openWeeklyInfoEditor());
         document.getElementById('weeklyInfoForm')?.addEventListener('submit', (e) => this.saveWeeklyInfo(e));
+        document.getElementById('wiAddNote')?.addEventListener('click', () => this.addWeeklyInfoNoteRow());
+        document.getElementById('wiAddLanguage')?.addEventListener('click', () => this.addWeeklyInfoLanguageRow());
+        document.getElementById('wiAddVenue')?.addEventListener('click', () => this.addWeeklyInfoVenueRow());
 
         // Form submission
         document.getElementById('eventForm')?.addEventListener('submit', (e) => this.handleFormSubmit(e));
@@ -1588,13 +1819,13 @@ class CalendarManager {
         // List view: open details on click/keyboard
         const listView = document.getElementById('eventListView');
         listView?.addEventListener('click', (e) => {
-            const card = e.target.closest('.list-event-card');
+            const card = e.target.closest('.list-event-card, .tt-card');
             if (card?.dataset?.id) {
                 this.loadEventDetails(card.dataset.id);
             }
         });
         listView?.addEventListener('keydown', (e) => {
-            const card = e.target.closest('.list-event-card');
+            const card = e.target.closest('.list-event-card, .tt-card');
             if (!card) return;
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
@@ -2637,8 +2868,12 @@ async setInternalFaculty(internalFacultyIds) {
             const url = `${CalendarConfig.api.weeklyInfoMeta}?course_id=${this.selectedCourseId}&week_start=${weekStart}`;
             const res = await fetch(url, { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' } });
             const data = await res.json();
-            if (!res.ok) {
+            if (!res.ok && res.status !== 403) {
                 throw new Error(data.error || 'Failed to load details.');
+            }
+            if (res.status === 403 || !data.can_edit) {
+                this.showNotification('You can edit the info sheet only for courses you coordinate.', 'warning');
+                return;
             }
 
             document.getElementById('wi_course_id').value = data.course_id;
@@ -2646,7 +2881,23 @@ async setInternalFaculty(internalFacultyIds) {
             document.getElementById('wi_director').value = data.director_name || '';
             document.getElementById('wi_joint_director').value = data.joint_director_name || '';
             document.getElementById('wi_participants_profile').value = data.participants_profile || '';
+            document.getElementById('wi_sheet_title').value = data.sheet_title || '';
             document.getElementById('wi_mention_of_week').value = data.mention_of_week || '';
+
+            document.getElementById('wi_venue_line').value = data.venue_line || '';
+            document.getElementById('wi_outdoor').value = data.outdoor_activities || '';
+            document.getElementById('wi_signatory_name').value = data.signatory_name || '';
+            document.getElementById('wi_signatory_designation').value = data.signatory_designation || '';
+            document.getElementById('wi_signatory_date').value = (data.signatory_date || '').slice(0, 10);
+
+            this.renderWeeklyInfoNotes(data.notes || []);
+            this.renderWeeklyInfoLanguages(data.language_venues || []);
+            this.renderWeeklyInfoVenues(data.venue_legend || []);
+            const legendOrder = document.getElementById('wi_faculty_legend_order');
+            legendOrder.value = (data.faculty_legend_order || []).join(', ');
+            legendOrder.placeholder = (data.faculty_codes || []).join(', ');
+            this.renderWeeklyInfoCounsellors(data.counsellors || [], data.counsellor_meta || {});
+            this.renderWeeklyInfoSpeakers(data.speakers || [], data.guest_moderators || {});
 
             const course = (this.courses || []).find(c => c.pk == data.course_id);
             document.getElementById('weeklyInfoContext').textContent =
@@ -2658,10 +2909,201 @@ async setInternalFaculty(internalFacultyIds) {
         }
     }
 
+    /** One removable text input per note. */
+    renderWeeklyInfoNotes(notes) {
+        document.getElementById('wiNotesList').innerHTML = '';
+        (notes.length ? notes : ['']).forEach(note => this.addWeeklyInfoNoteRow(note));
+    }
+
+    addWeeklyInfoNoteRow(value = '') {
+        const row = document.createElement('div');
+        row.className = 'input-group input-group-sm';
+        row.innerHTML = `
+            <input type="text" class="form-control" data-wi-note maxlength="1000" placeholder="Note text…">
+            <button type="button" class="btn btn-outline-danger" data-wi-remove title="Remove">
+                <i class="bi bi-x-lg"></i>
+            </button>`;
+        row.querySelector('[data-wi-note]').value = value || '';
+        row.querySelector('[data-wi-remove]').addEventListener('click', () => row.remove());
+        document.getElementById('wiNotesList').appendChild(row);
+    }
+
+    renderWeeklyInfoLanguages(rows) {
+        document.getElementById('wiLanguageList').innerHTML = '';
+        (rows.length ? rows : [{ language: '', venue: '' }]).forEach(r => this.addWeeklyInfoLanguageRow(r));
+    }
+
+    addWeeklyInfoLanguageRow(row = { language: '', venue: '' }) {
+        const el = document.createElement('div');
+        el.className = 'input-group input-group-sm';
+        el.innerHTML = `
+            <span class="input-group-text">Language</span>
+            <input type="text" class="form-control" data-wi-lang maxlength="100" placeholder="e.g. Hindi">
+            <span class="input-group-text">Venue</span>
+            <input type="text" class="form-control" data-wi-lang-venue maxlength="200" placeholder="e.g. SR-A & B (Karmashila)">
+            <button type="button" class="btn btn-outline-danger" data-wi-remove title="Remove">
+                <i class="bi bi-x-lg"></i>
+            </button>`;
+        el.querySelector('[data-wi-lang]').value = row.language || '';
+        el.querySelector('[data-wi-lang-venue]').value = row.venue || '';
+        el.querySelector('[data-wi-remove]').addEventListener('click', () => el.remove());
+        document.getElementById('wiLanguageList').appendChild(el);
+    }
+
+    renderWeeklyInfoVenues(rows) {
+        document.getElementById('wiVenueList').innerHTML = '';
+        rows.forEach(r => this.addWeeklyInfoVenueRow(r));
+    }
+
+    addWeeklyInfoVenueRow(row = { abbreviation: '', name: '' }) {
+        const el = document.createElement('div');
+        el.className = 'input-group input-group-sm';
+        el.innerHTML = `
+            <input type="text" class="form-control" style="max-width: 7rem;" data-wi-venue-abbr maxlength="20" placeholder="e.g. VH">
+            <input type="text" class="form-control" data-wi-venue-name maxlength="200" placeholder="e.g. Vivekanand Hall (Aadharshila Building)">
+            <button type="button" class="btn btn-outline-danger" data-wi-remove title="Remove">
+                <i class="bi bi-x-lg"></i>
+            </button>`;
+        el.querySelector('[data-wi-venue-abbr]').value = row.abbreviation || '';
+        el.querySelector('[data-wi-venue-name]').value = row.name || '';
+        el.querySelector('[data-wi-remove]').addEventListener('click', () => el.remove());
+        document.getElementById('wiVenueList').appendChild(el);
+    }
+
+    /** Counsellors come from the Counsellor Groups; label, cadre wording and venue are editable. */
+    renderWeeklyInfoCounsellors(counsellors, meta) {
+        const body = document.getElementById('wiCounsellorRows');
+        body.innerHTML = '';
+        if (!counsellors.length) {
+            body.innerHTML = '<tr><td colspan="5" class="text-secondary small">No Counsellor Groups mapped for this course.</td></tr>';
+            return;
+        }
+        const savedOrder = c => Number((meta[c.faculty_pk] || meta[String(c.faculty_pk)] || {}).order) || 999;
+        [...counsellors].sort((a, b) => savedOrder(a) - savedOrder(b)).forEach(c => {
+            const saved = meta[c.faculty_pk] || meta[String(c.faculty_pk)] || {};
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="number" class="form-control form-control-sm" data-wi-c-order min="1" max="99"></td>
+                <td class="small">${this.escapeHtml(c.name)}</td>
+                <td><input type="text" class="form-control form-control-sm" data-wi-c-cadres maxlength="200"></td>
+                <td><input type="text" class="form-control form-control-sm" data-wi-c-label maxlength="60"></td>
+                <td><input type="text" class="form-control form-control-sm" data-wi-c-venue maxlength="120" placeholder="e.g. SR- I"></td>`;
+            tr.dataset.facultyPk = c.faculty_pk;
+            const cadres = tr.querySelector('[data-wi-c-cadres]');
+            cadres.placeholder = c.cadres || '';
+            cadres.value = saved.cadres || '';
+            const label = tr.querySelector('[data-wi-c-label]');
+            label.placeholder = c.abbreviation || 'e.g. JD(SW)';
+            label.value = saved.label || '';
+            tr.querySelector('[data-wi-c-venue]').value = saved.venue || '';
+            tr.querySelector('[data-wi-c-order]').value = saved.order || '';
+            body.appendChild(tr);
+        });
+    }
+
+    renderWeeklyInfoSpeakers(speakers, moderators) {
+        const body = document.getElementById('wiGuestRows');
+        body.innerHTML = '';
+        if (!speakers.length) {
+            body.innerHTML = '<tr><td colspan="2" class="text-secondary small">No speakers scheduled this week.</td></tr>';
+            return;
+        }
+        speakers.forEach(s => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="small">${this.escapeHtml(s.name)}${s.code ? ' <span class="text-secondary">(' + this.escapeHtml(s.code) + ')</span>' : ''}${s.guest ? '' : ' <span class="badge text-bg-light border">In-house</span>'}</td>
+                <td><input type="text" class="form-control form-control-sm" data-wi-mod maxlength="200" placeholder="e.g. T Bhuvaneshram, B02"></td>`;
+            tr.dataset.facultyPk = s.faculty_pk;
+            tr.querySelector('[data-wi-mod]').value =
+                moderators[s.faculty_pk] || moderators[String(s.faculty_pk)] || '';
+            body.appendChild(tr);
+        });
+    }
+
+    /**
+     * Escape for element content AND quoted attribute values. renderListEvent() puts
+     * the result inside data-group="…", aria-label="…" and title="…", so quotes must
+     * be escaped too - a textContent/innerHTML round trip leaves them as they are.
+     */
+    escapeHtml(value) {
+        return String(value ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
+    }
+
+    /**
+     * Collect the info-sheet form into the payload the API expects.
+     *
+     * Built by hand rather than from FormData: the repeatable rows would collapse
+     * to their last value through Object.fromEntries, and the counsellor and
+     * moderator maps have to be keyed by faculty pk.
+     */
+    collectWeeklyInfoPayload() {
+        const val = id => (document.getElementById(id)?.value ?? '').trim();
+        const map = (rows, pick) => {
+            const out = {};
+            rows.forEach(tr => {
+                if (!tr.dataset.facultyPk) return;
+                const value = pick(tr);
+                if (value !== null) out[tr.dataset.facultyPk] = value;
+            });
+            return out;
+        };
+
+        return {
+            course_id: val('wi_course_id'),
+            week_start: val('wi_week_start'),
+
+            director_name: val('wi_director'),
+            joint_director_name: val('wi_joint_director'),
+            participants_profile: val('wi_participants_profile'),
+            sheet_title: val('wi_sheet_title'),
+            mention_of_week: val('wi_mention_of_week'),
+
+            venue_line: val('wi_venue_line'),
+            notes: [...document.querySelectorAll('#wiNotesList [data-wi-note]')]
+                .map(i => i.value.trim()).filter(Boolean),
+
+            outdoor_activities: val('wi_outdoor'),
+            language_venues: [...document.querySelectorAll('#wiLanguageList .input-group')]
+                .map(el => ({
+                    language: el.querySelector('[data-wi-lang]').value.trim(),
+                    venue: el.querySelector('[data-wi-lang-venue]').value.trim(),
+                }))
+                .filter(r => r.language !== ''),
+            venue_legend: [...document.querySelectorAll('#wiVenueList .input-group')]
+                .map(el => ({
+                    abbreviation: el.querySelector('[data-wi-venue-abbr]').value.trim(),
+                    name: el.querySelector('[data-wi-venue-name]').value.trim(),
+                }))
+                .filter(r => r.abbreviation !== ''),
+
+            counsellor_meta: map([...document.querySelectorAll('#wiCounsellorRows tr')], tr => {
+                const label = tr.querySelector('[data-wi-c-label]')?.value.trim() ?? '';
+                const venue = tr.querySelector('[data-wi-c-venue]')?.value.trim() ?? '';
+                const cadres = tr.querySelector('[data-wi-c-cadres]')?.value.trim() ?? '';
+                const order = tr.querySelector('[data-wi-c-order]')?.value.trim() ?? '';
+                return (label || venue || cadres || order) ? { label, venue, cadres, order } : null;
+            }),
+
+            guest_moderators: map([...document.querySelectorAll('#wiGuestRows tr')], tr => {
+                const name = tr.querySelector('[data-wi-mod]')?.value.trim() ?? '';
+                return name || null;
+            }),
+
+            faculty_legend_order: val('wi_faculty_legend_order'),
+            signatory_name: val('wi_signatory_name'),
+            signatory_designation: val('wi_signatory_designation'),
+            signatory_date: val('wi_signatory_date'),
+        };
+    }
+
     /** Persist info-sheet details. */
     async saveWeeklyInfo(e) {
         e.preventDefault();
-        const form = document.getElementById('weeklyInfoForm');
         const alertEl = document.getElementById('weeklyInfoAlert');
         const saveBtn = document.getElementById('wiSaveBtn');
         alertEl.classList.add('d-none');
@@ -2675,7 +3117,7 @@ async setInternalFaculty(internalFacultyIds) {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
-                body: JSON.stringify(Object.fromEntries(new FormData(form).entries()))
+                body: JSON.stringify(this.collectWeeklyInfoPayload())
             });
             const data = await res.json();
             if (!res.ok) {
@@ -2723,6 +3165,10 @@ async setInternalFaculty(internalFacultyIds) {
                 url += '?' + params.toString();
             }
             
+            // Week buttons can be clicked faster than the feed answers: only the latest
+            // request may draw, or a slower earlier week overwrites the one on screen.
+            const requestNo = (this.listViewRequestNo = (this.listViewRequestNo || 0) + 1);
+
             const response = await fetch(url, {
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -2730,6 +3176,9 @@ async setInternalFaculty(internalFacultyIds) {
                 }
             });
             const events = await response.json();
+            if (requestNo !== this.listViewRequestNo) {
+                return;
+            }
 
             // Update week display in header (use same calculation as updateCurrentWeek)
             const date = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate());
@@ -2740,9 +3189,13 @@ async setInternalFaculty(internalFacultyIds) {
             const weekDiff = Math.floor(timeDiff / (7 * 24 * 60 * 60 * 1000));
             const weekNum = weekDiff + 1;
 
-            const weekElement = document.getElementById('currentWeek');
+            const weekElement = document.getElementById('currentWeekNumber') || document.getElementById('currentWeek');
             if (weekElement) {
-                weekElement.textContent = weekNum;
+                // The course's own week when a course is chosen - "Week 08" as the printed
+                // sheet numbers it - else the calendar week.
+                const courseWeek = this.courseWeekNumber(weekStart);
+                weekElement.textContent = courseWeek ? String(courseWeek).padStart(2, '0') : weekNum;
+                weekElement.parentElement?.setAttribute('title', courseWeek ? 'Week of the course' : 'Calendar week');
             }
 
             // This week's events decide which weekend columns the header, the
@@ -2789,10 +3242,13 @@ async setInternalFaculty(internalFacultyIds) {
         }
 
         const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const keys = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
         const headers = thead.querySelectorAll('th:not(.time-column)');
         const visibleDays = this.visibleWeekDayIndexes();
+        const todayYmd = this.toYmd(new Date());
 
         headers.forEach((header, index) => {
+            header.dataset.day = keys[index];
             if (!visibleDays.includes(index)) {
                 header.classList.add('d-none');
                 return;
@@ -2801,11 +3257,9 @@ async setInternalFaculty(internalFacultyIds) {
 
             const date = new Date(weekStart);
             date.setDate(date.getDate() + index);
-            const dateStr = date.toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric'
-            });
-            header.innerHTML = `${days[index]}<br><small class="text-muted">${dateStr}</small>`;
+            const dateStr = date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+            header.classList.toggle('is-today', this.toYmd(date) === todayYmd);
+            header.innerHTML = `<span class="tt-th-day">${days[index]}</span><span class="tt-th-date">${dateStr}</span>`;
         });
     }
 
@@ -2817,10 +3271,10 @@ async setInternalFaculty(internalFacultyIds) {
         if (!events.length) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="${visibleDays.length + 1}" class="text-center p-5">
-                        <div class="empty-state">
-                            <i class="bi bi-calendar-x display-5 text-muted mb-3"></i>
-                            <p class="text-muted mb-3">No events scheduled</p>
+                    <td colspan="${visibleDays.length + 1}" class="tt-empty-cell">
+                        <div class="ds-empty-state tt-empty">
+                            <i class="bi bi-calendar-x" aria-hidden="true"></i>
+                            <p class="mb-0">No sessions scheduled this week</p>
                         </div>
                     </td>
                 </tr>
@@ -2828,17 +3282,54 @@ async setInternalFaculty(internalFacultyIds) {
             return;
         }
 
-        // Group events by time slot
-        const timeSlots = this.groupEventsByTime(events);
+        // Group events by time slot, earliest first.
+        const timeSlots = Object.entries(this.groupEventsByTime(events))
+            .map(([time, dayEvents]) => {
+                const all = Object.values(dayEvents).flat();
+                const starts = all.map(e => this.isAllDayEvent(e) ? null : this.eventStartDateTime(e)).filter(Boolean);
+                const ends = all.map(e => (!this.isAllDayEvent(e) && e.end) ? new Date(this.fixCalendarDateTimeString(e.end)) : null).filter(Boolean);
+                const start = starts.length ? new Date(Math.min(...starts)) : null;
+                // An end only when every session in the row ends together: a long session
+                // on one day must not stretch the label of the whole row.
+                const tod = d => d.getHours() * 60 + d.getMinutes();
+                const sameEnd = ends.length === all.length && ends.every(d => tod(d) === tod(ends[0]));
+                const end = sameEnd ? ends[0] : null;
+                const sortKey = start ? start.getHours() * 60 + start.getMinutes() : -1;
+                return { time, dayEvents, all, start, end, sortKey };
+            })
+            .sort((a, b) => a.sortKey - b.sortKey);
+
+        const hhmm = d => d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
         let html = '';
-        Object.entries(timeSlots).forEach(([time, dayEvents]) => {
+        timeSlots.forEach(slot => {
+            const label = slot.start
+                ? `<span class="tt-time-start">${hhmm(slot.start)}</span>${slot.end ? `<span class="tt-time-end">to ${hhmm(slot.end)}</span>` : ''}`
+                : `<span class="tt-time-start">${this.escapeHtml(slot.time)}</span>`;
+
+            // A slot that holds nothing but breaks is a band across the week, not a row of cells.
+            const breaksOnly = slot.all.length && slot.all.every(e => this.isBreakEvent(e));
+            if (breaksOnly) {
+                const names = [...new Set(slot.all.map(e => e.title || 'Break'))].join(' · ');
+                const icon = slot.all.some(e => /lunch/i.test(e.break_type || e.title || '')) ? 'bi-egg-fried' : 'bi-cup-hot';
+                html += `
+                <tr class="tt-break-row break-row">
+                    <th scope="row" class="time-slot">${label}</th>
+                    <td colspan="${visibleDays.length}" class="tt-break-band">
+                        <i class="bi ${icon}" aria-hidden="true"></i>
+                        <span>${this.escapeHtml(names)}</span>
+                        ${slot.start && slot.end ? `<span class="tt-break-time">${hhmm(slot.start)} – ${hhmm(slot.end)}</span>` : ''}
+                    </td>
+                </tr>`;
+                return;
+            }
+
             html += `
                 <tr>
-                    <th scope="row" class="time-slot">${time}</th>
+                    <th scope="row" class="time-slot">${label}</th>
                     ${visibleDays.map(day => `
-                        <td class="event-cell">
-                            ${dayEvents[day] ? this.renderListEvent(dayEvents[day]) : ''}
+                        <td class="event-cell" data-day="${day}">
+                            ${slot.dayEvents[day] ? this.renderListEvent(slot.dayEvents[day]) : ''}
                         </td>
                     `).join('')}
                 </tr>
@@ -2846,20 +3337,45 @@ async setInternalFaculty(internalFacultyIds) {
         });
 
         tbody.innerHTML = html;
-        this.applyBreakLunchRowStyles();
-        this.initializeScrollIndicators();
+        this.applyTimetableActiveDay();
     }
 
+    /**
+     * Week of the selected course containing weekStart, counted from the Monday of the
+     * course's start week (week 1) - the numbering the printed timetable uses. Null with
+     * no course chosen, no start date known, or a week before the course began.
+     */
+    courseWeekNumber(weekStart) {
+        if (!this.selectedCourseId) return null;
+        const archived = (typeof archivedCourses !== 'undefined' && Array.isArray(archivedCourses)) ? archivedCourses : [];
+        const course = [...(this.courses || []), ...archived].find(c => String(c.pk) === String(this.selectedCourseId));
+        if (!course || !course.start_year) return null;
+        const [y, m, d] = String(course.start_year).slice(0, 10).split('-').map(Number);
+        if (!y || !m || !d) return null;
+        const courseMonday = this.mondayOf(new Date(y, m - 1, d));
+        const weeks = Math.round((this.mondayOf(new Date(weekStart)) - courseMonday) / (7 * 864e5)) + 1;
+        return weeks >= 1 ? weeks : null;
+    }
+
+    /** True for the break rows the feed sends alongside sessions. */
+    isBreakEvent(event) {
+        const ep = event.extendedProps || event;
+        return ep.is_break === true || ep.type === 'break';
+    }
+
+    /**
+     * Day navigation: one chip per visible day with its date and session count.
+     * The chosen day is highlighted in the grid and, on a phone, is the column shown.
+     */
     renderWeekCards(events, weekStart) {
         const container = document.querySelector('#weekCards .row');
         if (!container) return;
 
         const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+        const keys = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
         const byDay = new Map();
 
         // Boundaries: Monday 00:00 inclusive to the following Monday 00:00 EXCLUSIVE.
-        // A `weekStart + 6` bound is Sunday 00:00, which excludes every Sunday event
-        // that has a time on it.
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekEnd.getDate() + 7);
 
@@ -2869,12 +3385,8 @@ async setInternalFaculty(internalFacultyIds) {
             byDay.set(this.toYmd(d), { date: d, events: [] });
         });
 
-        // Filter incoming events to week range and allocate to day buckets.
-        // The row's day is resolved with eventLocalDate(), NOT the Date constructor: the feed
-        // sends all-day rows as a bare "YYYY-MM-DD", which `new Date(str)` reads as UTC
-        // midnight. At a negative UTC offset that lands on the previous day, so the row is
-        // filed under the wrong card - and a row on the Monday boundary falls out of the week
-        // entirely. Both sides of this map are then keyed with toYmd (local) from that date.
+        // The row's day is resolved with eventLocalDate(), not the Date constructor - see
+        // eventLocalDate(): a bare all-day "YYYY-MM-DD" read as UTC lands on the wrong day.
         (events || []).forEach(evt => {
             const d = this.eventLocalDate(evt);
             if (!d) return;
@@ -2883,54 +3395,73 @@ async setInternalFaculty(internalFacultyIds) {
             if (byDay.has(key)) byDay.get(key).events.push(evt);
         });
 
+        const todayYmd = this.toYmd(new Date());
+        const visible = this.visibleWeekDayIndexes();
+
+        // Keep the chosen day when it is still in view; otherwise today, else the first day.
+        const visibleKeys = visible.map(i => keys[i]);
+        if (!visibleKeys.includes(this.timetableActiveDay)) {
+            const todayIndex = visible.find(i => {
+                const d = new Date(weekStart);
+                d.setDate(d.getDate() + i);
+                return this.toYmd(d) === todayYmd;
+            });
+            this.timetableActiveDay = keys[todayIndex !== undefined ? todayIndex : visible[0]];
+        }
+
         container.innerHTML = '';
-        this.visibleWeekDayIndexes().forEach(i => {
-            const label = days[i];
+        visible.forEach(i => {
             const d = new Date(weekStart);
             d.setDate(d.getDate() + i);
             const info = byDay.get(this.toYmd(d)) || { date: d, events: [] };
-            const count = info.events.length;
-
-            const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+            const count = info.events.filter(e => !this.isBreakEvent(e)).length;
+            const isToday = this.toYmd(d) === todayYmd;
             const fullStr = d.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-            const col = document.createElement('div');
-            col.className = 'col-12 col-md-6 col-xl-4';
-            col.setAttribute('role', 'listitem');
-            col.innerHTML = `
-                <div class="week-day-card" tabindex="0" aria-label="${label} ${fullStr}, ${count} event${count!==1?'s':''}">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="fw-bold text-dark">${label} <span class="text-muted">${dateStr}</span></div>
-                        <span class="badge bg-primary-subtle text-primary">${count} event${count!==1?'s':''}</span>
-                    </div>
-                    <div class="week-day-events">
-                        ${info.events.slice(0, 3).map(evt => {
-                            const title = evt.title || evt.extendedProps?.topic || '';
-                            const venue = evt.extendedProps?.vanue || evt.extendedProps?.venue_name || '';
-                            const faculty = evt.extendedProps?.faculty_name || '';
-                            // An all-day row carries no time of day. Reading its bare
-                            // "YYYY-MM-DD" through the Date constructor yields UTC midnight,
-                            // which prints as "05:30 am" at IST - a time nobody entered, on a
-                            // row the timetable slot beside it correctly labels "All Day".
-                            const allDay = this.isAllDayEvent(evt);
-                            const timeTxt = !evt.start
-                                ? ''
-                                : allDay
-                                    ? 'All Day'
-                                    : this.eventStartDateTime(evt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-                            const timeAria = !timeTxt ? '' : (allDay ? ', all day' : `, at ${timeTxt}`);
-                            return `
-                            <div class="mini-event d-flex align-items-center gap-2" role="button" tabindex="0" aria-label="${title}${timeAria}${venue?`, at ${venue}`:''}">
-                                <i class="bi bi-clock text-primary" aria-hidden="true"></i>
-                                <span class="mini-title text-truncate">${title}</span>
-                                ${timeTxt ? `<span class="mini-time text-muted">${timeTxt}</span>` : ''}
-                            </div>`;
-                        }).join('')}
-                        ${count > 3 ? `<a href="#" class="mini-more" aria-label="Show ${count-3} more events">+ ${count-3} more</a>` : ''}
-                    </div>
-                </div>
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'tt-day' + (isToday ? ' is-today' : '');
+            chip.dataset.day = keys[i];
+            chip.setAttribute('role', 'tab');
+            chip.setAttribute('aria-label', `${fullStr}, ${count} session${count !== 1 ? 's' : ''}${isToday ? ', today' : ''}`);
+            chip.innerHTML = `
+                <span class="tt-day-name">${days[i].slice(0, 3)}</span>
+                <span class="tt-day-date">${d.getDate()}</span>
+                <span class="tt-day-month">${d.toLocaleDateString('en-IN', { month: 'short' })}</span>
+                <span class="tt-day-count">${count} session${count !== 1 ? 's' : ''}</span>
             `;
-            container.appendChild(col);
+            chip.addEventListener('click', () => this.setTimetableActiveDay(keys[i], true));
+            container.appendChild(chip);
+        });
+
+        this.applyTimetableActiveDay();
+    }
+
+    /** Choose the day the timetable focuses on (the only column shown on a phone). */
+    setTimetableActiveDay(dayKey, scroll = false) {
+        this.timetableActiveDay = dayKey;
+        this.applyTimetableActiveDay();
+        if (scroll) {
+            const th = document.querySelector(`#timetableTable thead th[data-day="${dayKey}"]`);
+            th?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+    }
+
+    applyTimetableActiveDay() {
+        const key = this.timetableActiveDay;
+        const table = document.getElementById('timetableTable');
+        if (table && key) {
+            table.dataset.activeDay = key;
+            table.querySelectorAll('[data-day]').forEach(el => el.classList.toggle('tt-col-active', el.dataset.day === key));
+            table.querySelectorAll('tbody tr').forEach(tr => {
+                const cell = tr.querySelector(`td.event-cell[data-day="${key}"]`);
+                tr.classList.toggle('tt-row-empty-day', !!cell && !cell.querySelector('.tt-card'));
+            });
+        }
+        document.querySelectorAll('#weekCards .tt-day').forEach(chip => {
+            const on = chip.dataset.day === key;
+            chip.classList.toggle('is-active', on);
+            chip.setAttribute('aria-selected', on ? 'true' : 'false');
         });
     }
 
@@ -2989,66 +3520,51 @@ async setInternalFaculty(internalFacultyIds) {
 
     renderListEvent(events) {
         const arr = Array.isArray(events) ? events : [events];
+        const esc = v => this.escapeHtml(v);
         return arr.map(event => {
             // List view fetches the raw JSON feed (flat objects), while
             // FullCalendar nests custom fields under extendedProps — support both.
             const ep = event.extendedProps || event;
-            const isBreak = ep.is_break === true || ep.type === 'break';
+            const isBreak = this.isBreakEvent(event);
             const groupName = ep.group_name || ep.group || '';
             const title = event.title || ep.topic || '';
-            const faculty = ep.faculty_name || '';
+            const faculty = String(ep.faculty_name || '').replace(/\s+/g, ' ').trim();
             const venue = ep.vanue || ep.venue_name || '';
-            const classSession = ep.class_session || '';
             // An all-day row has no time of day: reading its bare "YYYY-MM-DD" through the
             // Date constructor gives UTC midnight, printed as "05:30 am" at IST. Label it the
             // way the timetable slot does rather than inventing a range from the parse.
             const isAllDay = this.isAllDayEvent(event);
-            const startTime = (!isAllDay && event.start) ? this.eventStartDateTime(event).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
-            const endTime = (!isAllDay && event.end) ? new Date(this.fixCalendarDateTimeString(event.end)).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
-            const timeRange = isAllDay ? 'All Day' : (startTime && endTime ? `${startTime} - ${endTime}` : '');
-            
+            const fmt = d => d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+            const startTime = (!isAllDay && event.start) ? fmt(this.eventStartDateTime(event)) : '';
+            const endTime = (!isAllDay && event.end) ? fmt(new Date(this.fixCalendarDateTimeString(event.end))) : '';
+            const timeRange = isAllDay ? 'All Day' : (startTime && endTime ? `${startTime} – ${endTime}` : (ep.class_session || ''));
+            // "A" / "B" / "A, B" / "Full Group" / "Group 1" from the feed. A card takes the
+            // Group A or B colour only when that group alone attends.
+            const groups = String(groupName).split(',').map(g => g.trim()).filter(Boolean);
+            const letterOf = g => (g.match(/^(?:group\s*-?\s*)?([ab])$/i) || [])[1];
+            const letters = groups.map(letterOf);
+            const uniqueLetters = [...new Set(letters.filter(Boolean).map(l => l.toLowerCase()))].sort();
+            const group = letters.every(Boolean) ? uniqueLetters.join('') : '';   // 'a', 'b' or 'ab'
+            const groupLabel = groups.length && letters.every(Boolean)
+                ? (groups.length === 1 ? `Group ${letters[0].toUpperCase()}` : `Groups ${letters.map(l => l.toUpperCase()).join(' & ')}`)
+                : groups.join(', ');
+            // Break rows ("break_1111") have no event to open.
+            const openable = !isBreak && event.id !== undefined && !String(event.id).startsWith('break_');
+            const label = [title, timeRange, faculty && `Faculty: ${faculty}`, venue && `Venue: ${venue}`, groupLabel && `For: ${groupLabel}`]
+                .filter(Boolean).join(', ');
+
             return `
-                <div class="list-event-card p-2 mb-2 ${isBreak ? 'list-event-break' : ''}" data-group="${groupName}">
-                    ${groupName ? `<div class="group-badge">${groupName}</div>` : ''}
-                    <div class="title">${title}</div>
-                    <div class="meta d-flex align-items-center"><i class="material-icons me-1">class</i>${classSession}</div> <div class="meta d-flex align-items-center"><i class="material-icons me-1">place</i>${venue}</div>
-                    <div class="meta d-flex align-items-center"><i class="material-icons me-1">person</i>${faculty}</div>
-                    
-                    <!-- Hover Tooltip -->
-                    <div class="event-tooltip">
-                        <div class="tooltip-title">${title}</div>
-                        ${timeRange ? `
-                        <div class="tooltip-row">
-                            <i class="bi bi-clock"></i>
-                            <span class="tooltip-label">Time:</span>
-                            <span class="tooltip-value">${timeRange}</span>
-                        </div>` : ''}
-                        ${groupName ? `
-                        <div class="tooltip-row">
-                            <i class="bi bi-people"></i>
-                            <span class="tooltip-label">Group:</span>
-                            <span class="tooltip-value">${groupName}</span>
-                        </div>` : ''}
-                        ${venue ? `
-                        <div class="tooltip-row">
-                            <i class="bi bi-geo-alt"></i>
-                            <span class="tooltip-label">Venue:</span>
-                            <span class="tooltip-value">${venue}</span>
-                        </div>` : ''}
-                        ${faculty ? `
-                        <div class="tooltip-row">
-                            <i class="material-icons me-1">person</i>
-                            <span class="tooltip-label">Faculty:</span>
-                            <span class="tooltip-value">${faculty}</span>
-                        </div>` : ''}
-                        ${classSession ? `
-                        <div class="tooltip-row">
-                            <i class="material-icons me-1">book</i>
-                            <span class="tooltip-label">Session:</span>
-                            <span class="tooltip-value">${classSession}</span>
-                        </div>` : ''}
+                <article class="tt-card ${isBreak ? 'tt-card--break' : ''} ${group ? `tt-card--group-${group}` : ''}"
+                    data-group="${esc(groupName)}" ${openable ? `data-id="${esc(event.id)}" role="button" tabindex="0"` : ''}
+                    aria-label="${esc(label)}" title="${esc(label)}">
+                    <div class="tt-card-top">
+                        ${timeRange ? `<span class="tt-card-time"><i class="bi bi-clock" aria-hidden="true"></i>${esc(timeRange)}</span>` : ''}
+                        ${groupLabel ? `<span class="tt-card-group">${esc(groupLabel)}</span>` : ''}
                     </div>
-                </div>
+                    <div class="tt-card-title">${esc(title)}</div>
+                    ${faculty ? `<div class="tt-card-meta"><i class="bi bi-person" aria-hidden="true"></i><span>${esc(faculty)}</span></div>` : ''}
+                    ${venue ? `<div class="tt-card-venue"><i class="bi bi-geo-alt" aria-hidden="true"></i><span>${esc(venue)}</span></div>` : ''}
+                </article>
             `;
         }).join('');
     }
@@ -3135,7 +3651,7 @@ async setInternalFaculty(internalFacultyIds) {
         const weekNum = weekDiff + 1;
 
         // Update the week number display
-        const weekElement = document.getElementById('currentWeek');
+        const weekElement = document.getElementById('currentWeekNumber') || document.getElementById('currentWeek');
         if (weekElement) {
             weekElement.textContent = weekNum;
         }

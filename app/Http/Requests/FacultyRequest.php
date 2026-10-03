@@ -38,6 +38,8 @@ class FacultyRequest extends FormRequest
             'alternativeEmail' => 'nullable|email:rfc,dns',
             'mobile' => ['nullable', 'digits:10'],
             'photo' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
+            // faculty_master.abbreviation is VARCHAR(12); a longer value fails the whole save.
+            'abbreviation' => 'nullable|string|max:12',
         ];
     }
 
@@ -71,6 +73,7 @@ class FacultyRequest extends FormRequest
             'alternativeEmail.email' => 'Please enter a valid alternate email address (e.g. name@example.com)',
             // 'alternativeEmail.required' => 'Alternative email is required',
             'mobile.digits' => 'Mobile number must be exactly 10 digits',
+            'abbreviation.max' => 'Abbreviation may not be longer than 12 characters.',
             'photo.image' => 'The photo must be an image file.',
             'photo.mimes' => 'Only JPG and PNG formats are allowed for the photo.',
             'photo.max' => 'The photo must not exceed 2 MB.',
