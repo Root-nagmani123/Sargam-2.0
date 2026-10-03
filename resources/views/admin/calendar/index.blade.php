@@ -2868,10 +2868,10 @@ async setInternalFaculty(internalFacultyIds) {
             const url = `${CalendarConfig.api.weeklyInfoMeta}?course_id=${this.selectedCourseId}&week_start=${weekStart}`;
             const res = await fetch(url, { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' } });
             const data = await res.json();
-            if (!res.ok) {
+            if (!res.ok && res.status !== 403) {
                 throw new Error(data.error || 'Failed to load details.');
             }
-            if (!data.can_edit) {
+            if (res.status === 403 || !data.can_edit) {
                 this.showNotification('You can edit the info sheet only for courses you coordinate.', 'warning');
                 return;
             }
@@ -3020,10 +3020,18 @@ async setInternalFaculty(internalFacultyIds) {
         });
     }
 
+    /**
+     * Escape for element content AND quoted attribute values. renderListEvent() puts
+     * the result inside data-group="…", aria-label="…" and title="…", so quotes must
+     * be escaped too - a textContent/innerHTML round trip leaves them as they are.
+     */
     escapeHtml(value) {
-        const div = document.createElement('div');
-        div.textContent = value ?? '';
-        return div.innerHTML;
+        return String(value ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
     }
 
     /**

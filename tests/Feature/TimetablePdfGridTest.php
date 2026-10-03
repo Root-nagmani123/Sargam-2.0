@@ -770,6 +770,88 @@ class TimetablePdfGridTest extends TestCase
     }
 
     /**
+     * The last page has to hold what prints after the grid's last row - the
+     * VENUES and notes rows and the P.T.O. line - as well as its sessions.
+     * Swept across week sizes around the point where the sessions alone fill a
+     * page: DomPDF must print exactly the planned pages (plus the info sheet),
+     * and every planned page must carry a timed row, so the closing content
+     * never lands on a page of its own (review finding F-017).
+     */
+    public function test_the_closing_rows_and_pto_fit_on_the_planned_last_page(): void
+    {
+        $slots = [];
+        for ($m = 7 * 60; count($slots) < 18; $m += 40) {
+            $slots[] = sprintf('%02d:%02d', intdiv($m, 60), $m % 60) . ' to ' . sprintf('%02d:%02d', intdiv($m + 30, 60), ($m + 30) % 60);
+        }
+        $notes = implode("\n", array_map(
+            fn ($i) => "$i. Participants will assemble at the venue ten minutes before the session begins.",
+            range(1, 6)
+        ));
+        $sheet = [
+            'counsellors' => [], 'facultyLegend' => [], 'venueLegend' => [], 'guestSpeakers' => [], 'languageVenues' => [],
+            'outdoorActivities' => 'Morning PT, 06:30 to 07:30', 'signatoryName' => '', 'signatoryDesignation' => '', 'signatoryDate' => '',
+        ];
+
+        $controller = app(CalendarController::class);
+        $paginate = new ReflectionMethod(CalendarController::class, 'paginateWeeks');
+        $paginate->setAccessible(true);
+        $measure = new ReflectionMethod(CalendarController::class, 'measureWeek');
+        $measure->setAccessible(true);
+        $pageBody = (new \ReflectionClassConstant(CalendarController::class, 'TT_PAGE_HEIGHT'))->getValue()
+            - (new \ReflectionClassConstant(CalendarController::class, 'TT_PAGE_MARGINS'))->getValue();
+
+        $exercised = 0;
+        foreach (range(8, 18) as $n) {
+            $events = [];
+            foreach (array_slice($slots, 0, $n) as $i => $slot) {
+                $events[] = $this->event(['class_session' => $slot, 'subject_topic' => sprintf('Session %02d', $i + 1)]);
+            }
+            $week = $this->buildWeeks($events, '2026-01-19', '2026-01-25')[0];
+            $week['venueLine']  = 'Full Group: MH';
+            $week['footerNote'] = $notes;
+            $week['sheet']      = $sheet;
+
+            $data = [
+                'weeks' => [$week], 'rangeStart' => '19 Jan 2026', 'rangeEnd' => '25 Jan 2026',
+                'course' => null, 'courseStartDate' => null, 'courseEndDate' => null, 'courseDuration' => null,
+                'multiCourse' => false, 'primaryVenue' => '', 'footerNote' => '', 'studentName' => null,
+                'logoLeft' => null, 'logoRight' => null, 'titleHindi' => null,
+            ];
+
+            $m = $measure->invoke($controller, $data, array_merge($week, ['pages' => [$week['rows']]]));
+            $this->assertNotNull($m, "$n sessions: the week measures");
+            $rowsAlone = array_sum($m['rows']);
+            $firstCap  = $pageBody - $m['firstTop'] - $m['head'];
+            if ($rowsAlone <= $firstCap && $rowsAlone + $m['tail'] > $firstCap) {
+                $exercised++;
+            }
+
+            $data['weeks'] = $paginate->invoke($controller, $data);
+            $pages = $data['weeks'][0]['pages'];
+            $printed = 0;
+            foreach ($pages as $p => $rows) {
+                $timed = array_filter($rows, fn ($r) => $r['type'] === 'row' && !empty($r['showTime']));
+                $this->assertNotEmpty($timed, "$n sessions: planned page $p carries a timed row");
+                $printed += count($timed);
+            }
+            $this->assertSame($n, $printed, "$n sessions: every session row prints once");
+
+            $dompdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.calendar.pdf.ot-timetable-pdf', $data)
+                ->setPaper('legal', 'portrait')
+                ->setOptions(['defaultFont' => 'DejaVu Sans', 'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => false, 'isPhpEnabled' => false, 'dpi' => 96])
+                ->getDomPDF();
+            $dompdf->render();
+
+            $this->assertSame(count($pages) + 1, $dompdf->getCanvas()->get_page_count(),
+                "$n sessions: DomPDF printed a page the plan did not have (the info sheet is the +1)");
+        }
+
+        $this->assertGreaterThan(0, $exercised,
+            'no week size put the sessions on one page with the closing rows overflowing it - the sweep missed the case it guards');
+    }
+
+    /**
      * Before migration 2026_09_22_090000 adds faculty_master.abbreviation the
      * sheet must still build: the column is read only once it exists, and the
      * names fall back to derived initials. (The column cannot be dropped here -

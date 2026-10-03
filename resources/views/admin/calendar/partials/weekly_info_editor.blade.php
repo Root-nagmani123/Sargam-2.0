@@ -191,7 +191,7 @@
                             <section class="ds-form-section">
                                 <h6 class="ds-form-section-title">Outdoor and Other Activities</h6>
                                 <textarea class="form-control" id="wi_outdoor" rows="3" maxlength="2000" placeholder="Time: Outdoors- Morning 06:30 - 07:30 (Monday to Friday)&#10;Venue: Happy Valley Sports Complex, at T-5"></textarea>
-                                <div class="form-text">Line breaks are preserved. When filled in, the morning Physical Activity rows are left off the printed grid.</div>
+                                <div class="form-text">Line breaks are preserved. Printed on the P.T.O. page; the morning Physical Activity sessions still print on the timetable grid.</div>
                             </section>
 
                             <section class="ds-form-section">

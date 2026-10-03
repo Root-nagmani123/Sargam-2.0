@@ -136,6 +136,23 @@ class WeeklyInfoEditAccessTest extends TestCase
         $this->assertSame(403, $this->saveAs(['FC Reports Viewer'], null, self::COURSE_OWN));
     }
 
+    /**
+     * The save locks the course row before it writes, so a course_id with no
+     * course behind it is refused rather than leaving orphan coordinator and
+     * week-note rows.
+     */
+    public function test_a_course_that_does_not_exist_is_refused(): void
+    {
+        try {
+            $this->saveAs(['Training IST'], null, 90300999);
+            $this->fail('a save for a missing course was accepted');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('course_id', $e->errors());
+        }
+        $this->assertSame(0, DB::table('course_coordinator_master')->where('courses_master_pk', 90300999)->count());
+        $this->assertNull($this->savedNote(90300999));
+    }
+
     /** created_date has no default; the save must still work for a course with no coordinator row. */
     public function test_a_course_without_a_coordinator_row_can_be_saved(): void
     {
