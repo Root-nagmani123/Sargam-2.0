@@ -2,8 +2,41 @@
 
 @section('title', 'Course Group Type')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/programme-admin.css') }}?v={{ @filemtime(public_path('css/programme-admin.css')) ?: time() }}">
+<style>
+    /* This page carries older ID-scoped rules for .edit-btn / .delete-btn
+       (custom.css:1202-1248) that size them as 1.75rem icon buttons. Those two
+       classes are JS hooks here, so the markup still needs them — this block
+       just lets the §3b icon-over-label stack win, at matching specificity. */
+    .cgt-master-page #coursegrouptype .prog-act.edit-btn,
+    .cgt-master-page #coursegrouptype .prog-act.delete-btn {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        width: auto;
+        height: auto;
+        min-width: 62px;
+        gap: 4px;
+        line-height: 1;
+        transform: none;
+    }
+
+    .cgt-master-page #coursegrouptype .prog-act.edit-btn:hover,
+    .cgt-master-page #coursegrouptype .prog-act.delete-btn:hover {
+        opacity: 1;
+        transform: none;
+    }
+
+    .cgt-master-page #coursegrouptype .prog-act .bi {
+        font-size: 1.1rem;
+    }
+</style>
+@endpush
+
 @section('setup_content')
-<div class="container-fluid cgt-master-page">
+<div class="container-fluid prog-page cgt-master-page">
     <x-breadcrum title="Course Group Type"
         buttonText="Add Course Group Type"
         buttonId="showAlert"
@@ -340,55 +373,15 @@ $(function() {
        data-dt-footer-for hooks. Do NOT rebuild them here — a second enhancer
        races the global one and leaves the footer empty. */
 
+    /* The server now renders the §3b status badge and the Edit · switch · Delete
+       stacks directly (CourseGroupTypeController@grouptypeview), so this page no
+       longer rebuilds those two cells in the DOM after every draw. The old
+       decorateCgtRows() moved the switch out of the status cell and fabricated a
+       badge — surgery that had to be re-run on each redraw and drifted from the
+       markup the doc specifies. */
     function decorateCgtRows() {
-        $(tableSelector + ' tbody tr').each(function() {
-            const $row = $(this);
-            const $cells = $row.find('td');
-            if ($cells.length < 4) {
-                return;
-            }
-
-            const $statusCell = $cells.eq(2);
-            const $actionCell = $cells.eq(3);
-            const $toggle = $statusCell.find('.plain-status-toggle').add($actionCell.find('.plain-status-toggle')).first();
-
-            if ($toggle.length) {
-                const isActive = $toggle.is(':checked');
-                const badgeClass = isActive ? 'programme-status-badge--active' : 'programme-status-badge--inactive';
-                const label = isActive ? 'Active' : 'Inactive';
-
-                const $switchWrap = $toggle.closest('.form-check');
-                const $actionGroup = $actionCell.find('.d-inline-flex[role="group"]');
-                const $editBtn = $actionGroup.find('.edit-btn').first();
-                if ($switchWrap.length && $actionGroup.length && $editBtn.length) {
-                    $switchWrap.addClass('programme-action-switch m-0 d-inline-flex align-items-center');
-                    $editBtn.after($switchWrap);
-                }
-
-                $statusCell.empty().append(
-                    $('<span>', {
-                        class: 'badge rounded-1 programme-status-badge cgt-status-badge ' + badgeClass,
-                        text: label
-                    })
-                );
-            }
-
-            $actionCell.find('.edit-btn').each(function() {
-                const $btn = $(this);
-                if (!$btn.find('.bi').length) {
-                    $btn.append('<i class="bi bi-pencil" aria-hidden="true"></i>');
-                }
-            });
-
-            $actionCell.find('.delete-btn').each(function() {
-                const $btn = $(this);
-                if (!$btn.find('.bi').length) {
-                    $btn.append('<i class="bi bi-trash3" aria-hidden="true"></i>');
-                }
-            });
-        });
+        /* intentionally empty — kept as a no-op because draw.dt still calls it */
     }
-
     /* ---------- Column show / hide (DataTables API) ---------- */
     const cgtColStorageKey = 'cgtGrid:hiddenColumns:v1';
 

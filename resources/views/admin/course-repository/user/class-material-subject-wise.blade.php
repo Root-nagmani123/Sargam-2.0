@@ -2,7 +2,7 @@
 
 @section('title', 'Class Material (Subject Wise) | Course Repository Admin')
 
-@section('setup_content')
+@section('content')
 <div class="cru-page">
     <div class="container-fluid px-3 px-md-4 pt-3 pb-0">
         <x-breadcrum title="Class Material (Subject Wise)"></x-breadcrum>
@@ -85,6 +85,9 @@
             </div>
         </div>
     </div>
+</div>
+    </main>
+</div>
 </div>
 
 @include('admin.course-repository.user.partials.assets')
