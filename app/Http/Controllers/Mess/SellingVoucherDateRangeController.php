@@ -42,6 +42,7 @@ class SellingVoucherDateRangeController extends Controller
     {
         DataTableRedisCache::bumpListEpoch(self::SV_DATE_RANGE_DT_LIST_EPOCH, 'SellingVoucherDateRangeController@datatable');
         AvailableQuantityService::bumpCacheEpoch();
+        ProcessMessBillsEmployeeController::invalidateCombinedBillsCache();
     }
 
     /**
