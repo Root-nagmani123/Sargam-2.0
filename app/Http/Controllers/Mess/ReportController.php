@@ -1699,21 +1699,16 @@ class ReportController extends Controller
                 ->where('po.status', 'approved')
                 ->when($storeIds !== [], fn ($q) => $q->whereIn('po.store_id', $storeIds));
 
+            // Opening quantity and value come from one grouped query (the value gives the opening rate).
             $openingIncoming = (clone $incomingQuery)
                 ->where('po.po_date', '<=', $previousDate)
-                ->selectRaw('poi.item_subcategory_id, SUM(poi.quantity) as total_qty')
+                ->selectRaw('poi.item_subcategory_id, SUM(poi.quantity) as total_qty, COALESCE(SUM(poi.quantity * poi.unit_price), 0) as val_sum')
                 ->groupBy('poi.item_subcategory_id')
                 ->get()
                 ->keyBy('item_subcategory_id');
             $periodIncoming = (clone $incomingQuery)
                 ->whereBetween('po.po_date', [$fromDate, $toDate])
                 ->selectRaw('poi.item_subcategory_id, SUM(poi.quantity) as total_qty, AVG(poi.unit_price) as avg_rate')
-                ->groupBy('poi.item_subcategory_id')
-                ->get()
-                ->keyBy('item_subcategory_id');
-            $openingRates = (clone $incomingQuery)
-                ->where('po.po_date', '<=', $previousDate)
-                ->selectRaw('poi.item_subcategory_id, COALESCE(SUM(poi.quantity), 0) as qty_sum, COALESCE(SUM(poi.quantity * poi.unit_price), 0) as val_sum')
                 ->groupBy('poi.item_subcategory_id')
                 ->get()
                 ->keyBy('item_subcategory_id');
@@ -1729,21 +1724,16 @@ class ReportController extends Controller
                 ->whereNotNull('sai.item_subcategory_id')
                 ->when($storeIds !== [], fn ($q) => $q->whereIn('sa.sub_store_id', $storeIds));
 
+            // Opening quantity and value come from one grouped query (the value gives the opening rate).
             $openingIncoming = (clone $incomingQuery)
                 ->where('sa.allocation_date', '<=', $previousDate)
-                ->selectRaw('sai.item_subcategory_id, SUM(sai.quantity) as total_qty')
+                ->selectRaw('sai.item_subcategory_id, SUM(sai.quantity) as total_qty, COALESCE(SUM(sai.quantity * COALESCE(sai.unit_price, 0)), 0) as val_sum')
                 ->groupBy('sai.item_subcategory_id')
                 ->get()
                 ->keyBy('item_subcategory_id');
             $periodIncoming = (clone $incomingQuery)
                 ->whereBetween('sa.allocation_date', [$fromDate, $toDate])
                 ->selectRaw('sai.item_subcategory_id, SUM(sai.quantity) as total_qty, AVG(sai.unit_price) as avg_rate')
-                ->groupBy('sai.item_subcategory_id')
-                ->get()
-                ->keyBy('item_subcategory_id');
-            $openingRates = (clone $incomingQuery)
-                ->where('sa.allocation_date', '<=', $previousDate)
-                ->selectRaw('sai.item_subcategory_id, COALESCE(SUM(sai.quantity), 0) as qty_sum, COALESCE(SUM(sai.quantity * COALESCE(sai.unit_price, 0)), 0) as val_sum')
                 ->groupBy('sai.item_subcategory_id')
                 ->get()
                 ->keyBy('item_subcategory_id');
@@ -1796,9 +1786,10 @@ class ReportController extends Controller
 
             // Same weighted-average basis as closing (as of the day before From Date), so
             // opening of a day equals closing of the previous day.
-            $openingRateRow = $openingRates->get($item->id);
-            $openingValRate = (float) ($openingRateRow->qty_sum ?? 0) > 0
-                ? round(((float) ($openingRateRow->val_sum ?? 0)) / (float) $openingRateRow->qty_sum, 6)
+            $openingRateRow = $openingIncoming->get($item->id);
+            $openingQtySum = (float) ($openingRateRow->total_qty ?? 0);
+            $openingValRate = $openingQtySum > 0
+                ? round(((float) ($openingRateRow->val_sum ?? 0)) / $openingQtySum, 6)
                 : null;
             $itemData['opening_rate'] = $openingValRate ?? ($item->standard_cost ?? 0);
             $itemData['opening_amount'] = $itemData['opening_qty'] * $itemData['opening_rate'];
