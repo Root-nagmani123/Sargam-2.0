@@ -446,6 +446,13 @@ class PurchaseOrderController extends Controller
                 return redirect()->route('admin.mess.purchaseorders.index')
                     ->with('po_edit_error', "Only {$receivedLines} of {$expectedLines} lines of this purchase order reached the server, so nothing was saved. Please contact the administrator (PHP max_input_vars is too low for this order).");
             }
+
+            // items_end is the form's last field. PHP drops fields from the end, so if it is missing the
+            // request was cut somewhere - even inside the last line (for example only its tax_percent).
+            if (! $request->has('items_end')) {
+                return redirect()->route('admin.mess.purchaseorders.index')
+                    ->with('po_edit_error', 'This purchase order did not reach the server completely, so nothing was saved. Please contact the administrator (PHP max_input_vars is too low for this order).');
+            }
         }
 
         $this->normalizePurchaseOrderItemsInRequest($request);

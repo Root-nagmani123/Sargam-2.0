@@ -1479,6 +1479,9 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                     <button type="submit" class="btn btn-warning rounded-1 px-5 shadow-sm fw-semibold"
                         style="transition: all 0.3s ease;">Update purchase order</button>
                 </div>
+                {{-- Must stay the LAST field of this form: PHP drops fields from the end when a request is
+                     too large, so if this one is missing the server knows the request was cut short. --}}
+                <input type="hidden" name="items_end" value="1">
             </form>
         </div>
     </div>
