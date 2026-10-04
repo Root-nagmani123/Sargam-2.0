@@ -2919,13 +2919,30 @@ async setInternalFaculty(internalFacultyIds) {
         const row = document.createElement('div');
         row.className = 'input-group input-group-sm';
         row.innerHTML = `
-            <input type="text" class="form-control" data-wi-note maxlength="1000" placeholder="Note text…">
+            <input type="text" class="form-control" data-wi-note maxlength="1000" placeholder="Note text…" aria-label="Note">
             <button type="button" class="btn btn-outline-danger" data-wi-remove title="Remove">
                 <i class="bi bi-x-lg"></i>
             </button>`;
         row.querySelector('[data-wi-note]').value = value || '';
-        row.querySelector('[data-wi-remove]').addEventListener('click', () => row.remove());
+        row.querySelector('[data-wi-remove]').addEventListener('click', () => {
+            row.remove();
+            this.labelWeeklyInfoRows('wiNotesList', { '[data-wi-note]': 'Note' });
+        });
         document.getElementById('wiNotesList').appendChild(row);
+        this.labelWeeklyInfoRows('wiNotesList', { '[data-wi-note]': 'Note' });
+    }
+
+    /**
+     * Name each input of a repeatable info-sheet list by field and row number
+     * ("Language — row 1") for screen readers. Re-run after a row is added or
+     * removed so the numbers follow what is on screen.
+     */
+    labelWeeklyInfoRows(listId, fields) {
+        document.querySelectorAll(`#${listId} > .input-group`).forEach((row, i) => {
+            Object.entries(fields).forEach(([selector, field]) => {
+                row.querySelector(selector)?.setAttribute('aria-label', `${field} — row ${i + 1}`);
+            });
+        });
     }
 
     renderWeeklyInfoLanguages(rows) {
@@ -2938,16 +2955,21 @@ async setInternalFaculty(internalFacultyIds) {
         el.className = 'input-group input-group-sm';
         el.innerHTML = `
             <span class="input-group-text">Language</span>
-            <input type="text" class="form-control" data-wi-lang maxlength="100" placeholder="e.g. Hindi">
+            <input type="text" class="form-control" data-wi-lang maxlength="100" placeholder="e.g. Hindi" aria-label="Language">
             <span class="input-group-text">Venue</span>
-            <input type="text" class="form-control" data-wi-lang-venue maxlength="200" placeholder="e.g. SR-A & B (Karmashila)">
+            <input type="text" class="form-control" data-wi-lang-venue maxlength="200" placeholder="e.g. SR-A & B (Karmashila)" aria-label="Language class venue">
             <button type="button" class="btn btn-outline-danger" data-wi-remove title="Remove">
                 <i class="bi bi-x-lg"></i>
             </button>`;
         el.querySelector('[data-wi-lang]').value = row.language || '';
         el.querySelector('[data-wi-lang-venue]').value = row.venue || '';
-        el.querySelector('[data-wi-remove]').addEventListener('click', () => el.remove());
+        const fields = { '[data-wi-lang]': 'Language', '[data-wi-lang-venue]': 'Language class venue' };
+        el.querySelector('[data-wi-remove]').addEventListener('click', () => {
+            el.remove();
+            this.labelWeeklyInfoRows('wiLanguageList', fields);
+        });
         document.getElementById('wiLanguageList').appendChild(el);
+        this.labelWeeklyInfoRows('wiLanguageList', fields);
     }
 
     renderWeeklyInfoVenues(rows) {
@@ -2959,15 +2981,20 @@ async setInternalFaculty(internalFacultyIds) {
         const el = document.createElement('div');
         el.className = 'input-group input-group-sm';
         el.innerHTML = `
-            <input type="text" class="form-control" style="max-width: 7rem;" data-wi-venue-abbr maxlength="20" placeholder="e.g. VH">
-            <input type="text" class="form-control" data-wi-venue-name maxlength="200" placeholder="e.g. Vivekanand Hall (Aadharshila Building)">
+            <input type="text" class="form-control" style="max-width: 7rem;" data-wi-venue-abbr maxlength="20" placeholder="e.g. VH" aria-label="Venue abbreviation">
+            <input type="text" class="form-control" data-wi-venue-name maxlength="200" placeholder="e.g. Vivekanand Hall (Aadharshila Building)" aria-label="Venue name">
             <button type="button" class="btn btn-outline-danger" data-wi-remove title="Remove">
                 <i class="bi bi-x-lg"></i>
             </button>`;
         el.querySelector('[data-wi-venue-abbr]').value = row.abbreviation || '';
         el.querySelector('[data-wi-venue-name]').value = row.name || '';
-        el.querySelector('[data-wi-remove]').addEventListener('click', () => el.remove());
+        const fields = { '[data-wi-venue-abbr]': 'Venue abbreviation', '[data-wi-venue-name]': 'Venue name' };
+        el.querySelector('[data-wi-remove]').addEventListener('click', () => {
+            el.remove();
+            this.labelWeeklyInfoRows('wiVenueList', fields);
+        });
         document.getElementById('wiVenueList').appendChild(el);
+        this.labelWeeklyInfoRows('wiVenueList', fields);
     }
 
     /** Counsellors come from the Counsellor Groups; label, cadre wording and venue are editable. */
@@ -2982,12 +3009,13 @@ async setInternalFaculty(internalFacultyIds) {
         [...counsellors].sort((a, b) => savedOrder(a) - savedOrder(b)).forEach(c => {
             const saved = meta[c.faculty_pk] || meta[String(c.faculty_pk)] || {};
             const tr = document.createElement('tr');
+            const who = this.escapeHtml(c.name);
             tr.innerHTML = `
-                <td><input type="number" class="form-control form-control-sm" data-wi-c-order min="1" max="99"></td>
-                <td class="small">${this.escapeHtml(c.name)}</td>
-                <td><input type="text" class="form-control form-control-sm" data-wi-c-cadres maxlength="200"></td>
-                <td><input type="text" class="form-control form-control-sm" data-wi-c-label maxlength="60"></td>
-                <td><input type="text" class="form-control form-control-sm" data-wi-c-venue maxlength="120" placeholder="e.g. SR- I"></td>`;
+                <td><input type="number" class="form-control form-control-sm" data-wi-c-order min="1" max="99" aria-label="Order — ${who}"></td>
+                <td class="small">${who}</td>
+                <td><input type="text" class="form-control form-control-sm" data-wi-c-cadres maxlength="200" aria-label="Cadres — ${who}"></td>
+                <td><input type="text" class="form-control form-control-sm" data-wi-c-label maxlength="60" aria-label="Label — ${who}"></td>
+                <td><input type="text" class="form-control form-control-sm" data-wi-c-venue maxlength="120" placeholder="e.g. SR- I" aria-label="Venue — ${who}"></td>`;
             tr.dataset.facultyPk = c.faculty_pk;
             const cadres = tr.querySelector('[data-wi-c-cadres]');
             cadres.placeholder = c.cadres || '';
@@ -3012,11 +3040,10 @@ async setInternalFaculty(internalFacultyIds) {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="small">${this.escapeHtml(s.name)}${s.code ? ' <span class="text-secondary">(' + this.escapeHtml(s.code) + ')</span>' : ''}${s.guest ? '' : ' <span class="badge text-bg-light border">In-house</span>'}</td>
-                <td><input type="text" class="form-control form-control-sm" data-wi-mod maxlength="200" placeholder="e.g. T Bhuvaneshram, B02"></td>`;
+                <td><input type="text" class="form-control form-control-sm" data-wi-mod maxlength="200" placeholder="e.g. T Bhuvaneshram, B02" aria-label="Session moderator — ${this.escapeHtml(s.name)}"></td>`;
             tr.dataset.facultyPk = s.faculty_pk;
             tr.querySelector('[data-wi-mod]').value =
-                moderators[s.faculty_pk] || moderators[String(s.faculty_pk)] || '';
-            body.appendChild(tr);
+                moderators[s.faculty_pk] || moderators[String(s.faculty_pk)] || '';            body.appendChild(tr);
         });
     }
 

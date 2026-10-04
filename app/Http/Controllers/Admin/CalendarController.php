@@ -3961,8 +3961,10 @@ class CalendarController extends Controller
      * course coordinator - so all of the course's rows are read, not one.
      * Coordinator_name and Assistant_Coordinator_name hold a faculty_master pk
      * on current rows and a typed name on older ones; a pk prints as the faculty
-     * member's name. A comma list of pks (which courseIdsForUser()'s FIND_IN_SET
-     * also accepts) names each of them.
+     * member's name. Both columns are read with CourseCordinatorMaster::peopleIn(),
+     * which courseIdsForUser() also uses, so the sheet names exactly the people
+     * the editor grants: a comma list of pks names each of them, and a typed
+     * name with a comma in it stays one person.
      *
      * Order: the order the rows were entered (pk), then the order within a
      * row's list. A person prints once - a faculty member by pk, a typed name
@@ -3979,18 +3981,7 @@ class CalendarController extends Controller
             ->orderBy('pk')
             ->get(['Coordinator_name', 'Assistant_Coordinator_name', 'director_name', 'joint_director_name']);
 
-        // A comma list is split only when every part is a pk; a typed name that
-        // contains a comma ("Sharma, R.") stays one person, as it always printed.
-        $split = function ($value): array {
-            $value = trim((string) $value);
-            $parts = array_values(array_filter(array_map('trim', explode(',', $value)), fn ($part) => $part !== ''));
-            foreach ($parts as $part) {
-                if (!ctype_digit($part)) {
-                    return $value !== '' ? [$value] : [];
-                }
-            }
-            return $parts;
-        };
+        $split = fn ($value): array => \App\Models\CourseCordinatorMaster::peopleIn($value);
 
         $facultyPks = [];
         foreach ($rows as $row) {
@@ -4273,7 +4264,9 @@ class CalendarController extends Controller
             : Carbon::now())->startOfWeek(Carbon::MONDAY)->toDateString();
 
         $course = DB::table('course_master')->where('pk', $courseId)->first();
-        $cc = DB::table('course_coordinator_master')->where('courses_master_pk', $courseId)->first();
+        // Director and Joint Director as the PDF prints them, so the editor opens
+        // on the values the sheet shows (first non-empty row in pk order).
+        $people = $this->courseCoordinatorPeople((int) $courseId);
         $note = DB::table('course_week_notes')
             ->where('course_master_pk', $courseId)
             ->where('week_start', $weekStart)
@@ -4287,8 +4280,8 @@ class CalendarController extends Controller
         return response()->json([
             'course_id'            => (int) $courseId,
             'week_start'           => $weekStart,
-            'director_name'        => $cc->director_name ?? '',
-            'joint_director_name'  => $cc->joint_director_name ?? '',
+            'director_name'        => $people['director'] ?? '',
+            'joint_director_name'  => $people['jointDirector'] ?? '',
             'participants_profile' => $course->participants_profile ?? '',
             'sheet_title'          => $course->sheet_title ?? '',
             'mention_of_week'      => $note->mention_of_week ?? '',
