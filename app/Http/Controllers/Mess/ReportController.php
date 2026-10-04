@@ -918,7 +918,7 @@ class ReportController extends Controller
 
         // Expensive report: cache full dataset (Redis/file via RedisBackedCache). Pagination reuses cache.
         // Apply filters sends refresh=1 to recompute and overwrite cache.
-        $cacheKey = 'stock-summary:v4:' . md5(json_encode([$fromDate, $toDate, $storeType, $storeIds]));
+        $cacheKey = 'stock-summary:v5:' . md5(json_encode([$fromDate, $toDate, $storeType, $storeIds]));
         $loadReport = function () use ($fromDate, $toDate, $storeIds, $storeType) {
             [$data, $storeName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeIds, $storeType);
             $totals = [
@@ -1699,9 +1699,10 @@ class ReportController extends Controller
                 ->where('po.status', 'approved')
                 ->when($storeIds !== [], fn ($q) => $q->whereIn('po.store_id', $storeIds));
 
+            // Opening quantity and value come from one grouped query (the value gives the opening rate).
             $openingIncoming = (clone $incomingQuery)
                 ->where('po.po_date', '<=', $previousDate)
-                ->selectRaw('poi.item_subcategory_id, SUM(poi.quantity) as total_qty')
+                ->selectRaw('poi.item_subcategory_id, SUM(poi.quantity) as total_qty, COALESCE(SUM(poi.quantity * poi.unit_price), 0) as val_sum')
                 ->groupBy('poi.item_subcategory_id')
                 ->get()
                 ->keyBy('item_subcategory_id');
@@ -1723,9 +1724,10 @@ class ReportController extends Controller
                 ->whereNotNull('sai.item_subcategory_id')
                 ->when($storeIds !== [], fn ($q) => $q->whereIn('sa.sub_store_id', $storeIds));
 
+            // Opening quantity and value come from one grouped query (the value gives the opening rate).
             $openingIncoming = (clone $incomingQuery)
                 ->where('sa.allocation_date', '<=', $previousDate)
-                ->selectRaw('sai.item_subcategory_id, SUM(sai.quantity) as total_qty')
+                ->selectRaw('sai.item_subcategory_id, SUM(sai.quantity) as total_qty, COALESCE(SUM(sai.quantity * COALESCE(sai.unit_price, 0)), 0) as val_sum')
                 ->groupBy('sai.item_subcategory_id')
                 ->get()
                 ->keyBy('item_subcategory_id');
@@ -1782,6 +1784,14 @@ class ReportController extends Controller
             $openingSaleSvQty = (float) ($openingDateRangeSales->get($item->id)->total_qty ?? 0);
             $itemData['opening_qty'] = $openingIncomingQty - $openingSaleKiQty - $openingSaleSvQty;
 
+            // Same weighted-average basis as closing (as of the day before From Date), so
+            // opening of a day equals closing of the previous day.
+            $openingRateRow = $openingIncoming->get($item->id);
+            $openingQtySum = (float) ($openingRateRow->total_qty ?? 0);
+            $openingValRate = $openingQtySum > 0
+                ? round(((float) ($openingRateRow->val_sum ?? 0)) / $openingQtySum, 6)
+                : null;
+            $itemData['opening_rate'] = $openingValRate ?? ($item->standard_cost ?? 0);
             $itemData['opening_amount'] = $itemData['opening_qty'] * $itemData['opening_rate'];
 
             $incoming = $periodIncoming->get($item->id);

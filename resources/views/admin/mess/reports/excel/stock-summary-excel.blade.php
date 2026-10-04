@@ -22,6 +22,12 @@
         </td>
     </tr>
 
+    <tr>
+        <td colspan="16" style="text-align:center; font-style:italic;">
+            Note: Opening and Closing value = quantity x average buying price up to that date. Purchase value uses the average buying price of this period. Sale value uses the selling price.
+        </td>
+    </tr>
+
     {{-- Blank row --}}
     <tr><td colspan="16"></td></tr>
 
