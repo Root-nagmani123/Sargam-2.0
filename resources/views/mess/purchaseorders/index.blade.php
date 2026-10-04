@@ -1273,6 +1273,8 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                 @method('PUT')
                 {{-- Set to 1 on submit once every line is in the form; the server refuses the save otherwise. --}}
                 <input type="hidden" name="all_lines_loaded" id="editAllLinesLoaded" value="0">
+                {{-- Number of lines in the form; kept above the line fields so it survives if the server cuts the request short. --}}
+                <input type="hidden" name="items_count" id="editItemsCount" value="">
                 <div class="modal-header border-0 border-bottom py-3 px-4 bg-gradient"
                     style="background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);">
                     <div>
@@ -2744,6 +2746,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                     const tbody = document.getElementById('editPoItemsBody');
                     editPendingItems = [];
                     document.getElementById('editAllLinesLoaded').value = '0';
+                    document.getElementById('editItemsCount').value = '';
                     if (items.length === 0) {
                         tbody.innerHTML = getItemRowHtml(0, null, true);
                         editItemRowIndex = 1;
@@ -3220,6 +3223,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
         // Lines not yet scrolled into view must still be posted.
         renderPendingEditRows();
         document.getElementById('editAllLinesLoaded').value = editPendingItems.length ? '0' : '1';
+        document.getElementById('editItemsCount').value = document.querySelectorAll('#editPoItemsBody .po-item-row').length;
     });
 
     // Large POs: append the next chunk of line items as the modal nears the bottom.

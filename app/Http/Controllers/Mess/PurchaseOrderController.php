@@ -432,6 +432,18 @@ class PurchaseOrderController extends Controller
                 ->with('po_edit_error', 'Not all lines of this purchase order were loaded, so nothing was saved. Please reload the page and save again.');
         }
 
+        // PHP drops request fields beyond max_input_vars without an error, so a very large PO can
+        // arrive with only part of its lines. items_count is sent ahead of the line fields; if fewer
+        // lines arrived than the form held, refuse the save so no existing line is deleted.
+        if ($request->filled('items_count')) {
+            $expectedLines = (int) $request->input('items_count');
+            $receivedLines = is_array($request->input('items')) ? count($request->input('items')) : 0;
+            if ($receivedLines < $expectedLines) {
+                return redirect()->route('admin.mess.purchaseorders.index')
+                    ->with('po_edit_error', "Only {$receivedLines} of {$expectedLines} lines of this purchase order reached the server, so nothing was saved. Please contact the administrator (PHP max_input_vars is too low for this order).");
+            }
+        }
+
         $this->normalizePurchaseOrderItemsInRequest($request);
         $request->validate([
             'vendor_id' => 'required|exists:mess_vendors,id',
