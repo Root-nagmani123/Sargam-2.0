@@ -4251,11 +4251,19 @@ class CalendarController extends Controller
      */
     public function weeklyInfoMeta(Request $request)
     {
-        $courseId = $request->query('course_id') ?: null;
-        if (!$courseId) {
-            return response()->json(['error' => 'Select a course first.'], 422);
+        // Validated before the access check and used as the one integer below: a raw
+        // course_id[]=X would cast to 1 for the check while the queries bind X.
+        $validator = \Illuminate\Support\Facades\Validator::make($request->query(), [
+            'course_id'  => 'required|integer|min:1',
+            'week_start' => 'nullable|date',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => $validator->errors()->has('course_id') ? 'Select a course first.' : 'Invalid week.',
+            ], 422);
         }
-        if (!$this->canEditWeeklyInfo((int) $courseId)) {
+        $courseId = (int) $request->query('course_id');
+        if (!$this->canEditWeeklyInfo($courseId)) {
             return response()->json(['error' => 'You can edit the info sheet only for courses you coordinate.'], 403);
         }
 
