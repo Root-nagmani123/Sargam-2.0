@@ -437,7 +437,11 @@ class PurchaseOrderController extends Controller
         // lines arrived than the form held, refuse the save so no existing line is deleted.
         if ($request->filled('items_count')) {
             $expectedLines = (int) $request->input('items_count');
-            $receivedLines = is_array($request->input('items')) ? count($request->input('items')) : 0;
+            // Count only complete lines: PHP can cut the last line in half, leaving a line with no
+            // quantity or price, which would otherwise pass this check and fail validation instead.
+            $receivedLines = collect(is_array($request->input('items')) ? $request->input('items') : [])
+                ->filter(fn ($line) => is_array($line) && array_key_exists('quantity', $line) && array_key_exists('unit_price', $line))
+                ->count();
             if ($receivedLines < $expectedLines) {
                 return redirect()->route('admin.mess.purchaseorders.index')
                     ->with('po_edit_error', "Only {$receivedLines} of {$expectedLines} lines of this purchase order reached the server, so nothing was saved. Please contact the administrator (PHP max_input_vars is too low for this order).");
