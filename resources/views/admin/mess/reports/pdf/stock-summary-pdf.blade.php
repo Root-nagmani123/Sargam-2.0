@@ -282,6 +282,10 @@
     </table>
 @endif
 
+<p style="font-size: 11px; color: #555; margin: 8px 0 0;">
+    Note: Opening and Closing value = quantity x average buying price up to that date. Purchase value uses the average buying price of this period. Sale value uses the selling price.
+</p>
+
 <div class="footer">
     <small>Officer's Mess LBSNAA Mussoorie &mdash; Stock Summary Report</small>
 </div>
