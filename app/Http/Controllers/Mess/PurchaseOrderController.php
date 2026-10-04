@@ -422,6 +422,16 @@ class PurchaseOrderController extends Controller
     public function update(Request $request, $id)
     {
         $purchaseOrder = PurchaseOrder::findOrFail($id);
+
+        // The edit modal loads the lines of a large PO in parts and sets all_lines_loaded to 1
+        // only once every line is in the form. Below, every existing line is deleted and only the
+        // posted lines are re-created, so a save that may be missing lines is refused untouched.
+        // Requests that do not send the field are handled exactly as before.
+        if ($request->has('all_lines_loaded') && $request->input('all_lines_loaded') !== '1') {
+            return redirect()->route('admin.mess.purchaseorders.index')
+                ->with('po_edit_error', 'Not all lines of this purchase order were loaded, so nothing was saved. Please reload the page and save again.');
+        }
+
         $this->normalizePurchaseOrderItemsInRequest($request);
         $request->validate([
             'vendor_id' => 'required|exists:mess_vendors,id',

@@ -54,6 +54,12 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
                 @endif
+                @if(session('po_edit_error'))
+                <div class="alert alert-danger alert-dismissible fade show border-0 rounded-4" role="alert">
+                    {{ session('po_edit_error') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                @endif
 
                 {{-- Filters --}}
                 <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}"
@@ -1265,6 +1271,8 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
             <form method="POST" id="editPOForm" action="" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
+                {{-- Set to 1 on submit once every line is in the form; the server refuses the save otherwise. --}}
+                <input type="hidden" name="all_lines_loaded" id="editAllLinesLoaded" value="0">
                 <div class="modal-header border-0 border-bottom py-3 px-4 bg-gradient"
                     style="background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);">
                     <div>
@@ -2735,6 +2743,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 
                     const tbody = document.getElementById('editPoItemsBody');
                     editPendingItems = [];
+                    document.getElementById('editAllLinesLoaded').value = '0';
                     if (items.length === 0) {
                         tbody.innerHTML = getItemRowHtml(0, null, true);
                         editItemRowIndex = 1;
@@ -3210,6 +3219,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
         }
         // Lines not yet scrolled into view must still be posted.
         renderPendingEditRows();
+        document.getElementById('editAllLinesLoaded').value = editPendingItems.length ? '0' : '1';
     });
 
     // Large POs: append the next chunk of line items as the modal nears the bottom.
