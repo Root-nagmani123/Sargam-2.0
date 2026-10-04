@@ -19,6 +19,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Support\PdfPageNumbers;
 use App\Services\Timetable\WeeklyInfoSheetBuilder;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 
 
 
@@ -1591,15 +1592,27 @@ class CalendarController extends Controller
     }
 
     /**
-     * Academic time table as a print-ready A4 portrait PDF (flat session list).
-     * Renders admin.calendar.pdf.ot-timetable-pdf for the calendar's visible range.
-     * ?start & ?end (YYYY-MM-DD) bound the period, ?course_id filters (same as the
-     * calendar filter), ?download=1 forces an attachment.
+     * Longest span, in days from ?start to ?end, a range timetable PDF accepts.
+     * The calendar only ever exports its visible view, and the widest of those
+     * is the month grid's six weeks (activeStart to activeEnd - 1 = 41 days).
+     * Every week in the range is laid out by DomPDF several times over (see
+     * paginateWeeks()), so an unbounded range holds a PHP worker until the
+     * time limit kills it.
      */
-    public function downloadTimetablePdf(Request $request)
+    private const TT_PDF_MAX_RANGE_DAYS = 42;
+
+    /**
+     * ?start / ?end of a range timetable PDF, defaulting to the current month.
+     * A span past TT_PDF_MAX_RANGE_DAYS is refused with a validation error.
+     *
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    private function timetablePdfRange(Request $request): array
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(120);
+        $request->validate([
+            'start' => 'nullable|date',
+            'end'   => 'nullable|date',
+        ]);
 
         $rangeStartDate = $request->filled('start')
             ? Carbon::parse($request->start)
@@ -1607,6 +1620,29 @@ class CalendarController extends Controller
         $rangeEndDate = $request->filled('end')
             ? Carbon::parse($request->end)
             : Carbon::now()->endOfMonth();
+
+        if ($rangeStartDate->copy()->startOfDay()->addDays(self::TT_PDF_MAX_RANGE_DAYS)->lt($rangeEndDate->copy()->startOfDay())) {
+            throw ValidationException::withMessages([
+                'end' => 'The timetable PDF covers at most ' . self::TT_PDF_MAX_RANGE_DAYS . ' days; choose a shorter period.',
+            ]);
+        }
+
+        return [$rangeStartDate, $rangeEndDate];
+    }
+
+    /**
+     * Academic time table as a print-ready A4 portrait PDF (flat session list).
+     * Renders admin.calendar.pdf.ot-timetable-pdf for the calendar's visible range.
+     * ?start & ?end (YYYY-MM-DD) bound the period (at most TT_PDF_MAX_RANGE_DAYS
+     * apart), ?course_id filters (same as the calendar filter), ?download=1
+     * forces an attachment.
+     */
+    public function downloadTimetablePdf(Request $request)
+    {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(120);
+
+        [$rangeStartDate, $rangeEndDate] = $this->timetablePdfRange($request);
 
         $courseId = $request->query('course_id') ?: null;
 
@@ -1726,19 +1762,15 @@ class CalendarController extends Controller
      * OT (Student-OT) timetable PDF for the dedicated OT calendar's Download
      * button. Always scoped to the logged-in student's groups (mirrors
      * otFullCalendarDetails) and renders the same ot-timetable-pdf template
-     * via buildWeeksGrid(). Accepts ?start, ?end (YYYY-MM-DD) and ?course_id.
+     * via buildWeeksGrid(). Accepts ?start, ?end (YYYY-MM-DD, at most
+     * TT_PDF_MAX_RANGE_DAYS apart) and ?course_id.
      */
     public function otDownloadPdf(Request $request)
     {
         @ini_set('memory_limit', '512M');
         @set_time_limit(120);
 
-        $rangeStartDate = $request->filled('start')
-            ? Carbon::parse($request->start)
-            : Carbon::now()->startOfMonth();
-        $rangeEndDate = $request->filled('end')
-            ? Carbon::parse($request->end)
-            : Carbon::now()->endOfMonth();
+        [$rangeStartDate, $rangeEndDate] = $this->timetablePdfRange($request);
 
         $courseId  = $request->query('course_id') ?: null;
         $studentPk = auth()->user()->user_id;
@@ -3688,8 +3720,9 @@ class CalendarController extends Controller
     /**
      * A row's faculty_master as a list of pks. Most rows hold a JSON array,
      * older ones a bare pk ("17") - which json_decode() returns as an int, so
-     * an is_array() check alone drops those rows' faculty from the sheet even
-     * though the calendar itself shows them (see resolveEventFaculty()).
+     * an is_array() check alone drops those rows' faculty from the sheet. The
+     * grid reads faculty through timetableRowFaculty(), which falls back to
+     * this list for rows that have no faculty_details.
      */
     private function timetableFacultyIds($row): array
     {
@@ -3851,24 +3884,6 @@ class CalendarController extends Controller
             default:
                 return 'Tea Break';
         }
-    }
-
-    /** Resolve a timetable row's faculty_master JSON into a "Name, Name" string. */
-    private function resolveEventFaculty($facultyMaster): string
-    {
-        $facultyIds = json_decode((string) $facultyMaster, true);
-        if (!is_array($facultyIds)) {
-            $facultyIds = !empty($facultyMaster) ? [$facultyMaster] : [];
-        }
-        if (!$facultyIds) {
-            return '';
-        }
-        $ordered = implode(',', array_map('intval', $facultyIds));
-        return DB::table('faculty_master')
-            ->whereIn('pk', $facultyIds)
-            ->orderByRaw("FIELD(pk, {$ordered})")
-            ->pluck('full_name')
-            ->implode(', ');
     }
 
     /**
@@ -4436,7 +4451,10 @@ class CalendarController extends Controller
 
             'signatory_name'        => 'nullable|string|max:255',
             'signatory_designation' => 'nullable|string|max:255',
-            'signatory_date'        => 'nullable|date',
+            // Y-m-d only: the column is a DATE, which strict MySQL refuses in the
+            // other shapes 'date' admits (21-08-2026, 08/21/2026), and the editor's
+            // <input type="date"> always posts Y-m-d.
+            'signatory_date'        => 'nullable|date_format:Y-m-d',
         ]);
 
         $courseId = (int) $validated['course_id'];
