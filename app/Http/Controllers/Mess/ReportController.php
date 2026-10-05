@@ -2811,7 +2811,7 @@ class ReportController extends Controller
     {
         $sortedStoreIds = $storeIds;
         sort($sortedStoreIds);
-        $cacheKey = 'stock-balance-till-date:v2:' . md5(json_encode([$tillDate, $sortedStoreIds]));
+        $cacheKey = 'stock-balance-till-date:v3:' . md5(json_encode([$tillDate, $sortedStoreIds]));
         $loadReport = fn () => $this->buildStockBalanceTillDateData($tillDate, $sortedStoreIds);
 
         if ($request->boolean('refresh')) {
@@ -2932,10 +2932,14 @@ class ReportController extends Controller
             ->whereNotNull('poi.item_subcategory_id')
             ->when($storeIds !== [], fn ($q) => $q->whereIn('po.store_id', $storeIds))
             ->groupBy('poi.item_subcategory_id')
+            // Value with tax, the same way Stock Summary and Stock Purchase Details value a line.
             ->selectRaw('
                 poi.item_subcategory_id,
                 COALESCE(SUM(poi.quantity), 0) as total_qty,
-                COALESCE(SUM(poi.quantity * poi.unit_price), 0) as total_value
+                COALESCE(SUM(
+                    COALESCE(poi.quantity, 0) * COALESCE(poi.unit_price, 0)
+                    + ROUND(COALESCE(poi.quantity, 0) * COALESCE(poi.unit_price, 0) * COALESCE(poi.tax_percent, 0) / 100, 2)
+                ), 0) as total_value
             ')
             ->get()
             ->keyBy('item_subcategory_id');
