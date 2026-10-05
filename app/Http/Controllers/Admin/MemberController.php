@@ -554,6 +554,18 @@ class MemberController extends Controller
      * regardless of how many roles this screen happens to offer a checkbox
      * for.
      */
+    /**
+     * One batch insert instead of N round-trips (PR #319 re-review F-049),
+     * extracted so store()/update() can't drift from each other (F-065).
+     */
+    private function syncEmployeeRoleMappings(int $userCredentialPk, array $roles): void
+    {
+        EmployeeRoleMapping::insert(array_map(fn ($role) => [
+            'user_credentials_pk' => $userCredentialPk,
+            'user_role_master_pk' => $role,
+        ], $roles));
+    }
+
     private function syncSpatieRolesFromWizardSelection(
         int $userCredentialPk,
         array $selectedUserRoleMasterPks,
@@ -1044,11 +1056,8 @@ class MemberController extends Controller
                 if ($userCredential) {
                     $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
 
-                    // PR #319 re-review F-049: one batch insert instead of N round-trips.
-                    EmployeeRoleMapping::insert(array_map(fn ($role) => [
-                        'user_credentials_pk' => $userCredential->pk,
-                        'user_role_master_pk' => $role,
-                    ], $roles));
+                    // PR #319 re-review F-065: shared with update() so the two paths can't drift.
+                    $this->syncEmployeeRoleMappings($userCredential->pk, $roles);
 
                     $this->syncSpatieRolesFromWizardSelection($userCredential->pk, $roles);
                 }
@@ -1312,11 +1321,8 @@ class MemberController extends Controller
                     ->whereIn('user_role_master_pk', $offeredRoleIds)
                     ->delete();
 
-                // PR #319 re-review F-049: one batch insert instead of N round-trips.
-                EmployeeRoleMapping::insert(array_map(fn ($role) => [
-                    'user_credentials_pk' => $userCredential->pk,
-                    'user_role_master_pk' => $role,
-                ], $roles));
+                // PR #319 re-review F-065: shared with store() so the two paths can't drift.
+                $this->syncEmployeeRoleMappings($userCredential->pk, $roles);
 
                 $saveWarnings[] = $this->syncSpatieRolesFromWizardSelection($userCredential->pk, $roles, $previouslySelectedRoleIds);
             }
