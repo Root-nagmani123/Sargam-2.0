@@ -209,7 +209,7 @@ table.table tbody tr:hover{background:#FFF9F0;}
             <option value="">-- select --</option>
             @if ($managers)
               @foreach ($managers as $manager)
-                <option value="{{ $manager->id }}">{{ $manager->name }}</option>
+                <option value="{{ $manager->user_credentials_pk }}">{{ $manager->employee_name }}</option>
               @endforeach
             @endif
           </select>

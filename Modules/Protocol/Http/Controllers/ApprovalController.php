@@ -70,9 +70,13 @@ class ApprovalController extends Controller
 
         // Supply the list of managers/staff that can be recommended to.
         // Swap this for your own role-based user query.
-        $managers =  User::whereHas('roles', function ($query) {
+        $approverIds = User::whereHas('roles', function ($query) {
                     $query->where('name', 'Protocol Approver');
-                })->get();
+                })->pluck('user_id');
+             
+        $managers = User::getEmployeesAndFacultyForComplaint();
+        $managers = $managers->whereIn('employee_pk', $approverIds);
+
         return view('protocol::approval.review', compact('protocolRequest', 'managers','GuestHouse'));
     }
 
@@ -82,6 +86,7 @@ class ApprovalController extends Controller
      */
     public function decide(ReviewProtocolRequest $request, ProtocolRequest $protocolRequest)
     {
+             dd('here');
         abort_if($protocolRequest->status !== ProtocolRequest::STATUS_PENDING, 403,
             'This request has already been actioned.');
 
@@ -94,7 +99,7 @@ class ApprovalController extends Controller
                 'assigned_guest_house' => $data['assigned_guest_house'],
             ]);
         }
-
+   
         if ($data['decision'] === 'approve') {
             $protocolRequest->approveDirectly(Auth::id(), $data['remarks'] ?? null);
             $message = "Request {$protocolRequest->request_number} approved.";
