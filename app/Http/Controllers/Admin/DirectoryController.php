@@ -40,6 +40,7 @@ class DirectoryController extends Controller
         'name' => 'sm.display_name',
         'ot_code' => 'sm.generated_OT_code',
         'email' => 'sm.email',
+        'mobile' => 'sm.contact_no',
         'cadre' => 'cad.cadre_name',
     ];
 
@@ -423,6 +424,7 @@ class DirectoryController extends Controller
                 'room_no' => '-',
                 'room_ext' => '-',
                 'email' => e((string) ($student->email ?: '-')),
+                'mobile' => e((string) ($student->contact_no ?: '-')),
                 'course' => e((string) ($student->course_name ?: '-')),
                 'cadre' => e((string) ($student->cadre_name ?: '-')),
             ]);
@@ -565,6 +567,7 @@ class DirectoryController extends Controller
                 $inner->whereRaw('CONVERT(sm.display_name USING utf8mb4) LIKE ?', [$like])
                     ->orWhereRaw('CONVERT(sm.generated_OT_code USING utf8mb4) LIKE ?', [$like])
                     ->orWhereRaw('CONVERT(sm.email USING utf8mb4) LIKE ?', [$like])
+                    ->orWhereRaw('CONVERT(sm.contact_no USING utf8mb4) LIKE ?', [$like])
                     ->orWhereRaw('CONVERT(cad.cadre_name USING utf8mb4) LIKE ?', [$like]);
             }))
             ->select([
@@ -572,6 +575,7 @@ class DirectoryController extends Controller
                 'sm.display_name',
                 'sm.generated_OT_code',
                 'sm.email',
+                'sm.contact_no',
                 'sm.photo_path',
                 'cm.course_name',
                 'cad.cadre_name',
@@ -593,20 +597,22 @@ class DirectoryController extends Controller
         return [
             'sno' => ['heading' => 'S.No.', 'width' => '6%', 'align' => 'center',
                 'value' => fn ($row, int $i) => $i + 1],
-            'name' => ['heading' => 'Name', 'width' => '20%', 'align' => 'left',
+            'name' => ['heading' => 'Name', 'width' => '17%', 'align' => 'left',
                 'value' => fn ($row) => trim((string) $row->display_name) ?: '-'],
-            'ot_code' => ['heading' => 'OT Code', 'width' => '9%', 'align' => 'center',
+            'ot_code' => ['heading' => 'OT Code', 'width' => '8%', 'align' => 'center',
                 'value' => fn ($row) => $row->generated_OT_code ?: '-'],
             // Not stored on student_master yet — the grid shows the same placeholder.
-            'room_no' => ['heading' => 'Room No.', 'width' => '8%', 'align' => 'center',
+            'room_no' => ['heading' => 'Room No.', 'width' => '7%', 'align' => 'center',
                 'value' => fn () => '-'],
-            'room_ext' => ['heading' => 'Room Extension No.', 'width' => '11%', 'align' => 'center',
+            'room_ext' => ['heading' => 'Room Extension No.', 'width' => '10%', 'align' => 'center',
                 'value' => fn () => '-'],
-            'email' => ['heading' => 'Email ID', 'width' => '22%', 'align' => 'left',
+            'email' => ['heading' => 'Email ID', 'width' => '19%', 'align' => 'left',
                 'value' => fn ($row) => $row->email ?: '-'],
-            'course' => ['heading' => 'Course Name', 'width' => '12%', 'align' => 'left',
+            'mobile' => ['heading' => 'Mobile No.', 'width' => '11%', 'align' => 'center',
+                'value' => fn ($row) => $row->contact_no ?: '-'],
+            'course' => ['heading' => 'Course Name', 'width' => '11%', 'align' => 'left',
                 'value' => fn ($row) => $row->course_name ?: '-'],
-            'cadre' => ['heading' => 'Cadre Name', 'width' => '12%', 'align' => 'left',
+            'cadre' => ['heading' => 'Cadre Name', 'width' => '11%', 'align' => 'left',
                 'value' => fn ($row) => $row->cadre_name ?: '-'],
         ];
     }
