@@ -103,6 +103,8 @@ class FacultyController extends Controller
                     ($request->middlename ? $request->middlename . ' ' : '') .
                     $request->lastname
                 ),
+                // Curated initials for the printed weekly timetable.
+                'abbreviation' => $request->abbreviation ?: null,
                 'gender' => $request->gender,
                 'landline_no' => $request->landline,
                 'mobile_no' => $request->mobile,
@@ -127,6 +129,11 @@ class FacultyController extends Controller
                 //'last_update' => now(),
                 'active_inactive' => 1,
             ];
+            // abbreviation arrives with migration 2026_09_22_090000; until it has
+            // run, writing it would fail every Faculty save.
+            if (!FacultyMaster::hasAbbreviationColumn()) {
+                unset($facultyDetails['abbreviation']);
+            }
 
             // Handle City - create new city if "other_city" is provided
             if (!empty($request->other_city)) {
@@ -604,6 +611,13 @@ class FacultyController extends Controller
             'request' => $request->all(),
             'user_id' => auth()->id()
         ]);*/
+        // Outside the try: the catch below would swallow the ValidationException.
+        $request->validate([
+            'abbreviation' => 'nullable|string|max:12',
+        ], [
+            'abbreviation.max' => 'Abbreviation may not be longer than 12 characters.',
+        ]);
+
         try {
             DB::beginTransaction();
 
@@ -637,6 +651,8 @@ class FacultyController extends Controller
                     ($request->middlename ? $request->middlename . ' ' : '') .
                     $request->lastname
                 ),
+                // Curated initials for the printed weekly timetable.
+                'abbreviation'  => $request->abbreviation ?: null,
                 'gender'        => $request->gender,
                 'landline_no'   => $request->landline,
                 'mobile_no'        => $request->mobile,
@@ -658,6 +674,9 @@ class FacultyController extends Controller
                 'PAN_No'                => $request->pannumber,
                 'faculty_pa'            => $request->facultyType == '1' ? $request->faculty_pa : null, // Only save for Internal faculty type
             ];
+            if (!FacultyMaster::hasAbbreviationColumn()) {
+                unset($facultyDetails['abbreviation']);
+            }
 
             if(!empty($request->other_city)) {
                 $otherCity = City::create([
@@ -703,7 +722,6 @@ class FacultyController extends Controller
             $facultyDetails['active_inactive'] = 1;
 
             //print_r($facultyDetails);die;
-            logger()->info('DB columns', \Schema::getColumnListing('faculty_master'));
            //$faculty->update($facultyDetails);
 
            $faculty->fill($facultyDetails);
@@ -825,9 +843,11 @@ class FacultyController extends Controller
             // return redirect()->route('faculty.index')->with('success', 'Faculty created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            dump($e);
-         //   dd('' . $e->getMessage());
-            return redirect()->back()->with('error', 'Something went wrong: ' . $e->getMessage());
+            Log::error('Faculty Update Error: ' . $e->getMessage(), [
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+            return redirect()->back()->with('error', 'Something went wrong while updating the faculty.');
         }
 
 

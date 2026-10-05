@@ -38,6 +38,7 @@ use App\Http\Controllers\Admin\IssueReportController;
 use App\Http\Controllers\Admin\LeaveApplicationController;
 use App\Http\Controllers\Admin\Master\AppellationMasterController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
+use App\Http\Controllers\Admin\Master\LeaveNatureMasterController;
 use App\Http\Controllers\Admin\MDOEscrotExemptionController;
 use App\Http\Controllers\Admin\MedicalExceptionFacultyViewController;
 use App\Http\Controllers\Admin\MedicalExceptionOTViewController;
@@ -245,6 +246,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/feed', [UserController::class, 'dashboardFeed'])->name('admin.dashboard.feed');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
     Route::get('/dashboard/ot-participants', [UserController::class, 'otParticipantsList'])->name('admin.dashboard.ot-participants');
+    Route::get('/dashboard/ot-participants/export/{format}', [UserController::class, 'otParticipantsExport'])->name('admin.dashboard.ot-participants.export');
+    // Comment / Feedback on a participant: the Action column's form, and the
+    // history page behind the COMMENTS/FEEDBACKS count.
+    Route::post('/dashboard/ot-participants/comment', [UserController::class, 'otParticipantCommentStore'])
+        ->middleware('throttle:30,1')->name('admin.dashboard.ot-participants.comment.store');
+    Route::get('/dashboard/ot-participants/{id}/comments', [UserController::class, 'otParticipantComments'])->name('admin.dashboard.ot-participants.comments');
+    Route::get('/dashboard/ot-participants/{id}/comments/export/{format}', [UserController::class, 'otParticipantCommentsExport'])->name('admin.dashboard.ot-participants.comments.export');
     Route::get('/dashboard/students/export/{format}', [UserController::class, 'studentListExport'])->name('admin.dashboard.students.export');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
@@ -1024,6 +1032,16 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/delete/{id}', 'destroy')->name('destroy');
     });
 
+    // Leave Nature Master (Leave Management)
+    Route::prefix('master/leave-nature-master')->name('master.leave-nature.')->controller(LeaveNatureMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/status/{id}', 'status')->name('status');
+        Route::delete('/delete/{id}', 'destroy')->name('delete');
+    });
+
     // Stationed Leave Master (Leave Management)
     Route::prefix('admin/stationed-leave-master')->name('admin.stationed-leave-master.')->controller(StationedLeaveMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
@@ -1433,6 +1451,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/faculty/whos-who/courses', [WhosWhoController::class, 'getCourses'])->name('admin.faculty.whos-who.courses');
     Route::get('/faculty/whos-who/students', [WhosWhoController::class, 'getStudents'])->name('admin.faculty.whos-who.students');
     Route::get('/faculty/whos-who/download-pdf', [WhosWhoController::class, 'downloadPdf'])->name('admin.faculty.whos-who.download-pdf');
+    Route::get('/faculty/whos-who/download-excel', [WhosWhoController::class, 'downloadExcel'])->name('admin.faculty.whos-who.download-excel');
+    Route::get('/faculty/whos-who/download-csv', [WhosWhoController::class, 'downloadCsv'])->name('admin.faculty.whos-who.download-csv');
     Route::get('/faculty/whos-who/static-info', [WhosWhoController::class, 'getStaticInfo'])->name('admin.faculty.whos-who.static-info');
     Route::get('/sessions', [DashboardController::class, 'sessions'])->name('admin.dashboard.sessions');
 

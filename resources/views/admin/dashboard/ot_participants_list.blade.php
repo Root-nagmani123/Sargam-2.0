@@ -53,6 +53,22 @@
     .ot-list-page .programme-dt-table th:nth-child(2), .ot-list-page .programme-dt-table td:nth-child(2) { min-width: 120px; }
     .ot-list-page .programme-dt-table th:nth-child(3), .ot-list-page .programme-dt-table td:nth-child(3) { min-width: 200px; }
 
+    /* Action column trigger — a link-styled button so the grid keeps its light look. */
+    .ot-list-page .ot-add-comment-btn {
+        display: inline-flex; align-items: center; gap: 0.35rem;
+        border: 0; background: none; padding: 0; color: #004a93;
+        font-size: 0.8125rem; font-weight: 600; line-height: 1.25; text-align: left;
+        white-space: normal; max-width: 8.5rem; cursor: pointer;
+    }
+    .ot-list-page .ot-add-comment-btn:hover { text-decoration: underline; }
+    .ot-list-page .ot-add-comment-btn i { font-size: 1rem; flex: 0 0 auto; }
+    .ot-list-page .ot-add-comment-btn:focus-visible { outline: 2px solid #004a93; outline-offset: 2px; }
+
+    .ot-comment-modal .form-label { font-weight: 600; font-size: 0.875rem; color: #344054; }
+    .ot-comment-modal .req { color: #d92d20; }
+    .ot-comment-modal .form-control:disabled,
+    .ot-comment-modal .form-select:disabled { background-color: #eaecf0; }
+
     .ot-list-page .sl-dt-scroll-host { overflow-x: auto; overflow-y: visible; }
     .ot-list-page .programme-dt-table { overflow: visible !important; }
     .ot-list-page .programme-dt-table { --sl-pin-left-0: 0px; --sl-pin-left-1: 70px; --sl-pin-left-2: 190px; }
@@ -99,6 +115,16 @@
                 <i class="bi bi-printer" aria-hidden="true"></i>
                 <span>Print</span>
             </button>
+            <div class="dropdown">
+                <button type="button" class="btn sl-toolbar-btn dropdown-toggle border-0" id="otListDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-download" aria-hidden="true"></i>
+                    <span>Download</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-1 py-2" aria-labelledby="otListDownloadBtn">
+                    <li><button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="otListDownloadCsv"><i class="bi bi-file-earmark-excel text-success"></i><span>Download Excel</span></button></li>
+                    <li><button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="otListDownloadPdf"><i class="bi bi-filetype-pdf text-danger"></i><span>Download PDF</span></button></li>
+                </ul>
+            </div>
         </div>
     </div>
 
@@ -135,6 +161,37 @@
                             @foreach($cadreOptions as $cadre)
                                 <option value="{{ $cadre }}" {{ (string)($filters['cadre'] ?? '') === (string)$cadre ? 'selected' : '' }}>{{ $cadre }}</option>
                             @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Cadre Counsellor — dependent on Cadre. Hidden until a cadre is
+                         picked, then filled from COUNSELLORS_BY_CADRE with the faculty
+                         who actually counsel that cadre's participants. --}}
+                    <div class="sl-filter-item" id="otItemCounsellor" style="display:none;">
+                        <select id="counsellorFacultyFilter" class="form-select sl-filter-select" aria-label="Filter by cadre counsellor">
+                            <option value="">Cadre Counsellor</option>
+                        </select>
+                    </div>
+                    @endif
+
+                    {{-- House Group — the course's House Group from Course Group
+                         Mapping ("Nanda Devi", "Stok Kangri"), matching the
+                         House Group column. --}}
+                    @if(($houseGroupOptions ?? collect())->isNotEmpty())
+                    <div class="sl-filter-item">
+                        <select id="houseGroupFilter" class="form-select sl-filter-select" aria-label="Filter by house group">
+                            <option value="">House Group</option>
+                            @foreach($houseGroupOptions as $hg)
+                                <option value="{{ $hg }}" {{ (string)($filters['house_group'] ?? '') === (string)$hg ? 'selected' : '' }}>{{ $hg }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- House Group Faculty — dependent on House Group, filled from
+                         FACULTY_BY_HOUSE_GROUP (gmap.facility_id of the house group). --}}
+                    <div class="sl-filter-item" id="otItemHouseFaculty" style="display:none;">
+                        <select id="houseFacultyFilter" class="form-select sl-filter-select" aria-label="Filter by house group faculty">
+                            <option value="">House Group Faculty</option>
                         </select>
                     </div>
                     @endif
@@ -177,15 +234,21 @@
                                     <th>OT Code</th>
                                     <th>Name</th>
                                     <th>Email</th>
+                                    <th>Mobile No</th>
+                                    <th>User Name</th>
                                     <th>Cadre</th>
-                                    <th>House Name</th>
-                                    <th>Total Duty (Count)</th>
+                                    <th>Cadre Counsellor</th>
+                                    <th>House Group Faculty</th>
+                                    <th>House Group</th>
+                                    <th>MDO Duty</th>
                                     <th>Duty Type</th>
-                                    <th>Total Medical Exemption Count</th>
-                                    <th>Total PT Exemption (Days)</th>
-                                    <th>Total Stationed Leave (Days)</th>
-                                    <th>Total Notice/Memo</th>
-                                    <th>Total Discipline Memo</th>
+                                    <th>Medical Exemption</th>
+                                    <th>PT Exemption</th>
+                                    <th>Stationed Leave</th>
+                                    <th>Notice/Memo</th>
+                                    <th>Discipline Memo</th>
+                                    <th>Comments/ Feedbacks</th>
+                                    <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -213,6 +276,58 @@
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
+        </div>
+    </div>
+</div>
+
+{{-- Add Comment/ Feedback — opened from the Action column. --}}
+<div class="modal fade ot-comment-modal" id="otCommentModal" tabindex="-1" aria-labelledby="otCommentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom pb-3">
+                <h5 class="modal-title fw-bold" id="otCommentModalLabel">Add Comment/ Feedback</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="otCommentForm" novalidate>
+                <div class="modal-body">
+                    <input type="hidden" id="otCommentStudentPk" name="student_master_pk" value="">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="otCommentOtName">OT Name<span class="req">*</span></label>
+                            {{-- Read-only: the row decides who the feedback is about. --}}
+                            <input type="text" class="form-control" id="otCommentOtName" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="otCommentBy">Comment/ Feedback by<span class="req">*</span></label>
+                            <input type="text" class="form-control" id="otCommentBy" disabled
+                                value="{{ trim((auth()->user()->first_name ?? '') . ' ' . (auth()->user()->last_name ?? '')) ?: (auth()->user()->user_name ?? '') }}">
+                        </div>
+                        <div class="col-12">
+                            <span class="form-label d-block">Notify OT<span class="req">*</span></span>
+                            <div class="d-flex align-items-center gap-4">
+                                <div class="form-check m-0">
+                                    <input class="form-check-input" type="radio" name="notify_ot" id="otNotifyYes" value="1" checked>
+                                    <label class="form-check-label" for="otNotifyYes">Yes</label>
+                                </div>
+                                <div class="form-check m-0">
+                                    <input class="form-check-input" type="radio" name="notify_ot" id="otNotifyNo" value="0">
+                                    <label class="form-check-label" for="otNotifyNo">No</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="otCommentMessage">Message<span class="req">*</span></label>
+                            <textarea class="form-control" id="otCommentMessage" name="message" rows="4"
+                                maxlength="5000" placeholder="Lorem ipsum dolor sit amet"></textarea>
+                            <div class="invalid-feedback" id="otCommentMessageError">Please enter a message.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-danger rounded-3 px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4" id="otCommentSubmit">Add Comment/ Feedback</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -246,8 +361,16 @@
         const ACADEMY_EN = 'Lal Bahadur Shastri National Academy of Administration, Mussoorie';
         const filters = @json($filters ?? []);
         const baseUrl = "{{ route('admin.dashboard.ot-participants') }}";
+        // { "<cadre>": [{pk, name}, ...] } — the faculty who counsel each cadre's
+        // participants. Sent whole at page load so the dependent dropdown fills
+        // without a round trip.
+        // Rebuilt from every DataTable response (`filterOptions`) so the dropdowns
+        // only ever offer values that still have rows under the current filters.
+        let COUNSELLORS_BY_CADRE = @json($counsellorsByCadre ?? new stdClass);
+        let FACULTY_BY_HOUSE_GROUP = @json($facultyByHouseGroup ?? new stdClass);
         const LOCKED_COLUMNS = [0, 1, 2]; // S.No, OT Code, Name — frozen & always visible
-        const DUTY_TYPE_COL = 7; // "Duty Type" — only meaningful for a single-day filter
+        // Index tracks the <thead> order above — bump it when a column is inserted before it.
+        const DUTY_TYPE_COL = 11; // "Duty Type" — only meaningful for a single-day filter
         let dt = null;
 
         // Duty Type is per-day, so it only makes sense when the Time Period is a single
@@ -273,6 +396,11 @@
                 status: currentStatus,
                 course_id: $('#courseFilter').val() || '',
                 cadre: $('#cadreFilter').val() || '',
+                // Only meaningful alongside a cadre — cleared with it below.
+                counsellor_faculty: $('#counsellorFacultyFilter').val() || '',
+                house_group: $('#houseGroupFilter').val() || '',
+                // Only meaningful alongside a house group — cleared with it.
+                house_faculty: $('#houseFacultyFilter').val() || '',
                 session: $('#sessionFilter').val() || '',
                 participant: $('#participantFilter').val() || '',
                 from_date: (filters.from_date || '').toString(),
@@ -330,6 +458,12 @@
                 type: 'GET',
                 data: function(d) {
                     Object.assign(d, getFilterState());
+                },
+                dataSrc: function(json) {
+                    // Re-scope the filter dropdowns to what this result set can
+                    // still reach, before the rows are handed to DataTables.
+                    applyFilterOptions(json.filterOptions);
+                    return json.data || [];
                 }
             },
             columns: [
@@ -337,7 +471,11 @@
                 { data: 'ot_code', name: 'ot_code' },
                 { data: 'name', name: 'name' },
                 { data: 'email', name: 'email' },
+                { data: 'mobile', name: 'mobile' },
+                { data: 'user_name', name: 'user_name' },
                 { data: 'cadre', name: 'cadre' },
+                { data: 'counsellor', name: 'counsellor' },
+                { data: 'house_faculty', name: 'house_faculty' },
                 { data: 'house', name: 'house' },
                 { data: 'duty_count', name: 'duty_count', orderable: false, searchable: false },
                 { data: 'duty_type', name: 'duty_type', orderable: false, searchable: false },
@@ -346,6 +484,8 @@
                 { data: 'stationed', name: 'stationed', orderable: false, searchable: false },
                 { data: 'notice_memo', name: 'notice_memo', orderable: false, searchable: false },
                 { data: 'discipline_memo', name: 'discipline_memo', orderable: false, searchable: false },
+                { data: 'comments', name: 'comments', orderable: false, searchable: false },
+                { data: 'action', name: 'action', orderable: false, searchable: false },
             ]
         });
 
@@ -365,8 +505,129 @@
         });
 
         /* ── Filters ── */
-        $('#courseFilter').on('change', function() { applyFilter({ course_id: this.value }); });
-        $('#cadreFilter').on('change', function() { applyFilter({ cadre: this.value }); });
+        // Course change is a STRUCTURAL change, not just a narrower row set: which
+        // filters exist at all follows the course's Course Group Mapping (a
+        // counsellor-group course offers Cadre / Cadre Counsellor, a house-group one
+        // offers House Group / House Group Faculty), and that markup is rendered
+        // server-side. So reload the page, exactly as the Active/Archived tabs do.
+        // The group selections belong to the previous course, so they are dropped.
+        $('#courseFilter').on('change', function() {
+            const p = new URLSearchParams(window.location.search);
+            p.set('status', currentStatus);
+            if (this.value) { p.set('course_id', this.value); } else { p.delete('course_id'); }
+            ['cadre', 'counsellor_faculty', 'house_group', 'house_faculty'].forEach(k => p.delete(k));
+            window.location.href = baseUrl + (p.toString() ? '?' + p.toString() : '');
+        });
+        // Cadre Counsellor cascades off Cadre: no cadre → hidden and cleared; a cadre
+        // → VISIBLE, listing that cadre's counsellors. When the cadre has none
+        // mapped the control still shows, disabled, reading "No counsellor mapped"
+        // — hiding it outright looked like the filter was missing. `keep` restores
+        // a selection carried in the URL on first paint.
+        function refreshDependentFaculty(opts) {
+            const parent = $(opts.parent).val() || '';
+            const $item = $(opts.item);
+            const $sel = $(opts.select);
+            const list = (parent && opts.map[parent]) ? opts.map[parent] : [];
+
+            const previous = opts.keep !== undefined ? String(opts.keep) : String($sel.val() || '');
+            $sel.empty().append($('<option>', {
+                value: '',
+                text: list.length ? opts.placeholder : opts.emptyText,
+            }));
+            list.forEach(function(f) {
+                $sel.append($('<option>', { value: String(f.pk), text: f.name }));
+            });
+            // Keep the previous faculty only if the new parent value still has them.
+            const stillValid = previous !== '' && list.some(f => String(f.pk) === previous);
+            let value = stillValid ? previous : '';
+            // With nothing carried over and exactly ONE faculty for this parent,
+            // pre-select them — picking a cadre then picking its only counsellor is
+            // two clicks for one outcome. Never guessed when the parent has more than
+            // one, and never applied while re-scoping the lists after a draw (that
+            // would make the blank "all" option impossible to keep).
+            if (value === '' && opts.autoSelectSingle && list.length === 1) {
+                value = String(list[0].pk);
+            }
+            $sel.val(value);
+            $sel.prop('disabled', list.length === 0);
+            $item.toggle(!!parent);
+            return !stillValid && previous !== '';
+        }
+
+        function refreshCounsellorOptions(keep, autoSelectSingle) {
+            return refreshDependentFaculty({
+                parent: '#cadreFilter', item: '#otItemCounsellor', select: '#counsellorFacultyFilter',
+                map: COUNSELLORS_BY_CADRE, placeholder: 'Cadre Counsellor',
+                emptyText: 'No counsellor mapped', keep: keep,
+                autoSelectSingle: autoSelectSingle === true,
+            });
+        }
+
+        // House Group Faculty cascades off House Group, exactly as Cadre Counsellor
+        // cascades off Cadre.
+        function refreshHouseFacultyOptions(keep, autoSelectSingle) {
+            return refreshDependentFaculty({
+                parent: '#houseGroupFilter', item: '#otItemHouseFaculty', select: '#houseFacultyFilter',
+                map: FACULTY_BY_HOUSE_GROUP, placeholder: 'House Group Faculty',
+                emptyText: 'No faculty mapped', keep: keep,
+                autoSelectSingle: autoSelectSingle === true,
+            });
+        }
+
+        // Rebuild a plain <select> from a list of values, keeping the current
+        // selection when it survives. The selected value is always kept as an
+        // option even if the server no longer lists it, so the control never
+        // silently shows a different filter than the one in effect.
+        function rebuildValueSelect($sel, values, placeholder) {
+            if (!$sel.length) { return; }
+            const previous = String($sel.val() || '');
+            const list = (values || []).map(String);
+            if (previous !== '' && list.indexOf(previous) === -1) { list.push(previous); list.sort(); }
+
+            $sel.empty().append($('<option>', { value: '', text: placeholder }));
+            list.forEach(function(v) { $sel.append($('<option>', { value: v, text: v })); });
+            $sel.val(previous);
+        }
+
+        // Apply the re-scoped option lists that came back with the rows.
+        function applyFilterOptions(opts) {
+            if (!opts) { return; }
+            if (opts.counsellorsByCadre) { COUNSELLORS_BY_CADRE = opts.counsellorsByCadre; }
+            if (opts.facultyByHouseGroup) { FACULTY_BY_HOUSE_GROUP = opts.facultyByHouseGroup; }
+            rebuildValueSelect($('#cadreFilter'), opts.cadre, 'Cadre');
+            rebuildValueSelect($('#houseGroupFilter'), opts.houseGroup, 'House Group');
+            // The parents may have been rebuilt, so the dependent lists follow them.
+            refreshCounsellorOptions($('#counsellorFacultyFilter').val() || '');
+            refreshHouseFacultyOptions($('#houseFacultyFilter').val() || '');
+        }
+
+        $('#cadreFilter').on('change', function() {
+            // Dropping an out-of-cadre counsellor must reach the server too, so
+            // refresh the options BEFORE reading the filter state. autoSelectSingle:
+            // picking a cadre pre-selects its counsellor when it has only one.
+            refreshCounsellorOptions('', true);
+            applyFilter({ cadre: this.value });
+        });
+        $('#counsellorFacultyFilter').on('change', function() { applyFilter({ counsellor_faculty: this.value }); });
+        $('#houseGroupFilter').on('change', function() {
+            // Dropping an out-of-house faculty must reach the server too, so refresh
+            // the options BEFORE reading the filter state. autoSelectSingle: picking
+            // a house group pre-selects its faculty when it has only one.
+            refreshHouseFacultyOptions('', true);
+            applyFilter({ house_group: this.value });
+        });
+        $('#houseFacultyFilter').on('change', function() { applyFilter({ house_faculty: this.value }); });
+        // First paint: restore the faculty carried in the URL, and pre-select the
+        // parent's only faculty when the URL names a parent but no faculty —
+        // ?cadre=AGMUT picks that cadre's lone counsellor, ?house_group=Kangchendjunga
+        // picks that house's lone warden. If either changed what the server was
+        // given, push it ONCE so the table and the dropdowns never disagree.
+        refreshCounsellorOptions(filters.counsellor_faculty || '', true);
+        refreshHouseFacultyOptions(filters.house_faculty || '', true);
+        if ((($('#counsellorFacultyFilter').val() || '') !== (filters.counsellor_faculty || ''))
+            || (($('#houseFacultyFilter').val() || '') !== (filters.house_faculty || ''))) {
+            applyFilter({});
+        }
         $('#sessionFilter').on('change', function() { applyFilter({ session: this.value }); });
         $('#participantFilter').on('change', function() { applyFilter({ participant: this.value }); });
         $('#resetFilters').on('click', function() { window.location.href = baseUrl; });
@@ -400,15 +661,21 @@
             { title: 'OT Code', data: 'ot_code', w: 6 },
             { title: 'Name', data: 'name', w: 12 },
             { title: 'Email', data: 'email', w: 14 },
+            { title: 'Mobile No', data: 'mobile', w: 8 },
+            { title: 'User Name', data: 'user_name', w: 10 },
             { title: 'Cadre', data: 'cadre', w: 8 },
-            { title: 'House Name', data: 'house', w: 8 },
-            { title: 'Total Duty (Count)', data: 'duty_count', w: 6 },
+            { title: 'Cadre Counsellor', data: 'counsellor', w: 10 },
+            { title: 'House Group Faculty', data: 'house_faculty', w: 10 },
+            { title: 'House Group', data: 'house', w: 8 },
+            { title: 'MDO Duty', data: 'duty_count', w: 6 },
             { title: 'Duty Type', data: 'duty_type', w: 8 },
-            { title: 'Total Medical Exemption Count', data: 'medical', w: 7 },
-            { title: 'Total PT Exemption (Days)', data: 'pt', w: 7 },
-            { title: 'Total Stationed Leave (Days)', data: 'stationed', w: 7 },
-            { title: 'Total Notice/Memo', data: 'notice_memo', w: 6 },
-            { title: 'Total Discipline Memo', data: 'discipline_memo', w: 6 },
+            { title: 'Medical Exemption', data: 'medical', w: 7 },
+            { title: 'PT Exemption', data: 'pt', w: 7 },
+            { title: 'Stationed Leave', data: 'stationed', w: 7 },
+            { title: 'Notice/Memo', data: 'notice_memo', w: 6 },
+            { title: 'Discipline Memo', data: 'discipline_memo', w: 6 },
+            // Action is a control, not data — it is never printed or exported.
+            { title: 'Comments/ Feedbacks', data: 'comments', w: 6 },
         ];
 
         function stripHtml(html) {
@@ -455,6 +722,14 @@
             if ($('#courseFilter').val()) { parts.push('Course: ' + course); }
             const cadre = $('#cadreFilter').val();
             if (cadre) { parts.push('Cadre: ' + cadre); }
+            if ($('#counsellorFacultyFilter').val()) {
+                parts.push('Cadre Counsellor: ' + $('#counsellorFacultyFilter option:selected').text().trim());
+            }
+            const houseGroup = $('#houseGroupFilter').val();
+            if (houseGroup) { parts.push('House Group: ' + houseGroup); }
+            if ($('#houseFacultyFilter').val()) {
+                parts.push('House Group Faculty: ' + $('#houseFacultyFilter option:selected').text().trim());
+            }
             const period = $('#timePeriodFilter').val().trim();
             if (period) { parts.push('Time Period: ' + period); }
             parts.push('Status: ' + (currentStatus === 'archive' ? 'Archived' : 'Active'));
@@ -549,11 +824,101 @@
                 });
         });
 
+        /* ── Add Comment/ Feedback ── */
+        // The button lives in a DataTables-rendered cell, so the handler is
+        // delegated from the table — it must keep working after every redraw.
+        const otCommentModalEl = document.getElementById('otCommentModal');
+        const otCommentModal = otCommentModalEl ? new bootstrap.Modal(otCommentModalEl) : null;
+
+        $('#otParticipantsTable').on('click', '.ot-add-comment-btn', function() {
+            if (!otCommentModal) { return; }
+            $('#otCommentStudentPk').val($(this).data('student'));
+            $('#otCommentOtName').val($(this).data('name'));
+            $('#otCommentMessage').val('').removeClass('is-invalid');
+            $('#otNotifyYes').prop('checked', true);
+            otCommentModal.show();
+        });
+
+        $('#otCommentForm').on('submit', function(e) {
+            e.preventDefault();
+            const $msg = $('#otCommentMessage');
+            const message = ($msg.val() || '').trim();
+            if (message === '') { $msg.addClass('is-invalid').focus(); return; }
+            $msg.removeClass('is-invalid');
+
+            const $btn = $('#otCommentSubmit');
+            $btn.prop('disabled', true).text('Saving…');
+
+            $.ajax({
+                url: "{{ route('admin.dashboard.ot-participants.comment.store') }}",
+                type: 'POST',
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    student_master_pk: $('#otCommentStudentPk').val(),
+                    course_master_pk: $('#courseFilter').val() || '',
+                    message: message,
+                    notify_ot: $('input[name="notify_ot"]:checked').val(),
+                },
+            }).done(function(res) {
+                otCommentModal.hide();
+                // Reload keeps the row's Comments/Feedbacks count honest without
+                // hand-patching the cell.
+                if (dt) { dt.ajax.reload(null, false); }
+                if (window.toastr && res && res.message) { toastr.success(res.message); }
+                else if (res && res.message) { alert(res.message); }
+            }).fail(function(xhr) {
+                const err = (xhr.responseJSON && (xhr.responseJSON.message || xhr.responseJSON.error))
+                    || 'Unable to save the comment. Please try again.';
+                alert(err);
+            }).always(function() {
+                $btn.prop('disabled', false).text('Add Comment/ Feedback');
+            });
+        });
+
+        /* ── Download (Excel / PDF) ── */
+        // The file follows the on-screen view: same filters, same Active/Archived
+        // tab, same search text.
+        function buildDownloadUrl(format) {
+            const params = new URLSearchParams();
+            Object.entries(getFilterState()).forEach(function([k, v]) {
+                if (v !== '' && v !== null && v !== undefined) { params.set(k, v); }
+            });
+            const search = dt ? dt.search() : '';
+            if (search) { params.set('search', search); }
+            const base = format === 'csv'
+                ? "{{ route('admin.dashboard.ot-participants.export', ['format' => 'csv']) }}"
+                : "{{ route('admin.dashboard.ot-participants.export', ['format' => 'pdf']) }}";
+            const q = params.toString();
+            return q ? base + '?' + q : base;
+        }
+        $('#otListDownloadCsv').on('click', function(e) { e.preventDefault(); window.location.href = buildDownloadUrl('csv'); });
+        $('#otListDownloadPdf').on('click', function(e) { e.preventDefault(); window.open(buildDownloadUrl('pdf'), '_blank'); });
+
         /* ── Dynamic columns: show / hide ── */
-        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v1';
+        // Stored values are column INDEXES, so bump the version whenever the column
+        // order changes — v1 entries would otherwise hide the wrong columns.
+        // v5: Mobile No / User Name inserted after Email, so every stored index
+        // past it shifted — a v4 list would hide the wrong columns.
+        // v6: the default set below was introduced, so v5 entries (which meant
+        // "everything visible") must not survive as a saved preference.
+        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v6';
+        // What the page opens with: the frozen identity columns plus the counts
+        // the list exists for. The contact / mapping columns are one click away in
+        // Column Visibility, so a viewer who wants them turns them on — and that
+        // choice is then saved and wins over this default for good.
+        //   3 Email · 4 Mobile No · 5 User Name · 6 Cadre
+        //   7 Cadre Counsellor · 8 House Group Faculty · 9 House Group
+        const DEFAULT_HIDDEN_COLUMNS = [3, 4, 5, 6, 7, 8, 9];
         function otGetHiddenCols() {
-            try { const raw = localStorage.getItem(otColStorageKey); const arr = raw ? JSON.parse(raw) : []; return Array.isArray(arr) ? arr : []; }
-            catch (e) { return []; }
+            try {
+                const raw = localStorage.getItem(otColStorageKey);
+                // No saved preference yet (null) → the default set. An empty ARRAY is
+                // a real choice ("show everything") and must be honoured as one.
+                if (raw === null) { return DEFAULT_HIDDEN_COLUMNS.slice(); }
+                const arr = JSON.parse(raw);
+                return Array.isArray(arr) ? arr : DEFAULT_HIDDEN_COLUMNS.slice();
+            }
+            catch (e) { return DEFAULT_HIDDEN_COLUMNS.slice(); }
         }
         function otPersistHiddenCols(arr) { try { localStorage.setItem(otColStorageKey, JSON.stringify(arr)); } catch (e) {} }
         function setupOtColumns() {
