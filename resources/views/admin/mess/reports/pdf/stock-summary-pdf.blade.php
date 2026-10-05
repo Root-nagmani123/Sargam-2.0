@@ -283,7 +283,7 @@
 @endif
 
 <p style="font-size: 11px; color: #555; margin: 8px 0 0;">
-    Note: Opening and Closing value = quantity x average buying price up to that date. Purchase value uses the buying price of this period, including tax. Sale value = Opening + Purchase - Closing, at buying price (not the selling price).
+    Note: Opening, Sale and Closing are valued at the running average buying price: each purchase updates the average, and each sale is valued at the average on its date (not the selling price). Purchase value uses the buying price of this period, including tax.
 </p>
 
 <div class="footer">
