@@ -3,13 +3,14 @@
 @section('title', 'Venue Master')
 
 @push('styles')
+@include('admin.layouts.partials.select2-assets')
 <link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
 @endpush
 
 @section('setup_content')
 <div class="container-fluid mst-page">
     <x-breadcrum title="Venue Master" :showBack="false">
-        <a href="{{ route('Venue-Master.create') }}"
+        <a href="{{ route('Venue-Master.create') }}" data-mst-modal-form
            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
             <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
             <span>Add New Venue</span>
@@ -20,75 +21,49 @@
 
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
-            {{-- Server-paginated (VenueMasterController::index, fixed 10 per
-                 page, no per_page parameter): no DataTable on this grid, so
-                 the footer below is hand-written (docs/new-design-index-page.md
-                 §4 variant B). --}}
+
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns"
+                            data-bs-toggle="modal" data-bs-target="#vnmColumnVisibilityModal"
+                            title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div class="programme-dt-search" data-dt-search-for="venue-master-table"></div>
+                </div>
+            </div>
+
+            {{-- Server-side grid (VenueMasterDataTable): search, sorting, page size and
+                 paging run on the whole table. Search, pager and "Showing N of M
+                 items" are moved into these slots by datatable-global-ui.js. --}}
             <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" id="venueMasterTable">
-                        <caption class="visually-hidden">Venues</caption>
-                        <thead>
-                            <tr>
-                                <th scope="col" class="text-nowrap">S. No.</th>
-                                <th scope="col">Venue Name</th>
-                                <th scope="col" class="text-nowrap">Short Name</th>
-                                <th scope="col">Description</th>
-                                <th scope="col" class="text-nowrap">Status</th>
-                                <th scope="col" class="text-nowrap">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($venues as $index => $venue)
-                                @php $isActive = (int) $venue->active_inactive === 1; @endphp
-                                <tr>
-                                    <td>{{ $venues->firstItem() + $index }}</td>
-                                    <td>{{ $venue->venue_name }}</td>
-                                    <td>{{ $venue->venue_short_name }}</td>
-                                    <td class="mst-col-wrap">{{ $venue->description }}</td>
-                                    <td data-order="{{ $isActive ? 1 : 0 }}">
-                                        @include('admin.master.partials.grid-status', ['active' => $isActive])
-                                    </td>
-                                    <td>
-                                        @include('admin.master.partials.grid-actions', [
-                                            'name'   => $venue->venue_name,
-                                            'edit'   => ['href' => route('Venue-Master.edit', $venue->venue_id)],
-                                            'toggle' => [
-                                                'active'    => $isActive,
-                                                'table'     => 'venue_master',
-                                                'column'    => 'active_inactive',
-                                                'id'        => $venue->venue_id,
-                                                'id_column' => 'venue_id',
-                                            ],
-                                            'delete' => $isActive
-                                                ? ['disabled' => true, 'reason' => 'Cannot delete an active venue. Deactivate it first.']
-                                                : ['action' => route('Venue-Master.destroy', $venue->venue_id)],
-                                        ])
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr class="mst-empty">
-                                    <td colspan="6">No venues found.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
                 </div>
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                     data-dt-footer-for="venue-master-table"></div>
+            </div>
 
-                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
-                    <div class="programme-dt-pagination">
-                        {{ $venues->links('vendor.pagination.custom') }}
-                    </div>
-                    <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
-                        <div class="dataTables_info" aria-live="polite">
-                            @if ($venues->total())
-                                Showing {{ $venues->firstItem() }}–{{ $venues->lastItem() }} of {{ number_format($venues->total()) }} items
-                            @else
-                                0 items
-                            @endif
-                        </div>
-                    </div>
-                </div>
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility -->
+<div class="modal fade" id="vnmColumnVisibilityModal" tabindex="-1"
+     aria-labelledby="vnmColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-3 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="vnmColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3 mst-colvis-grid" id="vnmColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -96,12 +71,17 @@
 @endsection
 
 @push('scripts')
+{!! $dataTable->scripts() !!}
 <script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
 <script>
     window.statusToggleUrl = "{{ route('admin.toggleStatus') }}";
 
-    // Server-rendered grid: the badge and the switch live in different
-    // columns, so refresh the page once custom.js has saved the new status.
-    MstAdmin.reloadPageOnStatusToggle();
+    $(function () {
+        MstAdmin.columnVisibility({
+            table: '#venue-master-table',
+            grid: '#vnmColumnToggleGrid',
+            storageKey: 'sargam.venueMaster.hiddenCols.{{ auth()->id() ?? 'guest' }}'
+        });
+    });
 </script>
 @endpush

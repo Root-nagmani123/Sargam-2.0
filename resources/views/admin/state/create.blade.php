@@ -18,69 +18,74 @@
     <x-breadcrum title="Add State" />
     <x-session_message />
 
-    <form action="{{ route('master.state.store') }}" method="POST">
-        @csrf
+    {{-- Form root: the index opens this same form in a modal
+         (public/js/master-admin.js openFormModal). Keep form-specific JS in
+         the x-mst-form-init block inside it, bound to elements under root. --}}
+    <div data-mst-form-root data-mst-form-title="Add State">
+        <form action="{{ route('master.state.store') }}" method="POST">
+            @csrf
 
-        <div class="card mst-form-card">
-            <div class="card-body">
-                <h2 class="mst-form-section-title h6">State Details</h2>
+            <div class="card mst-form-card">
+                <div class="card-body">
+                    <h2 class="mst-form-section-title h6">State Details</h2>
 
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="country_master_pk" class="mst-form-label d-block">
-                            Country <span class="mst-req" aria-hidden="true">*</span>
-                        </label>
-                        <select name="country_master_pk" id="country_master_pk"
-                                class="form-select mst-control mst-searchable @error('country_master_pk') is-invalid @enderror"
-                                data-placeholder="Select Country" required aria-required="true">
-                            <option value="">Select Country</option>
-                            @foreach($countries as $country)
-                                <option value="{{ $country->pk }}" {{ old('country_master_pk') == $country->pk ? 'selected' : '' }}>
-                                    {{ $country->country_name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('country_master_pk')
-                            <span class="mst-field-error">{{ $message }}</span>
-                        @enderror
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="country_master_pk" class="mst-form-label d-block">
+                                Country <span class="mst-req" aria-hidden="true">*</span>
+                            </label>
+                            <select name="country_master_pk" id="country_master_pk"
+                                    class="form-select mst-control mst-searchable @error('country_master_pk') is-invalid @enderror"
+                                    data-placeholder="Select Country" required aria-required="true">
+                                <option value="">Select Country</option>
+                                @foreach($countries as $country)
+                                    <option value="{{ $country->pk }}" {{ old('country_master_pk') == $country->pk ? 'selected' : '' }}>
+                                        {{ $country->country_name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('country_master_pk')
+                                <span class="mst-field-error">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="state_name" class="mst-form-label d-block">
+                                State Name <span class="mst-req" aria-hidden="true">*</span>
+                            </label>
+                            <input type="text" id="state_name" name="state_name"
+                                   class="form-control mst-control @error('state_name') is-invalid @enderror"
+                                   value="{{ old('state_name') }}" placeholder="State Name"
+                                   maxlength="255" required aria-required="true">
+                            @error('state_name')
+                                <span class="mst-field-error">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="stateStatus" class="mst-form-label d-block">
+                                Status <span class="mst-req" aria-hidden="true">*</span>
+                            </label>
+                            <select name="active_inactive" id="stateStatus"
+                                    class="form-select mst-control mst-searchable @error('active_inactive') is-invalid @enderror"
+                                    data-placeholder="Select Status" required aria-required="true">
+                                <option value="1" @selected($stateStatus === '1')>Active</option>
+                                <option value="2" @selected($stateStatus === '2')>Inactive</option>
+                            </select>
+                            @error('active_inactive')
+                                <span class="mst-field-error">{{ $message }}</span>
+                            @enderror
+                        </div>
                     </div>
 
-                    <div class="col-md-6">
-                        <label for="state_name" class="mst-form-label d-block">
-                            State Name <span class="mst-req" aria-hidden="true">*</span>
-                        </label>
-                        <input type="text" id="state_name" name="state_name"
-                               class="form-control mst-control @error('state_name') is-invalid @enderror"
-                               value="{{ old('state_name') }}" placeholder="State Name"
-                               maxlength="255" required aria-required="true">
-                        @error('state_name')
-                            <span class="mst-field-error">{{ $message }}</span>
-                        @enderror
+                    <div class="mst-form-footer">
+                        <a href="{{ route('master.state.index') }}" class="btn mst-btn-cancel px-4">Cancel</a>
+                        <button type="submit" class="btn mst-btn-submit px-4">Save</button>
                     </div>
-
-                    <div class="col-md-6">
-                        <label for="stateStatus" class="mst-form-label d-block">
-                            Status <span class="mst-req" aria-hidden="true">*</span>
-                        </label>
-                        <select name="active_inactive" id="stateStatus"
-                                class="form-select mst-control mst-searchable @error('active_inactive') is-invalid @enderror"
-                                data-placeholder="Select Status" required aria-required="true">
-                            <option value="1" @selected($stateStatus === '1')>Active</option>
-                            <option value="2" @selected($stateStatus === '2')>Inactive</option>
-                        </select>
-                        @error('active_inactive')
-                            <span class="mst-field-error">{{ $message }}</span>
-                        @enderror
-                    </div>
-                </div>
-
-                <div class="mst-form-footer">
-                    <a href="{{ route('master.state.index') }}" class="btn mst-btn-cancel px-4">Cancel</a>
-                    <button type="submit" class="btn mst-btn-submit px-4">Save</button>
                 </div>
             </div>
-        </div>
-    </form>
+        </form>
+    </div>
 </div>
 @endsection
 

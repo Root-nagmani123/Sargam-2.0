@@ -1158,3 +1158,87 @@
         flex: 1 1 auto;
     }
 }
+
+/* ── Create / Edit form inside the shared modal (MstAdmin.openFormModal) ─────
+ * The modal shows the create/edit page's own <form>, so the full-page form
+ * classes need a .mst-form-modal variant: the modal already is the surface,
+ * so each section card goes flat and the button row becomes the footer. */
+.mst-form-modal .mst-form-card {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    margin: 0;
+}
+
+.mst-form-modal .mst-form-card + .mst-form-card {
+    margin-top: var(--ds-space-3);
+    padding-top: var(--ds-space-3);
+    border-top: 1px solid var(--ds-line);
+}
+
+.mst-form-modal .mst-form-card > .card-body {
+    padding: 0;
+}
+
+.mst-form-modal .mst-form-section-title {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--ds-ink);
+    margin-bottom: var(--ds-space-3);
+}
+
+.mst-form-modal .mst-form-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--ds-space-2);
+    margin: var(--ds-space-4) calc(-1 * 1.25rem) calc(-1 * 1.25rem);
+    padding: var(--ds-space-3) 1.25rem;
+    border-top: 1px solid #eaecf0;
+}
+
+.mst-form-modal .mst-btn-cancel,
+.mst-form-modal .mst-btn-submit {
+    min-height: var(--ds-control-h);
+}
+
+.mst-form-modal .mst-readonly {
+    min-height: var(--ds-control-h);
+    padding: 0.5rem 0.75rem;
+    background: var(--ds-surface-2);
+    border: 1px solid var(--ds-line);
+    border-radius: 8px;
+    color: var(--ds-ink);
+    font-size: 0.875rem;
+}
+
+@media (max-width: 575.98px) {
+    .mst-form-modal .mst-form-footer > .btn {
+        flex: 1 1 auto;
+    }
+}
+
+/* Hint text under a field, a unit suffix ("In Days") on an input-group, and
+ * values the form derives from elsewhere (read-only). Both roots, so a form
+ * looks the same on its page and in the shared modal. */
+.mst-modal .mst-hint,
+.mst-page  .mst-hint {
+    display: block;
+    margin-top: var(--ds-space-1);
+    color: var(--ds-ink-muted);
+    font-size: 0.8125rem;
+}
+
+.mst-modal .mst-unit,
+.mst-page  .mst-unit {
+    background: var(--ds-surface-2);
+    color: var(--ds-ink-muted);
+    border-color: var(--ds-line);
+    font-size: 0.875rem;
+}
+
+.mst-modal .mst-control[readonly],
+.mst-page  .mst-control[readonly] {
+    background-color: var(--ds-surface-2);
+}

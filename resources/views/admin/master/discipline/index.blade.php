@@ -3,13 +3,14 @@
 @section('title', 'Discipline Master')
 
 @push('styles')
+@include('admin.layouts.partials.select2-assets')
 <link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
 @endpush
 
 @section('setup_content')
 <div class="container-fluid mst-page">
     <x-breadcrum title="Discipline Master" :showBack="false">
-        <a href="{{ route('master.discipline.create') }}"
+        <a href="{{ route('master.discipline.create') }}" data-mst-modal-form
            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
             <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
             <span>Add Discipline</span>

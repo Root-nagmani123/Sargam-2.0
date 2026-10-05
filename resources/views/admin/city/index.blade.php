@@ -3,13 +3,14 @@
 @section('title', 'City List')
 
 @push('styles')
+@include('admin.layouts.partials.select2-assets')
 <link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
 @endpush
 
 @section('setup_content')
 <div class="container-fluid mst-page">
     <x-breadcrum title="City List" :showBack="false">
-        <a href="{{ route('master.city.create') }}"
+        <a href="{{ route('master.city.create') }}" data-mst-modal-form
            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
             <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
             <span>Add City</span>
@@ -20,74 +21,49 @@
 
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
-            {{-- Server-paginated (LocationController::cityIndex, 10 per page,
-                 state + district eager-loaded): no DataTable on this grid, so
-                 the footer below is hand-written (docs/new-design-index-page.md
-                 §4 variant B). --}}
+
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns"
+                            data-bs-toggle="modal" data-bs-target="#citymColumnVisibilityModal"
+                            title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div class="programme-dt-search" data-dt-search-for="city-master-table"></div>
+                </div>
+            </div>
+
+            {{-- Server-side grid (CityMasterDataTable): search, sorting, page size and
+                 paging run on the whole table. Search, pager and "Showing N of M
+                 items" are moved into these slots by datatable-global-ui.js. --}}
             <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" id="cityTable">
-                        <caption class="visually-hidden">Cities</caption>
-                        <thead>
-                            <tr>
-                                <th scope="col" class="text-nowrap">S. No.</th>
-                                <th scope="col">City Name</th>
-                                <th scope="col">State</th>
-                                <th scope="col">District</th>
-                                <th scope="col" class="text-nowrap">Status</th>
-                                <th scope="col" class="text-nowrap">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($cities as $index => $city)
-                                @php $isActive = (int) $city->active_inactive === 1; @endphp
-                                <tr>
-                                    <td>{{ $cities->firstItem() + $index }}</td>
-                                    <td>{{ $city->city_name }}</td>
-                                    <td class="mst-col-wrap">{{ optional($city->state)->state_name ?? 'N/A' }}</td>
-                                    <td class="mst-col-wrap">{{ $city->district?->district_name ?? 'N/A' }}</td>
-                                    <td data-order="{{ $isActive ? 1 : 0 }}">
-                                        @include('admin.master.partials.grid-status', ['active' => $isActive])
-                                    </td>
-                                    <td>
-                                        @include('admin.master.partials.grid-actions', [
-                                            'name'   => $city->city_name,
-                                            'edit'   => ['href' => route('master.city.edit', $city->pk)],
-                                            'toggle' => [
-                                                'active' => $isActive,
-                                                'table'  => 'city_master',
-                                                'column' => 'active_inactive',
-                                                'id'     => $city->pk,
-                                            ],
-                                            'delete' => $isActive
-                                                ? ['disabled' => true, 'reason' => 'Cannot delete an active city. Deactivate it first.']
-                                                : ['action' => route('master.city.delete', $city->pk)],
-                                        ])
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr class="mst-empty">
-                                    <td colspan="6">No cities found.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
                 </div>
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                     data-dt-footer-for="city-master-table"></div>
+            </div>
 
-                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
-                    <div class="programme-dt-pagination">
-                        {{ $cities->links('vendor.pagination.custom') }}
-                    </div>
-                    <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
-                        <div class="dataTables_info" aria-live="polite">
-                            @if ($cities->total())
-                                Showing {{ $cities->firstItem() }}–{{ $cities->lastItem() }} of {{ number_format($cities->total()) }} items
-                            @else
-                                0 items
-                            @endif
-                        </div>
-                    </div>
-                </div>
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility -->
+<div class="modal fade" id="citymColumnVisibilityModal" tabindex="-1"
+     aria-labelledby="citymColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-3 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="citymColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3 mst-colvis-grid" id="citymColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -95,10 +71,15 @@
 @endsection
 
 @push('scripts')
+{!! $dataTable->scripts() !!}
 <script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
 <script>
-    // Server-rendered grid: the badge and the switch live in different
-    // columns, so refresh the page once custom.js has saved the new status.
-    MstAdmin.reloadPageOnStatusToggle();
+    $(function () {
+        MstAdmin.columnVisibility({
+            table: '#city-master-table',
+            grid: '#citymColumnToggleGrid',
+            storageKey: 'sargam.cityMaster.hiddenCols.{{ auth()->id() ?? 'guest' }}'
+        });
+    });
 </script>
 @endpush

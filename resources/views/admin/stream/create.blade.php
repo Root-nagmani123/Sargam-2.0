@@ -16,58 +16,61 @@
     <x-breadcrum title="Add Stream" />
     <x-session_message />
 
-    <form action="{{ route('stream.store') }}" method="POST">
-        @csrf
+    {{-- Form root: the index opens this same form in a modal
+         (public/js/master-admin.js openFormModal). Keep form-specific JS in
+         the x-mst-form-init block inside it, bound to elements under root. --}}
+    <div data-mst-form-root data-mst-form-title="Add Stream">
+        <form action="{{ route('stream.store') }}" method="POST">
+            @csrf
 
-        <div class="card mst-form-card">
-            <div class="card-body">
-                <h2 class="mst-form-section-title h6">Stream Details</h2>
+            <div class="card mst-form-card">
+                <div class="card-body">
+                    <h2 class="mst-form-section-title h6">Stream Details</h2>
 
-                {{-- stream_name[] — StreamController::store() saves one row per name. --}}
-                <div id="stream_fields">
-                    @foreach ($streamNames as $i => $streamName)
-                        <div class="mst-field-card mst-repeat">
-                            <div class="row g-3 align-items-end">
-                                <div class="col">
-                                    <label for="streamName{{ $i }}" class="mst-form-label d-block">
-                                        Stream Name <span class="mst-req" aria-hidden="true">*</span>
-                                    </label>
-                                    <input type="text" id="streamName{{ $i }}" name="stream_name[]"
-                                           class="form-control mst-control @error('stream_name.' . $i) is-invalid @enderror"
-                                           placeholder="Stream" maxlength="100"
-                                           value="{{ $streamName }}" required aria-required="true">
-                                    @error('stream_name.' . $i)
-                                        <span class="mst-field-error">{{ $message }}</span>
-                                    @enderror
-                                </div>
-                                <div class="col-auto mst-field-actions">
-                                    <button type="button" class="mst-field-btn mst-field-btn--remove" aria-label="Remove this stream">
-                                        <i class="bi bi-dash-lg" aria-hidden="true"></i>
-                                    </button>
-                                    <button type="button" class="mst-field-btn mst-field-btn--add" aria-label="Add another stream">
-                                        <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                                    </button>
+                    {{-- stream_name[] — StreamController::store() saves one row per name. --}}
+                    <div id="stream_fields">
+                        @foreach ($streamNames as $i => $streamName)
+                            <div class="mst-field-card mst-repeat">
+                                <div class="row g-3 align-items-end">
+                                    <div class="col">
+                                        <label for="streamName{{ $i }}" class="mst-form-label d-block">
+                                            Stream Name <span class="mst-req" aria-hidden="true">*</span>
+                                        </label>
+                                        <input type="text" id="streamName{{ $i }}" name="stream_name[]"
+                                               class="form-control mst-control @error('stream_name.' . $i) is-invalid @enderror"
+                                               placeholder="Stream" maxlength="100"
+                                               value="{{ $streamName }}" required aria-required="true">
+                                        @error('stream_name.' . $i)
+                                            <span class="mst-field-error">{{ $message }}</span>
+                                        @enderror
+                                    </div>
+                                    <div class="col-auto mst-field-actions">
+                                        <button type="button" class="mst-field-btn mst-field-btn--remove" aria-label="Remove this stream">
+                                            <i class="bi bi-dash-lg" aria-hidden="true"></i>
+                                        </button>
+                                        <button type="button" class="mst-field-btn mst-field-btn--add" aria-label="Add another stream">
+                                            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    @endforeach
-                </div>
+                        @endforeach
+                    </div>
 
-                <div class="mst-form-footer">
-                    <a href="{{ route('stream.index') }}" class="btn mst-btn-cancel px-4">Cancel</a>
-                    <button type="submit" class="btn mst-btn-submit px-4">Save</button>
+                    <div class="mst-form-footer">
+                        <a href="{{ route('stream.index') }}" class="btn mst-btn-cancel px-4">Cancel</a>
+                        <button type="submit" class="btn mst-btn-submit px-4">Save</button>
+                    </div>
                 </div>
             </div>
-        </div>
-    </form>
+        </form>
+        <script type="text/x-mst-form-init">
+            MstAdmin.repeatable({ container: $(root).find('#stream_fields') });
+        </script>
+    </div>
 </div>
 @endsection
 
 @push('scripts')
 <script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
-<script>
-    $(function () {
-        MstAdmin.repeatable({ container: '#stream_fields' });
-    });
-</script>
 @endpush

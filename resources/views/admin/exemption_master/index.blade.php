@@ -44,7 +44,7 @@
 @section('setup_content')
 <div class="container-fluid mst-page lm-page ptx-page">
     <x-breadcrum title="PT Exemption Master" :showBack="false">
-        <a href="{{ route('admin.pt-exemption-master.create') }}"
+        <a href="{{ route('admin.pt-exemption-master.create') }}" data-mst-modal-form
            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
             <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
             <span>Configure PT Exemption</span>
@@ -185,7 +185,7 @@
     <template id="exemptionActionsOn">
         @include('admin.master.partials.grid-actions', [
             'name'   => '__LM_NAME__',
-            'edit'   => ['href' => '__LM_EDIT__'],
+            'edit'   => ['href' => '__LM_EDIT__', 'attrs' => ['data-mst-modal-form' => true]],
             'toggle' => ['active' => true, 'id' => '__LM_ID__', 'class' => 'plain-status-toggle exemption-status-toggle'],
             'delete' => ['disabled' => true, 'reason' => 'Only inactive records can be deleted. Deactivate it first.'],
         ])
@@ -193,7 +193,7 @@
     <template id="exemptionActionsOff">
         @include('admin.master.partials.grid-actions', [
             'name'   => '__LM_NAME__',
-            'edit'   => ['href' => '__LM_EDIT__'],
+            'edit'   => ['href' => '__LM_EDIT__', 'attrs' => ['data-mst-modal-form' => true]],
             'toggle' => ['active' => false, 'id' => '__LM_ID__', 'class' => 'plain-status-toggle exemption-status-toggle'],
             'delete' => ['class' => 'exemption-delete-btn', 'attrs' => ['data-id' => '__LM_ID__']],
         ])

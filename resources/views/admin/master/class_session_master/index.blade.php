@@ -3,13 +3,14 @@
 @section('title', 'Class Session Master')
 
 @push('styles')
+@include('admin.layouts.partials.select2-assets')
 <link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
 @endpush
 
 @section('setup_content')
 <div class="container-fluid mst-page">
     <x-breadcrum title="Class Session Master" :showBack="false">
-        <a href="{{ route('master.class.session.create') }}"
+        <a href="{{ route('master.class.session.create') }}" data-mst-modal-form
            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
             <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
             <span>Add Class Session</span>
@@ -20,76 +21,49 @@
 
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
-            {{-- Server-paginated (ClassSessionMasterController::index, 10 per
-                 page): no DataTable on this grid, so the footer below is
-                 hand-written (docs/new-design-index-page.md §4 variant B). --}}
+
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns"
+                            data-bs-toggle="modal" data-bs-target="#csmColumnVisibilityModal"
+                            title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div class="programme-dt-search" data-dt-search-for="class-session-master-table"></div>
+                </div>
+            </div>
+
+            {{-- Server-side grid (ClassSessionMasterDataTable): search, sorting, page size and
+                 paging run on the whole table. Search, pager and "Showing N of M
+                 items" are moved into these slots by datatable-global-ui.js. --}}
             <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" id="classSessionTable">
-                        <caption class="visually-hidden">Class sessions</caption>
-                        <thead>
-                            <tr>
-                                <th scope="col" class="text-nowrap">S. No.</th>
-                                <th scope="col">Shift Name</th>
-                                <th scope="col" class="text-nowrap">Start Time</th>
-                                <th scope="col" class="text-nowrap">End Time</th>
-                                <th scope="col" class="text-nowrap">Status</th>
-                                <th scope="col" class="text-nowrap">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($classSessionMaster as $index => $classSession)
-                                @php
-                                    $isActive = (int) $classSession->active_inactive === 1;
-                                    $encId = encrypt($classSession->pk);
-                                @endphp
-                                <tr>
-                                    <td>{{ $classSessionMaster->firstItem() + $index }}</td>
-                                    <td>{{ $classSession->shift_name ?? 'N/A' }}</td>
-                                    <td class="text-nowrap">{{ $classSession->start_time ?? 'N/A' }}</td>
-                                    <td class="text-nowrap">{{ $classSession->end_time ?? 'N/A' }}</td>
-                                    <td data-order="{{ $isActive ? 1 : 0 }}">
-                                        @include('admin.master.partials.grid-status', ['active' => $isActive])
-                                    </td>
-                                    <td>
-                                        @include('admin.master.partials.grid-actions', [
-                                            'name'   => $classSession->shift_name,
-                                            'edit'   => ['href' => route('master.class.session.edit', ['id' => $encId])],
-                                            'toggle' => [
-                                                'active' => $isActive,
-                                                'table'  => 'class_session_master',
-                                                'column' => 'active_inactive',
-                                                'id'     => $classSession->pk,
-                                            ],
-                                            'delete' => $isActive
-                                                ? ['disabled' => true, 'reason' => 'Cannot delete an active class session. Deactivate it first.']
-                                                : ['action' => route('master.class.session.delete', ['id' => $encId])],
-                                        ])
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr class="mst-empty">
-                                    <td colspan="6">No class sessions found.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
                 </div>
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                     data-dt-footer-for="class-session-master-table"></div>
+            </div>
 
-                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
-                    <div class="programme-dt-pagination">
-                        {{ $classSessionMaster->links('vendor.pagination.custom') }}
-                    </div>
-                    <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
-                        <div class="dataTables_info" aria-live="polite">
-                            @if ($classSessionMaster->total())
-                                Showing {{ $classSessionMaster->firstItem() }}–{{ $classSessionMaster->lastItem() }} of {{ number_format($classSessionMaster->total()) }} items
-                            @else
-                                0 items
-                            @endif
-                        </div>
-                    </div>
-                </div>
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility -->
+<div class="modal fade" id="csmColumnVisibilityModal" tabindex="-1"
+     aria-labelledby="csmColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-3 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="csmColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3 mst-colvis-grid" id="csmColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -97,10 +71,15 @@
 @endsection
 
 @push('scripts')
+{!! $dataTable->scripts() !!}
 <script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
 <script>
-    // Server-rendered grid: the badge and the switch live in different
-    // columns, so refresh the page once custom.js has saved the new status.
-    MstAdmin.reloadPageOnStatusToggle();
+    $(function () {
+        MstAdmin.columnVisibility({
+            table: '#class-session-master-table',
+            grid: '#csmColumnToggleGrid',
+            storageKey: 'sargam.classSessionMaster.hiddenCols.{{ auth()->id() ?? 'guest' }}'
+        });
+    });
 </script>
 @endpush

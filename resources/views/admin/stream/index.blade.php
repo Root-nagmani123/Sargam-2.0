@@ -3,13 +3,14 @@
 @section('title', 'Stream')
 
 @push('styles')
+@include('admin.layouts.partials.select2-assets')
 <link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
 @endpush
 
 @section('setup_content')
 <div class="container-fluid mst-page">
     <x-breadcrum title="Stream" :showBack="false">
-        <a href="{{ route('stream.create') }}"
+        <a href="{{ route('stream.create') }}" data-mst-modal-form
            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
             <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
             <span>Add Stream</span>
@@ -20,69 +21,49 @@
 
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
-            {{-- Server-paginated (StreamController::index, 10 per page): no
-                 DataTable on this grid, so the footer below is hand-written
-                 (docs/new-design-index-page.md §4 variant B). --}}
+
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns"
+                            data-bs-toggle="modal" data-bs-target="#strmColumnVisibilityModal"
+                            title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div class="programme-dt-search" data-dt-search-for="stream-master-table"></div>
+                </div>
+            </div>
+
+            {{-- Server-side grid (StreamMasterDataTable): search, sorting, page size and
+                 paging run on the whole table. Search, pager and "Showing N of M
+                 items" are moved into these slots by datatable-global-ui.js. --}}
             <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" id="streamTable">
-                        <caption class="visually-hidden">Streams</caption>
-                        <thead>
-                            <tr>
-                                <th scope="col" class="text-nowrap">S. No.</th>
-                                <th scope="col">Stream Name</th>
-                                <th scope="col" class="text-nowrap">Status</th>
-                                <th scope="col" class="text-nowrap">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($streams as $index => $stream)
-                                @php $isActive = (int) $stream->active_inactive === 1; @endphp
-                                <tr>
-                                    <td>{{ $streams->firstItem() + $index }}</td>
-                                    <td>{{ $stream->stream_name }}</td>
-                                    <td data-order="{{ $isActive ? 1 : 0 }}">
-                                        @include('admin.master.partials.grid-status', ['active' => $isActive])
-                                    </td>
-                                    <td>
-                                        @include('admin.master.partials.grid-actions', [
-                                            'name'   => $stream->stream_name,
-                                            'edit'   => ['href' => route('stream.edit', $stream->pk)],
-                                            'toggle' => [
-                                                'active' => $isActive,
-                                                'table'  => 'stream_master',
-                                                'column' => 'active_inactive',
-                                                'id'     => $stream->pk,
-                                            ],
-                                            'delete' => $isActive
-                                                ? ['disabled' => true, 'reason' => 'Cannot delete an active stream. Deactivate it first.']
-                                                : ['action' => route('stream.destroy', $stream->pk)],
-                                        ])
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr class="mst-empty">
-                                    <td colspan="4">No streams found.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
                 </div>
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                     data-dt-footer-for="stream-master-table"></div>
+            </div>
 
-                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
-                    <div class="programme-dt-pagination">
-                        {{ $streams->links('vendor.pagination.custom') }}
-                    </div>
-                    <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
-                        <div class="dataTables_info" aria-live="polite">
-                            @if ($streams->total())
-                                Showing {{ $streams->firstItem() }}–{{ $streams->lastItem() }} of {{ number_format($streams->total()) }} items
-                            @else
-                                0 items
-                            @endif
-                        </div>
-                    </div>
-                </div>
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility -->
+<div class="modal fade" id="strmColumnVisibilityModal" tabindex="-1"
+     aria-labelledby="strmColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-3 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="strmColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3 mst-colvis-grid" id="strmColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -90,12 +71,15 @@
 @endsection
 
 @push('scripts')
+{!! $dataTable->scripts() !!}
 <script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
 <script>
-    window.statusToggleUrl = "{{ route('admin.toggleStatus') }}";
-
-    // Server-rendered grid: the badge and the switch live in different
-    // columns, so refresh the page once custom.js has saved the new status.
-    MstAdmin.reloadPageOnStatusToggle();
+    $(function () {
+        MstAdmin.columnVisibility({
+            table: '#stream-master-table',
+            grid: '#strmColumnToggleGrid',
+            storageKey: 'sargam.streamMaster.hiddenCols.{{ auth()->id() ?? 'guest' }}'
+        });
+    });
 </script>
 @endpush

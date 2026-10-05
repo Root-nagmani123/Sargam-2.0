@@ -9,7 +9,7 @@
  *
  * Public API: window.MstAdmin = { whenTableReady, columnVisibility,
  *                                 reloadPageOnStatusToggle, searchable,
- *                                 repeatable }
+ *                                 repeatable, runFormInit, openFormModal }
  */
 (function (window, document, $) {
     'use strict';
@@ -320,4 +320,322 @@
 
         sync();
     };
+
+    /* ---------- Form init (full page AND modal) ----------
+     * A create/edit view wraps its <form> in
+     *   <div data-mst-form-root data-mst-form-title="Add …" data-mst-modal-size="lg">
+     * and keeps any form-specific JS inside it as
+     *   <script type="text/x-mst-form-init"> … </script>
+     * — a function body run with (root, $). It must bind only to elements
+     * inside `root` (never $(document)), because the modal runs it again on
+     * every open. The type keeps the browser from executing it on its own; this
+     * runner executes it once per render, on the full page and in the modal. */
+    MstAdmin.runFormInit = function (root) {
+        if (!root || root.__mstInit) {
+            return;
+        }
+        root.__mstInit = true;
+        MstAdmin.searchable($(root).find('select.mst-searchable'));
+        $(root).find('script[type="text/x-mst-form-init"]').each(function () {
+            try {
+                (new Function('root', '$', 'jQuery', this.textContent))(root, $, $);
+            } catch (err) {
+                if (window.console) { window.console.error('mst form init failed', err); }
+            }
+        });
+    };
+
+    $(function () {
+        $('[data-mst-form-root]').each(function () { MstAdmin.runFormInit(this); });
+
+        // Message carried over a reload after a modal save (see openFormModal).
+        var flash = null;
+        try {
+            flash = window.sessionStorage.getItem('mstFlash');
+            window.sessionStorage.removeItem('mstFlash');
+        } catch (e) { /* storage unavailable */ }
+        if (flash && window.Swal && typeof window.Swal.fire === 'function') {
+            window.Swal.fire({ icon: 'success', title: 'Success', text: flash });
+        }
+    });
+
+    /* ---------- Add / Edit in a modal ----------
+     * Any link with `data-mst-modal-form` opens its href's form in a shared
+     * modal instead of navigating. The href stays the real create/edit page, so
+     * Ctrl/middle-click, no-JS and a failed load all fall back to the page.
+     *
+     * The form posts to its own route exactly as the page does. Laravel then
+     * redirects (validation failure: back with errors + old input; success:
+     * index with a flash), and the modal re-reads the form URL once to see
+     * which. Field errors or an error flash re-render in the modal with the
+     * user's input; otherwise it was a save, so the page reloads and the
+     * success message is shown. No controller needs to know about the modal. */
+    var formModal = { el: null, url: null, busy: false };
+
+    function formModalEl() {
+        if (formModal.el) {
+            return formModal.el;
+        }
+        var html = ''
+            + '<div class="modal fade mst-modal mst-form-modal" id="mstFormModal" tabindex="-1"'
+            + ' aria-labelledby="mstFormModalLabel" aria-hidden="true" data-bs-backdrop="static">'
+            + '<div class="modal-dialog modal-lg modal-dialog-centered">'
+            + '<div class="modal-content border-0 shadow">'
+            + '<div class="modal-header border-bottom">'
+            + '<h5 class="modal-title fw-bold" id="mstFormModalLabel"></h5>'
+            + '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>'
+            + '</div>'
+            + '<div class="modal-body"></div>'
+            + '</div></div></div>';
+        formModal.el = $(html).appendTo(document.body)[0];
+
+        var body = formModal.el.querySelector('.modal-body');
+
+        // Cancel inside the form closes the modal instead of leaving the page.
+        $(body).on('click', '.mst-btn-cancel', function (e) {
+            e.preventDefault();
+            window.bootstrap.Modal.getOrCreateInstance(formModal.el).hide();
+        });
+
+        // Delegated on the body so form-level handlers (client validation)
+        // run first and can still veto the submit.
+        body.addEventListener('submit', function (e) {
+            var form = e.target;
+            if (e.defaultPrevented || !form || form.tagName !== 'FORM') {
+                return;
+            }
+            e.preventDefault();
+            submitModalForm(form, e.submitter);
+        });
+
+        formModal.el.addEventListener('shown.bs.modal', function () {
+            focusFirstField();
+        });
+        formModal.el.addEventListener('hidden.bs.modal', function () {
+            // Drop the form so its ids can't collide with the next one.
+            body.innerHTML = '';
+            formModal.url = null;
+            formModal.busy = false;
+        });
+        return formModal.el;
+    }
+
+    function focusFirstField() {
+        var el = formModal.el && formModal.el.querySelector(
+            '.modal-body input:not([type=hidden]):not([disabled]):not([readonly]), '
+            + '.modal-body select:not([disabled]), .modal-body textarea:not([disabled])'
+        );
+        if (!el) {
+            return;
+        }
+        if ($(el).hasClass('select2-hidden-accessible')) {
+            $(el).next('.select2-container').find('.select2-selection').trigger('focus');
+        } else {
+            el.focus();
+        }
+    }
+
+    function focusFirstError() {
+        var $bad = $(formModal.el).find('.modal-body .is-invalid').first();
+        if (!$bad.length) {
+            focusFirstField();
+            return;
+        }
+        if ($bad.hasClass('select2-hidden-accessible')) {
+            $bad.next('.select2-container').find('.select2-selection').trigger('focus');
+        } else {
+            $bad.trigger('focus');
+        }
+    }
+
+    function modalAlert(message) {
+        var body = formModal.el.querySelector('.modal-body');
+        $(body).find('.mst-form-modal-alert').remove();
+        $('<div class="alert alert-danger rounded-1 mst-form-modal-alert" role="alert"></div>')
+            .text(message)
+            .prependTo(body);
+    }
+
+    function setModalSize(size) {
+        var dialog = formModal.el.querySelector('.modal-dialog');
+        dialog.classList.remove('modal-lg', 'modal-xl');
+        dialog.classList.add(size === 'xl' ? 'modal-xl' : 'modal-lg');
+    }
+
+    // Text of the flash alerts <x-session_message /> rendered on a page.
+    function flashText(doc, selector) {
+        return $(doc).find(selector).map(function () {
+            var clone = this.cloneNode(true);
+            $(clone).find('button, strong').remove();
+            return $.trim($(clone).text());
+        }).get().filter(Boolean);
+    }
+
+    // Errors the server rendered into a form. Client-side message slots that
+    // ship hidden (.d-none) until JS needs them are not server errors.
+    function serverErrorCount(root) {
+        return $(root).find('.is-invalid, .mst-field-error').filter(function () {
+            return !$(this).closest('.d-none').length;
+        }).length;
+    }
+
+    // Put a fetched page's form into the modal. Returns false when the page
+    // has no form root (so the caller can fall back to navigating there).
+    function renderForm(doc) {
+        var src = doc.querySelector('[data-mst-form-root]');
+        if (!src) {
+            return false;
+        }
+        var body = formModal.el.querySelector('.modal-body');
+        var root = document.importNode(src, true);
+        body.innerHTML = '';
+        body.appendChild(root);
+
+        $('#mstFormModalLabel').text(src.getAttribute('data-mst-form-title') || $('#mstFormModalLabel').text());
+        setModalSize(src.getAttribute('data-mst-modal-size'));
+
+        // An `error` flash or a business-rule message the page would have shown
+        // above the form. Plain validation errors already sit under their fields.
+        var hasFieldErrors = serverErrorCount(root) > 0;
+        var errors = flashText(doc, '.alert-danger');
+        if (errors.length && !hasFieldErrors) {
+            modalAlert(errors.join(' '));
+        }
+
+        MstAdmin.runFormInit(root);
+        return true;
+    }
+
+    function fetchPage(url) {
+        return window.fetch(url, {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'text/html,application/xhtml+xml' }
+        }).then(function (res) {
+            if (!res.ok) {
+                throw new Error('HTTP ' + res.status);
+            }
+            return res.text();
+        }).then(function (html) {
+            return new window.DOMParser().parseFromString(html, 'text/html');
+        });
+    }
+
+    MstAdmin.openFormModal = function (url, title) {
+        if (!window.fetch || !window.bootstrap || !window.DOMParser) {
+            window.location.href = url;
+            return;
+        }
+        var el = formModalEl();
+        var body = el.querySelector('.modal-body');
+        formModal.url = url;
+        $('#mstFormModalLabel').text(title || '');
+        body.innerHTML = '<div class="d-flex justify-content-center align-items-center py-5" role="status">'
+            + '<span class="spinner-border text-primary" aria-hidden="true"></span>'
+            + '<span class="visually-hidden">Loading…</span></div>';
+        window.bootstrap.Modal.getOrCreateInstance(el).show();
+
+        fetchPage(url).then(function (doc) {
+            if (formModal.url !== url) {
+                return; // closed or replaced meanwhile
+            }
+            if (!renderForm(doc)) {
+                window.location.href = url;
+                return;
+            }
+            if (el.classList.contains('show')) {
+                focusFirstField();
+            }
+        }).catch(function () {
+            window.location.href = url;
+        });
+    };
+
+    function setBusy(form, busy) {
+        formModal.busy = busy;
+        $(form).find('button[type=submit], input[type=submit]').each(function () {
+            var $btn = $(this);
+            if (busy) {
+                $btn.data('mstLabel', $btn.html()).prop('disabled', true)
+                    .html('<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Saving…');
+            } else {
+                $btn.prop('disabled', false);
+                if ($btn.data('mstLabel')) { $btn.html($btn.data('mstLabel')); }
+            }
+        });
+    }
+
+    function submitModalForm(form, submitter) {
+        if (formModal.busy) {
+            return;
+        }
+        var url = formModal.url;
+        var data = new window.FormData(form);
+        if (submitter && submitter.name) {
+            data.append(submitter.name, submitter.value);
+        }
+        setBusy(form, true);
+
+        // No X-Requested-With: the controllers must answer exactly as they do
+        // for the page (redirects), not with their AJAX / JSON variants.
+        window.fetch(form.action, {
+            method: 'POST',
+            body: data,
+            credentials: 'same-origin',
+            redirect: 'manual',
+            headers: { 'Accept': 'text/html,application/xhtml+xml' }
+        }).then(function (res) {
+            if (res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400)) {
+                // Saved, or bounced back with errors: the form URL tells which.
+                return fetchPage(url).then(function (doc) {
+                    var root = doc.querySelector('[data-mst-form-root]');
+                    var failed = (root && serverErrorCount(root) > 0)
+                        || flashText(doc, '.alert-danger').length > 0;
+                    if (failed) {
+                        renderForm(doc);
+                        focusFirstError();
+                        return;
+                    }
+                    var done = flashText(doc, '.alert-success');
+                    try {
+                        window.sessionStorage.setItem('mstFlash', done[0] || 'Saved successfully.');
+                    } catch (e) { /* storage unavailable */ }
+                    window.location.reload();
+                }, function () {
+                    // The save went through but the form could not be re-read;
+                    // the reload shows whatever the server flashed.
+                    window.location.reload();
+                });
+            }
+            if (res.status === 419) {
+                setBusy(form, false);
+                modalAlert('Your session has expired. Please reload the page and try again.');
+                return;
+            }
+            if (res.ok) {
+                // A controller that answers the POST with a page of its own.
+                return res.text().then(function (html) {
+                    var doc = new window.DOMParser().parseFromString(html, 'text/html');
+                    if (!renderForm(doc)) {
+                        window.location.reload();
+                    }
+                });
+            }
+            setBusy(form, false);
+            modalAlert(res.status === 403
+                ? 'You are not authorised to perform this action.'
+                : 'Something went wrong (error ' + res.status + '). Please try again.');
+        }).catch(function () {
+            setBusy(form, false);
+            modalAlert('Could not reach the server. Please check your connection and try again.');
+        });
+    }
+
+    $(document).on('click', 'a[data-mst-modal-form]', function (e) {
+        // Let the browser handle new-tab / new-window clicks.
+        if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button === 1) {
+            return;
+        }
+        e.preventDefault();
+        MstAdmin.openFormModal(this.href, $(this).attr('data-mst-modal-title') || $.trim($(this).text()));
+    });
 })(window, document, window.jQuery);
