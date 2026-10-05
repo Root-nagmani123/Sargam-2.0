@@ -79,7 +79,7 @@ class RequestService
                 break;
         }
 
-        return $query->count();
+        return $query->forUser(Auth::id())->count();
     }
 
     public function columns(): array
