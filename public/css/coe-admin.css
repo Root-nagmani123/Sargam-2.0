@@ -152,6 +152,7 @@
     color: #475467;
 }
 .coe-page .coe-state--frozen,
+.coe-page .coe-state--sent,
 .coe-page .coe-state--published  { background: var(--coe-success-soft); border-color: #abefc6; color: #067647; }
 
 /* ── Scope tabs (All / Translated) — links, one URL per scope ── */
@@ -242,6 +243,7 @@
 
 .coe-page .coe-act.is-disabled:hover .coe-act__label { text-decoration: none; }
 .coe-page .coe-act--freeze { color: #0e9384; }
+.coe-page .coe-act--approve { color: #067647; }
 
 /* ── Empty state ── */
 .coe-page .coe-empty {
@@ -278,7 +280,7 @@
 }
 
 /* Buttons shared by every qp modal. */
-.coe-modal .coe-btn {
+:is(.coe-modal, .coe-page) .coe-btn {
     min-height: var(--ds-control-h);
     padding: 0 1.25rem;
     border-radius: var(--ds-radius-2);
@@ -286,46 +288,46 @@
     font-size: 0.9375rem;
 }
 
-.coe-modal .coe-btn-cancel {
+:is(.coe-modal, .coe-page) .coe-btn-cancel {
     min-width: 108px;
     border: 1px solid var(--coe-danger);
     background: #fff;
     color: var(--coe-danger);
 }
 
-.coe-modal .coe-btn-cancel:hover { background: #fff1f3; color: var(--coe-danger); }
+:is(.coe-modal, .coe-page) .coe-btn-cancel:hover { background: #fff1f3; color: var(--coe-danger); }
 
 /* The Freeze dialog's Cancel is navy, per the design. */
-.coe-modal .coe-btn-cancel--brand {
+:is(.coe-modal, .coe-page) .coe-btn-cancel--brand {
     border-color: var(--coe-brand);
     color: var(--coe-brand);
 }
 
-.coe-modal .coe-btn-cancel--brand:hover { background: #eef3fb; color: var(--coe-brand); }
+:is(.coe-modal, .coe-page) .coe-btn-cancel--brand:hover { background: #eef3fb; color: var(--coe-brand); }
 
-.coe-modal .coe-btn-primary {
+:is(.coe-modal, .coe-page) .coe-btn-primary {
     min-width: 140px;
     border: 1px solid var(--coe-brand);
     background: var(--coe-brand);
     color: #fff;
 }
 
-.coe-modal .coe-btn-primary:hover:not(:disabled) {
+:is(.coe-modal, .coe-page) .coe-btn-primary:hover:not(:disabled) {
     background: var(--coe-brand-hover);
     border-color: var(--coe-brand-hover);
     color: #fff;
 }
 
-.coe-modal .coe-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+:is(.coe-modal, .coe-page) .coe-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
 
-.coe-modal .coe-btn-danger {
+:is(.coe-modal, .coe-page) .coe-btn-danger {
     min-width: 140px;
     border: 1px solid var(--coe-danger);
     background: var(--coe-danger);
     color: #fff;
 }
 
-.coe-modal .coe-btn-danger:hover { filter: brightness(0.92); color: #fff; }
+:is(.coe-modal, .coe-page) .coe-btn-danger:hover { filter: brightness(0.92); color: #fff; }
 
 /* ── Confirm dialogs (Delete / Freeze): icon medallion + centred copy ── */
 .coe-modal .coe-confirm {
@@ -348,6 +350,7 @@
 
 .coe-modal .coe-confirm__icon--danger { background: var(--coe-danger-soft); color: var(--coe-danger); }
 .coe-modal .coe-confirm__icon--freeze { background: var(--coe-success-soft); color: var(--coe-success); }
+.coe-modal .coe-confirm__icon--approve { background: var(--coe-success-soft); color: var(--coe-success); }
 
 .coe-modal .coe-confirm__title {
     font-size: 1.25rem;
@@ -433,7 +436,7 @@
 }
 
 /* ── Upload dropzone ── */
-.coe-modal .coe-dropzone {
+:is(.coe-modal, .coe-page) .coe-dropzone {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -447,30 +450,30 @@
     transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.coe-modal .coe-dropzone.is-dragover { background: #eef3fb; }
-.coe-modal .coe-dropzone.is-invalid  { border-color: var(--coe-danger); }
+:is(.coe-modal, .coe-page) .coe-dropzone.is-dragover { background: #eef3fb; }
+:is(.coe-modal, .coe-page) .coe-dropzone.is-invalid  { border-color: var(--coe-danger); }
 
-.coe-modal .coe-dropzone__icon {
+:is(.coe-modal, .coe-page) .coe-dropzone__icon {
     font-size: 1.75rem;
     color: var(--coe-brand);
     line-height: 1;
     margin-bottom: 0.75rem;
 }
 
-.coe-modal .coe-dropzone__title {
+:is(.coe-modal, .coe-page) .coe-dropzone__title {
     font-size: 0.9375rem;
     font-weight: 700;
     color: #101828;
     margin: 0;
 }
 
-.coe-modal .coe-dropzone__hint {
+:is(.coe-modal, .coe-page) .coe-dropzone__hint {
     font-size: 0.8125rem;
     color: #475467;
     margin: 0.25rem 0 0;
 }
 
-.coe-modal .coe-dropzone__or {
+:is(.coe-modal, .coe-page) .coe-dropzone__or {
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -480,14 +483,14 @@
     color: #667085;
 }
 
-.coe-modal .coe-dropzone__or::before,
-.coe-modal .coe-dropzone__or::after {
+:is(.coe-modal, .coe-page) .coe-dropzone__or::before,
+:is(.coe-modal, .coe-page) .coe-dropzone__or::after {
     content: "";
     flex: 1;
     border-top: 1px solid var(--ds-line);
 }
 
-.coe-modal .coe-dropzone__pick {
+:is(.coe-modal, .coe-page) .coe-dropzone__pick {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
@@ -501,9 +504,9 @@
     font-weight: 500;
 }
 
-.coe-modal .coe-dropzone__pick:hover { background: #eef3fb; }
+:is(.coe-modal, .coe-page) .coe-dropzone__pick:hover { background: #eef3fb; }
 
-.coe-modal .coe-dropzone__file {
+:is(.coe-modal, .coe-page) .coe-dropzone__file {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -517,13 +520,13 @@
     color: #344054;
 }
 
-.coe-modal .coe-dropzone__file span {
+:is(.coe-modal, .coe-page) .coe-dropzone__file span {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.coe-modal .coe-dropzone__clear {
+:is(.coe-modal, .coe-page) .coe-dropzone__clear {
     padding: 0;
     border: 0;
     background: none;
@@ -531,7 +534,7 @@
     line-height: 1;
 }
 
-.coe-modal .coe-dropzone__error {
+:is(.coe-modal, .coe-page) .coe-dropzone__error {
     color: var(--coe-danger);
     font-size: 0.8125rem;
     margin: 0.5rem 0 0;
@@ -605,7 +608,7 @@
 }
 
 /* ── Segmented switch inside a modal (Import In Bulk / Add Single Record) ── */
-.coe-modal .coe-seg {
+:is(.coe-modal, .coe-page) .coe-seg {
     display: flex;
     flex-wrap: nowrap;
     gap: var(--ds-space-1);
@@ -615,7 +618,7 @@
     background: #e4e7ec;
 }
 
-.coe-modal .coe-seg__btn {
+:is(.coe-modal, .coe-page) .coe-seg__btn {
     flex: 1;
     min-height: 38px;
     border: 0;
@@ -626,7 +629,7 @@
     font-weight: 500;
 }
 
-.coe-modal .coe-seg__btn.active {
+:is(.coe-modal, .coe-page) .coe-seg__btn.active {
     background: var(--coe-brand);
     color: #fff;
     font-weight: 600;
@@ -743,7 +746,7 @@
 }
 
 .coe-modal .coe-modal-header--rule + .coe-modal-body { padding-top: 1rem; }
-.coe-modal .coe-btn--narrow { min-width: 96px; }
+:is(.coe-modal, .coe-page) .coe-btn--narrow { min-width: 96px; }
 
 /* ── Activate / Deactivate confirm variants ── */
 /* The medallion's switch is display only, drawn larger. */
@@ -783,3 +786,240 @@
 
 /* A filter whose placeholder is long ("Number of Rooms") — 150px truncates it. */
 .coe-page .coe-toolbar .programme-dt-filter-select.coe-filter-wide { width: 180px; }
+
+/* ============================================================================
+   Add Question Paper (faculty) — admin/coe/faculty-question-paper/{id}/create
+   Upload a .docx or write the paper in the editor (Summernote lite).
+   ========================================================================= */
+
+/* ── The paper being added: four labelled facts in a row ── */
+.coe-qp-add .coe-qp-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem 1.5rem;
+    padding: 1rem 1.5rem;
+}
+
+.coe-qp-add .coe-qp-summary dt {
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #475467;
+}
+
+.coe-qp-add .coe-qp-summary dd {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #101828;
+    overflow-wrap: anywhere;
+}
+
+/* Last fact (Total Marks) sits at the right edge, as designed. */
+.coe-qp-add .coe-qp-summary > div:last-child { justify-self: end; }
+
+/* ── Upload / Create switch: full width, bordered ── */
+.coe-qp-add .coe-qp-seg {
+    border: 1px solid var(--coe-control-line);
+    background: #e4e7ec;
+}
+
+.coe-qp-add .coe-qp-seg .coe-seg__btn:focus-visible {
+    outline: 2px solid var(--coe-brand);
+    outline-offset: 2px;
+}
+
+/* The page dropzone fills the card. */
+.coe-qp-add .coe-dropzone { min-height: 400px; }
+
+.coe-qp-add .coe-qp-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.coe-qp-add .coe-qp-actions .coe-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── Editor chrome: toolbar on the right, no frame — the page is the sheet ── */
+.coe-qp-add .coe-qp-editor .note-editor.note-frame {
+    border: 0;
+    box-shadow: none;
+}
+
+.coe-qp-add .coe-qp-editor .note-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    padding: 0 0 0.75rem;
+    border-bottom: 0;
+    background: transparent;
+}
+
+.coe-qp-add .coe-qp-editor .note-toolbar .note-btn-group { margin: 0; }
+
+.coe-qp-add .coe-qp-editor .note-editing-area { background: transparent; }
+
+.coe-qp-add .coe-qp-editor .note-editor .note-editing-area .note-editable {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 2rem 2.5rem 2.5rem;
+    border: 1px solid #c9d7ea;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 2px 10px rgba(16, 24, 40, 0.06);
+    color: #1d3461;
+    font-family: var(--bs-body-font-family);   /* the page face; Summernote sets sans-serif */
+    font-size: 0.9375rem;
+    line-height: 1.55;
+}
+
+/* Typing in the sheet: a firmer border, not a heavy ring around the page. */
+.coe-qp-add .coe-qp-editor .note-editor .note-editing-area .note-editable:focus {
+    outline: 0;
+    border-color: #7f9cc7;
+}
+
+/* The resize bar is off (disableResizeEditor); drop its empty strip too. */
+.coe-qp-add .coe-qp-editor .note-statusbar { display: none; }
+
+
+/* ── The paper ──
+   Four classes deep so these beat summernote-lite.css, which borders and pads
+   every table cell inside the editor. */
+.coe-page.coe-qp-add .coe-qp-editor .note-editable table {
+    width: 100%;
+    margin: 0 0 1rem;
+    border-collapse: collapse;
+}
+
+.coe-page.coe-qp-add .coe-qp-editor .note-editable table td {
+    border: 0;
+    padding: 0.2rem 0.35rem;
+    vertical-align: top;
+}
+
+/* !important only because the admin theme (styles.css) forces tbody, tr and td
+   to 500 / 0.75rem with it; the paper is body text, not a data grid. All three
+   levels, or td would inherit the forced size from tr. */
+.coe-page.coe-qp-add .coe-qp-editor .note-editable table tbody,
+.coe-page.coe-qp-add .coe-qp-editor .note-editable table tr,
+.coe-page.coe-qp-add .coe-qp-editor .note-editable table td {
+    font-size: inherit !important;
+    font-weight: inherit !important;
+}
+
+.coe-page.coe-qp-add .coe-qp-editor .note-editable h2,
+.coe-page.coe-qp-add .coe-qp-editor .note-editable h3,
+.coe-page.coe-qp-add .coe-qp-editor .note-editable h4 {
+    color: #0b2a5b;
+    font-weight: 700;
+}
+
+.coe-page.coe-qp-add .coe-qp-editor .note-editable h3 { font-size: 1.125rem; margin: 0; }
+.coe-page.coe-qp-add .coe-qp-editor .note-editable h4 { font-size: 0.9375rem; margin: 0.25rem 0 0.5rem; }
+
+/* Header: emblem · title · time and marks */
+.coe-page.coe-qp-add .coe-qp-editor .note-editable table.coe-paper-head {
+    border-bottom: 1px solid #c9d7ea;
+}
+
+.coe-page.coe-qp-add .coe-qp-editor .note-editable table.coe-paper-head td { vertical-align: middle; padding-bottom: 1rem; }
+.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__emblem { width: 80px; }
+.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__emblem img { width: 64px; height: auto; }
+.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__title { text-align: center; }
+
+.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__title h2 {
+    margin: 0;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.75rem;
+}
+
+.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__title p { margin: 0.15rem 0 0; }
+.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__subject { font-size: 1.125rem; }
+.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__code { font-weight: 600; }
+
+.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__time {
+    width: 190px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__time p { margin: 0.15rem 0; }
+
+/* Particulars and instructions: tinted boxes */
+.coe-page.coe-qp-add .coe-qp-editor .note-editable table.coe-paper-meta,
+.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-box {
+    border: 1px solid #d6e2f2;
+    border-radius: 6px;
+    background: #f6f9fd;
+}
+
+.coe-page.coe-qp-add .coe-qp-editor .note-editable table.coe-paper-meta { border-collapse: separate; padding: 0.5rem 0.75rem; }
+.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-meta__key { width: 90px; font-weight: 600; }
+
+.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-box {
+    margin: 0 0 1.25rem;
+    padding: 0.75rem 1rem;
+}
+
+.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-box p { margin: 0 0 0.25rem; }
+.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-box ol { margin: 0; padding-left: 1.5rem; }
+
+/* Section heading row and questions: marks right-aligned */
+.coe-page.coe-qp-add .coe-qp-editor .note-editable table.coe-paper-section {
+    margin: 1.25rem 0 0;
+    border-top: 1px solid #d6e2f2;
+}
+
+.coe-page.coe-qp-add .coe-qp-editor .note-editable table.coe-paper-section td { padding-top: 0.75rem; }
+
+.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-marks {
+    width: 130px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-questions__no { width: 40px; }
+
+.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-end {
+    margin: 2rem 0 0;
+    text-align: center;
+    font-style: italic;
+    color: #475467;
+}
+
+.coe-qp-add #qpaperEditorError { text-align: center; }
+
+@media (max-width: 767.98px) {
+    .coe-qp-add .coe-qp-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 1rem; }
+    .coe-qp-add .coe-qp-summary > div:last-child { justify-self: start; }
+    .coe-qp-add .coe-dropzone { min-height: 280px; }
+    .coe-qp-add .coe-qp-editor .note-editor .note-editing-area .note-editable { padding: 1.25rem 1rem; }
+    /* Header stacks: emblem, title, then time and marks — all centred. */
+    .coe-page.coe-qp-add .coe-qp-editor .note-editable table.coe-paper-head td {
+        display: block;
+        width: auto;
+        padding-bottom: 0.5rem;
+        text-align: center;
+    }
+    .coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__title h2 { font-size: 1.375rem; }
+    .coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__time { white-space: normal; }
+    /* Particulars: one key/value pair per line. */
+    .coe-page.coe-qp-add .coe-qp-editor .note-editable table.coe-paper-meta tr {
+        display: grid;
+        grid-template-columns: 72px minmax(0, 1fr);
+    }
+    .coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-meta__key { width: auto; }
+    .coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-marks { width: auto; }
+    .coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-questions__no { width: 28px; }
+    .coe-qp-add .coe-qp-actions .coe-btn { flex: 1; min-width: 0; }
+}

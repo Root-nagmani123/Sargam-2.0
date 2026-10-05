@@ -396,6 +396,9 @@
      *                          modal: '#qpDeleteModal', confirm: '#qpDeleteConfirm',
      *                          bulkTrigger: '#btn',   // optional: opens it with no row
      *                          onConfirm: function ($rowOrNull) { … } });
+     *
+     * Exported as CoeGrid.confirm too, for any one-step row confirm with its own
+     * modal (e.g. admin/coe/partials/confirm_approval_modal — Send for Approval).
      */
     function confirmDelete(o) {
         var modalEl = document.querySelector(o.modal || '#qpDeleteModal');
@@ -732,5 +735,6 @@
 
     window.CoeGrid = {
         simpleMaster: simpleMaster,
-        confirmStatus: confirmStatus, init: init, upload: upload, dropzone: dropzone, freeze: freeze, confirmDelete: confirmDelete };
+        confirmStatus: confirmStatus, init: init, upload: upload, dropzone: dropzone, freeze: freeze, confirmDelete: confirmDelete,
+        confirm: confirmDelete };
 })(window, jQuery);

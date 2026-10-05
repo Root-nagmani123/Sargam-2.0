@@ -92,7 +92,8 @@
                                 <th scope="col">Question Paper Name</th>
                                 <th scope="col">Drive</th>
                                 <th scope="col">Batch</th>
-                                <th scope="col">Deadline</th>
+                                <th scope="col">Max Marks</th>
+                                <th scope="col">Exam Date</th>
                                 <th scope="col">Original Exam Paper</th>
                                 <th scope="col">Translated Exam Paper</th>
                                 <th scope="col">Translated By (Rajbhasha)</th>
@@ -109,24 +110,27 @@
                         <tbody>
                             @foreach ($papers as $paper)
                                 @php
+                                    // Exam day reached and the paper is still with the faculty.
                                     $isOverdue = in_array($paper['status'], ['pending-faculty', 'draft'], true)
-                                        && $paper['deadline']->isPast();
+                                        && $paper['exam_date']->isPast();
                                 @endphp
                                 <tr data-coe-id="{{ $paper['id'] }}"
                                     data-coe-code="{{ $paper['code'] }}"
                                     data-coe-name="{{ $paper['name'] }}"
                                     data-coe-state="{{ $paper['status'] }}"
                                     data-coe-version="{{ $paper['version'] }}"
-                                    data-coe-translated="{{ $paper['translated_file'] ? '1' : '0' }}">
+                                    data-coe-translated="{{ $paper['translated_file'] ? '1' : '0' }}"
+                                    data-coe-create-url="{{ route('admin.coe.faculty-question-paper.create', $paper['id']) }}">
                                     <td></td>
                                     <td>{{ $paper['code'] }}</td>
                                     <td>{{ $paper['name'] }}</td>
                                     <td class="coe-col-wrap">{{ $paper['drive'] }}</td>
                                     <td>{{ $paper['batch'] }}</td>
-                                    <td data-order="{{ $paper['deadline']->timestamp }}">
+                                    <td>{{ $paper['max_marks'] }}</td>
+                                    <td data-order="{{ $paper['exam_date']->timestamp }}">
                                         <span class="coe-deadline {{ $isOverdue ? 'is-overdue' : '' }}"
-                                              @if ($isOverdue) title="Deadline has passed" @endif>
-                                            {{ $paper['deadline']->format('d/m/Y') }}
+                                              @if ($isOverdue) title="Exam date reached — paper not yet submitted" @endif>
+                                            {{ $paper['exam_date']->format('d/m/Y') }}
                                         </span>
                                     </td>
                                     <td class="coe-cell-original">
@@ -196,34 +200,37 @@ $(function () {
     'use strict';
 
     /* Column indexes — keep in step with the <thead>. */
-    var COL = { sno: 0, drive: 3, batch: 4, deadline: 5, status: 11, action: 12 };
+    var COL = { sno: 0, drive: 3, batch: 4, examDate: 6, status: 12, action: 13 };
     var STATUS = @json($statusLabels);
     var $table = $('#qpfTable');
 
     /* ── Row actions per state — the ONE place they are defined ─────────── */
-    function act(cls, icon, label) {
-        var tag = cls.indexOf('coe-act--download') !== -1 ? 'a href="#"' : 'button type="button"';
-        return '<' + tag + ' class="coe-act ' + cls + '">' +
-            '<span class="coe-act__icon"><i class="bi ' + icon + '" aria-hidden="true"></i></span>' +
-            '<span class="coe-act__label">' + label + '</span></' + tag.split(' ')[0] + '>';
+    // href: null → a button; '#' → an inert link; otherwise a real link.
+    function act(cls, icon, label, href) {
+        var $el = href ? $('<a></a>').attr('href', href) : $('<button type="button"></button>');
+        return $el.addClass('coe-act ' + cls).append(
+            '<span class="coe-act__icon"><i class="bi ' + icon + '" aria-hidden="true"></i></span>',
+            $('<span class="coe-act__label"></span>').text(label)
+        ).prop('outerHTML');
     }
 
     var ACTIONS = {
+        // Opens the Add Question Paper page (Upload / Create).
         'pending-faculty': [
-            ['coe-act--upload coe-act--wide', 'bi-upload', 'Upload or Create Original Paper']
+            ['coe-act--create coe-act--wide', 'bi-upload', 'Upload or Create Original Paper', 'create']
         ],
         'draft': [
-            ['coe-act--download', 'bi-download', 'Download Original Paper'],
+            ['coe-act--download', 'bi-download', 'Download Original Paper', '#'],
             ['coe-act--upload', 'bi-arrow-repeat', 'Re-upload Paper'],
             ['coe-act--del', 'bi-trash3', 'Delete'],
             ['coe-act--freeze', 'bi-snow', 'Freeze']
         ],
         'pending-rajbhasha': [
-            ['coe-act--download', 'bi-download', 'Download Original Paper']
+            ['coe-act--download', 'bi-download', 'Download Original Paper', '#']
         ],
         'published': [
-            ['coe-act--download', 'bi-download', 'Download Original Paper'],
-            ['coe-act--download', 'bi-translate', 'Download Translated Paper']
+            ['coe-act--download', 'bi-download', 'Download Original Paper', '#'],
+            ['coe-act--download', 'bi-translate', 'Download Translated Paper', '#']
         ]
     };
 
@@ -231,7 +238,10 @@ $(function () {
         var list = ACTIONS[$row.attr('data-coe-state')] || [];
         $row.find('.coe-cell-actions').html(
             '<div class="coe-act-group" role="group" aria-label="Row actions">' +
-            list.map(function (a) { return act(a[0], a[1], a[2]); }).join('') + '</div>'
+            list.map(function (a) {
+                var href = a[3] === 'create' ? $row.attr('data-coe-create-url') : a[3];
+                return act(a[0], a[1], a[2], href);
+            }).join('') + '</div>'
         );
     }
 
@@ -241,7 +251,7 @@ $(function () {
     var dt = CoeGrid.init({
         table: '#qpfTable',
         title: 'My Question Paper',
-        order: [[COL.deadline, 'asc']],
+        order: [[COL.examDate, 'asc']],
         noSort: [COL.sno, COL.action],
         exclude: [COL.action],
         filters: { '#qpfFilterDrive': COL.drive, '#qpfFilterBatch': COL.batch, '#qpfFilterStatus': COL.status },

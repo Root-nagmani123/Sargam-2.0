@@ -110,7 +110,9 @@
                             </tr>
                         </thead>
                         {{-- @foreach, not @forelse: an @empty colspan row breaks DataTables'
-                             column count. DataTables renders its own empty state. --}}
+                             column count. DataTables renders its own empty state.
+                             The Action cell is painted by the script from data-coe-state, so
+                             the buttons for each state are defined in exactly one place. --}}
                         <tbody>
                             @foreach ($papers as $paper)
                                 @php
@@ -119,7 +121,8 @@
                                 @endphp
                                 <tr data-coe-id="{{ $paper['id'] }}"
                                     data-coe-code="{{ $paper['code'] }}"
-                                    data-coe-name="{{ $paper['name'] }}">
+                                    data-coe-name="{{ $paper['name'] }}"
+                                    data-coe-state="{{ $status }}">
                                     <td></td>
                                     <td>{{ $paper['code'] }}</td>
                                     <td>{{ $paper['name'] }}</td>
@@ -145,30 +148,7 @@
                                     <td class="coe-col-center coe-cell-status">
                                         <span class="coe-state coe-state--{{ $status }}">{{ $statusLabels[$status] ?? ucfirst($status) }}</span>
                                     </td>
-                                    <td class="coe-cell-actions">
-                                        <div class="coe-act-group" role="group" aria-label="Row actions">
-                                            <a href="#" class="coe-act coe-act--download" title="{{ $paper['original_file'] }}">
-                                                <span class="coe-act__icon"><i class="bi bi-download" aria-hidden="true"></i></span>
-                                                <span class="coe-act__label">Download Original Paper</span>
-                                            </a>
-
-                                            @if ($status === $QP::STATUS_PENDING)
-                                                <button type="button" class="coe-act coe-act--upload">
-                                                    <span class="coe-act__icon"><i class="bi bi-upload" aria-hidden="true"></i></span>
-                                                    <span class="coe-act__label">Upload Translated Paper</span>
-                                                </button>
-                                            @elseif ($status === $QP::STATUS_TRANSLATED)
-                                                <button type="button" class="coe-act coe-act--del">
-                                                    <span class="coe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
-                                                    <span class="coe-act__label">Delete Translated Paper</span>
-                                                </button>
-                                                <button type="button" class="coe-act coe-act--freeze">
-                                                    <span class="coe-act__icon"><i class="bi bi-snow" aria-hidden="true"></i></span>
-                                                    <span class="coe-act__label">Freeze</span>
-                                                </button>
-                                            @endif
-                                        </div>
-                                    </td>
+                                    <td class="coe-cell-actions"></td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -191,8 +171,8 @@
 {{-- Confirm Delete (shared) --}}
 @include('admin.coe.partials.confirm_delete_modal')
 
-{{-- Confirm Freeze (OTP, shared) --}}
-@include('admin.coe.partials.freeze_modal', ['phoneMasked' => $otpPhoneMasked])
+{{-- Send for Approval (shared) --}}
+@include('admin.coe.partials.confirm_approval_modal')
 
 {{-- Column Visibility --}}
 <div class="modal fade" id="qpColumnVisibilityModal" tabindex="-1" aria-labelledby="qpColumnVisibilityLabel" aria-hidden="true">
@@ -226,6 +206,37 @@ $(function () {
 
     var $table = $('#qpTable');
 
+    /* ── Row actions per state — the ONE place they are defined ─────────── */
+    // [class, icon, label, href]: href '#' → an inert link (no file store yet), none → a button.
+    var DOWNLOAD = ['coe-act--download', 'bi-download', 'Download Original Paper', '#'];
+    var ACTIONS = {
+        'pending': [DOWNLOAD, ['coe-act--upload', 'bi-upload', 'Upload Translated Paper']],
+        'translated': [
+            DOWNLOAD,
+            ['coe-act--del', 'bi-trash3', 'Delete Translated Paper'],
+            ['coe-act--approve', 'bi-send-check', 'Send for Approval']
+        ],
+        'sent': [DOWNLOAD]
+    };
+
+    function act(a) {
+        var $el = a[3] ? $('<a></a>').attr('href', a[3]) : $('<button type="button"></button>');
+        return $el.addClass('coe-act ' + a[0]).append(
+            '<span class="coe-act__icon"><i class="bi ' + a[1] + '" aria-hidden="true"></i></span>',
+            $('<span class="coe-act__label"></span>').text(a[2])
+        ).prop('outerHTML');
+    }
+
+    function paintActions($row) {
+        $row.find('.coe-cell-actions').html(
+            '<div class="coe-act-group" role="group" aria-label="Row actions">' +
+            (ACTIONS[$row.attr('data-coe-state')] || []).map(act).join('') + '</div>'
+        );
+    }
+
+    // Paint before DataTables reads the DOM.
+    $table.find('tbody tr').each(function () { paintActions($(this)); });
+
     /* DataTable, S. No., exports, filters, search toggle and column picker —
        shared with the other COE grids (public/js/coe-grid.js). */
     var dt = CoeGrid.init({
@@ -246,31 +257,12 @@ $(function () {
     });
 
     /* ── Row state ───────────────────────────────────────────────────────────
-       DESIGN PREVIEW: no backend yet, so upload / delete / freeze repaint the
+       DESIGN PREVIEW: no backend yet, so upload / delete / send repaint the
        row in the browser only. When the endpoints exist, POST first and repaint
        from the response (or reload) — never from the client alone. */
-    function rowActions(state) {
-        var html = '<div class="coe-act-group" role="group" aria-label="Row actions">' +
-            '<a href="#" class="coe-act coe-act--download">' +
-            '<span class="coe-act__icon"><i class="bi bi-download" aria-hidden="true"></i></span>' +
-            '<span class="coe-act__label">Download Original Paper</span></a>';
-
-        if (state === 'pending') {
-            html += '<button type="button" class="coe-act coe-act--upload">' +
-                '<span class="coe-act__icon"><i class="bi bi-upload" aria-hidden="true"></i></span>' +
-                '<span class="coe-act__label">Upload Translated Paper</span></button>';
-        } else if (state === 'translated') {
-            html += '<button type="button" class="coe-act coe-act--del">' +
-                '<span class="coe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>' +
-                '<span class="coe-act__label">Delete Translated Paper</span></button>' +
-                '<button type="button" class="coe-act coe-act--freeze">' +
-                '<span class="coe-act__icon"><i class="bi bi-snow" aria-hidden="true"></i></span>' +
-                '<span class="coe-act__label">Freeze</span></button>';
-        }
-        return html + '</div>';
-    }
-
     function setRowState($row, state, fileName) {
+        $row.attr('data-coe-state', state);
+
         var $translated = $row.find('.coe-cell-translated').empty();
         if (fileName) {
             $('<a href="#" class="coe-attach">See Attachment</a>').attr('title', fileName).appendTo($translated);
@@ -281,7 +273,7 @@ $(function () {
         $row.find('.coe-cell-status').html(
             $('<span class="coe-state"></span>').addClass('coe-state--' + state).text(STATUS[state])
         );
-        $row.find('.coe-cell-actions').html(rowActions(state));
+        paintActions($row);
 
         // Let the status filter / search see the new label.
         dt.row($row).invalidate('dom').draw(false);
@@ -295,7 +287,7 @@ $(function () {
         e.preventDefault();   // no file store yet
     });
 
-    /* ── Upload / Delete / Freeze — shared modal behaviour (coe-grid.js) ── */
+    /* ── Upload / Delete / Send for Approval — shared modal behaviour (coe-grid.js) ── */
     CoeGrid.upload({
         table: '#qpTable',
         trigger: '.coe-act--upload',
@@ -314,13 +306,15 @@ $(function () {
         }
     });
 
-    CoeGrid.freeze({
+    CoeGrid.confirm({
         table: '#qpTable',
-        trigger: '.coe-act--freeze',
+        trigger: '.coe-act--approve',
+        modal: '#qpApprovalModal',
+        confirm: '#qpApprovalConfirm',
         onConfirm: function ($row) {
             var file = $row.find('.coe-cell-translated .coe-attach').attr('title') || null;
-            setRowState($row, 'frozen', file);
-            Swal.fire({ icon: 'success', title: 'Success', text: 'Question paper frozen.' });
+            setRowState($row, 'sent', file);
+            Swal.fire({ icon: 'success', title: 'Success', text: 'Translated question paper sent for approval.' });
         }
     });
 });

@@ -1996,6 +1996,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->name('question-paper.index');
     Route::get('faculty-question-paper', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'index'])
         ->name('faculty-question-paper.index');
+    Route::get('faculty-question-paper/{paper}/create', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'create'])
+        ->whereNumber('paper')->name('faculty-question-paper.create');
     // COE -> Master Data
     Route::get('examination-type', [\App\Http\Controllers\Admin\COE\ExaminationTypeController::class, 'index'])
         ->name('examination-type.index');
