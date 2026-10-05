@@ -121,4 +121,49 @@ class UserRoleAssignmentAuthorizationTest extends TestCase
         Role::where('name', $plainAdminRoleName)->delete();
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
     }
+
+    /**
+     * PR #319 re-review F-052: user_credentials.user_id is only an employee_master.pk
+     * for an 'E'-category login (MemberController::authorizeMemberRecord()'s F-038
+     * docblock). Assigning a role to a non-'E' account whose user_id happens to collide
+     * with an unrelated real employee's pk must not deliver the role-assignment
+     * notification to that unrelated employee.
+     */
+    public function test_assigning_a_role_to_a_non_employee_account_sends_no_notification(): void
+    {
+        $admin = $this->makeTestUser('admin_notif');
+        $admin->assignRole('Super Admin');
+
+        $unrelatedEmployeePk = DB::table('employee_master')->insertGetId([
+            'first_name' => 'Unrelated',
+            'last_name'  => 'Employee',
+        ]);
+
+        $target = $this->makeTestUser('nonemployee_target');
+        $target->user_category = null;
+        $target->user_id = $unrelatedEmployeePk; // collides with a real employee's pk, same shape F-038 measured
+        $target->save();
+
+        $doctorRoleId = Role::where('name', 'Doctor')->value('id');
+        $this->assertNotNull($doctorRoleId, 'Fixture assumption: a "Doctor" role must exist.');
+
+        $response = $this->actingAs($admin)->post(route('admin.users.assignRoleSave'), [
+            'user_id' => $target->pk,
+            'roles' => [$doctorRoleId],
+        ]);
+
+        $response->assertRedirect();
+
+        $target->refresh();
+        $this->assertTrue($target->hasRole('Doctor'), 'The role grant itself must still succeed.');
+
+        $this->assertSame(
+            0,
+            DB::table('notifications')
+                ->where('receiver_user_id', $unrelatedEmployeePk)
+                ->where('type', 'role_assignment')
+                ->count(),
+            'No role-assignment notification may be addressed to the unrelated employee the colliding user_id points at.'
+        );
+    }
 }

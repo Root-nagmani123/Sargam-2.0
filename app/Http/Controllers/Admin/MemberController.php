@@ -314,6 +314,24 @@ class MemberController extends Controller
         $data = $this->mapStep6Data($request);
 
         if (empty($data)) {
+            // PR #319 re-review F-042: mapStep6Data() cannot tell "Step 6 never touched"
+            // apart from "every field deliberately blanked" -- both submit as all-empty.
+            // If a payroll row already exists for this employee, treat an all-blank
+            // submission as a deliberate clear and null the five columns this wizard
+            // owns; if no row exists yet, there is genuinely nothing to clear, so this
+            // remains a no-op exactly as before.
+            $existingKey = $this->payrollEmployeeKey($employeeMasterPk);
+
+            if (PayrollSalaryMaster::where('employee_master_pk', $existingKey)->exists()) {
+                PayrollSalaryMaster::where('employee_master_pk', $existingKey)->update([
+                    'salary_grade_pk' => null,
+                    'employee_category_master_pk' => null,
+                    'basic_pay' => null,
+                    'bank_name' => null,
+                    'account_no' => null,
+                ]);
+            }
+
             return null;
         }
 
@@ -325,10 +343,35 @@ class MemberController extends Controller
         // Keyed through payrollEmployeeKey(), not by the raw employee_master.pk — see that
         // method. Keying by pk matched no existing row on any measured environment
         // (F-037), so every save created an orphan the Estate module could not read.
-        PayrollSalaryMaster::updateOrCreate(
-            ['employee_master_pk' => $this->payrollEmployeeKey($employeeMasterPk)],
-            $data
-        );
+        //
+        // PR #319 re-review F-043: updateOrCreate() is itself a read-then-write, not an
+        // atomic upsert, so the unique index above can still lose the exact race it
+        // exists to prevent — both concurrent calls read "no row", both attempt an
+        // INSERT, and the second's throws (SQLSTATE 23000). Every other refusal in this
+        // method degrades into a $saveWarnings message rather than failing the whole
+        // save; this one previously propagated to store()/update()'s generic
+        // catch (\Throwable $e), rolling back the entire transaction — not just Step 6 —
+        // for a condition this method's own unique index was added to make safe to
+        // retry. Only the duplicate-key case is caught; any other QueryException is a
+        // real failure and still propagates.
+        try {
+            PayrollSalaryMaster::updateOrCreate(
+                ['employee_master_pk' => $this->payrollEmployeeKey($employeeMasterPk)],
+                $data
+            );
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ((string) $e->getCode() !== '23000') {
+                throw $e;
+            }
+
+            Log::warning('Member wizard: Step 6 payroll save lost a concurrent-save race on the unique index.', [
+                'employee_master_pk' => $employeeMasterPk,
+            ]);
+
+            return 'Employee Grade Pay (Step 6) was NOT saved: another save for this employee completed '
+                . 'at the same moment. The rest of the member record was saved. Please re-open this '
+                . 'member and re-enter the payroll details if they are still needed.';
+        }
 
         return null;
     }
@@ -1142,19 +1185,39 @@ class MemberController extends Controller
         // the response.
         $saveWarnings = [];
 
+        // PR #319 re-review F-051: store()'s equivalent lockForUpdate() recheck runs
+        // inside its transaction because the FormRequest-level uniqueness rule is a
+        // separate, unlocked SELECT that two concurrent requests can both pass. update()
+        // had the same gap for a changed Employee ID (and, for an admin, a changed login
+        // user_name): two concurrent edits converging on the same new value could both
+        // pass validation and both write, since employee_master.emp_id/user_credentials
+        // .user_name carry no unique DB constraint either. Mirrors store()'s guard and
+        // response shape exactly.
+        $duplicate = null;
+
         // Same reasoning as store(): one transaction across employee_master,
         // payroll_salary_master, user_credentials and the role mappings.
         try {
-            DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload, &$saveWarnings) {
-            EmployeeMaster::find($request->emp_id)->update(array_merge(
-                $this->mapStep1Data($request),
-                $this->mapStep2Data($request),
-                $this->mapStep4Data($request),
-                $this->mapStep5Data($request, $profile_picture, $additional_doc_upload)
-            ));
+            DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload, &$saveWarnings, &$duplicate) {
+            // Excludes the row being edited itself, so an unchanged emp_id never
+            // collides with its own current value.
+            if (EmployeeMaster::where('emp_id', $request->id)->where('pk', '!=', $request->emp_id)->lockForUpdate()->exists()) {
+                $duplicate = ['id' => ['This employee ID already exists']];
 
-            $saveWarnings[] = $this->saveStep6PayrollData((int) $request->emp_id, $request);
+                return;
+            }
 
+            // PR #319 re-review round 6 (F-064): this whole block — resolving which
+            // credential row 'this one' is, and for an admin, rechecking the new
+            // user_name for a collision — is pure reads, moved up here BEFORE any write
+            // runs in this transaction. It used to sit after EmployeeMaster::update()
+            // and saveStep6PayrollData() below; returning from this closure on a
+            // detected duplicate does not throw, so DB::transaction() committed those
+            // two writes before the 422 was ever reported — a partial save reported as
+            // a failure, exactly the shape F-051 itself was fixing for emp_id. Moving
+            // the check earlier, not wrapping it in its own rollback, is the fix: it
+            // must run before the first write, not undo writes after the fact.
+            //
             // PR #319 review round 2 (F-002 residual). This was
             // UserCredential::updateOrCreate(['user_id' => $emp_id], ...) followed by a
             // separate where('user_id')->first() lookup. Both matched on user_id, which
@@ -1199,12 +1262,35 @@ class MemberController extends Controller
                 $userCredential = UserCredential::where('user_id', $request->emp_id)
                     ->orderBy('pk')
                     ->first();
+
+                // Same recheck as emp_id above, for the login name an admin can rename
+                // here. Excludes the row being edited itself (if one exists yet — on a
+                // credential-less member being given a login for the first time,
+                // $userCredential is null and every match is a real collision).
+                $userNameQuery = UserCredential::where('user_name', $request->userid)->lockForUpdate();
+                if ($userCredential) {
+                    $userNameQuery->where('pk', '!=', $userCredential->pk);
+                }
+                if ($userNameQuery->exists()) {
+                    $duplicate = ['userid' => ['This user ID already exists']];
+
+                    return;
+                }
             } else {
                 // Self-service: the actor's own row, by primary key. authorizeMemberRecord()
                 // has already established that this actor is an 'E' login whose user_id is
                 // this employee, so there is no lookup to get wrong.
                 $userCredential = UserCredential::find(Auth::id());
             }
+
+            EmployeeMaster::find($request->emp_id)->update(array_merge(
+                $this->mapStep1Data($request),
+                $this->mapStep2Data($request),
+                $this->mapStep4Data($request),
+                $this->mapStep5Data($request, $profile_picture, $additional_doc_upload)
+            ));
+
+            $saveWarnings[] = $this->saveStep6PayrollData((int) $request->emp_id, $request);
 
             if ($userCredential) {
                 $userCredential->update($credentialAttributes);
@@ -1260,6 +1346,14 @@ class MemberController extends Controller
         } catch (\Throwable $e) {
             $this->deleteUploadedMemberFiles($profile_picture, $additional_doc_upload);
             throw $e;
+        }
+
+        // Same shape store() returns, so the wizard renders it in the same place as any
+        // other field error (F-051).
+        if ($duplicate !== null) {
+            $this->deleteUploadedMemberFiles($profile_picture, $additional_doc_upload);
+
+            return response()->json(['errors' => $duplicate], 422);
         }
 
         MemberDataTable::bumpListingCacheEpoch();

@@ -20,6 +20,16 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // PR #319 re-review F-055: Schema::hasColumn() on a table that doesn't exist at
+        // all returns false (not an exception), which previously fell through to
+        // Schema::table() below and threw (SQLSTATE 42S02) on a genuinely fresh
+        // database -- aborting the whole migration batch. No migration in this repo
+        // creates payroll_salary_master; every one of its migrations assumes it already
+        // exists, same as the sibling migration guarded this way already.
+        if (! Schema::hasTable('payroll_salary_master')) {
+            return;
+        }
+
         if (Schema::hasColumn('payroll_salary_master', 'employee_category_master_pk')) {
             return;
         }

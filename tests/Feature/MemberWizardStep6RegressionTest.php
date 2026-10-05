@@ -332,6 +332,48 @@ class MemberWizardStep6RegressionTest extends TestCase
     }
 
     /**
+     * PR #319 re-review F-042: mapStep6Data() cannot distinguish "Step 6 never touched"
+     * from "every field deliberately blanked" -- both yield an empty $data array, so
+     * saveStep6PayrollData() used to no-op on both, silently leaving an existing row
+     * unchanged when an admin deliberately cleared every field.
+     */
+    public function test_blanking_every_step6_field_clears_the_existing_row(): void
+    {
+        $this->requireStep6Schema();
+        $this->makeAdminActor('fullclear');
+
+        $employeePk = $this->makeEmployee();
+
+        $this->invokePrivate('saveStep6PayrollData', [
+            $employeePk,
+            $this->step6Request(['bankname' => 'Bank To Be Cleared', 'basicpay' => 42000]),
+        ]);
+
+        $this->assertSame(
+            42000,
+            (int) PayrollSalaryMaster::where('employee_master_pk', $employeePk)->value('basic_pay'),
+            'Fixture assumption: the row exists with a real basic_pay value before the full clear.'
+        );
+
+        // The admin blanks every Step 6 field and saves again.
+        $this->invokePrivate('saveStep6PayrollData', [
+            $employeePk,
+            $this->step6Request([
+                'gradepay' => '', 'employeecategory' => '', 'basicpay' => '', 'bankname' => '', 'accountno' => '',
+            ]),
+        ]);
+
+        $row = PayrollSalaryMaster::where('employee_master_pk', $employeePk)->first();
+
+        $this->assertNotNull($row, 'The row itself must survive a full clear, not be deleted.');
+        $this->assertNull($row->salary_grade_pk);
+        $this->assertNull($row->employee_category_master_pk);
+        $this->assertNull($row->basic_pay);
+        $this->assertNull($row->bank_name);
+        $this->assertNull($row->account_no);
+    }
+
+    /**
      * F-037: Step 6 must read and write the payroll row an employee ACTUALLY has.
      *
      * payroll_salary_master.employee_master_pk does not hold employee_master.pk on real
@@ -437,8 +479,16 @@ class MemberWizardStep6RegressionTest extends TestCase
 
         $employeePk = $this->makeEmployee();
 
+        // PR #319 re-review F-053: EnsureMemberRecordAccess::ownsMemberRecord() (merged in
+        // from main/PR #309) requires a contact-proof match between user_credentials and
+        // employee_master in addition to user_id/user_category, checked before update()
+        // writes anything — so the payload's own 'personalemail' below is too late.
+        $selfpayEmail = 'selfpay_' . uniqid() . '@example.test';
+        DB::table('employee_master')->where('pk', $employeePk)->update(['email' => $selfpayEmail]);
+
         $actor = $this->makeActor('selfpay');
         $actor->user_id = $employeePk;   // links the login to its own employee record
+        $actor->email_id = $selfpayEmail;
         $actor->save();
 
         $this->assertSame([], $actor->getRoleNames()->all(), 'Fixture assumption: the actor holds no Spatie roles.');

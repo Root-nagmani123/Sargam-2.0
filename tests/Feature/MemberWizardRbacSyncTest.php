@@ -153,9 +153,16 @@ class MemberWizardRbacSyncTest extends TestCase
      */
     public function test_http_post_by_zero_role_actor_does_not_self_grant_a_role(): void
     {
+        // PR #319 re-review F-054: EnsureMemberRecordAccess::ownsMemberRecord() (merged in
+        // from main/PR #309) requires a contact-proof match between user_credentials and
+        // employee_master, checked BEFORE update() writes anything — so the payload's own
+        // 'personalemail' below is too late; the fixture rows must already match.
+        $attackerEmail = 'rbac_http_attacker_' . uniqid() . '@example.test';
+
         $employeePk = DB::table('employee_master')->insertGetId([
             'first_name' => 'Attacker',
             'last_name' => 'Self',
+            'email' => $attackerEmail,
         ]);
 
         $attackerCredPk = DB::table('user_credentials')->insertGetId([
@@ -164,6 +171,7 @@ class MemberWizardRbacSyncTest extends TestCase
             'first_name' => 'Attacker',
             'last_name' => 'Self',
             'user_category' => 'E',
+            'email_id' => $attackerEmail,
         ]);
 
         $attacker = User::find($attackerCredPk);

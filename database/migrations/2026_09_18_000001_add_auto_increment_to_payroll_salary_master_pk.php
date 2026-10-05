@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * payroll_salary_master.pk had no AUTO_INCREMENT, so new rows were keyed by
@@ -19,6 +20,15 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // PR #319 re-review F-055: alreadyAutoIncrement()'s information_schema lookup
+        // returns no row (not an exception) on a table that doesn't exist at all, which
+        // previously fell through to the raw ALTER TABLE below and threw (SQLSTATE
+        // 42S02) on a genuinely fresh database. No migration in this repo creates
+        // payroll_salary_master.
+        if (! Schema::hasTable('payroll_salary_master')) {
+            return;
+        }
+
         if ($this->alreadyAutoIncrement()) {
             return;
         }

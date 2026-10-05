@@ -10,6 +10,15 @@ return new class extends Migration
     {
         // payroll_salary_master already exists (created outside Laravel migrations) and is read
         // by the Estate module — this only adds the one column the new Member wizard step needs.
+        //
+        // PR #319 re-review F-055: Schema::hasColumn() on a table that doesn't exist at all
+        // returns false (not an exception), which previously fell through to Schema::table()
+        // below and threw (SQLSTATE 42S02) on a genuinely fresh database. No migration in
+        // this repo creates payroll_salary_master.
+        if (! Schema::hasTable('payroll_salary_master')) {
+            return;
+        }
+
         if (! Schema::hasColumn('payroll_salary_master', 'basic_pay')) {
             Schema::table('payroll_salary_master', function (Blueprint $table) {
                 // decimal(15,2), matching every other money column on this table

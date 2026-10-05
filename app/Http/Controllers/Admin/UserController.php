@@ -7078,7 +7078,15 @@ class UserController extends Controller
             // version — see git history — rather than repair it, and left a note that
             // it belongs in its own change with $user/$roleNames, which already exist
             // in this scope).
-            if (! empty($roleNames) && $user->user_id) {
+            //
+            // PR #319 re-review F-052: $user->user_id is only an employee_master.pk for
+            // an 'E'-category login (see MemberController::authorizeMemberRecord()'s F-038
+            // docblock) -- a non-'E' account's user_id can collide with an unrelated real
+            // employee's pk. Without this check, assigning a role (potentially Super
+            // Admin) to a non-employee account could deliver the "Role Assigned"
+            // notification to that unrelated employee instead of, or as well as, the
+            // actual assignee.
+            if (! empty($roleNames) && $user->user_id && strtoupper(trim((string) $user->user_category)) === 'E') {
                 try {
                     $notificationService = app(NotificationService::class);
                     $assignedRoleList = implode(', ', $roleNames);

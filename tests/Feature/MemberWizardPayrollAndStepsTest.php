@@ -55,16 +55,35 @@ class MemberWizardPayrollAndStepsTest extends TestCase
         }
     }
 
-    /** Same coverage for the Edit Member wizard, against a real employee record. */
+    /**
+     * Same coverage for the Edit Member wizard, against a real employee record.
+     *
+     * PR #319 re-review F-041: editStep() is gated by authorizeMemberRecord() (added
+     * later in this same PR to close an IDOR — any authenticated account could
+     * previously read another employee's step content, including Role Assignment
+     * state). A render check against an arbitrary employee therefore needs a
+     * privileged actor; see the companion 403 test below for the non-owning case.
+     */
     public function test_all_six_edit_member_wizard_steps_render(): void
     {
         $actor = $this->makeActor('render_edit');
+        $actor->assignRole('Super Admin');
         $employeePk = $this->makeEmployee('render_edit_target');
 
         for ($step = 1; $step <= 6; $step++) {
             $response = $this->actingAs($actor)->get(route('member.edit-step', ['step' => $step, 'id' => $employeePk]));
             $response->assertOk();
         }
+    }
+
+    /** F-041 companion: a non-privileged, non-owning actor must be refused, not shown the content. */
+    public function test_edit_wizard_steps_refuse_a_non_privileged_non_owning_actor(): void
+    {
+        $actor = $this->makeActor('render_edit_stranger');
+        $employeePk = $this->makeEmployee('render_edit_victim');
+
+        $response = $this->actingAs($actor)->get(route('member.edit-step', ['step' => 1, 'id' => $employeePk]));
+        $response->assertForbidden();
     }
 
     /**

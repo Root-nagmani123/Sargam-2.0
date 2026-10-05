@@ -53,18 +53,28 @@ class MemberWriteAuthorizationTest extends TestCase
         return DB::table('employee_master')->insertGetId([
             'first_name' => $firstName,
             'last_name'  => 'Fixture',
+            // PR #319 re-review F-054: EnsureMemberRecordAccess::ownsMemberRecord()
+            // (merged in from main/PR #309) requires a contact-proof match between
+            // user_credentials and employee_master in addition to user_id/user_category.
+            // makeZeroRoleActor() mirrors this back onto the credential row it creates.
+            'email' => 'authz_emp_' . uniqid() . '@example.test',
         ]);
     }
 
     /** An ordinary authenticated account holding no Spatie roles, linked to its own employee row. */
     private function makeZeroRoleActor(int $employeeMasterPk): User
     {
+        $employeeEmail = DB::table('employee_master')->where('pk', $employeeMasterPk)->value('email');
+
         $pk = DB::table('user_credentials')->insertGetId([
             'user_name'      => 'authz_actor_' . uniqid(),
             'user_id'        => $employeeMasterPk,
             'first_name'     => 'Authz',
             'last_name'      => 'Actor',
             'user_category'  => 'E',
+            // Matches employee_master.email above so ownsMemberRecord()'s contact-proof
+            // check passes for this actor's own record (F-054).
+            'email_id' => $employeeEmail,
         ]);
 
         $actor = User::find($pk);
@@ -266,12 +276,21 @@ class MemberWriteAuthorizationTest extends TestCase
             ->assertForbidden();
     }
 
-    /** F-001. An unknown emp_id must be a field error, not a fatal on find()->update(). */
+    /**
+     * F-001. An unknown emp_id must be a field error, not a fatal on find()->update().
+     *
+     * PR #319 re-review F-054: EnsureMemberRecordAccess::ownsMemberRecord() (merged in from
+     * main/PR #309) now runs BEFORE the emp_id-exists validation and correctly 403s a
+     * non-owning actor for an id that doesn't exist (it can't own a record that isn't
+     * there). A zero-role actor therefore no longer reaches the validation this test is
+     * actually about — a Super Admin bypasses the ownership check and does.
+     */
     public function test_an_unknown_emp_id_is_rejected_by_validation(): void
     {
-        $actor = $this->makeZeroRoleActor($this->makeEmployee());
+        $admin = $this->makeZeroRoleActor($this->makeEmployee());
+        $admin->assignRole('Super Admin');
 
-        $this->actingAs($actor)
+        $this->actingAs($admin)
             ->post(route('member.update'), $this->memberPayload(9999999))
             ->assertStatus(422)
             ->assertJsonValidationErrors('emp_id');
@@ -430,6 +449,52 @@ class MemberWriteAuthorizationTest extends TestCase
             $originalUserName,
             DB::table('user_credentials')->where('pk', $actor->pk)->value('user_name'),
             'A self-service save must not rename the login.'
+        );
+    }
+
+    /**
+     * PR #319 re-review round 6 (F-064): the F-051 fix for update()'s duplicate-username
+     * guard originally ran its check AFTER EmployeeMaster::update() and
+     * saveStep6PayrollData() had already executed inside the same transaction.
+     * Returning from the transaction closure on a detected duplicate does not throw, so
+     * DB::transaction() committed those two writes before the 422 was ever reported — a
+     * partial save reported as a failure. This pins that the whole save is atomic: a
+     * detected username collision must leave every one of this request's writes
+     * unapplied, not just report an error alongside a partially-applied one.
+     */
+    public function test_an_admin_update_colliding_on_username_writes_nothing(): void
+    {
+        $admin = $this->makeZeroRoleActor($this->makeEmployee('Admin'));
+        $admin->assignRole('Super Admin');
+
+        $takenUserName = 'already_taken_' . uniqid();
+        $otherActor = $this->makeZeroRoleActor($this->makeEmployee('Other'));
+        DB::table('user_credentials')->where('pk', $otherActor->pk)->update(['user_name' => $takenUserName]);
+
+        $targetPk = $this->makeEmployee('Target');
+        $target = $this->makeZeroRoleActor($targetPk);
+        $originalUserName = $target->user_name;
+
+        $response = $this->actingAs($admin)->post(
+            route('member.update'),
+            $this->memberPayload($targetPk, [
+                'userid'     => $takenUserName,
+                'first_name' => 'RenamedByCollidingSave',
+            ])
+        );
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('userid');
+
+        $this->assertSame(
+            'Target',
+            DB::table('employee_master')->where('pk', $targetPk)->value('first_name'),
+            'employee_master must be unchanged — the whole save must roll back, not just the credential half.'
+        );
+        $this->assertSame(
+            $originalUserName,
+            DB::table('user_credentials')->where('pk', $target->pk)->value('user_name'),
+            'The login name must be unchanged by a save that was refused.'
         );
     }
 
