@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'User Registration and Exemption Summary - Sargam | Lal Bahadur')
+@section('title', 'User Registration and Exemption Summary')
 
 @section('setup_content')
     <div class="container-fluid">
