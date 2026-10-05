@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Admin\Master;
 
+use App\DataTables\LeaveNatureMasterDataTable;
 use App\Http\Controllers\Controller;
+use App\Models\LeaveApplication;
 use App\Models\LeaveNatureMaster;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Yajra\DataTables\Facades\DataTables;
 
 /**
  * Nature Leave Master — the natures each leave form offers.
@@ -17,133 +19,134 @@ use Yajra\DataTables\Facades\DataTables;
  */
 class LeaveNatureMasterController extends Controller
 {
-    public function index()
+    public function index(LeaveNatureMasterDataTable $dataTable)
     {
-        return view('admin.master.leave_nature_master.index', [
+        return $dataTable->render('admin.master.leave_nature.index');
+    }
+
+    public function create()
+    {
+        return view('admin.master.leave_nature.create_edit', [
             'leaveTypes' => LeaveNatureMaster::TYPE_LABELS,
         ]);
     }
 
-    public function datatable(Request $request)
+    public function edit($id)
     {
-        /* Status toggle from the grid */
-        if ($request->filled('pk') && $request->filled('active_inactive') && $request->active_inactive != 2) {
-            LeaveNatureMaster::whereKey($request->pk)->update([
-                'active_inactive' => (int) $request->active_inactive,
-                'modified_date' => now(),
-            ]);
-        }
+        $leaveNature = LeaveNatureMaster::findOrFail($this->decryptId($id));
 
-        /* Delete from the grid */
-        if ($request->filled('pk') && $request->active_inactive == 2) {
-            LeaveNatureMaster::whereKey($request->pk)->delete();
-        }
-
-        $query = LeaveNatureMaster::query()
-            ->when($request->filled('leave_type_filter'), fn ($q) => $q->where('leave_type', $request->input('leave_type_filter')))
-            ->orderBy('leave_type')
-            ->orderBy('display_order')
-            ->orderByDesc('pk');
-
-        return DataTables::of($query)
-            ->addIndexColumn()
-            ->filter(function ($query) use ($request) {
-                $search = $request->input('search.value');
-                if (! empty($search)) {
-                    $query->where(function ($q) use ($search) {
-                        $q->where('nature_name', 'LIKE', "%{$search}%")
-                            ->orWhere('leave_type', 'LIKE', "%{$search}%");
-                    });
-                }
-            })
-            ->addColumn('leave_type_label', fn ($row) => e($row->leave_type_label))
-            ->addColumn('nature_name', fn ($row) => e($row->nature_name ?? 'N/A'))
-            ->addColumn('display_order', fn ($row) => (int) $row->display_order)
-            ->addColumn('status', function ($row) {
-                $checked = (int) $row->active_inactive === 1 ? 'checked' : '';
-
-                return '<div class="form-check form-switch d-inline-block programme-action-switch">'
-                    . '<input class="form-check-input plain-status-toggle" type="checkbox" data-id="' . $row->pk . '" ' . $checked . '>'
-                    . '</div>';
-            })
-            ->addColumn('action', function ($row) {
-                $disabled = (int) $row->active_inactive === 1 ? 'disabled aria-disabled="true"' : '';
-
-                return '<div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Row actions">'
-                    . '<a href="javascript:void(0)" class="btn btn-sm edit-btn btn-outline-primary d-inline-flex align-items-center gap-1"'
-                    . ' data-id="' . $row->pk . '"'
-                    . ' data-leave_type="' . e($row->leave_type) . '"'
-                    . ' data-nature_name="' . e($row->nature_name) . '"'
-                    . ' data-display_order="' . (int) $row->display_order . '"'
-                    . ' data-active_inactive="' . (int) $row->active_inactive . '"'
-                    . ' aria-label="Edit nature"><i class="bi bi-pencil"></i><span class="d-none d-md-inline">Edit</span></a>'
-                    . '<a href="javascript:void(0)" class="btn btn-sm btn-outline-danger delete-btn d-inline-flex align-items-center gap-1 ' . $disabled . '"'
-                    . ' data-id="' . $row->pk . '" aria-disabled="' . ((int) $row->active_inactive === 1 ? 'true' : 'false') . '">'
-                    . '<i class="bi bi-trash"></i><span class="d-none d-md-inline">Delete</span></a>'
-                    . '</div>';
-            })
-            ->rawColumns(['status', 'action'])
-            ->make(true);
+        return view('admin.master.leave_nature.create_edit', [
+            'leaveNature' => $leaveNature,
+            'leaveTypes' => LeaveNatureMaster::TYPE_LABELS,
+        ]);
     }
 
     public function store(Request $request)
     {
-        try {
-            $id = $request->input('id');
+        $pk = $request->id ? $this->decryptId($request->id) : null;
 
-            $validated = $request->validate([
-                'leave_type' => ['required', Rule::in(array_keys(LeaveNatureMaster::TYPE_LABELS))],
-                // Unique per bucket, not globally: "Medical" legitimately exists
-                // under both PT Exemption and Stationed Leave today.
-                'nature_name' => [
-                    'required', 'string', 'max:150',
-                    Rule::unique('leave_nature_master', 'nature_name')
-                        ->where(fn ($q) => $q->where('leave_type', $request->input('leave_type')))
-                        ->ignore($id, 'pk'),
-                ],
-                'display_order' => 'nullable|integer|min:0|max:9999',
-                'status' => 'required|in:0,1',
-            ], [
-                'nature_name.unique' => 'This nature already exists for the selected leave type.',
-            ]);
+        $request->validate([
+            'leave_type' => ['required', Rule::in(array_keys(LeaveNatureMaster::TYPE_LABELS))],
+            // Unique per bucket, not globally: "Medical" legitimately exists
+            // under both PT Exemption and Stationed Leave today.
+            'nature_name' => [
+                'required',
+                'string',
+                'max:150',
+                Rule::unique('leave_nature_master', 'nature_name')
+                    ->where(fn ($query) => $query->where('leave_type', $request->leave_type))
+                    ->ignore($pk, 'pk'),
+            ],
+            'active_inactive' => 'required|in:1,2',
+        ], [
+            'nature_name.unique' => 'This nature already exists for the selected leave type.',
+        ]);
 
-            $data = [
-                'leave_type' => $validated['leave_type'],
-                'nature_name' => $validated['nature_name'],
-                'display_order' => (int) ($validated['display_order'] ?? 0),
-                'active_inactive' => (int) $validated['status'],
+        $displayOrder = $pk
+            ? LeaveNatureMaster::find($pk)?->display_order ?? 0
+            : (int) LeaveNatureMaster::where('leave_type', $request->leave_type)->max('display_order') + 1;
+
+        LeaveNatureMaster::updateOrCreate(
+            ['pk' => $pk],
+            [
+                'leave_type' => $request->leave_type,
+                'nature_name' => $request->nature_name,
+                'display_order' => $displayOrder,
+                'active_inactive' => $request->active_inactive,
                 'modified_date' => now(),
-            ];
+                'created_date' => $pk ? LeaveNatureMaster::find($pk)?->created_date ?? now() : now(),
+            ]
+        );
 
-            if ($id) {
-                LeaveNatureMaster::findOrFail($id)->update($data);
+        return redirect()->route('master.leave-nature.index')
+            ->with('success', 'Leave nature saved successfully.');
+    }
 
-                return response()->json([
-                    'status' => true,
-                    'type' => 'update',
-                    'message' => 'Nature of leave updated successfully.',
-                ]);
-            }
-
-            LeaveNatureMaster::create($data + ['created_date' => now()]);
-
-            return response()->json([
-                'status' => true,
-                'type' => 'create',
-                'message' => 'Nature of leave created successfully.',
-            ], 201);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json(['status' => false, 'errors' => $e->errors()], 422);
-        } catch (\Exception $e) {
-            return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+    /**
+     * Decrypt a route id, answering 404 rather than 500 for a tampered or
+     * stale link (an edited bookmark, or an id encrypted under a rotated
+     * APP_KEY).
+     */
+    private function decryptId($id): int
+    {
+        try {
+            return (int) decrypt($id);
+        } catch (DecryptException $e) {
+            abort(404);
         }
     }
 
-    public function delete($id)
+    /**
+     * Flip this master's status on its own guarded route.
+     *
+     * The generic admin/toggle-status endpoint takes the table, column, id
+     * column and value straight from the request and is behind auth only, so
+     * any signed-in user can write any column of any table through it. This
+     * screen uses its own route instead, matching ExemptionMasterController.
+     *
+     * The id is encrypted, like edit() and destroy(). LeaveNatureMasterDataTable
+     * emits it with encrypt() in the same markup that carries the raw pk as
+     * data-id for client-side row matching; the two must change together.
+     */
+    public function status(Request $request, $id)
     {
-        LeaveNatureMaster::destroy(decrypt($id));
+        $request->validate([
+            'active_inactive' => 'required|in:1,2',
+        ]);
 
-        return redirect()->route('master.leave.nature.master.index')
-            ->with('success', 'Nature of leave deleted successfully.');
+        LeaveNatureMaster::findOrFail($this->decryptId($id))->update([
+            'active_inactive' => (int) $request->active_inactive,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Status updated successfully.',
+        ]);
+    }
+
+    public function destroy($id)
+    {
+        try {
+            $leaveNature = LeaveNatureMaster::where('pk', $this->decryptId($id))->firstOrFail();
+
+            if ($leaveNature->active_inactive == 1) {
+                return redirect()->back()->with('error', 'Active records cannot be deleted. Please deactivate it first.');
+            }
+
+            // No FK guards leave_application.leave_nature_master_pk, so deleting a nature still
+            // in use would blank the nature on those applications in approvals and exports.
+            if (LeaveApplication::where('leave_nature_master_pk', $leaveNature->pk)->exists()) {
+                return redirect()->back()->with('error', 'This leave nature is used by existing leave applications and cannot be deleted. Keep it inactive instead.');
+            }
+
+            $leaveNature->delete();
+
+            return redirect()->route('master.leave-nature.index')
+                ->with('success', 'Deleted successfully.');
+        } catch (\Exception $e) {
+            \Log::error($e->getMessage());
+
+            return redirect()->back()->with('error', 'Something went wrong.');
+        }
     }
 }

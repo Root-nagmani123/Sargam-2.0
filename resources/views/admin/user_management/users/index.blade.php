@@ -3,6 +3,7 @@
 @section('title', 'User Management')
 
 @push('styles')
+@include('admin.layouts.partials.select2-assets')
 <link rel="stylesheet" href="{{ asset('css/users-admin.css') }}?v={{ @filemtime(public_path('css/users-admin.css')) ?: time() }}">
 <style>
     #usersTableContainer { transition: opacity .15s ease; }
@@ -13,14 +14,15 @@
     #usersColumnToggleGrid .colvis-item .form-check-input { cursor: pointer; flex-shrink: 0; }
 
     /* ===== Reference-matched polish (presentation only) ===== */
-    /* Print / Download utility buttons */
-    .users-page .users-util-btn {
-        height: 44px; display: inline-flex; align-items: center; gap: 8px;
-        padding: 0 18px; font-weight: 600; font-size: 0.9rem; color: #004a93;
-        background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
-        transition: border-color .15s ease, box-shadow .15s ease;
-    }
-    .users-page .users-util-btn:hover { border-color: #004a93; box-shadow: 0 1px 3px rgba(16,24,40,.08); }
+    /* The export row uses the shared programme-dt-btn-columns chrome from
+       custom.css, like every other new-design index page — the bespoke
+       .users-util-btn that used to live here made this one screen's Print and
+       Download taller and a different colour from the rest of the app. */
+
+    /* The Download dropdown is styled by .programme-dt-download-menu in
+       custom.css, alongside the .programme-dt-btn-columns chrome its toggle
+       wears — four index pages use it, so it lives in the shared layer rather
+       than being copied per page. */
 
     /* Filter toolbar */
     .users-page .users-filters-label { font-weight: 600; color: #1f2937; font-size: 0.9rem; }
@@ -85,16 +87,55 @@
 
     <x-session_message />
 
-    {{-- Print / Download --}}
-    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
-        <button type="button" id="usersPrintBtn" class="users-util-btn">
-            <i class="material-icons material-symbols-rounded" style="font-size:20px;" aria-hidden="true">print</i>
-            <span>Print</span>
-        </button>
-        <button type="button" id="usersDownloadBtn" class="users-util-btn">
-            <i class="material-icons material-symbols-rounded" style="font-size:20px;" aria-hidden="true">download</i>
-            <span>Download</span>
-        </button>
+    {{-- Exports — ABOVE the card, right-aligned, in the same order and the same
+         programme-dt-btn-columns chrome every other new-design index page uses
+         (docs/new-design-index-page.md §1). These are LINKS to the server export,
+         not buttons that scrape the rendered table: the grid shows one page of
+         10 rows, so the old DOM-scraping Print and Download silently truncated
+         every report to whatever happened to be on screen. --}}
+    <div class="d-flex flex-wrap align-items-end justify-content-end gap-3 mb-3">
+        <div class="d-flex flex-wrap align-items-end gap-2 users-secondary-actions">
+            {{-- ?search / ?User_type / ?columns are stamped on by
+                 usersUpdateExportLinks(), so a download carries the same filters
+                 and columns as the grid. --}}
+            <div class="dropdown">
+                <button type="button"
+                        class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                        id="usersDownloadMenuBtn" data-bs-toggle="dropdown" aria-expanded="false"
+                        title="Download this list">
+                    <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end programme-dt-download-menu"
+                    aria-labelledby="usersDownloadMenuBtn">
+                    <li>
+                        <a class="dropdown-item" id="usersCsvLink"
+                           href="{{ route('admin.users.export', ['format' => 'csv']) }}">
+                            <i class="bi bi-filetype-csv" aria-hidden="true"></i><span>CSV</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" id="usersExcelLink"
+                           href="{{ route('admin.users.export', ['format' => 'xlsx']) }}">
+                            <i class="bi bi-file-earmark-excel" aria-hidden="true"></i><span>Excel</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" id="usersPdfLink"
+                           href="{{ route('admin.users.export', ['format' => 'pdf']) }}">
+                            <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i><span>PDF</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            {{-- Print stays OUTSIDE the dropdown: it opens a sheet rather than
+                 saving a file, so it is not one of the download formats. --}}
+            <a href="{{ route('admin.users.export', ['format' => 'print']) }}"
+               id="usersPrintLink" target="_blank" rel="noopener"
+               class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
+                <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
+            </a>
+        </div>
     </div>
 
     <div class="card users-dt-card shadow-sm rounded-3 overflow-hidden border-0">
@@ -108,7 +149,10 @@
                     <span class="users-filters-label me-1">Filters</span>
 
                     <label for="User_type" class="visually-hidden">User type</label>
-                    <select name="User_type" id="User_type" class="form-select users-filter-select" aria-label="Filter by user type">
+                    <select name="User_type" id="User_type"
+                            class="form-select users-filter-select select2"
+                            data-placeholder="User Type"
+                            aria-label="Filter by user type">
                         <option value="">User Type</option>
                         <option value="S" {{ $user_type === 'S' ? 'selected' : '' }}>Student</option>
                         <option value="E" {{ $user_type === 'E' ? 'selected' : '' }}>Employee</option>
@@ -220,6 +264,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 container.innerHTML = html;
                 container.classList.remove('users-loading');
                 applyColumnVisibility();
+                // The footer's per-page select is brand-new markup; DropdownSearch
+                // only auto-initialises on DOMContentLoaded, so re-hook it here or
+                // it comes back as a plain <select> after the first page change.
+                if (window.DropdownSearch) { window.DropdownSearch.autoInit(); }
+                // Search, user-type, reset, pagination and per-page all land here,
+                // so this one call keeps every export link on the current filters.
+                usersUpdateExportLinks();
                 try { window.history.replaceState({}, '', url); } catch (e) {}
                 if (scrollTop) scrollTableIntoView();
             })
@@ -244,24 +295,31 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (userTypeSelect) {
-        userTypeSelect.addEventListener('change', function () { loadUsers(); });
+        // jQuery, NOT addEventListener. Select2 signals a pick with
+        // $(el).trigger('change'), which runs jQuery-bound handlers only — a
+        // vanilla listener is never called and the grid silently stops
+        // reloading. See docs/new-design-index-page.md §2.
+        $(userTypeSelect).on('change', function () { loadUsers(); });
     }
 
     if (resetBtn) {
         resetBtn.addEventListener('click', function () {
             if (searchInput) searchInput.value = '';
-            if (userTypeSelect) userTypeSelect.value = '';
+            // change.select2 repaints the box; a bare .value = '' leaves it
+            // still showing the cleared user type.
+            if (userTypeSelect) { $(userTypeSelect).val('').trigger('change.select2'); }
             if (perPageHidden) perPageHidden.value = '10';
             loadUsers();
         });
     }
 
     // Delegated handlers — the table/pagination is replaced on every fetch.
-    container.addEventListener('change', function (e) {
-        if (e.target && e.target.id === 'usersPerPageFooter') {
-            if (perPageHidden) perPageHidden.value = e.target.value;
-            loadUsers(null, true);
-        }
+    // Delegated with jQuery for the same reason as the filter above: the
+    // per-page select is Select2-backed and its change never reaches a vanilla
+    // listener, delegated or not.
+    $(container).on('change', '#usersPerPageFooter', function () {
+        if (perPageHidden) perPageHidden.value = this.value;
+        loadUsers(null, true);
     });
     container.addEventListener('click', function (e) {
         var link = e.target.closest('.users-pagination-links a');
@@ -326,6 +384,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 else { if (pos === -1) hiddenCols.push(i); }
                 persistColumns();
                 applyColumnVisibility();
+                usersUpdateExportLinks();
             });
             var span = document.createElement('span');
             span.textContent = header;
@@ -339,55 +398,56 @@ document.addEventListener('DOMContentLoaded', function () {
     buildColumnsModal();
     applyColumnVisibility();
 
-    /* ---------------- Print (current table) ---------------- */
-    var printBtn = document.getElementById('usersPrintBtn');
-    if (printBtn) {
-        printBtn.addEventListener('click', function () {
-            var table = container.querySelector('#zero_config_table');
-            if (!table) return;
-            var clone = table.cloneNode(true);
-            clone.querySelectorAll('tr').forEach(function (tr) {
-                if (tr.children.length > 1) tr.removeChild(tr.children[tr.children.length - 1]); // drop Action
-            });
-            var w = window.open('', '_blank');
-            if (!w) return;
-            w.document.write('<!DOCTYPE html><html><head><title>Users</title>' +
-                '<style>body{font-family:Arial,sans-serif;margin:20px}table{width:100%;border-collapse:collapse}' +
-                'th,td{border:1px solid #ccc;padding:8px;text-align:left;font-size:12px}th{background:#004a93;color:#fff}h2{color:#004a93}</style>' +
-                '</head><body><h2>Users</h2>' + clone.outerHTML + '</body></html>');
-            w.document.close();
-            w.onload = function () { w.print(); };
+    /* ---------------- Export links ----------------
+       Print, Download, Excel and PDF are server-side: one query, one column list,
+       every matching row. The old handlers here cloned the rendered <table>,
+       which is a single page of 10 rows, so a "complete list" print or download
+       quietly stopped at 10 users no matter how many actually matched.
+
+       All four have to be re-stamped whenever the search, the user-type filter or
+       the visible columns change, or a download would carry the state the page
+       was FIRST loaded with. */
+
+    /* Header index -> the export key the server understands
+       (UserController::adminUsersExportColumns()). Positional: null marks a
+       column that is not in the export list at all — S. No., which the export
+       generates itself, and Action.
+       ⚠️ Adding a column to _table.blade.php means adding an entry here too. */
+    var USERS_EXPORT_COLUMN_KEYS = [null, 'username', 'name', 'email', 'mobile', 'usertype', 'roles', null];
+    var USERS_EXPORT_KEY_COUNT = USERS_EXPORT_COLUMN_KEYS.filter(Boolean).length;
+
+    function usersUpdateExportLinks() {
+        var keys = [];
+        USERS_EXPORT_COLUMN_KEYS.forEach(function (key, index) {
+            if (key && hiddenCols.indexOf(index) === -1) { keys.push(key); }
+        });
+
+        var searchValue = searchInput ? searchInput.value.trim() : '';
+        var typeValue = userTypeSelect ? userTypeSelect.value : '';
+
+        ['usersCsvLink', 'usersExcelLink', 'usersPdfLink', 'usersPrintLink'].forEach(function (id) {
+            var link = document.getElementById(id);
+            if (!link) { return; }
+            var base = link.href.split('?')[0];
+            var params = new URLSearchParams(link.href.split('?')[1] || '');
+
+            params.delete('search');
+            if (searchValue !== '') { params.set('search', searchValue); }
+
+            params.delete('User_type');
+            if (typeValue !== '') { params.set('User_type', typeValue); }
+
+            params.delete('columns');
+            // Omit ?columns= entirely while nothing is hidden — the server reads
+            // "no columns" as "every column".
+            if (keys.length !== USERS_EXPORT_KEY_COUNT) { params.set('columns', keys.join(',')); }
+
+            var qs = params.toString();
+            link.href = base + (qs ? '?' + qs : '');
         });
     }
 
-    /* ---------------- Download (current table → CSV) ---------------- */
-    var downloadBtn = document.getElementById('usersDownloadBtn');
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', function () {
-            var table = container.querySelector('#zero_config_table');
-            if (!table) return;
-            var rows = [];
-            table.querySelectorAll('tr').forEach(function (tr) {
-                if (tr.children.length <= 1) return; // skip empty-state row
-                var cells = [];
-                for (var i = 0; i < tr.children.length - 1; i++) { // exclude Action column
-                    var txt = (tr.children[i].innerText || '').replace(/\s+/g, ' ').trim().replace(/"/g, '""');
-                    cells.push('"' + txt + '"');
-                }
-                rows.push(cells.join(','));
-            });
-            if (!rows.length) return;
-            var blob = new Blob(['﻿' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-            var url = URL.createObjectURL(blob);
-            var a = document.createElement('a');
-            a.href = url;
-            a.download = 'users_' + new Date().toISOString().slice(0, 10) + '.csv';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        });
-    }
+    usersUpdateExportLinks();
 });
 </script>
 @endpush

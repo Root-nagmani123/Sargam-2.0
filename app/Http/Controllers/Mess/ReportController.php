@@ -918,7 +918,7 @@ class ReportController extends Controller
 
         // Expensive report: cache full dataset (Redis/file via RedisBackedCache). Pagination reuses cache.
         // Apply filters sends refresh=1 to recompute and overwrite cache.
-        $cacheKey = 'stock-summary:v4:' . md5(json_encode([$fromDate, $toDate, $storeType, $storeIds]));
+        $cacheKey = 'stock-summary:v5:' . md5(json_encode([$fromDate, $toDate, $storeType, $storeIds]));
         $loadReport = function () use ($fromDate, $toDate, $storeIds, $storeType) {
             [$data, $storeName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeIds, $storeType);
             $totals = [
@@ -1164,70 +1164,33 @@ class ReportController extends Controller
         return 'data:'.$mime.';base64,'.base64_encode($raw);
     }
 
-    /**
-     * Fetch an image over HTTP and return a data URI for Dompdf embedding.
-     */
-    private function pdfTryHttpToDataUri(string $url, string $mime): ?string
-    {
-        try {
-            $response = Http::timeout(20)->connectTimeout(8)->get($url);
-            if ($response->successful()) {
-                $body = $response->body();
-                if ($body !== '' && strlen($body) > 100) {
-                    return 'data:'.$mime.';base64,'.base64_encode($body);
-                }
-            }
-        } catch (\Throwable $e) {
-            // Fall back to returning the raw URL for the view / Dompdf remote loader
-        }
-
-        return null;
-    }
 
     /**
-     * LBSNAA header logo for Stock Summary PDF: local academy assets first, then official site, then URL fallback.
+     * LBSNAA header logo for the mess PDF headers. Local assets only.
+     *
+     * Review finding F-027. This used to try the local files, then fetch
+     * https://www.lbsnaa.gov.in/admin_assets/images/logo.png over HTTP, then hand dompdf
+     * that raw URL if even the fetch failed - so a server-side render depended on the
+     * public website being up, and dompdf needed isRemoteEnabled to load the fallback.
      */
     private function messPdfLbsnaaLogoForDompdf(): string
     {
-        foreach ([public_path('images/lbsnaa_logo.jpg'), public_path('images/lbsnaa_logo.png')] as $path) {
-            $uri = $this->pdfTryFileToDataUri($path);
-            if ($uri !== null) {
-                return $uri;
-            }
-        }
-
-        $official = 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
-        $embedded = $this->pdfTryHttpToDataUri($official, 'image/png');
-        if ($embedded !== null) {
-            return $embedded;
-        }
-
-        foreach ([
-            public_path('admin_assets/images/logos/logo.png'),
-            public_path('admin_assets/images/logos/logo.svg'),
-            public_path('admin_assets/images/logos/logo-icon.svg'),
-        ] as $path) {
-            $uri = $this->pdfTryFileToDataUri($path);
-            if ($uri !== null) {
-                return $uri;
-            }
-        }
-
-        return $official;
+        return pdf_lbsnaa_logo_src();
     }
 
     /**
-     * India emblem (PNG) for PDF header — embedded when fetch succeeds.
+     * India emblem for the mess PDF headers. Local assets only.
+     *
+     * Review finding F-027, and the sharper half of it: this method did not try a local
+     * file at all. Every mess PDF export called
+     * https://upload.wikimedia.org/.../Emblem_of_India.svg.png with Http::timeout(20) while
+     * building the document, and returned the raw URL for dompdf to fetch when that failed.
+     * public/admin_assets/images/logos/ashoka.png has been sitting in the repository the
+     * whole time, and is what every other PDF header in this application already uses.
      */
     private function messPdfIndiaEmblemForDompdf(): string
     {
-        $url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
-        $embedded = $this->pdfTryHttpToDataUri($url, 'image/png');
-        if ($embedded !== null) {
-            return $embedded;
-        }
-
-        return $url;
+        return pdf_emblem_src();
     }
 
     /**
@@ -1281,7 +1244,7 @@ class ReportController extends Controller
             ->setOptions([
                 'defaultFont'           => 'DejaVu Sans',
                 'isHtml5ParserEnabled'  => true,
-                'isRemoteEnabled'       => true,
+                'isRemoteEnabled'       => false,
                 'dpi'                   => 96,
             ]);
 
@@ -1336,7 +1299,7 @@ class ReportController extends Controller
             ->setOptions([
                 'defaultFont'           => 'DejaVu Sans',
                 'isHtml5ParserEnabled'  => true,
-                'isRemoteEnabled'       => true,
+                'isRemoteEnabled'       => false,
                 'dpi'                   => 96,
             ]);
 
@@ -1387,7 +1350,7 @@ class ReportController extends Controller
             ->setOptions([
                 'defaultFont'           => 'DejaVu Sans',
                 'isHtml5ParserEnabled'  => true,
-                'isRemoteEnabled'       => true,
+                'isRemoteEnabled'       => false,
                 'dpi'                   => 96,
                 'isPhpEnabled'          => false,
             ]);
@@ -1465,7 +1428,7 @@ class ReportController extends Controller
             ->setOptions([
                 'defaultFont'           => 'DejaVu Sans',
                 'isHtml5ParserEnabled'  => true,
-                'isRemoteEnabled'       => true,
+                'isRemoteEnabled'       => false,
                 'dpi'                   => 96,
             ]);
 
@@ -1555,7 +1518,7 @@ class ReportController extends Controller
             ->setOptions([
                 'defaultFont' => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => true,
+                'isRemoteEnabled' => false,
                 'isPhpEnabled' => false,
                 'chroot' => realpath(public_path()) ?: public_path(),
                 'dpi' => 96,
@@ -1736,9 +1699,10 @@ class ReportController extends Controller
                 ->where('po.status', 'approved')
                 ->when($storeIds !== [], fn ($q) => $q->whereIn('po.store_id', $storeIds));
 
+            // Opening quantity and value come from one grouped query (the value gives the opening rate).
             $openingIncoming = (clone $incomingQuery)
                 ->where('po.po_date', '<=', $previousDate)
-                ->selectRaw('poi.item_subcategory_id, SUM(poi.quantity) as total_qty')
+                ->selectRaw('poi.item_subcategory_id, SUM(poi.quantity) as total_qty, COALESCE(SUM(poi.quantity * poi.unit_price), 0) as val_sum')
                 ->groupBy('poi.item_subcategory_id')
                 ->get()
                 ->keyBy('item_subcategory_id');
@@ -1760,9 +1724,10 @@ class ReportController extends Controller
                 ->whereNotNull('sai.item_subcategory_id')
                 ->when($storeIds !== [], fn ($q) => $q->whereIn('sa.sub_store_id', $storeIds));
 
+            // Opening quantity and value come from one grouped query (the value gives the opening rate).
             $openingIncoming = (clone $incomingQuery)
                 ->where('sa.allocation_date', '<=', $previousDate)
-                ->selectRaw('sai.item_subcategory_id, SUM(sai.quantity) as total_qty')
+                ->selectRaw('sai.item_subcategory_id, SUM(sai.quantity) as total_qty, COALESCE(SUM(sai.quantity * COALESCE(sai.unit_price, 0)), 0) as val_sum')
                 ->groupBy('sai.item_subcategory_id')
                 ->get()
                 ->keyBy('item_subcategory_id');
@@ -1819,6 +1784,14 @@ class ReportController extends Controller
             $openingSaleSvQty = (float) ($openingDateRangeSales->get($item->id)->total_qty ?? 0);
             $itemData['opening_qty'] = $openingIncomingQty - $openingSaleKiQty - $openingSaleSvQty;
 
+            // Same weighted-average basis as closing (as of the day before From Date), so
+            // opening of a day equals closing of the previous day.
+            $openingRateRow = $openingIncoming->get($item->id);
+            $openingQtySum = (float) ($openingRateRow->total_qty ?? 0);
+            $openingValRate = $openingQtySum > 0
+                ? round(((float) ($openingRateRow->val_sum ?? 0)) / $openingQtySum, 6)
+                : null;
+            $itemData['opening_rate'] = $openingValRate ?? ($item->standard_cost ?? 0);
             $itemData['opening_amount'] = $itemData['opening_qty'] * $itemData['opening_rate'];
 
             $incoming = $periodIncoming->get($item->id);
@@ -3394,7 +3367,7 @@ class ReportController extends Controller
             ->setOptions([
                 'defaultFont'           => 'DejaVu Sans',
                 'isHtml5ParserEnabled'  => true,
-                'isRemoteEnabled'       => true,
+                'isRemoteEnabled'       => false,
                 'dpi'                   => 96,
             ]);
 

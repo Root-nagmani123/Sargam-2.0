@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use App\Support\PdfPageNumbers;
 
 class MemoDisciplineController extends Controller
 {
@@ -485,12 +486,17 @@ public function exportPdf(Request $request)
         ->setOptions([
             'defaultFont' => 'DejaVu Sans',
             'isHtml5ParserEnabled' => true,
-            'isRemoteEnabled' => true,
-            'isPhpEnabled' => true,
+            'isRemoteEnabled' => false,
+            // Never true: isPhpEnabled makes the renderer a PHP execution
+            // context for the whole view, so any raw block that later
+            // appears in an export blade would execute. Page numbers are
+            // stamped on the canvas after render instead - see
+            // PdfPageNumbers.
+            'isPhpEnabled' => false,
             'dpi' => 96,
         ]);
 
-    return $pdf->download('send-discipline-memo-' . now()->format('Y-m-d_His') . '.pdf');
+    return PdfPageNumbers::stamp($pdf, 18, 20, [0.4, 0.4, 0.4])->download('send-discipline-memo-' . now()->format('Y-m-d_His') . '.pdf');
 }
 
 /**
@@ -581,7 +587,7 @@ public function exportPdfZip(Request $request)
             ->setOptions([
                 'defaultFont' => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => true,
+                'isRemoteEnabled' => false,
                 'dpi' => 96,
             ])
             ->output();

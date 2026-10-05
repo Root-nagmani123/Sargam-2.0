@@ -47,13 +47,19 @@
                 <i class="bi bi-download" aria-hidden="true"></i>
                 <span>Download</span>
             </button>
-            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="myLeaveDownload">
-                <li><button type="button" class="dropdown-item my-leave-export-option" data-format="excel">
-                    <i class="bi bi-file-earmark-excel me-2" aria-hidden="true"></i>Excel (.xlsx)
-                </button></li>
-                <li><button type="button" class="dropdown-item my-leave-export-option" data-format="pdf">
-                    <i class="bi bi-file-earmark-pdf me-2" aria-hidden="true"></i>PDF
-                </button></li>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm py-2" aria-labelledby="myLeaveDownload">
+                <li>
+                    <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="myLeaveExportPdf">
+                        <i class="bi bi-file-earmark-pdf text-danger" aria-hidden="true"></i>
+                        <span>Download PDF</span>
+                    </button>
+                </li>
+                <li>
+                    <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="myLeaveExportExcel">
+                        <i class="bi bi-file-earmark-excel text-success" aria-hidden="true"></i>
+                        <span>Download Excel</span>
+                    </button>
+                </li>
             </ul>
         </div>
     </div>
@@ -241,15 +247,24 @@ $(function () {
     });
 
     /* ── Download ── */
-    $(document).on('click', '.my-leave-export-option', function () {
+    function myLeaveExportUrl(format) {
         const params = $.param({
+            format: format,
             leave_type: $('#filter_leave_type').val() || '',
             status: currentStatus,
             from_date: $period.data('from') || '',
             to_date: $period.data('to') || '',
             format: $(this).data('format'),
         });
-        window.location.href = exportUrl + '?' + params;
+        return exportUrl + '?' + params;
+    }
+
+    $('#myLeaveExportPdf').on('click', function () {
+        window.location.href = myLeaveExportUrl('pdf');
+    });
+
+    $('#myLeaveExportExcel').on('click', function () {
+        window.location.href = myLeaveExportUrl('excel');
     });
 
     /* ── Delete ── */

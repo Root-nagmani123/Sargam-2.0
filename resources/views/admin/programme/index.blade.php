@@ -5,10 +5,11 @@
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+<link rel="stylesheet" href="{{ asset('css/programme-admin.css') }}?v={{ @filemtime(public_path('css/programme-admin.css')) ?: time() }}">
 @endpush
 
 @section('setup_content')
-<div class="container-fluid programme-index-page">
+<div class="container-fluid prog-page programme-index-page">
     <x-breadcrum
         title="Course Master"
         buttonText="Add Course"
@@ -37,6 +38,54 @@
                         </button>
                     </li>
                 </ul>
+
+                {{-- Status pills · Download sit ABOVE the card (§1). More than one
+                     format, so Download is a dropdown; Print sits beside it because
+                     it opens a page rather than saving a file. Every href is kept
+                     in step with the pill, the Course filter, the search box and
+                     the Columns modal by the JS below. --}}
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <div class="dropdown">
+                        <button type="button"
+                            class="btn programme-dt-btn-columns dropdown-toggle border-0 text-primary"
+                            id="programmeDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-download" aria-hidden="true"></i>
+                            <span>Download</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-1 py-2"
+                            aria-labelledby="programmeDownloadBtn">
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2 programme-export-link"
+                                    data-export-format="csv" href="{{ route('programme.export', 'csv') }}">
+                                    <i class="bi bi-filetype-csv text-success" aria-hidden="true"></i>
+                                    <span>Download CSV</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2 programme-export-link"
+                                    data-export-format="excel" href="{{ route('programme.export', 'excel') }}">
+                                    <i class="bi bi-file-earmark-spreadsheet text-success" aria-hidden="true"></i>
+                                    <span>Download Excel</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2 programme-export-link"
+                                    data-export-format="pdf" href="{{ route('programme.export', 'pdf') }}">
+                                    <i class="bi bi-filetype-pdf text-danger" aria-hidden="true"></i>
+                                    <span>Download PDF</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <a class="btn programme-dt-btn-columns border-0 text-primary programme-export-link"
+                        id="programmePrintBtn" data-export-format="print"
+                        href="{{ route('programme.export', 'print') }}"
+                        target="_blank" rel="noopener" title="Print the filtered list">
+                        <i class="bi bi-printer" aria-hidden="true"></i>
+                        <span>Print</span>
+                    </a>
+                </div>
             </div>
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
@@ -486,17 +535,80 @@
                 });
             }
 
+            /* ---- Export links follow the screen (§1) --------------------------
+               Header label -> the export column key CourseController::exportColumnDefs()
+               knows. "Action" has no export column, so it is absent by design. */
+            var PROGRAMME_EXPORT_KEYS = {
+                'S. No.': 'sno',
+                'Course Name': 'course_name',
+                'Short Name': 'couse_short_name',
+                'Course Year': 'course_year',
+                'Start Date': 'start_year',
+                'End Date': 'end_date',
+                'Status': 'status'
+            };
+            var PROGRAMME_EXPORT_KEY_COUNT = Object.keys(PROGRAMME_EXPORT_KEYS).length;
+
+            window.programmeSyncExportLinks = function() {
+                // Read visibility off the table itself rather than the saved
+                // indices, so this holds however the colvis state is stored.
+                var keys = [];
+                if ($.fn.DataTable.isDataTable('#coursemaster-table')) {
+                    $('#coursemaster-table').DataTable().columns().every(function() {
+                        if (!this.visible()) {
+                            return;
+                        }
+                        var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+                        if (PROGRAMME_EXPORT_KEYS[title]) {
+                            keys.push(PROGRAMME_EXPORT_KEYS[title]);
+                        }
+                    });
+                }
+
+                var courseFilter = $('#courseFilter').val() || '';
+                var search = $.trim($('#programmeDtSearch input[type="search"]').val() || '');
+
+                $('.programme-export-link').each(function() {
+                    var url = new URL(this.href, window.location.origin);
+                    url.search = '';
+                    url.searchParams.set('status_filter', currentFilter || 'active');
+                    if (courseFilter) {
+                        url.searchParams.set('course_filter', courseFilter);
+                    }
+                    if (search) {
+                        url.searchParams.set('q', search);
+                    }
+                    // Omit ?cols= entirely while nothing is hidden — the server
+                    // reads "no cols" as "every column".
+                    if (keys.length && keys.length !== PROGRAMME_EXPORT_KEY_COUNT) {
+                        url.searchParams.set('cols', keys.join(','));
+                    }
+                    this.href = url.toString();
+                });
+            };
+
+            // The search box is moved into #programmeDtSearch by the global
+            // enhancer, so it is bound through the document rather than directly.
+            $(document).on('input search', '#programmeDtSearch input[type="search"]', function() {
+                window.programmeSyncExportLinks();
+            });
+            $('#coursemaster-table').on('draw.dt', function() {
+                window.programmeSyncExportLinks();
+            });
+
             // Filter button click handlers
             $('#filterActive').on('click', function() {
                 setActiveButton($(this));
                 currentFilter = 'active';
                 loadCoursesByStatus('active');
+                window.programmeSyncExportLinks();
             });
 
             $('#filterArchive').on('click', function() {
                 setActiveButton($(this));
                 currentFilter = 'archive';
                 loadCoursesByStatus('archive');
+                window.programmeSyncExportLinks();
             });
 
             // Function to initialize dropdowns
@@ -562,6 +674,7 @@
             $('#courseFilter').on('change', function() {
                 table.ajax.reload();
                 initializeDropdowns();
+                window.programmeSyncExportLinks();
             });
 
             // Handle reset filters
@@ -571,6 +684,7 @@
                 currentFilter = 'active'; // Reset to active by default
                 setActiveButton($('#filterActive'));
                 loadCoursesByStatus('active');
+                window.programmeSyncExportLinks();
             });
 
             // Handle view course button click
@@ -644,6 +758,7 @@
                     programmePersistHiddenCols(h);
                     dt.column(idx).visible(this.checked, false);
                     dt.columns.adjust();
+                    window.programmeSyncExportLinks();
                 });
 
                 $label.append($cb).append($('<span></span>').text(title));
