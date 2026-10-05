@@ -483,49 +483,6 @@ class MemberController extends Controller
     }
 
     /**
-     * Authorise a write against one member record.
-     *
-     * Super Admin may write any member. Any other authenticated user may write only
-     * their OWN employee record — the header's "Edit Profile" link posts to this same
-     * member.update endpoint with emp_id carried in a hidden input, so the id is
-     * attacker-controlled and must be verified server-side rather than trusted.
-     *
-     * user_credentials.user_id holds employee_master.pk (store() writes
-     * 'user_id' => $employee->pk), which is why that is the column compared here.
-     */
-    private function authorizeMemberWrite($employeeMasterPk): void
-    {
-        if ($this->actingUserCanManageMembers()) {
-            return;
-        }
-
-        $actor = Auth::user();
-
-        // Independent review of PR #319, F-038. The previous version compared
-        // Auth::user()->user_id to emp_id and stopped there. That treats user_id as an
-        // employee_master.pk for EVERY login, and it is not one: user_id is scoped per
-        // user_category. Measured on this database, 328 logins that are NOT employee
-        // accounts (327 NULL-category, 1 'S') carry a user_id equal to some unrelated
-        // employee's pk — so each of them passed the "it's my own record" test for a
-        // stranger. Reproduced end to end on testsargam6 by the independent reviewer: a
-        // trainee login renamed employee 11056, and another rewrote employee 11058's own
-        // user_credentials row.
-        //
-        // The category check is what makes user_id mean "employee_master.pk" — store()
-        // creates employee logins with user_category 'E' and 'user_id' => $employee->pk,
-        // so that is the only category in which the two are the same namespace.
-        $isEmployeeLogin = ($actor->user_category ?? null) === 'E';
-        $ownEmployeePk = $actor->user_id ?? null;
-
-        abort_unless(
-            $isEmployeeLogin
-                && $ownEmployeePk !== null
-                && (int) $ownEmployeePk === (int) $employeeMasterPk,
-            403
-        );
-    }
-
-    /**
      * Whether this credential row is the only one for its employee.
      *
      * Returns false when the employee owns two or more user_credentials rows, because
@@ -547,15 +504,24 @@ class MemberController extends Controller
         return UserCredential::where('user_id', $employeeMasterPk)->count() === 1;
     }
 
+    /**
+     * PR #319 re-review F-057: this used to be its own `return hasRole('Super Admin');`,
+     * byte-for-byte identical to actingUserCanManageMembers() with nothing enforcing the
+     * two stayed in step. "Manage RBAC roles" and "manage members" are the same decision
+     * on this codebase today (see that method's own docblock for the live-data check
+     * backing it) — delegating here makes that explicit instead of accidental, and a
+     * future widening/narrowing of one cannot silently diverge from the other.
+     *
+     * hasRole('Super Admin') already checks both 'Super Admin' and 'SuperAdmin'
+     * internally (see app/helpers.php). 'Admin' and 'Super-Admin' were dropped
+     * (PR #319 review, F-029): neither is aliased by hasRole(), so both were
+     * permanently false against the real `roles` table, but would have silently
+     * widened this gate's authority the moment either name was ever created for
+     * an unrelated purpose — several existing roles already contain "Admin".
+     */
     private function actingUserCanManageRbacRoles(): bool
     {
-        // hasRole('Super Admin') already checks both 'Super Admin' and 'SuperAdmin'
-        // internally (see app/helpers.php). 'Admin' and 'Super-Admin' were dropped
-        // (PR #319 review, F-029): neither is aliased by hasRole(), so both were
-        // permanently false against the real `roles` table, but would have silently
-        // widened this gate's authority the moment either name was ever created for
-        // an unrelated purpose — several existing roles already contain "Admin".
-        return hasRole('Super Admin');
+        return $this->actingUserCanManageMembers();
     }
 
     /**
@@ -930,6 +896,19 @@ class MemberController extends Controller
      * F-024 tightened the rule (user_category = 'E' plus a contact proof, see
      * that class), and this now inherits the change instead of needing the same
      * edit made twice.
+     *
+     * Why the user_category check matters (independent review of PR #319, F-038,
+     * carried forward from the now-deleted authorizeMemberWrite() this method
+     * replaced): user_credentials.user_id is scoped per user_category, not a
+     * universal employee_master.pk. Measured on the live database: 328 logins that
+     * are NOT employee accounts (327 NULL-category, 1 'S') carry a user_id equal to
+     * some unrelated employee's pk, so each would pass an "it's my own record"
+     * test built on user_id alone. Reproduced end to end on testsargam6: a trainee
+     * login renamed employee 11056, and another rewrote employee 11058's own
+     * user_credentials row. store() creates employee logins with user_category 'E'
+     * and 'user_id' => $employee->pk, which is the only category in which the two
+     * are the same namespace — see F-052 in UserController::assignRoleSave() for
+     * the same gap class resurfacing on a different write path.
      */
     private function authorizeMemberRecord($memberPk): void
     {
@@ -1064,12 +1043,12 @@ class MemberController extends Controller
 
                 if ($userCredential) {
                     $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
-                    foreach ($roles as $role) {
-                        EmployeeRoleMapping::create([
-                            'user_credentials_pk' => $userCredential->pk,
-                            'user_role_master_pk' => $role,
-                        ]);
-                    }
+
+                    // PR #319 re-review F-049: one batch insert instead of N round-trips.
+                    EmployeeRoleMapping::insert(array_map(fn ($role) => [
+                        'user_credentials_pk' => $userCredential->pk,
+                        'user_role_master_pk' => $role,
+                    ], $roles));
 
                     $this->syncSpatieRolesFromWizardSelection($userCredential->pk, $roles);
                 }
@@ -1333,12 +1312,11 @@ class MemberController extends Controller
                     ->whereIn('user_role_master_pk', $offeredRoleIds)
                     ->delete();
 
-                foreach ($roles as $role) {
-                    EmployeeRoleMapping::create([
-                        'user_credentials_pk' => $userCredential->pk,
-                        'user_role_master_pk' => $role,
-                    ]);
-                }
+                // PR #319 re-review F-049: one batch insert instead of N round-trips.
+                EmployeeRoleMapping::insert(array_map(fn ($role) => [
+                    'user_credentials_pk' => $userCredential->pk,
+                    'user_role_master_pk' => $role,
+                ], $roles));
 
                 $saveWarnings[] = $this->syncSpatieRolesFromWizardSelection($userCredential->pk, $roles, $previouslySelectedRoleIds);
             }

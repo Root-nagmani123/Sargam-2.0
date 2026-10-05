@@ -76,6 +76,7 @@ class UserRoleAssignmentAuthorizationTest extends TestCase
         $admin->assignRole('Super Admin');
         $target = $this->makeTestUser('target');
         $doctorRoleId = Role::where('name', 'Doctor')->value('id');
+        $this->assertNotNull($doctorRoleId, 'Fixture assumption: a "Doctor" role must exist.');
 
         $response = $this->actingAs($admin)->post(route('admin.users.assignRoleSave'), [
             'user_id' => $target->pk,

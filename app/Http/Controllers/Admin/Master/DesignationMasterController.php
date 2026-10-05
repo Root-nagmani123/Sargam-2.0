@@ -53,9 +53,14 @@ class DesignationMasterController extends Controller
         $designation->designation_name = $request->designation_name;
         $designation->save();
 
-        // The Member listing renders/caches this designation's name (see F-011/F-021,
-        // PR #319 review) — this controller is a second, separately-routed write path
-        // to designation_master alongside the Setup one, so it needs the same bump.
+        // PR #319 re-review F-059: MemberDataTable does NOT currently read or display
+        // designation_master in any form (verified: grep "designation" against
+        // app/DataTables/MemberDataTable.php returns zero matches) — the original
+        // comment here claiming otherwise (citing F-011/F-021) was false, unlike the
+        // analogous department comment in DepartmentMasterController, which IS
+        // accurate. This bump is therefore a harmless no-op today, kept rather than
+        // removed in case a future column add restores the dependency this comment
+        // once assumed.
         MemberDataTable::bumpListingCacheEpoch();
 
         $message = $id ? 'Designation updated successfully.' : 'Designation created successfully.';

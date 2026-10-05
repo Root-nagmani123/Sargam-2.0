@@ -43,8 +43,12 @@ class DesignationMasterSetupController extends Controller
         $model->designation_name = $validated['designation_name'];
         $model->active_inactive = 1;
         $model->save();
-        // The Member listing renders/caches this designation's name (see F-011,
-        // PR #319 review) — bump so a rename/create there isn't shown stale.
+        // PR #319 re-review F-059: MemberDataTable does NOT currently read or display
+        // designation_master in any form (verified: grep "designation" against
+        // app/DataTables/MemberDataTable.php returns zero matches) — this bump (and
+        // the two further calls below, in update()/delete()) is therefore a harmless
+        // no-op today, kept in case a future column add restores the dependency the
+        // original comment here assumed.
         MemberDataTable::bumpListingCacheEpoch();
         if($request->ajax()) {
             return response()->json([

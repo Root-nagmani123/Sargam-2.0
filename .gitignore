@@ -50,6 +50,12 @@ tools/phpstan/vendor/
 # silent no-op, so the F-030 fix could not be committed at all. The rule below
 # is scoped to the generated files only: it matches neither bootstrap/app.php
 # nor bootstrap/cache/.gitignore.
+#
+# main also carried a blanket `tools/phpstan/` rule, also deliberately not kept
+# (PR #319 re-review F-063): it would hide tools/phpstan/composer.json and
+# .lock, which are meant to be tracked (see that rule's own comment above). The
+# scoped `tools/phpstan/vendor/` rule above already replaces it for the one
+# thing that actually needs ignoring there.
 /bootstrap/cache/*.php
 /docs/Sargam-code-review-guideline/
 /reviews/

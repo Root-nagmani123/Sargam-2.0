@@ -220,7 +220,9 @@ class MemberWriteAuthorizationTest extends TestCase
      * from — had no ownership check at all. Any authenticated account could request
      * /member/edit-step/{step}/{id} for an id that was not their own, including step 3's
      * Role Assignment checkbox state for a stranger. Fixed by adding the same
-     * authorizeMemberWrite($id) gate update()/updateValidateStep() already use.
+     * authorizeMemberRecord($id) gate update()/updateValidateStep() already use
+     * (corrected per F-056: the gate used to be named authorizeMemberWrite(), since
+     * superseded and removed — see MemberController::authorizeMemberRecord()).
      */
     public function test_edit_step_content_is_scoped_to_the_same_ownership_rule_as_writes(): void
     {

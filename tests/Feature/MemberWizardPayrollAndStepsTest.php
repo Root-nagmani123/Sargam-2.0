@@ -171,14 +171,26 @@ class MemberWizardPayrollAndStepsTest extends TestCase
      */
     private function basicMemberPayload(string $suffix, ?int $employeePk = null): array
     {
+        // PR #319 re-review F-061: guarded the same way the other wizard fixtures
+        // guard an unseeded-test-DB lookup — a null FK here would otherwise fail
+        // with a validation 422 indistinguishable from the regression this file
+        // exists to catch.
         $castePk = DB::table('caste_category_master')->where('active_inactive', 1)->value('pk');
+        $this->assertNotNull($castePk, 'Fixture assumption: an active caste_category_master row must exist.');
         $countryPk = DB::table('country_master')->value('pk');
+        $this->assertNotNull($countryPk, 'Fixture assumption: a country_master row must exist.');
         $statePk = DB::table('state_master')->value('pk');
+        $this->assertNotNull($statePk, 'Fixture assumption: a state_master row must exist.');
         $departmentPk = DB::table('department_master')->where('pk', '>', 0)->value('pk');
+        $this->assertNotNull($departmentPk, 'Fixture assumption: a department_master row (pk > 0) must exist.');
         $designationPk = DB::table('designation_master')->value('pk');
+        $this->assertNotNull($designationPk, 'Fixture assumption: a designation_master row must exist.');
         $groupPk = DB::table('employee_group_master')->value('pk');
+        $this->assertNotNull($groupPk, 'Fixture assumption: an employee_group_master row must exist.');
         $employeeTypePk = DB::table('employee_type_master')->value('pk');
+        $this->assertNotNull($employeeTypePk, 'Fixture assumption: an employee_type_master row must exist.');
         $doctorPk = UserRoleMaster::where('user_role_display_name', 'Doctor')->value('pk');
+        $this->assertNotNull($doctorPk, 'Fixture assumption: a "Doctor" user_role_master row must exist.');
 
         $unique = $suffix . '_' . uniqid();
 
