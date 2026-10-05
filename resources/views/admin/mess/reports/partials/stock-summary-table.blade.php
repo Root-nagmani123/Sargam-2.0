@@ -139,7 +139,7 @@
         </table>
     </div>
     <p class="ssr-valuation-note small text-body-secondary px-3 px-lg-4 pt-2 mb-0">
-        Note: Opening and Closing value = quantity x average buying price up to that date. Purchase value uses the average buying price of this period. Sale value uses the selling price.
+        Note: Opening and Closing value = quantity x average buying price up to that date. Purchase value uses the buying price of this period, including tax. Sale value = Opening + Purchase - Closing, at buying price (not the selling price).
     </p>
     @if(isset($reportPage) && $reportPage->hasPages())
         <div class="ssr-pagination-bar px-3 px-lg-4 py-3 border-top">

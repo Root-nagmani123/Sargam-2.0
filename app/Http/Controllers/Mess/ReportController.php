@@ -918,7 +918,7 @@ class ReportController extends Controller
 
         // Expensive report: cache full dataset (Redis/file via RedisBackedCache). Pagination reuses cache.
         // Apply filters sends refresh=1 to recompute and overwrite cache.
-        $cacheKey = 'stock-summary:v5:' . md5(json_encode([$fromDate, $toDate, $storeType, $storeIds]));
+        $cacheKey = 'stock-summary:v8:' . md5(json_encode([$fromDate, $toDate, $storeType, $storeIds]));
         $loadReport = function () use ($fromDate, $toDate, $storeIds, $storeType) {
             [$data, $storeName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeIds, $storeType);
             $totals = [
@@ -1629,7 +1629,7 @@ class ReportController extends Controller
         $reportData = [];
         $kimStoreType = $storeType === 'main' ? 'store' : 'sub_store';
 
-        $kitchenIssueSales = function (string $dateOperator, $dateValue, bool $withAmount) use ($storeIds, $kimStoreType) {
+        $kitchenIssueSales = function (string $dateOperator, $dateValue) use ($storeIds, $kimStoreType) {
             $query = DB::table('kitchen_issue_items as kii')
                 ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
                 ->whereNotNull('kii.item_subcategory_id')
@@ -1641,24 +1641,15 @@ class ReportController extends Controller
                 ? $query->whereBetween('kim.issue_date', $dateValue)
                 : $query->where('kim.issue_date', $dateOperator, $dateValue);
 
-            if ($withAmount) {
-                $query->join('mess_item_subcategories as mis', 'mis.id', '=', 'kii.item_subcategory_id')
-                    ->selectRaw('
-                        kii.item_subcategory_id,
-                        SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as total_qty,
-                        SUM((kii.quantity - COALESCE(kii.return_quantity, 0)) * COALESCE(kii.rate, mis.standard_cost, 0)) as total_amount
-                    ');
-            } else {
-                $query->selectRaw('
-                    kii.item_subcategory_id,
-                    SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as total_qty
-                ');
-            }
+            $query->selectRaw('
+                kii.item_subcategory_id,
+                SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as total_qty
+            ');
 
             return $query->groupBy('kii.item_subcategory_id')->get()->keyBy('item_subcategory_id');
         };
 
-        $dateRangeSales = function (string $dateOperator, $dateValue, bool $withAmount) use ($storeIds, $kimStoreType) {
+        $dateRangeSales = function (string $dateOperator, $dateValue) use ($storeIds, $kimStoreType) {
             $query = DB::table('sv_date_range_report_items as svi')
                 ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
                 ->whereNotNull('svi.item_subcategory_id')
@@ -1670,27 +1661,18 @@ class ReportController extends Controller
                 ? $query->whereBetween('svi.issue_date', $dateValue)
                 : $query->where('svi.issue_date', $dateOperator, $dateValue);
 
-            if ($withAmount) {
-                $query->join('mess_item_subcategories as mis', 'mis.id', '=', 'svi.item_subcategory_id')
-                    ->selectRaw('
-                        svi.item_subcategory_id,
-                        SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as total_qty,
-                        SUM((svi.quantity - COALESCE(svi.return_quantity, 0)) * COALESCE(svi.rate, mis.standard_cost, 0)) as total_amount
-                    ');
-            } else {
-                $query->selectRaw('
-                    svi.item_subcategory_id,
-                    SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as total_qty
-                ');
-            }
+            $query->selectRaw('
+                svi.item_subcategory_id,
+                SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as total_qty
+            ');
 
             return $query->groupBy('svi.item_subcategory_id')->get()->keyBy('item_subcategory_id');
         };
 
-        $openingKitchenIssueSales = $kitchenIssueSales('<=', $previousDate, false);
-        $openingDateRangeSales = $dateRangeSales('<=', $previousDate, false);
-        $periodKitchenIssueSales = $kitchenIssueSales('between', [$fromDate, $toDate], true);
-        $periodDateRangeSales = $dateRangeSales('between', [$fromDate, $toDate], true);
+        $openingKitchenIssueSales = $kitchenIssueSales('<=', $previousDate);
+        $openingDateRangeSales = $dateRangeSales('<=', $previousDate);
+        $periodKitchenIssueSales = $kitchenIssueSales('between', [$fromDate, $toDate]);
+        $periodDateRangeSales = $dateRangeSales('between', [$fromDate, $toDate]);
 
         if ($storeType === 'main') {
             $incomingQuery = DB::table('mess_purchase_order_items as poi')
@@ -1699,22 +1681,26 @@ class ReportController extends Controller
                 ->where('po.status', 'approved')
                 ->when($storeIds !== [], fn ($q) => $q->whereIn('po.store_id', $storeIds));
 
+            // Line value with tax, the same way Stock Purchase Details totals a line.
+            $lineValueSql = '(COALESCE(poi.quantity, 0) * COALESCE(poi.unit_price, 0)
+                + ROUND(COALESCE(poi.quantity, 0) * COALESCE(poi.unit_price, 0) * COALESCE(poi.tax_percent, 0) / 100, 2))';
+
             // Opening quantity and value come from one grouped query (the value gives the opening rate).
             $openingIncoming = (clone $incomingQuery)
                 ->where('po.po_date', '<=', $previousDate)
-                ->selectRaw('poi.item_subcategory_id, SUM(poi.quantity) as total_qty, COALESCE(SUM(poi.quantity * poi.unit_price), 0) as val_sum')
+                ->selectRaw("poi.item_subcategory_id, SUM(poi.quantity) as total_qty, COALESCE(SUM($lineValueSql), 0) as val_sum")
                 ->groupBy('poi.item_subcategory_id')
                 ->get()
                 ->keyBy('item_subcategory_id');
             $periodIncoming = (clone $incomingQuery)
                 ->whereBetween('po.po_date', [$fromDate, $toDate])
-                ->selectRaw('poi.item_subcategory_id, SUM(poi.quantity) as total_qty, AVG(poi.unit_price) as avg_rate')
+                ->selectRaw("poi.item_subcategory_id, SUM(poi.quantity) as total_qty, SUM($lineValueSql) / NULLIF(SUM(poi.quantity), 0) as avg_rate")
                 ->groupBy('poi.item_subcategory_id')
                 ->get()
                 ->keyBy('item_subcategory_id');
             $closingRates = (clone $incomingQuery)
                 ->where('po.po_date', '<=', $toDate)
-                ->selectRaw('poi.item_subcategory_id, COALESCE(SUM(poi.quantity), 0) as qty_sum, COALESCE(SUM(poi.quantity * poi.unit_price), 0) as val_sum')
+                ->selectRaw("poi.item_subcategory_id, COALESCE(SUM(poi.quantity), 0) as qty_sum, COALESCE(SUM($lineValueSql), 0) as val_sum")
                 ->groupBy('poi.item_subcategory_id')
                 ->get()
                 ->keyBy('item_subcategory_id');
@@ -1733,7 +1719,7 @@ class ReportController extends Controller
                 ->keyBy('item_subcategory_id');
             $periodIncoming = (clone $incomingQuery)
                 ->whereBetween('sa.allocation_date', [$fromDate, $toDate])
-                ->selectRaw('sai.item_subcategory_id, SUM(sai.quantity) as total_qty, AVG(sai.unit_price) as avg_rate')
+                ->selectRaw('sai.item_subcategory_id, SUM(sai.quantity) as total_qty, SUM(sai.quantity * COALESCE(sai.unit_price, 0)) / NULLIF(SUM(sai.quantity), 0) as avg_rate')
                 ->groupBy('sai.item_subcategory_id')
                 ->get()
                 ->keyBy('item_subcategory_id');
@@ -1800,17 +1786,9 @@ class ReportController extends Controller
 
             $itemData['purchase_amount'] = $itemData['purchase_qty'] * $itemData['purchase_rate'];
 
-            $salesKi = $periodKitchenIssueSales->get($item->id);
-            $saleQtyKi = (float) ($salesKi->total_qty ?? 0);
-            $saleAmountKi = (float) ($salesKi->total_amount ?? 0);
-
-            $salesSv = $periodDateRangeSales->get($item->id);
-            $saleQtySv = (float) ($salesSv->total_qty ?? 0);
-            $saleAmountSv = (float) ($salesSv->total_amount ?? 0);
-
+            $saleQtyKi = (float) ($periodKitchenIssueSales->get($item->id)->total_qty ?? 0);
+            $saleQtySv = (float) ($periodDateRangeSales->get($item->id)->total_qty ?? 0);
             $itemData['sale_qty'] = $saleQtyKi + $saleQtySv;
-            $itemData['sale_amount'] = $saleAmountKi + $saleAmountSv;
-            $itemData['sale_rate'] = $itemData['sale_qty'] > 0 ? $itemData['sale_amount'] / $itemData['sale_qty'] : $itemData['sale_rate'];
 
             $itemData['closing_qty'] = $itemData['opening_qty'] + $itemData['purchase_qty'] - $itemData['sale_qty'];
             $closingRateRow = $closingRates->get($item->id);
@@ -1819,6 +1797,13 @@ class ReportController extends Controller
                 : null;
             $itemData['closing_rate'] = $closingValRate ?? ($item->standard_cost ?? 0);
             $itemData['closing_amount'] = $itemData['closing_qty'] * $itemData['closing_rate'];
+
+            // Sale is valued at buying cost (opening + purchase - closing), not the selling price,
+            // so that opening + purchase - sale = closing on every row and in the totals.
+            $itemData['sale_amount'] = $itemData['opening_amount'] + $itemData['purchase_amount'] - $itemData['closing_amount'];
+            $itemData['sale_rate'] = $itemData['sale_qty'] != 0
+                ? $itemData['sale_amount'] / $itemData['sale_qty']
+                : $itemData['closing_rate'];
 
             if ($itemData['opening_qty'] != 0 || $itemData['purchase_qty'] != 0 || $itemData['sale_qty'] != 0) {
                 $reportData[] = $itemData;
@@ -1832,6 +1817,8 @@ class ReportController extends Controller
             } else {
                 $selectedStoreName = SubStore::whereIn('id', $storeIds)->orderBy('sub_store_name')->pluck('sub_store_name')->implode(', ');
             }
+        } else {
+            $selectedStoreName = $storeType == 'main' ? 'All Main Stores' : 'All Sub Stores';
         }
 
         return [$reportData, $selectedStoreName];

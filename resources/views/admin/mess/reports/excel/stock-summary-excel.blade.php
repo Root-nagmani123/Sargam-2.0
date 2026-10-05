@@ -24,7 +24,7 @@
 
     <tr>
         <td colspan="16" style="text-align:center; font-style:italic;">
-            Note: Opening and Closing value = quantity x average buying price up to that date. Purchase value uses the average buying price of this period. Sale value uses the selling price.
+            Note: Opening and Closing value = quantity x average buying price up to that date. Purchase value uses the buying price of this period, including tax. Sale value = Opening + Purchase - Closing, at buying price (not the selling price).
         </td>
     </tr>
 
