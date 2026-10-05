@@ -31,10 +31,27 @@
                     data-status="3" aria-pressed="false">Rejected</button>
             </li>
         </ul>
-        <button type="button" id="leaveApprovalDownload" class="btn fl-download-btn">
-            <i class="bi bi-download" aria-hidden="true"></i>
-            <span>Download</span>
-        </button>
+        <div class="dropdown">
+            <button type="button" id="leaveApprovalDownload" class="btn fl-download-btn dropdown-toggle"
+                data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-download" aria-hidden="true"></i>
+                <span>Download</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm py-2" aria-labelledby="leaveApprovalDownload">
+                <li>
+                    <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="leaveApprovalExportPdf">
+                        <i class="bi bi-file-earmark-pdf text-danger" aria-hidden="true"></i>
+                        <span>Download PDF</span>
+                    </button>
+                </li>
+                <li>
+                    <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="leaveApprovalExportExcel">
+                        <i class="bi bi-file-earmark-excel text-success" aria-hidden="true"></i>
+                        <span>Download Excel</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
     </div>
 
     <div class="card border-0 shadow-sm overflow-hidden rounded-3">
@@ -91,6 +108,7 @@
                                 <th>Total Days</th>
                                 <th>Reason</th>
                                 <th>Status</th>
+                                <th>Approved/Rejected By</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -158,6 +176,7 @@ $(function () {
             { data: 'total_days_display', name: 'total_days' },
             { data: 'reason_text', name: 'reason', orderable: false },
             { data: 'status_label', name: 'status', orderable: false, searchable: false },
+            { data: 'approver_name', orderable: false, searchable: false },
             { data: 'action', orderable: false, searchable: false },
         ],
         language: {
@@ -225,15 +244,24 @@ $(function () {
         table.ajax.reload();
     });
 
-    /* ── Download: export current tab + filters/search to CSV ── */
-    $('#leaveApprovalDownload').on('click', function () {
+    /* ── Download: export current tab + filters/search to PDF/Excel ── */
+    function leaveApprovalExportUrl(format) {
         const params = $.param({
+            format: format,
             status: currentStatus,
             course_filter: $('#courseFilter').val() || '',
             from_date: $period.data('from') || '',
             to_date: $period.data('to') || '',
         });
-        window.location.href = exportUrl + '?' + params;
+        return exportUrl + '?' + params;
+    }
+
+    $('#leaveApprovalExportPdf').on('click', function () {
+        window.location.href = leaveApprovalExportUrl('pdf');
+    });
+
+    $('#leaveApprovalExportExcel').on('click', function () {
+        window.location.href = leaveApprovalExportUrl('excel');
     });
 
     /* ── Approve ── */

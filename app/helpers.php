@@ -728,7 +728,27 @@ function mess_cw_slip_remark_for_date_group(string $displayDate, array $remarks)
 }
 
 /**
- * Per-row remark layout: rowspan when consecutive rows share the same display date.
+ * Stable per-voucher identity, used to keep one voucher's remark off another voucher's rows.
+ */
+function mess_cw_slip_row_voucher_key(object $row): string
+{
+    $voucher = $row->voucher ?? null;
+    if (! $voucher) {
+        return '';
+    }
+
+    $requestNo = trim((string) ($voucher->request_no ?? ''));
+    if ($requestNo !== '') {
+        return $requestNo;
+    }
+
+    return get_class($voucher) . '#' . (string) $voucher->getKey();
+}
+
+/**
+ * Per-row remark layout: rowspan when consecutive rows belong to the same voucher AND share the same
+ * display date. Grouping on the date alone merges distinct vouchers issued on the same day, leaking a
+ * remark entered on one voucher onto every other voucher's items in that buyer section.
  *
  * @param  \Illuminate\Support\Collection<int, object>  $displayRows
  * @return array<int, array{show: bool, rowspan: int, remark: string}>
@@ -741,10 +761,15 @@ function mess_cw_slip_section_remark_layout(\Illuminate\Support\Collection $disp
 
     while ($i < $count) {
         $displayDate = mess_cw_slip_row_display_date($displayRows[$i]);
+        $voucherKey = mess_cw_slip_row_voucher_key($displayRows[$i]);
         $remarks = [];
         $j = $i;
 
-        while ($j < $count && mess_cw_slip_row_display_date($displayRows[$j]) === $displayDate) {
+        while (
+            $j < $count
+            && mess_cw_slip_row_display_date($displayRows[$j]) === $displayDate
+            && mess_cw_slip_row_voucher_key($displayRows[$j]) === $voucherKey
+        ) {
             $remarks[] = (string) ($displayRows[$j]->voucher->remarks ?? '');
             $j++;
         }
