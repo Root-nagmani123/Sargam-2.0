@@ -1,136 +1,99 @@
 @extends('admin.layouts.master')
 
-@section('title', 'District - Sargam | Lal Bahadur')
+@section('title', 'District List')
+
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
+@endpush
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid mst-page">
+    <x-breadcrum title="District List" :showBack="false">
+        <a href="{{ route('master.district.create') }}"
+           class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+            <span>Add District</span>
+        </a>
+    </x-breadcrum>
 
-    <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card">
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-6">
-                        <h4>District</h4>
-                    </div>
-                    <div class="col-6">
-                        <div class="d-flex justify-content-end align-items-end mb-3">
-                            <div class="d-flex align-items-center gap-2">
+    <x-session_message />
 
-                                <!-- Add New Button -->
-                                <a href="{{ route('master.district.create') }}"
-                                    class="btn btn-primary px-3 py-2 rounded-3 shadow-sm">
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 20px; vertical-align: middle;">add</i>
-                                    Add New District
-                                </a>
-
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <hr>
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
+            {{-- Server-paginated (LocationController::districtIndex, 10 per page):
+                 no DataTable on this grid, so the footer below is hand-written
+                 (docs/new-design-index-page.md §4 variant B). --}}
+            <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <table class="table">
+                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" id="districtTable">
+                        <caption class="visually-hidden">Districts</caption>
                         <thead>
-                            <!-- start row -->
                             <tr>
-                                <th class="col">S.No.</th>
-                                <th class="col">District</th>
-                                <th class="col">Action</th>
-                                <th class="col">Status</th>
+                                <th scope="col" class="text-nowrap">S. No.</th>
+                                <th scope="col">District</th>
+                                <th scope="col" class="text-nowrap">Status</th>
+                                <th scope="col" class="text-nowrap">Action</th>
                             </tr>
-                            <!-- end row -->
                         </thead>
                         <tbody>
-                            @foreach($districts as $key => $district)
-                            <tr class="odd">
-                                <td>{{ $districts->firstItem() + $key }}</td>
-                                <td class="sorting_1">
-                                    <div class="d-flex align-items-center gap-6">
-                                        <h6 class="mb-0">{{ $district->district_name }}</h6>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="form-check form-switch d-inline-block">
-                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                            data-table="state_district_mapping" data-column="active_inactive"
-                                            data-id="{{ $district->pk }}"
-                                            {{ $district->active_inactive == 1 ? 'checked' : '' }}>
-                                    </div>
-                                </td>
-
-
-                                <td class="text-start">
-                                    <div class="dropdown">
-                                        <a href="javascript:void(0)"
-                                            id="actionMenu{{ $district->pk }}" data-bs-toggle="dropdown"
-                                            aria-expanded="false">
-                                            <span class="material-symbols-rounded fs-5">more_horiz</span>
-                                        </a>
-
-                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm"
-                                            aria-labelledby="actionMenu{{ $district->pk }}">
-
-                                            <!-- Edit -->
-                                            <li>
-                                                <a href="{{ route('master.district.edit', $district->pk) }}"
-                                                    class="dropdown-item d-flex align-items-center gap-2">
-                                                    <span class="material-symbols-rounded text-primary fs-6">edit</span>
-                                                    Edit
-                                                </a>
-                                            </li>
-
-                                            <!-- Delete -->
-                                            <li>
-                                                <form action="{{ route('master.district.delete', $district->pk) }}"
-                                                    method="POST" class="d-inline">
-                                                    @csrf
-                                                    @method('DELETE')
-
-                                                    <button type="button"
-                                                        class="dropdown-item d-flex align-items-center gap-2 text-danger"
-                                                        onclick="event.preventDefault();
-                            if({{ $district->active_inactive }} == 1) return;
-                            if(confirm('Are you sure you want to delete this?')) {
-                                this.closest('form').submit();
-                            }" {{ $district->active_inactive == 1 ? 'disabled' : '' }}>
-                                                        <span class="material-symbols-rounded fs-6">delete</span>
-                                                        Delete
-                                                    </button>
-                                                </form>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </td>
-
-
-
-                            </tr>
-                            @endforeach
-
+                            @forelse($districts as $index => $district)
+                                @php $isActive = (int) $district->active_inactive === 1; @endphp
+                                <tr>
+                                    <td>{{ $districts->firstItem() + $index }}</td>
+                                    <td>{{ $district->district_name }}</td>
+                                    <td data-order="{{ $isActive ? 1 : 0 }}">
+                                        @include('admin.master.partials.grid-status', ['active' => $isActive])
+                                    </td>
+                                    <td>
+                                        @include('admin.master.partials.grid-actions', [
+                                            'name'   => $district->district_name,
+                                            'edit'   => ['href' => route('master.district.edit', $district->pk)],
+                                            'toggle' => [
+                                                'active' => $isActive,
+                                                'table'  => 'state_district_mapping',
+                                                'column' => 'active_inactive',
+                                                'id'     => $district->pk,
+                                            ],
+                                            'delete' => $isActive
+                                                ? ['disabled' => true, 'reason' => 'Cannot delete an active district. Deactivate it first.']
+                                                : ['action' => route('master.district.delete', $district->pk)],
+                                        ])
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr class="mst-empty">
+                                    <td colspan="4">No districts found.</td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
-                    <!-- Pagination -->
-                    <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
+                </div>
 
-                        <div class="text-muted small mb-2">
-                            Showing {{ $districts->firstItem() }}
-                            to {{ $districts->lastItem() }}
-                            of {{ $districts->total() }} items
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
+                    <div class="programme-dt-pagination">
+                        {{ $districts->links('vendor.pagination.custom') }}
+                    </div>
+                    <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                        <div class="dataTables_info" aria-live="polite">
+                            @if ($districts->total())
+                                Showing {{ $districts->firstItem() }}–{{ $districts->lastItem() }} of {{ number_format($districts->total()) }} items
+                            @else
+                                0 items
+                            @endif
                         </div>
-
-                        <div>
-                            {{ $districts->links('vendor.pagination.custom') }}
-                        </div>
-
                     </div>
                 </div>
             </div>
         </div>
-        <!-- end Zero Configuration -->
     </div>
 </div>
-
-
 @endsection
+
+@push('scripts')
+<script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
+<script>
+    // Server-rendered grid: the badge and the switch live in different
+    // columns, so refresh the page once custom.js has saved the new status.
+    MstAdmin.reloadPageOnStatusToggle();
+</script>
+@endpush

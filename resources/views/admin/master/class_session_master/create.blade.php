@@ -2,78 +2,84 @@
 
 @section('title', 'Class Session Master')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
+@endpush
+
 @section('setup_content')
-
-<div class="container-fluid">
-    <x-breadcrum title="Class Session Master" />
+@php $isEdit = !empty($classSessionMaster); @endphp
+<div class="container-fluid mst-page">
+    <x-breadcrum title="{{ $isEdit ? 'Edit Class Session' : 'Add Class Session' }}" />
     <x-session_message />
-    <!-- start Vertical Steps Example -->
-    <div class="card" >
-        <div class="card-body">
-            <h4 class="card-title mb-3">
-                {{ !empty($classSessionMaster) ? 'Edit Class Session' : 'Create Class Session' }}
-            </h4>
-            <hr>
-            <form action="{{ route('master.class.session.store') }}" method="POST" id="classSessionForm">
-                @csrf
-                @if(!empty($classSessionMaster)) 
-                    <input type="hidden" name="id" value="{{ encrypt($classSessionMaster->pk) }}">
-                @endif
-                <div class="row">
-                    
+
+    {{-- One view serves create and edit: ClassSessionMasterController::store()
+         updates when the encrypted `id` is posted, creates otherwise. --}}
+    <form action="{{ route('master.class.session.store') }}" method="POST" id="classSessionForm">
+        @csrf
+        @if ($isEdit)
+            <input type="hidden" name="id" value="{{ encrypt($classSessionMaster->pk) }}">
+        @endif
+
+        <div class="card mst-form-card">
+            <div class="card-body">
+                <h2 class="mst-form-section-title h6">Class Session Details</h2>
+
+                <div class="row g-3">
                     <div class="col-md-4">
-                        <div class="mb-3">
-                            <x-input 
-                                name="shift_name" 
-                                label="Shift Name :" 
-                                placeholder="Shift Name" 
-                                formLabelClass="form-label"
-                                required="true"
-                                value="{{ old('shift_name', $classSessionMaster->shift_name ?? '') }}"
-                                />
-                        </div>
+                        <label for="shift_name" class="mst-form-label d-block">
+                            Shift Name <span class="mst-req" aria-hidden="true">*</span>
+                        </label>
+                        <input type="text" id="shift_name" name="shift_name"
+                               class="form-control mst-control @error('shift_name') is-invalid @enderror"
+                               placeholder="Shift Name"
+                               value="{{ old('shift_name', $classSessionMaster->shift_name ?? '') }}"
+                               required aria-required="true">
+                        @error('shift_name')
+                            <span class="mst-field-error">{{ $message }}</span>
+                        @enderror
                     </div>
+
                     <div class="col-md-4">
-                        <div class="mb-3">
-                            <x-input 
-                                type="time"
-                                name="start_time" 
-                                label="Start Time :" 
-                                placeholder="Start Time" 
-                                formLabelClass="form-label"
-                                required="true"
-                                value="{{ old('start_time', $classSessionMaster->start_time ?? '') }}"
-                                />
-                        </div>
+                        <label for="start_time" class="mst-form-label d-block">
+                            Start Time <span class="mst-req" aria-hidden="true">*</span>
+                        </label>
+                        <input type="time" id="start_time" name="start_time"
+                               class="form-control mst-control @error('start_time') is-invalid @enderror"
+                               placeholder="Start Time"
+                               value="{{ old('start_time', $classSessionMaster->start_time ?? '') }}"
+                               required aria-required="true">
+                        @error('start_time')
+                            <span class="mst-field-error">{{ $message }}</span>
+                        @enderror
                     </div>
+
                     <div class="col-md-4">
-                        <div class="mb-3">
-                            <x-input 
-                                type="time"
-                                name="end_time" 
-                                label="End Time :" 
-                                placeholder="End Time" 
-                                formLabelClass="form-label"
-                                required="true"
-                                value="{{ old('end_time', $classSessionMaster->end_time ?? '') }}"
-                                />
-                        </div>
+                        <label for="end_time" class="mst-form-label d-block">
+                            End Time <span class="mst-req" aria-hidden="true">*</span>
+                        </label>
+                        <input type="time" id="end_time" name="end_time"
+                               class="form-control mst-control @error('end_time') is-invalid @enderror"
+                               placeholder="End Time"
+                               value="{{ old('end_time', $classSessionMaster->end_time ?? '') }}"
+                               required aria-required="true">
+                        @error('end_time')
+                            <span class="mst-field-error">{{ $message }}</span>
+                        @enderror
                     </div>
                 </div>
-                <hr>
-                <div class="mb-3 text-end gap-3">
-                    <button class="btn btn-primary" type="submit" id="saveClassSessionForm">
-                        {{ !empty($classSessionMaster) ? 'Update' : 'Save' }}
+
+                <div class="mst-form-footer">
+                    <a href="{{ route('master.class.session.index') }}" class="btn mst-btn-cancel px-4">Cancel</a>
+                    <button type="submit" class="btn mst-btn-submit px-4" id="saveClassSessionForm">
+                        {{ $isEdit ? 'Update' : 'Save' }}
                     </button>
-                    <a href="{{ route('master.class.session.index') }}" class="btn btn-secondary">
-                        Back
-                    </a>
                 </div>
-            </form>
+            </div>
         </div>
-    </div>
-    <!-- end Vertical Steps Example -->
+    </form>
 </div>
-
-
 @endsection
+
+@push('scripts')
+<script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
+@endpush

@@ -17,39 +17,29 @@ class DisciplineMasterDataTable extends DataTable
             ->editColumn('discipline_name', fn($row) => $row->discipline_name ?? 'N/A')
             ->editColumn('mark_deduction', fn($row) => $row->mark_deduction ?? '0')
 
-            ->addColumn('status', function ($row) {
-                 return '<div class="form-check form-switch d-inline-block">
-                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                data-table="discipline_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . ($row->active_inactive == 1 ? 'checked' : '') . '>
-                        </div>';
-            })
+            // Status: display-only soft badge. The switch lives in the Action stack.
+            ->addColumn('status', fn ($row) => view('admin.master.partials.grid-status', [
+                'active' => (int) $row->active_inactive === 1,
+            ])->render())
 
+            // Action: Edit · status switch · Delete (docs/new-design-index-page.md §3b).
             ->addColumn('actions', function ($row) {
-                $edit = route('master.discipline.edit', encrypt($row->pk));
-                $delete = route('master.discipline.delete', encrypt($row->pk));
-if($row->active_inactive == 1){
-    return '
-                <a href="'.$edit.'" title="Edit">
-                    <i class="material-icons">edit</i>
-                </a>
-              
-                    <button style="border:none;background:none " disabled title="Delete">
-                        <i class="material-icons text-danger">delete</i>
-                    </button>';
-}else{
-return '
-                <a href="'.$edit.'" title="Edit">
-                    <i class="material-icons">edit</i>
-                </a>
+                $isActive = (int) $row->active_inactive === 1;
 
-                <form action="'.$delete.'" method="POST" style="display:inline">
-                    '.csrf_field().method_field('DELETE').'
-                    <button onclick="return confirm(\'Delete?\')" style="border:none;background:none">
-                        <i class="material-icons text-danger">delete</i>
-                    </button>
-                </form>';
-}
-                
+                return view('admin.master.partials.grid-actions', [
+                    'name'   => $row->discipline_name ?? '',
+                    'edit'   => ['href' => route('master.discipline.edit', encrypt($row->pk))],
+                    'toggle' => [
+                        'active' => $isActive,
+                        'table'  => 'discipline_master',
+                        'column' => 'active_inactive',
+                        'id'     => $row->pk,
+                    ],
+                    // Active records were never deletable from this grid — keep that rule.
+                    'delete' => $isActive
+                        ? ['disabled' => true, 'reason' => 'Active records cannot be deleted. Deactivate it first.']
+                        : ['action' => route('master.discipline.delete', encrypt($row->pk))],
+                ])->render();
             })
 
             ->rawColumns(['status','actions']);
@@ -66,12 +56,12 @@ return '
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No'),
+            Column::computed('DT_RowIndex')->title('S. No.')->addClass('text-nowrap')->width('5.5rem'),
             Column::make('course_name')->title('Course'),
             Column::make('discipline_name')->title('Discipline'),
-            Column::make('mark_deduction')->title('Mark Deduction'),
-            Column::computed('status')->title('Status'),
-            Column::computed('actions')->title('Actions'),
+            Column::make('mark_deduction')->title('Mark Deduction')->addClass('text-nowrap'),
+            Column::computed('status')->title('Status')->addClass('text-nowrap')->width('8rem'),
+            Column::computed('actions')->title('Action')->addClass('text-nowrap')->width('13rem'),
         ];
     }
 

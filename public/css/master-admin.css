@@ -134,6 +134,13 @@
     white-space: nowrap;
 }
 
+/* DataTables' "No data available" cell is the only cell in its row, so the
+ * Action column's right-align above would push the message to the far edge. */
+.mst-page:not(.print-area) .programme-dt-table td.dataTables_empty:last-child {
+    text-align: center;
+    white-space: normal;
+}
+
 /* A wrapping <form> around Delete must add no box of its own. */
 .mst-page .mst-del-form {
     display: flex;
@@ -271,7 +278,9 @@
 
 .mst-modal .mst-control,
 .mst-page  .mst-control {
-    background: #fff;
+    /* background-color, not the shorthand: the shorthand wipes the
+       .form-select chevron (a background-image). */
+    background-color: #fff;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     min-height: var(--ds-control-h);
@@ -995,5 +1004,157 @@
     .mst-page:not(.print-area) .programme-dt-table th:last-child,
     .mst-page:not(.print-area) .programme-dt-table td:last-child {
         display: none !important;
+    }
+}
+
+/* ── Shared listing pieces for the master / mapping screens ─────────────────
+ * Added with the Exemption, Memo, Subject, Location, Venue, Stream and Hostel
+ * redesign (docs/design.md + docs/new-design-index-page.md), so those 26
+ * screens carry no copied CSS of their own. Everything is opt-in by class. */
+
+/* Tinted field card inside an Add/Edit modal or a full-page form (§3c):
+ * #eef1fc, radius 10, padding 1rem — one per record. */
+.mst-modal .mst-field-card,
+.mst-page  .mst-field-card {
+    background: #eef1fc;
+    border-radius: 10px;
+    padding: var(--ds-space-3);
+}
+
+.mst-modal .mst-field-card + .mst-field-card,
+.mst-page  .mst-field-card + .mst-field-card {
+    margin-top: var(--ds-space-3);
+}
+
+/* Repeatable field cards: − / + controls, 30x30, radius 7 (§3c). Visibility is
+ * toggled by JS, so the buttons carry a plain display — never .d-flex, whose
+ * !important beats jQuery's .hide() (§9). */
+.mst-modal .mst-field-actions,
+.mst-page  .mst-field-actions {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--ds-space-2);
+}
+
+.mst-modal .mst-field-btn,
+.mst-page  .mst-field-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 7px;
+    color: #fff;
+    line-height: 1;
+}
+
+.mst-modal .mst-field-btn--add,
+.mst-page  .mst-field-btn--add {
+    background: #2563eb;
+}
+
+.mst-modal .mst-field-btn--remove,
+.mst-page  .mst-field-btn--remove {
+    background: #ef4444;
+}
+
+.mst-modal .mst-field-btn:focus-visible,
+.mst-page  .mst-field-btn:focus-visible {
+    outline: 0;
+    box-shadow: var(--ds-focus-ring);
+}
+
+/* Validation message under a field — full-page form or modal. */
+.mst-modal .mst-field-error,
+.mst-page .mst-field-error {
+    display: block;
+    margin-top: var(--ds-space-1);
+    color: #dc2626;
+    font-size: 0.8125rem;
+}
+
+/* Read-only value inside a form or detail card (label over value). */
+.mst-page .mst-readonly {
+    min-height: var(--ds-control-h);
+    padding: 0.5rem 0.75rem;
+    background: var(--ds-surface-2);
+    border: 1px solid var(--ds-line);
+    border-radius: 8px;
+    color: var(--ds-ink);
+    font-size: 0.875rem;
+}
+
+/* Empty grid row — spans the table, quiet, not an alert. */
+.mst-page .mst-empty td,
+.mst-page td.mst-empty {
+    padding: var(--ds-space-5) var(--ds-space-3);
+    color: var(--ds-ink-muted);
+    text-align: center !important;
+    white-space: normal;
+}
+
+/* Long free-text columns: only column 2 of .programme-dt-table wraps by
+ * default (custom.css), so opt other text columns in explicitly. */
+.mst-page .programme-dt-table .mst-col-wrap {
+    white-space: normal;
+    max-width: 420px;
+    word-break: break-word;
+}
+
+/* Soft workflow / category badges beyond Active-Inactive. */
+.mst-page .status-pill.bg-warning-subtle {
+    color: #93370d;
+}
+
+.mst-page .status-pill.bg-info-subtle {
+    color: #055160;
+}
+
+.mst-page .status-pill.bg-primary-subtle {
+    color: #004384;
+}
+
+.mst-page .status-pill.bg-secondary-subtle {
+    color: #344054;
+}
+
+/* Column-visibility modal tiles. Styled by class so a new grid does not have
+ * to be appended to the hard-coded ID lists in custom.css (§9). */
+.mst-colvis-grid .colvis-item {
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.mst-colvis-grid .colvis-item:hover {
+    border-color: #004384 !important; /* beats Bootstrap's .border !important */
+    background-color: rgba(0, 67, 132, 0.04);
+}
+
+.mst-colvis-grid .colvis-item .form-check-input {
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+/* Filter row of a report/mapping screen: label above control, wraps cleanly. */
+.mst-page .mst-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--ds-space-3);
+    align-items: end;
+}
+
+.mst-page .mst-filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ds-space-2);
+    align-items: center;
+}
+
+@media (max-width: 575.98px) {
+    .mst-page .mst-form-footer > .btn,
+    .mst-modal .modal-footer > .btn {
+        flex: 1 1 auto;
     }
 }

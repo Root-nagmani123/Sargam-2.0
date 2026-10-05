@@ -1,138 +1,101 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Stream - Sargam | Lal Bahadur')
+@section('title', 'Stream')
+
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
+@endpush
 
 @section('setup_content')
-<div class="container-fluid">
-    <x-breadcrum title="Stream" />
-    <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card" style="border-left:4px solid #004a93;">
-            <div class="card-body">
+<div class="container-fluid mst-page">
+    <x-breadcrum title="Stream" :showBack="false">
+        <a href="{{ route('stream.create') }}"
+           class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+            <span>Add Stream</span>
+        </a>
+    </x-breadcrum>
+
+    <x-session_message />
+
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
+            {{-- Server-paginated (StreamController::index, 10 per page): no
+                 DataTable on this grid, so the footer below is hand-written
+                 (docs/new-design-index-page.md §4 variant B). --}}
+            <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
-                            <h4>Stream</h4>
-                        </div>
-                        <div class="col-6">
-                            <div class="d-flex justify-content-end align-items-center gap-2">
-
-                                <!-- Add Group Mapping -->
-                                <a href="{{route('stream.create')}}" class="btn btn-primary d-flex align-items-center">
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 20px; vertical-align: middle;">add</i>
-                                    Add Stream
-                                </a>
-
-
-                            </div>
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="table-responsive">
-
-                        <table class="table text-nowrap w-100">
-                            <thead>
-                                <!-- start row -->
+                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" id="streamTable">
+                        <caption class="visually-hidden">Streams</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col" class="text-nowrap">S. No.</th>
+                                <th scope="col">Stream Name</th>
+                                <th scope="col" class="text-nowrap">Status</th>
+                                <th scope="col" class="text-nowrap">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($streams as $index => $stream)
+                                @php $isActive = (int) $stream->active_inactive === 1; @endphp
                                 <tr>
-                                    <th class="col">S.No.</th>
-                                    <th class="col">Stream Name</th>
-                                    <th class="col">Status</th>
-                                    <th class="col">Action</th>
-
+                                    <td>{{ $streams->firstItem() + $index }}</td>
+                                    <td>{{ $stream->stream_name }}</td>
+                                    <td data-order="{{ $isActive ? 1 : 0 }}">
+                                        @include('admin.master.partials.grid-status', ['active' => $isActive])
+                                    </td>
+                                    <td>
+                                        @include('admin.master.partials.grid-actions', [
+                                            'name'   => $stream->stream_name,
+                                            'edit'   => ['href' => route('stream.edit', $stream->pk)],
+                                            'toggle' => [
+                                                'active' => $isActive,
+                                                'table'  => 'stream_master',
+                                                'column' => 'active_inactive',
+                                                'id'     => $stream->pk,
+                                            ],
+                                            'delete' => $isActive
+                                                ? ['disabled' => true, 'reason' => 'Cannot delete an active stream. Deactivate it first.']
+                                                : ['action' => route('stream.destroy', $stream->pk)],
+                                        ])
+                                    </td>
                                 </tr>
-                                <!-- end row -->
-                            </thead>
-                            <tbody>
-                                @foreach($streams as $key => $stream)
-                                <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
-                                    <td>{{ $key + 1 }}</td>
-                                    <td>
-                                        {{ $stream->stream_name }}
-                                    </td>
-                                    <td>
-                                        <div class="form-check form-switch">
-                                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                data-table="stream_master" data-column="active_inactive"
-                                                data-id="{{ $stream->pk }}" {{ $stream->active_inactive == 1 ? 'checked' : '' }}>
-                                        </div>
-                                    </td>
-                                    <td>
-
-                                        <div class="d-inline-flex align-items-center gap-2" role="group"
-                                            aria-label="Stream actions">
-
-                                            <!-- Edit -->
-                                            <a href="{{ route('stream.edit', $stream->pk) }}"
-                                                class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
-                                                aria-label="Edit stream">
-                                                <span class="material-symbols-rounded fs-6"
-                                                    aria-hidden="true">edit</span>
-                                                <span class="d-none d-md-inline">Edit</span>
-                                            </a>
-
-                                            <!-- Delete -->
-                                            @if($stream->active_inactive == 1)
-                                            <button type="button"
-                                                class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
-                                                disabled aria-disabled="true" title="Cannot delete active stream">
-                                                <span class="material-symbols-rounded fs-6"
-                                                    aria-hidden="true">delete</span>
-                                                <span class="d-none d-md-inline">Delete</span>
-                                            </button>
-                                            @else
-                                            <form action="{{ route('stream.destroy', $stream->pk) }}" method="POST"
-                                                class="d-inline"
-                                                onsubmit="return confirm('Are you sure you want to delete this stream?');">
-                                                @csrf
-                                                @method('DELETE')
-
-                                                <button type="submit"
-                                                    class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
-                                                    aria-label="Delete stream">
-                                                    <span class="material-symbols-rounded fs-6"
-                                                        aria-hidden="true">delete</span>
-                                                    <span class="d-none d-md-inline">Delete</span>
-                                                </button>
-                                            </form>
-                                            @endif
-
-                                        </div>
-
-
-                                    </td>
-
-
+                            @empty
+                                <tr class="mst-empty">
+                                    <td colspan="4">No streams found.</td>
                                 </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
 
-                        <!-- Pagination -->
-                        <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
-
-                            <div class="text-muted small mb-2">
-                                Showing {{ $streams->firstItem() }}
-                                to {{ $streams->lastItem() }}
-                                of {{ $streams->total() }} items
-                            </div>
-
-                            <div>
-                                {{ $streams->links('vendor.pagination.custom') }}
-                            </div>
-
-                        </div>
-
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
+                    <div class="programme-dt-pagination">
+                        {{ $streams->links('vendor.pagination.custom') }}
                     </div>
-
+                    <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                        <div class="dataTables_info" aria-live="polite">
+                            @if ($streams->total())
+                                Showing {{ $streams->firstItem() }}–{{ $streams->lastItem() }} of {{ number_format($streams->total()) }} items
+                            @else
+                                0 items
+                            @endif
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <!-- end Zero Configuration -->
     </div>
 </div>
-
-<script>
-window.statusToggleUrl = "{{ route('admin.toggleStatus') }}";
-</script>
 @endsection
+
+@push('scripts')
+<script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
+<script>
+    window.statusToggleUrl = "{{ route('admin.toggleStatus') }}";
+
+    // Server-rendered grid: the badge and the switch live in different
+    // columns, so refresh the page once custom.js has saved the new status.
+    MstAdmin.reloadPageOnStatusToggle();
+</script>
+@endpush

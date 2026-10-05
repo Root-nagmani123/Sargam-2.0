@@ -44,21 +44,23 @@ class OTHostelRoomDetailsDataTable extends DataTable
             ->filterColumn('hostel_room_name', function ($query, $keyword) {
                 $query->where('hostel_room_name', 'like', "%{$keyword}%");
             })
-            ->addColumn('status', function ($row) {
-                return (int) $row->active_inactive === 1
-                    ? '<span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>'
-                    : '<span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>';
-            })
-            ->addColumn('action', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return '<div class="d-inline-flex align-items-center justify-content-center programme-action-group" role="group" aria-label="Row actions">
-                            <div class="form-check form-switch programme-action-switch mb-0">
-                                <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                    data-table="ot_hostel_room_details" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
-                            </div>
-                        </div>';
-            })
-            ->rawColumns(['student_name', 'hostel_room_name', 'course_name', 'status', 'action']);
+            // Status: display-only soft badge. The switch lives in the Action stack.
+            ->addColumn('status', fn ($row) => view('admin.master.partials.grid-status', [
+                'active' => (int) $row->active_inactive === 1,
+            ])->render())
+            // Action: the status switch only — this grid never had Edit or Delete.
+            ->addColumn('action', fn ($row) => view('admin.master.partials.grid-actions', [
+                'name'   => $row->user_name ?? '',
+                'toggle' => [
+                    'active' => (int) $row->active_inactive === 1,
+                    'table'  => 'ot_hostel_room_details',
+                    'column' => 'active_inactive',
+                    'id'     => $row->pk,
+                ],
+            ])->render())
+            // Names come from an Excel import — let Yajra escape them; only the
+            // partial-rendered cells are HTML.
+            ->rawColumns(['status', 'action']);
     }
 
     /**
@@ -191,12 +193,12 @@ class OTHostelRoomDetailsDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S. No.')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::computed('DT_RowIndex')->title('S. No.')->addClass('text-nowrap')->width('5.5rem')->orderable(false)->searchable(false),
             Column::make('course_name')->title('Course Name')->orderable(false),
             Column::make('user_name')->title('User Name')->orderable(false),
             Column::make('hostel_room_name')->title('Hostel Room Name')->orderable(false),
-            Column::computed('status')->title('Status')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('action')->title('Action')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::computed('status')->title('Status')->addClass('text-nowrap')->width('8rem')->orderable(false)->searchable(false),
+            Column::make('action')->title('Action')->addClass('text-nowrap')->width('6rem')->orderable(false)->searchable(false),
         ];
     }
 

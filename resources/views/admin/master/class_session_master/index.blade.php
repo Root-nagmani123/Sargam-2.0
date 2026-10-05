@@ -2,138 +2,105 @@
 
 @section('title', 'Class Session Master')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
+@endpush
+
 @section('setup_content')
-<div class="container-fluid">
-    <x-breadcrum title="Class Session Master" />
-    <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card" >
-            <div class="card-body">
+<div class="container-fluid mst-page">
+    <x-breadcrum title="Class Session Master" :showBack="false">
+        <a href="{{ route('master.class.session.create') }}"
+           class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+            <span>Add Class Session</span>
+        </a>
+    </x-breadcrum>
+
+    <x-session_message />
+
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
+            {{-- Server-paginated (ClassSessionMasterController::index, 10 per
+                 page): no DataTable on this grid, so the footer below is
+                 hand-written (docs/new-design-index-page.md §4 variant B). --}}
+            <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
-                            <h4>Class Session Master</h4>
-                        </div>
-                        <div class="col-6">
-                            <div class="d-flex justify-content-end align-items-center gap-2">
-
-                                <!-- Add Group Mapping -->
-                                <a href="{{route('master.class.session.create')}}"
-                                    class="btn btn-primary d-flex align-items-center">
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 20px; vertical-align: middle;">add</i>
-                                    Add Class Session
-                                </a>
-
-
-                            </div>
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="table-responsive">
-                        <table class="table w-100 nowrap">
-                            <thead>
-                                <!-- start row -->
+                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" id="classSessionTable">
+                        <caption class="visually-hidden">Class sessions</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col" class="text-nowrap">S. No.</th>
+                                <th scope="col">Shift Name</th>
+                                <th scope="col" class="text-nowrap">Start Time</th>
+                                <th scope="col" class="text-nowrap">End Time</th>
+                                <th scope="col" class="text-nowrap">Status</th>
+                                <th scope="col" class="text-nowrap">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($classSessionMaster as $index => $classSession)
+                                @php
+                                    $isActive = (int) $classSession->active_inactive === 1;
+                                    $encId = encrypt($classSession->pk);
+                                @endphp
                                 <tr>
-                                    <th class="col">S.No.</th>
-                                    <th class="col">Shift Name</th>
-                                    <th class="col">Start Time</th>
-                                    <th class="col">End Time</th>
-                                    <th class="col">Status</th>
-                                    <th class="col">Action</th>
-
-                                </tr>
-                                <!-- end row -->
-                            </thead>
-                            <tbody>
-                                @if (!empty($classSessionMaster) && count($classSessionMaster) > 0)
-                                @foreach ($classSessionMaster as $index => $classSession)
-                                <tr class="odd">
                                     <td>{{ $classSessionMaster->firstItem() + $index }}</td>
                                     <td>{{ $classSession->shift_name ?? 'N/A' }}</td>
-                                    <td>{{ $classSession->start_time ?? 'N/A' }}</td>
-                                    <td>{{ $classSession->end_time ?? 'N/A' }}</td>
-                                    <td>
-                                        <div class="form-check form-switch d-inline-block">
-                                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                data-table="class_session_master" data-column="active_inactive"
-                                                data-id="{{ $classSession->pk }}"
-                                                {{ $classSession->active_inactive == 1 ? 'checked' : '' }}>
-                                        </div>
+                                    <td class="text-nowrap">{{ $classSession->start_time ?? 'N/A' }}</td>
+                                    <td class="text-nowrap">{{ $classSession->end_time ?? 'N/A' }}</td>
+                                    <td data-order="{{ $isActive ? 1 : 0 }}">
+                                        @include('admin.master.partials.grid-status', ['active' => $isActive])
                                     </td>
                                     <td>
-
-                                        <div class="d-inline-flex align-items-center gap-2" role="group"
-                                            aria-label="Class session actions">
-
-                                            <!-- Edit -->
-                                            <a href="{{ route('master.class.session.edit', ['id' => encrypt($classSession->pk)]) }}"
-                                                class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
-                                                aria-label="Edit class session">
-                                                <span class="material-symbols-rounded fs-6"
-                                                    aria-hidden="true">edit</span>
-                                                <span class="d-none d-md-inline">Edit</span>
-                                            </a>
-
-                                            <!-- Delete -->
-                                            @if($classSession->active_inactive == 1)
-                                            <button type="button"
-                                                class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
-                                                disabled aria-disabled="true"
-                                                title="Cannot delete active class session">
-                                                <span class="material-symbols-rounded fs-6"
-                                                    aria-hidden="true">delete</span>
-                                                <span class="d-none d-md-inline">Delete</span>
-                                            </button>
-                                            @else
-                                            <form
-                                                action="{{ route('master.class.session.delete', ['id' => encrypt($classSession->pk)]) }}"
-                                                method="POST" class="d-inline"
-                                                onsubmit="return confirm('Are you sure you want to delete this record?');">
-                                                @csrf
-                                                @method('DELETE')
-
-                                                <button type="submit"
-                                                    class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
-                                                    aria-label="Delete class session">
-                                                    <span class="material-symbols-rounded fs-6"
-                                                        aria-hidden="true">delete</span>
-                                                    <span class="d-none d-md-inline">Delete</span>
-                                                </button>
-                                            </form>
-                                            @endif
-
-                                        </div>
-
-
+                                        @include('admin.master.partials.grid-actions', [
+                                            'name'   => $classSession->shift_name,
+                                            'edit'   => ['href' => route('master.class.session.edit', ['id' => $encId])],
+                                            'toggle' => [
+                                                'active' => $isActive,
+                                                'table'  => 'class_session_master',
+                                                'column' => 'active_inactive',
+                                                'id'     => $classSession->pk,
+                                            ],
+                                            'delete' => $isActive
+                                                ? ['disabled' => true, 'reason' => 'Cannot delete an active class session. Deactivate it first.']
+                                                : ['action' => route('master.class.session.delete', ['id' => $encId])],
+                                        ])
                                     </td>
-
                                 </tr>
-                                @endforeach
-                                @else
+                            @empty
+                                <tr class="mst-empty">
+                                    <td colspan="6">No class sessions found.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
 
-                                @endif
-
-                            </tbody>
-                        </table>
-
-                        <!-- Pagination -->
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <div>
-                                Showing {{ $classSessionMaster->firstItem() ?? 0 }} to
-                                {{ $classSessionMaster->lastItem() ?? 0 }} of {{ $classSessionMaster->total() }} entries
-                            </div>
-                            <div>
-                                {{ $classSessionMaster->links('pagination::bootstrap-5') }}
-                            </div>
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
+                    <div class="programme-dt-pagination">
+                        {{ $classSessionMaster->links('vendor.pagination.custom') }}
+                    </div>
+                    <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                        <div class="dataTables_info" aria-live="polite">
+                            @if ($classSessionMaster->total())
+                                Showing {{ $classSessionMaster->firstItem() }}–{{ $classSessionMaster->lastItem() }} of {{ number_format($classSessionMaster->total()) }} items
+                            @else
+                                0 items
+                            @endif
                         </div>
-
                     </div>
                 </div>
             </div>
         </div>
-        <!-- end Zero Configuration -->
     </div>
 </div>
-
 @endsection
+
+@push('scripts')
+<script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
+<script>
+    // Server-rendered grid: the badge and the switch live in different
+    // columns, so refresh the page once custom.js has saved the new status.
+    MstAdmin.reloadPageOnStatusToggle();
+</script>
+@endpush
