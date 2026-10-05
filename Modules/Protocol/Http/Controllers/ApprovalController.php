@@ -86,7 +86,7 @@ class ApprovalController extends Controller
      */
     public function decide(ReviewProtocolRequest $request, ProtocolRequest $protocolRequest)
     {
-             dd('here');
+      
         abort_if($protocolRequest->status !== ProtocolRequest::STATUS_PENDING, 403,
             'This request has already been actioned.');
 
