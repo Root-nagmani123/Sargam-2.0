@@ -523,7 +523,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to reload programs based on course type
     function reloadPrograms() {
-        const courseType = document.querySelector('input[name="course_type"]:checked')?.value || 'archived';
+        const courseType = document.querySelector('input[name="course_type"]:checked')?.value || 'current';
 
         // Show loading state for program dropdown
         programSelect.innerHTML = '<option value="">Loading programs...</option>';
@@ -655,8 +655,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Reset form values
         filterForm.reset();
 
-        // Set default course type to archived
-        document.querySelector('input[name="course_type"][value="archived"]').checked = true;
+        // Back to the page's default: current (active) courses
+        document.querySelector('input[name="course_type"][value="current"]').checked = true;
 
         // Clear suggestions. A pinned name survives Reset: it is not a filter the
         // viewer chose, so there is nothing to reset it to.
@@ -974,10 +974,15 @@ function initProgramChoices() {
 
     el._choicesInstance = instance;
 
-    // When Choices changes the value, trigger filter reload
-    el.addEventListener('change', function() {
-        goToPage(1);
-    });
+    // When Choices changes the value, trigger filter reload. Bound once: this runs
+    // again after every data load on the same <select>, and a listener added each
+    // time made one program change fire a growing burst of overlapping reloads.
+    if (!el.dataset.changeBound) {
+        el.addEventListener('change', function() {
+            goToPage(1);
+        });
+        el.dataset.changeBound = '1';
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {

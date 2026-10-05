@@ -93,13 +93,14 @@ private function exportFacultyList(int $facultyType, string $reportTitle, Reques
     $headings = ['S. No.', 'Faculty Name', 'Email', 'Mobile Number'];
     $centreColumns = [0, 3];
 
-    $serial = 1;
-    $rows = $faculties->map(fn ($faculty) => [
-        $serial++,
+    // Serial from the row index: an arrow fn captures a counter BY VALUE, so a
+    // `$serial++` inside one numbered every row 1.
+    $rows = $faculties->values()->map(fn ($faculty, $index) => [
+        $index + 1,
         $faculty->full_name ?: '-',
         $faculty->email_id ?: 'N/A',
         $faculty->mobile_no ?: 'N/A',
-    ])->values();
+    ]);
 
     $baseName = str_replace([' ', '-'], '_', $reportTitle) . '_' . now()->format('Ymd_His');
 

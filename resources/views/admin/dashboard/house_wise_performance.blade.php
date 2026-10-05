@@ -34,12 +34,12 @@
     --hwp-major-bg: rgba(var(--ds-secondary-rgb), 0.12);
     --hwp-major-ink: var(--ds-secondary);
 
-    /* Summary rows: a tint of the brand, lightest for an OT's own subtotal
+    /* Summary rows: a tint of the brand, lighter for an OT's own subtotal
        and a step up for the house's Final Marks, so the two never read as
        the same kind of row. */
-    --hwp-subtotal-bg: rgba(var(--bs-primary-rgb), 0.05);
-    --hwp-subtotal-line: rgba(var(--bs-primary-rgb), 0.22);
-    --hwp-final-bg: rgba(var(--bs-primary-rgb), 0.08);
+    --hwp-subtotal-bg: rgba(var(--bs-primary-rgb), 0.10);
+    --hwp-subtotal-line: rgba(var(--bs-primary-rgb), 0.30);
+    --hwp-final-bg: rgba(var(--bs-primary-rgb), 0.16);
 }
 
 /* Each house is its own panel inside the one card, so they need the gap
@@ -195,13 +195,13 @@
     .hwp-page .hwp-chip { color: #fff !important; }
 
     .hwp-page .programme-dt-table tbody tr.hwp-final td {
-        background: #eaf0f7 !important;
+        background: #d3e0ef !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
 
     .hwp-page .programme-dt-table tbody tr.hwp-student-total td {
-        background: #f2f6fb !important;
+        background: #e3ebf5 !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
@@ -327,15 +327,12 @@
                                                     <td class="hwp-col-marks">{{ $row['marks'] + 0 }}</td>
                                                 </tr>
                                             @endforeach
-                                            {{-- A trainee's own total, where more than one
-                                                 deduction had to be added up to reach it. --}}
-                                            @if($member['rows']->count() > 1)
-                                                <tr class="hwp-student-total">
-                                                    <td class="hwp-col-no"></td>
-                                                    <td colspan="3" class="text-end">{{ $member['name'] }} — Total Marks</td>
-                                                    <td class="hwp-col-marks">{{ $member['total'] + 0 }}</td>
-                                                </tr>
-                                            @endif
+                                            {{-- Every trainee's own total, highlighted. --}}
+                                            <tr class="hwp-student-total">
+                                                <td class="hwp-col-no"></td>
+                                                <td colspan="3" class="text-end">{{ $member['name'] }} — Total Marks</td>
+                                                <td class="hwp-col-marks">{{ $member['total'] + 0 }}</td>
+                                            </tr>
                                     @endforeach
 
                                     <tr class="hwp-final">

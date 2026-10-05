@@ -27,6 +27,7 @@ use App\Exports\FacultyFeedback_AvgExport;
 use App\Exports\PendingFeedbackSummaryExport;
 use App\Exports\FeedbackDatabaseExport;
 use App\Services\FacultyFeedbackReportService;
+use App\Services\Timetable\FacultySessionScope;
 use App\Http\Controllers\Admin\Concerns\ScopesSessionFeedbackReports;
 use App\Support\FeedbackReportCache;
 use App\Support\FeedbackReportGrouping;

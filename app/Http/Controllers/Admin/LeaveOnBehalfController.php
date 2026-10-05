@@ -179,9 +179,8 @@ class LeaveOnBehalfController extends Controller
         $headings = ['S. No.', 'Course Name', 'OT Code', 'OT Name', 'Nature of Leave',
             'Date From', 'Date To', 'Time From', 'Time To', 'Total Days', 'Reason', 'Recorded By', 'Status'];
 
-        $serial = 1;
-        $data = $rows->map(fn ($row) => [
-            $serial++,
+        $data = $rows->values()->map(fn ($row, $index) => [
+            $index + 1,
             $row->course->course_name ?? '-',
             $row->student->generated_OT_code ?: '-',
             $this->studentName($row->student),

@@ -557,9 +557,8 @@ class LeaveApplicationController extends Controller
 
         $headings = ['S. No.', 'Course Name', 'Leave Type', 'Nature', 'From Date', 'To Date', 'Time From', 'Time To', 'Total Days', 'Status'];
 
-        $serial = 1;
-        $data = $rows->map(fn ($row) => [
-            $serial++,
+        $data = $rows->values()->map(fn ($row, $index) => [
+            $index + 1,
             $row->course->course_name ?? '-',
             $row->leave_type_label,
             $row->nature->nature_name ?? '-',

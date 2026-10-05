@@ -258,7 +258,6 @@ $(function () {
             course_filter: $('#courseFilter').val() || '',
             from_date: $period.data('from') || '',
             to_date: $period.data('to') || '',
-            format: $(this).data('format'),
         });
         return exportUrl + '?' + params;
     }

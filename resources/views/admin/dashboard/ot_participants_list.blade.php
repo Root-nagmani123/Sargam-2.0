@@ -472,8 +472,10 @@
             pageLength: 10,
             lengthMenu: [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
             // The House Wise Details card opens this list with ?sort=house, so it
-            // lands grouped by house instead of by serial number.
-            order: (filters.sort === 'house') ? [[5, 'asc']] : [[0, 'asc']],
+            // lands grouped by house (col 9) instead of by serial number; the My
+            // Counsellees card lands grouped by cadre (col 6).
+            order: (filters.sort === 'house') ? [[9, 'asc']]
+                : (filters.view === 'counsellees') ? [[6, 'asc']] : [[0, 'asc']],
             language: { emptyTable: 'Data not found.' },
             responsive: false,
             autoWidth: false,
@@ -928,17 +930,35 @@
         // past it shifted — a v4 list would hide the wrong columns.
         // v6: the default set below was introduced, so v5 entries (which meant
         // "everything visible") must not survive as a saved preference.
-        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v6';
-        // What the page opens with: the frozen identity columns plus the counts
-        // the list exists for. The contact / mapping columns are one click away in
-        // Column Visibility, so a viewer who wants them turns them on — and that
-        // choice is then saved and wins over this default for good.
-        //   3 Email · 4 Mobile No · 5 User Name · 6 Cadre
+        // v7: Mobile No became a default column. A saved v6 list is carried over
+        // with Mobile No taken out of it, so every other choice survives.
+        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v7';
+        const MOBILE_COL = 4;
+        // What the page opens with: the frozen identity columns, Mobile No, and the
+        // counts the list exists for. The other contact / mapping columns are one
+        // click away in Column Visibility, so a viewer who wants them turns them
+        // on — and that choice is then saved and wins over this default for good.
+        //   3 Email · 5 User Name · 6 Cadre
         //   7 Cadre Counsellor · 8 House Group Faculty · 9 House Group
-        const DEFAULT_HIDDEN_COLUMNS = [3, 4, 5, 6, 7, 8, 9];
+        const DEFAULT_HIDDEN_COLUMNS = [3, 5, 6, 7, 8, 9];
+        // The column each card view is about is always shown there — it is what
+        // the list opens sorted by: Cadre on My Counsellees, House Group on House
+        // Wise Details. Not saved, so the general preference is left alone.
+        const VIEW_FORCED_COLUMNS = filters.view === 'counsellees' ? [6]
+            : (filters.view === 'house' ? [9] : []);
         function otGetHiddenCols() {
             try {
-                const raw = localStorage.getItem(otColStorageKey);
+                let raw = localStorage.getItem(otColStorageKey);
+                if (raw === null) {
+                    const v6 = localStorage.getItem('otParticipantsGrid:hiddenColumns:v6');
+                    if (v6 !== null) {
+                        const old = JSON.parse(v6);
+                        if (Array.isArray(old)) {
+                            raw = JSON.stringify(old.filter(idx => idx !== MOBILE_COL));
+                            localStorage.setItem(otColStorageKey, raw);
+                        }
+                    }
+                }
                 // No saved preference yet (null) → the default set. An empty ARRAY is
                 // a real choice ("show everything") and must be honoured as one.
                 if (raw === null) { return DEFAULT_HIDDEN_COLUMNS.slice(); }
@@ -951,8 +971,9 @@
         function setupOtColumns() {
             if (!dt) { return; }
             const singleDay = isSingleDayFilter();
-            const hidden = otGetHiddenCols().filter(idx => LOCKED_COLUMNS.indexOf(idx) === -1);
+            let hidden = otGetHiddenCols().filter(idx => LOCKED_COLUMNS.indexOf(idx) === -1);
             otPersistHiddenCols(hidden);
+            hidden = hidden.filter(idx => VIEW_FORCED_COLUMNS.indexOf(idx) === -1);
             dt.columns().every(function() {
                 const idx = this.index();
                 if (LOCKED_COLUMNS.indexOf(idx) !== -1) { this.visible(true, false); return; }

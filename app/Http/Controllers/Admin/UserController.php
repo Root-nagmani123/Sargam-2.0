@@ -717,6 +717,11 @@ class UserController extends Controller
             $row->course = $courses[$mapping->course_pk] ?? null;
             $row->groupMapping = $membership;
             $row->{$labelProperty} = trim((string) $mapping->group_name);
+            // On the counsellee view the cadre IS the counsellor group, which is what
+            // the Cadre dropdown offers — the row filter reads cadre_name first.
+            if ($labelProperty === 'counsellor_group_name') {
+                $row->cadre_name = $row->counsellor_group_name;
+            }
             $uid = $student->user_id ?? null;
             $row->house_name = ($uid && isset($houseByUser[$uid])) ? $houseByUser[$uid] : null;
             $row->source = 'faculty_group';
@@ -1013,8 +1018,8 @@ class UserController extends Controller
             : '';
 
         // Same columns and same row order as the page, so a download reads like
-        // the screen it came from: a band per house, one row per deduction, the
-        // trainee's own subtotal where several were added up, then Final Marks.
+        // the screen it came from: a band per house, one row per deduction, each
+        // trainee's own subtotal, then Final Marks.
         $headings = ['S. No.', 'Student Name', 'OT Code', 'Discipline Category', 'Marks'];
         $centreColumns = [0, 2, 4];
         $today = now()->format('d M Y');
@@ -1043,10 +1048,9 @@ class UserController extends Controller
                     ]);
                 }
 
-                if ($member['rows']->count() > 1) {
-                    $totalRows[] = $data->count();
-                    $data->push(['', '', '', $member['name'] . ' — Total Marks', $member['total'] + 0]);
-                }
+                // Every trainee's own total, as on the page.
+                $totalRows[] = $data->count();
+                $data->push(['', '', '', $member['name'] . ' — Total Marks', $member['total'] + 0]);
             }
 
             $totalRows[] = $data->count();
@@ -2205,25 +2209,46 @@ class UserController extends Controller
      * (House Group, Duty Type, the count columns) — letting the shared filter
      * search first would drop every row on a House Group query.
      */
-    private function otParticipantsRowsFor(Request $request, $students)
+    /**
+     * ?view=counsellees / ?view=house — opened from the My Counsellees and House
+     * Wise Details cards. The list is then the students of that faculty's groups
+     * on the Course Group Mapping page and nothing else, so each card's number
+     * and its rows agree. Each view drops the filter the other one is about, and
+     * both drop the Active/Archived tabs: the scope spans both.
+     *
+     * @return array{0: ?int, 1: bool, 2: bool}  [facultyPk, isCounselleeView, isHouseView]
+     */
+    private function otParticipantsScopedView(Request $request): array
     {
-        // ?view=counsellees / ?view=house — opened from the My Counsellees and House
-        // Wise Details cards. The list is then the students of that faculty's groups
-        // on the Course Group Mapping page and nothing else, so each card's number
-        // and its rows agree. Each view drops the filter the other one is about, and
-        // both drop the Active/Archived tabs: the scope spans both.
         $requestedView = $request->input('view');
         $scopeFacultyPk = in_array($requestedView, ['counsellees', 'house'], true)
             ? get_auth_faculty_master_pk()
             : null;
-        $isCounselleeView = $scopeFacultyPk !== null && $requestedView === 'counsellees';
-        $isHouseView = $scopeFacultyPk !== null && $requestedView === 'house';
+
+        return [
+            $scopeFacultyPk,
+            $scopeFacultyPk !== null && $requestedView === 'counsellees',
+            $scopeFacultyPk !== null && $requestedView === 'house',
+        ];
+    }
+
+    /**
+     * The students of the faculty's own groups for a scoped view — the same scope
+     * the dashboard cards count on, so the list holds exactly their number.
+     */
+    private function otParticipantsScopedStudents(int $facultyPk, bool $isCounselleeView)
+    {
+        return $isCounselleeView
+            ? $this->facultyGroupRows($facultyPk, '%counsel%', 'counsellor_group_name', true)
+            : $this->facultyGroupRows($facultyPk, '%house%', 'house_group_name', true);
+    }
+
+    private function otParticipantsRowsFor(Request $request, $students)
+    {
+        [$scopeFacultyPk, $isCounselleeView, $isHouseView] = $this->otParticipantsScopedView($request);
 
         if ($isCounselleeView || $isHouseView) {
-            // Same scope the cards count on, so the list holds exactly their number.
-            $students = $isCounselleeView
-                ? $this->facultyGroupRows($scopeFacultyPk, '%counsel%', 'counsellor_group_name', true)
-                : $this->facultyGroupRows($scopeFacultyPk, '%house%', 'house_group_name', true);
+            $students = $this->otParticipantsScopedStudents($scopeFacultyPk, $isCounselleeView);
 
             $payload = [
                 'students' => $students,
@@ -2515,8 +2540,13 @@ class UserController extends Controller
             return $this->otParticipantsDataTableResponse($request, $rows, $rowMeta, $totalParticipants, $filterOptions);
         }
 
-        // Filter option lists (mirrors the student list page).
-        $students = $payload['students'];
+        // Filter option lists (mirrors the student list page). On the card views
+        // they come off the faculty's own group rows, so the Cadre / House dropdowns
+        // offer only what is mapped to this faculty.
+        [$scopeFacultyPk, $isCounselleeView, $isHouseView] = $this->otParticipantsScopedView($request);
+        $students = ($isCounselleeView || $isHouseView)
+            ? $this->otParticipantsScopedStudents($scopeFacultyPk, $isCounselleeView)
+            : $payload['students'];
         // In the counsellee view the cadres ARE the counsellor group names off the
         // Course Group Mapping page — which is where the faculty verifies this list
         // — not the students' own cadre master, where 70 of them have nothing. The
@@ -6904,9 +6934,8 @@ class UserController extends Controller
         $headings = ['S. No.', 'Student Name', 'OT Code', 'Email', 'Mobile Number'];
         $centreColumns = [0, 2, 4];
 
-        $serial = 1;
-        $rows = $roster->map(fn ($s) => [
-            $serial++, $s['name'], $s['ot_code'], $s['email'], $s['mobile'],
+        $rows = $roster->values()->map(fn ($s, $index) => [
+            $index + 1, $s['name'], $s['ot_code'], $s['email'], $s['mobile'],
         ])->values();
 
         $filterLine = 'Course: ' . ($group->course_name ?? '—')

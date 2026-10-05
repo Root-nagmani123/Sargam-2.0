@@ -156,9 +156,8 @@ class MedicalExceptionOTViewController extends Controller
             'Exemption Category', 'Medical Speciality', 'Diagnosis / Remarks'];
         $centreColumns = [0, 3, 4];
 
-        $serial = 1;
-        $rows = $exemptions->map(fn ($e) => [
-            $serial++,
+        $rows = $exemptions->values()->map(fn ($e, $index) => [
+            $index + 1,
             $e['course_name'] ?: '-',
             $e['doctor_name'] ?: '-',
             $this->dateTimeLabel($e['from_date']),

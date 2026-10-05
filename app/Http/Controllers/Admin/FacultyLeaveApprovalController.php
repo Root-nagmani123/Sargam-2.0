@@ -252,9 +252,8 @@ class FacultyLeaveApprovalController extends Controller
 
         $headings = ['S. No.', 'OT Code', 'OT Name', 'Course Name', 'Leave Type', 'Date From', 'Date To', 'Time From', 'Time To', 'Total Days', 'Reason', 'Status'];
 
-        $serial = 1;
-        $data = $rows->map(fn ($row) => [
-            $serial++,
+        $data = $rows->values()->map(fn ($row, $index) => [
+            $index + 1,
             $row->student->generated_OT_code ?? '-',
             $this->approvalService->studentDisplayName($row->student),
             $row->course->course_name ?? '-',
