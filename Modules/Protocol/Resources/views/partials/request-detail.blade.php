@@ -64,14 +64,14 @@
       <tr><td class="text-muted">Date To</td><td class="fw-semibold">{{ $d->date_to?->format('d M Y') }}</td></tr>
       <tr><td class="text-muted">No. of Guests</td><td class="fw-semibold">{{ $d->no_of_guests ?? '—' }}</td></tr>
       <tr><td class="text-muted">No. of Rooms</td><td class="fw-semibold">{{ $d->no_of_rooms }}</td></tr>
-      <tr><td class="text-muted">Assigned Guest House</td><td class="fw-semibold">{{ $d->assigned_guest_house ?? 'Not yet assigned' }}</td></tr>
+      <tr><td class="text-muted">Assigned Guest House</td><td class="fw-semibold"> {{ $d->assignedGuestHouse?->building_name ?? 'Not yet assigned' }}</td></tr>
       <tr><td class="text-muted">Payment Done By</td><td class="fw-semibold">{{ $d->payment_done_by }}</td></tr>
       <tr><td class="text-muted">Remarks</td><td class="fw-semibold">{{ $d->remarks ?? '—' }}</td></tr>
     </table>
 
   @elseif ($protocolRequest->request_type === 'vehicle')
     <div class="row g-3 mb-3">
-      <div class="col-md-4"><span class="text-muted small">Vehicle Type</span><div class="fw-semibold">{{ $d->vehicle_type ?? '—' }}</div></div>
+      <div class="col-md-4"><span class="text-muted small">Vehicle</span><div class="fw-semibold">{{ $d->vehicle?->vehicle_name ?? '-' }}</div></div>
       <div class="col-md-4"><span class="text-muted small">One Way Booking</span><div class="fw-semibold">{{ $d->one_way_booking ? 'Yes' : 'No' }}</div></div>
       <div class="col-md-4"><span class="text-muted small">Payment Will Be Done By</span><div class="fw-semibold">{{ $d->payment_will_be_done_by }}</div></div>
     </div>

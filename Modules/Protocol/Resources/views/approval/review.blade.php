@@ -203,17 +203,7 @@ table.table tbody tr:hover{background:#FFF9F0;}
           </div>
         @endif
 
-        <div class="mb-3" id="recommendToWrap" style="display:none;">
-          <label class="form-label">Recommend To <span class="required-star">*</span></label>
-          <select name="recommended_to_id" class="form-select">
-            <option value="">-- select --</option>
-            @if ($managers)
-              @foreach ($managers as $manager)
-                <option value="{{ $manager->user_credentials_pk }}">{{ $manager->employee_name }}</option>
-              @endforeach
-            @endif
-          </select>
-        </div>
+        
 
         <div class="mb-3">
           <label class="form-label">Remarks</label>
@@ -221,10 +211,12 @@ table.table tbody tr:hover{background:#FFF9F0;}
         </div>
 
         <div class="d-flex gap-2 justify-content-end">
-          <a href="{{ route('protocol.approval.queue') }}" class="btn btn-light">Cancel</a>
-          <button type="button" class="btn btn-outline-saffron" onclick="setDecision('recommend')">
+          <a href="{{ route('protocol.requests.all') }}" class="btn btn-light">Cancel</a>
+          @if ($protocolRequest->status != 'recommended')
+          <button type="button" class="btn btn-outline-saffron" data-bs-toggle="modal" data-bs-target="#recommendModal">
             <i class="bi bi-arrow-right-circle me-1"></i> Recommend
           </button>
+          @endif
           <button type="submit" class="btn btn-green" onclick="setDecision('approve')">
             <i class="bi bi-check-lg me-1"></i> Approve
           </button>
@@ -233,6 +225,115 @@ table.table tbody tr:hover{background:#FFF9F0;}
     </div>
   </div>
 
+  <!-- Recommend Modal -->
+  <div class="modal fade"
+      id="recommendModal"
+      tabindex="-1"
+      aria-labelledby="recommendModalLabel"
+      aria-hidden="true">
+
+      <div class="modal-dialog modal-dialog-centered">
+
+          <div class="modal-content">
+
+              <!-- Modal Header -->
+              <div class="modal-header gov">
+
+                  <h5 class="modal-title text-light" id="recommendModalLabel">
+                      <i class="bi bi-arrow-right-circle me-2 "></i>
+                      Recommend Request
+                  </h5>
+
+                  <button type="button"
+                          class="btn-close"
+                          data-bs-dismiss="modal"
+                          aria-label="Close">
+                  </button>
+
+              </div>
+
+              <!-- Modal Form -->
+              <form method="POST"
+                    action="{{ route('protocol.approval.decide', $protocolRequest) }}">
+
+                  @csrf
+
+                  <input type="hidden"
+                        name="decision"
+                        value="recommend">
+
+                  <div class="modal-body">
+
+                      <!-- Recommend To -->
+                      <div class="mb-3">
+
+                          <label class="form-label">
+                              Recommend To
+                              <span class="required-star">*</span>
+                          </label>
+
+                          <select name="recommended_to_id"
+                                  class="form-select"
+                                  required>
+
+                              <option value="">
+                                  -- Select Manager --
+                              </option>
+
+                              @if ($managers)
+                                  @foreach ($managers as $manager)
+
+                                      <option value="{{ $manager->user_credentials_pk }}">
+                                          {{ $manager->employee_name }}
+                                      </option>
+
+                                  @endforeach
+                              @endif
+
+                          </select>
+
+                      </div>
+
+                      <!-- Remarks -->
+                      <div class="mb-3">
+
+                          <label class="form-label">
+                              Remarks
+                          </label>
+
+                          <textarea name="remarks"
+                                    class="form-control"
+                                    rows="4"
+                                    placeholder="Enter recommendation remarks..."></textarea>
+
+                      </div>
+
+                  </div>
+
+                  <!-- Modal Footer -->
+                  <div class="modal-footer">
+
+                      <button type="button"
+                              class="btn btn-light"
+                              data-bs-dismiss="modal">
+                          Cancel
+                      </button>
+
+                      <button type="submit"
+                              class="btn btn-saffron">
+                          <i class="bi bi-send me-1"></i>
+                          Submit Recommendation
+                      </button>
+
+                  </div>
+
+              </form>
+
+          </div>
+
+      </div>
+
+  </div>
 @endsection
 
 @push('scripts')

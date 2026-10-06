@@ -15,7 +15,7 @@ class ReviewProtocolRequest extends FormRequest
     {
         return [
             'decision' => ['required', 'in:approve,recommend'],
-            'recommended_to_id' => ['required_if:decision,recommend', 'nullable', 'integer', 'exists:users,id'],
+            'recommended_to_id' => ['required_if:decision,recommend', 'nullable', 'integer'],
             'assigned_guest_house' => ['nullable', 'string', 'max:150'],
             'remarks' => ['nullable', 'string', 'max:1000'],
         ];

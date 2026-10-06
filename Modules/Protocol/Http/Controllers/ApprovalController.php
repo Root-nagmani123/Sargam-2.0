@@ -41,7 +41,6 @@ class ApprovalController extends Controller
         return view('protocol::approval.all-requests', compact('pageData'));
     }
 
-
     /**
      * Queue of requests awaiting Protocol Staff review.
      */
@@ -61,12 +60,32 @@ class ApprovalController extends Controller
      */
     public function review(ProtocolRequest $protocolRequest)
     {
-        abort_if($protocolRequest->status !== ProtocolRequest::STATUS_PENDING, 403,
-            'This request is no longer awaiting Protocol Staff review.');
 
-        $protocolRequest->loadFullRequestable();
-        $protocolRequest->load('batch.guests', 'logs.actionBy');
+        // dd($protocolRequest->status);
+        // abort_if($protocolRequest->status !== ProtocolRequest::STATUS_PENDING, 403,
+        //     'This request is no longer awaiting Protocol Staff review.');
+
+        if ($protocolRequest->request_type === 'guesthouse') {
+            $protocolRequest->load([
+                'requestable.assignedGuestHouse',
+            ]);
+        } elseif ($protocolRequest->request_type === 'vehicle') {
+            $protocolRequest->load([
+                'requestable.vehicle',
+            ]);
+        } elseif ($protocolRequest->request_type === 'travel') {
+            $protocolRequest->load([
+                'requestable.journeys',
+            ]);
+        }
+
+            $protocolRequest->load([
+                'batch.guests',
+                'logs.actionBy',
+            ]);
+          
         $GuestHouse = HostelBuildingMaster::orderBy('building_name', 'asc')->pluck('building_name', 'pk');
+       
 
         // Supply the list of managers/staff that can be recommended to.
         // Swap this for your own role-based user query.
@@ -86,12 +105,7 @@ class ApprovalController extends Controller
      */
     public function decide(ReviewProtocolRequest $request, ProtocolRequest $protocolRequest)
     {
-      
-        abort_if($protocolRequest->status !== ProtocolRequest::STATUS_PENDING, 403,
-            'This request has already been actioned.');
-
         $data = $request->validated();
-
         // If Protocol Staff assigned a physical guest house, persist it
         // on the type-specific row (employee never sets this themselves).
         if ($protocolRequest->request_type === 'guesthouse' && ! empty($data['assigned_guest_house'])) {
@@ -99,17 +113,18 @@ class ApprovalController extends Controller
                 'assigned_guest_house' => $data['assigned_guest_house'],
             ]);
         }
-   
-        if ($data['decision'] === 'approve') {
-            $protocolRequest->approveDirectly(Auth::id(), $data['remarks'] ?? null);
+
+        $employee = User::select('user_id')->find(Auth::id());
+        if ($data['decision'] === 'approve') {  
+            $protocolRequest->approveDirectly($employee->user_id, $data['remarks'] ?? null);
             $message = "Request {$protocolRequest->request_number} approved.";
         } else {
-            $protocolRequest->recommendTo(Auth::id(), (int) $data['recommended_to_id'], $data['remarks'] ?? null);
+            $protocolRequest->recommendTo($employee->user_id, (int) $data['recommended_to_id'], $data['remarks'] ?? null);
             $message = "Request {$protocolRequest->request_number} recommended for further approval.";
         }
 
         return redirect()
-            ->route('protocol.approval.queue')
+            ->route('protocol.requests.all')
             ->with('success', $message);
     }
 

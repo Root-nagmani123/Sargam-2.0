@@ -181,9 +181,7 @@ class ProtocolRequest extends Model
     public function recommendTo(int $protocolStaffId, int $recommendedToId, ?string $remarks = null): void
     {
         DB::transaction(function () use ($protocolStaffId, $recommendedToId, $remarks) {
-            $recommendedToName = optional(
-                (config('auth.providers.users.model'))::find($recommendedToId)
-            )->name ?? "User #{$recommendedToId}";
+            $recommendedToName = User::find($recommendedToId)->name ?? "User #{$recommendedToId}";
 
             $this->update([
                 'status' => self::STATUS_RECOMMENDED,

@@ -137,11 +137,18 @@ class ApprovalService
         $user = Auth::user();
 
         // Direct user permissions only
-        $userPermissions = $user->permissions()->pluck('name')->toArray();
+        // $userPermissions = $user->permissions()->pluck('name')->toArray();
+        $rolePermissions = $user->getPermissionsViaRoles()->pluck('name');
+        $uPermissions = $user->getDirectPermissions()->pluck('name');
+        $userPermissions = $rolePermissions->merge($uPermissions)->unique()->values()->toArray();
 
         // Full access
         if (in_array('protocol.all_booking', $userPermissions)) {
             return ProtocolRequest::query();
+        }
+        
+        if (in_array('protocol.recommended_booking', $userPermissions)) {
+            return ProtocolRequest::where('status', 'recommended');
         }
 
         $requestTypes = [];
@@ -162,7 +169,7 @@ class ApprovalService
         if (empty($requestTypes)) {
             return ProtocolRequest::whereRaw('1 = 0');
         }
-
+        
         return ProtocolRequest::whereIn('request_type', $requestTypes);
     }
 

@@ -19,15 +19,13 @@ use Modules\Protocol\Http\Controllers\Admin\{PermissionController,VehicleMasterC
 use Modules\Protocol\Http\Controllers\CommonController;
 use Spatie\Permission\Models\Permission;
 
+
 Route::group(['middleware' => ['web', 'auth'], 'prefix' => 'protocol', 'as' => 'protocol.'], function () {
 
     // @assigned_permissions
     Route::get('assign-permission',function(){
         $permissions = [
-            "protocol.all_booking",
-            "protocol.guest_house_booking",
-            "protocol.vehicle_booking",
-            "protocol.ticket_booking",
+            "protocol.recommended_booking",
         ];
         foreach($permissions as $permission){
             Permission::firstOrCreate([
@@ -35,7 +33,6 @@ Route::group(['middleware' => ['web', 'auth'], 'prefix' => 'protocol', 'as' => '
                 'guard_name' => 'web'
             ]);
         }
-
     });
    
 
@@ -71,6 +68,10 @@ Route::group(['middleware' => ['web', 'auth'], 'prefix' => 'protocol', 'as' => '
     // Driver Master routes
     Route::middleware('can:protocol.driver_master')->group(function () {
         Route::resource('/driver-master', DriverMasterController::class)->names('driver-master');
+    });
+
+    Route::middleware('can:protocol.recommended_booking')->group(function () {
+        Route::get('/recommended_booking', [ApprovalController::class, 'recommendedRequests'])->name('recommended-booking');
     });
 
     // Vehicle Master routes

@@ -4,6 +4,8 @@ namespace Modules\Protocol\Entities;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\HostelBuildingMaster;
 
 class GuestHouseRequest extends Model
 {
@@ -27,5 +29,10 @@ class GuestHouseRequest extends Model
     public function protocolRequest(): MorphOne
     {
         return $this->morphOne(ProtocolRequest::class, 'requestable');
+    }
+
+    public function assignedGuestHouse(): BelongsTo
+    {
+        return $this->belongsTo(HostelBuildingMaster::class, 'assigned_guest_house');
     }
 }

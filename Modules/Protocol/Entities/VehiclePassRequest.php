@@ -5,6 +5,8 @@ namespace Modules\Protocol\Entities;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\Protocol\Entities\Vehicle;
 
 class VehiclePassRequest extends Model
 {
@@ -29,5 +31,10 @@ class VehiclePassRequest extends Model
     public function legs(): HasMany
     {
         return $this->hasMany(VehicleLeg::class, 'vehicle_pass_id')->orderBy('sort_order');
+    }
+
+    public function vehicle(): BelongsTo
+    {
+        return $this->belongsTo(Vehicle::class, 'vehicle_pass_id',);
     }
 }
