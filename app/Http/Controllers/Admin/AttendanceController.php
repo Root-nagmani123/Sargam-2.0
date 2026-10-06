@@ -1122,6 +1122,9 @@ $currentPath = $segments[1] ?? null;
             // Build attendance records array
             $attendanceRecords = [];
             $mdoDutyTypes = MDOEscotDutyMap::getMdoDutyTypes();
+            // Medical and duty coverage for the whole set in two queries — the same
+            // lookups the Excel export uses (PR #334 F-035).
+            [$findMedical, $findDuty] = $this->otAttendanceCoverageLookups($courseGroups, $course_pk, $student_pk, $mdoDutyTypes);
 
             foreach ($courseGroups as $courseGroup) {
                 $timetableDate = optional($courseGroup->timetable)->START_DATE;
@@ -1166,7 +1169,7 @@ $currentPath = $segments[1] ?? null;
                 if ($timetableDate) {
                     // Check medical exemption — the OtExemptionResolver rule, the one
                     // save() and the admin grid use (PR #334 F-004).
-                    $medicalExemption = $this->coveringMedicalExemption($currentCoursePk, $student_pk, $courseGroup->timetable);
+                    $medicalExemption = $findMedical($timetableDate, $currentCoursePk, optional($courseGroup->timetable)->class_session);
 
                     if ($medicalExemption) {
                         $record['attendance_status'] = 'Present';
@@ -1177,11 +1180,7 @@ $currentPath = $segments[1] ?? null;
                         // Check MDO/Escort/Other duties
                         // Check MDO
                         if (!empty($mdoDutyTypes['mdo'])) {
-                            $mdoDuty = MDOEscotDutyMap::where([
-                                ['course_master_pk', '=', $currentCoursePk],
-                                ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['mdo']],
-                                ['selected_student_list', '=', $student_pk]
-                            ])->whereDate('mdo_date', '=', $timetableDate)->first();
+                            $mdoDuty = $findDuty('mdo', $timetableDate, $currentCoursePk);
 
                             // Get timetable class_session for time overlap checking
                             $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
@@ -1198,11 +1197,7 @@ $currentPath = $segments[1] ?? null;
 
                         // Check Escort
                         if (!$record['duty_type'] && !empty($mdoDutyTypes['escort'])) {
-                            $escortDuty = MDOEscotDutyMap::where([
-                                ['course_master_pk', '=', $currentCoursePk],
-                                ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['escort']],
-                                ['selected_student_list', '=', $student_pk]
-                            ])->whereDate('mdo_date', '=', $timetableDate)->first();
+                            $escortDuty = $findDuty('escort', $timetableDate, $currentCoursePk);
 
                             // Get timetable class_session for time overlap checking
                             $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
@@ -1219,11 +1214,7 @@ $currentPath = $segments[1] ?? null;
 
                         // Check Other
                         if (!$record['duty_type'] && !empty($mdoDutyTypes['other'])) {
-                            $otherDuty = MDOEscotDutyMap::where([
-                                ['course_master_pk', '=', $currentCoursePk],
-                                ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['other']],
-                                ['selected_student_list', '=', $student_pk]
-                            ])->whereDate('mdo_date', '=', $timetableDate)->first();
+                            $otherDuty = $findDuty('other', $timetableDate, $currentCoursePk);
 
                             // Get timetable class_session for time overlap checking
                             $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
@@ -1273,7 +1264,7 @@ $currentPath = $segments[1] ?? null;
                             $record['exemption_type'] = 'Medical';
                             // Get medical exemption details
                             if ($timetableDate) {
-                                $medicalExemption = $this->coveringMedicalExemption($currentCoursePk, $student_pk, $courseGroup->timetable);
+                                $medicalExemption = $findMedical($timetableDate, $currentCoursePk, optional($courseGroup->timetable)->class_session);
 
                                 if ($medicalExemption) {
                                     $record['exemption_document'] = $medicalExemption->Doc_upload;
@@ -1333,6 +1324,76 @@ $currentPath = $segments[1] ?? null;
             Log::error('Error fetching OT student attendance: ' . $e->getMessage());
             return redirect()->back()->with('error', 'An error occurred while fetching attendance data: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * The medical-exemption and duty lookups behind an OT's per-session attendance
+     * rows: two queries for the whole set, then in-memory closures — so neither the
+     * attendance view nor its Excel export queries per session (F-278-02; PR #334
+     * F-035). Shared by OTmarkAttendanceView() and buildOtStudentAttendanceData()
+     * so the page and the export cannot drift.
+     *
+     * @return array{0: \Closure, 1: \Closure} [findMedical(date, coursePk, classSession), findDuty(dutyKey, date, coursePk)]
+     */
+    private function otAttendanceCoverageLookups($courseGroups, $course_pk, $student_pk, array $mdoDutyTypes): array
+    {
+        $timetableDates = $courseGroups->pluck('timetable')->filter()
+            ->pluck('START_DATE')->filter()
+            ->map(fn($d) => substr($d, 0, 10))
+            ->unique()->values()->all();
+
+        $batchCoursePks = $courseGroups->pluck('Programme_pk')->filter()
+            ->push($course_pk)->unique()->values()->all();
+
+        // Active medical exemptions for the student (1 query; date-range checked in PHP)
+        $medicalExemptions = StudentMedicalExemption::where('student_master_pk', $student_pk)
+            ->where('active_inactive', 1)
+            ->whereIn('course_master_pk', $batchCoursePks)
+            ->get();
+
+        // MDO/escort/other duty entries for the visible session dates (1 query instead of N×3)
+        $allDutyTypeIds = array_values(array_filter($mdoDutyTypes));
+        $mdoDutyMap = collect();
+        if (!empty($allDutyTypeIds) && !empty($timetableDates)) {
+            $mdoDutyMap = MDOEscotDutyMap::where('selected_student_list', $student_pk)
+                ->whereIn('course_master_pk', $batchCoursePks)
+                ->whereIn('mdo_duty_type_master_pk', $allDutyTypeIds)
+                ->where(function ($q) use ($timetableDates) {
+                    // G8: full-day ranges so the index on mdo_date is not defeated.
+                    foreach ($timetableDates as $d) {
+                        $q->orWhereBetween('mdo_date', [$d . ' 00:00:00', $d . ' 23:59:59']);
+                    }
+                })
+                ->get()
+                ->groupBy(fn($r) => $r->mdo_duty_type_master_pk . '|' . $r->course_master_pk . '|' . substr($r->mdo_date, 0, 10));
+        }
+
+        // In-memory helpers — zero DB queries inside the loop.
+        // Coverage by the OtExemptionResolver rule (date span on dates, then the
+        // session's time window), so this export agrees with save() and the admin
+        // grid for timed exemptions (PR #334 F-004). Still zero queries per row.
+        $findMedical = function (?string $date, $cPk, ?string $classSession = null) use ($medicalExemptions): ?object {
+            if ($date === null) {
+                return null;
+            }
+
+            return OtExemptionResolver::coveringMedicalExemption(
+                $medicalExemptions->filter(fn($e) => (string) $e->course_master_pk === (string) $cPk),
+                $date,
+                $classSession
+            );
+        };
+
+        $findDuty = function (?string $dutyKey, ?string $date, $cPk) use ($mdoDutyMap, $mdoDutyTypes): ?object {
+            if ($date === null || empty($mdoDutyTypes[$dutyKey])) {
+                return null;
+            }
+            $key = $mdoDutyTypes[$dutyKey] . '|' . $cPk . '|' . substr($date, 0, 10);
+            $group = $mdoDutyMap->get($key);
+            return $group ? $group->first() : null;
+        };
+
+        return [$findMedical, $findDuty];
     }
 
     /**
@@ -1396,14 +1457,6 @@ $currentPath = $segments[1] ?? null;
         // --- F-278-02: Batch-load all supporting data before the loop to eliminate N+1 queries ---
         $timetablePks = $courseGroups->pluck('timetable_pk')->filter()->unique()->values()->all();
 
-        $timetableDates = $courseGroups->pluck('timetable')->filter()
-            ->pluck('START_DATE')->filter()
-            ->map(fn($d) => substr($d, 0, 10))
-            ->unique()->values()->all();
-
-        $batchCoursePks = $courseGroups->pluck('Programme_pk')->filter()
-            ->push($course_pk)->unique()->values()->all();
-
         // 1. All attendance records for the visible timetables (1 query instead of N)
         $attendanceMap = empty($timetablePks)
             ? collect()
@@ -1412,53 +1465,8 @@ $currentPath = $segments[1] ?? null;
                 ->get()
                 ->keyBy('timetable_pk');
 
-        // 2. Active medical exemptions for the student (1 query; date-range checked in PHP)
-        $medicalExemptions = StudentMedicalExemption::where('student_master_pk', $student_pk)
-            ->where('active_inactive', 1)
-            ->whereIn('course_master_pk', $batchCoursePks)
-            ->get();
-
-        // 3. MDO/escort/other duty entries for the visible session dates (1 query instead of N×3)
-        $allDutyTypeIds = array_values(array_filter($mdoDutyTypes));
-        $mdoDutyMap = collect();
-        if (!empty($allDutyTypeIds) && !empty($timetableDates)) {
-            $mdoDutyMap = MDOEscotDutyMap::where('selected_student_list', $student_pk)
-                ->whereIn('course_master_pk', $batchCoursePks)
-                ->whereIn('mdo_duty_type_master_pk', $allDutyTypeIds)
-                ->where(function ($q) use ($timetableDates) {
-                    // G8: full-day ranges so the index on mdo_date is not defeated.
-                    foreach ($timetableDates as $d) {
-                        $q->orWhereBetween('mdo_date', [$d . ' 00:00:00', $d . ' 23:59:59']);
-                    }
-                })
-                ->get()
-                ->groupBy(fn($r) => $r->mdo_duty_type_master_pk . '|' . $r->course_master_pk . '|' . substr($r->mdo_date, 0, 10));
-        }
-
-        // In-memory helpers — zero DB queries inside the loop.
-        // Coverage by the OtExemptionResolver rule (date span on dates, then the
-        // session's time window), so this export agrees with save() and the admin
-        // grid for timed exemptions (PR #334 F-004). Still zero queries per row.
-        $findMedical = function (?string $date, $cPk, ?string $classSession = null) use ($medicalExemptions): ?object {
-            if ($date === null) {
-                return null;
-            }
-
-            return OtExemptionResolver::coveringMedicalExemption(
-                $medicalExemptions->filter(fn($e) => (string) $e->course_master_pk === (string) $cPk),
-                $date,
-                $classSession
-            );
-        };
-
-        $findDuty = function (?string $dutyKey, ?string $date, $cPk) use ($mdoDutyMap, $mdoDutyTypes): ?object {
-            if ($date === null || empty($mdoDutyTypes[$dutyKey])) {
-                return null;
-            }
-            $key = $mdoDutyTypes[$dutyKey] . '|' . $cPk . '|' . substr($date, 0, 10);
-            $group = $mdoDutyMap->get($key);
-            return $group ? $group->first() : null;
-        };
+        // 2–3. Medical exemptions and duties — shared with OTmarkAttendanceView().
+        [$findMedical, $findDuty] = $this->otAttendanceCoverageLookups($courseGroups, $course_pk, $student_pk, $mdoDutyTypes);
         // -----------------------------------------------------------------------------------------
 
         foreach ($courseGroups as $courseGroup) {
