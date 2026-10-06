@@ -237,6 +237,37 @@ class MemberWizardPayrollAndStepsTest extends TestCase
     }
 
     /**
+     * Saving the edit wizard without uploading a new picture or document wrote NULL over
+     * the stored paths (mapStep5Data() always returned both keys), so every edit silently
+     * dropped the member's existing photo and document. A save without an upload must
+     * leave them as they were.
+     */
+    public function test_an_update_without_a_new_upload_keeps_the_existing_picture_and_document(): void
+    {
+        $actor = $this->makeActor('keep_uploads');
+        $actor->assignRole('Super Admin');
+
+        $createPayload = $this->basicMemberPayload('KeepUploads');
+        $this->actingAs($actor)->post(route('member.store'), $createPayload)->assertOk();
+
+        $employeePk = DB::table('employee_master')->where('emp_id', $createPayload['id'])->value('pk');
+        $this->assertNotNull($employeePk);
+
+        DB::table('employee_master')->where('pk', $employeePk)->update([
+            'profile_picture'       => 'members/existing-photo.jpg',
+            'additional_doc_upload' => 'members/existing-doc.pdf',
+        ]);
+
+        $this->actingAs($actor)
+            ->post(route('member.update'), $this->basicMemberPayload('KeepUploads', $employeePk))
+            ->assertOk();
+
+        $row = DB::table('employee_master')->where('pk', $employeePk)->first(['profile_picture', 'additional_doc_upload']);
+        $this->assertSame('members/existing-photo.jpg', $row->profile_picture, 'A save without a new picture must keep the stored one.');
+        $this->assertSame('members/existing-doc.pdf', $row->additional_doc_upload, 'A save without a new document must keep the stored one.');
+    }
+
+    /**
      * Shared step 1-5 payload valid against combinedMemberRules(). $employeePk, when given,
      * targets update() against an existing record instead of creating a new one.
      */

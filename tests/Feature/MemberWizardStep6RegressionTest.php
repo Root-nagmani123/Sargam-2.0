@@ -542,4 +542,85 @@ class MemberWizardStep6RegressionTest extends TestCase
             'A zero-role actor must not be able to write their own payroll row through the member wizard.'
         );
     }
+
+    /**
+     * A zero-role login that owns its employee record, the same fixture shape as the test
+     * above (user_id link, 'E' category, contact-proof email match).
+     *
+     * @return array{0: User, 1: int}
+     */
+    private function makeOwnRecordActor(string $suffix): array
+    {
+        $employeePk = $this->makeEmployee();
+        $email = $suffix . '_' . uniqid() . '@example.test';
+        DB::table('employee_master')->where('pk', $employeePk)->update(['email' => $email]);
+
+        $actor = $this->makeActor($suffix);
+        $actor->user_id = $employeePk;
+        $actor->email_id = $email;
+        $actor->save();
+
+        $this->assertSame([], $actor->getRoleNames()->all(), 'Fixture assumption: the actor holds no Spatie roles.');
+
+        return [$actor, $employeePk];
+    }
+
+    /**
+     * PR #319 re-review F-072: the edit wizard showed a non-admin Step 6 (payroll) and
+     * Step 3 (roles) for their own record, then silently discarded both on save. Those
+     * two steps must not offer inputs to an actor who cannot manage members.
+     */
+    public function test_a_zero_role_actor_is_not_offered_payroll_or_role_inputs_on_their_own_record(): void
+    {
+        [$actor, $employeePk] = $this->makeOwnRecordActor('nostep6');
+
+        $step6 = $this->actingAs($actor)->get(route('member.edit-step', ['step' => 6, 'id' => $employeePk]));
+        $step6->assertOk();
+        $this->assertStringNotContainsString('name="basicpay"', $step6->getContent(), 'Step 6 must not offer payroll inputs to a non-admin.');
+        $this->assertStringNotContainsString('name="accountno"', $step6->getContent());
+
+        $step3 = $this->actingAs($actor)->get(route('member.edit-step', ['step' => 3, 'id' => $employeePk]));
+        $step3->assertOk();
+        $this->assertStringNotContainsString('name="userrole', $step3->getContent(), 'Step 3 must not offer role inputs to a non-admin.');
+    }
+
+    /**
+     * F-072 companion: with Steps 3 and 6 showing a notice instead of inputs, their
+     * per-step validation must not demand fields the actor was never shown.
+     */
+    public function test_a_zero_role_actor_can_pass_steps_3_and_6_without_their_fields(): void
+    {
+        [$actor, $employeePk] = $this->makeOwnRecordActor('passsteps');
+
+        foreach ([3, 6] as $step) {
+            $this->actingAs($actor)
+                ->postJson("/member/update-validate-step/{$step}/{$employeePk}", [])
+                ->assertOk();
+        }
+    }
+
+    /**
+     * F-072, server side: a request that still carries Step 6 fields from a non-admin (a
+     * stale page, or a hand-crafted POST) must be told the payroll was not saved, instead
+     * of answering plain success.
+     */
+    public function test_a_zero_role_actor_posting_payroll_fields_is_told_they_were_not_saved(): void
+    {
+        $this->requireStep6Schema();
+
+        [$actor, $employeePk] = $this->makeOwnRecordActor('warnpay');
+
+        $this->actingAs($actor);
+        $warning = $this->invokePrivate('saveStep6PayrollData', [
+            $employeePk,
+            $this->step6Request(['basicpay' => 50000, 'bankname' => 'Some Bank']),
+        ]);
+
+        $this->assertNotNull($warning, 'Refusing a non-admin payroll write must say so.');
+        $this->assertStringContainsString('Employee Grade Pay', $warning);
+        $this->assertNull(PayrollSalaryMaster::where('employee_master_pk', $employeePk)->first());
+
+        // And a request with no Step 6 fields at all stays silent — nothing was refused.
+        $this->assertNull($this->invokePrivate('saveStep6PayrollData', [$employeePk, $this->step6Request([])]));
+    }
 }

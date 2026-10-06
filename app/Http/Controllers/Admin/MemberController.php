@@ -209,17 +209,32 @@ class MemberController extends Controller
 
     private function mapStep5Data(Request $request, ?string $profilePicture, ?string $additionalDocUpload): array
     {
-        return [
+        $data = [
             'residence_no' => $request->residencenumber,
             'home_town_details' => $request->homeaddress,
             'other_miscellaneous_fields' => $request->miscellaneous ?? null,
-            'additional_doc_upload' => $additionalDocUpload,
-            'profile_picture' => $profilePicture,
         ];
+
+        // Only a newly uploaded file replaces the stored path. Writing the null that "no
+        // upload this time" produces wiped the existing photo and document on every edit
+        // (PR #319 re-review follow-up); there is no remove control, so null never means
+        // "delete". On create the columns are simply left at their default.
+        if ($additionalDocUpload !== null) {
+            $data['additional_doc_upload'] = $additionalDocUpload;
+        }
+
+        if ($profilePicture !== null) {
+            $data['profile_picture'] = $profilePicture;
+        }
+
+        return $data;
     }
 
     /** Request keys Step 6 posts — the same five mapStep6Data() reads. */
     private const STEP6_FIELDS = ['gradepay', 'employeecategory', 'basicpay', 'bankname', 'accountno'];
+
+    /** Wizard steps whose values only an administrator can save: Role Assignment and Employee Grade Pay. */
+    private const ADMIN_ONLY_STEPS = [3, 6];
 
     /**
      * Step 6 ("Employee Grade Pay") does NOT belong on employee_master — it's saved separately
@@ -279,8 +294,16 @@ class MemberController extends Controller
         // split mapStep6Data() and gate only the payroll-determining subset
         // (salary_grade_pk, basic_pay, employee_category_master_pk) — that is a product
         // decision and is deliberately not made here.
+        //
+        // PR #319 re-review F-072: refusing silently told a non-admin who had filled in
+        // Step 6 that their pay/bank details were saved. The edit wizard no longer offers
+        // those inputs to a non-admin, so this only fires for a stale page or a crafted
+        // POST — and then it says so.
         if (! $this->actingUserCanManageMembers()) {
-            return null;
+            return $request->hasAny(self::STEP6_FIELDS)
+                ? 'Employee Grade Pay (Step 6) was NOT saved: payroll details can only be changed by an administrator. '
+                    . 'The rest of the record was saved.'
+                : null;
         }
 
         // PR #319 review round 2 (F-003). The code below depends on schema this PR also
@@ -1597,6 +1620,16 @@ class MemberController extends Controller
         $this->authorizeMemberRecord($id);
 
         $member = EmployeeMaster::findOrFail($id);
+
+        // PR #319 re-review F-072: Role Assignment (3) and Employee Grade Pay (6) are
+        // administrator-only on save — update() skips the role block and
+        // saveStep6PayrollData() refuses for anyone else — so a non-admin editing their own
+        // record must not be handed inputs whose values would be discarded. Same rule
+        // edit_profile.blade.php already applies by not listing those steps.
+        if (in_array((int) $step, self::ADMIN_ONLY_STEPS, true) && ! $this->actingUserCanManageMembers()) {
+            return view('admin.member.edit_steps.admin_only', ['step' => (int) $step]);
+        }
+
         $appellationMasterList = AppellationMaster::where('active_inactive', 1)
             ->pluck('appettation_name', 'pk')
             ->toArray();
@@ -1620,6 +1653,13 @@ class MemberController extends Controller
         // answers "does this row exist / would this write be accepted" for
         // whichever pk it is handed.
         $this->authorizeMemberRecord($id);
+
+        // F-072: a non-admin is shown a notice, not inputs, on these steps (see editStep()),
+        // so there is nothing of theirs to validate — and Step 3's required 'userrole' would
+        // otherwise block them from ever reaching Finish.
+        if (in_array((int) $step, self::ADMIN_ONLY_STEPS, true) && ! $this->actingUserCanManageMembers()) {
+            return response()->json(['message' => "Step $step validated."], 200);
+        }
 
         $request->merge(['emp_id' => $id]);
 

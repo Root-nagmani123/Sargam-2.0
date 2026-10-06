@@ -34,10 +34,9 @@ class PayrollSalaryMaster extends Model
         'account_no',
     ];
 
-    public function employee()
-    {
-        return $this->belongsTo(EmployeeMaster::class, 'employee_master_pk', 'pk');
-    }
+    // No employee() relation on purpose (PR #319 re-review F-074): employee_master_pk holds
+    // pk_old for legacy employees (see the class docblock), so a belongsTo on pk silently
+    // misses them. Resolve the key with MemberController::payrollEmployeeKey() instead.
 
     public function salaryGrade()
     {
