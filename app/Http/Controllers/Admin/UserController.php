@@ -5649,16 +5649,21 @@ class UserController extends Controller
 
     private function applyDashboardStudentListFilters($students, Request $request, bool $applySessionDateFilter = true, bool $applySearch = true)
     {
-        $courseId = $request->input('course_id');
-        $roleFilter = $request->input('role_filter');
-        $counsellorFaculty = $request->input('counsellor_faculty');
-        $groupPk = $request->input('group_pk');
-        $cadre = $request->input('cadre');
-        $house = $request->input('house');
-        $houseGroup = (string) $request->input('house_group', '');
-        $session = (string) $request->input('session', '');
-        $topic = (string) $request->input('topic', '');
-        $participant = (string) $request->input('participant', '');
+        // Every filter below is compared as a string, so an array-valued query
+        // parameter (?cadre[]=x) reads as "not set" instead of throwing
+        // "Array to string conversion" (PR #334 F-025 family).
+        $scalar = fn (string $key, $default = null) => is_scalar($v = $request->input($key, $default)) ? $v : $default;
+
+        $courseId = $scalar('course_id');
+        $roleFilter = $scalar('role_filter');
+        $counsellorFaculty = $scalar('counsellor_faculty');
+        $groupPk = $scalar('group_pk');
+        $cadre = $scalar('cadre');
+        $house = $scalar('house');
+        $houseGroup = (string) $scalar('house_group', '');
+        $session = (string) $scalar('session', '');
+        $topic = (string) $scalar('topic', '');
+        $participant = (string) $scalar('participant', '');
         // The DataTables search box. Callers that run their own search over the
         // columns THEY render (e.g. the OT participants page, whose House Group /
         // Duty Type / count columns don't exist here) pass $applySearch = false so

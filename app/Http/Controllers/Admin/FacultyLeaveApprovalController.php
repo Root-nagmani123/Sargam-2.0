@@ -206,7 +206,7 @@ class FacultyLeaveApprovalController extends Controller
      */
     public function export(Request $request)
     {
-        $format = strtolower((string) $request->get('format', 'excel'));
+        $format = is_string($request->get('format')) ? strtolower($request->get('format')) : 'excel';
         $filename = 'Leave_Approval_' . now()->format('Ymd_His');
 
         if ($format === 'pdf') {

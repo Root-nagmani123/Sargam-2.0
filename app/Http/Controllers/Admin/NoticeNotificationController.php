@@ -75,7 +75,7 @@ class NoticeNotificationController extends Controller
         }
 
         // 🔍 Free-text search across title, type, course name and creator name
-        $search = trim((string) $request->input('search', ''));
+        $search = is_scalar($request->input('search')) ? trim((string) $request->input('search')) : '';
         if ($search !== '') {
             $like = '%' . $search . '%';
             $query->where(function ($q) use ($like) {
