@@ -1813,10 +1813,14 @@ if (!function_exists('notice_feed_query_by_role')) {
         ];
         $roleStudent = ['Student-OT', 'Officer Trainee'];
 
-        $isStaffFaculty = $category === 'E'
-            || ($category === '' && !empty(array_intersect($roleStaffFaculty, $sessionRoles)));
+        // 'F' is a faculty login (is_faculty_portal_user()), so it gets the
+        // Staff/Faculty notices. Any category other than E / F / S keeps the
+        // role-based test the feed used before categories were read (PR #334 F-021).
+        $knownCategory = in_array($category, ['E', 'F', 'S'], true);
+        $isStaffFaculty = in_array($category, ['E', 'F'], true)
+            || (! $knownCategory && !empty(array_intersect($roleStaffFaculty, $sessionRoles)));
         $isStudent = $category === 'S'
-            || ($category === '' && !empty(array_intersect($roleStudent, $sessionRoles)));
+            || (! $knownCategory && !empty(array_intersect($roleStudent, $sessionRoles)));
 
         $query = notice_feed_base_query($scope);
 
@@ -1825,8 +1829,15 @@ if (!function_exists('notice_feed_query_by_role')) {
         // No department rows means "all departments", and a NULL audience_mode is
         // every notice written before this targeting existed — both reach everyone.
         if ($isStaffFaculty) {
-            $departmentIds = DB::table('employee_master')
-                ->where('pk', $user->user_id)
+            // A category-F login's user_id is a faculty_master.pk, not an employee
+            // pk (see get_auth_faculty_master_pk()); its employee is the faculty
+            // row's employee_master_pk, and a guest faculty has none.
+            $employeePk = $category === 'F'
+                ? DB::table('faculty_master')->where('pk', $user->user_id)->value('employee_master_pk')
+                : $user->user_id;
+
+            $departmentIds = $employeePk === null ? [] : DB::table('employee_master')
+                ->where('pk', $employeePk)
                 ->pluck('department_master_pk')
                 // Not ->filter(): department pk 0 (NIAR) is real, and dropping it
                 // would hide NIAR-pinned notices from NIAR's own staff.
@@ -1834,18 +1845,20 @@ if (!function_exists('notice_feed_query_by_role')) {
                 ->values()
                 ->all();
 
-            return $query->where(function ($w) use ($user, $departmentIds) {
+            $employeeIds = $employeePk === null ? [] : [$employeePk];
+
+            return $query->where(function ($w) use ($employeeIds, $departmentIds) {
                 $w->where('notices_notification.target_audience', 'All')
-                    ->orWhere(function ($o) use ($user, $departmentIds) {
+                    ->orWhere(function ($o) use ($employeeIds, $departmentIds) {
                         $o->where('notices_notification.target_audience', 'like', '%Staff/Faculty%');
 
                         notice_audience_unpinned_or_any($o, 'D', $departmentIds);
 
-                        $o->where(function ($m) use ($user) {
+                        $o->where(function ($m) use ($employeeIds) {
                             $m->where('notices_notification.audience_mode', '!=', 'individual')
                                 ->orWhereNull('notices_notification.audience_mode')
-                                ->orWhere(function ($i) use ($user) {
-                                    notice_audience_has_any($i, 'E', [$user->user_id]);
+                                ->orWhere(function ($i) use ($employeeIds) {
+                                    notice_audience_has_any($i, 'E', $employeeIds);
                                 });
                         });
                     });

@@ -142,7 +142,7 @@
                                     aria-label="Which date the year applies to"
                                     onchange="this.form.submit()">
                                     @foreach($yearFields as $key => $column)
-                                    <option value="{{ $key }}" {{ (string) request('year_field', 'display') === (string) $key ? 'selected' : '' }}>
+                                    <option value="{{ $key }}" {{ (is_string(request('year_field')) ? request('year_field') : 'display') === (string) $key ? 'selected' : '' }}>
                                         {{ ucfirst($key) }} Date
                                     </option>
                                     @endforeach
@@ -151,7 +151,7 @@
                                     aria-label="Year" onchange="this.form.submit()">
                                     <option value="">All</option>
                                     @foreach($years as $y)
-                                    <option value="{{ $y }}" {{ (string) request('year') === (string) $y ? 'selected' : '' }}>
+                                    <option value="{{ $y }}" {{ (is_scalar(request('year')) ? (string) request('year') : '') === (string) $y ? 'selected' : '' }}>
                                         {{ $y }}
                                     </option>
                                     @endforeach

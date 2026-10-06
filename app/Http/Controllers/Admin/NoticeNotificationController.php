@@ -63,8 +63,11 @@ class NoticeNotificationController extends Controller
         // of them in the label still left the other two unreachable.
         $yearField = $this->yearColumn($request->input('year_field'));
 
-        if ($request->filled('year')) {
-            $query->whereYear($yearField, $request->input('year'));
+        // Scalar only: ?year[]= reached whereYear() and the view's string cast
+        // and returned 500 (PR #334 F-025).
+        $year = $request->input('year');
+        if (is_scalar($year) && trim((string) $year) !== '') {
+            $query->whereYear($yearField, $year);
         }
 
         // 🔍 Free-text search across title, type, course name and creator name
@@ -137,7 +140,10 @@ class NoticeNotificationController extends Controller
 
     private function yearColumn($key): string
     {
-        return self::YEAR_FIELDS[$key] ?? self::YEAR_FIELDS['display'];
+        // An array key (?year_field[]=) is an "Illegal offset type" TypeError.
+        return is_string($key) && isset(self::YEAR_FIELDS[$key])
+            ? self::YEAR_FIELDS[$key]
+            : self::YEAR_FIELDS['display'];
     }
 
     /**
@@ -218,10 +224,6 @@ class NoticeNotificationController extends Controller
 
         $types = self::TYPES;
         $target = self::TARGETS;
-        $departments = DepartmentMaster::active()
-            ->select('pk', 'department_name')
-            ->orderBy('department_name')
-            ->get();
 
         // Saved selections, so the form can re-check them once the AJAX lists
         // come back. Cast to string: the form posts strings, and the JS compares
@@ -237,6 +239,19 @@ class NoticeNotificationController extends Controller
         $selectedDepartments = $selected[NoticeAudienceMap::TYPE_DEPARTMENT] ?? [];
         $selectedStudents = $selected[NoticeAudienceMap::TYPE_STUDENT] ?? [];
         $selectedEmployees = $selected[NoticeAudienceMap::TYPE_EMPLOYEE] ?? [];
+
+        // Active departments, plus any this notice is already pinned to even if
+        // since deactivated: an unlisted pick is not re-posted, and a notice with
+        // no department left saves as "every department" (PR #334 F-020). Courses
+        // get the same treatment through getCourses()'s include list.
+        $departments = DepartmentMaster::query()
+            ->where(function ($q) use ($selectedDepartments) {
+                $q->where('active_inactive', 1)
+                    ->orWhereIn('pk', array_map('intval', $selectedDepartments));
+            })
+            ->select('pk', 'department_name', 'active_inactive')
+            ->orderBy('department_name')
+            ->get();
 
         return view('admin.NoticeNotification.edit', compact(
             'notice',

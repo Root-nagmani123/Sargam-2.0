@@ -1194,7 +1194,8 @@ class UserController extends Controller
 
         // Year applies to display_date. It only earns its place once the archive
         // exists: on the live feed the set spans a year or two at most.
-        $year = trim((string) ($request?->query('notice_year') ?? ''));
+        $rawYear = $request?->query('notice_year');
+        $year = trim(is_scalar($rawYear) ? (string) $rawYear : ''); // ?notice_year[]= is not a year (PR #334 F-025)
         if ($year !== '' && !preg_match('/^\d{4}$/', $year)) {
             $year = '';
         }
@@ -3841,33 +3842,16 @@ class UserController extends Controller
         $searchInput = $request->input('search');
         $search = strtolower(trim((string) (is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput)));
         if ($search !== '') {
-            $rows = $rows->filter(function ($p) use ($search, $rowMeta) {
-                $s = $p->studentMaster;
-                if (! $s) {
-                    return false;
-                }
-                $meta = $rowMeta[$p->student_master_pk] ?? [];
-                // Zero-padded count strings so "02" and "2" both match, alongside
-                // the raw numbers.
-                $pad = fn ($n) => str_pad((string) (int) $n, 2, '0', STR_PAD_LEFT);
-                $countFields = ['duty_count', 'medical', 'pt', 'stationed', 'notice_memo', 'discipline_memo'];
-                $counts = [];
-                foreach ($countFields as $f) {
-                    $n = (int) ($meta[$f] ?? 0);
-                    $counts[] = (string) $n;
-                    $counts[] = $pad($n);
-                }
-                // A single haystack of every column's displayed value.
-                $haystack = strtolower(implode(' ', array_filter([
-                    $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? '')),
-                    $s->generated_OT_code ?? '',
-                    $s->email ?? '',
-                    $p->counsellor_group_name ?: ($s->cadre->cadre_name ?? ''),
-                    $p->house_group_name ?: ($p->house_name ?? ''),
-                    $p->topic ?? '',
-                    $meta['duty_type'] ?? '',
-                    implode(' ', $counts),
-                ], fn ($v) => trim((string) $v) !== '')));
+            // The comment columns as the table shows them (PR #334 F-019: the merge
+            // 7082e5204 had left the participants-list search body here).
+            $rows = $rows->filter(function ($r) use ($search) {
+                $haystack = strtolower(implode(' ', [
+                    (string) $r->comment_by_name,
+                    (string) $r->message,
+                    ((int) $r->notify_ot === 1 ? 'yes' : 'no'),
+                    optional($r->comment_date)->format('d M Y') ?? '',
+                ]));
+
                 return str_contains($haystack, $search);
             })->values();
         }

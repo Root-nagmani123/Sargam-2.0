@@ -666,7 +666,8 @@ $(document).ready(function() {
                     { data: 'start_date' },
                     { data: 'end_date' },
                     { data: 'venue_name' },
-                    { data: 'faculty_role',     orderable: false },
+                    // Free text from the timetable form: written as text, never HTML (PR #334 F-024).
+                    { data: 'faculty_role',     orderable: false, render: $.fn.dataTable.render.text() },
                 ],
                 order: [[11, 'desc']],
                 responsive: false,

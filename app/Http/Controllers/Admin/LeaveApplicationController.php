@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Exports\LbsnaaTableExport;
-use App\Exports\MyLeaveExport;
 use App\Http\Controllers\Controller;
 use App\Models\LeaveApplication;
 use App\Models\LeaveApplicationAttachment;
@@ -628,79 +627,6 @@ class LeaveApplicationController extends Controller
         }
 
         return implode(' | ', $parts);
-        $format = strtolower((string) $request->get('format', 'excel'));
-        $filename = 'My_Leave_Applications_' . now()->format('Ymd_His');
-
-        if ($format === 'pdf') {
-            @ini_set('memory_limit', '256M');
-            @set_time_limit(120);
-
-            $context = $this->leaveService->resolveStudentContext((int) Auth::user()->pk);
-            $rows = $this->baseMyLeaveQuery($request)->get();
-
-            $logoPath = public_path('images/lbsnaa_logo.jpg');
-            $logo = (is_file($logoPath) && is_readable($logoPath))
-                ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoPath))
-                : null;
-
-            $pdf = Pdf::loadView('admin.leave.export_pdf', [
-                'rows' => $rows,
-                'filterLine' => $this->buildMyLeaveExportFilterLine($request),
-                'printedOn' => now()->format('d-m-Y H:i'),
-                'reportTitle' => 'My Leave Applications',
-                'studentName' => $context['student']->display_name ?? '',
-                'logo' => $logo,
-            ])
-                ->setPaper('a4', 'landscape')
-                ->setOptions([
-                    'defaultFont' => 'DejaVu Sans',
-                    'isHtml5ParserEnabled' => true,
-                    // Both off deliberately. A report has no reason to execute PHP, and
-                    // isPhpEnabled turns any raw block that later appears in the view into
-                    // server-side code execution on stored data. The only image is $logo,
-                    // a base64 data URI or null, so nothing needs fetching over the network.
-                    'isRemoteEnabled' => false,
-                    'isPhpEnabled' => false,
-                    'dpi' => 96,
-                ]);
-
-            $this->stampPageNumbers($pdf);
-
-            return $pdf->download($filename . '.pdf');
-        }
-
-        $context = $this->leaveService->resolveStudentContext((int) Auth::user()->pk);
-        $rows = $this->baseMyLeaveQuery($request)->get();
-
-        return Excel::download(
-            new MyLeaveExport($rows, $context['student']->display_name ?? '', $this->buildMyLeaveExportFilterLine($request)),
-            $filename . '.xlsx',
-            ExcelFormat::XLSX
-        );
-    }
-
-    private function buildMyLeaveExportFilterLine(Request $request): string
-    {
-        $parts = [];
-
-        $statusMap = [
-            (string) LeaveApplication::STATUS_PENDING => 'Pending',
-            (string) LeaveApplication::STATUS_APPROVED => 'Approved',
-            (string) LeaveApplication::STATUS_REJECTED => 'Rejected',
-        ];
-        if ($request->filled('status') && isset($statusMap[(string) $request->status])) {
-            $parts[] = 'Status: ' . $statusMap[(string) $request->status];
-        }
-
-        if ($request->filled('leave_type')) {
-            $parts[] = 'Leave Type: ' . ($request->leave_type === LeaveApplication::TYPE_PT_EXEMPTION ? 'PT Exemption' : 'Stationed Leave');
-        }
-
-        if ($request->filled('from_date') || $request->filled('to_date')) {
-            $parts[] = 'Period: ' . ($request->from_date ?: '…') . ' to ' . ($request->to_date ?: '…');
-        }
-
-        return implode('  |  ', $parts);
     }
 
     protected function findOwnedApplication(int $studentPk, $id): LeaveApplication

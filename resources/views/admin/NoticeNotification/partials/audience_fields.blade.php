@@ -98,7 +98,7 @@
                 </label>
                 <select name="department_master_pks[]" id="departmentSelect" class="form-control" multiple>
                     @foreach($departments as $department)
-                    <option value="{{ $department->pk }}">{{ $department->department_name }}</option>
+                    <option value="{{ $department->pk }}">{{ $department->department_name }}@if(isset($department->active_inactive) && (int) $department->active_inactive !== 1) (inactive)@endif</option>
                     @endforeach
                 </select>
                 <div class="form-text text-muted small">

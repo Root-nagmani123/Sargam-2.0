@@ -398,21 +398,31 @@ class LeaveOnBehalfController extends Controller
 
         $totalDays = $this->leaveService->calculateTotalDays($validated['from_date'], $validated['to_date']);
 
-        try {
-            $this->leaveService->assertNoOverlap(
-                $studentPk,
-                $validated['from_date'],
-                $validated['to_date'],
-                null,
-                $leaveType
-            );
-        } catch (\InvalidArgumentException $e) {
-            return back()->withInput()->withErrors(['from_date' => $e->getMessage()]);
-        }
-
         $now = now();
+        $overlapError = null;
 
-        $application = DB::transaction(function () use ($request, $validated, $coursePk, $studentPk, $leaveType, $totalDays, $now) {
+        $application = DB::transaction(function () use ($request, $validated, $coursePk, $studentPk, $leaveType, $totalDays, $now, &$overlapError) {
+            // The leave is stored APPROVED, so nothing downstream catches a
+            // duplicate. Lock the OT's student row first: a double click or a second
+            // tab then waits here, and its overlap check sees this insert (PR #334
+            // F-022). Locking leave rows alone would not do — with no overlapping
+            // row yet there is nothing to lock.
+            StudentMaster::whereKey($studentPk)->lockForUpdate()->first();
+
+            try {
+                $this->leaveService->assertNoOverlap(
+                    $studentPk,
+                    $validated['from_date'],
+                    $validated['to_date'],
+                    null,
+                    $leaveType
+                );
+            } catch (\InvalidArgumentException $e) {
+                $overlapError = $e->getMessage();
+
+                return null;
+            }
+
             $application = LeaveApplication::create([
                 'course_master_pk' => $coursePk,
                 'student_master_pk' => $studentPk,
@@ -457,6 +467,10 @@ class LeaveOnBehalfController extends Controller
 
             return $application;
         });
+
+        if ($overlapError !== null) {
+            return back()->withInput()->withErrors(['from_date' => $overlapError]);
+        }
 
         $label = $application->leave_type_label;
         $name = $this->studentName($student);

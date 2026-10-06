@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Exports\LbsnaaTableExport;
-use App\Exports\LeaveApprovalExport;
 use App\Http\Controllers\Controller;
 use App\Models\CourseMaster;
 use App\Models\LeaveApplication;
@@ -322,16 +321,6 @@ class FacultyLeaveApprovalController extends Controller
         }
 
         return implode(' | ', $parts);
-        return Excel::download(
-            new LeaveApprovalExport(
-                $rows,
-                $this->approvalService,
-                $this->buildExportFilterLine($request),
-                $this->buildApproverHeaderLine($rows)
-            ),
-            $filename . '.xlsx',
-            ExcelFormat::XLSX
-        );
     }
 
     private function buildExportFilterLine(Request $request): string

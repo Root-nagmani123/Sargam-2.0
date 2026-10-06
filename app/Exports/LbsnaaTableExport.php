@@ -74,6 +74,17 @@ class LbsnaaTableExport extends DefaultValueBinder implements FromCollection, Wi
     ) {
     }
 
+    /**
+     * Data rows only: section bands and subtotal / total lines are layout, not
+     * records (PR #334 F-026 — the House-wise export counted them).
+     */
+    public function recordCount(): int
+    {
+        return max(0, $this->rows->count()
+            - count(array_unique($this->sectionRows))
+            - count(array_unique($this->totalRows)));
+    }
+
     public function collection(): Collection
     {
         return $this->rows;
@@ -202,7 +213,7 @@ class LbsnaaTableExport extends DefaultValueBinder implements FromCollection, Wi
                 ]);
 
                 $sheet->mergeCells("A4:{$lastCol}4");
-                $sheet->setCellValue('A4', 'Total records: ' . $this->rows->count());
+                $sheet->setCellValue('A4', 'Total records: ' . $this->recordCount());
                 $sheet->getStyle('A4')->applyFromArray([
                     'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => '003366']],
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],

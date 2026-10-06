@@ -611,6 +611,8 @@ class CalendarController extends Controller
             'faculty_type' => 'nullable|integer',
             'faculty_row_type' => 'nullable|array',
             'faculty_role' => 'nullable|array',
+            // Stored as posted and shown in the Timetable Session Report (PR #334 F-024).
+            'faculty_role.*' => 'nullable|string|in:' . implode(',', \App\Services\Timetable\FacultySessionScope::FILTER_ROLES),
             'faculty_feedback_remark' => 'nullable|array',
             'faculty_feedback_rating' => 'nullable|array',
             'sector' => 'nullable|integer',
@@ -4718,6 +4720,7 @@ class CalendarController extends Controller
             'faculty_type'           => 'nullable|integer',
             'faculty_row_type'       => 'nullable|array',
             'faculty_role'           => 'nullable|array',
+            'faculty_role.*'         => 'nullable|string|in:' . implode(',', \App\Services\Timetable\FacultySessionScope::FILTER_ROLES),
             'faculty_feedback_remark' => 'nullable|array',
             'faculty_feedback_rating' => 'nullable|array',
             'sector'                 => 'nullable|integer',

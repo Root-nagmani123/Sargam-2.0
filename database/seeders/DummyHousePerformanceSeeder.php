@@ -47,6 +47,14 @@ class DummyHousePerformanceSeeder extends Seeder
 
     public function run(): void
     {
+        // It books closed discipline memos with marks against real trainees, so it
+        // refuses to run on production whatever the operator types (PR #334 F-015).
+        if (app()->isProduction()) {
+            $this->command?->error('DummyHousePerformanceSeeder writes demo deductions against real officer trainees - refused on production.');
+
+            return;
+        }
+
         $course = DB::table('course_master')
             ->where('active_inactive', 1)
             ->where(function ($q) {

@@ -1615,17 +1615,17 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             uploadData.append('keywords', kw ? kw.value : '');
             var vc = document.getElementById('video_link_course');
             uploadData.append('video_link', vc ? vc.value : '');
-            // Whether the user side may download that video. Sent only when
-            // ticked, which is how the server reads "off".
+            // Whether the user side may download that video: always 1 or 0, so
+            // the server can tell "off" from "this form has no switch".
             var dc = document.getElementById('video_download_enabled_course');
-            if (dc && dc.checked) { uploadData.append('video_download_enabled', '1'); }
+            if (dc) { uploadData.append('video_download_enabled', dc.checked ? '1' : '0'); }
         } else if (selectedCategory === 'Other') {
             var ko = document.getElementById('keywords_other');
             uploadData.append('keywords', ko ? ko.value : '');
             var vo = document.getElementById('video_link_other');
             uploadData.append('video_link', vo ? vo.value : '');
             var doEl = document.getElementById('video_download_enabled_other');
-            if (doEl && doEl.checked) { uploadData.append('video_download_enabled', '1'); }
+            if (doEl) { uploadData.append('video_download_enabled', doEl.checked ? '1' : '0'); }
         } else {
             var ki = document.getElementById('Key_words_institutional');
             uploadData.append('keywords', ki ? ki.value : '');
@@ -2150,8 +2150,9 @@ window.crDocEdit = (function() {
             fd.append('ministry_master', (($id('ministry_master') || {}).value) || '');
             fd.append('keywords', (($id('keywords_course') || {}).value) || '');
             fd.append('video_link', (($id('video_link_course') || {}).value) || '');
-            // Sent only when ticked — absent is how the server reads "off".
-            if (($id('video_download_enabled_course') || {}).checked) { fd.append('video_download_enabled', '1'); }
+            // Always 1 or 0 — absent means "this form has no switch", and the
+            // server then keeps the stored choice.
+            if ($id('video_download_enabled_course')) { fd.append('video_download_enabled', $id('video_download_enabled_course').checked ? '1' : '0'); }
             var t1 = document.querySelector('#uploadForm input[name="attachment_titles[]"]');
             fileTitle = t1 ? t1.value : '';
             fileInput = findFileInput('attachments[]');
@@ -2164,7 +2165,7 @@ window.crDocEdit = (function() {
             fd.append('sector_master', (($id('sector_master_other') || {}).value) || '');
             fd.append('ministry_master', (($id('ministry_master_other') || {}).value) || '');
             fd.append('keywords', (($id('keywords_other') || {}).value) || '');
-            if (($id('video_download_enabled_other') || {}).checked) { fd.append('video_download_enabled', '1'); }
+            if ($id('video_download_enabled_other')) { fd.append('video_download_enabled', $id('video_download_enabled_other').checked ? '1' : '0'); }
             fd.append('video_link', (($id('video_link_other') || {}).value) || '');
             var t2 = document.querySelector('#uploadForm input[name="attachment_titles_other[]"]');
             fileTitle = t2 ? t2.value : '';

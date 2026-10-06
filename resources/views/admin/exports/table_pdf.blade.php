@@ -212,7 +212,7 @@
 
     <div class="meta">
         @if($filterLine){{ $filterLine }} &nbsp;|&nbsp; @endif
-        Total Records: {{ $rows->count() }} &nbsp;|&nbsp; Generated: {{ $printedOn }}
+        Total Records: {{ max(0, $rows->count() - count(array_unique($sectionRows ?? [])) - count(array_unique($totalRows ?? []))) }} &nbsp;|&nbsp; Generated: {{ $printedOn }}
     </div>
 
     @if($rows->isEmpty())

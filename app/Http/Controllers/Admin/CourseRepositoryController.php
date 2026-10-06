@@ -512,7 +512,7 @@ class CourseRepositoryController extends Controller
                 'attachment_titles.*' => 'nullable|string|max:5000',
                 'keywords' => 'nullable|string|max:4000',
                 'video_link' => 'nullable|string|max:2000',
-                // Unchecked checkboxes are simply absent, so absent means off.
+                // 1 or 0 from a form with the switch; absent when the form has none.
                 'video_download_enabled' => 'nullable|boolean',
             ], [
                 // Default messages name the raw input ("attachments.0"), which tells the
@@ -551,9 +551,13 @@ class CourseRepositoryController extends Controller
                 'ministry_master_pk' => $validated['ministry_master'] ?? null,
                 'keyword' => $validated['keywords'] ?? null,
                 'videolink' => $validated['video_link'] ?? null,
-                // Whether the user side may download that video. An unchecked box
-                // is simply absent from the request, so absent means off.
-                'video_download_enabled' => $request->boolean('video_download_enabled'),
+                // Whether the user side may download that video. The Course and
+                // Other forms always post 1 or 0; a form without the switch
+                // (Institutional) posts nothing and gets the column default, on —
+                // not off, which hid downloads it never offered to change (PR #334 F-017).
+                'video_download_enabled' => $request->has('video_download_enabled')
+                    ? $request->boolean('video_download_enabled')
+                    : true,
                 'created_date' => now(),
                 'created_by' => auth()->id(),
                 'status' => 1,
@@ -770,7 +774,7 @@ class CourseRepositoryController extends Controller
                 'ministry_master' => 'nullable|numeric',
                 'keywords' => 'nullable|string|max:4000',
                 'video_link' => 'nullable|string|max:2000',
-                // Unchecked checkboxes are simply absent, so absent means off.
+                // 1 or 0 from a form with the switch; absent when the form has none.
                 'video_download_enabled' => 'nullable|boolean',
             ], [
                 'category.in' => 'Please select a valid category (Course, Other or Institutional).',
@@ -839,7 +843,11 @@ class CourseRepositoryController extends Controller
                     : $detail->ministry_master_pk;
                 $detail->keyword = $validated['keywords'] ?? $detail->keyword;
                 $detail->videolink = $validated['video_link'] ?? $detail->videolink;
-                $detail->video_download_enabled = $request->boolean('video_download_enabled');
+                // Only an edit form that shows the switch posts it (always 1 or 0);
+                // without it the stored choice stands (PR #334 F-017).
+                if ($request->has('video_download_enabled')) {
+                    $detail->video_download_enabled = $request->boolean('video_download_enabled');
+                }
                 if ($category && isset($typeMap[$category])) {
                     $detail->type = $typeMap[$category];
                 }

@@ -494,6 +494,27 @@ $(function () {
         if (firstError) {
             showAttachmentError(firstError);
             e.preventDefault();
+            return;
+        }
+
+        // One submit per click: the leave is stored Approved, so a double click
+        // must not post twice (PR #334 F-022; the server also serialises).
+        if (this.dataset.submitting === '1') {
+            e.preventDefault();
+            return;
+        }
+        this.dataset.submitting = '1';
+        $('#lob-submit').prop('disabled', true);
+    });
+
+    // Back/forward cache restores the page as it was left — submitting.
+    $(window).on('pageshow', function (event) {
+        if (event.originalEvent && event.originalEvent.persisted) {
+            const form = document.getElementById('leave-on-behalf-form');
+            if (form) {
+                delete form.dataset.submitting;
+            }
+            applyContext();
         }
     });
 
