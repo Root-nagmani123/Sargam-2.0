@@ -29,6 +29,7 @@ use App\Models\User;
 use App\Models\UserCredential;
 use App\Models\UserRoleMaster;
 use App\Support\LogSafe;
+use App\Support\RoleNames;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -570,6 +571,44 @@ class MemberController extends Controller
     }
 
     /**
+     * Drop ticked role options that are no longer active, and say which ones.
+     *
+     * Validation only rejects pks that do not exist; an option deactivated while the
+     * form was open reaches here and is skipped rather than failing the whole save
+     * (PR #319 re-review F-045). Only active options are ever assigned, as before (F-025).
+     *
+     * @return array{0: array, 1: ?string} [roles to assign, warning or null]
+     */
+    private function withoutInactiveRoles(array $roles): array
+    {
+        $activeRoles = UserRoleMaster::getUserRoleList();
+
+        $kept = [];
+        $dropped = [];
+
+        foreach ($roles as $role) {
+            if ($role === null || $role === '') {
+                continue;
+            }
+
+            if ($activeRoles->has((int) $role)) {
+                $kept[] = $role;
+            } else {
+                $dropped[] = (int) $role;
+            }
+        }
+
+        if ($dropped === []) {
+            return [$kept, null];
+        }
+
+        $names = UserRoleMaster::whereIn('pk', $dropped)->pluck('user_role_display_name')->all();
+
+        return [$kept, implode(', ', $names) . ' ' . (count($names) === 1 ? 'is' : 'are')
+            . ' no longer an active role and was not assigned. The rest of the record was saved.'];
+    }
+
+    /**
      * One batch insert instead of N round-trips (PR #319 re-review F-049),
      * extracted so store()/update() can't drift from each other (F-065).
      */
@@ -635,11 +674,11 @@ class MemberController extends Controller
                 ->pluck('user_role_display_name')
                 ->all();
 
-        $newSpatieRoles = $this->resolveSpatieRoleNames($newNames, $spatieRoleNames);
-        $oldSpatieRoles = $this->resolveSpatieRoleNames($oldNames, $spatieRoleNames);
+        [$newSpatieRoles, $blockedSelections] = $this->classifyRoleSelection($newNames, $spatieRoleNames);
+        [$oldSpatieRoles, $previouslyBlocked] = $this->classifyRoleSelection($oldNames, $spatieRoleNames);
 
-        // PR #319 review round 3, R-002 follow-through. Blocking Super Admin at
-        // resolveSpatieRoleNames() re-created, for that one option, exactly the defect
+        // PR #319 review round 3, R-002 follow-through. Blocking Super Admin in
+        // classifyRoleSelection() re-created, for that one option, exactly the defect
         // F-005 was raised about: tick the box, see "success", get no permission, with
         // nothing to distinguish that from a working grant. The block is deliberate this
         // time, so the administrator is told instead of left to discover it.
@@ -648,8 +687,6 @@ class MemberController extends Controller
         // legitimately be an HR tag as well as an RBAC name, and this method has no
         // business deciding that. Only the RBAC half is refused, and only that is
         // reported.
-        $blockedSelections = $this->blockedRoleSelections($newNames, $spatieRoleNames);
-
         $blockedWarning = $blockedSelections === [] ? null
             : 'No permissions were granted for ' . implode(', ', $blockedSelections) . ': that role '
             . 'is not grantable from the Member wizard. It is assigned from Role & Permission > Users. '
@@ -661,10 +698,7 @@ class MemberController extends Controller
         // it mattered. That is why this cannot short-circuit below on empty role sets:
         // when the only thing the administrator changed was a blocked option, both sets
         // are empty and the early return would swallow the warning.
-        $blockedUnticked = array_diff(
-            $this->blockedRoleSelections($oldNames, $spatieRoleNames),
-            $blockedSelections
-        );
+        $blockedUnticked = array_diff($previouslyBlocked, $blockedSelections);
 
         if (empty($newSpatieRoles) && empty($oldSpatieRoles) && $blockedUnticked === []) {
             return $blockedWarning;
@@ -702,7 +736,7 @@ class MemberController extends Controller
 
         $currentRoleNames = $user->getRoleNames()->all();
 
-        // The block is symmetric by construction: resolveSpatieRoleNames() filters
+        // The block is symmetric by construction: classifyRoleSelection() filters
         // blocked roles out of BOTH the new and the old selection, so a blocked role can
         // never enter $toAdd and never enter $toRemove. Refusing to revoke is the right
         // half of "this screen does not manage Super Admin" — but doing it silently is
@@ -713,15 +747,15 @@ class MemberController extends Controller
         // now, and the member really does still hold the role. Warning on every save of
         // a Super Admin would be noise. ($blockedUnticked was computed above, before the
         // early return, so this case can actually be reached.)
-        $stillHeld = [];
-
-        foreach ($blockedUnticked as $displayName) {
-            foreach ($currentRoleNames as $held) {
-                if ($this->normalizeRoleName($held) === $this->normalizeRoleName($displayName)) {
-                    $stillHeld[] = $displayName;
-                }
-            }
-        }
+        //
+        // Matched on the same separator-free key as the block itself (PR #319 re-review
+        // F-050): the space-collapsing key missed an unticked "SuperAdmin" option on a
+        // member holding "Super Admin", so the refusal went unreported.
+        $heldBlockKeys = array_flip(array_map([RoleNames::class, 'blockKey'], $currentRoleNames));
+        $stillHeld = array_values(array_filter(
+            $blockedUnticked,
+            fn ($displayName) => isset($heldBlockKeys[RoleNames::blockKey($displayName)])
+        ));
 
         if ($stillHeld !== []) {
             $blockedWarning = trim(($blockedWarning ?? '') . ' '
@@ -746,143 +780,51 @@ class MemberController extends Controller
     }
 
     /**
-     * Map user_role_master display names onto the real `roles` names they denote.
+     * Split ticked user_role_master options into the real `roles` they grant and the
+     * options this screen refuses, in one pass over each list (PR #319 re-review F-050).
      *
-     * PR #319 review round 2 (F-005). This used to be array_intersect(), an exact string
-     * comparison — while 2026_09_10_000001_sync_user_role_master_with_roles decides
-     * whether a role is "already present" on a NORMALISED key (lowercased, trimmed,
-     * /[\s_-]+/ collapsed to one space). The two disagreed, and not at the margins:
-     * `roles` holds "Super Admin" while user_role_master holds "Super-Admin", so the
-     * migration saw them as the same row and inserted nothing, the wizard offered a
-     * checkbox labelled "Super-Admin", and the exact-match intersect returned []. Ticking
-     * it wrote an employee_role_mapping row, reported success, and granted no permission —
-     * indistinguishable from a working grant, on the highest-privilege role in the system.
-     * Measured against live data after the migration had run: of 34 offered options,
-     * exactly two were dead this way, "Super-Admin" and "Mess-Admin".
+     * Grants are matched on RoleNames::normalize() — the same key the role-sync migration
+     * uses — because an exact string match missed "Super-Admin" against "Super Admin" and
+     * reported success while granting nothing (F-005). The grant side returns the
+     * canonical `roles` name, which is what syncRoles() needs.
      *
-     * Normalising here uses the same rule the migration uses, so both sides of the link
-     * now answer the same question. The RETURNED value is always the canonical `roles`
-     * name, never the user_role_master spelling, because that is what syncRoles() needs.
+     * Refusals are matched on RoleNames::blockKey(), which drops separators so every
+     * spelling of a not-grantable role is caught (F-039), and return the option's own
+     * spelling so the warning names the checkbox the administrator clicked.
+     *
+     * @return array{0: string[], 1: string[]} [grantable `roles` names, refused option names]
      */
-    private function resolveSpatieRoleNames(array $displayNames, array $spatieRoleNames): array
+    private function classifyRoleSelection(array $displayNames, array $spatieRoleNames): array
     {
-        $byNormalisedName = [];
-
-        foreach ($spatieRoleNames as $spatieRoleName) {
-            if ($this->roleIsNotGrantableFromThisScreen($spatieRoleName)) {
-                continue;
-            }
-
-            $byNormalisedName[$this->normalizeRoleName($spatieRoleName)] = $spatieRoleName;
-        }
-
-        $resolved = [];
-
-        foreach ($displayNames as $displayName) {
-            $key = $this->normalizeRoleName($displayName);
-
-            if (isset($byNormalisedName[$key])) {
-                $resolved[] = $byNormalisedName[$key];
-            }
-        }
-
-        return array_values(array_unique($resolved));
-    }
-
-    /**
-     * Which of the ticked options name a role this screen refuses to grant.
-     *
-     * Returns the option's own spelling (what the administrator actually clicked), not
-     * the canonical `roles` name, so the message names the checkbox they can see.
-     */
-    private function blockedRoleSelections(array $displayNames, array $spatieRoleNames): array
-    {
-        // blockedRoleKey(), matching roleIsNotGrantableFromThisScreen(). If this used
-        // normalizeRoleName() instead, a ticked "SuperAdmin" option would be refused the
-        // grant and produce NO warning — silently dead, which is the F-005 shape the
-        // warning exists to prevent.
+        $grantableByKey = [];
         $blockedKeys = [];
 
         foreach ($spatieRoleNames as $spatieRoleName) {
-            if ($this->roleIsNotGrantableFromThisScreen($spatieRoleName)) {
-                $blockedKeys[$this->blockedRoleKey($spatieRoleName)] = true;
+            if (RoleNames::isNotGrantableFromMemberWizard($spatieRoleName)) {
+                $blockedKeys[RoleNames::blockKey($spatieRoleName)] = true;
+            } else {
+                $grantableByKey[RoleNames::normalize($spatieRoleName)] = $spatieRoleName;
             }
         }
 
-        $hits = [];
+        $grantable = [];
+        $blocked = [];
 
         foreach ($displayNames as $displayName) {
-            if (isset($blockedKeys[$this->blockedRoleKey($displayName)])) {
-                $hits[] = $displayName;
+            if (isset($blockedKeys[RoleNames::blockKey($displayName)])) {
+                $blocked[] = $displayName;
+
+                continue;
+            }
+
+            $key = RoleNames::normalize($displayName);
+
+            if (isset($grantableByKey[$key])) {
+                $grantable[] = $grantableByKey[$key];
             }
         }
 
-        return array_values(array_unique($hits));
-    }
-
-    /**
-     * Roles this screen must never grant or revoke, whatever the checkboxes say.
-     *
-     * PR #319 review round 3 (R-002). Correcting the F-005 name mismatch had a side
-     * effect nobody asked for: it widened what this screen can grant from 19 roles to
-     * 21, and the two it added were "Mess Admin" (17 permissions) and "Super Admin"
-     * (171 permissions, the highest privilege in the application). Before the fix,
-     * ticking "Super-Admin" wrote an employee_role_mapping row and granted nothing —
-     * a bug, but one that happened to keep the Member wizard from minting Super Admins.
-     *
-     * It must not. Super Admin is granted from Role & Permission > Users, which is the
-     * screen built for it and carries its own abort_unless(hasRole('Super Admin')) gate.
-     * Nobody loses the ability to grant it; it stops being a checkbox on a screen where
-     * almost every other option is a plain HR tag with nothing to distinguish the two.
-     *
-     * This choice was made during development and is NOT a recorded decision of the
-     * Engineering lead — an earlier version of this comment claimed it was, which the
-     * independent review raised as F-040. If the wizard IS meant to grant Super Admin,
-     * remove it from the list below; that reversal is one line.
-     *
-     * Matched on a SEPARATOR-FREE key, not the normalised name. normalizeRoleName()
-     * collapses separators to a single space, so it maps "Super-Admin" to "super admin"
-     * but "SuperAdmin" to "superadmin" — meaning the concatenated spelling slipped the
-     * block while this docblock claimed it was covered (F-039). app/helpers.php's
-     * hasRole() already treats "SuperAdmin" and "Super Admin" as the same role, so a
-     * Spatie role under that spelling is a real possibility, not a hypothetical.
-     */
-    private function roleIsNotGrantableFromThisScreen(string $spatieRoleName): bool
-    {
-        $blocked = array_map(
-            fn ($name) => $this->blockedRoleKey($name),
-            ['Super Admin']
-        );
-
-        return in_array($this->blockedRoleKey($spatieRoleName), $blocked, true);
-    }
-
-    /**
-     * Comparison key for the block list: lowercase with every separator REMOVED.
-     *
-     * Deliberately not normalizeRoleName(), which collapses separators to a single space
-     * and so distinguishes "Super Admin"/"Super-Admin" (both "super admin") from
-     * "SuperAdmin" ("superadmin"). That gap let the concatenated spelling through the
-     * block (F-039). Dropping separators entirely makes all three the same key.
-     *
-     * This is the right rule for a deny-list and the wrong one for the grant lookup:
-     * resolveSpatieRoleNames() must keep using normalizeRoleName(), because that mirrors
-     * the sync migration's own normalize() and a looser key there would start conflating
-     * genuinely different roles. A deny-list may over-match safely; a grant map may not.
-     */
-    private function blockedRoleKey(string $name): string
-    {
-        return preg_replace('/[\s_-]+/', '', mb_strtolower(trim($name)));
-    }
-
-    /**
-     * Identical to normalize() in 2026_09_10_000001_sync_user_role_master_with_roles.
-     * Kept deliberately in step with it: if one changes and the other does not, the
-     * silent-no-op class of bug this pair exists to prevent comes straight back.
-     */
-    private function normalizeRoleName(string $name): string
-    {
-        return preg_replace('/[\s_-]+/', ' ', mb_strtolower(trim($name)));
+        return [array_values(array_unique($grantable)), array_values(array_unique($blocked))];
     }
 
     /**
@@ -1101,6 +1043,7 @@ class MemberController extends Controller
 
                 if ($userCredential) {
                     $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
+                    [$roles, $saveWarnings[]] = $this->withoutInactiveRoles($roles);
 
                     // PR #319 re-review F-065: shared with update() so the two paths can't drift.
                     $this->syncEmployeeRoleMappings($userCredential->pk, $roles);
@@ -1344,6 +1287,7 @@ class MemberController extends Controller
             // block leaves existing mappings untouched rather than clearing them.
             if ($userCredential && $this->actingUserCanManageRbacRoles()) {
                 $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
+                [$roles, $saveWarnings[]] = $this->withoutInactiveRoles($roles);
 
                 // Only replace mappings for roles that were actually offered as a
                 // checkbox (getUserRoleList() — active roles only). A member holding a
@@ -1605,7 +1549,13 @@ class MemberController extends Controller
             ->pluck('appettation_name', 'pk')
             ->toArray();
 
-        return view('admin.member.edit_profile', compact('member', 'appellationMasterList'));
+        // Whether the Role Assignment tab is shown comes from the SAME predicate update()
+        // uses to decide whether role changes are saved and combinedMemberRules() uses to
+        // require 'userrole' — not a separate hasRole() in the view that could drift from
+        // it (PR #319 re-review F-046).
+        $canManageRoles = $this->actingUserCanManageRbacRoles();
+
+        return view('admin.member.edit_profile', compact('member', 'appellationMasterList', 'canManageRoles'));
     }
 
     public function editStep($step, $id)

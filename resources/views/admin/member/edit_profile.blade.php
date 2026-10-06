@@ -14,7 +14,8 @@
             1 => ['title' => 'Personal Details', 'description' => 'Identity and profile basics'],
             2 => ['title' => 'Employment', 'description' => 'Work, department, and access data'],
         ];
-        if (hasRole('Super Admin')) {
+        // Decided by MemberController::actingUserCanManageRbacRoles() (F-046).
+        if ($canManageRoles ?? false) {
             $profileSteps[3] = ['title' => 'Role Assignment', 'description' => 'Roles granted to this account'];
         }
         $profileSteps[4] = ['title' => 'Contact', 'description' => 'Addresses and communication details'];

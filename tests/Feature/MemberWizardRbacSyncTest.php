@@ -469,4 +469,36 @@ class MemberWizardRbacSyncTest extends TestCase
 
         $this->assertNull($warning, 'Nothing was lost, so nothing should be reported.');
     }
+
+    /**
+     * PR #319 re-review F-050: the "was NOT removed" check matched held roles with the
+     * space-collapsing normaliser while the block itself uses the separator-free key, so
+     * an unticked "SuperAdmin" option (no space) on a member holding "Super Admin" was
+     * blocked from revoking but reported nothing.
+     */
+    public function test_unticking_a_concatenated_spelling_of_a_blocked_role_still_says_it_was_not_removed(): void
+    {
+        $admin = $this->makeTestUser('sa_admin6');
+        $admin->assignRole('Super Admin');
+        $target = $this->makeTestUser('sa_target6');
+        $target->assignRole('Super Admin');
+
+        $optionPk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'SuperAdmin',
+            'user_role_display_name' => 'SuperAdmin',
+            'active_inactive'        => 1,
+        ]);
+
+        Auth::login($admin);
+
+        $controller = new MemberController();
+        $method = new ReflectionMethod($controller, 'syncSpatieRolesFromWizardSelection');
+        $method->setAccessible(true);
+        $warning = $method->invoke($controller, $target->pk, [], [$optionPk]);
+
+        $target->refresh();
+        $this->assertTrue($target->hasRole('Super Admin'), 'The wizard must not revoke Super Admin.');
+        $this->assertNotNull($warning, 'Unticking it must say the role was not removed.');
+        $this->assertStringContainsString('was NOT removed', $warning);
+    }
 }

@@ -27,11 +27,12 @@ class StoreMemberStep3Request extends FormRequest
     {
         return [
             'userrole' => ['required', 'array'],
-            // Scoped to the same active-role set the checkboxes are rendered from
-            // (UserRoleMaster::getUserRoleList()), not the whole table, so a
-            // deactivated role's pk is rejected the same as one that never
-            // existed (PR #319 review, F-025).
-            'userrole.*' => ['integer', Rule::in(UserRoleMaster::getUserRoleList()->keys()->all())],
+            // A pk that does not exist at all is rejected here. A pk that exists but was
+            // deactivated while the form was open is NOT rejected — that failed the whole
+            // save over one stale checkbox (PR #319 re-review F-045). It is still never
+            // assigned: MemberController::withoutInactiveRoles() drops it and the response
+            // says so, which keeps F-025's guarantee that only active roles are granted.
+            'userrole.*' => ['integer', Rule::exists((new UserRoleMaster())->getTable(), 'pk')],
         ];
     }
 
@@ -40,7 +41,7 @@ class StoreMemberStep3Request extends FormRequest
         return [
             'userrole.required' => 'Please select a user role.',
             'userrole.*.integer' => 'Invalid role selected.',
-            'userrole.*.in' => 'Invalid role selected.',
+            'userrole.*.exists' => 'Invalid role selected.',
         ];
     }
 }

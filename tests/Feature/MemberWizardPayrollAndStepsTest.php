@@ -237,6 +237,58 @@ class MemberWizardPayrollAndStepsTest extends TestCase
     }
 
     /**
+     * PR #319 re-review F-045: a role option deactivated while the form was open used to
+     * fail the WHOLE save with a 422 ("Invalid role selected"). The rest of the record must
+     * save; only the inactive role is skipped, and the response says so.
+     */
+    public function test_a_deactivated_role_does_not_block_the_save_and_is_reported(): void
+    {
+        $actor = $this->makeActor('stale_role');
+        $actor->assignRole('Super Admin');
+
+        $inactiveRolePk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'Retired Option ' . uniqid(),
+            'user_role_display_name' => 'Retired Option',
+            'active_inactive'        => 0,
+        ]);
+
+        $payload = $this->basicMemberPayload('StaleRole');
+        $payload['userrole'][] = $inactiveRolePk;
+
+        $response = $this->actingAs($actor)->post(route('member.store'), $payload);
+        $response->assertOk();
+
+        $warning = $response->json('warning');
+        $this->assertNotNull($warning, 'Skipping a deactivated role must be reported.');
+        $this->assertStringContainsString('Retired Option', $warning);
+
+        $credentialPk = DB::table('user_credentials')->where('user_name', $payload['userid'])->value('pk');
+        $this->assertNotNull($credentialPk, 'The member must still be created.');
+        $this->assertFalse(
+            DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)->where('user_role_master_pk', $inactiveRolePk)->exists(),
+            'The deactivated role must not be assigned.'
+        );
+        $this->assertTrue(
+            DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)->where('user_role_master_pk', $payload['userrole'][0])->exists(),
+            'The active role on the same save must still be assigned.'
+        );
+    }
+
+    /**
+     * A role pk that does not exist at all is still rejected, as before.
+     */
+    public function test_a_role_that_does_not_exist_is_still_rejected(): void
+    {
+        $actor = $this->makeActor('ghost_role');
+        $actor->assignRole('Super Admin');
+
+        $payload = $this->basicMemberPayload('GhostRole');
+        $payload['userrole'][] = 987654321;
+
+        $this->actingAs($actor)->postJson(route('member.store'), $payload)->assertStatus(422);
+    }
+
+    /**
      * Saving the edit wizard without uploading a new picture or document wrote NULL over
      * the stored paths (mapStep5Data() always returned both keys), so every edit silently
      * dropped the member's existing photo and document. A save without an upload must

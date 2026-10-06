@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\RoleNames;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -64,11 +65,13 @@ return new class extends Migration
 {
     private const LOG_TABLE = 'pr319_role_sync_log';
 
+    /**
+     * The same key MemberController matches wizard options on — one shared rule, so the
+     * two can no longer drift apart (PR #319 re-review F-058). Behaviour is unchanged.
+     */
     private function normalize(string $name): string
     {
-        $name = mb_strtolower(trim($name));
-
-        return preg_replace('/[\s_-]+/', ' ', $name);
+        return RoleNames::normalize($name);
     }
 
     public function up(): void

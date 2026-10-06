@@ -585,6 +585,28 @@ class MemberWizardStep6RegressionTest extends TestCase
     }
 
     /**
+     * PR #319 re-review F-046: the profile page's Role Assignment tab follows the same
+     * predicate the controller uses to save role changes, not a separate check in the view.
+     */
+    public function test_the_profile_page_offers_role_assignment_only_to_an_actor_who_can_manage_roles(): void
+    {
+        [$actor, $employeePk] = $this->makeOwnRecordActor('profiletabs');
+
+        $this->actingAs($actor)
+            ->get(route('member.profile.edit', $employeePk))
+            ->assertOk()
+            ->assertDontSee('Roles granted to this account');
+
+        $admin = $this->makeActor('profiletabs_admin');
+        $admin->assignRole('Super Admin');
+
+        $this->actingAs($admin)
+            ->get(route('member.profile.edit', $employeePk))
+            ->assertOk()
+            ->assertSee('Roles granted to this account');
+    }
+
+    /**
      * F-072 companion: with Steps 3 and 6 showing a notice instead of inputs, their
      * per-step validation must not demand fields the actor was never shown.
      */
