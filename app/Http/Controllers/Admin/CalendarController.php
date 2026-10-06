@@ -1692,7 +1692,11 @@ class CalendarController extends Controller
         $events = DB::table('timetable')
             ->leftJoin('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id');
 
-        $events = $this->scopeTimetableToUser($events);
+        // Academic Timetable view (?scope=academy) — the whole Academy's sessions,
+        // so the PDF holds what the page it was exported from was showing.
+        if (! $this->wantsAcademyScope($request)) {
+            $events = $this->scopeTimetableToUser($events);
+        }
 
         if ($courseId) {
             $events = $events->where('timetable.course_master_pk', $courseId);
@@ -5152,6 +5156,12 @@ class CalendarController extends Controller
             }
             // If no token but already authenticated, continue with current user
 
+            // user_id is a student_master.pk only for an Officer Trainee login
+            // (user_category 'S'); for staff and faculty it is an employee /
+            // faculty pk that can equal some trainee's pk. Refuse rather than
+            // show that trainee's submitted feedback.
+            abort_unless((auth()->user()->user_category ?? null) === 'S', 403);
+
             $student_pk = auth()->user()->user_id;
 
             // ================= PENDING FEEDBACK =================
@@ -5291,6 +5301,9 @@ class CalendarController extends Controller
                 'admin.feedback.student_feedback',
                 compact('pendingData', 'submittedData', 'authFullName')
             );
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $e) {
+            // A 403 must stay a 403, not become a redirect back.
+            throw $e;
         } catch (\Throwable $e) {
             logger()->error('Error in studentFacultyFeedback: ' . $e->getMessage());
             return back()->with('error', 'Something went wrong');
@@ -5579,6 +5592,10 @@ class CalendarController extends Controller
         $request->validate([
             'timetable_pk' => 'required|array|min:1',
         ]);
+
+        // Same rule as studentFacultyFeedback(): only a trainee's user_id is a
+        // student_master.pk.
+        abort_unless((auth()->user()->user_category ?? null) === 'S', 403);
 
         $studentId = auth()->user()->user_id;
         $now = now();
