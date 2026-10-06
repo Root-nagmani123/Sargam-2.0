@@ -43,8 +43,11 @@ class NoticeNotificationController extends Controller
         // The ALL_TARGETS sentinel finds the notices the list renders as
         // "All courses" / "All departments" — those carry no audience rows at
         // all, so no ordinary value could ever match them.
-        if ($request->filled('course_id')) {
-            $this->whereTargets($query, NoticeAudienceMap::TYPE_COURSE, $request->input('course_id'), 'Office trainee');
+        // Scalar only, like year below: ?course_id[]= / ?department_id[]= reached
+        // whereTargets()'s string cast and returned 500 (PR #334 F-025).
+        $courseId = $request->input('course_id');
+        if (is_scalar($courseId) && trim((string) $courseId) !== '') {
+            $this->whereTargets($query, NoticeAudienceMap::TYPE_COURSE, $courseId, 'Office trainee');
         }
 
         if ($request->status != "") {
@@ -54,8 +57,9 @@ class NoticeNotificationController extends Controller
         // Strict match: picking a department shows the notices addressed to that
         // department, not also every "all departments" notice. A filter that
         // widens its own result set reads as broken.
-        if ($request->filled('department_id')) {
-            $this->whereTargets($query, NoticeAudienceMap::TYPE_DEPARTMENT, $request->input('department_id'), 'Staff/Faculty');
+        $departmentId = $request->input('department_id');
+        if (is_scalar($departmentId) && trim((string) $departmentId) !== '') {
+            $this->whereTargets($query, NoticeAudienceMap::TYPE_DEPARTMENT, $departmentId, 'Staff/Faculty');
         }
 
         // Which date the year applies to is the user's choice. "Year" sitting

@@ -643,6 +643,7 @@
             applyFilter({ house_group: this.value });
         });
         $('#houseFacultyFilter').on('change', function() { applyFilter({ house_faculty: this.value }); });
+        $('#houseFilter').on('change', function() { applyFilter({ house: this.value }); });
         // First paint: restore the faculty carried in the URL, and pre-select the
         // parent's only faculty when the URL names a parent but no faculty —
         // ?cadre=AGMUT picks that cadre's lone counsellor, ?house_group=Kangchendjunga

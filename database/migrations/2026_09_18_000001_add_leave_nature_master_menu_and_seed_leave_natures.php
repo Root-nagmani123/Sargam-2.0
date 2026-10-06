@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Spatie\Permission\PermissionRegistrar;
 
 /**
  * Nature Leave Master — the admin page, plus the first natures under "Leave".
@@ -81,6 +82,10 @@ return new class extends Migration
             }
         }
 
+        // The grants above bypass Spatie, so its cached permission map would keep
+        // hiding the new menu until the cache expires.
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
         if (DB::table('menus')->where('route', self::ROUTE)->exists()) {
             return;
         }
@@ -122,6 +127,8 @@ return new class extends Migration
             DB::table('model_has_permissions')->where('permission_id', $permId)->delete();
             DB::table('permissions')->where('id', $permId)->delete();
         }
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         // Only the seeded rows, and only where nothing has been filed against
         // them — a leave application pointing at a nature must not be orphaned.

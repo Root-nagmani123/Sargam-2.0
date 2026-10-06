@@ -160,16 +160,16 @@ class FacultyLeaveApprovalController extends Controller
                     });
                 }
             })
-            ->addColumn('ot_code', fn ($row) => e($row->student->generated_OT_code ?? '-'))
-            ->addColumn('ot_name', fn ($row) => e($this->approvalService->studentDisplayName($row->student)))
-            ->addColumn('course_name', fn ($row) => e($row->course->course_name ?? '-'))
-            ->addColumn('leave_type_label', fn ($row) => e($row->leave_type_label))
+            ->addColumn('ot_code', fn ($row) => (string) ($row->student->generated_OT_code ?? '-'))
+            ->addColumn('ot_name', fn ($row) => (string) ($this->approvalService->studentDisplayName($row->student)))
+            ->addColumn('course_name', fn ($row) => (string) ($row->course->course_name ?? '-'))
+            ->addColumn('leave_type_label', fn ($row) => (string) ($row->leave_type_label))
             ->addColumn('from_date_display', fn ($row) => $row->from_date?->format('d-m-Y') ?? '-')
             ->addColumn('to_date_display', fn ($row) => $row->to_date?->format('d-m-Y') ?? '-')
-            ->addColumn('time_from_display', fn ($row) => e($row->time_from_display))
-            ->addColumn('time_to_display', fn ($row) => e($row->time_to_display))
+            ->addColumn('time_from_display', fn ($row) => (string) ($row->time_from_display))
+            ->addColumn('time_to_display', fn ($row) => (string) ($row->time_to_display))
             ->addColumn('total_days_display', fn ($row) => number_format((float) $row->total_days, 0))
-            ->addColumn('reason_text', fn ($row) => e(\Illuminate\Support\Str::limit($row->reason ?? '-', 80)))
+            ->addColumn('reason_text', fn ($row) => (string) (\Illuminate\Support\Str::limit($row->reason ?? '-', 80)))
             ->addColumn('status_label', function ($row) {
                 $map = [
                     LeaveApplication::STATUS_PENDING => ['Pending', 'pending'],
@@ -180,7 +180,7 @@ class FacultyLeaveApprovalController extends Controller
 
                 return '<span class="badge rounded-1 approval-status approval-status--' . $variant . '">' . $label . '</span>';
             })
-            ->addColumn('approver_name', fn ($row) => e($row->action_by_faculty_name))
+            ->addColumn('approver_name', fn ($row) => (string) ($row->action_by_faculty_name))
             ->addColumn('action', function ($row) {
                 $viewUrl = route('faculty.leave-approval.show', $row->pk);
                 $html = '<div class="d-inline-flex align-items-center gap-2 approval-action">';
@@ -200,9 +200,9 @@ class FacultyLeaveApprovalController extends Controller
     }
 
     /**
-     * Excel (.xlsx) or PDF of the current listing, honouring the same filters.
-     * Both formats render the identical heading/row arrays, so the two downloads
-     * can never disagree about what the list contained.
+     * Excel (.xlsx) or PDF of the current listing, honouring the same filters
+     * (baseQuery). The PDF renders its own view (export_pdf); the Excel sheet
+     * is built from the heading/row arrays below.
      */
     public function export(Request $request)
     {
@@ -271,21 +271,6 @@ class FacultyLeaveApprovalController extends Controller
         // names, course and reason stay left-aligned.
         $centreColumns = [0, 5, 6, 7, 8, 9, 11];
         $filterLine = $this->exportFilterLine($request);
-
-        if (strtolower((string) $request->get('format')) === 'pdf') {
-            @ini_set('memory_limit', '256M');
-            @set_time_limit(120);
-
-            $pdf = Pdf::loadView('admin.exports.table_pdf', [
-                'headings' => $headings,
-                'rows' => $data,
-                'reportTitle' => 'Leave Approval',
-                'filterLine' => $filterLine,
-                'centreColumns' => $centreColumns,
-            ])->setPaper('a4', 'landscape');
-
-            return $pdf->download($baseName . '.pdf');
-        }
 
         return Excel::download(
             new LbsnaaTableExport($data, $headings, 'Leave Approval', $filterLine, $centreColumns),

@@ -838,7 +838,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             Allow users to download this video
                                         </label>
                                         <small class="text-muted d-block">
-                                            Off: users can still watch it, but the download option is hidden.
+                                            Off: only the "Download video" button is hidden. Users can still watch it, and the "Open video link" button still exposes the same URL, so this does not stop a determined download.
                                         </small>
                                     </div>
                                 </div>
@@ -1037,7 +1037,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             Allow users to download this video
                                         </label>
                                         <small class="text-muted d-block">
-                                            Off: users can still watch it, but the download option is hidden.
+                                            Off: only the "Download video" button is hidden. Users can still watch it, and the "Open video link" button still exposes the same URL, so this does not stop a determined download.
                                         </small>
                                     </div>
                                 </div>

@@ -76,8 +76,15 @@
                 <form method="GET" action="{{ route('admin.notice.index') }}">
                     {{-- The sidebar reaches this page as ?menu=NNN; a GET filter submit
                          would otherwise drop it and the menu would lose its highlight. --}}
-                    @if(request('menu'))
-                    <input type="hidden" name="menu" value="{{ request('menu') }}">
+                    {{-- Scalar only: an array (?menu[]= / ?course_id[]= / ?department_id[]=)
+                         hit e() / the string casts below and returned 500 (PR #334 F-025). --}}
+                    @php
+                        $menuFilter = is_scalar(request('menu')) ? (string) request('menu') : '';
+                        $courseFilter = is_scalar(request('course_id')) ? (string) request('course_id') : '';
+                        $departmentFilter = is_scalar(request('department_id')) ? (string) request('department_id') : '';
+                    @endphp
+                    @if($menuFilter !== '')
+                    <input type="hidden" name="menu" value="{{ $menuFilter }}">
                     @endif
                     <div class="row g-3 align-items-end">
                         <div class="col-12 col-sm-6 col-md">
@@ -102,11 +109,11 @@
                             <select name="course_id" class="form-select form-select-sm js-choice"
                                 onchange="this.form.submit()">
                                 <option value="">All</option>
-                                <option value="{{ $allTargets }}" {{ (string) request('course_id') === $allTargets ? 'selected' : '' }}>
+                                <option value="{{ $allTargets }}" {{ $courseFilter === $allTargets ? 'selected' : '' }}>
                                     All courses (not course-specific)
                                 </option>
                                 @foreach($courses as $c)
-                                <option value="{{ $c->pk }}" {{ (string) request('course_id') === (string) $c->pk ? 'selected' : '' }}>
+                                <option value="{{ $c->pk }}" {{ $courseFilter === (string) $c->pk ? 'selected' : '' }}>
                                     {{ $c->course_name }}
                                 </option>
                                 @endforeach
@@ -121,11 +128,11 @@
                                 {{-- Finds the notices the Department column shows as
                                      "All departments". They carry no department rows,
                                      so no ordinary value could ever match them. --}}
-                                <option value="{{ $allTargets }}" {{ (string) request('department_id') === $allTargets ? 'selected' : '' }}>
+                                <option value="{{ $allTargets }}" {{ $departmentFilter === $allTargets ? 'selected' : '' }}>
                                     All departments (not department-specific)
                                 </option>
                                 @foreach($departments as $d)
-                                <option value="{{ $d->pk }}" {{ (string) request('department_id') === (string) $d->pk ? 'selected' : '' }}>
+                                <option value="{{ $d->pk }}" {{ $departmentFilter === (string) $d->pk ? 'selected' : '' }}>
                                     {{ $d->department_name }}
                                 </option>
                                 @endforeach
