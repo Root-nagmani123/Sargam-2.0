@@ -173,7 +173,7 @@ class MedicalExceptionOTViewController extends Controller
         $baseName = 'Medical_Exemption_' . preg_replace('/[^A-Za-z0-9]+/', '_', $name)
             . ($single ? '_Entry' : '') . '_' . now()->format('Ymd_His');
 
-        if (strtolower((string) $request->query('format')) === 'pdf') {
+        if (is_string($request->query('format')) && strtolower($request->query('format')) === 'pdf') {
             @ini_set('memory_limit', '256M');
             @set_time_limit(120);
 

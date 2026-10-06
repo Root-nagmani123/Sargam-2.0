@@ -939,7 +939,7 @@ class UserController extends Controller
         $courseFilter = $request->filled('course') ? (int) $request->input('course') : null;
         $houses = $this->houseWisePerformanceRows($courseFilter);
 
-        $format = strtolower((string) $request->get('format'));
+        $format = is_string($request->get('format')) ? strtolower($request->get('format')) : '';
         if ($format === 'excel' || $format === 'pdf') {
             return $this->exportHouseWisePerformance($houses, $format, $courseFilter);
         }
@@ -7014,7 +7014,7 @@ class UserController extends Controller
         $baseName = 'Group_Members_' . preg_replace('/[^A-Za-z0-9]+/', '_', (string) ($group->group_name ?? 'group'))
             . '_' . now()->format('Ymd_His');
 
-        if (strtolower((string) $request->get('format')) === 'pdf') {
+        if (is_string($request->get('format')) && strtolower($request->get('format')) === 'pdf') {
             @ini_set('memory_limit', '256M');
             @set_time_limit(120);
 

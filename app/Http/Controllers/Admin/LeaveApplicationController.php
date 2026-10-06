@@ -115,6 +115,15 @@ class LeaveApplicationController extends Controller
             ->load(['attachments', 'approvedByFaculty']);
         $leaveType = $application->leave_type;
         $natures = $this->getNatures($leaveType);
+        // A leave entered on the OT's behalf is stored as STATIONED_LEAVE with a
+        // nature from the LEAVE bucket, and a nature may since have been
+        // deactivated — either way the stored one is not in the list above, and
+        // the read-only form would show "Select Nature". Include it.
+        if ($application->leave_nature_master_pk
+            && ! $natures->contains('pk', $application->leave_nature_master_pk)
+            && ($storedNature = LeaveNatureMaster::find($application->leave_nature_master_pk))) {
+            $natures = $natures->push($storedNature);
+        }
         $ptBalance = $this->leaveService->getPtBalance(
             $context['student_pk'],
             $context['course_pk'],

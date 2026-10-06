@@ -104,7 +104,7 @@ private function exportFacultyList(int $facultyType, string $reportTitle, Reques
 
     $baseName = str_replace([' ', '-'], '_', $reportTitle) . '_' . now()->format('Ymd_His');
 
-    if (strtolower((string) $request->get('format')) === 'pdf') {
+    if (is_string($request->get('format')) && strtolower($request->get('format')) === 'pdf') {
         @ini_set('memory_limit', '256M');
         @set_time_limit(120);
 

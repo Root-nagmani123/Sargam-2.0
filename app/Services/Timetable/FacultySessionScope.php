@@ -36,8 +36,12 @@ class FacultySessionScope
     /** What the report's Role filter offers — the stored roles plus Supporting. */
     public const FILTER_ROLES = ['Teaching', 'Sectional', 'Administration', 'Supporting'];
 
-    /** A role string the report/card may filter by, or null for "any role". */
-    public static function normaliseRole(?string $role): ?string
+    /**
+     * A role string the report/card may filter by, or null for "any role".
+     * Takes the raw request value: ?faculty_role[]= arrives as an array and
+     * must read as "any role", not throw a TypeError.
+     */
+    public static function normaliseRole(mixed $role): ?string
     {
         return in_array($role, self::FILTER_ROLES, true) ? $role : null;
     }
