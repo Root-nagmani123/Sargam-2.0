@@ -2,14 +2,17 @@
 
 namespace App\Exports;
 
+use App\Support\Concerns\BindsExportCellsAsText;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithCustomStartCell;
+use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\DefaultValueBinder;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -32,8 +35,18 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
  * by admin/exports/table_pdf.blade.php, so a sheet and a PDF of one listing
  * cannot disagree.
  */
-class LbsnaaTableExport implements FromCollection, WithHeadings, WithStyles, WithEvents, WithTitle, WithCustomStartCell, ShouldAutoSize
+class LbsnaaTableExport extends DefaultValueBinder implements FromCollection, WithHeadings, WithStyles, WithEvents, WithTitle, WithCustomStartCell, ShouldAutoSize, WithCustomValueBinder
 {
+    /*
+     * Cells are typed by BindsExportCellsAsText, the BrandedGridExport shape: a
+     * formula-, identifier- or mobile-shaped string ("=HYPERLINK(…)",
+     * "+919876543210", a 19-digit id) is written as TEXT, while a plain number
+     * stays numeric. The leave exports moved here from MyLeaveExport /
+     * LeaveApprovalExport, which bound through TextValueBinder; without this
+     * the move brought spreadsheet formula injection back (PR #334 F-003).
+     */
+    use BindsExportCellsAsText;
+
     /** Rows of the branded block above the table. */
     private const HEADER_ROWS = 5;
 

@@ -8,6 +8,7 @@ use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\{Alignment, Border, Fill};
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 use App\Models\{MDOEscotDutyMap, StudentMedicalExemption, Timetable};
+use App\Services\Attendance\OtExemptionResolver;
 
 /**
  * Styled .xlsx of a topic's attendance sheet. The header block + table styling
@@ -120,8 +121,12 @@ class AttendanceDataExport implements FromArray, WithColumnWidths, WithEvents, W
                     }
                 }
                 
-                // Check Medical Exemption
-                $medicalExemption = StudentMedicalExemption::where([
+                // Check Medical Exemption — by the OtExemptionResolver rule, the
+                // one the on-screen badge, save() and the defaulter list use. The
+                // previous clock-time-only test read a date-only exemption
+                // (00:00 → 00:00) as covering nothing and a multi-day one as
+                // covering only its first day's hours (PR #334 F-004).
+                $medicalCandidates = StudentMedicalExemption::where([
                     ['course_master_pk', '=', $this->course_pk],
                     ['student_master_pk', '=', $studentId],
                     ['active_inactive', '=', 1]
@@ -132,20 +137,13 @@ class AttendanceDataExport implements FromArray, WithColumnWidths, WithEvents, W
                               $q->whereNull('to_date')
                                 ->orWhereDate('to_date', '>=', $this->timetableDate);
                           });
-                })->first();
-                
-                if ($medicalExemption) {
-                    $exemptionTimeFrom = $medicalExemption->from_date ? date('H:i:s', strtotime($medicalExemption->from_date)) : null;
-                    $exemptionTimeTo = $medicalExemption->to_date ? date('H:i:s', strtotime($medicalExemption->to_date)) : null;
-                    
-                    if ($exemptionTimeFrom && $exemptionTimeTo) {
-                        if ($this->checkTimeOverlap($this->timetableClassSession, $exemptionTimeFrom, $exemptionTimeTo)) {
-                            $hasMedicalExempt = true;
-                        }
-                    } else {
-                        $hasMedicalExempt = true;
-                    }
-                }
+                })->get();
+
+                $hasMedicalExempt = OtExemptionResolver::coveringMedicalExemption(
+                    $medicalCandidates,
+                    $this->timetableDate,
+                    $this->timetableClassSession
+                ) !== null;
             }
 
             // Get attendance status from saved record or determine based on exemptions.

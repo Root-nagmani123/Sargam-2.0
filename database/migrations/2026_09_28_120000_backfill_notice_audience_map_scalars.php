@@ -83,17 +83,23 @@ return new class extends Migration
     }
 
     /**
-     * Drops only the rows this migration is responsible for. S and E rows are
-     * the user's own picks and were never derived from a column, so they stay.
+     * Deliberately a no-op (PR #334 F-014).
+     *
+     * The previous body deleted EVERY C/G/D row. After deploy those rows are also
+     * written by the notice form (multi-course, group and department picks), and
+     * a backfilled row is indistinguishable from a form-written one — the form
+     * keeps the scalar column in step for a single selection. Deleting them while
+     * this module's code is live turns every targeted notice into "all courses /
+     * all departments" (or, in group mode, into nobody), and the scalar columns
+     * cannot rebuild a multi-value audience.
+     *
+     * Nothing needs undoing for a schema rollback: the backfill only added rows,
+     * and 2026_09_28_100000's down() drops notice_audience_map altogether. If the
+     * backfilled rows must go without that, remove them by hand under DBA
+     * supervision after exporting the table.
      */
     public function down(): void
     {
-        if (! Schema::hasTable(self::MAP_TABLE)) {
-            return;
-        }
-
-        DB::table(self::MAP_TABLE)
-            ->whereIn('audience_type', array_values($this->columns))
-            ->delete();
+        //
     }
 };

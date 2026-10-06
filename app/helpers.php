@@ -1828,7 +1828,9 @@ if (!function_exists('notice_feed_query_by_role')) {
             $departmentIds = DB::table('employee_master')
                 ->where('pk', $user->user_id)
                 ->pluck('department_master_pk')
-                ->filter()
+                // Not ->filter(): department pk 0 (NIAR) is real, and dropping it
+                // would hide NIAR-pinned notices from NIAR's own staff.
+                ->reject(fn ($pk) => $pk === null || $pk === '')
                 ->values()
                 ->all();
 

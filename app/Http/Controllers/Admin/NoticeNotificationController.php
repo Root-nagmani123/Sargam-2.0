@@ -196,8 +196,13 @@ class NoticeNotificationController extends Controller
                 ->store('notice_docs', 'public');
         }
 
-        $notice = Notice::create($data);
-        $this->syncAudience($notice, $request);
+        // One transaction: a notice committed without its audience rows reads as
+        // "every course / every department" in the feed, so a failed audience
+        // insert must take the notice down with it.
+        DB::transaction(function () use ($data, $request) {
+            $notice = Notice::create($data);
+            $this->syncAudience($notice, $request);
+        });
 
         return redirect()
             ->route('admin.notice.index')
@@ -269,8 +274,12 @@ class NoticeNotificationController extends Controller
             $data['document'] = $request->file('document')->store('notice_docs', 'public');
         }
 
-        $notice->update($data);
-        $this->syncAudience($notice, $request);
+        // syncAudience() deletes every audience row before re-inserting; outside a
+        // transaction a failed insert would leave the notice addressed to everyone.
+        DB::transaction(function () use ($notice, $data, $request) {
+            $notice->update($data);
+            $this->syncAudience($notice, $request);
+        });
 
         return redirect()->route('admin.notice.index')->with('success', 'Notice updated!');
     }
@@ -295,7 +304,12 @@ class NoticeNotificationController extends Controller
      * ----------------------------------------------------------------- */
 
     /**
-     * Posted ids for one audience field, cleaned to a list of positive ints.
+     * Posted ids for one audience field, cleaned to a list of non-negative ints.
+     *
+     * 0 is a real id: department_master holds pk 0 (NIAR). Dropping it as falsy
+     * left a NIAR-only notice with no D rows, which the feed reads as "every
+     * department". Non-numeric input (including the '__all__' filter sentinel,
+     * which intval() would turn into 0) is discarded before the cast instead.
      */
     private function idsFrom(Request $request, string $field): array
     {
@@ -305,7 +319,9 @@ class NoticeNotificationController extends Controller
             $ids = $ids === null || $ids === '' ? [] : [$ids];
         }
 
-        return array_values(array_unique(array_filter(array_map('intval', $ids))));
+        $numeric = array_filter($ids, fn ($id) => is_int($id) || (is_string($id) && ctype_digit(trim($id))));
+
+        return array_values(array_unique(array_map('intval', $numeric)));
     }
 
     /**

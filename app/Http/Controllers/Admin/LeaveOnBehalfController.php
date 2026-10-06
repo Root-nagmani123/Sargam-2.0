@@ -515,16 +515,28 @@ class LeaveOnBehalfController extends Controller
         return $query->get(['pk', 'course_name', 'couse_short_name']);
     }
 
+    /**
+     * The courses this operator may record leave for; null means every course.
+     *
+     * Super Admin is unrestricted. Every other Training-section role is confined
+     * to the courses its role owns (course_master.user_role_master_pk, resolved
+     * by get_Role_by_course()). The earlier isTrainingOrEstateAuthority() bypass
+     * admitted every role the constructor gate admits, so this scope never
+     * applied and any training operator could record APPROVED leave for any
+     * course (PR #334 F-006; policy decision 2026-10-06: own courses only).
+     */
     protected function getAllowedCourseIds(): ?array
     {
-        if (isTrainingOrEstateAuthority()) {
+        if (hasRole('Super Admin')) {
             return null;
         }
 
         $courseIds = get_Role_by_course();
 
-        if (empty($courseIds) || $courseIds === [-1]) {
-            return [-1];
+        // [] is get_Role_by_course()'s "no restriction" (Admin / PA); [-1] is
+        // "nothing" — a role with no course of its own sees no course here.
+        if ($courseIds === []) {
+            return null;
         }
 
         return $courseIds;

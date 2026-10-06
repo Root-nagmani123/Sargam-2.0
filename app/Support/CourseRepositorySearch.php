@@ -65,6 +65,9 @@ class CourseRepositorySearch
     /** parent pk => int[] child pks; derived from the folder tree. */
     private static ?array $folderChildren = null;
 
+    /** Soft-deleted folders and everything beneath them; see hiddenFolderPks(). */
+    private static ?array $hiddenFolderPks = null;
+
     /**
      * Read and normalize every search input from the query string.
      */
@@ -230,6 +233,10 @@ class CourseRepositorySearch
                 'dt.videolink as raw_videolink',
                 'm.course_repository_name as folder_name',
             ]);
+
+        // Browsing never reaches a deleted folder or anything under it; search
+        // must not either (PR #334 F-013).
+        self::excludeHiddenFolders($query, 'coalesce(dt.course_repository_master_pk, doc.course_repository_master_pk)');
 
         foreach ($c['tokens'] as $token) {
             $like = DataTableSearchHelper::likePattern($token);
@@ -487,10 +494,15 @@ class CourseRepositorySearch
         $tree = self::folderTree();
 
         $allowed = $c['folder'] !== null ? array_flip(self::folderSubtreePks($c['folder'])) : null;
+        $hidden = array_flip(self::hiddenFolderPks());
 
         $matches = [];
         foreach ($tree as $pk => $node) {
             if ($allowed !== null && ! isset($allowed[$pk])) {
+                continue;
+            }
+            // A live-flagged folder under a deleted one is unreachable by browsing.
+            if (isset($hidden[$pk])) {
                 continue;
             }
 
@@ -684,6 +696,66 @@ class CourseRepositorySearch
         return array_keys($out);
     }
 
+    /**
+     * Folders the user side must not surface: every soft-deleted folder
+     * (del_folder_status <> 1) and every folder beneath one, since browsing
+     * cannot reach those either (PR #334 F-013).
+     *
+     * @return int[]
+     */
+    public static function hiddenFolderPks(): array
+    {
+        if (self::$hiddenFolderPks !== null) {
+            return self::$hiddenFolderPks;
+        }
+
+        $tree = self::folderTree();
+        $hidden = CourseRepositoryMaster::query()
+            ->where(fn ($q) => $q->where('del_folder_status', '!=', 1)->orWhereNull('del_folder_status'))
+            ->pluck('pk')
+            ->map(fn ($pk) => (int) $pk)
+            ->flip()
+            ->all();
+
+        // A live row whose ancestor chain reaches a hidden or missing folder is
+        // hidden too. $seen guards against self-referencing or cyclic parent_type.
+        foreach (array_keys($tree) as $pk) {
+            $seen = [];
+            $current = $tree[$pk]['parent'];
+            while ($current !== null && ! isset($seen[$current])) {
+                $seen[$current] = true;
+                if (isset($hidden[$current]) || ! isset($tree[$current])) {
+                    $hidden[$pk] = true;
+                    break;
+                }
+                $current = $tree[$current]['parent'];
+            }
+        }
+
+        return self::$hiddenFolderPks = array_keys($hidden);
+    }
+
+    /**
+     * Drop rows filed in a hidden folder. $folderExpression is a code constant
+     * naming the folder column; rows with no folder at all are kept, as
+     * documentQuery() deliberately keeps them.
+     *
+     * @param  \Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder  $query
+     */
+    public static function excludeHiddenFolders($query, string $folderExpression)
+    {
+        $hidden = self::hiddenFolderPks();
+
+        if ($hidden === []) {
+            return $query;
+        }
+
+        return $query->where(function ($q) use ($folderExpression, $hidden) {
+            $q->whereNull(DB::raw($folderExpression))
+                ->orWhereNotIn(DB::raw($folderExpression), $hidden);
+        });
+    }
+
     // ------------------------------------------------------------------ facets
 
     /**
@@ -698,7 +770,7 @@ class CourseRepositorySearch
         return [
             'courses' => self::distinctText('course_master_pk'),
             'subjects' => self::distinctText('subject_pk'),
-            'years' => DB::table('course_repository_details')
+            'years' => self::excludeHiddenFolders(DB::table('course_repository_details'), 'course_repository_master_pk')
                 ->whereNotNull('session_date')
                 ->selectRaw('distinct year(session_date) as y')
                 ->orderByDesc('y')
@@ -713,7 +785,7 @@ class CourseRepositorySearch
     /** @return string[] */
     private static function distinctText(string $column): array
     {
-        return DB::table('course_repository_details')
+        return self::excludeHiddenFolders(DB::table('course_repository_details'), 'course_repository_master_pk')
             ->whereNotNull($column)
             ->where($column, '!=', '')
             ->whereRaw("{$column} not regexp '^[0-9]+$'")

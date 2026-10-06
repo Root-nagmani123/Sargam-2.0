@@ -167,7 +167,6 @@
                                 <th scope="col" class="dir-col-tight">Room No.</th>
                                 <th scope="col" class="dir-col-tight">Room Extension No.</th>
                                 <th scope="col" class="dir-col-email">Email ID</th>
-                                <th scope="col" class="dir-col-tight">Mobile No.</th>
                                 <th scope="col" class="dir-col-text">Course Name</th>
                                 <th scope="col" class="dir-col-text">Cadre Name</th>
                             </tr>
@@ -245,7 +244,6 @@ $(function () {
             { data: 'room_no', name: '', orderable: false, searchable: false },
             { data: 'room_ext', name: '', orderable: false, searchable: false },
             { data: 'email', name: 'email', className: 'dir-col-wrap dir-col-email' },
-            { data: 'mobile', name: 'mobile' },
             { data: 'course', name: '', orderable: false, className: 'dir-col-wrap dir-col-text' },
             { data: 'cadre', name: 'cadre', className: 'dir-col-wrap dir-col-text' }
         ],
@@ -316,7 +314,6 @@ $(function () {
         ['room_no'],
         ['room_ext'],
         ['email'],
-        ['mobile'],
         ['course'],
         ['cadre']
     ];

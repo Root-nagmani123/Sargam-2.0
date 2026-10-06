@@ -263,11 +263,22 @@ class FacultySessionScope
     }
 
     /**
+     * Lock value for a faculty-portal user whose login resolves to no
+     * faculty_master row. faculty_master.pk is never negative, so every consumer
+     * (where pk = ?, the faculty JSON predicates) matches nothing.
+     */
+    public const NO_FACULTY = -1;
+
+    /**
      * The faculty this viewer is confined to, or null when they may see everyone.
      *
      * Anyone on the faculty portal — Internal/Guest Faculty, and CC/ACC, who are
      * faculty too — is confined to their own sessions. Super Admin is not, so the
      * admin-side report keeps working as it does today.
+     *
+     * Fails CLOSED: a portal user whose faculty record cannot be resolved is
+     * locked to NO_FACULTY (no rows), never to null, because every consumer reads
+     * null as "may see everyone" (PR #334 F-012).
      */
     public static function lockedFacultyPk(): ?int
     {
@@ -275,6 +286,6 @@ class FacultySessionScope
             return null;
         }
 
-        return get_auth_faculty_master_pk();
+        return get_auth_faculty_master_pk() ?? self::NO_FACULTY;
     }
 }

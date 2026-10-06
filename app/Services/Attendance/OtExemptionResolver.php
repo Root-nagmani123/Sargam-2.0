@@ -169,7 +169,6 @@ class OtExemptionResolver
             }
 
             $date = substr((string) $timetable->START_DATE, 0, 10);
-            $window = self::windowFor($timetable->START_DATE, $timetable->class_session);
 
             foreach ($dutyTypes as $typePk) {
                 $group = $duties->get($session['student'] . '|' . $typePk . '|' . $session['course'] . '|' . $date);
@@ -181,14 +180,12 @@ class OtExemptionResolver
                 }
             }
 
-            foreach ($medicals->get($session['student'] . '|' . $session['course'], collect()) as $exemption) {
-                $inRange = substr((string) $exemption->from_date, 0, 10) <= $date
-                    && (empty($exemption->to_date) || substr((string) $exemption->to_date, 0, 10) >= $date);
-
-                if ($inRange && self::medicalCovers($exemption, $window)) {
-                    $covered[$key] = true;
-                    continue 2;
-                }
+            if (self::coveringMedicalExemption(
+                $medicals->get($session['student'] . '|' . $session['course'], collect()),
+                $timetable->START_DATE,
+                $timetable->class_session
+            )) {
+                $covered[$key] = true;
             }
         }
 
@@ -224,7 +221,11 @@ class OtExemptionResolver
 
         $date = $timetable->START_DATE;
 
-        $exemption = StudentMedicalExemption::where([
+        // Every exemption spanning the date, not ->first(): with a timed one that
+        // misses this session and a whole-day one that covers it, first() could
+        // pick the miss, and save() / the admin grid would then disagree with
+        // coveredSessions() (the defaulter list), which checks them all.
+        $candidates = StudentMedicalExemption::where([
             ['course_master_pk', '=', $this->coursePk],
             ['student_master_pk', '=', $studentId],
             ['active_inactive', '=', 1],
@@ -234,9 +235,43 @@ class OtExemptionResolver
                 // An open-ended exemption (no to_date) has not expired.
                 $q->whereNull('to_date')->orWhereDate('to_date', '>=', $date);
             })
-            ->first();
+            ->get();
 
-        return $exemption ? self::medicalCovers($exemption, $this->sessionWindow()) : false;
+        return self::coveringMedicalExemption($candidates, $date, $timetable->class_session) !== null;
+    }
+
+    /**
+     * The first of $exemptions that covers one session, or null.
+     *
+     * THE medical-exemption rule, public so every screen asks the same question:
+     * isExempt() (save() and the admin grid), coveredSessions() (the defaulter
+     * list), the OT's own attendance view and its export, and the attendance
+     * Excel all decide through here (PR #334 F-004). The date span is compared on
+     * dates — from_date / to_date are datetimes, so comparing them raw against a
+     * midnight session date dropped an exemption starting later that day and kept
+     * one ending earlier — and the time-of-day question is medicalCovers().
+     *
+     * @param  iterable<object>  $exemptions  active rows for the session's student and course
+     */
+    public static function coveringMedicalExemption(iterable $exemptions, $startDate, ?string $classSession): ?object
+    {
+        if (empty($startDate)) {
+            return null;
+        }
+
+        $date = substr((string) $startDate, 0, 10);
+        $window = self::windowFor((string) $startDate, $classSession);
+
+        foreach ($exemptions as $exemption) {
+            $inRange = substr((string) $exemption->from_date, 0, 10) <= $date
+                && (empty($exemption->to_date) || substr((string) $exemption->to_date, 0, 10) >= $date);
+
+            if ($inRange && self::medicalCovers($exemption, $window)) {
+                return $exemption;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -280,18 +315,6 @@ class OtExemptionResolver
         return $session === null
             ? true // Session times unreadable — honour the exemption rather than drop it.
             : $session['start'] <= $to && $session['end'] >= $from;
-    }
-
-    /**
-     * This session as absolute timestamps on its own date.
-     *
-     * @return array{start: int, end: int}|null
-     */
-    private function sessionWindow(): ?array
-    {
-        $timetable = $this->timetable();
-
-        return $timetable ? self::windowFor($timetable->START_DATE, $timetable->class_session) : null;
     }
 
     /**

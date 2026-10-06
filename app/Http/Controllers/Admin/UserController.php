@@ -370,11 +370,13 @@ class UserController extends Controller
                  //
                  // Both on current courses only: a course switched off in the master,
                  // or one whose end date has passed, stops counting.
-                 $facultyCounsellees = $this->facultyGroupRows($facultyPk, '%counsel%', 'counsellor_group_name', true)
-                     ->pluck('student_master_pk')->filter()->unique()->count();
+                 // A COUNT(DISTINCT) over the same mappings facultyGroupRows() reads,
+                 // not the full hydrated rows: this runs on every faculty dashboard
+                 // load (PR #334 F-010; measured 22 -> 6 queries, ~50 -> ~8 ms for a
+                 // faculty with 48 + 46 students, identical counts).
+                 $facultyCounsellees = $this->facultyGroupStudentCount($facultyPk, '%counsel%', true);
 
-                 $facultyHouses = $this->facultyGroupRows($facultyPk, '%house%', 'house_group_name', true)
-                     ->pluck('student_master_pk')->filter()->unique()->count();
+                 $facultyHouses = $this->facultyGroupStudentCount($facultyPk, '%house%', true);
 
                  // Check if faculty is CC or ACC
                  $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
@@ -645,25 +647,7 @@ class UserController extends Controller
         bool $currentCoursesOnly = false
     ): \Illuminate\Support\Collection
     {
-        $groupTypeIds = DB::table('course_group_type_master')
-            ->where('active_inactive', 1)
-            ->whereRaw('LOWER(type_name) LIKE ?', [$typeNameLike])
-            ->pluck('pk');
-
-        if ($groupTypeIds->isEmpty()) {
-            return collect();
-        }
-
-        $mappings = DB::table('group_type_master_course_master_map as g')
-            ->whereIn('g.type_name', $groupTypeIds)
-            ->where('g.facility_id', $facultyPk)
-            ->where('g.active_inactive', 1)
-            // Running courses only, when the caller asks: neither a switched-off
-            // course nor a finished batch keeps counting. An orphaned mapping —
-            // one whose course_name matches no course_master row — drops out with
-            // them, there being no course to call current.
-            ->when($currentCoursesOnly, fn ($q) => $q->whereIn('g.course_name', $this->currentCourseIds()))
-            ->get(['g.pk', 'g.group_name', 'g.course_name as course_pk']);
+        $mappings = $this->facultyGroupMappings($facultyPk, $typeNameLike, $currentCoursesOnly);
 
         if ($mappings->isEmpty()) {
             return collect();
@@ -730,6 +714,61 @@ class UserController extends Controller
         }
 
         return $rows;
+    }
+
+    /**
+     * The faculty's group mappings of one group type — shared by
+     * facultyGroupRows() and facultyGroupStudentCount(), so a dashboard count and
+     * the list it opens can never select different groups.
+     *
+     * @return \Illuminate\Support\Collection<int, \stdClass>  pk, group_name, course_pk
+     */
+    private function facultyGroupMappings(int $facultyPk, string $typeNameLike, bool $currentCoursesOnly): \Illuminate\Support\Collection
+    {
+        $groupTypeIds = DB::table('course_group_type_master')
+            ->where('active_inactive', 1)
+            ->whereRaw('LOWER(type_name) LIKE ?', [$typeNameLike])
+            ->pluck('pk');
+
+        if ($groupTypeIds->isEmpty()) {
+            return collect();
+        }
+
+        return DB::table('group_type_master_course_master_map as g')
+            ->whereIn('g.type_name', $groupTypeIds)
+            ->where('g.facility_id', $facultyPk)
+            ->where('g.active_inactive', 1)
+            // Running courses only, when the caller asks: neither a switched-off
+            // course nor a finished batch keeps counting. An orphaned mapping —
+            // one whose course_name matches no course_master row — drops out with
+            // them, there being no course to call current.
+            ->when($currentCoursesOnly, fn ($q) => $q->whereIn('g.course_name', $this->currentCourseIds()))
+            ->get(['g.pk', 'g.group_name', 'g.course_name as course_pk']);
+    }
+
+    /**
+     * Distinct students in the faculty's groups of one type — the number the
+     * My Counsellees / House Wise Details cards show — as one COUNT(DISTINCT)
+     * instead of hydrating every membership through facultyGroupRows() just to
+     * count it (PR #334 F-010). Same mappings, same active membership filter,
+     * and the same "student row must exist" rule the rows apply.
+     */
+    private function facultyGroupStudentCount(int $facultyPk, string $typeNameLike, bool $currentCoursesOnly = false): int
+    {
+        $mappingPks = $this->facultyGroupMappings($facultyPk, $typeNameLike, $currentCoursesOnly)->pluck('pk');
+
+        if ($mappingPks->isEmpty()) {
+            return 0;
+        }
+
+        return (int) DB::table('student_course_group_map as scgm')
+            ->join('student_master as sm', 'sm.pk', '=', 'scgm.student_master_pk')
+            ->whereIn('scgm.group_type_master_course_master_map_pk', $mappingPks)
+            ->where('scgm.active_inactive', 1)
+            // facultyGroupRows()->pluck()->filter() dropped a 0 pk; keep parity.
+            ->where('scgm.student_master_pk', '<>', 0)
+            ->distinct()
+            ->count('scgm.student_master_pk');
     }
 
     /**
@@ -892,6 +931,11 @@ class UserController extends Controller
      */
     public function houseWisePerformanceDetail(Request $request)
     {
+        // The route carries only `auth`, and the rows are trainees' discipline
+        // deductions. Admit exactly whoever the dashboard shows the panel to,
+        // before any query and for the page and both downloads alike.
+        abort_unless($this->canSeeHousePerformance(), 403);
+
         $courseFilter = $request->filled('course') ? (int) $request->input('course') : null;
         $houses = $this->houseWisePerformanceRows($courseFilter);
 
@@ -906,6 +950,25 @@ class UserController extends Controller
             'courses' => $this->houseCourseOptions(),
             'courseFilter' => $courseFilter,
         ]);
+    }
+
+    /**
+     * Whether the signed-in user may see House wise Performance: Super Admin, or
+     * a role the House wise Performance dashboard widget is assigned to — the
+     * same role → dashboard_cards mapping dashboard() uses to show the panel.
+     */
+    private function canSeeHousePerformance(): bool
+    {
+        if (hasRole('Super Admin')) {
+            return true;
+        }
+
+        $roleIds = (Auth::user()->roles ?? collect())->pluck('id')->all();
+
+        return $roleIds !== []
+            && DashboardCard::where('key', 'widget_house_performance')
+                ->whereHas('roles', fn ($q) => $q->whereIn('roles.id', $roleIds))
+                ->exists();
     }
 
     /**
@@ -7010,6 +7073,7 @@ class UserController extends Controller
 
             $failed = app(EmailService::class)->sendBulk($emails->values(), $validated['message']);
             $sent = $emails->count() - count($failed);
+            $this->logGroupMessage((int) $mapPk, 'email', $emails->count(), $sent);
 
             return response()->json([
                 'status' => $sent > 0 ? 'success' : 'error',
@@ -7028,11 +7092,33 @@ class UserController extends Controller
 
         $failed = app(SmsService::class)->sendBulk($numbers->values(), $validated['message']);
         $sent = $numbers->count() - count($failed);
+        $this->logGroupMessage((int) $mapPk, 'sms', $numbers->count(), $sent);
 
         return response()->json([
             'status' => $sent > 0 ? 'success' : 'error',
             'message' => $sent > 0 ? "SMS sent to {$sent} OT(s)." : 'Unable to send SMS to the selected OTs.',
         ], $sent > 0 ? 200 : 500);
+    }
+
+    /**
+     * Audit line for every My Groups send, so a message an OT pushes through the
+     * institutional gateway is attributable (PR #334 F-011). Same shape as
+     * DirectoryController::logDirectoryExport(). The message text is deliberately
+     * NOT logged: it is request text (a raw line feed would forge extra log
+     * records — trap 35) and it is the sender's private content.
+     */
+    private function logGroupMessage(int $mapPk, string $channel, int $recipients, int $sent): void
+    {
+        \Illuminate\Support\Facades\Log::info('my_groups.message', [
+            // user_credentials is keyed on `pk`, so auth()->id() is that pk.
+            'user_pk' => auth()->id(),
+            'student_pk' => (int) Auth::user()->user_id,
+            'group_map_pk' => $mapPk,
+            'channel' => $channel,
+            'recipients' => $recipients,
+            'sent' => $sent,
+            'ip' => request()->ip(),
+        ]);
     }
 
     /**

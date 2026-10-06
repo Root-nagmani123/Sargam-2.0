@@ -2310,8 +2310,10 @@ class CourseRepositoryController extends Controller
                 ['course_master_pk', 'Course', 3],
             ];
 
+            // Suggestions follow the same folder rule as the results: nothing filed
+            // in a deleted folder, or beneath one, is offered (PR #334 F-013).
             foreach ($columns as [$column, $label, $limit]) {
-                DB::table('course_repository_details')
+                CourseRepositorySearch::excludeHiddenFolders(DB::table('course_repository_details'), 'course_repository_master_pk')
                     ->where($column, 'like', $like)
                     ->whereRaw("{$column} not regexp '^[0-9]+$'")
                     ->distinct()
@@ -2321,17 +2323,27 @@ class CourseRepositoryController extends Controller
                     ->each(fn ($value) => $push($value, $label));
             }
 
-            CourseRepositoryDocument::where('del_type', 1)
-                ->where('file_title', 'like', $like)
+            CourseRepositorySearch::excludeHiddenFolders(
+                CourseRepositoryDocument::query()
+                    ->from('course_repository_documents as doc')
+                    ->leftJoin('course_repository_details as dt', 'dt.pk', '=', 'doc.course_repository_details_pk'),
+                'coalesce(dt.course_repository_master_pk, doc.course_repository_master_pk)'
+            )
+                ->where('doc.del_type', 1)
+                ->where('doc.file_title', 'like', $like)
                 ->distinct()
-                ->orderBy('file_title')
+                ->orderBy('doc.file_title')
                 ->limit(5)
-                ->pluck('file_title')
+                ->pluck('doc.file_title')
                 ->each(fn ($value) => $push($value, 'Document'));
 
+            $hiddenFolders = array_flip(CourseRepositorySearch::hiddenFolderPks());
             foreach (CourseRepositorySearch::folderTree() as $pk => $node) {
                 if (count($suggestions) >= 40) {
                     break;
+                }
+                if (isset($hiddenFolders[$pk])) {
+                    continue;
                 }
                 if (stripos($node['name'], $term) !== false) {
                     $push($node['name'], 'Category');

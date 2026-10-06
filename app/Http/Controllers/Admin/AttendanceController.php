@@ -1164,19 +1164,9 @@ $currentPath = $segments[1] ?? null;
                 // otherwise leave the OT showing the stale Late/Absent it was saved with.
                 // AttendanceController::save applies the same precedence when writing.
                 if ($timetableDate) {
-                    // Check medical exemption
-                    $medicalExemption = StudentMedicalExemption::where([
-                        ['course_master_pk', '=', $currentCoursePk],
-                        ['student_master_pk', '=', $student_pk],
-                        ['active_inactive', '=', 1]
-                    ])
-                    ->where(function($query) use ($timetableDate) {
-                        $query->where('from_date', '<=', $timetableDate)
-                              ->where(function($q) use ($timetableDate) {
-                                  $q->whereNull('to_date')
-                                    ->orWhere('to_date', '>=', $timetableDate);
-                              });
-                    })->first();
+                    // Check medical exemption — the OtExemptionResolver rule, the one
+                    // save() and the admin grid use (PR #334 F-004).
+                    $medicalExemption = $this->coveringMedicalExemption($currentCoursePk, $student_pk, $courseGroup->timetable);
 
                     if ($medicalExemption) {
                         $record['attendance_status'] = 'Present';
@@ -1283,18 +1273,7 @@ $currentPath = $segments[1] ?? null;
                             $record['exemption_type'] = 'Medical';
                             // Get medical exemption details
                             if ($timetableDate) {
-                                $medicalExemption = StudentMedicalExemption::where([
-                                    ['course_master_pk', '=', $currentCoursePk],
-                                    ['student_master_pk', '=', $student_pk],
-                                    ['active_inactive', '=', 1]
-                                ])
-                                ->where(function($query) use ($timetableDate) {
-                                    $query->where('from_date', '<=', $timetableDate)
-                                          ->where(function($q) use ($timetableDate) {
-                                              $q->whereNull('to_date')
-                                                ->orWhere('to_date', '>=', $timetableDate);
-                                          });
-                                })->first();
+                                $medicalExemption = $this->coveringMedicalExemption($currentCoursePk, $student_pk, $courseGroup->timetable);
 
                                 if ($medicalExemption) {
                                     $record['exemption_document'] = $medicalExemption->Doc_upload;
@@ -1457,16 +1436,19 @@ $currentPath = $segments[1] ?? null;
         }
 
         // In-memory helpers — zero DB queries inside the loop.
-        $findMedical = function (?string $date, $cPk) use ($medicalExemptions): ?object {
+        // Coverage by the OtExemptionResolver rule (date span on dates, then the
+        // session's time window), so this export agrees with save() and the admin
+        // grid for timed exemptions (PR #334 F-004). Still zero queries per row.
+        $findMedical = function (?string $date, $cPk, ?string $classSession = null) use ($medicalExemptions): ?object {
             if ($date === null) {
                 return null;
             }
-            $d = substr($date, 0, 10);
-            return $medicalExemptions->first(
-                fn($e) => (string) $e->course_master_pk === (string) $cPk
-                    && $e->from_date <= $d
-                    && ($e->to_date === null || $e->to_date >= $d)
-            ) ?: null;
+
+            return OtExemptionResolver::coveringMedicalExemption(
+                $medicalExemptions->filter(fn($e) => (string) $e->course_master_pk === (string) $cPk),
+                $date,
+                $classSession
+            );
         };
 
         $findDuty = function (?string $dutyKey, ?string $date, $cPk) use ($mdoDutyMap, $mdoDutyTypes): ?object {
@@ -1510,7 +1492,7 @@ $currentPath = $segments[1] ?? null;
             // otherwise leave the OT showing the stale Late/Absent it was saved with.
             // AttendanceController::save applies the same precedence when writing.
             if ($timetableDate) {
-                $medicalExemption = $findMedical($timetableDate, $currentCoursePk);
+                $medicalExemption = $findMedical($timetableDate, $currentCoursePk, optional($courseGroup->timetable)->class_session);
 
                 if ($medicalExemption) {
                     $record['attendance_status'] = 'Present';
@@ -1572,7 +1554,7 @@ $currentPath = $segments[1] ?? null;
                     case 6:
                         $record['attendance_status'] = 'Present';
                         $record['exemption_type'] = 'Medical';
-                        $medicalExemption = $findMedical($timetableDate, $currentCoursePk);
+                        $medicalExemption = $findMedical($timetableDate, $currentCoursePk, optional($courseGroup->timetable)->class_session);
                         if ($medicalExemption) {
                             $record['exemption_document'] = $medicalExemption->Doc_upload;
                             $record['exemption_comment'] = $medicalExemption->Description;
@@ -1776,19 +1758,9 @@ $currentPath = $segments[1] ?? null;
                 // otherwise leave the OT showing the stale Late/Absent it was saved with.
                 // AttendanceController::save applies the same precedence when writing.
                 if ($timetableDate) {
-                    // Check medical exemption
-                    $medicalExemption = StudentMedicalExemption::where([
-                        ['course_master_pk', '=', $currentCoursePk],
-                        ['student_master_pk', '=', $student_pk],
-                        ['active_inactive', '=', 1]
-                    ])
-                    ->where(function($query) use ($timetableDate) {
-                        $query->where('from_date', '<=', $timetableDate)
-                              ->where(function($q) use ($timetableDate) {
-                                  $q->whereNull('to_date')
-                                    ->orWhere('to_date', '>=', $timetableDate);
-                              });
-                    })->first();
+                    // Check medical exemption — the OtExemptionResolver rule, the one
+                    // save() and the admin grid use (PR #334 F-004).
+                    $medicalExemption = $this->coveringMedicalExemption($currentCoursePk, $student_pk, $courseGroup->timetable);
 
                     if ($medicalExemption) {
                         $record['attendance_status'] = 'Present';
@@ -1895,18 +1867,7 @@ $currentPath = $segments[1] ?? null;
                             $record['exemption_type'] = 'Medical';
                             // Get medical exemption details
                             if ($timetableDate) {
-                                $medicalExemption = StudentMedicalExemption::where([
-                                    ['course_master_pk', '=', $currentCoursePk],
-                                    ['student_master_pk', '=', $student_pk],
-                                    ['active_inactive', '=', 1]
-                                ])
-                                ->where(function($query) use ($timetableDate) {
-                                    $query->where('from_date', '<=', $timetableDate)
-                                          ->where(function($q) use ($timetableDate) {
-                                              $q->whereNull('to_date')
-                                                ->orWhere('to_date', '>=', $timetableDate);
-                                          });
-                                })->first();
+                                $medicalExemption = $this->coveringMedicalExemption($currentCoursePk, $student_pk, $courseGroup->timetable);
 
                                 if ($medicalExemption) {
                                     $record['exemption_document'] = $medicalExemption->Doc_upload;
@@ -2226,6 +2187,40 @@ $currentPath = $segments[1] ?? null;
             'logoRight'  => $toDataUri($rightLogo),
             'titleHindi' => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
         ];
+    }
+
+    /**
+     * The OT's medical exemption covering one timetabled session, or null.
+     *
+     * Loads the active exemptions whose dates span the session's DATE (compared
+     * as dates — from_date / to_date are datetimes, and comparing them raw
+     * against a midnight session date kept an exemption that ended earlier that
+     * day and dropped one that started later), then asks OtExemptionResolver
+     * whether one covers the session's time. That is the rule save() and the
+     * admin grid already apply, so the OT's own view and export can no longer
+     * show Present where the saved and admin-visible status is Absent
+     * (PR #334 F-004).
+     */
+    private function coveringMedicalExemption($coursePk, $studentPk, ?CalendarEvent $timetable): ?object
+    {
+        if (! $timetable || empty($timetable->START_DATE)) {
+            return null;
+        }
+
+        $date = substr((string) $timetable->START_DATE, 0, 10);
+
+        $candidates = StudentMedicalExemption::where([
+            ['course_master_pk', '=', $coursePk],
+            ['student_master_pk', '=', $studentPk],
+            ['active_inactive', '=', 1],
+        ])
+            ->whereDate('from_date', '<=', $date)
+            ->where(function ($q) use ($date) {
+                $q->whereNull('to_date')->orWhereDate('to_date', '>=', $date);
+            })
+            ->get();
+
+        return OtExemptionResolver::coveringMedicalExemption($candidates, $date, $timetable->class_session);
     }
 
     private function resolveTimetableFacultyNames(?CalendarEvent $timetable): string

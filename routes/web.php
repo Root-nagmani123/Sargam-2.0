@@ -260,7 +260,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/my-groups', [UserController::class, 'myGroups'])->name('admin.dashboard.my-groups');
     Route::get('/dashboard/my-groups/{mapPk}/students', [UserController::class, 'myGroupStudents'])->name('admin.dashboard.my-groups.students');
     Route::get('/dashboard/my-groups/{mapPk}/students/export', [UserController::class, 'myGroupStudentsExport'])->name('admin.dashboard.my-groups.students.export');
-    Route::post('/dashboard/my-groups/{mapPk}/students/message', [UserController::class, 'myGroupSendMessage'])->name('admin.dashboard.my-groups.students.message');
+    // Sends real SMS / email through the institutional gateway on an OT's text:
+    // at most 5 sends an hour per account (PR #334 F-011). Each send is audited
+    // by UserController::logGroupMessage().
+    Route::post('/dashboard/my-groups/{mapPk}/students/message', [UserController::class, 'myGroupSendMessage'])
+        ->middleware('throttle:5,60')
+        ->name('admin.dashboard.my-groups.students.message');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
     Route::post('/dashboard/report-issue', [IssueReportController::class, 'store'])->middleware('throttle:10,1')->name('admin.dashboard.report-issue');
     // Admin console for issues submitted via the dashboard "Report Issue" launcher

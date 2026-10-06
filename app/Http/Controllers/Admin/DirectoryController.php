@@ -40,7 +40,6 @@ class DirectoryController extends Controller
         'name' => 'sm.display_name',
         'ot_code' => 'sm.generated_OT_code',
         'email' => 'sm.email',
-        'mobile' => 'sm.contact_no',
         'cadre' => 'cad.cadre_name',
     ];
 
@@ -424,7 +423,10 @@ class DirectoryController extends Controller
                 'room_no' => '-',
                 'room_ext' => '-',
                 'email' => e((string) ($student->email ?: '-')),
-                'mobile' => e((string) ($student->contact_no ?: '-')),
+                // No mobile here: this feed is open to every signed-in account,
+                // and an OT's mobile number is not for every account to read or
+                // search by (PR #334 F-005, product decision 2026-10-06). It stays
+                // in the gated export (EnsureDirectoryExportAccess) only.
                 'course' => e((string) ($student->course_name ?: '-')),
                 'cadre' => e((string) ($student->cadre_name ?: '-')),
             ]);
@@ -567,7 +569,8 @@ class DirectoryController extends Controller
                 $inner->whereRaw('CONVERT(sm.display_name USING utf8mb4) LIKE ?', [$like])
                     ->orWhereRaw('CONVERT(sm.generated_OT_code USING utf8mb4) LIKE ?', [$like])
                     ->orWhereRaw('CONVERT(sm.email USING utf8mb4) LIKE ?', [$like])
-                    ->orWhereRaw('CONVERT(sm.contact_no USING utf8mb4) LIKE ?', [$like])
+                    // contact_no is deliberately not searchable: a match would let
+                    // any account reverse-look-up a mobile number (PR #334 F-005).
                     ->orWhereRaw('CONVERT(cad.cadre_name USING utf8mb4) LIKE ?', [$like]);
             }))
             ->select([

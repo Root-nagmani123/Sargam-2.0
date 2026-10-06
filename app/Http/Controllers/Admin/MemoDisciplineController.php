@@ -189,6 +189,12 @@ class MemoDisciplineController extends Controller
  */
 public function otMarksDeducted(OtMarksDeductedService $marks)
 {
+    // user_id is a student_master.pk only for an Officer Trainee login
+    // (user_category 'S'); for staff and faculty it is an employee / faculty pk
+    // that can equal some student's pk. Refuse rather than read that student's
+    // memos.
+    abort_unless((Auth::user()->user_category ?? null) === 'S', 403);
+
     $studentPk = (int) Auth::user()->user_id;
 
     $rows = $marks->rowsFor($studentPk);
