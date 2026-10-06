@@ -213,7 +213,8 @@ class FacultyLeaveApprovalController extends Controller
             @ini_set('memory_limit', '256M');
             @set_time_limit(120);
 
-            $rows = $this->baseQuery($request)->get();
+            // action_by_faculty_name reads both relations per row.
+            $rows = $this->baseQuery($request)->with(['approvedByFaculty', 'appliedByUser'])->get();
 
             $logoPath = public_path('images/lbsnaa_logo.jpg');
             $logo = (is_file($logoPath) && is_readable($logoPath))
@@ -247,9 +248,11 @@ class FacultyLeaveApprovalController extends Controller
             return $pdf->download($filename . '.pdf');
         }
 
-        $rows = $this->baseQuery($request)->get();
+        $rows = $this->baseQuery($request)->with(['approvedByFaculty', 'appliedByUser'])->get();
 
-        $headings = ['S. No.', 'OT Code', 'OT Name', 'Course Name', 'Leave Type', 'Date From', 'Date To', 'Time From', 'Time To', 'Total Days', 'Reason', 'Status'];
+        // "Approved/Rejected By" is the audit column the pre-PR LeaveApprovalExport
+        // ended with and the PDF still prints — the Excel must carry it too (PR #334 F-042).
+        $headings = ['S. No.', 'OT Code', 'OT Name', 'Course Name', 'Leave Type', 'Date From', 'Date To', 'Time From', 'Time To', 'Total Days', 'Reason', 'Status', 'Approved/Rejected By'];
 
         $data = $rows->values()->map(fn ($row, $index) => [
             $index + 1,
@@ -264,6 +267,9 @@ class FacultyLeaveApprovalController extends Controller
             number_format((float) $row->total_days, 0),
             $row->reason ?? '-',
             $row->status_label,
+            // Same value the PDF prints: the faculty approver, the Training Section
+            // operator for an on-behalf leave, or "-".
+            $row->action_by_faculty_name,
         ])->values();
 
         $baseName = 'Leave_Approval_' . now()->format('Ymd_His');
@@ -301,8 +307,10 @@ class FacultyLeaveApprovalController extends Controller
             }
         }
 
-        if ($request->filled('from_date') || $request->filled('to_date')) {
-            $parts[] = 'Period: ' . ($request->input('from_date') ?: '…') . ' to ' . ($request->input('to_date') ?: '…');
+        $from = is_scalar($request->input('from_date')) ? (string) $request->input('from_date') : '';
+        $to = is_scalar($request->input('to_date')) ? (string) $request->input('to_date') : '';
+        if ($from !== '' || $to !== '') {
+            $parts[] = 'Period: ' . ($from ?: '…') . ' to ' . ($to ?: '…');
         }
 
         return implode(' | ', $parts);
@@ -317,17 +325,22 @@ class FacultyLeaveApprovalController extends Controller
             (string) LeaveApplication::STATUS_APPROVED => 'Approved',
             (string) LeaveApplication::STATUS_REJECTED => 'Rejected',
         ];
-        if ($request->filled('status') && isset($statusMap[(string) $request->status])) {
-            $parts[] = 'Status: ' . $statusMap[(string) $request->status];
+        // Every value below is concatenated, so read each as a scalar: an
+        // array-valued parameter (?from_date[]=) reads as unset rather than
+        // raising "Array to string conversion" (PR #334 F-041).
+        $in = fn (string $key) => is_scalar($request->input($key)) ? (string) $request->input($key) : '';
+
+        if (isset($statusMap[$in('status')])) {
+            $parts[] = 'Status: ' . $statusMap[$in('status')];
         }
 
-        if ($request->filled('course_filter')) {
-            $course = CourseMaster::find($request->course_filter);
-            $parts[] = 'Course: ' . ($course->course_name ?? $request->course_filter);
+        if ($in('course_filter') !== '') {
+            $course = CourseMaster::find((int) $in('course_filter'));
+            $parts[] = 'Course: ' . ($course->course_name ?? $in('course_filter'));
         }
 
-        if ($request->filled('from_date') || $request->filled('to_date')) {
-            $parts[] = 'Period: ' . ($request->from_date ?: '…') . ' to ' . ($request->to_date ?: '…');
+        if ($in('from_date') !== '' || $in('to_date') !== '') {
+            $parts[] = 'Period: ' . ($in('from_date') ?: '…') . ' to ' . ($in('to_date') ?: '…');
         }
 
         return implode('  |  ', $parts);

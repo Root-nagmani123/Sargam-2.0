@@ -312,7 +312,8 @@ class TimetableReportController extends Controller
     {
         // Active / Archive course mode (same logic as feedback_average). Anything
         // else — the All Courses tab — leaves both in.
-        $courseMode = (string) $request->get('course_mode', 'active');
+        // ?course_mode[]= is not a mode; treat it like an absent one (PR #334 F-041).
+        $courseMode = is_string($request->get('course_mode')) ? $request->get('course_mode') : 'active';
         FacultySessionScope::applyCourseMode($query, $courseMode);
 
         if ($request->filled('course_pk')) {

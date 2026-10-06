@@ -377,7 +377,9 @@ class NoticeNotificationController extends Controller
             'target_audience.in'         => 'Please select a valid target audience.',
         ];
 
-        $target = (string) $request->input('target_audience');
+        // Read before validation runs, so an array (target_audience[]=) must not reach
+        // a string cast; it is left to the 'string' rule above to reject (PR #334 F-041).
+        $target = is_string($request->input('target_audience')) ? $request->input('target_audience') : '';
 
         if ($this->isOfficerTrainee($target)) {
             // Empty = "Select All" courses, so the courses themselves stay optional.
@@ -386,7 +388,7 @@ class NoticeNotificationController extends Controller
             $messages['course_master_pks.*.exists'] = 'One of the selected courses does not exist.';
 
             if ($this->idsFrom($request, 'course_master_pks')) {
-                $scope = (string) $request->input('ot_scope');
+                $scope = is_string($request->input('ot_scope')) ? $request->input('ot_scope') : '';
 
                 $rules['ot_scope'] = ['required', Rule::in([Notice::MODE_ALL, Notice::MODE_GROUP, Notice::MODE_INDIVIDUAL])];
                 $messages['ot_scope.required'] = 'Please choose All, Group or Individual.';
@@ -463,14 +465,14 @@ class NoticeNotificationController extends Controller
             'audience_mode'        => Notice::MODE_ALL,
         ];
 
-        $target = (string) $request->input('target_audience');
+        $target = is_string($request->input('target_audience')) ? $request->input('target_audience') : '';
 
         if ($this->isOfficerTrainee($target)) {
             $courses = $this->idsFrom($request, 'course_master_pks');
             $columns['course_master_pk'] = count($courses) === 1 ? $courses[0] : null;
 
             if ($courses) {
-                $scope = (string) $request->input('ot_scope', Notice::MODE_ALL);
+                $scope = is_string($request->input('ot_scope')) ? $request->input('ot_scope') : Notice::MODE_ALL;
 
                 if ($scope === Notice::MODE_INDIVIDUAL) {
                     $columns['audience_mode'] = Notice::MODE_INDIVIDUAL;

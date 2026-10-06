@@ -584,7 +584,7 @@ class LeaveApplicationController extends Controller
         $centreColumns = [0, 4, 5, 6, 7, 8, 9];
         $filterLine = $this->myLeaveFilterLine($request);
 
-        if (strtolower((string) $request->get('format')) === 'pdf') {
+        if (is_string($request->get('format')) && strtolower($request->get('format')) === 'pdf') {
             @ini_set('memory_limit', '256M');
             @set_time_limit(120);
 
@@ -613,11 +613,12 @@ class LeaveApplicationController extends Controller
     {
         $parts = [];
 
-        if ($request->filled('leave_type')) {
-            $parts[] = 'Leave Type: ' . match ($request->input('leave_type')) {
+        $leaveType = is_scalar($request->input('leave_type')) ? (string) $request->input('leave_type') : '';
+        if ($leaveType !== '') {
+            $parts[] = 'Leave Type: ' . match ($leaveType) {
                 LeaveApplication::TYPE_PT_EXEMPTION => 'PT Exemption',
                 LeaveApplication::TYPE_STATIONED_LEAVE => 'Stationed Leave',
-                default => $request->input('leave_type'),
+                default => $leaveType,
             };
         }
 
@@ -631,8 +632,10 @@ class LeaveApplicationController extends Controller
             $parts[] = 'Status: ' . ($labels[(int) $request->input('status')] ?? 'All');
         }
 
-        if ($request->filled('from_date') || $request->filled('to_date')) {
-            $parts[] = 'Period: ' . ($request->input('from_date') ?: '…') . ' to ' . ($request->input('to_date') ?: '…');
+        $from = is_scalar($request->input('from_date')) ? (string) $request->input('from_date') : '';
+        $to = is_scalar($request->input('to_date')) ? (string) $request->input('to_date') : '';
+        if ($from !== '' || $to !== '') {
+            $parts[] = 'Period: ' . ($from ?: '…') . ' to ' . ($to ?: '…');
         }
 
         return implode(' | ', $parts);

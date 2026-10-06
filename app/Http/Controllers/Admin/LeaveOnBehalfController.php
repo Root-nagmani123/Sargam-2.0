@@ -201,7 +201,7 @@ class LeaveOnBehalfController extends Controller
         $centreColumns = [0, 2, 5, 6, 7, 8, 9, 12];
         $filterLine = $this->exportFilterLine($request);
 
-        if (strtolower((string) $request->get('format')) === 'pdf') {
+        if (is_string($request->get('format')) && strtolower($request->get('format')) === 'pdf') {
             @ini_set('memory_limit', '256M');
             @set_time_limit(120);
 
@@ -232,8 +232,10 @@ class LeaveOnBehalfController extends Controller
             }
         }
 
-        if ($request->filled('from_date') || $request->filled('to_date')) {
-            $parts[] = 'Period: ' . ($request->input('from_date') ?: '…') . ' to ' . ($request->input('to_date') ?: '…');
+        $from = is_scalar($request->input('from_date')) ? (string) $request->input('from_date') : '';
+        $to = is_scalar($request->input('to_date')) ? (string) $request->input('to_date') : '';
+        if ($from !== '' || $to !== '') {
+            $parts[] = 'Period: ' . ($from ?: '…') . ' to ' . ($to ?: '…');
         }
 
         return implode(' | ', $parts);
@@ -362,6 +364,14 @@ class LeaveOnBehalfController extends Controller
 
         $this->assertCourseAllowed($coursePk);
 
+        // Same set the form's course dropdown offers (getCourses()): a course that
+        // has ended or been deactivated is not offered, so it is not accepted either.
+        if (! $this->getCourses()->contains('pk', $coursePk)) {
+            return back()->withInput()->withErrors([
+                'course_master_pk' => 'This course is not running. Choose a current course.',
+            ]);
+        }
+
         if (! $this->studentBelongsToCourse($studentPk, $coursePk)) {
             return back()->withInput()->withErrors([
                 'student_master_pk' => 'This officer trainee is not enrolled on the selected course.',
@@ -369,7 +379,8 @@ class LeaveOnBehalfController extends Controller
         }
 
         $nature = LeaveNatureMaster::find($validated['leave_nature_master_pk']);
-        if (! $nature || $nature->leave_type !== LeaveNatureMaster::TYPE_LEAVE) {
+        // Active only, like the form's list (leaveNatures() -> ofType()).
+        if (! $nature || $nature->leave_type !== LeaveNatureMaster::TYPE_LEAVE || (int) $nature->active_inactive !== 1) {
             return back()->withInput()->withErrors([
                 'leave_nature_master_pk' => 'Select a nature from the Leave list. '
                     . 'Natures are maintained under Nature Leave Master.',

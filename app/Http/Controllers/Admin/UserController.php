@@ -4227,35 +4227,45 @@ class UserController extends Controller
     private function otParticipantsFilterSummary(Request $request): string
     {
         $parts = [];
+        // Every value is concatenated; the list itself already treats an array-valued
+        // parameter as unset (applyDashboardStudentListFilters), so the summary must
+        // too, not throw "Array to string conversion" (PR #334 F-041 family).
+        $in = fn (string $key) => is_scalar($request->input($key)) ? trim((string) $request->input($key)) : '';
 
-        if ($request->filled('course_id')) {
-            $course = CourseMaster::find($request->input('course_id'));
-            $parts[] = 'Course: ' . ($course->course_name ?? $request->input('course_id'));
+        if ($in('course_id') !== '') {
+            $course = CourseMaster::find((int) $in('course_id'));
+            $parts[] = 'Course: ' . ($course->course_name ?? $in('course_id'));
         }
-        if ($request->filled('cadre')) {
-            $parts[] = 'Cadre: ' . $request->input('cadre');
+        if ($in('cadre') !== '') {
+            $parts[] = 'Cadre: ' . $in('cadre');
         }
-        if ($request->filled('counsellor_faculty')) {
-            $name = DB::table('faculty_master')->where('pk', $request->input('counsellor_faculty'))->value('full_name');
-            $parts[] = 'Cadre Counsellor: ' . trim((string) ($name ?: $request->input('counsellor_faculty')));
+        if ($in('counsellor_faculty') !== '') {
+            $name = DB::table('faculty_master')->where('pk', (int) $in('counsellor_faculty'))->value('full_name');
+            $parts[] = 'Cadre Counsellor: ' . trim((string) ($name ?: $in('counsellor_faculty')));
         }
-        if ($request->filled('house_group')) {
-            $parts[] = 'House Group: ' . $request->input('house_group');
+        if ($in('house_group') !== '') {
+            $parts[] = 'House Group: ' . $in('house_group');
         }
-        if ($request->filled('house_faculty')) {
-            $name = DB::table('faculty_master')->where('pk', $request->input('house_faculty'))->value('full_name');
-            $parts[] = 'House Group Faculty: ' . trim((string) ($name ?: $request->input('house_faculty')));
+        if ($in('house_faculty') !== '') {
+            $name = DB::table('faculty_master')->where('pk', (int) $in('house_faculty'))->value('full_name');
+            $parts[] = 'House Group Faculty: ' . trim((string) ($name ?: $in('house_faculty')));
         }
-        if ($request->filled('session')) {
-            $parts[] = 'Session: ' . $request->input('session');
+        // The page's "House" / "Hostel Room" select (#houseFilter) — same label as
+        // the page, which depends on the view (PR #334 F-043).
+        if ($in('house') !== '') {
+            $parts[] = ($this->otParticipantsScopedView($request)[2] ? 'House: ' : 'Hostel Room: ') . $in('house');
         }
-        if ($request->filled('from_date') && $request->filled('to_date')) {
-            $parts[] = 'Time Period: ' . Carbon::parse($request->input('from_date'))->format('d-m-Y')
-                . ' to ' . Carbon::parse($request->input('to_date'))->format('d-m-Y');
+        if ($in('session') !== '') {
+            $parts[] = 'Session: ' . $in('session');
+        }
+        if ($in('from_date') !== '' && $in('to_date') !== '') {
+            $parts[] = 'Time Period: ' . Carbon::parse($in('from_date'))->format('d-m-Y')
+                . ' to ' . Carbon::parse($in('to_date'))->format('d-m-Y');
         }
 
         $searchInput = $request->input('search');
-        $search = trim((string) (is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput));
+        $searchValue = is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput;
+        $search = is_scalar($searchValue) ? trim((string) $searchValue) : '';
         if ($search !== '') {
             $parts[] = 'Search: ' . $search;
         }
@@ -4274,7 +4284,8 @@ class UserController extends Controller
     private function otParticipantsApplySearch(Request $request, $rows, array $rowMeta)
     {
         $searchInput = $request->input('search');
-        $search = strtolower(trim((string) (is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput)));
+        $searchValue = is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput;
+        $search = is_scalar($searchValue) ? strtolower(trim((string) $searchValue)) : '';
         if ($search === '') {
             return collect($rows)->values();
         }
@@ -5670,7 +5681,8 @@ class UserController extends Controller
         // this narrower haystack doesn't drop their rows first.
         $searchInput = $applySearch ? $request->input('search', '') : '';
         $searchValue = is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput;
-        $search = strtolower(trim((string) $searchValue));
+        // ?search[value][]= — not a search term.
+        $search = is_scalar($searchValue) ? strtolower(trim((string) $searchValue)) : '';
 
         // Time Period (event date) filter: when a range is selected, only students who
         // have a timetable session/event within that range are kept. If no event exists

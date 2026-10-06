@@ -4953,6 +4953,11 @@ class CalendarController extends Controller
 
     public function studentFeedback()
     {
+        // user_id is a student_master.pk only for an Officer Trainee login
+        // (user_category 'S'); for staff and faculty it can equal some trainee's
+        // pk. Same rule as studentFacultyFeedback() (PR #334 F-034).
+        abort_unless((auth()->user()->user_category ?? null) === 'S', 403);
+
         try {
             $student_pk = auth()->user()->user_id;
             $sessionEndRaw = "

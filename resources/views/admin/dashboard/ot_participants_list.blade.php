@@ -205,10 +205,14 @@
                     </div>
                     @endif
 
+                    {{-- On the House view these are the faculty's House Groups (the House
+                         Group column). Everywhere else they are hostel rooms, which no
+                         column shows — so say so, rather than call a room a "House"
+                         beside a House Group column (PR #334 F-043). --}}
                     @if(! ($isCounselleeView ?? false) && ($houseOptions ?? collect())->isNotEmpty())
                     <div class="sl-filter-item">
-                        <select id="houseFilter" class="form-select sl-filter-select" aria-label="Filter by house name">
-                            <option value="">House: All</option>
+                        <select id="houseFilter" class="form-select sl-filter-select" aria-label="{{ ($isHouseView ?? false) ? 'Filter by house' : 'Filter by hostel room' }}">
+                            <option value="">{{ ($isHouseView ?? false) ? 'House: All' : 'Hostel Room: All' }}</option>
                             @foreach($houseOptions as $house)
                                 <option value="{{ $house }}" {{ (string)($filters['house'] ?? '') === (string)$house ? 'selected' : '' }}>{{ $house }}</option>
                             @endforeach

@@ -2081,7 +2081,8 @@ class FeedbackController extends Controller
     {
         // Handle faculty_type parameter - it might be string or array
         $selectedTypes = $request->input('faculty_type', []);
-        $searchTerm = $request->input('faculty_name', '');
+        // ?faculty_name[]= would reach the sha1() key and the LIKE below as an array.
+        $searchTerm = is_scalar($request->input('faculty_name')) ? (string) $request->input('faculty_name') : '';
 
         // Ensure selectedTypes is always an array
         if (is_string($selectedTypes)) {
@@ -2120,15 +2121,19 @@ class FeedbackController extends Controller
             $query->where('fm.full_name', 'LIKE', '%' . $searchTerm . '%');
         }
 
-        // Typeahead: fired on every keystroke, and the answer is the same for every
-        // viewer, so cache it per (type filter, search term).
+        // Typeahead: fired on every keystroke, so cache it per (viewer scope, type
+        // filter, search term). The viewer scope is part of the key because the query
+        // above is narrowed for a faculty viewer — without it an admin's full list was
+        // served to a faculty login, and a faculty's single name to admins, for the TTL
+        // (PR #334 F-039).
         //
         // The term is hashed rather than normalised. Normalising only the key while the LIKE
         // above still uses the raw term would let " Ravi" and "ravi" — which produce different
         // patterns, '% Ravi%' and '%ravi%' — share one entry, so whichever ran first would serve
         // the other for the whole TTL. Hashing keeps one entry per distinct term and keeps the
         // key safe for every store.
-        $suggestionKey = 'faculty_suggestions:' . implode(',', $validTypes) . ':' . sha1((string) $searchTerm);
+        $viewerScope = FacultySessionScope::lockedFacultyPk() ?? 'all';
+        $suggestionKey = 'faculty_suggestions:' . $viewerScope . ':' . implode(',', $validTypes) . ':' . sha1($searchTerm);
         $faculties = FeedbackReportCache::remember(
             $suggestionKey,
             FeedbackReportCache::TTL_SUGGESTIONS,
@@ -4007,14 +4012,40 @@ class FeedbackController extends Controller
     private function pendingStudentsPendingExpressionSql(): string
     {
         // A session with three Teaching faculty expects three feedbacks — but on the
-        // faculty portal only the viewer's own is in scope, so exactly one is
+        // faculty portal only the viewer's own is in scope, so at most one is
         // expected. Leaving it at three counted colleagues' missing feedback as this
         // faculty's, which is what made the totals read too high.
-        $expected = $this->facultyReportViewerPk() !== null
-            ? '1'
+        $viewerFacultyPk = $this->facultyReportViewerPk();
+        $expected = $viewerFacultyPk !== null
+            ? $this->viewerExpectedFeedbackSql($viewerFacultyPk, 't')
             : expected_feedback_count_sql('t');
 
         return '(' . $expected . ' - COALESCE(tf.submitted_count, 0))';
+    }
+
+    /**
+     * How many feedbacks a session owes THIS faculty viewer: 1 when they are a
+     * Teaching faculty on it, else 0 (PR #334 F-040).
+     *
+     * The faculty-portal scope (FacultySessionScope::applyFaculty) matches every
+     * faculty listed on the session whatever their role, but trainees are only
+     * offered feedback for Teaching faculty (CalendarController::studentFacultyFeedback),
+     * so a Sectional/Administration slot can never be answered. Same branches as
+     * expected_feedback_count_sql(): faculty_details decides when present, the
+     * legacy faculty_master list otherwise (every listed faculty is expected there).
+     * faculty_pk is stored as an int, but older rows may carry a string — match both.
+     */
+    private function viewerExpectedFeedbackSql(int $facultyPk, string $alias = 't'): string
+    {
+        $details = "{$alias}.faculty_details";
+
+        return "(CASE
+            WHEN JSON_VALID({$details}) THEN
+                CASE WHEN JSON_CONTAINS({$details}, JSON_OBJECT('faculty_pk', {$facultyPk}, 'role', 'Teaching'))
+                       OR JSON_CONTAINS({$details}, JSON_OBJECT('faculty_pk', '{$facultyPk}', 'role', 'Teaching'))
+                     THEN 1 ELSE 0 END
+            ELSE 1
+        END)";
     }
 
     /**
@@ -4273,6 +4304,12 @@ class FeedbackController extends Controller
             // line remains — otherwise the detail contradicts the totals above it.
             if ($viewerFacultyPk !== null) {
                 $facultyPks = array_values(array_filter($facultyPks, fn ($pk) => (int) $pk === $viewerFacultyPk));
+                // Not Teaching on this session: it owes the viewer nothing
+                // (viewerExpectedFeedbackSql() counts it as 0), so it is not listed.
+                if (empty($facultyPks)) {
+                    $facultyByRowKey[$idx] = null;
+                    continue;
+                }
             }
             $facultyByRowKey[$idx] = $facultyPks;
             foreach ($facultyPks as $fpk) {
@@ -4303,6 +4340,9 @@ class FeedbackController extends Controller
 
             $submitted = $submittedMap[$row->timetable_pk . '_' . $pk] ?? [];
             $facultyPks = $facultyByRowKey[$idx];
+            if ($facultyPks === null) {
+                continue;
+            }
 
             $base = [
                 'session_name' => $row->session_name,
