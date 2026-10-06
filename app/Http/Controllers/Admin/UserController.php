@@ -2307,31 +2307,50 @@ class UserController extends Controller
             : $this->facultyGroupRows($facultyPk, '%house%', 'house_group_name', true);
     }
 
+    /**
+     * The Cadre a participant row shows — one label for the grid, its sort, the
+     * search and the export, so all four agree with the Cadre filter (which reads
+     * cadre_name). On the counsellee view the cadre is the counsellor group name.
+     */
+    private function otParticipantCadreLabel($p): string
+    {
+        return (string) (($p->counsellor_group_name ?? null)
+            ?: (($p->cadre_name ?? null) ?: ($p->studentMaster->cadre->cadre_name ?? '')));
+    }
+
+    /**
+     * The House a participant row shows: the House view's own group name, else the
+     * Course Group Mapping house group (what the House Group filter and the export
+     * use). Only the counsellee view, which has no house group, falls back to the
+     * hostel room — see otParticipantsHouseRoomFallback().
+     */
+    private function otParticipantHouseLabel($p, bool $roomFallback): string
+    {
+        $label = ($p->house_group_name ?? null) ?: ($p->house_group ?? null);
+        if (! $label && $roomFallback) {
+            $label = $p->house_name ?? null;
+        }
+
+        return (string) ($label ?? '');
+    }
+
+    private function otParticipantsHouseRoomFallback(Request $request): bool
+    {
+        return $this->otParticipantsScopedView($request)[1];
+    }
+
     private function otParticipantsRowsFor(Request $request, $students)
     {
         [$scopeFacultyPk, $isCounselleeView, $isHouseView] = $this->otParticipantsScopedView($request);
 
+        // The card views list the faculty's own groups. Every other view lists the
+        // $students the caller built — the viewer's coordinated roster — and must
+        // not rebuild a wider payload here.
         if ($isCounselleeView || $isHouseView) {
             $students = $this->otParticipantsScopedStudents($scopeFacultyPk, $isCounselleeView);
-
-            $payload = [
-                'students' => $students,
-                'availableCourses' => $students->map(fn ($m) => $m->course)->filter()->unique('pk')->values(),
-                'facultyPk' => $scopeFacultyPk,
-            ];
-        } else {
-            // Skip the payload's per-student total_* / notice-memo N+1 loop — this page
-            // computes its counts separately via otParticipantsRowMeta (batched).
-            $payload = $this->resolveDashboardStudentListPayload($request, false);
         }
 
-        $availableCourses = $payload['availableCourses'];
-
-        // Apply the shared filters to the session rows, then collapse to one row
-        // per participant — every student of the selected course is listed. The
-        // Time Period filter here only scopes the count columns (see $rowMeta
-        // below), so pass false to keep all students visible regardless of dates.
-        $sessionRows = $this->applyDashboardStudentListFilters($payload['students'], $request, false);
+        $sessionRows = $this->applyDashboardStudentListFilters($students, $request, false, false);
 
         $byStudent = [];
         foreach ($sessionRows as $m) {
@@ -4053,7 +4072,7 @@ class UserController extends Controller
         // The search box narrows the export exactly as it narrows the table.
         $rows = $this->otParticipantsApplySearch($request, $rows, $rowMeta);
 
-        $exportData = $this->otParticipantsExportData($rows, $rowMeta);
+        $exportData = $this->otParticipantsExportData($rows, $rowMeta, $this->otParticipantsHouseRoomFallback($request));
 
         $timestamp = now()->format('Ymd_His');
         $fileBase = "ot_participants_{$timestamp}";
@@ -4132,7 +4151,7 @@ class UserController extends Controller
      *
      * @return array{headings: array<int, string>, rows: array<int, array<int, string>>, widths: array<int, int>}
      */
-    private function otParticipantsExportData($rows, array $rowMeta): array
+    private function otParticipantsExportData($rows, array $rowMeta, bool $roomFallback = false): array
     {
         // Heading, then the relative width it gets in the PDF. Text columns need
         // the room; the count columns hold two characters and stay narrow.
@@ -4183,10 +4202,10 @@ class UserController extends Controller
                 (string) ($s->email ?: 'N/A'),
                 (string) ($s->contact_no ?: 'N/A'),
                 (string) ($s->user_id ?: 'N/A'),
-                (string) ($p->cadre_name ?: ($s->cadre->cadre_name ?? 'N/A')),
+                (string) ($this->otParticipantCadreLabel($p) ?: 'N/A'),
                 (string) ($p->counsellor_name ?: 'N/A'),
                 (string) ($p->house_faculty_name ?: 'N/A'),
-                (string) ($p->house_group ?: 'N/A'),
+                (string) ($this->otParticipantHouseLabel($p, $roomFallback) ?: 'N/A'),
                 $count($meta['duty_count'] ?? 0),
                 (string) ($meta['duty_type'] ?: '-'),
                 $count($meta['medical'] ?? 0),
@@ -4260,7 +4279,9 @@ class UserController extends Controller
             return collect($rows)->values();
         }
 
-        return collect($rows)->filter(function ($p) use ($search, $rowMeta) {
+        $roomFallback = $this->otParticipantsHouseRoomFallback($request);
+
+        return collect($rows)->filter(function ($p) use ($search, $rowMeta, $roomFallback) {
             $s = $p->studentMaster;
             if (! $s) {
                 return false;
@@ -4285,10 +4306,10 @@ class UserController extends Controller
                 // student_master.user_id IS the login name (it matches
                 // user_credentials.user_name) — no extra lookup needed.
                 $s->user_id ?? '',
-                $p->cadre_name ?? ($s->cadre->cadre_name ?? ''),
+                $this->otParticipantCadreLabel($p),
                 $p->counsellor_name ?? '',
                 $p->house_faculty_name ?? '',
-                $p->house_group ?? '',
+                $this->otParticipantHouseLabel($p, $roomFallback),
                 $p->topic ?? '',
                 $meta['duty_type'] ?? '',
                 implode(' ', $counts),
@@ -4317,8 +4338,9 @@ class UserController extends Controller
         $orderCol = (int) $request->input('order.0.column', 0);
         $orderDir = strtolower((string) $request->input('order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
         $sortKey = $columnMap[$orderCol] ?? null;
+        $roomFallback = $this->otParticipantsHouseRoomFallback($request);
         if ($sortKey !== null) {
-            $rows = $rows->sortBy(function ($p) use ($sortKey) {
+            $rows = $rows->sortBy(function ($p) use ($sortKey, $roomFallback) {
                 $s = $p->studentMaster;
 
                 return match ($sortKey) {
@@ -4327,10 +4349,10 @@ class UserController extends Controller
                     'email' => (string) ($s->email ?? ''),
                     'mobile' => (string) ($s->contact_no ?? ''),
                     'user_name' => (string) ($s->user_id ?? ''),
-                    'cadre' => (string) ($p->counsellor_group_name ?: ($s->cadre->cadre_name ?? '')),
+                    'cadre' => $this->otParticipantCadreLabel($p),
                     'counsellor' => (string) ($p->counsellor_name ?? ''),
                     'house_faculty' => (string) ($p->house_faculty_name ?? ''),
-                    'house' => (string) ($p->house_group_name ?: ($p->house_name ?? '')),
+                    'house' => $this->otParticipantHouseLabel($p, $roomFallback),
                     default => '',
                 };
             }, SORT_NATURAL | SORT_FLAG_CASE, $orderDir === 'desc')->values();
@@ -4383,10 +4405,10 @@ class UserController extends Controller
                 'counsellor' => e($p->counsellor_name ?: 'N/A'),
                 // The faculty on the same Course Group Mapping row as the house group.
                 'house_faculty' => e($p->house_faculty_name ?: 'N/A'),
-                // House GROUP (Course Group Mapping) — the full group name
-                // ("Nanda Devi"), not the hostel room code ("GANG-116").
-                'cadre' => e($p->counsellor_group_name ?: ($s->cadre->cadre_name ?? 'N/A')),
-                'house' => e($p->house_group_name ?: ($p->house_name ?: 'N/A')),
+                // Same labels as the Cadre filter, the search and the export —
+                // see otParticipantCadreLabel() / otParticipantHouseLabel().
+                'cadre' => e($this->otParticipantCadreLabel($p) ?: 'N/A'),
+                'house' => e($this->otParticipantHouseLabel($p, $roomFallback) ?: 'N/A'),
                 'duty_count' => $this->otCountCell($meta['duty_count'], $detailUrl.'?section=dutiesSection'.$linkDateQs),
                 'duty_type' => e($meta['duty_type'] ?: '-'),
                 'medical' => $this->otCountCell($meta['medical'], $detailUrl.'?section=medicalExceptionsSection'.$linkDateQs),
@@ -5826,17 +5848,17 @@ class UserController extends Controller
                 continue;
             }
 
-            // Present bucket: EVERY non-absent marked session, so a student marked
-            // present in several sessions of the range shows one row per session
-            // exactly like the All tab.
-            foreach ($marked->filter(fn ($m) => (int) $m->attendance_status !== 3) as $presentRow) {
+            // Present bucket: EVERY non-absent marked session — including an absence
+            // a duty/exemption covers — so a student marked present in several
+            // sessions of the range shows one row per session exactly like the All tab.
+            foreach ($marked->reject($isAbsentRow) as $presentRow) {
                 $presentRow->attendance_present = true;
                 $present->push($presentRow);
             }
 
-            // Absent bucket: EVERY absent (status 3) marked session. Each row keeps
-            // its own session date so the Absent Reason resolves against that day.
-            foreach ($marked->filter(fn ($m) => (int) $m->attendance_status === 3) as $absentRow) {
+            // Absent bucket: EVERY uncovered absent (status 3) marked session. Each row
+            // keeps its own session date so the Absent Reason resolves against that day.
+            foreach ($marked->filter($isAbsentRow) as $absentRow) {
                 $absentRow->attendance_present = false;
                 $absent->push($absentRow);
             }
