@@ -47,6 +47,25 @@ class StudentFacultyFeedbackTraineeOnlyTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_a_non_trainee_is_refused_the_student_feedback_page(): void
+    {
+        $this->actingAs($this->nonTrainee())
+            ->get(route('feedback.get.studentFeedback'))
+            ->assertForbidden();
+    }
+
+    public function test_a_trainee_is_not_refused_the_student_feedback_page(): void
+    {
+        // Not assertOk(): on the local MariaDB copy the page's own query fails
+        // (pre-existing, identical on base) and the catch redirects. The guard
+        // under test only decides 403 or not.
+        $status = $this->actingAs($this->officerTrainee())
+            ->get(route('feedback.get.studentFeedback'))
+            ->getStatusCode();
+
+        $this->assertNotSame(403, $status);
+    }
+
     public function test_a_trainee_without_a_token_is_served(): void
     {
         $this->actingAs($this->officerTrainee())

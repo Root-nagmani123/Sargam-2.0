@@ -23,11 +23,15 @@ class LeaveOnBehalfDoubleSubmitTest extends TestCase
     /** @return array<string, mixed> a valid store payload for an enrolled OT on a configured course */
     private function payload(): array
     {
-        $enrolment = DB::table('student_master_course__map')
-            ->where('active_inactive', 1)
-            ->orderBy('pk')
-            ->first(['course_master_pk', 'student_master_pk']);
-        $nature = DB::table('leave_nature_master')->where('leave_type', 'LEAVE')->value('pk');
+        // A running course: store() accepts only what the form offers.
+        $enrolment = DB::table('student_master_course__map as m')
+            ->join('course_master as c', 'c.pk', '=', 'm.course_master_pk')
+            ->where('m.active_inactive', 1)
+            ->where('c.active_inactive', 1)
+            ->where(fn ($q) => $q->whereNull('c.end_date')->orWhereDate('c.end_date', '>=', now()->toDateString()))
+            ->orderBy('m.pk')
+            ->first(['m.course_master_pk', 'm.student_master_pk']);
+        $nature = DB::table('leave_nature_master')->where('leave_type', 'LEAVE')->where('active_inactive', 1)->value('pk');
 
         if (! $enrolment || ! $nature) {
             $this->markTestSkipped('need an active enrolment and a LEAVE nature');
