@@ -149,6 +149,14 @@
                     },
 
                     onFinishing: function () {
+                        // PR #319 re-review F-066: Step 6 arrives over AJAX. Submitting
+                        // before it has loaded (or after its load failed) posts no payroll
+                        // fields at all, so refuse until it is on the page.
+                        if (!loadedSteps[6]) {
+                            toastr.warning('Employee Grade Pay is still loading. Please wait a moment and try again.');
+                            loadStepContent(6);
+                            return false;
+                        }
                         return true;
                     },
 

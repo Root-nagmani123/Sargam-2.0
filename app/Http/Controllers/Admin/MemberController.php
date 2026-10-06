@@ -218,6 +218,9 @@ class MemberController extends Controller
         ];
     }
 
+    /** Request keys Step 6 posts — the same five mapStep6Data() reads. */
+    private const STEP6_FIELDS = ['gradepay', 'employeecategory', 'basicpay', 'bankname', 'accountno'];
+
     /**
      * Step 6 ("Employee Grade Pay") does NOT belong on employee_master — it's saved separately
      * to payroll_salary_master by saveStep6PayrollData().
@@ -320,6 +323,17 @@ class MemberController extends Controller
             // submission as a deliberate clear and null the five columns this wizard
             // owns; if no row exists yet, there is genuinely nothing to clear, so this
             // remains a no-op exactly as before.
+            //
+            // PR #319 re-review F-066: "all blank" and "not submitted" are different
+            // things. The self-service profile page never renders Step 6 but posts to
+            // the same update(), so its requests carry none of these keys — that is not
+            // a clear, and treating it as one wiped the payroll row on every profile
+            // save by a Super Admin. Only a request that actually carries the Step 6
+            // fields (the wizard posts them, blank or not) may clear.
+            if (! $request->hasAny(self::STEP6_FIELDS)) {
+                return null;
+            }
+
             $existingKey = $this->payrollEmployeeKey($employeeMasterPk);
 
             if (PayrollSalaryMaster::where('employee_master_pk', $existingKey)->exists()) {
@@ -403,7 +417,16 @@ class MemberController extends Controller
      */
     private function payrollEmployeeKey(int $employeeMasterPk): int
     {
-        if (! Schema::hasColumn('employee_master', 'pk_old')) {
+        // Memoised per process, same reasoning as step6SchemaIsReady() (PR #319 re-review
+        // F-069): this is called on request paths, and an unmemoised hasColumn() is a
+        // schema-introspection query per call.
+        static $hasPkOld = null;
+
+        if ($hasPkOld === null) {
+            $hasPkOld = Schema::hasColumn('employee_master', 'pk_old');
+        }
+
+        if (! $hasPkOld) {
             return $employeeMasterPk;
         }
 
@@ -442,24 +465,6 @@ class MemberController extends Controller
             && Schema::hasColumn('payroll_salary_master', 'employee_category_master_pk');
     }
 
-    /**
-     * PR #319 review round 2 (F-018): granting real Spatie roles from this
-     * screen must be restricted to actors already privileged enough to grant
-     * roles elsewhere. Gated using the `hasRole('Super Admin')` convention
-     * already used throughout this codebase for admin-only checks, since
-     * there is no `permission:`/`role:` middleware or policy layer in use
-     * anywhere in this app to hook into instead. Every member/* and
-     * admin/setup/member/* route carries only the generic `auth` middleware,
-     * so without this check any authenticated member could grant themselves
-     * roles like "Super Admin" simply by ticking them on their own edit form.
-     *
-     * PR #319 review round 4 (F-028): UserController::assignRoleSave() — the
-     * dedicated Role & Permission > Users screen this method's docblock below
-     * points to as "the same mechanism" — had no authorization check of its
-     * own at all until this same round, meaning it was not actually a valid
-     * precedent for "already gated" when this method was first written. It
-     * now carries the equivalent `hasRole('Super Admin')` gate directly.
-     */
     /**
      * Whether the acting user may administer OTHER members through this wizard.
      *
@@ -505,6 +510,23 @@ class MemberController extends Controller
     }
 
     /**
+     * PR #319 review round 2 (F-018): granting real Spatie roles from this
+     * screen must be restricted to actors already privileged enough to grant
+     * roles elsewhere. Gated using the `hasRole('Super Admin')` convention
+     * already used throughout this codebase for admin-only checks, since
+     * there is no `permission:`/`role:` middleware or policy layer in use
+     * anywhere in this app to hook into instead. Every member/* and
+     * admin/setup/member/* route carries only the generic `auth` middleware,
+     * so without this check any authenticated member could grant themselves
+     * roles like "Super Admin" simply by ticking them on their own edit form.
+     *
+     * PR #319 review round 4 (F-028): UserController::assignRoleSave() — the
+     * dedicated Role & Permission > Users screen this method's docblock below
+     * points to as "the same mechanism" — had no authorization check of its
+     * own at all until this same round, meaning it was not actually a valid
+     * precedent for "already gated" when this method was first written. It
+     * now carries the equivalent `hasRole('Super Admin')` gate directly.
+     *
      * PR #319 re-review F-057: this used to be its own `return hasRole('Super Admin');`,
      * byte-for-byte identical to actingUserCanManageMembers() with nothing enforcing the
      * two stayed in step. "Manage RBAC roles" and "manage members" are the same decision
@@ -522,6 +544,18 @@ class MemberController extends Controller
     private function actingUserCanManageRbacRoles(): bool
     {
         return $this->actingUserCanManageMembers();
+    }
+
+    /**
+     * One batch insert instead of N round-trips (PR #319 re-review F-049),
+     * extracted so store()/update() can't drift from each other (F-065).
+     */
+    private function syncEmployeeRoleMappings(int $userCredentialPk, array $roles): void
+    {
+        EmployeeRoleMapping::insert(array_map(fn ($role) => [
+            'user_credentials_pk' => $userCredentialPk,
+            'user_role_master_pk' => $role,
+        ], $roles));
     }
 
     /**
@@ -554,18 +588,6 @@ class MemberController extends Controller
      * regardless of how many roles this screen happens to offer a checkbox
      * for.
      */
-    /**
-     * One batch insert instead of N round-trips (PR #319 re-review F-049),
-     * extracted so store()/update() can't drift from each other (F-065).
-     */
-    private function syncEmployeeRoleMappings(int $userCredentialPk, array $roles): void
-    {
-        EmployeeRoleMapping::insert(array_map(fn ($role) => [
-            'user_credentials_pk' => $userCredentialPk,
-            'user_role_master_pk' => $role,
-        ], $roles));
-    }
-
     private function syncSpatieRolesFromWizardSelection(
         int $userCredentialPk,
         array $selectedUserRoleMasterPks,
@@ -745,33 +767,6 @@ class MemberController extends Controller
     }
 
     /**
-     * Roles this screen must never grant or revoke, whatever the checkboxes say.
-     *
-     * PR #319 review round 3 (R-002). Correcting the F-005 name mismatch had a side
-     * effect nobody asked for: it widened what this screen can grant from 19 roles to
-     * 21, and the two it added were "Mess Admin" (17 permissions) and "Super Admin"
-     * (171 permissions, the highest privilege in the application). Before the fix,
-     * ticking "Super-Admin" wrote an employee_role_mapping row and granted nothing —
-     * a bug, but one that happened to keep the Member wizard from minting Super Admins.
-     *
-     * It must not. Super Admin is granted from Role & Permission > Users, which is the
-     * screen built for it and carries its own abort_unless(hasRole('Super Admin')) gate.
-     * Nobody loses the ability to grant it; it stops being a checkbox on a screen where
-     * almost every other option is a plain HR tag with nothing to distinguish the two.
-     *
-     * This choice was made during development and is NOT a recorded decision of the
-     * Engineering lead — an earlier version of this comment claimed it was, which the
-     * independent review raised as F-040. If the wizard IS meant to grant Super Admin,
-     * remove it from the list below; that reversal is one line.
-     *
-     * Matched on a SEPARATOR-FREE key, not the normalised name. normalizeRoleName()
-     * collapses separators to a single space, so it maps "Super-Admin" to "super admin"
-     * but "SuperAdmin" to "superadmin" — meaning the concatenated spelling slipped the
-     * block while this docblock claimed it was covered (F-039). app/helpers.php's
-     * hasRole() already treats "SuperAdmin" and "Super Admin" as the same role, so a
-     * Spatie role under that spelling is a real possibility, not a hypothetical.
-     */
-    /**
      * Which of the ticked options name a role this screen refuses to grant.
      *
      * Returns the option's own spelling (what the administrator actually clicked), not
@@ -802,6 +797,33 @@ class MemberController extends Controller
         return array_values(array_unique($hits));
     }
 
+    /**
+     * Roles this screen must never grant or revoke, whatever the checkboxes say.
+     *
+     * PR #319 review round 3 (R-002). Correcting the F-005 name mismatch had a side
+     * effect nobody asked for: it widened what this screen can grant from 19 roles to
+     * 21, and the two it added were "Mess Admin" (17 permissions) and "Super Admin"
+     * (171 permissions, the highest privilege in the application). Before the fix,
+     * ticking "Super-Admin" wrote an employee_role_mapping row and granted nothing —
+     * a bug, but one that happened to keep the Member wizard from minting Super Admins.
+     *
+     * It must not. Super Admin is granted from Role & Permission > Users, which is the
+     * screen built for it and carries its own abort_unless(hasRole('Super Admin')) gate.
+     * Nobody loses the ability to grant it; it stops being a checkbox on a screen where
+     * almost every other option is a plain HR tag with nothing to distinguish the two.
+     *
+     * This choice was made during development and is NOT a recorded decision of the
+     * Engineering lead — an earlier version of this comment claimed it was, which the
+     * independent review raised as F-040. If the wizard IS meant to grant Super Admin,
+     * remove it from the list below; that reversal is one line.
+     *
+     * Matched on a SEPARATOR-FREE key, not the normalised name. normalizeRoleName()
+     * collapses separators to a single space, so it maps "Super-Admin" to "super admin"
+     * but "SuperAdmin" to "superadmin" — meaning the concatenated spelling slipped the
+     * block while this docblock claimed it was covered (F-039). app/helpers.php's
+     * hasRole() already treats "SuperAdmin" and "Super Admin" as the same role, so a
+     * Spatie role under that spelling is a real possibility, not a hypothetical.
+     */
     private function roleIsNotGrantableFromThisScreen(string $spatieRoleName): bool
     {
         $blocked = array_map(
@@ -999,10 +1021,11 @@ class MemberController extends Controller
         // failure partway through (e.g. Step 6 hitting a bad value) rolls back the whole
         // thing instead of leaving a member with no login credential and no roles.
         // Same reasoning as update(): a refusal inside the save has to reach the response
-        // rather than be swallowed (PR #319 review round 3, R-003). On this path only the
-        // missing-schema refusal can fire — a member being created cannot yet have two
-        // logins, and store() is admin-only — but it is collected the same way so the two
-        // paths cannot drift.
+        // rather than be swallowed (PR #319 review round 3, R-003). Two refusals can fire
+        // here: the missing-schema one for Step 6, and a ticked role this wizard will not
+        // grant (Super Admin) — PR #319 re-review F-068, which this path used to discard.
+        // A member being created cannot yet have two logins, so the ambiguous-credential
+        // refusal cannot.
         $saveWarnings = [];
 
         // The unique rules above run in a separate statement from the insert, so
@@ -1059,7 +1082,7 @@ class MemberController extends Controller
                     // PR #319 re-review F-065: shared with update() so the two paths can't drift.
                     $this->syncEmployeeRoleMappings($userCredential->pk, $roles);
 
-                    $this->syncSpatieRolesFromWizardSelection($userCredential->pk, $roles);
+                    $saveWarnings[] = $this->syncSpatieRolesFromWizardSelection($userCredential->pk, $roles);
                 }
             });
         } catch (\Throwable $e) {
@@ -1582,7 +1605,10 @@ class MemberController extends Controller
             : [[], []];
         // Same key as the write path (F-037). Reading by the raw pk showed a blank grade
         // for every existing employee, because no live payroll row is keyed that way.
-        $payrollSalary = PayrollSalaryMaster::where('employee_master_pk', $this->payrollEmployeeKey((int) $id))->first();
+        // Only step 6 renders it (PR #319 re-review F-069), so the other steps skip the read.
+        $payrollSalary = ((int) $step === 6)
+            ? PayrollSalaryMaster::where('employee_master_pk', $this->payrollEmployeeKey((int) $id))->first()
+            : null;
 
         return view("admin.member.edit_steps.step{$step}", compact('member', 'appellationMasterList', 'gradePayOptions', 'employeeCategoryOptions', 'payrollSalary'));
     }

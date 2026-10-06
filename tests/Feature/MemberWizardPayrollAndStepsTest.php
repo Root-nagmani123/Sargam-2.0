@@ -166,6 +166,77 @@ class MemberWizardPayrollAndStepsTest extends TestCase
     }
 
     /**
+     * PR #319 re-review F-066: a save whose request carries NO step-6 fields at all must
+     * leave the payroll row alone. The self-service profile page never renders step 6 yet
+     * posts to member.update, and a Super Admin passes saveStep6PayrollData()'s gate — so
+     * treating "fields absent" the same as "every field blanked" (F-042) wiped grade,
+     * category, basic pay, bank and account on every such save while reporting success.
+     * basicMemberPayload() is exactly that shape: steps 1-5 only.
+     */
+    public function test_a_save_that_omits_step6_leaves_the_payroll_row_untouched(): void
+    {
+        $actor = $this->makeActor('payroll_profile_save');
+        $actor->assignRole('Super Admin');
+
+        $gradePk = DB::table('salary_grade_master')->value('pk');
+        $this->assertNotNull($gradePk, 'Fixture assumption: a salary_grade_master row must exist.');
+
+        $createPayload = $this->basicMemberPayload('ProfileSave') + [
+            'gradepay' => $gradePk,
+            'basicpay' => 41000,
+            'bankname' => 'Kept Bank',
+            'accountno' => '55555',
+        ];
+        $this->actingAs($actor)->post(route('member.store'), $createPayload)->assertOk();
+
+        $employeePk = DB::table('employee_master')->where('emp_id', $createPayload['id'])->value('pk');
+        $this->assertNotNull($employeePk);
+
+        // No gradepay / employeecategory / basicpay / bankname / accountno keys at all.
+        $this->actingAs($actor)
+            ->post(route('member.update'), $this->basicMemberPayload('ProfileSave', $employeePk))
+            ->assertOk();
+
+        $payroll = PayrollSalaryMaster::where('employee_master_pk', $employeePk)->first();
+        $this->assertNotNull($payroll);
+        $this->assertSame((int) $gradePk, (int) $payroll->salary_grade_pk, 'A save without step 6 must not clear the grade.');
+        $this->assertSame(41000, (int) $payroll->basic_pay, 'A save without step 6 must not clear basic pay.');
+        $this->assertSame('Kept Bank', $payroll->bank_name);
+        $this->assertSame('55555', $payroll->account_no);
+    }
+
+    /**
+     * PR #319 re-review F-068: update() reports a role the wizard refused to grant, but
+     * store() discarded the same refusal — ticking the blocked "Super Admin" option on a
+     * NEW member answered plain success while granting nothing.
+     */
+    public function test_creating_a_member_with_a_blocked_role_says_it_was_not_granted(): void
+    {
+        $actor = $this->makeActor('blocked_role_creator');
+        $actor->assignRole('Super Admin');
+
+        $blockedOptionPk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'Super-Admin',
+            'user_role_display_name' => 'Super-Admin',
+            'active_inactive'        => 1,
+        ]);
+
+        $payload = $this->basicMemberPayload('BlockedRole');
+        $payload['userrole'][] = $blockedOptionPk;
+
+        $response = $this->actingAs($actor)->post(route('member.store'), $payload);
+        $response->assertOk();
+
+        $warning = $response->json('warning');
+        $this->assertNotNull($warning, 'A refused role on create must be reported, not swallowed.');
+        $this->assertStringContainsString('Super-Admin', $warning);
+
+        $credentialPk = DB::table('user_credentials')->where('user_name', $payload['userid'])->value('pk');
+        $this->assertNotNull($credentialPk);
+        $this->assertFalse(User::find($credentialPk)->hasRole('Super Admin'), 'And it still must not be granted.');
+    }
+
+    /**
      * Shared step 1-5 payload valid against combinedMemberRules(). $employeePk, when given,
      * targets update() against an existing record instead of creating a new one.
      */

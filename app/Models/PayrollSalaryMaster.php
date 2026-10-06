@@ -6,8 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Also read directly (via DB::table) by App\Http\Controllers\Admin\EstateController for
- * salary-grade based house eligibility — keep employee_master_pk / salary_grade_pk semantics
- * (Member wizard Step 6 writes employee_master.pk here, matching new/non-legacy records).
+ * salary-grade based house eligibility — keep employee_master_pk / salary_grade_pk semantics.
+ *
+ * Despite its name, employee_master_pk holds the employee's LEGACY key: Member wizard Step 6
+ * writes employee_master.pk_old when the employee has one, and falls back to
+ * employee_master.pk only when pk_old is NULL/0 — see MemberController::payrollEmployeeKey(),
+ * which mirrors Estate's own join (PR #319 review F-037; docblock corrected in re-review F-071).
  */
 class PayrollSalaryMaster extends Model
 {
