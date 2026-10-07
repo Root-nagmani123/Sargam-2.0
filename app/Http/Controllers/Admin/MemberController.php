@@ -1298,11 +1298,22 @@ class MemberController extends Controller
 
                     return;
                 }
-            } else {
-                // Self-service: the actor's own row, by primary key. authorizeMemberRecord()
-                // has already established that this actor is an 'E' login whose user_id is
-                // this employee, so there is no lookup to get wrong.
+            } elseif (EnsureMemberRecordAccess::ownsMemberRecord($request->emp_id)) {
+                // Self-service: the actor's own row, by primary key. ownsMemberRecord()
+                // establishes that this actor is an 'E' login whose user_id is this
+                // employee, so there is no lookup to get wrong.
                 $userCredential = UserCredential::find(Auth::id());
+            } else {
+                // PR #319 re-review F-078: authorizeMemberRecord() also admits a holder of
+                // member_pii_read who is not Super Admin, for a record they do NOT own.
+                // Resolving Auth::id() here wrote the edited member's name, email and
+                // mobile onto the actor's own login. Such an actor may not rewrite another
+                // member's login either (that is an administrator action, above), so no
+                // credential row is touched and the response says so.
+                $userCredential = null;
+                $saveWarnings[] = 'Login account details (name, email, mobile) were not changed: '
+                    .'only an administrator or the member themself can update them. '
+                    .'The rest of the record was saved.';
             }
 
             EmployeeMaster::find($request->emp_id)->update(array_merge(

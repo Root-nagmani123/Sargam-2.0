@@ -3,11 +3,14 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\Admin\MemberController;
+use App\Http\Middleware\EnsureMemberPiiAccess;
 use App\Models\User;
 use App\Models\UserRoleMaster;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use ReflectionMethod;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /**
@@ -498,6 +501,82 @@ class MemberWriteAuthorizationTest extends TestCase
             DB::table('user_credentials')->where('pk', $target->pk)->value('user_name'),
             'The login name must be unchanged by a save that was refused.'
         );
+    }
+
+    /**
+     * PR #319 re-review F-078. authorizeMemberRecord() admits a holder of member_pii_read
+     * who is not Super Admin for ANY member's record. update() then treated every
+     * non-admin as self-service and resolved the login row by Auth::id(), so saving
+     * someone else's record wrote that member's name, email and mobile onto the actor's
+     * OWN login, and answered "Member successfully updated". No login row may be touched
+     * for such an actor, and the response must say so.
+     */
+    public function test_a_pii_permission_holder_saving_another_member_does_not_touch_any_login(): void
+    {
+        Permission::findOrCreate(EnsureMemberPiiAccess::PII_PERMISSION, 'web');
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $actor = $this->makeZeroRoleActor($this->makeEmployee('Holder'));
+        $actor->givePermissionTo(EnsureMemberPiiAccess::PII_PERMISSION);
+        $this->assertFalse($actor->hasRole('Super Admin'), 'Fixture assumption: the actor is not Super Admin.');
+
+        $memberPk = $this->makeEmployee('Member');
+        $member = $this->makeZeroRoleActor($memberPk);
+
+        $actorBefore = (array) DB::table('user_credentials')->where('pk', $actor->pk)
+            ->first(['first_name', 'last_name', 'email_id', 'mobile_no', 'user_name']);
+        $memberBefore = (array) DB::table('user_credentials')->where('pk', $member->pk)
+            ->first(['first_name', 'last_name', 'email_id', 'mobile_no', 'user_name']);
+
+        $response = $this->actingAs($actor)->post(
+            route('member.update'),
+            $this->memberPayload($memberPk, [
+                'first_name'    => 'EditedByHolder',
+                'personalemail' => 'edited_by_holder_' . uniqid() . '@example.com',
+                'mnumber'       => '8888888888',
+            ])
+        );
+
+        $response->assertStatus(200);
+
+        $this->assertSame(
+            $actorBefore,
+            (array) DB::table('user_credentials')->where('pk', $actor->pk)
+                ->first(['first_name', 'last_name', 'email_id', 'mobile_no', 'user_name']),
+            "The actor's own login must not take the edited member's details."
+        );
+        $this->assertSame(
+            $memberBefore,
+            (array) DB::table('user_credentials')->where('pk', $member->pk)
+                ->first(['first_name', 'last_name', 'email_id', 'mobile_no', 'user_name']),
+            "The edited member's login is an administrator's to change, not this actor's."
+        );
+        $this->assertStringContainsString('Login account details', (string) $response->json('warning'));
+
+        // The member record itself is still saved: only the login write is withheld.
+        $this->assertSame(
+            'EditedByHolder',
+            DB::table('employee_master')->where('pk', $memberPk)->value('first_name')
+        );
+    }
+
+    /** F-078, the unchanged case: a self-service save still updates the actor's own login. */
+    public function test_a_self_service_save_still_updates_the_actors_own_login(): void
+    {
+        $employeePk = $this->makeEmployee('Selfsvc');
+        $actor = $this->makeZeroRoleActor($employeePk);
+
+        $response = $this->actingAs($actor)->post(
+            route('member.update'),
+            $this->memberPayload($employeePk, ['first_name' => 'SelfRenamed', 'mnumber' => '7777777777'])
+        );
+
+        $response->assertStatus(200);
+        $this->assertNull($response->json('warning'));
+
+        $row = DB::table('user_credentials')->where('pk', $actor->pk)->first(['first_name', 'mobile_no']);
+        $this->assertSame('SelfRenamed', $row->first_name);
+        $this->assertSame('7777777777', (string) $row->mobile_no);
     }
 
     /**
