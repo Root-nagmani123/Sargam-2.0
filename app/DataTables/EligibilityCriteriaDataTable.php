@@ -62,15 +62,15 @@ class EligibilityCriteriaDataTable extends DataTable
                 $name = trim(($row->salaryGrade?->display_label_text ?? '') . ' → ' . ($row->unitSubType?->name ?? ''), ' →');
                 $deleteUrl = route('admin.estate.eligibility-criteria.destroy', $row->pk);
 
-                return '<div class="em-act-group" role="group" aria-label="Actions for ' . e($name) . '">'
-                    . '<button type="button" class="em-act em-act--edit js-em-edit" data-pk="' . (int) $row->pk . '"'
-                    . ' data-values="' . e(json_encode($values)) . '" aria-label="Edit ' . e($name) . '">'
-                    . '<span class="em-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>'
-                    . '<span class="em-act__label">Edit</span></button>'
-                    . '<button type="button" class="em-act em-act--delete js-em-delete" data-url="' . e($deleteUrl) . '"'
-                    . ' data-name="' . e($name) . '" aria-label="Delete ' . e($name) . '">'
-                    . '<span class="em-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>'
-                    . '<span class="em-act__label">Delete</span></button>'
+                // .ds-actions + .btn-icon (docs/design.md, Layer C) — same markup as the
+                // other Estate Master grids (partials/master_crud.blade.php).
+                return '<div class="ds-actions" role="group" aria-label="Actions for ' . e($name) . '">'
+                    . '<button type="button" class="btn btn-icon em-act-edit js-em-edit" data-pk="' . (int) $row->pk . '"'
+                    . ' data-values="' . e(json_encode($values)) . '" title="Edit" aria-label="Edit ' . e($name) . '">'
+                    . '<i class="bi bi-pencil-square" aria-hidden="true"></i></button>'
+                    . '<button type="button" class="btn btn-icon em-act-delete js-em-delete" data-url="' . e($deleteUrl) . '"'
+                    . ' data-name="' . e($name) . '" title="Delete" aria-label="Delete ' . e($name) . '">'
+                    . '<i class="bi bi-trash3" aria-hidden="true"></i></button>'
                     . '</div>';
             })
             ->rawColumns(['pay_scale', 'unit_type', 'unit_sub_type', 'actions'])
@@ -91,7 +91,7 @@ class EligibilityCriteriaDataTable extends DataTable
             // programme-dt chrome (docs/new-design-index-page.md) — no `dom` and no
             // `language` on purpose: datatable-global-ui.js owns both, and a page-level
             // override would break the "Showing N of M items" footer.
-            ->addTableClass('table table-hover align-middle mb-0 w-100 programme-dt-table')
+            ->addTableClass('table table-hover align-middle w-100 ds-table-sticky em-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([

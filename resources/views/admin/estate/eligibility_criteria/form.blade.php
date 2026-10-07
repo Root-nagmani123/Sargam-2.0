@@ -18,10 +18,13 @@
 
     <x-session_message />
 
-    <div class="card border-0 shadow-sm rounded-1">
-        <div class="card-body p-3 p-md-4">
+    <section class="card ds-card" aria-labelledby="emFormTitle">
+        <div class="ds-card-header">
+            <h2 class="em-card-title" id="emFormTitle">{{ $item ? 'Edit' : 'Add' }} Eligibility Criteria</h2>
+        </div>
+        <div class="ds-card-body">
             <form action="{{ $item ? route('admin.estate.eligibility-criteria.update', $item->pk) : route('admin.estate.eligibility-criteria.store') }}"
-                method="POST" class="ds-form-fields em-form-narrow">
+                method="POST" class="em-form-narrow">
                 @csrf
                 @if($item) @method('PUT') @endif
 
@@ -30,8 +33,8 @@
                     $err = $errors->first($s['name']);
                     $sel = (string) old($s['name'], $item->{$s['name']} ?? '');
                 @endphp
-                <div class="mb-3">
-                    <label class="form-label" for="{{ $s['name'] }}">{{ $s['label'] }}<span class="ds-req" aria-hidden="true">*</span></label>
+                <div class="{{ $loop->last ? 'mb-0' : 'mb-3' }}">
+                    <label class="ds-form-label" for="{{ $s['name'] }}">{{ $s['label'] }}<span class="ds-req" aria-hidden="true">*</span></label>
                     <select class="form-select @if($err) is-invalid @endif" id="{{ $s['name'] }}" name="{{ $s['name'] }}"
                         data-searchable="true" data-placeholder="{{ $s['placeholder'] }}" required aria-required="true"
                         @if($err) aria-invalid="true" aria-describedby="{{ $s['name'] }}_error" @endif>
@@ -46,18 +49,18 @@
                 </div>
                 @endforeach
 
-                <div class="d-flex flex-wrap justify-content-end gap-2 pt-2">
+                <div class="ds-form-footer">
                     <a href="{{ route('admin.estate.eligibility-criteria.index') }}" class="btn ds-btn-cancel">Cancel</a>
-                    <button type="submit" class="btn ds-btn-submit">{{ $item ? 'Update' : 'Add' }} Criteria</button>
+                    <button type="submit" class="btn ds-btn-primary">{{ $item ? 'Update' : 'Add' }} Criteria</button>
                 </div>
             </form>
         </div>
-    </div>
+    </section>
 </div>
 @endsection
 
 @push('styles')
 {{-- Select2 JS is global and dropdown-search.js picks up data-searchable selects. --}}
 @include('admin.layouts.partials.select2-assets')
-<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
+@include('admin.estate.partials.master_styles')
 @endpush

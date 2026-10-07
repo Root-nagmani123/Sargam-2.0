@@ -1,8 +1,10 @@
 {{--
-    Full-page Add / Edit for an Estate master. The index pages now open the same
-    form in a modal (partials/master_crud.blade.php); this page stays for direct
-    links and posts to the same store / update routes, with the same fields and
-    the same .ds-form-fields controls as the modal (sargam-app.css).
+    Full-page Add / Edit for an Estate master. The index pages open the same form
+    in a modal (partials/master_crud.blade.php); this page stays for direct links
+    and posts to the same store / update routes with the same fields.
+
+    Design: docs/design.md — .ds-card, .ds-form-label / .ds-req, .ds-form-footer,
+    .ds-btn-primary / .ds-btn-cancel; styles in partials/master_styles.blade.php.
 
     Expects $cfg: title, singular, routePrefix, fields (see master_crud) and
     $item (null for Add).
@@ -18,10 +20,13 @@
 
     <x-session_message />
 
-    <div class="card border-0 shadow-sm rounded-1">
-        <div class="card-body p-3 p-md-4">
+    <section class="card ds-card" aria-labelledby="emFormTitle">
+        <div class="ds-card-header">
+            <h2 class="em-card-title" id="emFormTitle">{{ $isEdit ? 'Edit' : 'Add' }} {{ $cfg['singular'] }}</h2>
+        </div>
+        <div class="ds-card-body">
             <form action="{{ $isEdit ? route($cfg['routePrefix'] . '.update', $item->pk) : route($cfg['routePrefix'] . '.store') }}"
-                method="POST" class="ds-form-fields em-form-narrow">
+                method="POST" class="em-form-narrow">
                 @csrf
                 @if($isEdit) @method('PUT') @endif
 
@@ -31,8 +36,8 @@
                     $err = $errors->first($f['name']);
                     $val = old($f['name'], $item->{$f['name']} ?? '');
                 @endphp
-                <div class="mb-3">
-                    <label class="form-label" for="{{ $id }}">
+                <div class="{{ $loop->last ? 'mb-0' : 'mb-3' }}">
+                    <label class="ds-form-label" for="{{ $id }}">
                         {{ $f['label'] }}@if(! empty($f['required']))<span class="ds-req" aria-hidden="true">*</span>@endif
                     </label>
                     @if(($f['type'] ?? 'text') === 'textarea')
@@ -55,15 +60,15 @@
                 </div>
                 @endforeach
 
-                <div class="d-flex flex-wrap justify-content-end gap-2 pt-2">
+                <div class="ds-form-footer">
                     <a href="{{ $indexUrl }}" class="btn ds-btn-cancel">Cancel</a>
-                    <button type="submit" class="btn ds-btn-submit">{{ $isEdit ? 'Update' : 'Add' }} {{ $cfg['singular'] }}</button>
+                    <button type="submit" class="btn ds-btn-primary">{{ $isEdit ? 'Update' : 'Add' }} {{ $cfg['singular'] }}</button>
                 </div>
             </form>
         </div>
-    </div>
+    </section>
 </div>
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
+@include('admin.estate.partials.master_styles')
 @endpush
