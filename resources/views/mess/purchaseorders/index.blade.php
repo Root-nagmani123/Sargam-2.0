@@ -60,6 +60,16 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
                 @endif
+                @if(($pendingApprovalCount ?? 0) > 0)
+                <div class="alert alert-warning border-0 rounded-4 d-flex flex-wrap align-items-center gap-2 no-print" role="status">
+                    <i class="material-icons material-symbol-rounded" aria-hidden="true">pending_actions</i>
+                    <span class="flex-grow-1"><strong>{{ $pendingApprovalCount }}</strong>
+                        purchase {{ $pendingApprovalCount === 1 ? 'order is' : 'orders are' }} waiting for your approval.
+                        Their items cannot be sold until approved.</span>
+                    <a href="{{ route('admin.mess.purchaseorders.index', ['status' => 'pending']) }}"
+                        class="btn btn-sm btn-warning rounded-2 fw-semibold">Show pending</a>
+                </div>
+                @endif
 
                 {{-- Filters --}}
                 <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}"
@@ -185,6 +195,16 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                                             </div>
                                             <div class="form-text mt-1 mb-0 fst-italic">All stores when none selected.
                                                 Type to search.</div>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label fw-bold small mb-2 text-dark"
+                                                for="poFilterStatus">Status</label>
+                                            <select name="status" id="poFilterStatus" class="form-select form-select-sm shadow rounded-3">
+                                                <option value="">All statuses</option>
+                                                @foreach(['pending' => 'Pending approval', 'approved' => 'Approved', 'rejected' => 'Rejected'] as $value => $label)
+                                                <option value="{{ $value }}" {{ ($filterStatus ?? '') === $value ? 'selected' : '' }}>{{ $label }}</option>
+                                                @endforeach
+                                            </select>
                                         </div>
                                     </div>
                                 </div>
@@ -1289,6 +1309,12 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                 </div>
                 <div class="modal-body px-3 px-md-4 py-4"
                     style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
+                    <div id="editPoLockedNote" class="alert alert-info border-0 rounded-4 d-none d-flex align-items-start gap-2" role="status">
+                        <i class="material-icons material-symbol-rounded" aria-hidden="true">lock</i>
+                        <span>This purchase order is <strong>approved</strong> and its items are in stock, so vendor,
+                            store, order date and line items are locked. You can still update payment, bill, challan
+                            and attachment details.</span>
+                    </div>
                     <div class="card border-0 shadow-lg mb-4 rounded-4 overflow-hidden">
                         <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex align-items-center gap-2"
                             style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
@@ -1416,7 +1442,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                             </div>
                         </div>
                     </div>
-                    <div class="card border-0 shadow-lg mb-2 rounded-4 overflow-hidden">
+                    <div class="card border-0 shadow-lg mb-2 rounded-4 overflow-hidden" id="editPoLinesCard">
                         <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3"
                             style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
                             <div class="d-flex align-items-center gap-3">
@@ -1481,7 +1507,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                     <button type="button" class="btn btn-outline-secondary rounded-1 px-4 fw-semibold"
                         data-bs-dismiss="modal" style="transition: all 0.3s ease;">Cancel</button>
                     <button type="submit" class="btn btn-warning rounded-1 px-5 shadow-sm fw-semibold"
-                        style="transition: all 0.3s ease;">Update purchase order</button>
+                        id="editPoSubmitBtn" style="transition: all 0.3s ease;">Update purchase order</button>
                 </div>
                 {{-- Must stay the LAST field of this form: PHP drops fields from the end when a request is
                      too large, so if this one is missing the server knows the request was cut short. --}}
@@ -2670,6 +2696,30 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
         }
     });
 
+    // An approved PO is in stock, so its vendor, store, date and lines are locked; only payment,
+    // bill and challan details stay editable. The server ignores the locked fields as well.
+    // A store can still be picked once on an old approved PO saved without one.
+    function applyEditPoLock(locked, hasStore) {
+        document.getElementById('editPoLockedNote').classList.toggle('d-none', !locked);
+        document.getElementById('editPoDate').readOnly = locked;
+        [
+            [choicesInstances.edit.vendor, document.getElementById('editVendorId'), locked],
+            [choicesInstances.edit.store, document.getElementById('editStoreId'), locked && hasStore]
+        ].forEach(function(entry) {
+            var instance = entry[0], selectEl = entry[1], disable = entry[2];
+            if (instance && typeof instance.disable === 'function') {
+                disable ? instance.disable() : instance.enable();
+            } else if (selectEl) {
+                selectEl.disabled = disable;
+            }
+        });
+        var linesCard = document.getElementById('editPoLinesCard');
+        linesCard.inert = locked;
+        linesCard.style.opacity = locked ? '0.65' : '';
+        document.getElementById('addEditPoItemRow').classList.toggle('d-none', locked);
+        document.getElementById('editPoSubmitBtn').textContent = locked ? 'Save bill details' : 'Update purchase order';
+    }
+
     // Edit button: fetch PO and open modal (mousedown ensures single-tap works with DataTables)
     document.addEventListener('mousedown', function(e) {
         const btn = e.target.closest('.btn-edit-po');
@@ -2735,6 +2785,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                     }
                 }
                 editCurrentVendorId = po.vendor_id;
+                applyEditPoLock(po.status === 'approved', storeVal !== '');
 
                 function buildEditRows(vendorItemList) {
                     const merged = (vendorItemList || []).slice();
