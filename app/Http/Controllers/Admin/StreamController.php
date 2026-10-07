@@ -22,17 +22,24 @@ class StreamController extends Controller
     public function store(Request $request)
 {
     $request->validate([
+        'stream_name' => 'required|array|min:1',
         'stream_name.*' => 'required|string|max:100',
     ], [
         'stream_name.*.required' => 'The stream name field is required.',
         'stream_name.*.max' => 'Stream name may not be greater than 100 characters.',
     ]);
 
-    foreach ($request->stream_name as $name) {
-        Stream::create([
-            'stream_name' => $name
-        ]);
-    }
+    // active_inactive is NOT NULL with no default, so it must be set or the
+    // insert fails (500). The form has no status field: new streams start
+    // Active. One transaction, so a failure can't leave half the batch saved.
+    \Illuminate\Support\Facades\DB::transaction(function () use ($request) {
+        foreach ((array) $request->stream_name as $name) {
+            $stream = new Stream();
+            $stream->stream_name = $name;
+            $stream->active_inactive = 1;
+            $stream->save();
+        }
+    });
 
     return redirect()->route('stream.index')->with('success', 'Streams added successfully!');
 }
