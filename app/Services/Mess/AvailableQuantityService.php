@@ -89,7 +89,22 @@ class AvailableQuantityService
      */
     public static function returnReductionShortfalls(array $available, array $reductions): array
     {
-        $messages = [];
+        return array_values(array_map(
+            fn (array $s) => "{$s['name']}: return cannot be reduced by {$s['qty']}, only {$s['in_stock']} is in stock (the returned quantity has already been issued).",
+            self::stockShortfalls($available, $reductions)
+        ));
+    }
+
+    /**
+     * Items that do not have enough stock for the quantity about to be taken out of the store.
+     *
+     * @param  array<int, float>  $available  from availableQuantitiesForStore(), read before the change
+     * @param  array<int, array{qty: float, name: string}>  $reductions  item_subcategory_id => net quantity taken out (zero or negative: none)
+     * @return array<int, array{name: string, qty: float, in_stock: float}>
+     */
+    public static function stockShortfalls(array $available, array $reductions): array
+    {
+        $shortfalls = [];
         foreach ($reductions as $itemId => $reduction) {
             $qty = round((float) $reduction['qty'], 4);
             if ($qty <= 0) {
@@ -97,11 +112,11 @@ class AvailableQuantityService
             }
             $inStock = round((float) ($available[$itemId] ?? 0), 4);
             if ($qty > $inStock) {
-                $messages[] = "{$reduction['name']}: return cannot be reduced by {$qty}, only {$inStock} is in stock (the returned quantity has already been issued).";
+                $shortfalls[$itemId] = ['name' => $reduction['name'], 'qty' => $qty, 'in_stock' => $inStock];
             }
         }
 
-        return $messages;
+        return $shortfalls;
     }
 
     /**
