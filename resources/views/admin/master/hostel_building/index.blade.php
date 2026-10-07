@@ -20,17 +20,44 @@
 
     <x-session_message />
 
-    {{-- Secondary actions (Download / Print) — above the card (§1). Download is
-         the controller's one .xlsx export; Print prints this screen, and the
-         master-admin.css print rules drop the toolbar, pager and Action column. --}}
+    {{-- Secondary actions (Download / Print) — above the card (§1). ?q= and
+         ?cols= are stamped on by hbUpdateExportLinks(), so every format carries
+         the search term and columns the grid is showing. Print is the shared
+         server-rendered branded sheet (ExportsMasterGrid), NOT window.print(). --}}
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 mst-secondary-actions">
-        <a href="{{ route('master.hostel.building.export') }}"
-           class="btn programme-dt-btn-columns border-0 text-primary" title="Download as Excel (.xlsx)">
-            <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-        </a>
-        <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="hbPrintBtn" title="Print">
+        <div class="dropdown">
+            <button type="button" id="hbDownloadToggle"
+                    class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                    data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="hbDownloadToggle">
+                <li>
+                    <a class="dropdown-item" id="hbCsvLink"
+                       href="{{ route('master.hostel.building.export', ['format' => 'csv']) }}">
+                        <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i> CSV
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" id="hbExcelLink"
+                       href="{{ route('master.hostel.building.export', ['format' => 'excel']) }}">
+                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Excel (.xlsx)
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" id="hbPdfLink"
+                       href="{{ route('master.hostel.building.export', ['format' => 'pdf']) }}">
+                        <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <a href="{{ route('master.hostel.building.export', ['format' => 'print']) }}"
+           id="hbPrintLink" target="_blank" rel="noopener"
+           class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
             <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
-        </button>
+        </a>
     </div>
 
     <div class="card overflow-hidden rounded-3">
@@ -175,16 +202,58 @@
            into #hbDtSearch / #hbDtFooter by the global enhancer
            (public/js/datatable-global-ui.js). Do NOT rebuild them here. */
 
+        /* ---- Export links follow the grid ----
+         * Positional map: header index -> export key the server understands
+         * (HostelBuildingMasterController::exportColumnDefs()). '' = not
+         * exported (Action). ⚠️ Adding a grid column means adding an entry here. */
+        var HB_EXPORT_COLUMN_KEYS = ['sno', 'building_name', 'no_of_floors', 'no_of_rooms', 'building_type', 'status', ''];
+        var HB_EXPORT_COL_COUNT = HB_EXPORT_COLUMN_KEYS.filter(Boolean).length;
+        var HB_EXPORT_LINK_IDS = ['hbCsvLink', 'hbExcelLink', 'hbPdfLink', 'hbPrintLink'];
+
+        function hbUpdateExportLinks() {
+            var dt = $.fn.DataTable.isDataTable(TABLE_ID) ? $(TABLE_ID).DataTable() : null;
+            var keys = [];
+            var term = '';
+
+            if (dt) {
+                dt.columns().every(function () {
+                    var key = HB_EXPORT_COLUMN_KEYS[this.index()];
+                    if (key && this.visible()) { keys.push(key); }
+                });
+                // The grid sends its search as search[value]; the export reads ?q=.
+                term = dt.search() || '';
+            }
+
+            HB_EXPORT_LINK_IDS.forEach(function (id) {
+                var link = document.getElementById(id);
+                if (!link) { return; }
+
+                var base = link.href.split('?')[0];
+                var params = new URLSearchParams(link.href.split('?')[1] || '');
+
+                params.delete('q');
+                if (term !== '') { params.set('q', term); }
+
+                params.delete('cols');
+                // No ?cols= while nothing is hidden — the server reads that as "every column".
+                if (dt && keys.length !== HB_EXPORT_COL_COUNT) { params.set('cols', keys.join(',')); }
+
+                var qs = params.toString();
+                link.href = base + (qs ? '?' + qs : '');
+            });
+        }
+
         /* ---- Column show / hide (shared Columns modal) ---- */
         MstAdmin.columnVisibility({
             table: TABLE_ID,
             grid: '#hbColumnToggleGrid',
-            storageKey: 'sargam.hostelBuildingMaster.hiddenCols.{{ auth()->id() ?? 'guest' }}'
+            storageKey: 'sargam.hostelBuildingMaster.hiddenCols.{{ auth()->id() ?? 'guest' }}',
+            onChange: hbUpdateExportLinks
         });
 
-        /* ---- Print ---- */
-        $('#hbPrintBtn').on('click', function () {
-            window.print();
+        MstAdmin.whenTableReady(TABLE_ID, function (dt) {
+            dt.on('search.dt', hbUpdateExportLinks);
+            hbUpdateExportLinks();
         });
 
         /* ---- Add / Edit modal ---- */
