@@ -2104,6 +2104,15 @@ class KitchenIssueController extends Controller
 
         try {
             DB::beginTransaction();
+            // Read stock before any line changes: a lowered return must still be in stock.
+            $availableMap = $kitchenIssue->store_id
+                ? AvailableQuantityService::availableQuantitiesForStore(
+                    $kitchenIssue->store_type === 'sub_store' ? 'sub_store' : 'store',
+                    (int) $kitchenIssue->store_id,
+                    true
+                )
+                : null;
+            $returnReductions = [];
             foreach ($request->items as $row) {
                 $itemPk = (int) $row['id'];
                 if (!in_array($itemPk, $itemIds, true)) {
@@ -2140,10 +2149,23 @@ class KitchenIssueController extends Controller
                         return back()->withInput()->with('error', 'Invalid return date.');
                     }
                 }
+                $itemSubId = (int) ($item->item_subcategory_id ?? 0);
+                $reduction = (float) ($item->return_quantity ?? 0) - $returnQty;
+                if ($itemSubId > 0 && $reduction != 0) {
+                    $returnReductions[$itemSubId]['qty'] = ($returnReductions[$itemSubId]['qty'] ?? 0) + $reduction;
+                    $returnReductions[$itemSubId]['name'] = $item->item_name ?: ('Item #' . $itemSubId);
+                }
                 $item->update([
                     'return_quantity' => $returnQty,
                     'return_date' => $returnDate,
                 ]);
+            }
+            if ($availableMap !== null) {
+                $shortfalls = AvailableQuantityService::returnReductionShortfalls($availableMap, $returnReductions);
+                if ($shortfalls !== []) {
+                    DB::rollBack();
+                    return back()->withInput()->with('error', implode(' ', $shortfalls));
+                }
             }
             DB::commit();
             self::bumpSellingVoucherListingCacheEpoch();

@@ -80,6 +80,31 @@ class AvailableQuantityService
     }
 
     /**
+     * Lowering or cancelling a return adds that quantity back to the sale, so it has to be in
+     * stock now: the returned goods may already have been sold to another buyer.
+     *
+     * @param  array<int, float>  $available  from availableQuantitiesForStore(), read before the returns change
+     * @param  array<int, array{qty: float, name: string}>  $reductions  item_subcategory_id => net quantity the returns go down by
+     * @return array<int, string>  one message per item that is short of stock
+     */
+    public static function returnReductionShortfalls(array $available, array $reductions): array
+    {
+        $messages = [];
+        foreach ($reductions as $itemId => $reduction) {
+            $qty = round((float) $reduction['qty'], 4);
+            if ($qty <= 0) {
+                continue;
+            }
+            $inStock = round((float) ($available[$itemId] ?? 0), 4);
+            if ($qty > $inStock) {
+                $messages[] = "{$reduction['name']}: return cannot be reduced by {$qty}, only {$inStock} is in stock (the returned quantity has already been issued).";
+            }
+        }
+
+        return $messages;
+    }
+
+    /**
      * @return array<int, float>
      */
     private static function computeAvailableQuantitiesForStore(string $storeType, int $storeId): array

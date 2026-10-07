@@ -2021,6 +2021,9 @@ class SellingVoucherDateRangeController extends Controller
 
         try {
             DB::beginTransaction();
+            // Per store: stock read before that store's first line changes, and how much its returns go down.
+            $availableMaps = [];
+            $returnReductions = [];
             foreach ($request->items as $row) {
                 $itemId = (int) $row['id'];
                 if (!in_array($itemId, $allowedItemIds, true)) {
@@ -2061,10 +2064,32 @@ class SellingVoucherDateRangeController extends Controller
                         return back()->withInput()->with('error', 'Invalid return date.');
                     }
                 }
+                $itemSubId = (int) ($item->item_subcategory_id ?? 0);
+                $reduction = (float) ($item->return_quantity ?? 0) - $returnQty;
+                if ($itemSubId > 0 && $reduction != 0 && $itemReport->store_id) {
+                    $storeType = $itemReport->store_type === 'sub_store' ? 'sub_store' : 'store';
+                    $storeKey = $storeType . ':' . (int) $itemReport->store_id;
+                    $availableMaps[$storeKey] ??= AvailableQuantityService::availableQuantitiesForStore($storeType, (int) $itemReport->store_id, true);
+                    $returnReductions[$storeKey][$itemSubId]['qty'] = ($returnReductions[$storeKey][$itemSubId]['qty'] ?? 0) + $reduction;
+                    $returnReductions[$storeKey][$itemSubId]['name'] = $item->item_name ?: ('Item #' . $itemSubId);
+                }
                 $item->update([
                     'return_quantity' => $returnQty,
                     'return_date' => $returnDate,
                 ]);
+            }
+            $shortfalls = [];
+            foreach ($returnReductions as $storeKey => $reductions) {
+                array_push($shortfalls, ...AvailableQuantityService::returnReductionShortfalls($availableMaps[$storeKey], $reductions));
+            }
+            if ($shortfalls !== []) {
+                DB::rollBack();
+                $message = implode(' ', $shortfalls);
+                if ($request->wantsJson() || $request->ajax()) {
+                    return response()->json(['success' => false, 'message' => $message], 422);
+                }
+
+                return back()->withInput()->with('error', $message);
             }
             DB::commit();
             self::bumpSellingVoucherDateRangeListingCacheEpoch();
