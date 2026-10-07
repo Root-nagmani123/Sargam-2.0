@@ -110,11 +110,40 @@
 
     <x-session_message />
 
-    {{-- Print sits above the card, right-aligned (docs/new-design-index-page.md §1). --}}
-    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 mst-secondary-actions">
-        <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" onclick="printContent()" title="Print">
-            <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
-        </button>
+    {{-- Admin: course scope tabs left (each is its own ?course_status=, keeping
+         the faculty pick; the course list differs per tab so it is dropped) ·
+         Print right — above the card (docs/new-design-index-page.md §1). --}}
+    @php
+        $fmeStatus = ($courseStatus ?? 'active') === 'archive' ? 'archive' : 'active';
+        $fmeTabParams = filled($facultyFilter ?? null) ? ['faculty_filter' => $facultyFilter] : [];
+    @endphp
+    <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-between gap-3 mb-3">
+        @if(!$isFacultyView)
+            <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0" role="group"
+                aria-label="Course status filter">
+                <li class="nav-item" role="presentation">
+                    <a href="{{ route('faculty.mdo.escort.exception.view', $fmeTabParams) }}"
+                        class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $fmeStatus === 'active' ? 'active' : '' }}"
+                        aria-pressed="{{ $fmeStatus === 'active' ? 'true' : 'false' }}"
+                        @if ($fmeStatus === 'active') aria-current="true" @endif>
+                        Active
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a href="{{ route('faculty.mdo.escort.exception.view', $fmeTabParams + ['course_status' => 'archive']) }}"
+                        class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $fmeStatus === 'archive' ? 'active' : '' }}"
+                        aria-pressed="{{ $fmeStatus === 'archive' ? 'true' : 'false' }}"
+                        @if ($fmeStatus === 'archive') aria-current="true" @endif>
+                        Archived
+                    </a>
+                </li>
+            </ul>
+        @endif
+        <div class="d-flex flex-wrap justify-content-lg-end gap-2 ms-lg-auto mst-secondary-actions">
+            <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" onclick="printContent()" title="Print">
+                <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
+            </button>
+        </div>
     </div>
 
     {{-- Filters: GET to this same route; the controller reads the same
@@ -145,6 +174,9 @@
             <div class="card-body">
                 <h2 class="mst-form-section-title h6">Filters</h2>
                 <form method="GET" action="{{ route('faculty.mdo.escort.exception.view') }}" class="mst-filter-grid" role="search" aria-label="Filter exceptions">
+                    @if($fmeStatus === 'archive')
+                        <input type="hidden" name="course_status" value="archive">
+                    @endif
                     <div>
                         <label for="fmeFacultyFilter" class="mst-form-label d-block">Faculty</label>
                         <select id="fmeFacultyFilter" name="faculty_filter" class="form-select mst-control mst-searchable" data-placeholder="All Faculty">
@@ -165,7 +197,8 @@
                     </div>
                     <div class="mst-filter-actions">
                         <button type="submit" class="btn mst-btn-submit px-4">Apply</button>
-                        <a href="{{ route('faculty.mdo.escort.exception.view') }}" class="btn programme-dt-btn-reset">Reset Filters</a>
+                        {{-- Reset clears Faculty / Course but stays on the current tab. --}}
+                        <a href="{{ route('faculty.mdo.escort.exception.view', $fmeStatus === 'archive' ? ['course_status' => 'archive'] : []) }}" class="btn programme-dt-btn-reset">Reset Filters</a>
                     </div>
                 </form>
             </div>

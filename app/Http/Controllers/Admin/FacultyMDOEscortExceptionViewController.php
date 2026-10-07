@@ -70,7 +70,6 @@ class FacultyMDOEscortExceptionViewController extends Controller
                           ->select('pk', 'course_name');
                 },
                 'mdoDutyTypeMaster:pk,mdo_duty_type_name',
-                'facultyMaster:pk,full_name'
             ]);
 
         // Apply course filter if provided
@@ -102,19 +101,29 @@ class FacultyMDOEscortExceptionViewController extends Controller
             ->get(['pk', 'display_name', 'generated_OT_code', 'email', 'first_name', 'last_name'])
             ->keyBy('pk');
 
+        // A duty can carry several faculty (faculty_master_pks; faculty_master_pk is
+        // only the first). Resolve every name in one query, in the order selected.
+        $facultyNames = FacultyMaster::whereIn('pk', $dutyMaps->flatMap->facultyPks()->unique()->values())
+            ->pluck('full_name', 'pk');
+
         // Build student data structure using collections
         $dutyMapsByStudent = $dutyMaps->groupBy('selected_student_list');
-        
-        $studentData = $students->map(function($student) use ($dutyMapsByStudent) {
+
+        $studentData = $students->map(function($student) use ($dutyMapsByStudent, $facultyNames) {
             $studentDutyMaps = $dutyMapsByStudent->get($student->pk, collect());
-            
-            $exemptionDetails = $studentDutyMaps->map(function($dutyMap) {
+
+            $exemptionDetails = $studentDutyMaps->map(function($dutyMap) use ($facultyNames) {
+                $faculty = collect($dutyMap->facultyPks())
+                    ->map(fn ($pk) => $facultyNames[$pk] ?? null)
+                    ->filter()
+                    ->implode(', ');
+
                 return [
                     'date' => $dutyMap->mdo_date,
                     'course_master_pk' => $dutyMap->course_master_pk,
                     'course_name' => $dutyMap->courseMaster->course_name ?? 'N/A',
                     'duty_type' => $dutyMap->mdoDutyTypeMaster->mdo_duty_type_name ?? 'N/A',
-                    'faculty' => $dutyMap->facultyMaster->full_name ?? 'N/A',
+                    'faculty' => $faculty !== '' ? $faculty : 'N/A',
                     'description' => $dutyMap->Remark ?? 'N/A',
                     'time' => ($dutyMap->Time_from ?? 'N/A') . ' - ' . ($dutyMap->Time_to ?? 'N/A'),
                 ];
@@ -194,34 +203,41 @@ class FacultyMDOEscortExceptionViewController extends Controller
     {
         $facultyFilter = $request->get('faculty_filter');
         $courseFilter = $request->get('course_filter');
-        
+
+        // Active tab = running / upcoming courses (end date today or later, or none);
+        // Archived tab = courses that have ended. Same split as Course Master.
+        $courseStatus = $request->get('course_status') === 'archive' ? 'archive' : 'active';
+        $courseScope = function ($cq) use ($courseStatus, $currentDate) {
+            $cq->where('active_inactive', 1);
+            if ($courseStatus === 'archive') {
+                $cq->whereNotNull('end_date')->where('end_date', '<', $currentDate);
+            } else {
+                $cq->where(function ($qq) use ($currentDate) {
+                    $qq->whereNull('end_date')->orWhere('end_date', '>=', $currentDate);
+                });
+            }
+        };
+
         // Get faculties with MDO/Escort Exception duties, filtering courses at DB level
         $facultiesQuery = FacultyMaster::query()
-            ->whereHas('mdoEscotDutyMaps', function($q) use ($currentDate, $courseFilter) {
+            ->whereHas('mdoEscotDutyMaps', function($q) use ($courseScope, $courseFilter) {
                 $q->where('mdo_duty_type_master_pk', 2)
-                  ->whereHas('courseMaster', function($cq) use ($currentDate) {
-                      $cq->where('active_inactive', 1)
-                         ->where('end_date', '>=', $currentDate);
-                  });
-                
+                  ->whereHas('courseMaster', $courseScope);
+
                 if ($courseFilter) {
                     $q->where('course_master_pk', $courseFilter);
                 }
             })
-            ->with(['mdoEscotDutyMaps' => function($q) use ($currentDate, $courseFilter) {
+            ->with(['mdoEscotDutyMaps' => function($q) use ($courseScope, $courseFilter) {
                 $q->where('mdo_duty_type_master_pk', 2)
-                  ->whereHas('courseMaster', function($cq) use ($currentDate) {
-                      $cq->where('active_inactive', 1)
-                         ->where('end_date', '>=', $currentDate);
-                  })
+                  ->whereHas('courseMaster', $courseScope)
                   ->when($courseFilter, function($query) use ($courseFilter) {
                       $query->where('course_master_pk', $courseFilter);
                   })
                   ->with([
-                      'courseMaster' => function($cq) use ($currentDate) {
-                          $cq->where('active_inactive', 1)
-                             ->where('end_date', '>=', $currentDate)
-                             ->select('pk', 'course_name');
+                      'courseMaster' => function($cq) use ($courseScope) {
+                          $courseScope($cq);
+                          $cq->select('pk', 'course_name');
                       },
                       'mdoDutyTypeMaster:pk,mdo_duty_type_name'
                   ]);
@@ -319,18 +335,20 @@ class FacultyMDOEscortExceptionViewController extends Controller
         ->pluck('full_name', 'pk')
         ->toArray();
         
-        $allCourses = CourseMaster::where('active_inactive', 1)
-            ->where('end_date', '>=', $currentDate)
+        // Courses in the selected tab that actually have escort duties.
+        $allCourses = CourseMaster::where($courseScope)
+            ->whereIn('pk', MDOEscotDutyMap::where('mdo_duty_type_master_pk', 2)->select('course_master_pk'))
             ->orderBy('course_name')
             ->pluck('course_name', 'pk')
             ->toArray();
-        
+
         return view('admin.faculty_mdo_escort_exception.view', compact(
             'facultyData',
             'allFaculties',
             'allCourses',
             'facultyFilter',
-            'courseFilter'
+            'courseFilter',
+            'courseStatus'
         ));
     }
 }
