@@ -314,7 +314,8 @@ class MemberWizardRbacSyncTest extends TestCase
      * Admin is to be granted only from Role & Permission > Users, so the wizard refuses it
      * explicitly rather than relying on a name mismatch to do it by accident. That choice
      * was made during development and is NOT a recorded decision of the Engineering lead
-     * (see MemberController::roleIsNotGrantableFromThisScreen(); PR #319 re-review F-073).
+     * (see App\Support\RoleNames::NOT_GRANTABLE_FROM_MEMBER_WIZARD; PR #319 re-review
+     * F-073, reference updated for F-076).
      *
      * Note the actor here IS a Super Admin — so this is not testing the F-018 gate. It is
      * testing that even a fully privileged actor cannot mint one from THIS screen.

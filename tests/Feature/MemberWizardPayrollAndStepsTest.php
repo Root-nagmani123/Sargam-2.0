@@ -275,6 +275,103 @@ class MemberWizardPayrollAndStepsTest extends TestCase
     }
 
     /**
+     * PR #319 re-review F-075 (a): if EVERY ticked role is inactive, nothing would be
+     * assigned, so the save is refused exactly as "role required" refuses an empty
+     * selection — before anything is written.
+     */
+    public function test_creating_a_member_with_only_inactive_roles_is_rejected(): void
+    {
+        $actor = $this->makeActor('only_inactive');
+        $actor->assignRole('Super Admin');
+
+        $inactiveRolePk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'Retired Only ' . uniqid(),
+            'user_role_display_name' => 'Retired Only',
+            'active_inactive'        => 0,
+        ]);
+
+        $payload = $this->basicMemberPayload('OnlyInactive');
+        $payload['userrole'] = [$inactiveRolePk];
+
+        $this->actingAs($actor)->postJson(route('member.store'), $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['userrole'], 'errors');
+
+        $this->assertNull(
+            DB::table('employee_master')->where('emp_id', $payload['id'])->value('pk'),
+            'A refused save must not create the member.'
+        );
+    }
+
+    /**
+     * F-075 (b): on an update, a role the member already holds that has since been
+     * deactivated is left as it is — so the message must say it was not CHANGED, not that
+     * it "was not assigned".
+     */
+    public function test_an_update_keeps_a_held_role_that_was_deactivated_and_says_so(): void
+    {
+        $actor = $this->makeActor('held_inactive');
+        $actor->assignRole('Super Admin');
+
+        $heldRolePk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'Held Then Retired ' . uniqid(),
+            'user_role_display_name' => 'Held Then Retired',
+            'active_inactive'        => 1,
+        ]);
+
+        $createPayload = $this->basicMemberPayload('HeldInactive');
+        $createPayload['userrole'][] = $heldRolePk;
+        $this->actingAs($actor)->post(route('member.store'), $createPayload)->assertOk();
+
+        $employeePk = DB::table('employee_master')->where('emp_id', $createPayload['id'])->value('pk');
+        $credentialPk = DB::table('user_credentials')->where('user_name', $createPayload['userid'])->value('pk');
+        $this->assertNotNull($employeePk);
+        $this->assertNotNull($credentialPk);
+
+        DB::table('user_role_master')->where('pk', $heldRolePk)->update(['active_inactive' => 0]);
+
+        $updatePayload = $this->basicMemberPayload('HeldInactive', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['userrole'][] = $heldRolePk;
+
+        $response = $this->actingAs($actor)->post(route('member.update'), $updatePayload);
+        $response->assertOk();
+
+        $warning = $response->json('warning');
+        $this->assertNotNull($warning);
+        $this->assertStringContainsString('Held Then Retired', $warning);
+        $this->assertStringContainsString('was not changed', $warning);
+        $this->assertStringNotContainsString('not assigned', $warning, 'The member still holds it, so it was not "not assigned".');
+
+        $this->assertTrue(
+            DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)->where('user_role_master_pk', $heldRolePk)->exists(),
+            'The held, deactivated role must be left in place.'
+        );
+    }
+
+    /**
+     * F-075 (c): two skipped roles read as plural.
+     */
+    public function test_the_skipped_role_warning_agrees_in_number(): void
+    {
+        $actor = $this->makeActor('plural_inactive');
+        $actor->assignRole('Super Admin');
+
+        $payload = $this->basicMemberPayload('PluralInactive');
+        foreach (['Retired One', 'Retired Two'] as $name) {
+            $payload['userrole'][] = DB::table('user_role_master')->insertGetId([
+                'user_role_name'         => $name . ' ' . uniqid(),
+                'user_role_display_name' => $name,
+                'active_inactive'        => 0,
+            ]);
+        }
+
+        $warning = $this->actingAs($actor)->post(route('member.store'), $payload)->assertOk()->json('warning');
+
+        $this->assertStringContainsString('are no longer active roles and were not assigned', $warning);
+    }
+
+    /**
      * A role pk that does not exist at all is still rejected, as before.
      */
     public function test_a_role_that_does_not_exist_is_still_rejected(): void

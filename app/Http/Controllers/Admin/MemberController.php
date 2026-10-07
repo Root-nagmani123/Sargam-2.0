@@ -577,9 +577,15 @@ class MemberController extends Controller
      * form was open reaches here and is skipped rather than failing the whole save
      * (PR #319 re-review F-045). Only active options are ever assigned, as before (F-025).
      *
+     * On an update the member may already hold a role that has since been deactivated;
+     * update() only rewrites mappings for ACTIVE roles, so that mapping is left in place
+     * and the message says the role was not changed rather than "not assigned" (F-075).
+     * A selection where every role is inactive never reaches here: the validator refuses
+     * it first (see rejectOnlyInactiveRoles()).
+     *
      * @return array{0: array, 1: ?string} [roles to assign, warning or null]
      */
-    private function withoutInactiveRoles(array $roles): array
+    private function withoutInactiveRoles(array $roles, bool $isUpdate = false): array
     {
         $activeRoles = UserRoleMaster::getUserRoleList();
 
@@ -603,9 +609,41 @@ class MemberController extends Controller
         }
 
         $names = UserRoleMaster::whereIn('pk', $dropped)->pluck('user_role_display_name')->all();
+        $one = count($names) === 1;
 
-        return [$kept, implode(', ', $names) . ' ' . (count($names) === 1 ? 'is' : 'are')
-            . ' no longer an active role and was not assigned. The rest of the record was saved.'];
+        return [$kept, implode(', ', $names)
+            . ($one ? ' is no longer an active role and ' : ' are no longer active roles and ')
+            . ($isUpdate ? ($one ? 'was not changed.' : 'were not changed.') : ($one ? 'was not assigned.' : 'were not assigned.'))
+            . ' The rest of the record was saved.'];
+    }
+
+    /**
+     * Validator hook: refuse a role selection in which EVERY ticked role is inactive.
+     *
+     * withoutInactiveRoles() would drop them all and leave the member with no role,
+     * which 'userrole' => required exists to prevent (PR #319 re-review F-075). Runs as
+     * part of validation, so the refusal happens before any upload or database write.
+     */
+    private function rejectOnlyInactiveRoles(\Illuminate\Validation\Validator $validator, Request $request): void
+    {
+        $roles = array_filter(
+            (array) $request->input('userrole', []),
+            fn ($role) => $role !== null && $role !== ''
+        );
+
+        if ($roles === []) {
+            return;
+        }
+
+        $activeRoles = UserRoleMaster::getUserRoleList();
+
+        foreach ($roles as $role) {
+            if ($activeRoles->has((int) $role)) {
+                return;
+            }
+        }
+
+        $validator->errors()->add('userrole', 'The selected role is no longer active. Please choose an active role.');
     }
 
     /**
@@ -967,6 +1005,7 @@ class MemberController extends Controller
         [$rules, $messages] = $this->combinedMemberRules();
 
         $validator = Validator::make($request->all(), $rules, $messages);
+        $validator->after(fn ($validator) => $this->rejectOnlyInactiveRoles($validator, $request));
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
@@ -1140,6 +1179,12 @@ class MemberController extends Controller
 
         $validator = Validator::make($request->all(), $rules, $messages);
 
+        // Only for an actor whose role selection is actually saved; a non-admin's
+        // 'userrole' is ignored by update() (F-001), so it must not block their save.
+        if ($this->actingUserCanManageRbacRoles()) {
+            $validator->after(fn ($validator) => $this->rejectOnlyInactiveRoles($validator, $request));
+        }
+
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
@@ -1287,7 +1332,7 @@ class MemberController extends Controller
             // block leaves existing mappings untouched rather than clearing them.
             if ($userCredential && $this->actingUserCanManageRbacRoles()) {
                 $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
-                [$roles, $saveWarnings[]] = $this->withoutInactiveRoles($roles);
+                [$roles, $saveWarnings[]] = $this->withoutInactiveRoles($roles, true);
 
                 // Only replace mappings for roles that were actually offered as a
                 // checkbox (getUserRoleList() — active roles only). A member holding a
