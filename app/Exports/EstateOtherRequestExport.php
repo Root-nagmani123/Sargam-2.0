@@ -78,6 +78,12 @@ class EstateOtherRequestExport implements
                 'width' => 32,
                 'value' => fn ($row) => $row->emp_name ?: '-',
             ],
+            'emp_id' => [
+                'heading' => 'Emp ID',
+                'center' => false,
+                'width' => 16,
+                'value' => fn ($row) => self::text($row->employee_master_emp_id ?? null),
+            ],
             'section' => [
                 'heading' => 'Section',
                 'center' => false,

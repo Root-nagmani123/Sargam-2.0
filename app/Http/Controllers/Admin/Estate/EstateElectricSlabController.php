@@ -15,6 +15,20 @@ class EstateElectricSlabController extends Controller
 {
     use AuthorizesEstateMaster;
 
+    /** The rules are identical for create and update — one definition. */
+    private const RULES = [
+        'start_unit_range' => 'required|integer|min:0',
+        'end_unit_range' => 'required|integer|min:0|gte:start_unit_range',
+        'rate_per_unit' => 'required|numeric|min:0',
+        'estate_unit_type_master_pk' => 'required|integer|exists:estate_unit_type_master,pk',
+    ];
+
+    /** "Merge with House" options — the Unit Type master, the one source for this list. */
+    private function unitTypes()
+    {
+        return UnitType::orderBy('unit_type')->pluck('unit_type', 'pk');
+    }
+
     public function index(EstateElectricSlabDataTable $dataTable)
     {
         // Add / Edit is a modal on the index now, so the option list has to be

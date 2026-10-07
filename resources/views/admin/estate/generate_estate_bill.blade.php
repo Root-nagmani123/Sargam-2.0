@@ -132,9 +132,12 @@
     <div class="bill-cards-wrapper geb-cards">
             @forelse($bills as $bill)
             @php
-                // Other/contract bills alag table (estate_month_reading_details_other) se aate hain —
-                // unke pk LBSNAA pks se takra sakte hain, isliye na checkbox (Print Selected) me jaate hain
-                // aur na hi LBSNAA print route par; unka print is_other flag ke saath hota hai.
+                $gebMeterTwo = (isset($bill->meter_two) && (int) $bill->meter_two !== 0)
+                    || (isset($bill->meter_two_consume_unit) && (int) $bill->meter_two_consume_unit > 0);
+
+                // Other/contract bills come from a separate table (estate_month_reading_details_other),
+                // so their pk can collide with an LBSNAA pk. They therefore stay out of the
+                // checkbox selection (Print Selected) and print through the is_other route.
                 $billIsOther = ! empty($bill->is_other_bill);
                 $billPrintUrl = $billIsOther
                     ? route('admin.estate.reports.bill-report-print-all', array_filter([
@@ -145,49 +148,78 @@
                     ], static fn ($v) => $v !== null && $v !== ''))
                     : route('admin.estate.reports.bill-report-print') . '?bill_no=' . urlencode($bill->bill_no) . '&month=' . urlencode($bill->bill_month) . '&year=' . urlencode($bill->bill_year);
             @endphp
-            <div class="card shadow-sm border-0 rounded-3 mb-3 bill-card" data-bill-no="{{ $bill->bill_no ?? '' }}" data-bill-month="{{ $bill->bill_month ?? '' }}" data-bill-year="{{ $bill->bill_year ?? '' }}" data-bill-source="{{ $billIsOther ? 'other' : 'lbsnaa' }}">
-                <div class="card-body p-4 position-relative">
-                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3 pb-2 border-bottom">
+            <div class="geb-bill mb-3 bill-card" data-bill-no="{{ $bill->bill_no ?? '' }}"
+                data-bill-month="{{ $bill->bill_month ?? '' }}" data-bill-year="{{ $bill->bill_year ?? '' }}"
+                data-bill-source="{{ $billIsOther ? 'other' : 'lbsnaa' }}">
+
+                <div class="geb-bill__head">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                         @if($billIsOther)
-                        <span class="text-muted small">Other employee bill</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="geb-bill__no">Bill Number #{{ $bill->bill_no ?? '—' }}</span>
+                            <span class="geb-pill">Other employee</span>
+                        </div>
                         @else
-                        <div class="form-check form-check-lg mb-0">
-                            <input class="form-check-input bill-checkbox" type="checkbox" value="{{ $bill->pk }}" id="bill_{{ $bill->pk }}" data-bill-pk="{{ $bill->pk }}">
-                            <label class="form-check-label text-muted small" for="bill_{{ $bill->pk }}">Select this bill</label>
+                        <div class="form-check mb-0 d-flex align-items-center gap-2">
+                            <input class="form-check-input bill-checkbox mt-0" type="checkbox" value="{{ $bill->pk }}"
+                                id="bill_{{ $bill->pk }}" data-bill-pk="{{ $bill->pk }}">
+                            <label class="form-check-label geb-bill__no" for="bill_{{ $bill->pk }}">
+                                Bill Number #{{ $bill->bill_no ?? '—' }}
+                            </label>
                         </div>
                         @endif
-                        <a href="{{ $billPrintUrl }}" target="_blank" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" title="Print this bill">
-                            <i class="material-symbols-rounded" style="font-size: 1rem;">print</i>
-                            Print
+                        <a href="{{ $billPrintUrl }}"
+                            target="_blank" rel="noopener" class="btn geb-btn-print" title="Print this bill">
+                            <i class="bi bi-printer" aria-hidden="true"></i>
+                            <span>Print</span>
                         </a>
                     </div>
 
-                    <div class="row g-3 g-md-4 mb-3">
-                        <div class="col-12 col-md-6">
-                            <table class="table table-borderless table-sm mb-0">
-                                <tbody>
-                                    <tr>
-                                        <td class="text-muted pe-3 text-nowrap" style="width: 42%;">Bill No.</td>
-                                        <td class="fw-semibold">{{ $bill->bill_no ?? '—' }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">Month</td>
-                                        <td>{{ $bill->bill_month ?? '' }} {{ $bill->bill_year ?? '' }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">Emp Name</td>
-                                        <td><span class="text-primary fw-medium">{{ $bill->emp_name ?? '—' }}</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">Designation</td>
-                                        <td>{{ $bill->emp_designation ?? '—' }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">Employee Type</td>
-                                        <td><span class="badge text-bg-secondary">{{ $bill->employee_type_label ?? 'REGULAR' }}</span></td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                    <div class="geb-facts geb-facts--head">
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Request Date</span>
+                            <span class="geb-fact__value">{{ $bill->req_date_formatted ?? '—' }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Employee Name</span>
+                            <span class="geb-fact__value">{{ $bill->emp_name ?? '—' }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">House Number</span>
+                            <span class="geb-fact__value">{{ $bill->house_display ?? '—' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="geb-bill__body">
+                    <div class="geb-facts">
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Bill No.</span>
+                            <span class="geb-fact__value">{{ $bill->bill_no ?? '—' }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Month</span>
+                            <span class="geb-fact__value">{{ trim(($bill->bill_month ?? '') . ' ' . ($bill->bill_year ?? '')) ?: '—' }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Employee Name</span>
+                            <span class="geb-fact__value">{{ $bill->emp_name ?? '—' }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Designation</span>
+                            <span class="geb-fact__value">{{ $bill->emp_designation ?? '—' }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">Employee Type</span>
+                            <span class="geb-fact__value"><span class="geb-pill">{{ $bill->employee_type_label ?? 'Regular' }}</span></span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">House No.</span>
+                            <span class="geb-fact__value">{{ $bill->house_display ?? '—' }}</span>
+                        </div>
+                        <div class="geb-fact" data-fact>
+                            <span class="geb-fact__label">From Date</span>
+                            <span class="geb-fact__value">{{ $bill->from_date_formatted ?? '—' }}</span>
                         </div>
                         <div class="geb-fact" data-fact>
                             <span class="geb-fact__label">To Date</span>
