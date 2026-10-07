@@ -147,10 +147,13 @@
                                 <span class="eor-date-placeholder" aria-hidden="true">Select Date</span>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        {{-- Optional: links this request to employee_master.emp_id so the
+                             employee sees their bill under My Estate Bill. --}}
+                        <div class="col-12">
                             <label for="modal_employee_master_emp_id" class="form-label">Employee Emp ID</label>
                             <input type="text" class="form-control" id="modal_employee_master_emp_id" name="employee_master_emp_id"
-                                maxlength="255" placeholder="e.g. SOC00237">
+                                maxlength="255" placeholder="eg. SOC00237" aria-describedby="modal_employee_master_emp_id_help">
+                            <div id="modal_employee_master_emp_id_help" class="form-text">Optional. Links the request to the employee's own estate bill.</div>
                         </div>
                     </div>
                 </div>
@@ -215,8 +218,10 @@
         /* ---------- Column visibility (persisted per browser, per user) ---------- */
         // Header index -> export column key. POSITIONAL: adding a table column means
         // adding an entry here too. '' = a column that is never exported (Action).
-        var EOR_EXPORT_COLUMN_KEYS = ['sno', 'request_id', 'emp_name', 'section', 'doj_acad', ''];
-        var eorColStorageKey = 'sargam.estateRequestForOthers.hiddenCols.{{ auth()->id() ?? 'guest' }}';
+        var EOR_EXPORT_COLUMN_KEYS = ['sno', 'request_id', 'emp_name', 'emp_id', 'section', 'doj_acad', ''];
+        // v2: Emp ID was inserted at index 3. Hidden columns are stored by index, so the
+        // v1 value would now hide the wrong column — start those users from all-visible.
+        var eorColStorageKey = 'sargam.estateRequestForOthers.hiddenCols.v2.{{ auth()->id() ?? 'guest' }}';
 
         function eorGetHiddenCols() {
             try {
