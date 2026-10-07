@@ -2,247 +2,229 @@
 
 @section('title', 'Estate Migration Report (1998–2026) - Sargam')
 
+{{--
+    Filters keep their original ids, option sources and cascade endpoint
+    (migration-report/filter-options). Nine filters do not fit one toolbar row,
+    so the four primary ones stay in the toolbar and the rest sit in a
+    "More Filters" panel (new-design-index-page.md §2 "Filter overflow").
+
+    "1998–2026" is the source dataset's own name (table
+    estate_migration_report_1998_2026); the Year filter itself is built from the
+    data, not from this label.
+--}}
+@php
+    $primaryFilters = [
+        ['id' => 'filter_allotment_year', 'label' => 'Allotment Year', 'all' => '— All Years —', 'options' => $years ?? []],
+        ['id' => 'filter_campus_name', 'label' => 'Campus Name', 'all' => '— All Campuses —', 'options' => $campuses ?? []],
+        ['id' => 'filter_building_name', 'label' => 'Building Name', 'all' => '— All Buildings —', 'options' => $buildings ?? []],
+        ['id' => 'filter_employee_type', 'label' => 'Employee Type', 'all' => '— All Types —', 'options' => $employeeTypes ?? []],
+    ];
+    $moreFilters = [
+        ['id' => 'filter_type_of_building', 'label' => 'Type of Building', 'all' => '— All Types —', 'options' => $buildingTypes ?? []],
+        ['id' => 'filter_house_no', 'label' => 'House No.', 'all' => '— All Houses —', 'options' => $houseNos ?? []],
+        ['id' => 'filter_employee_name', 'label' => 'Employee Name', 'all' => '— All Employees —', 'options' => $employeeNames ?? []],
+        ['id' => 'filter_department_name', 'label' => 'Department', 'all' => '— All Departments —', 'options' => $departments ?? []],
+        ['id' => 'filter_stay_period_text', 'label' => 'Stay Period', 'all' => '— All Periods —', 'options' => $stayPeriods ?? []],
+    ];
+@endphp
+
 @section('setup_content')
-<div class="container-fluid px-2 px-sm-3 px-md-4">
-    <x-breadcrum title="Estate Migration Report (1998–2026)"></x-breadcrum>
+<div class="container-fluid er-report emr-page">
+    <x-breadcrum title="Estate Migration Report (1998–2026)" :showBack="false"></x-breadcrum>
 
     <x-session_message />
 
-    <div class="card shadow-sm border-0 rounded-3 mb-4">
-        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
-            <h2 class="h6 fw-semibold text-body mb-0 d-flex align-items-center gap-2">
-                <i class="material-symbols-rounded fs-5">filter_list</i>
-                Filters
-            </h2>
-        </div>
-        <div class="card-body p-4">
-            <div class="row g-3 g-md-4 align-items-end">
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                    <label for="filter_allotment_year" class="form-label fw-medium">Allotment Year</label>
-                    <select class="form-select" id="filter_allotment_year">
-                        <option value="">— All Years —</option>
-                        @foreach($years ?? [] as $y)
-                            <option value="{{ $y }}">{{ $y }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                    <label for="filter_campus_name" class="form-label fw-medium">Campus Name</label>
-                    <select class="form-select" id="filter_campus_name">
-                        <option value="">— All Campuses —</option>
-                        @foreach($campuses ?? [] as $c)
-                            <option value="{{ $c }}">{{ $c }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                    <label for="filter_building_name" class="form-label fw-medium">Building Name</label>
-                    <select class="form-select" id="filter_building_name">
-                        <option value="">— All Buildings —</option>
-                        @foreach($buildings ?? [] as $b)
-                            <option value="{{ $b }}">{{ $b }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                    <label for="filter_type_of_building" class="form-label fw-medium">Type of Building</label>
-                    <select class="form-select" id="filter_type_of_building">
-                        <option value="">— All Types —</option>
-                        @foreach($buildingTypes ?? [] as $bt)
-                            <option value="{{ $bt }}">{{ $bt }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                    <label for="filter_house_no" class="form-label fw-medium">House No.</label>
-                    <select class="form-select" id="filter_house_no">
-                        <option value="">— All Houses —</option>
-                        @foreach($houseNos ?? [] as $houseNo)
-                            <option value="{{ $houseNo }}">{{ $houseNo }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                    <label for="filter_employee_name" class="form-label fw-medium">Employee Name</label>
-                    <select class="form-select" id="filter_employee_name">
-                        <option value="">— All Employees —</option>
-                        @foreach($employeeNames ?? [] as $employeeName)
-                            <option value="{{ $employeeName }}">{{ $employeeName }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                    <label for="filter_department_name" class="form-label fw-medium">Department</label>
-                    <select class="form-select" id="filter_department_name">
-                        <option value="">— All Departments —</option>
-                        @foreach($departments ?? [] as $d)
-                            <option value="{{ $d }}">{{ $d }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                    <label for="filter_employee_type" class="form-label fw-medium">Employee Type</label>
-                    <select class="form-select" id="filter_employee_type">
-                        <option value="">— All Types —</option>
-                        @foreach($employeeTypes ?? [] as $et)
-                            <option value="{{ $et }}">{{ $et }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                    <label for="filter_stay_period_text" class="form-label fw-medium">Stay Period</label>
-                    <select class="form-select" id="filter_stay_period_text">
-                        <option value="">— All Periods —</option>
-                        @foreach($stayPeriods ?? [] as $sp)
-                            <option value="{{ $sp }}">{{ $sp }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-4 d-flex flex-wrap gap-2">
-                    <button type="button" id="btnApplyFilters" class="btn btn-primary d-inline-flex align-items-center gap-2">
-                        <i class="material-symbols-rounded" style="font-size: 1.1rem;">search</i>
-                        Apply
+    <div class="card border-0 shadow-sm rounded-1">
+        <div class="card-body p-3 p-md-4">
+            <p class="er-summary mb-3">Historical estate allotment records. Narrow them by year, campus, building, house, employee, department and employee type; every filter narrows the options of the ones after it.</p>
+
+            <div class="d-flex flex-column flex-xl-row align-items-xl-end justify-content-between gap-3 mb-3 programme-dt-toolbar">
+                <div class="er-filters">
+                    @foreach($primaryFilters as $f)
+                    <div class="programme-dt-filter-select">
+                        <label for="{{ $f['id'] }}" class="er-filter-label">{{ $f['label'] }}</label>
+                        <select class="form-select" id="{{ $f['id'] }}">
+                            <option value="">{{ $f['all'] }}</option>
+                            @foreach($f['options'] as $opt)
+                            <option value="{{ $opt }}">{{ $opt }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endforeach
+
+                    <button type="button" class="btn programme-dt-btn-columns" id="emrMoreFiltersBtn"
+                        data-bs-toggle="collapse" data-bs-target="#emrMoreFilters" aria-expanded="false" aria-controls="emrMoreFilters">
+                        <i class="bi bi-sliders" aria-hidden="true"></i>
+                        <span>More Filters</span>
+                        <span class="badge text-bg-primary rounded-1 d-none" id="emrMoreCount" aria-label="active"></span>
                     </button>
-                    <button type="button" id="btnResetFilters" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
-                        <i class="material-symbols-rounded" style="font-size: 1.1rem;">refresh</i>
-                        Reset
+                    <button type="button" id="btnResetFilters" class="btn programme-dt-btn-reset">Reset Filters</button>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-xl-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" data-bs-toggle="modal"
+                        data-bs-target="#emrColumnModal" title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
+                    <div id="emrDtSearch" class="programme-dt-search" data-dt-search-for="estateMigrationReportTable"></div>
                 </div>
             </div>
+
+            <div class="collapse" id="emrMoreFilters">
+                <div class="er-filters p-3 mb-3 bg-light border rounded-1">
+                    @foreach($moreFilters as $f)
+                    <div class="programme-dt-filter-select">
+                        <label for="{{ $f['id'] }}" class="er-filter-label">{{ $f['label'] }}</label>
+                        <select class="form-select" id="{{ $f['id'] }}">
+                            <option value="">{{ $f['all'] }}</option>
+                            @foreach($f['options'] as $opt)
+                            <option value="{{ $opt }}">{{ $opt }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+
+            <div class="programme-dt-panel">
+                <div class="table-responsive er-scroll">
+                    {!! $dataTable->table([
+                        'class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table ds-table-sticky',
+                        'aria-describedby' => 'estate-migration-report-caption'
+                    ]) !!}
+                </div>
+            </div>
+            <div id="estate-migration-report-caption" class="visually-hidden">Estate Migration Report list</div>
+            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                data-dt-footer-for="estateMigrationReportTable"></div>
         </div>
     </div>
 
-    <div class="card shadow-sm border-0 rounded-3">
-        <div class="card-body p-4 p-lg-5">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
-                <div>
-                    <h1 class="h4 fw-bold text-dark mb-1">Estate Migration Report (1998–2026)</h1>
-                    <p class="text-body-secondary small mb-0">Historical estate allotment records with filters. Browse older reports by year, campus, building, house, employee, department, and employee type.</p>
+    <div class="modal fade" id="emrColumnModal" tabindex="-1" aria-labelledby="emrColumnModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content rounded-1 border-0 shadow">
+                <div class="modal-header border-0 pb-2">
+                    <h5 class="modal-title fw-bold" id="emrColumnModalLabel">Column Visibility</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-0">
+                    <hr class="mt-0">
+                    <div class="row g-3" id="emrColumnToggleGrid"></div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn ds-btn-cancel ds-btn-cancel--primary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
-
-            <div class="table-responsive">
-                {!! $dataTable->table([
-                    'class' => 'table text-nowrap align-middle mb-0',
-                    'aria-describedby' => 'estate-migration-report-caption'
-                ]) !!}
-            </div>
-            <div id="estate-migration-report-caption" class="visually-hidden">Estate Migration Report list</div>
         </div>
     </div>
 </div>
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
-<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
-<style>
-    .select2-container--open { z-index: 1060; } /* sirf khula dropdown modal ke upar; closed widget normal flow me (modal ke peeche) */
-    .select2-container--default .select2-selection--single { min-height: calc(1.5em + 0.75rem + 2px); display: flex; align-items: center; }
-    .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.5; padding-left: 0.25rem; }
-</style>
+@include('admin.layouts.partials.select2-assets')
+<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
 @endpush
 
 @push('scripts')
-{{-- Select2 JS globally footer (admin.layouts.footer) se load hoti hai; yahan include ki zaroorat nahi. --}}
+@include('admin.estate.partials.report_print_assets')
 <script>
-$(document).ready(function() {
+$(function () {
+    var G = window.EstateReportGrid;
+    var esc = G.esc;
     var filterSelectIds = ['filter_allotment_year', 'filter_campus_name', 'filter_building_name', 'filter_type_of_building', 'filter_house_no', 'filter_employee_name', 'filter_department_name', 'filter_employee_type', 'filter_stay_period_text'];
+    var moreFilterIds = ['filter_type_of_building', 'filter_house_no', 'filter_employee_name', 'filter_department_name', 'filter_stay_period_text'];
 
-    // Page-level filter selects (kisi modal ke andar nahi) -> dropdownParent ki zaroorat nahi.
     function initFilterSelects() {
         if (typeof $.fn.select2 === 'undefined') return;
-        filterSelectIds.forEach(function(id) {
+        filterSelectIds.forEach(function (id) {
             var el = document.getElementById(id);
             if (!el) return;
             if ($(el).data('select2')) { try { $(el).select2('destroy'); } catch (e) {} }
-            $(el).select2({
-                allowClear: false,
-                width: '100%'
-            });
+            $(el).select2({ allowClear: false, width: '100%', dropdownParent: $(el).closest('.card-body') });
         });
     }
 
     function destroyFilterSelects() {
         if (typeof $.fn.select2 === 'undefined') return;
-        filterSelectIds.forEach(function(id) {
+        filterSelectIds.forEach(function (id) {
             var el = document.getElementById(id);
-            if (el && $(el).data('select2')) {
-                try { $(el).select2('destroy'); } catch (e) {}
-            }
+            if (el && $(el).data('select2')) { try { $(el).select2('destroy'); } catch (e) {} }
         });
+    }
+
+    // How many "More Filters" are set — shown on the button so a hidden filter is never forgotten.
+    function syncMoreCount() {
+        var n = moreFilterIds.filter(function (id) { return !!$('#' + id).val(); }).length;
+        $('#emrMoreCount').text(n).toggleClass('d-none', n === 0);
     }
 
     initFilterSelects();
 
+    // Yajra HTML-escapes every non-raw column on the server, so the values below are
+    // already safe markup — escaping them again would print "&amp;" literally.
+    function occupancyBadge(v) {
+        var s = String(v || '').trim();
+        if (!s || s === '—') return '<span class="text-muted">—</span>';
+        var tone = /exit/i.test(s) ? 'exited' : (/occup/i.test(s) ? 'occupied' : 'neutral');
+        return '<span class="er-badge er-badge--' + tone + '">' + s + '</span>';
+    }
+
+    function text(v, t) {
+        return t === 'display' ? ((v == null || v === '') ? '—' : v) : v;
+    }
+
     var table = $('#estateMigrationReportTable').DataTable({
         processing: true,
         serverSide: true,
+        // Server-side ordering across the whole dataset, not just the loaded page.
+        sargamServerOrder: true,
         searching: true,
         responsive: false,
-        scrollX: true,
         autoWidth: false,
         order: [[1, 'desc']],
         pageLength: 10,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-        language: {
-            search: 'Search within table:',
-            lengthMenu: 'Show _MENU_ entries',
-            info: 'Showing _START_ to _END_ of _TOTAL_ entries',
-            infoEmpty: 'Showing 0 to 0 of 0 entries',
-            infoFiltered: '(filtered from _MAX_ total entries)',
-            paginate: {
-                first: 'First',
-                last: 'Last',
-                next: 'Next',
-                previous: 'Previous'
-            }
-        },
         ajax: {
-            url: "{{ route('admin.estate.reports.migration-report') }}",
+            url: @json(route('admin.estate.reports.migration-report')),
             type: 'GET',
-            data: function(d) {
-                d.filter_allotment_year = $('#filter_allotment_year').val();
-                d.filter_campus_name = $('#filter_campus_name').val();
-                d.filter_building_name = $('#filter_building_name').val();
-                d.filter_type_of_building = $('#filter_type_of_building').val();
-                d.filter_house_no = $('#filter_house_no').val();
-                d.filter_employee_name = $('#filter_employee_name').val();
-                d.filter_department_name = $('#filter_department_name').val();
-                d.filter_employee_type = $('#filter_employee_type').val();
-                d.filter_stay_period_text = $('#filter_stay_period_text').val();
+            data: function (d) {
+                filterSelectIds.forEach(function (id) { d[id] = $('#' + id).val(); });
             }
         },
         columns: [
-            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'text-center', width: '50px' },
-            { data: 'allotment_year', name: 'allotment_year' },
-            { data: 'campus_name', name: 'campus_name' },
-            { data: 'building_name', name: 'building_name' },
-            { data: 'type_of_building', name: 'type_of_building' },
-            { data: 'house_no', name: 'house_no' },
-            { data: 'employee_name', name: 'employee_name' },
-            { data: 'department_name', name: 'department_name' },
-            { data: 'employee_type', name: 'employee_type' },
-            { data: 'date_of_allotment', name: 'date_of_allotment', orderable: true, searchable: false },
-            { data: 'date_of_exit', name: 'date_of_exit', orderable: true, searchable: false },
-            { data: 'occupancy_status', name: 'occupancy_status' },
-            { data: 'stay_period_text', name: 'stay_period_text' }
-        ],
-        dom: '<"row flex-wrap align-items-center gap-2 mb-3"<"col-12 col-sm-6 col-md-4"l><"col-12 col-sm-6 col-md-5"f>>rt<"row align-items-center mt-3"<"col-12 col-sm-6 col-md-5"i><"col-12 col-sm-6 col-md-7"p>>'
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'no-sort' },
+            { data: 'allotment_year', name: 'allotment_year', className: 'fw-medium', render: text },
+            { data: 'campus_name', name: 'campus_name', render: text },
+            { data: 'building_name', name: 'building_name', render: text },
+            { data: 'type_of_building', name: 'type_of_building', render: text },
+            { data: 'house_no', name: 'house_no', render: text },
+            { data: 'employee_name', name: 'employee_name', className: 'er-col-wrap', render: text },
+            { data: 'department_name', name: 'department_name', className: 'er-col-wrap', render: text },
+            { data: 'employee_type', name: 'employee_type', render: text },
+            { data: 'date_of_allotment', name: 'date_of_allotment', orderable: true, searchable: false, render: text },
+            { data: 'date_of_exit', name: 'date_of_exit', orderable: true, searchable: false, render: text },
+            { data: 'occupancy_status', name: 'occupancy_status', render: function (v, t) { return t === 'display' ? occupancyBadge(v) : v; } },
+            { data: 'stay_period_text', name: 'stay_period_text', render: text }
+        ]
+        // No `language` / `dom` / `scrollX`: datatable-global-ui.js owns the chrome,
+        // and scrollX cloned the header into a second, duplicate row.
     });
 
-    var filterOptionsUrl = "{{ route('admin.estate.reports.migration-report.filter-options') }}";
+    G.columnVisibility(table, {
+        grid: '#emrColumnToggleGrid',
+        storageKey: 'sargam.estateMigrationReport.hiddenCols.' + @json(auth()->id() ?? 'guest')
+    });
+
+    var filterOptionsUrl = @json(route('admin.estate.reports.migration-report.filter-options'));
 
     function fillSelect($el, items, defaultText) {
-        var html = '<option value="">' + defaultText + '</option>';
-        if (items && items.length) {
-            items.forEach(function(v) {
-                html += '<option value="' + (v ? String(v).replace(/"/g, '&quot;') : '') + '">' + (v ? $('<div/>').text(v).html() : '') + '</option>';
-            });
-        }
+        var html = '<option value="">' + esc(defaultText) + '</option>';
+        (items || []).forEach(function (v) {
+            html += '<option value="' + esc(v) + '">' + esc(v) + '</option>';
+        });
         $el.html(html);
-        // Options native <select> me rebuild ho gaye; Select2 widget ko silently refresh karo
-        // (change.select2 namespaced hai -> app ke .on('change') cascade handlers fire nahi hote).
+        // Repaint Select2 without firing the app's cascade handlers (namespaced event).
         $el.trigger('change.select2');
     }
 
@@ -260,97 +242,62 @@ $(document).ready(function() {
         };
     }
 
-    function refreshCascadingFilters(resetFrom, opts, reloadTable) {
-        if (resetFrom <= 1) {
-            $('#filter_campus_name').val('');
-            fillSelect($('#filter_campus_name'), opts.campuses || [], '— All Campuses —');
+    // Cascade order (unchanged): year → campus → building → type → house → employee →
+    // department → employee type → stay period. Changing one resets those after it.
+    var CASCADE = [
+        null,
+        ['filter_campus_name', 'campuses', '— All Campuses —'],
+        ['filter_building_name', 'buildings', '— All Buildings —'],
+        ['filter_type_of_building', 'buildingTypes', '— All Types —'],
+        ['filter_house_no', 'houseNos', '— All Houses —'],
+        ['filter_employee_name', 'employeeNames', '— All Employees —'],
+        ['filter_department_name', 'departments', '— All Departments —'],
+        ['filter_employee_type', 'employeeTypes', '— All Types —'],
+        ['filter_stay_period_text', 'stayPeriods', '— All Periods —']
+    ];
+
+    function refreshCascadingFilters(resetFrom, opts) {
+        for (var i = Math.max(resetFrom, 1); i < CASCADE.length; i++) {
+            var c = CASCADE[i];
+            $('#' + c[0]).val('');
+            fillSelect($('#' + c[0]), opts[c[1]] || [], c[2]);
         }
-        if (resetFrom <= 2) {
-            $('#filter_building_name').val('');
-            fillSelect($('#filter_building_name'), opts.buildings || [], '— All Buildings —');
-        }
-        if (resetFrom <= 3) {
-            $('#filter_type_of_building').val('');
-            fillSelect($('#filter_type_of_building'), opts.buildingTypes || [], '— All Types —');
-        }
-        if (resetFrom <= 4) {
-            $('#filter_house_no').val('');
-            fillSelect($('#filter_house_no'), opts.houseNos || [], '— All Houses —');
-        }
-        if (resetFrom <= 5) {
-            $('#filter_employee_name').val('');
-            fillSelect($('#filter_employee_name'), opts.employeeNames || [], '— All Employees —');
-        }
-        if (resetFrom <= 6) {
-            $('#filter_department_name').val('');
-            fillSelect($('#filter_department_name'), opts.departments || [], '— All Departments —');
-        }
-        if (resetFrom <= 7) {
-            $('#filter_employee_type').val('');
-            fillSelect($('#filter_employee_type'), opts.employeeTypes || [], '— All Types —');
-        }
-        if (resetFrom <= 8) {
-            $('#filter_stay_period_text').val('');
-            fillSelect($('#filter_stay_period_text'), opts.stayPeriods || [], '— All Periods —');
-        }
-        if (reloadTable) {
-            table.ajax.reload(null, false);
-        }
+        syncMoreCount();
+        table.ajax.reload(null, false);
     }
 
-    function fetchAndUpdateFilters(resetFrom, reloadTable) {
-        $.get(filterOptionsUrl, getFilterParams(), function(opts) {
-            refreshCascadingFilters(resetFrom, opts, reloadTable);
+    function fetchAndUpdateFilters(resetFrom) {
+        $.get(filterOptionsUrl, getFilterParams(), function (opts) {
+            refreshCascadingFilters(resetFrom, opts || {});
         });
     }
 
-    $('#filter_allotment_year').on('change', function() {
-        fetchAndUpdateFilters(1, true);
-    });
-    $('#filter_campus_name').on('change', function() {
-        fetchAndUpdateFilters(2, true);
-    });
-    $('#filter_building_name').on('change', function() {
-        fetchAndUpdateFilters(3, true);
-    });
-    $('#filter_type_of_building').on('change', function() {
-        fetchAndUpdateFilters(4, true);
-    });
-    $('#filter_house_no').on('change', function() {
-        fetchAndUpdateFilters(5, true);
-    });
-    $('#filter_employee_name').on('change', function() {
-        fetchAndUpdateFilters(6, true);
-    });
-    $('#filter_department_name').on('change', function() {
-        fetchAndUpdateFilters(7, true);
-    });
-    $('#filter_employee_type').on('change', function() {
-        fetchAndUpdateFilters(8, true);
-    });
-    $('#filter_stay_period_text').on('change', function() {
+    // jQuery handlers on purpose: Select2 signals a pick with a jQuery change event.
+    $('#filter_allotment_year').on('change', function () { fetchAndUpdateFilters(1); });
+    $('#filter_campus_name').on('change', function () { fetchAndUpdateFilters(2); });
+    $('#filter_building_name').on('change', function () { fetchAndUpdateFilters(3); });
+    $('#filter_type_of_building').on('change', function () { fetchAndUpdateFilters(4); });
+    $('#filter_house_no').on('change', function () { fetchAndUpdateFilters(5); });
+    $('#filter_employee_name').on('change', function () { fetchAndUpdateFilters(6); });
+    $('#filter_department_name').on('change', function () { fetchAndUpdateFilters(7); });
+    $('#filter_employee_type').on('change', function () { fetchAndUpdateFilters(8); });
+    $('#filter_stay_period_text').on('change', function () {
+        syncMoreCount();
         table.ajax.reload(null, false);
     });
 
-    $('#btnApplyFilters').on('click', function() {
-        table.ajax.reload(null, false);
-    });
-
-    $('#btnResetFilters').on('click', function() {
+    $('#btnResetFilters').on('click', function () {
         destroyFilterSelects();
-        $('#filter_allotment_year, #filter_campus_name, #filter_building_name, #filter_type_of_building, #filter_house_no, #filter_employee_name, #filter_department_name, #filter_employee_type, #filter_stay_period_text').val('');
-        $.get(filterOptionsUrl, {}, function(opts) {
+        filterSelectIds.forEach(function (id) { $('#' + id).val(''); });
+        $.get(filterOptionsUrl, {}, function (opts) {
+            opts = opts || {};
             fillSelect($('#filter_allotment_year'), opts.years || [], '— All Years —');
-            fillSelect($('#filter_campus_name'), opts.campuses || [], '— All Campuses —');
-            fillSelect($('#filter_building_name'), opts.buildings || [], '— All Buildings —');
-            fillSelect($('#filter_type_of_building'), opts.buildingTypes || [], '— All Types —');
-            fillSelect($('#filter_house_no'), opts.houseNos || [], '— All Houses —');
-            fillSelect($('#filter_employee_name'), opts.employeeNames || [], '— All Employees —');
-            fillSelect($('#filter_department_name'), opts.departments || [], '— All Departments —');
-            fillSelect($('#filter_employee_type'), opts.employeeTypes || [], '— All Types —');
-            fillSelect($('#filter_stay_period_text'), opts.stayPeriods || [], '— All Periods —');
+            for (var i = 1; i < CASCADE.length; i++) {
+                fillSelect($('#' + CASCADE[i][0]), opts[CASCADE[i][1]] || [], CASCADE[i][2]);
+            }
             initFilterSelects();
-            table.ajax.reload(null, false);
+            syncMoreCount();
+            table.search('').ajax.reload(null, false);
         });
     });
 });

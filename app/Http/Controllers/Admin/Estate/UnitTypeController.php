@@ -14,7 +14,9 @@ class UnitTypeController extends Controller
     public function index()
     {
         // Naya record hamesha sabse upar — isliye pk desc, naam se nahi.
-        $items = UnitType::orderBy('pk', 'desc')->paginate(request('per_page', 10));
+        // Full list, like the other estate masters: the grid pages client-side. A 10-row
+        // paginate() here left every row after the 10th unreachable (no pager rendered).
+        $items = UnitType::orderBy('pk', 'desc')->get();
         return view('admin.estate.define_unit_type.index', compact('items'));
     }
 

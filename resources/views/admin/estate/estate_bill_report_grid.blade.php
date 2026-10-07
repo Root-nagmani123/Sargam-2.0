@@ -3,44 +3,91 @@
 @section('title', 'Estate Bill Report - Grid View - Sargam')
 
 @section('setup_content')
-<div class="container-fluid px-2 px-sm-3 px-md-4">
-    <!-- Breadcrumb -->
+<div class="container-fluid er-report ebr-page">
     <x-breadcrum title="Estate Bill Report - Grid View" :showBack="false"></x-breadcrum>
 
-    <!-- Filter: Bill Month + Show -->
-    <div class="card shadow-sm border-0 rounded-3 mb-4">
-        <div class="card-body p-4">
-            <h1 class="h4 fw-bold text-dark mb-1">List Bill For Other And Lbsnaa</h1>
-            <p class="text-muted small mb-4">Only notified bills are listed for the selected month except for other employee. Select Bill Month and click Show. If you expect more records, ensure those bills are notified except other employee.</p>
-            <form id="billReportGridFilterForm" class="row g-3 align-items-end">
-                <div class="col-12 col-md-4">
-                    <label for="bill_month" class="form-label">Bill Month <span class="text-danger">*</span></label>
-                    <div class="input-group">
-                        <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ request('bill_month', date('Y-m')) }}" max="{{ date('Y-m') }}" required>
+    {{-- Print sits above the card (new-design-index-page.md §1). --}}
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 er-export">
+        <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="btnBillReportPrint" title="Print every row for the selected month" disabled>
+            <i class="bi bi-printer" aria-hidden="true"></i>
+            <span>Print</span>
+        </button>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-1">
+        <div class="card-body p-3 p-md-4">
+            <div class="mb-3">
+                <h2 class="h6 fw-semibold mb-1">List Bill For Other And LBSNAA</h2>
+                <p class="er-summary">Only notified bills are listed for the selected month, except for other employees. If you expect more records, make sure those bills are notified.</p>
+            </div>
+
+            <div class="d-flex flex-column flex-lg-row align-items-lg-end justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <form id="billReportGridFilterForm" class="er-filters" novalidate>
+                    <div class="programme-dt-filter-select">
+                        <label for="bill_month" class="er-filter-label">Bill Month <span class="text-danger" aria-hidden="true">*</span></label>
+                        <input type="month" class="form-control" id="bill_month" name="bill_month"
+                            value="{{ request('bill_month', date('Y-m')) }}" max="{{ date('Y-m') }}" required aria-required="true"
+                            title="Current month or earlier">
                     </div>
-                </div>
-                <div class="col-12 col-md-3">
-                    <label for="employee_type_filter" class="form-label">Employee Type</label>
-                    <select class="form-select" id="employee_type_filter" name="employee_type">
-                        <option value="all" selected>All</option>
-                        <option value="lbsnaa">LBSNAA</option>
-                        <option value="other">Other Employee</option>
-                    </select>
-                </div>
-                <div class="col-12 col-md-2">
-                    <button type="submit" class="btn btn-primary rounded-1 px-3 w-100" id="btnShow">
-                        <i class="bi bi-search me-1"></i> Show
+                    <div class="programme-dt-filter-select">
+                        <label for="employee_type_filter" class="er-filter-label">Employee Type</label>
+                        <select class="form-select" id="employee_type_filter" name="employee_type" data-searchable="true">
+                            <option value="all" selected>All</option>
+                            <option value="lbsnaa">LBSNAA</option>
+                            <option value="other">Other Employee</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn programme-dt-btn-reset" id="btnBillReportReset">Reset Filters</button>
+                </form>
+
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="btnBillReportColumns"
+                        data-bs-toggle="modal" data-bs-target="#estateBillReportColumnModal"
+                        title="Show / hide columns" disabled>
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
+                    <div id="billReportDtSearch" class="programme-dt-search" data-dt-search-for="estateBillReportTable"></div>
                 </div>
-            </form>
-            <small class="text-muted d-block mt-2">Select Bill Month (current month or earlier)</small>
+            </div>
+
+            <div class="programme-dt-panel">
+                <div class="table-responsive er-scroll">
+                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table ds-table-sticky" id="estateBillReportTable">
+                        <thead>
+                            <tr>
+                                <th scope="col">S. No.</th>
+                                <th scope="col">Employee Type</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Section</th>
+                                <th scope="col">Building</th>
+                                <th scope="col">House No.</th>
+                                <th scope="col">From</th>
+                                <th scope="col">To</th>
+                                <th scope="col">Meter No.</th>
+                                <th scope="col" class="er-num">Prev. Reading</th>
+                                <th scope="col" class="er-num">Curr. Reading</th>
+                                <th scope="col" class="er-num">Units</th>
+                                <th scope="col" class="er-num">Total Charge</th>
+                                <th scope="col" class="er-num">Licence</th>
+                                <th scope="col" class="er-num">Water</th>
+                                <th scope="col" class="er-num">Grand Total</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            {{-- DataTables paginates (server-side), so the global UI fills this slot (§4A). --}}
+            <div id="billReportDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                data-dt-footer-for="estateBillReportTable"></div>
         </div>
     </div>
 
     <!-- Column Visibility Modal -->
     <div class="modal fade" id="estateBillReportColumnModal" tabindex="-1" aria-labelledby="estateBillReportColumnLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-content rounded-1 border-0 shadow">
                 <div class="modal-header border-0 pb-2">
                     <h5 class="modal-title fw-bold" id="estateBillReportColumnLabel">Column Visibility</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -50,390 +97,159 @@
                     <div class="row g-3" id="estateBillReportColumnGrid"></div>
                 </div>
                 <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn ds-btn-cancel ds-btn-cancel--primary" data-bs-dismiss="modal">Close</button>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Data Table Card -->
-    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
-        <div class="card-body p-3 p-md-4">
-            <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-end gap-3 mb-4">
-                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
-                    <button type="button" class="btn programme-dt-btn-columns" id="btnBillReportColumns"
-                        data-bs-toggle="modal" data-bs-target="#estateBillReportColumnModal"
-                        title="Show / hide columns" disabled>
-                        <span>Columns</span>
-                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
-                    </button>
-                    <button type="button" class="btn programme-dt-btn-columns" id="btnBillReportPrint" title="Print" disabled>
-                        <span>Print</span>
-                        <i class="bi bi-printer" aria-hidden="true"></i>
-                    </button>
-                    <div id="billReportDtSearch" class="programme-dt-search" data-dt-search-for="estateBillReportTable"></div>
-                </div>
-            </div>
-
-            <div class="programme-dt-panel">
-                <div class="table-responsive">
-                    <table class="table text-nowrap mb-0 w-100 programme-dt-table" id="estateBillReportTable">
-                        <thead>
-                            <tr>
-                                <th>S.No.</th>
-                                <th>Employee Type</th>
-                                <th>Name</th>
-                                <th>Section</th>
-                                <th>Building</th>
-                                <th>House No.</th>
-                                <th>From</th>
-                                <th>To</th>
-                                <th>Meter No.</th>
-                                <th>Prev. Reading</th>
-                                <th>Curr. Reading</th>
-                                <th>Units</th>
-                                <th>Total Charge</th>
-                                <th>Licence</th>
-                                <th>Water</th>
-                                <th>Grand Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr id="noDataRow">
-                                <td colspan="16" class="text-center text-muted py-4">Select Bill Month and click Show to load data.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div id="billReportDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="estateBillReportTable"></div>
             </div>
         </div>
     </div>
 </div>
-
-@push('styles')
-<style>
-#estateBillReportTable .dtr-control,
-#estateBillReportTable th.dtr-control,
-#estateBillReportTable td.dtr-control { display: none !important; }
-@media (max-width: 767.98px) {
-    .table-scroll-vertical-sm { max-height: 65vh; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-}
-</style>
-@endpush
 @endsection
 
-@push('scripts')
-<script>
-$(document).ready(function() {
-    var billReportDt = null;
-    var dataUrl = "{{ route('admin.estate.reports.bill-report-grid.data') }}";
-    var columnStorageKey = 'estateBillReportGrid:columns:v1';
+@push('styles')
+@include('admin.layouts.partials.select2-assets')
+<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
+@endpush
 
+@push('scripts')
+@include('admin.estate.partials.report_print_assets')
+<script>
+$(function () {
+    var G = window.EstateReportGrid;
+    var esc = G.esc;
+    var billReportDt = null;
+    var dataUrl = @json(route('admin.estate.reports.bill-report-grid.data'));
+
+    // Display only — the amounts arrive already calculated from the server.
     function formatMoney(n) {
         if (n == null || n === '' || isNaN(n)) return '—';
         return '₹ ' + parseFloat(n).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
     }
 
-    function buildColumnToggle() {
-        if (!billReportDt) return;
-        var $grid = $('#estateBillReportColumnGrid');
-        if (!$grid.length) return;
-        $grid.empty();
-        billReportDt.columns().every(function(i) {
-            var col = this;
-            var header = ($(col.header()).text() || '').trim();
-            if (!header) return;
-
-            var inputId = 'billReportColVis_' + i;
-            var $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
-            var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
-                .attr('for', inputId);
-            var $cb = $('<input type="checkbox" class="form-check-input m-0 bill-report-column-toggle">')
-                .attr('id', inputId)
-                .attr('data-column', i)
-                .prop('checked', col.visible());
-
-            $cb.on('change', function() {
-                if (!billReportDt) return;
-                var colIdx = $(this).data('column');
-                billReportDt.column(colIdx).visible($(this).prop('checked'));
-                persistColumnVisibility();
-            });
-
-            $label.append($cb).append($('<span></span>').text(header));
-            $cell.append($label);
-            $grid.append($cell);
-        });
+    function text(v) {
+        return (v == null || v === '') ? '—' : esc(v);
     }
 
-    function persistColumnVisibility() {
-        if (!billReportDt) return;
-        var state = {};
-        billReportDt.columns().every(function(i) {
-            state[i] = this.visible();
-        });
-        try { localStorage.setItem(columnStorageKey, JSON.stringify(state)); } catch (e) {}
+    // Dual-meter rows carry "\n"-separated values — one line per meter.
+    function lines(v) {
+        return (v == null || v === '' ? '—' : String(v)).split(/\n/).map(function (s) { return esc(s.trim() || '—'); }).join('<br>');
     }
 
-    function restoreColumnVisibility() {
-        if (!billReportDt) return;
-        var raw = null;
-        try { raw = localStorage.getItem(columnStorageKey); } catch (e) { raw = null; }
-        if (!raw) return;
-        var state = null;
-        try { state = JSON.parse(raw); } catch (e) { state = null; }
-        if (!state || typeof state !== 'object') return;
-        Object.keys(state).forEach(function(k) {
-            var idx = parseInt(k, 10);
-            if (isNaN(idx)) return;
-            billReportDt.column(idx).visible(!!state[k], false);
-        });
-        billReportDt.columns.adjust().draw(false);
-    }
-
-    // Change handler is now attached inside buildColumnToggle per-checkbox
-
-    function buildPrintableTableHtml() {
-        if (!billReportDt) return '';
-        var visibleIndexes = [];
-        billReportDt.columns().every(function(i) {
-            if (this.visible()) visibleIndexes.push(i);
-        });
-
-        var html = '<table class="table table-bordered table-striped">';
-        html += '<thead><tr>';
-        visibleIndexes.forEach(function(colIdx) {
-            var h = ($(billReportDt.column(colIdx).header()).text() || '').trim();
-            html += '<th>' + h + '</th>';
-        });
-        html += '</tr></thead><tbody>';
-
-        billReportDt.rows({ search: 'applied' }).nodes().each(function(rowNode) {
-            var $row = $(rowNode);
-            if ($row.hasClass('child')) return;
-            html += '<tr>';
-            visibleIndexes.forEach(function(colIdx) {
-                var cellNode = billReportDt.cell(rowNode, colIdx).node();
-                var cellHtml = '';
-                if (cellNode) {
-                    var $cell = $(cellNode).clone();
-                    $cell.find('input, button, select, textarea').remove();
-                    $cell.find('a.btn, .btn, .form-check-input').remove();
-                    cellHtml = ($cell.html() || '').trim();
-                }
-                html += '<td>' + cellHtml + '</td>';
-            });
-            html += '</tr>';
-        });
-
-        html += '</tbody></table>';
-        return html;
-    }
-
-    // Branded LBSNAA header assets (same layout as the official report PDF).
-    var printLogoLeft   = @json(asset('admin_assets/images/logos/logo_new.png'));
-    var printLogoRight  = @json(file_exists(public_path('admin_assets/images/logos/constitution-75.png'))
-        ? asset('admin_assets/images/logos/constitution-75.png')
-        : asset('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png'));
-    var printTitleHindi = @json(asset('admin_assets/images/logos/lbsnaa-title-hi.png'));
-
-    function openPrintWindow(tableHtml) {
-        var billMonth = ($('#bill_month').val() || '').trim();
-
-        var today = new Date();
-        var dateStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-
-        var printHtml = (
-            '<!doctype html><html><head><meta charset="utf-8">' +
-            '<title>Estate Bill Report - Grid View</title>' +
-            '<style>' +
-            '@page{size:A4 landscape;margin:10mm;}' +
-            'body{font-family:Arial, sans-serif;font-size:11px;color:#1f2937;margin:16px;}' +
-            '.pdf-hdr{width:100%;border-collapse:collapse;margin-bottom:4px;}' +
-            '.pdf-hdr td{vertical-align:middle;}' +
-            '.pdf-hdr .logo{width:90px;text-align:center;}' +
-            '.pdf-hdr .logo img{max-height:64px;max-width:84px;}' +
-            '.pdf-hdr .center{text-align:center;padding:0 8px;}' +
-            '.pdf-hdr .inst-hi-img{height:18px;width:auto;margin-bottom:2px;}' +
-            '.pdf-hdr .inst-en{font-size:16px;font-weight:bold;color:#102a43;line-height:1.25;}' +
-            '.pdf-hdr .course-line{font-size:12px;font-weight:bold;color:#243b53;margin-top:4px;}' +
-            '.report-title{text-align:center;font-size:20px;font-weight:bold;color:#004a93;margin:8px 0 6px;padding-bottom:8px;border-bottom:2px solid #004a93;}' +
-            '.print-info{margin-bottom:12px;font-size:11px;color:#666;text-align:center;}' +
-            'table{width:100%;border-collapse:collapse;margin-top:10px;}' +
-            'th,td{border:1px solid #8fa3bd;padding:6px 8px;text-align:left;font-size:11px;vertical-align:top;word-break:break-word;white-space:normal;}' +
-            'thead{display:table-header-group;}' +
-            'thead th{font-weight:bold;background-color:#004a93 !important;color:#fff !important;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
-            'tbody tr:nth-child(even){background-color:#eef2f8;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
-            'tr{page-break-inside:avoid;}' +
-            '.print-footer{margin-top:18px;text-align:center;font-size:10px;color:#666;border-top:1px solid #ccc;padding-top:10px;}' +
-            '@media print{body{margin:0;}}' +
-            '</style></head><body>' +
-            '<table class="pdf-hdr"><tr>' +
-                '<td class="logo"><img src="' + printLogoLeft + '" alt=""></td>' +
-                '<td class="center">' +
-                    '<img class="inst-hi-img" src="' + printTitleHindi + '" alt="">' +
-                    '<div class="inst-en">Lal Bahadur Shastri National Academy of Administration, Mussoorie</div>' +
-                    (billMonth ? '<div class="course-line">Bill Month: ' + billMonth + '</div>' : '') +
-                '</td>' +
-                '<td class="logo"><img src="' + printLogoRight + '" alt=""></td>' +
-            '</tr></table>' +
-            '<div class="report-title">Estate Bill Report</div>' +
-            '<div class="print-info"><div>Print Date: ' + dateStr + '</div></div>' +
-            tableHtml +
-            '<div class="print-footer"><p>Generated on ' + today.toLocaleString() + '</p></div>' +
-            '</body></html>'
-        );
-
-        // Popup windows live/gov domain par block ho jaate hain (tab window.print() poore page ko
-        // print kar deta tha). Isliye hidden iframe use karo — ye popup-blocker se affected nahi hota.
-        var existing = document.getElementById('billReportPrintFrame');
-        if (existing && existing.parentNode) { existing.parentNode.removeChild(existing); }
-        var frame = document.createElement('iframe');
-        frame.id = 'billReportPrintFrame';
-        frame.setAttribute('aria-hidden', 'true');
-        frame.style.position = 'fixed';
-        frame.style.right = '0';
-        frame.style.bottom = '0';
-        frame.style.width = '0';
-        frame.style.height = '0';
-        frame.style.border = '0';
-        document.body.appendChild(frame);
-
-        var fdoc = frame.contentWindow.document;
-        fdoc.open();
-        fdoc.write(printHtml);
-        fdoc.close();
-
-        // Images (logos) load hone ke baad print karo.
-        setTimeout(function() {
-            try {
-                frame.contentWindow.focus();
-                frame.contentWindow.print();
-            } catch (e) {
-                window.print(); // last-resort fallback
-            }
-            // Print dialog band hone ke baad iframe cleanup.
-            setTimeout(function() {
-                if (frame && frame.parentNode) { frame.parentNode.removeChild(frame); }
-            }, 1000);
-        }, 500);
+    function typeBadge(v) {
+        var s = String(v || '').trim();
+        var tone = /other/i.test(s) ? 'other' : (/lbsnaa/i.test(s) ? 'lbsnaa' : 'neutral');
+        return '<span class="er-badge er-badge--' + tone + '">' + esc(s || '—') + '</span>';
     }
 
     function initOrReloadBillReportGrid() {
-        var billMonth = $('#bill_month').val();
-        if (!billMonth) return;
-
-        if (!billReportDt) {
-            billReportDt = $('#estateBillReportTable').DataTable({
-                processing: true,
-                serverSide: true,
-                // Global enhancer (datatable-global-ui.js) default me serverSide tables ka ordering OFF
-                // karke sirf visible page ko client-sort karta hai (= "pagination-wise sorting" bug).
-                // Ye opt-in DataTables ka native server ordering ON rakhta hai -> order server ko jata hai
-                // aur poore 302 records DB par sort hote hain (offset/limit uske baad).
-                sargamServerOrder: true,
-                searching: true,
-                pageLength: 10,
-                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-                ajax: {
-                    url: dataUrl,
-                    data: function (d) {
-                        // Always read latest value (avoid stale closure on reload)
-                        d.bill_month = $('#bill_month').val();
-                        d.employee_type = $('#employee_type_filter').val();
-                    }
-                },
-                columns: [
-                    { data: 'sno', orderable: false, searchable: false },
-                    { data: 'employee_type' },
-                    { data: 'name' },
-                    { data: 'section' },
-                    { data: 'building_name' },
-                    { data: 'house_no' },
-                    { data: 'from_date', searchable: false },
-                    { data: 'to_date', searchable: false },
-                    { data: 'meter_no', searchable: false, render: function(v){ return (v == null || v === '') ? '—' : v.toString().split(/\n+/).map(function(s){ return s.trim(); }).filter(Boolean).join(', '); } },
-                    { data: 'prev_reading', searchable: false, render: function(v){ return (v || '—').toString().replace(/\n/g,'<br>'); } },
-                    { data: 'curr_reading', searchable: false, render: function(v){ return (v || '—').toString().replace(/\n/g,'<br>'); } },
-                    { data: 'unit_consumed', searchable: false },
-                    { data: 'total_charge', searchable: false, render: function(v){ return formatMoney(v); } },
-                    { data: 'licence_fee', searchable: false, render: function(v){ return formatMoney(v); } },
-                    { data: 'water_charges', searchable: false, render: function(v){ return formatMoney(v); } },
-                    { data: 'grand_total', searchable: false, render: function(v){ return formatMoney(v); } },
-                ],
-                order: [[2, 'asc']], // default: Name (A→Z) — poore 302 records par server-side sort
-                responsive: false,
-                autoWidth: false
-                // scrollX removed: it cloned the header into .dataTables_scrollHead
-                // (showing a duplicate header row). The wrapping .table-responsive
-                // already provides horizontal scroll for the wide table.
-                // No custom `dom` — the global DataTables enhancer
-                // (datatable-global-ui.js) relocates search/length/pagination into
-                // the .programme-dt-search / .programme-dt-footer slots below.
-            });
-
-            billReportDt.on('draw', function() { buildColumnToggle(); });
-            restoreColumnVisibility();
-            buildColumnToggle();
-
-            $('#btnBillReportColumns').prop('disabled', false);
-            $('#btnBillReportPrint').prop('disabled', false);
-        } else {
-            billReportDt.ajax.reload(null, true);
+        if (!$('#bill_month').val()) {
+            $('#bill_month').trigger('focus');
+            return;
         }
+
+        if (billReportDt) {
+            billReportDt.ajax.reload(null, true);
+            return;
+        }
+
+        billReportDt = $('#estateBillReportTable').DataTable({
+            processing: true,
+            serverSide: true,
+            // Keep DataTables' native server ordering so a header click sorts the WHOLE
+            // month, not just the loaded page (datatable-global-ui.js opt-in).
+            sargamServerOrder: true,
+            searching: true,
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+            ajax: {
+                url: dataUrl,
+                data: function (d) {
+                    d.bill_month = $('#bill_month').val();
+                    d.employee_type = $('#employee_type_filter').val();
+                }
+            },
+            columns: [
+                { data: 'sno', orderable: false, searchable: false },
+                { data: 'employee_type', render: function (v, t) { return t === 'display' ? typeBadge(v) : v; } },
+                { data: 'name', className: 'er-col-wrap fw-medium', render: function (v, t) { return t === 'display' ? text(v) : v; } },
+                { data: 'section', className: 'er-col-wrap', render: function (v, t) { return t === 'display' ? text(v) : v; } },
+                { data: 'building_name', render: function (v, t) { return t === 'display' ? text(v) : v; } },
+                { data: 'house_no', render: function (v, t) { return t === 'display' ? text(v) : v; } },
+                { data: 'from_date', searchable: false, render: function (v, t) { return t === 'display' ? text(v) : v; } },
+                { data: 'to_date', searchable: false, render: function (v, t) { return t === 'display' ? text(v) : v; } },
+                { data: 'meter_no', searchable: false, render: function (v) {
+                    return (v == null || v === '') ? '—' : esc(v.toString().split(/\n+/).map(function (s) { return s.trim(); }).filter(Boolean).join(', '));
+                } },
+                { data: 'prev_reading', searchable: false, className: 'er-num', render: lines },
+                { data: 'curr_reading', searchable: false, className: 'er-num', render: lines },
+                { data: 'unit_consumed', searchable: false, className: 'er-num', render: function (v) { return text(v); } },
+                { data: 'total_charge', searchable: false, className: 'er-num', render: formatMoney },
+                { data: 'licence_fee', searchable: false, className: 'er-num', render: formatMoney },
+                { data: 'water_charges', searchable: false, className: 'er-num', render: formatMoney },
+                { data: 'grand_total', searchable: false, className: 'er-num er-total', render: formatMoney }
+            ],
+            order: [[2, 'asc']], // Name A→Z across the whole month (server-side)
+            responsive: false,
+            autoWidth: false
+            // No `language` and no custom `dom`: datatable-global-ui.js owns both
+            // (a page override breaks the "Showing N of M items" footer), and it moves
+            // search / length / pager into the .programme-dt-search / .programme-dt-footer slots.
+        });
+
+        G.columnVisibility(billReportDt, {
+            grid: '#estateBillReportColumnGrid',
+            // v2: remembered by column label (v1 stored indexes).
+            storageKey: 'estateBillReportGrid:columns:v2'
+        });
+
+        $('#btnBillReportColumns, #btnBillReportPrint').prop('disabled', false);
     }
 
-    $('#billReportGridFilterForm').on('submit', function(e) {
+    $('#billReportGridFilterForm').on('submit', function (e) {
         e.preventDefault();
         initOrReloadBillReportGrid();
     });
 
-    // Filter works independently — reload as soon as the month changes,
-    // no need to press Show.
-    $('#bill_month').on('change', function() {
+    // Filters apply on change — no Show button needed.
+    $('#bill_month').on('change', initOrReloadBillReportGrid);
+    $('#employee_type_filter').on('change', initOrReloadBillReportGrid); // jQuery: Select2 fires a jQuery change
+
+    $('#btnBillReportReset').on('click', function () {
+        $('#bill_month').val(@json(date('Y-m')));
+        $('#employee_type_filter').val('all').trigger('change.select2');
+        if (billReportDt) billReportDt.search('');
         initOrReloadBillReportGrid();
     });
 
-    // Employee Type filter — reload on change (LBSNAA / Other Employee / All).
-    $('#employee_type_filter').on('change', function() {
-        initOrReloadBillReportGrid();
-    });
+    $('#btnBillReportPrint').on('click', function () {
+        if (!billReportDt) return;
 
-    // Auto-load on page open for the default/selected month (Show not required).
-    if ($('#bill_month').val()) {
-        initOrReloadBillReportGrid();
-    }
-
-    $('#btnBillReportPrint').on('click', function() {
-        if (!billReportDt) {
-            window.print();
-            return;
-        }
-
-        // Try to print all rows (server-side must support length=-1 for "All")
+        // Fetch every row (server honours length = -1), print, then restore the pager.
         var originalLen = billReportDt.page.len();
         var originalPage = billReportDt.page();
-        var restored = false;
+        var $btn = $(this).prop('disabled', true);
 
-        var restore = function() {
-            if (restored) return;
-            restored = true;
-            billReportDt.page.len(originalLen);
-            billReportDt.page(originalPage);
-            billReportDt.draw(false);
-        };
-
-        billReportDt.one('draw', function() {
-            setTimeout(function() {
-                var tableHtml = buildPrintableTableHtml();
-                openPrintWindow(tableHtml);
-                setTimeout(restore, 800);
+        billReportDt.one('draw', function () {
+            setTimeout(function () {
+                var data = G.collectRows(billReportDt);
+                var type = $('#employee_type_filter option:selected').text();
+                G.printGrid({
+                    title: 'Estate Bill Report',
+                    meta: ['Bill Month: ' + ($('#bill_month').val() || '') + '  |  Employee Type: ' + type],
+                    headers: data.headers,
+                    rows: data.rows,
+                    numericCols: data.headers.map(function (h, i) {
+                        return ['Prev. Reading', 'Curr. Reading', 'Units', 'Total Charge', 'Licence', 'Water', 'Grand Total'].indexOf(h) !== -1 ? i : -1;
+                    }).filter(function (i) { return i !== -1; })
+                });
+                billReportDt.page.len(originalLen).page(originalPage).draw(false);
+                $btn.prop('disabled', false);
             }, 250);
         });
-
         billReportDt.page.len(-1).draw();
     });
+
+    // Load the default / requested month on open.
+    initOrReloadBillReportGrid();
 });
 </script>
 @endpush

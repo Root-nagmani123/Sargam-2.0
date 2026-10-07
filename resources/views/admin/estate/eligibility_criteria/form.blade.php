@@ -1,66 +1,54 @@
 @extends('admin.layouts.master')
 
-@section('title', ($item ? 'Edit' : 'Add') . ' Eligibility Unit Mapping - Sargam')
+@section('title', ($item ? 'Edit' : 'Add') . ' Eligibility Criteria - Sargam')
+
+{{-- Full-page Add / Edit. The index opens the same fields in a modal; this page
+     stays for direct links and posts to the same store / update routes. --}}
+@php
+    $selects = [
+        ['name' => 'salary_grade_master_pk', 'label' => 'Pay Scale', 'options' => $payScales, 'placeholder' => 'Select pay scale'],
+        ['name' => 'estate_unit_type_master_pk', 'label' => 'Unit Type', 'options' => $unitTypes, 'placeholder' => 'Select unit type'],
+        ['name' => 'estate_unit_sub_type_master_pk', 'label' => 'Unit Sub Type', 'options' => $unitSubTypes, 'placeholder' => 'Select unit sub type'],
+    ];
+@endphp
 
 @section('setup_content')
-<div class="container-fluid px-2 px-sm-3 px-md-4">
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Protocol</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('admin.estate.request-for-others') }}">Estate Management</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('admin.estate.eligibility-criteria.index') }}">Eligibility - Criteria</a></li>
-            <li class="breadcrumb-item active" aria-current="page">{{ $item ? 'Edit' : 'Add' }} Eligibility Unit Mapping</li>
-        </ol>
-    </nav>
+<div class="container-fluid em-page">
+    <x-breadcrum :title="($item ? 'Edit' : 'Add') . ' Eligibility Criteria'" />
 
     <x-session_message />
 
-    <div class="card shadow-sm border-0">
-        <div class="card-body p-4">
-            <h1 class="h4 fw-bold mb-1">{{ $item ? 'Edit Eligibility Unit Mapping' : 'Add Eligibility Unit Mapping' }}</h1>
-            <p class="text-muted small mb-4">{{ $item ? 'Update mapping.' : 'Please Add Eligibility Unit Mapping.' }}</p>
-            <hr class="my-4">
-
-            <form action="{{ $item ? route('admin.estate.eligibility-criteria.update', $item->pk) : route('admin.estate.eligibility-criteria.store') }}" method="POST">
+    <div class="card border-0 shadow-sm rounded-1">
+        <div class="card-body p-3 p-md-4">
+            <form action="{{ $item ? route('admin.estate.eligibility-criteria.update', $item->pk) : route('admin.estate.eligibility-criteria.store') }}"
+                method="POST" class="ds-form-fields em-form-narrow">
                 @csrf
                 @if($item) @method('PUT') @endif
 
+                @foreach($selects as $s)
+                @php
+                    $err = $errors->first($s['name']);
+                    $sel = (string) old($s['name'], $item->{$s['name']} ?? '');
+                @endphp
                 <div class="mb-3">
-                    <label for="salary_grade_master_pk" class="form-label">Salary Grade / Pay Scale <span class="text-danger">*</span></label>
-                    <select class="form-select @error('salary_grade_master_pk') is-invalid @enderror" id="salary_grade_master_pk" name="salary_grade_master_pk" required>
-                        <option value="">--select--</option>
-                        @foreach($payScales as $pk => $label)
-                        <option value="{{ $pk }}" {{ old('salary_grade_master_pk', $item->salary_grade_master_pk ?? '') == $pk ? 'selected' : '' }}>{{ $label }}</option>
+                    <label class="form-label" for="{{ $s['name'] }}">{{ $s['label'] }}<span class="ds-req" aria-hidden="true">*</span></label>
+                    <select class="form-select @if($err) is-invalid @endif" id="{{ $s['name'] }}" name="{{ $s['name'] }}"
+                        data-searchable="true" data-placeholder="{{ $s['placeholder'] }}" required aria-required="true"
+                        @if($err) aria-invalid="true" aria-describedby="{{ $s['name'] }}_error" @endif>
+                        <option value="">{{ $s['placeholder'] }}</option>
+                        @foreach($s['options'] as $pk => $label)
+                        <option value="{{ $pk }}" @selected($sel === (string) $pk)>{{ $label }}</option>
                         @endforeach
                     </select>
-                    @error('salary_grade_master_pk')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    @if($err)
+                    <div class="invalid-feedback d-block" id="{{ $s['name'] }}_error">{{ $err }}</div>
+                    @endif
                 </div>
+                @endforeach
 
-                <div class="mb-3">
-                    <label for="estate_unit_type_master_pk" class="form-label">Unit Type <span class="text-danger">*</span></label>
-                    <select class="form-select @error('estate_unit_type_master_pk') is-invalid @enderror" id="estate_unit_type_master_pk" name="estate_unit_type_master_pk" required>
-                        <option value="">--select--</option>
-                        @foreach($unitTypes as $pk => $name)
-                        <option value="{{ $pk }}" {{ old('estate_unit_type_master_pk', $item->estate_unit_type_master_pk ?? '') == $pk ? 'selected' : '' }}>{{ $name }}</option>
-                        @endforeach
-                    </select>
-                    @error('estate_unit_type_master_pk')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                </div>
-
-                <div class="mb-4">
-                    <label for="estate_unit_sub_type_master_pk" class="form-label">Unit Sub type <span class="text-danger">*</span></label>
-                    <select class="form-select @error('estate_unit_sub_type_master_pk') is-invalid @enderror" id="estate_unit_sub_type_master_pk" name="estate_unit_sub_type_master_pk" required>
-                        <option value="">--select--</option>
-                        @foreach($unitSubTypes as $pk => $name)
-                        <option value="{{ $pk }}" {{ old('estate_unit_sub_type_master_pk', $item->estate_unit_sub_type_master_pk ?? '') == $pk ? 'selected' : '' }}>{{ $name }}</option>
-                        @endforeach
-                    </select>
-                    @error('estate_unit_sub_type_master_pk')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                </div>
-
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-success"><i class="bi bi-save me-1"></i> Save</button>
-                    <a href="{{ route('admin.estate.eligibility-criteria.index') }}" class="btn btn-secondary">Cancel</a>
+                <div class="d-flex flex-wrap justify-content-end gap-2 pt-2">
+                    <a href="{{ route('admin.estate.eligibility-criteria.index') }}" class="btn ds-btn-cancel">Cancel</a>
+                    <button type="submit" class="btn ds-btn-submit">{{ $item ? 'Update' : 'Add' }} Criteria</button>
                 </div>
             </form>
         </div>
@@ -69,31 +57,7 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
-<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
-<style>
-    .select2-container--open { z-index: 1060; } /* sirf khula dropdown modal ke upar; closed widget normal flow me (modal ke peeche) */
-    .select2-container--default .select2-selection--single { min-height: calc(1.5em + 0.75rem + 2px); display: flex; align-items: center; }
-    .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.5; padding-left: 0.25rem; }
-</style>
-@endpush
-
-@push('scripts')
-{{-- Select2 JS globally footer (admin.layouts.footer) se load hoti hai; yahan include ki zaroorat nahi. --}}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof $.fn.select2 === 'undefined') return;
-    var ids = [
-        'salary_grade_master_pk',
-        'estate_unit_type_master_pk',
-        'estate_unit_sub_type_master_pk'
-    ];
-    ids.forEach(function(id) {
-        var el = document.getElementById(id);
-        if (!el) return;
-        if ($(el).data('select2')) { try { $(el).select2('destroy'); } catch (e) {} }
-        $(el).select2({ placeholder: '--select--', allowClear: false, width: '100%' });
-    });
-});
-</script>
+{{-- Select2 JS is global and dropdown-search.js picks up data-searchable selects. --}}
+@include('admin.layouts.partials.select2-assets')
+<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
 @endpush

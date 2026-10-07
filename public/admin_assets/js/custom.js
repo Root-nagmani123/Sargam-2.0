@@ -1022,7 +1022,10 @@ $(document).ready(function () {
         });
     });
 
-    $(".select2").select2();
+    // select.select2 only: Select2 adds class "select2" to its own container <span>, so an
+    // unscoped $(".select2") built a second, empty widget beside every searchable dropdown
+    // and pushed that phantom span off-screen (horizontal page scroll).
+    $("select.select2").select2();
 });
 
 

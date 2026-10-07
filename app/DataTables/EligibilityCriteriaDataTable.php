@@ -16,13 +16,19 @@ class EligibilityCriteriaDataTable extends DataTable
         return (new EloquentDataTable($query))
             ->addIndexColumn()
             ->addColumn('pay_scale', function ($row) {
-                return $row->salaryGrade?->display_label_text ?? '-';
+                $label = $row->salaryGrade?->display_label_text;
+
+                return $label ? '<span class="em-pay-scale">' . e($label) . '</span>' : '<span class="em-muted">—</span>';
             })
             ->addColumn('unit_type', function ($row) {
-                return $row->unitType?->name ?? '-';
+                $label = $row->unitType?->name;
+
+                return $label ? '<span class="em-chip em-chip--type">' . e($label) . '</span>' : '<span class="em-muted">—</span>';
             })
             ->addColumn('unit_sub_type', function ($row) {
-                return $row->unitSubType?->name ?? '-';
+                $label = $row->unitSubType?->name;
+
+                return $label ? '<span class="em-chip em-chip--subtype">' . e($label) . '</span>' : '<span class="em-muted">—</span>';
             })
             ->orderColumn('pay_scale', 'salary_grade_master_pk $1')
             ->filterColumn('pay_scale', function ($query, $keyword) {
@@ -46,24 +52,28 @@ class EligibilityCriteriaDataTable extends DataTable
                 });
             })
             ->addColumn('actions', function ($row) {
-                $editUrl = route('admin.estate.eligibility-criteria.edit', $row->pk);
+                // Edit opens the Add / Edit modal on the index with these values;
+                // Delete opens the shared confirm dialog (eligibility_criteria/index).
+                $values = [
+                    'salary_grade_master_pk' => (string) $row->salary_grade_master_pk,
+                    'estate_unit_type_master_pk' => (string) $row->estate_unit_type_master_pk,
+                    'estate_unit_sub_type_master_pk' => (string) $row->estate_unit_sub_type_master_pk,
+                ];
+                $name = trim(($row->salaryGrade?->display_label_text ?? '') . ' → ' . ($row->unitSubType?->name ?? ''), ' →');
                 $deleteUrl = route('admin.estate.eligibility-criteria.destroy', $row->pk);
-                $token = csrf_token();
 
-                return '<div class="d-flex gap-1 flex-wrap">
-                    <a href="' . e($editUrl) . '" class="text-primary" title="Edit">
-                        <i class="material-icons material-symbols-rounded">edit</i>
-                    </a>
-                    <form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this eligibility mapping?\');">
-                        <input type="hidden" name="_token" value="' . e($token) . '">
-                        <input type="hidden" name="_method" value="DELETE">
-                        <button type="submit" class="btn btn-link p-0 text-primary border-0" title="Delete">
-                            <i class="material-icons material-symbols-rounded">delete</i>
-                        </button>
-                    </form>
-                </div>';
+                return '<div class="em-act-group" role="group" aria-label="Actions for ' . e($name) . '">'
+                    . '<button type="button" class="em-act em-act--edit js-em-edit" data-pk="' . (int) $row->pk . '"'
+                    . ' data-values="' . e(json_encode($values)) . '" aria-label="Edit ' . e($name) . '">'
+                    . '<span class="em-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>'
+                    . '<span class="em-act__label">Edit</span></button>'
+                    . '<button type="button" class="em-act em-act--delete js-em-delete" data-url="' . e($deleteUrl) . '"'
+                    . ' data-name="' . e($name) . '" aria-label="Delete ' . e($name) . '">'
+                    . '<span class="em-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>'
+                    . '<span class="em-act__label">Delete</span></button>'
+                    . '</div>';
             })
-            ->rawColumns(['actions'])
+            ->rawColumns(['pay_scale', 'unit_type', 'unit_sub_type', 'actions'])
             ->setRowId('pk');
     }
 
@@ -78,43 +88,34 @@ class EligibilityCriteriaDataTable extends DataTable
     {
         return $this->builder()
             ->setTableId('eligibilityCriteriaTable')
-            ->addTableClass('table text-nowrap w-100')
+            // programme-dt chrome (docs/new-design-index-page.md) — no `dom` and no
+            // `language` on purpose: datatable-global-ui.js owns both, and a page-level
+            // override would break the "Showing N of M items" footer.
+            ->addTableClass('table table-hover align-middle mb-0 w-100 programme-dt-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
-                'responsive' => true,
+                'responsive' => false,
                 'autoWidth' => false,
                 'ordering' => true,
+                // Re-sort the whole list on the server, not just the loaded page.
+                'sargamServerOrder' => true,
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
                 'order' => [],
-                'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-                'language' => [
-                    'search' => 'Search within table:',
-                    'lengthMenu' => 'Show _MENU_ entries',
-                    'info' => 'Showing _START_ to _END_ of _TOTAL_ entries',
-                    'infoEmpty' => 'Showing 0 to 0 of 0 entries',
-                    'infoFiltered' => '(filtered from _MAX_ total entries)',
-                    'paginate' => [
-                        'first' => 'First',
-                        'last' => 'Last',
-                        'next' => 'Next',
-                        'previous' => 'Previous',
-                    ],
-                ],
-                'dom' => '<"row align-items-center mb-3"<"col-12 col-md-4"l><"col-12 col-md-8"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>',
+                'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
             ]);
     }
 
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false)->width('80px'),
-            Column::computed('pay_scale')->title('PAY SCALE')->orderable(true)->searchable(true),
-            Column::computed('unit_type')->title('UNIT TYPE')->orderable(true)->searchable(true),
-            Column::computed('unit_sub_type')->title('UNIT SUB TYPE')->name('unit_sub_type')->orderable(true)->searchable(true),
-            Column::computed('actions')->title('Actions')->orderable(false)->searchable(false),
+            Column::computed('DT_RowIndex')->title('S. No.')->addClass('em-col-sno no-sort')->orderable(false)->searchable(false),
+            Column::computed('pay_scale')->title('Pay Scale')->orderable(true)->searchable(true),
+            Column::computed('unit_type')->title('Unit Type')->orderable(true)->searchable(true),
+            Column::computed('unit_sub_type')->title('Unit Sub Type')->name('unit_sub_type')->orderable(true)->searchable(true),
+            Column::computed('actions')->title('Action')->addClass('em-col-action no-sort')->orderable(false)->searchable(false),
         ];
     }
 
