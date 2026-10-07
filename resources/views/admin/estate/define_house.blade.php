@@ -23,24 +23,60 @@
     {{-- No status pills on this grid, so the export row sits alone on the right
          (new-design-index-page.md §1). Print is the server-rendered view, not
          window.print(), so the printout and the Excel can't drift apart. --}}
-    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 dh-secondary-actions no-print">
-        <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="dhDownloadBtn"
-            title="Download as Excel">
-            <i class="bi bi-download" aria-hidden="true"></i>
-            <span>Download</span>
-        </button>
-        <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="dhPrintBtn" title="Print">
-            <i class="bi bi-printer" aria-hidden="true"></i>
-            <span>Print</span>
-        </button>
-    </div>
+    @include('admin.estate.partials.export_actions', ['prefix' => 'dh'])
 
     <div class="card shadow-sm border-0 rounded-3">
         <div class="card-body p-3 p-md-4">
-            {{-- Toolbar: nothing to filter by on this grid, so Columns + search
-                 sit alone on the right (§2). --}}
+            {{-- Toolbar (§2): filters left, Columns + search right. Filters run on the
+                 server (applyDefineHouseFilters) and ride along to Download / Print. --}}
             <div
-                class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4 programme-dt-toolbar no-print">
+                class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar no-print">
+                <div class="d-flex flex-wrap align-items-center gap-3 dh-filters">
+                    <span class="programme-dt-filters-label">Filters</span>
+
+                    <div class="programme-dt-filter-select">
+                        <select id="dhCampusFilter" class="form-select" aria-label="Filter by estate"
+                            data-searchable="true" data-placeholder="Estate Name" data-allow-clear="true">
+                            <option value="">Estate Name</option>
+                            @foreach($campuses ?? [] as $c)
+                                <option value="{{ $c->pk }}">{{ $c->campus_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="programme-dt-filter-select">
+                        <select id="dhBlockFilter" class="form-select" aria-label="Filter by building"
+                            data-searchable="true" data-placeholder="Building Name" data-allow-clear="true">
+                            <option value="">Building Name</option>
+                            @foreach($blocks ?? [] as $blk)
+                                <option value="{{ $blk->pk }}">{{ $blk->block_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="programme-dt-filter-select">
+                        <select id="dhSubTypeFilter" class="form-select" aria-label="Filter by unit sub type"
+                            data-searchable="true" data-placeholder="Unit Sub Type" data-allow-clear="true">
+                            <option value="">Unit Sub Type</option>
+                            @foreach($unitSubTypes ?? [] as $ust)
+                                <option value="{{ $ust->pk }}">{{ $ust->unit_sub_type }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="programme-dt-filter-select">
+                        <select id="dhStatusFilter" class="form-select" aria-label="Filter by status"
+                            data-searchable="true" data-placeholder="Status" data-allow-clear="true">
+                            <option value="">Status</option>
+                            <option value="vacant">Vacant</option>
+                            <option value="occupied">Occupied</option>
+                            <option value="renovation">Under Renovation</option>
+                        </select>
+                    </div>
+
+                    <button type="button" id="dhResetFilters" class="btn programme-dt-btn-reset">Reset Filters</button>
+                </div>
+
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
                     <button type="button" class="btn programme-dt-btn-columns" data-bs-toggle="modal"
                         data-bs-target="#dhColumnModal" title="Show / hide columns">
@@ -109,10 +145,30 @@
             </div>
         </div>
     </div>
+    {{-- Delete confirmation (.ds-modal-confirm — the module's confirm dialog). --}}
+    <div class="modal fade ds-modal ds-modal-confirm" id="dhDeleteModal" tabindex="-1"
+        aria-labelledby="dhDeleteTitle" aria-describedby="dhDeleteText" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="ds-confirm-icon" aria-hidden="true">!</div>
+                    <h5 class="ds-confirm-title" id="dhDeleteTitle">Delete this house?</h5>
+                    <p class="ds-confirm-text" id="dhDeleteText">This action can't be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn ds-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn ds-btn-danger" id="dhConfirmDeleteBtn">Yes, Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection
 
 @push('styles')
+@include('admin.layouts.partials.select2-assets')
+{{-- Shared Estate controls (Download menu, Name & ID, links) — estate-request-admin.css. --}}
+<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
 <style>
     /* ── Define House — page-scoped chrome on top of programme-dt. Namespaced
        under .dh-page so nothing leaks (new-design-index-page.md §7); values come
@@ -309,6 +365,16 @@ $(document).ready(function() {
         return (renovation === 2 || allotted) ? 'Occupied' : 'Vacant';
     }
 
+    // Toolbar filters — sent with every draw and every Download / Print.
+    function dhFilters() {
+        return {
+            campus_filter: $('#dhCampusFilter').val() || '',
+            block_filter: $('#dhBlockFilter').val() || '',
+            unit_sub_type_filter: $('#dhSubTypeFilter').val() || '',
+            status_filter: $('#dhStatusFilter').val() || ''
+        };
+    }
+
     // DataTable server-side. No dom / language / lengthMenu here:
     // datatable-global-ui.js owns those, and hand-rolling them breaks the chrome
     // relocation (new-design-index-page.md §3, §5).
@@ -319,7 +385,10 @@ $(document).ready(function() {
         responsive: false,
         ajax: {
             url: dataUrl,
-            type: 'GET'
+            type: 'GET',
+            data: function(d) {
+                $.extend(d, dhFilters());
+            }
         },
         columns: [
             { data: null, orderable: false, searchable: false, render: function(data, type, row, meta) { return meta.row + meta.settings._iDisplayStart + 1; } },
@@ -359,7 +428,7 @@ $(document).ready(function() {
                                 '<span class="dh-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>' +
                                 '<span class="dh-act__label">Edit</span>' +
                             '</a>' +
-                            '<button type="button" class="dh-act dh-act--delete btn-delete-house" data-url="' + deleteUrl + '" title="Delete">' +
+                            '<button type="button" class="dh-act dh-act--delete btn-delete-house" data-url="' + deleteUrl + '" data-house="' + escapeHtml(row.house_no || '') + '" title="Delete">' +
                                 '<span class="dh-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>' +
                                 '<span class="dh-act__label">Delete</span>' +
                             '</button>' +
@@ -443,6 +512,7 @@ $(document).ready(function() {
     function exportQuery() {
         var params = new URLSearchParams();
         params.set('search', table.search() || '');
+        $.each(dhFilters(), function(k, v) { if (v) params.set(k, v); });
         var order = table.order();
         if (order && order.length) {
             params.set('order[0][column]', order[0][0]);
@@ -458,8 +528,20 @@ $(document).ready(function() {
         return params.toString();
     }
 
-    $('#dhDownloadBtn').on('click', function() {
-        window.location.href = downloadUrl + '?' + exportQuery();
+    // Download menu (CSV · Excel · PDF) — partials/export_actions.
+    $(document).on('click', '[data-export-for="dh"]', function() {
+        window.location.href = downloadUrl + '?' + exportQuery() + '&format=' + encodeURIComponent($(this).data('format'));
+    });
+
+    // jQuery handlers: Select2 signals a pick with a jQuery change event.
+    $('#dhCampusFilter, #dhBlockFilter, #dhSubTypeFilter, #dhStatusFilter').on('change', function() {
+        table.ajax.reload();
+    });
+
+    $('#dhResetFilters').on('click', function() {
+        // change.select2 repaints the boxes without firing a reload per select.
+        $('#dhCampusFilter, #dhBlockFilter, #dhSubTypeFilter, #dhStatusFilter').val('').trigger('change.select2');
+        table.search('').ajax.reload();
     });
 
     $('#dhPrintBtn').on('click', function() {
@@ -474,14 +556,25 @@ $(document).ready(function() {
         if (open) $wrap.find('input').trigger('focus');
     });
 
-    // Delete Estate House - simple confirm + alert
+    // Delete Estate House — the module's confirm dialog; nothing is sent until "Yes, Delete".
+    var dhDeleteModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('dhDeleteModal'));
+    var dhDeleteUrl = null;
+
     $(document).on('click', '.btn-delete-house', function(e) {
         e.preventDefault();
-        var url = $(this).data('url');
+        dhDeleteUrl = $(this).data('url');
+        if (!dhDeleteUrl) return;
+        var house = String($(this).data('house') || '').trim();
+        $('#dhDeleteTitle').text(house ? 'Delete house ' + house + '?' : 'Delete this house?');
+        $('#dhDeleteText').text('The house record will be removed from Define House. This action can\'t be undone.');
+        $('#dhConfirmDeleteBtn').prop('disabled', false).text('Yes, Delete');
+        dhDeleteModal.show();
+    });
+
+    $('#dhConfirmDeleteBtn').on('click', function() {
+        var url = dhDeleteUrl;
         if (!url) return;
-        if (!confirm('Are you sure you want to delete this house? This action cannot be undone.')) {
-            return;
-        }
+        var $btn = $(this).prop('disabled', true).text('Deleting…');
         $.ajax({
             url: url,
             type: 'DELETE',
@@ -500,6 +593,11 @@ $(document).ready(function() {
             error: function(xhr) {
                 var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to delete.';
                 showPageAlert('danger', msg);
+            },
+            complete: function() {
+                dhDeleteUrl = null;
+                dhDeleteModal.hide();
+                $btn.prop('disabled', false).text('Yes, Delete');
             }
         });
     });

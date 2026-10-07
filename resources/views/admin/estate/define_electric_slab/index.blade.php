@@ -16,25 +16,27 @@
     {{-- No status pills on this grid, so the export row sits alone on the right
          (new-design-index-page.md §1). Print is the server-rendered view, not
          window.print(), so the printout and the Excel can't drift apart. --}}
-    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 es-secondary-actions no-print">
-        <a href="{{ route('admin.estate.define-electric-slab.download') }}"
-            class="btn programme-dt-btn-columns border-0 text-primary" title="Download as Excel">
-            <i class="bi bi-download" aria-hidden="true"></i>
-            <span>Download</span>
-        </a>
-        <a href="{{ route('admin.estate.define-electric-slab.print') }}" target="_blank" rel="noopener"
-            class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
-            <i class="bi bi-printer" aria-hidden="true"></i>
-            <span>Print</span>
-        </a>
-    </div>
+    @include('admin.estate.partials.export_actions', ['prefix' => 'es'])
 
     <div class="card shadow-sm border-0 rounded-3">
         <div class="card-body p-3 p-md-4">
-            {{-- Toolbar: nothing to filter by on this grid, so Columns + search
-                 sit alone on the right (§2). --}}
+            {{-- Toolbar (§2): the "Merge with House" filter left, Columns + search right. --}}
             <div
-                class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4 programme-dt-toolbar no-print">
+                class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar no-print">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="programme-dt-filters-label">Filters</span>
+                    <div class="programme-dt-filter-select">
+                        <select id="esUnitTypeFilter" class="form-select" aria-label="Filter by Merge with House"
+                            data-searchable="true" data-placeholder="Merge with House" data-allow-clear="true">
+                            <option value="">Merge with House</option>
+                            @foreach($unitTypes ?? [] as $pk => $label)
+                            <option value="{{ $pk }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <button type="button" id="esResetFilters" class="btn programme-dt-btn-reset">Reset Filters</button>
+                </div>
+
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
                     <button type="button" class="btn programme-dt-btn-columns" data-bs-toggle="modal"
                         data-bs-target="#esColumnModal" title="Show / hide columns">
@@ -148,6 +150,9 @@
 @endsection
 
 @push('styles')
+@include('admin.layouts.partials.select2-assets')
+{{-- Shared Estate controls (Download menu, Name & ID, links) — estate-request-admin.css. --}}
+<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
 <style>
     /* ── Define Electric Slab — page-scoped remainder only. The toolbar, panel,
        footer, form labels and buttons are design-system components; what is
@@ -350,6 +355,33 @@
             buildToggles();
             applySavedVisibility();
             buildToggles();
+        });
+
+        /* ---------- Filter + Download / Print ---------- */
+        // jQuery handler: Select2 signals a pick with a jQuery change event.
+        $('#esUnitTypeFilter').on('change', function () {
+            if (dt) dt.ajax.reload();
+        });
+        $('#esResetFilters').on('click', function () {
+            $('#esUnitTypeFilter').val('').trigger('change.select2');
+            if (dt) dt.search('').ajax.reload();
+        });
+
+        // Every format honours the filter and the search box, like the grid.
+        function esExportParams() {
+            var params = {};
+            var unitType = $('#esUnitTypeFilter').val();
+            if (unitType) params.unit_type_filter = unitType;
+            if (dt && dt.search()) params.search = dt.search();
+            return params;
+        }
+        $(document).on('click', '[data-export-for="es"]', function () {
+            var params = esExportParams();
+            params.format = $(this).data('format');
+            window.location.href = @json(route('admin.estate.define-electric-slab.download')) + '?' + $.param(params);
+        });
+        $('#esPrintBtn').on('click', function () {
+            window.open(@json(route('admin.estate.define-electric-slab.print')) + '?' + $.param(esExportParams()), '_blank', 'noopener');
         });
 
         $('#esSearchToggle').on('click', function () {

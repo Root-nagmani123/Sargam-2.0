@@ -12,25 +12,41 @@
     {{-- No status pills on this grid, so the export row sits alone on the right
          (new-design-index-page.md §1). Print is the server-rendered view, not
          window.print(), so the printout and the Excel can't drift apart. --}}
-    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 rfh-secondary-actions no-print">
-        <a href="{{ route('admin.estate.request-for-house.download') }}"
-            class="btn programme-dt-btn-columns border-0 text-primary" title="Download as Excel">
-            <i class="bi bi-download" aria-hidden="true"></i>
-            <span>Download</span>
-        </a>
-        <a href="{{ route('admin.estate.request-for-house.print') }}" target="_blank" rel="noopener"
-            class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
-            <i class="bi bi-printer" aria-hidden="true"></i>
-            <span>Print</span>
-        </a>
-    </div>
+    @include('admin.estate.partials.export_actions', ['prefix' => 'rfh'])
 
     <div class="card shadow-sm border-0 rounded-3">
         <div class="card-body p-3 p-md-4">
-            {{-- Toolbar: nothing to filter by on this grid, so Columns + search
-                 sit alone on the right (§2). --}}
+            {{-- Toolbar (§2): filters left, Columns + search right. The options are the
+                 values present in the list, so a filter can never match nothing by design. --}}
+            @php
+                $rfhStatusOptions = collect($requests ?? [])->pluck('status')->map(fn ($v) => trim((string) $v))->filter()->unique()->sort()->values();
+                $rfhEligibilityOptions = collect($requests ?? [])->pluck('eligibility_type')->map(fn ($v) => trim((string) $v))->filter(fn ($v) => $v !== '' && $v !== '—')->unique()->sort()->values();
+            @endphp
             <div
-                class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4 programme-dt-toolbar no-print">
+                class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar no-print">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="programme-dt-filters-label">Filters</span>
+                    <div class="programme-dt-filter-select">
+                        <select id="rfhStatusFilter" class="form-select" aria-label="Filter by status of request"
+                            data-searchable="true" data-placeholder="Status of Request" data-allow-clear="true">
+                            <option value="">Status of Request</option>
+                            @foreach($rfhStatusOptions as $opt)
+                            <option value="{{ $opt }}">{{ $opt }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="programme-dt-filter-select">
+                        <select id="rfhEligibilityFilter" class="form-select" aria-label="Filter by eligibility type"
+                            data-searchable="true" data-placeholder="Eligibility Type" data-allow-clear="true">
+                            <option value="">Eligibility Type</option>
+                            @foreach($rfhEligibilityOptions as $opt)
+                            <option value="{{ $opt }}">{{ $opt }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <button type="button" id="rfhResetFilters" class="btn programme-dt-btn-reset">Reset Filters</button>
+                </div>
+
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
                     <button type="button" class="btn programme-dt-btn-columns" data-bs-toggle="modal"
                         data-bs-target="#rfhColumnModal" title="Show / hide columns">
@@ -83,7 +99,7 @@
                                     ? 'ok'
                                     : (str_contains($rfhKey, 'disapprove') || str_contains($rfhKey, 'reject') ? 'no' : 'wait');
                             @endphp
-                            <td data-order="{{ $rfhStatus }}">
+                            <td data-order="{{ $rfhStatus }}" data-search="{{ $rfhStatus }}">
                                 @if($rfhStatus !== '')
                                 <span class="rfh-status rfh-status--{{ $rfhTone }}">{{ $rfhStatus }}</span>
                                 @else
@@ -319,6 +335,9 @@
 </div>
 
 @push('styles')
+@include('admin.layouts.partials.select2-assets')
+{{-- Shared Estate controls (Download menu, Name & ID, links) — estate-request-admin.css. --}}
+<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
 <style>
     /* Change Request For House — page-scoped remainder. The toolbar, panel and
        footer are design-system components; only what is specific to this grid
@@ -782,6 +801,42 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             });
             dt.draw();
+
+            /* ---------- Toolbar filters (client-side: every row is on the page) ---------- */
+            var RFH_STATUS_COL = 5, RFH_ELIGIBILITY_COL = 7;
+            function rfhExact(v) {
+                return v ? '^' + jQuery.fn.dataTable.util.escapeRegex(v) + '$' : '';
+            }
+            // jQuery handlers: Select2 signals a pick with a jQuery change event.
+            jQuery('#rfhStatusFilter').on('change', function () {
+                dt.column(RFH_STATUS_COL).search(rfhExact(jQuery(this).val()), true, false).draw();
+            });
+            jQuery('#rfhEligibilityFilter').on('change', function () {
+                dt.column(RFH_ELIGIBILITY_COL).search(rfhExact(jQuery(this).val()), true, false).draw();
+            });
+            jQuery('#rfhResetFilters').on('click', function () {
+                jQuery('#rfhStatusFilter, #rfhEligibilityFilter').val('').trigger('change.select2');
+                dt.search('').columns().search('').draw();
+            });
+
+            /* ---------- Download / Print: the filtered list ---------- */
+            function rfhExportParams() {
+                var params = {};
+                var st = jQuery('#rfhStatusFilter').val();
+                var el = jQuery('#rfhEligibilityFilter').val();
+                if (st) params.status_filter = st;
+                if (el) params.eligibility_filter = el;
+                if (dt.search()) params.search = dt.search();
+                return params;
+            }
+            jQuery(document).on('click', '[data-export-for="rfh"]', function () {
+                var params = rfhExportParams();
+                params.format = jQuery(this).data('format');
+                window.location.href = @json(route('admin.estate.request-for-house.download')) + '?' + jQuery.param(params);
+            });
+            jQuery('#rfhPrintBtn').on('click', function () {
+                window.open(@json(route('admin.estate.request-for-house.print')) + '?' + jQuery.param(rfhExportParams()), '_blank', 'noopener');
+            });
 
             rfhBuildToggles(dt);
             var rfhHidden = [];

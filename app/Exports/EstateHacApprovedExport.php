@@ -103,6 +103,12 @@ class EstateHacApprovedExport implements
                 'width' => 18,
                 'value' => fn ($row) => $row->pay_scale ?: '-',
             ],
+            'status' => [
+                'heading' => 'Status',
+                'center' => true,
+                'width' => 12,
+                'value' => fn ($row) => EstateHacApprovedDataTable::statusLabel($row),
+            ],
         ];
     }
 

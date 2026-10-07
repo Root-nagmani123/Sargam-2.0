@@ -4,6 +4,8 @@
 
 @section('setup_content')
 @push('styles')
+{{-- Shared Estate controls (Download menu, Name & ID, links) — estate-request-admin.css. --}}
+<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
 <style>
     /* ── List Meter Reading — page-scoped chrome on top of programme-dt ──
        Namespaced under .lmr-page so nothing leaks (new-design-index-page.md §7).
@@ -106,17 +108,7 @@
     {{-- No status pills on this grid, so the export row sits alone on the right
          (new-design-index-page.md §1). Print is the server-rendered view, not
          window.print(), so the printout and the Excel can't drift apart. --}}
-    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 lmr-secondary-actions">
-        <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="lmrDownloadBtn"
-            title="Download as Excel">
-            <i class="bi bi-download" aria-hidden="true"></i>
-            <span>Download</span>
-        </button>
-        <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="lmrPrintBtn" title="Print">
-            <i class="bi bi-printer" aria-hidden="true"></i>
-            <span>Print</span>
-        </button>
-    </div>
+    @include('admin.estate.partials.export_actions', ['prefix' => 'lmr'])
 
     <div class="card shadow-sm border-0 rounded-3">
         <div class="card-body p-3 p-md-4">
@@ -356,7 +348,15 @@
                 },
                 columns: [
                     { data: 'sno', name: 'sno', orderable: false, searchable: false },
-                    { data: 'name', name: 'name', className: 'lmr-col-wrap' },
+                    // Name & ID in one cell: name, employee id beneath (shared estate pattern).
+                    { data: 'name', name: 'name', className: 'lmr-col-wrap', render: function (data, type, row) {
+                        var name = data == null ? '' : String(data);
+                        var id = row && row.employee_id ? String(row.employee_id) : '';
+                        if (type !== 'display') return name + ' ' + id;
+                        var esc = function (v) { return $('<div>').text(v).html(); };
+                        return '<span class="estate-name-id"><span class="estate-name-id__name">' + esc(name || 'N/A') + '</span>'
+                            + (id ? '<span class="estate-name-id__id">' + esc(id) + '</span>' : '') + '</span>';
+                    } },
                     { data: 'designation', name: 'designation', className: 'lmr-col-wrap' },
                     { data: 'section', name: 'section' },
                     { data: 'unit_type', name: 'unit_type' },
@@ -422,9 +422,10 @@
             return false;
         }
 
-        $('#lmrDownloadBtn').on('click', function () {
+        // Download menu (CSV · Excel · PDF) — partials/export_actions.
+        $(document).on('click', '[data-export-for="lmr"]', function () {
             if (!requireMonth()) return;
-            window.location.href = downloadUrl + '?' + exportQuery();
+            window.location.href = downloadUrl + '?' + exportQuery() + '&format=' + encodeURIComponent($(this).data('format'));
         });
 
         $('#lmrPrintBtn').on('click', function () {

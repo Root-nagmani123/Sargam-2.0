@@ -16,6 +16,17 @@
     <div class="{{ $inModal ? 'modal-body' : '' }} umr-form">
         <div class="alert alert-danger d-none js-umr-error" role="alert"></div>
 
+        @if(! empty($selectedPossessions))
+        {{-- Opened from Estate Possession for Others with rows selected: the filters
+             below are prefilled from these records and their meters load on their own. --}}
+        <div class="umr-selected mb-3" role="status">
+            <span class="umr-selected__label">Meters for {{ count($selectedPossessions) }} selected {{ count($selectedPossessions) === 1 ? 'record' : 'records' }}:</span>
+            @foreach($selectedPossessions as $sp)
+                <span class="umr-selected__item">{{ $sp['name'] }}@if(! empty($sp['request_no_oth'])) <span class="umr-selected__id">({{ $sp['request_no_oth'] }})</span>@endif</span>
+            @endforeach
+        </div>
+        @endif
+
         <form id="meterReadingFilterForm" novalidate>
             @csrf
             <div class="row g-3">
@@ -72,7 +83,7 @@
         </form>
 
         <div id="noDataMessage" class="alert alert-warning mt-3 mb-0 d-none">
-            No meter reading records found for the selected filters.
+            No meter reading records found for the selected month and filters. Readings exist only for months that have been generated — try an earlier Meter Change Month.
         </div>
 
         {{-- The grid the filters load. Hidden until Load Data returns rows. --}}
@@ -139,6 +150,9 @@ function init() {
     var unitSubTypesUrl = @json(route('admin.estate.update-meter-reading-of-other.unit-sub-types'));
     var possessionPks = @json($possessionPks ?? '');
     var prefill = @json($prefill ?? null);
+    // Opened for specific possession rows: load their meters as soon as the
+    // prefilled estate -> building -> sub-type cascade has settled.
+    var autoLoad = !!(prefill && possessionPks && String(possessionPks).trim() !== '');
     // List Meter Reading's Edit link opens this screen with a reading_pk — only in
     // that flow is New Meter No. editable.
     var isListEditMode = !!(prefill && prefill.reading_pk);
@@ -193,13 +207,16 @@ function init() {
         $f('unit_sub_type').html('<option value="">All</option>');
         if (!campusId) return;
         $.get(blocksUrl, { campus_id: campusId }, function(res) {
-            if (!res.status || !res.data) return;
+            if (!res.status || !res.data) { autoLoad = false; return; }
             $.each(res.data, function(i, b) {
                 $f('building').append($('<option>', { value: String(b.pk), text: b.block_name || '' }));
             });
             if (prefill && String(prefill.estate_campus_master_pk) === String(campusId)) {
                 $f('building').val(String(prefill.estate_block_master_pk || '')).trigger('change');
             }
+        }).fail(function() {
+            autoLoad = false;
+            showError('Could not load buildings for this estate. Please try again.');
         });
     });
 
@@ -220,6 +237,14 @@ function init() {
                 && prefill.estate_unit_sub_type_master_pk) {
                 $f('unit_sub_type').val(String(prefill.estate_unit_sub_type_master_pk));
             }
+            // Prefill settled — fetch the selected records' meters (once).
+            if (autoLoad) {
+                autoLoad = false;
+                $loadBtn.trigger('click');
+            }
+        }).fail(function() {
+            autoLoad = false;
+            showError('Could not load unit sub-types for this building. Please try again.');
         });
     });
 
@@ -255,7 +280,9 @@ function init() {
             params.reading_pk = String(prefill.reading_pk);
         }
 
-        $loadBtn.prop('disabled', true);
+        $loadBtn.prop('disabled', true)
+            .html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading…');
+        $f('noDataMessage').addClass('d-none');
         // Load the grid by meter-change month + estate filters (the meter reading
         // date is for Save, not for the list).
         $.get(listUrl, params, function(res) {
@@ -370,10 +397,11 @@ function init() {
             });
 
             showGrid(true);
-        }).fail(function() {
-            showError('Failed to load data. Please try again.');
+        }).fail(function(xhr) {
+            showGrid(false);
+            showError((xhr.responseJSON && xhr.responseJSON.message) || 'Failed to load data. Please try again.');
         }).always(function() {
-            $loadBtn.prop('disabled', false);
+            $loadBtn.prop('disabled', false).text('Load Data');
         });
     });
 

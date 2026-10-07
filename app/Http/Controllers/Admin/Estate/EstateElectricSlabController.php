@@ -6,6 +6,7 @@ use App\DataTables\EstateElectricSlabDataTable;
 use App\Exports\EstateElectricSlabExport;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Admin\Estate\Concerns\AuthorizesEstateMaster;
+use App\Http\Controllers\Admin\Estate\Concerns\ExportsEstateGrid;
 use App\Models\EstateElectricSlab;
 use App\Models\UnitType;
 use Illuminate\Http\Request;
@@ -14,6 +15,7 @@ use Maatwebsite\Excel\Facades\Excel;
 class EstateElectricSlabController extends Controller
 {
     use AuthorizesEstateMaster;
+    use ExportsEstateGrid;
 
     /** The rules are identical for create and update — one definition. */
     private const RULES = [
@@ -107,8 +109,11 @@ class EstateElectricSlabController extends Controller
     private function exportPayload(Request $request): array
     {
         $search = trim((string) $request->input('search', ''));
+        $unitType = (string) $request->input('unit_type_filter', '');
 
         $rows = EstateElectricSlab::with('unitType')
+            // Same "Merge with House" filter as the grid.
+            ->when(ctype_digit($unitType), fn ($q) => $q->where('estate_unit_type_master_pk', (int) $unitType))
             ->orderBy('start_unit_range')
             ->get()
             ->map(function ($row) {
@@ -135,7 +140,10 @@ class EstateElectricSlabController extends Controller
         return [
             'rows' => $rows,
             'cols' => EstateElectricSlabExport::resolveCols($request->input('cols')),
-            'filterLine' => $search !== '' ? 'Search: "' . $search . '"' : 'All slabs',
+            'filterLine' => implode('  |  ', array_filter([
+                ctype_digit($unitType) ? 'Merge with House: ' . (UnitType::where('pk', (int) $unitType)->value('unit_type') ?? $unitType) : null,
+                $search !== '' ? 'Search: "' . $search . '"' : null,
+            ])) ?: 'All slabs',
             'generatedAt' => now()->format('d M Y, h:i A'),
         ];
     }
@@ -144,6 +152,11 @@ class EstateElectricSlabController extends Controller
     public function download(Request $request)
     {
         $payload = $this->exportPayload($request);
+
+        // CSV / PDF: same rows, filter and columns as the Excel download below.
+        if ($response = $this->estateCsvOrPdf($request, EstateElectricSlabExport::class, $payload, 'Define Electric Slab', 'estate-electric-slab', 'portrait')) {
+            return $response;
+        }
 
         return Excel::download(
             new EstateElectricSlabExport(

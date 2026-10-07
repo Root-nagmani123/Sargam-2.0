@@ -17,16 +17,7 @@
 
     {{-- Exports sit above the card (docs/new-design-index-page.md §1). Both honour
          the applied filters, the search box and the Columns choice. --}}
-    <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3">
-        <button type="button" class="btn rfe-export-btn border-0" id="eorDownloadBtn">
-            <i class="bi bi-download" aria-hidden="true"></i>
-            <span>Download</span>
-        </button>
-        <button type="button" class="btn rfe-export-btn border-0" id="eorPrintBtn">
-            <i class="bi bi-printer" aria-hidden="true"></i>
-            <span>Print</span>
-        </button>
-    </div>
+    @include('admin.estate.partials.export_actions', ['prefix' => 'eor'])
 
     <div class="card overflow-hidden rounded-1">
         <div class="card-body p-3 p-md-4">
@@ -34,10 +25,11 @@
 
                 <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
                     <div class="d-flex flex-wrap align-items-center gap-3">
-                        <span class="programme-dt-filters-label">Filter</span>
+                        <span class="programme-dt-filters-label">Filters</span>
 
                         <div class="programme-dt-filter-select">
-                            <select id="eorSectionFilter" class="form-select" aria-label="Filter by section">
+                            <select id="eorSectionFilter" class="form-select" aria-label="Filter by section"
+                                data-searchable="true" data-placeholder="Section" data-allow-clear="true">
                                 <option value="">Section</option>
                                 @foreach($sectionOptions ?? [] as $section)
                                     <option value="{{ $section }}">{{ $section }}</option>
@@ -51,7 +43,7 @@
                         </div>
 
                         <button type="button" id="eorClearFilter" class="btn programme-dt-btn-reset">
-                            Remove Filter
+                            Reset Filters
                         </button>
                     </div>
 
@@ -185,6 +177,7 @@
 @endsection
 
 @push('styles')
+@include('admin.layouts.partials.select2-assets')
 <link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
 @endpush
 
@@ -208,7 +201,8 @@
         });
 
         $('#eorClearFilter').on('click', function() {
-            $('#eorSectionFilter').val('');
+            // change.select2 repaints the searchable box without re-firing the reload.
+            $('#eorSectionFilter').val('').trigger('change.select2');
             $('#eorDojFilter').val('');
             if (!$.fn.DataTable.isDataTable($eorTable)) return;
             // "Remove Filter" clears the search box too — it resets the whole toolbar.
@@ -218,10 +212,11 @@
         /* ---------- Column visibility (persisted per browser, per user) ---------- */
         // Header index -> export column key. POSITIONAL: adding a table column means
         // adding an entry here too. '' = a column that is never exported (Action).
-        var EOR_EXPORT_COLUMN_KEYS = ['sno', 'request_id', 'emp_name', 'emp_id', 'section', 'doj_acad', ''];
-        // v2: Emp ID was inserted at index 3. Hidden columns are stored by index, so the
-        // v1 value would now hide the wrong column — start those users from all-visible.
-        var eorColStorageKey = 'sargam.estateRequestForOthers.hiddenCols.v2.{{ auth()->id() ?? 'guest' }}';
+        // The Name & ID column exports as two columns (Employee Name, Emp ID).
+        var EOR_EXPORT_COLUMN_KEYS = ['sno', 'request_id', 'emp_name,emp_id', 'section', 'doj_acad', ''];
+        // v3: Emp ID folded into Name & ID. Hidden columns are stored by index, so an
+        // older value would now hide the wrong column — start those users from all-visible.
+        var eorColStorageKey = 'sargam.estateRequestForOthers.hiddenCols.v3.{{ auth()->id() ?? 'guest' }}';
 
         function eorGetHiddenCols() {
             try {
@@ -315,8 +310,12 @@
             return params;
         }
 
-        $('#eorDownloadBtn').on('click', function() {
-            window.location.href = '{{ route('admin.estate.request-for-others.export') }}?' + $.param(eorExportParams());
+        // Download menu (CSV · Excel · PDF) — partials/export_actions; every format runs the
+        // same server payload, so it carries the filters, search and Columns choice.
+        $(document).on('click', '[data-export-for="eor"]', function() {
+            var params = eorExportParams();
+            params.format = $(this).data('format');
+            window.location.href = '{{ route('admin.estate.request-for-others.export') }}?' + $.param(params);
         });
 
         $('#eorPrintBtn').on('click', function() {

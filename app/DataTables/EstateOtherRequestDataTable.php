@@ -25,8 +25,8 @@ class EstateOtherRequestDataTable extends DataTable
 
                 return $val !== '' ? '<span title="' . e($val) . '">' . e($val) . '</span>' : '—';
             })
-            ->editColumn('emp_name', fn ($row) => self::nameWithId($row->emp_name, null))
-            ->editColumn('employee_master_emp_id', fn ($row) => self::plainOrDash($row->employee_master_emp_id ?? null))
+            // Name & ID: name, with the linked employee id (employee_master_emp_id) beneath.
+            ->editColumn('emp_name', fn ($row) => self::nameWithId($row->emp_name, $row->employee_master_emp_id ?? null))
             ->editColumn('section', fn ($row) => self::plainOrDash($row->section))
             ->editColumn('doj_acad', fn ($row) => self::dateOrDash($row->doj_acad))
             ->addColumn('actions', function ($row) {
@@ -68,7 +68,6 @@ class EstateOtherRequestDataTable extends DataTable
             ->orderColumn('DT_RowIndex', 'estate_other_req.pk $1')
             ->orderColumn('request_no_oth', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(estate_other_req.request_no_oth, "")) ' . $order))
             ->orderColumn('emp_name', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(estate_other_req.emp_name, "")) ' . $order))
-            ->orderColumn('employee_master_emp_id', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(employee_master_emp_id, "")) ' . $order))
             ->orderColumn('section', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(estate_other_req.section, "")) ' . $order))
             ->orderColumn('doj_acad', fn ($query, $order) => $query->reorder()
                 ->orderBy('estate_other_req.doj_acad', $order)
@@ -219,8 +218,7 @@ class EstateOtherRequestDataTable extends DataTable
         return [
             Column::computed('DT_RowIndex')->title('S. No.')->orderable(true)->searchable(false)->width('64px'),
             Column::make('request_no_oth')->title('Request ID')->addClass('eor-col-req')->orderable(true)->searchable(true),
-            Column::make('emp_name')->title('Employee Name')->addClass('rfe-col-name')->orderable(true)->searchable(true),
-            Column::make('employee_master_emp_id')->title('Emp ID')->addClass('eor-col-empid')->orderable(true)->searchable(true),
+            Column::make('emp_name')->title('Name & ID')->addClass('rfe-col-name')->orderable(true)->searchable(true),
             // Father Name is captured on the form but filled on ~10% of the rows, so it
             // stays in the Add / Edit modal and out of the grid — it is still searchable.
             Column::make('section')->title('Section')->addClass('eor-col-section')->orderable(true)->searchable(true),
