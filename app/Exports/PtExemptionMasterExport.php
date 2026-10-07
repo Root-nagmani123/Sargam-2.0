@@ -16,15 +16,60 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 
 class PtExemptionMasterExport implements FromCollection, WithEvents, WithCustomValueBinder
 {
-    protected const HEADINGS = ['S. No.', 'Course', 'Effective From', 'PT Timing', 'Gender', 'PT Exemption Count (Days)', 'Status'];
+    /**
+     * Report columns in grid order: key => [heading, Excel width, centred].
+     * The keys are what the grid sends as ?cols= (see the index view), and the
+     * PDF view uses the same keys, so both exports carry the same columns.
+     */
+    public const COLUMNS = [
+        'sno'            => ['S. No.', 10, true],
+        'course'         => ['Course', 28, false],
+        'effective_from' => ['Effective From', 16, true],
+        'pt_timing'      => ['PT Timing', 14, true],
+        'gender'         => ['Gender', 12, true],
+        'days'           => ['PT Exemption Count (Days)', 20, true],
+        'status'         => ['Status', 12, true],
+    ];
 
     protected int $rowCount = 0;
 
+    /** @var list<string> */
+    protected array $columns;
+
+    /**
+     * @param  list<string>  $columns  keys of COLUMNS to include; empty means all
+     */
     public function __construct(
         protected Collection $rows,
-        protected string $filterLine = ''
+        protected string $filterLine = '',
+        array $columns = []
     ) {
         $this->rowCount = $rows->count();
+        $this->columns = $columns !== [] ? array_values($columns) : array_keys(self::COLUMNS);
+    }
+
+    /** One cell's display text — shared with the PDF view. */
+    public static function cellValue(string $key, $row, int $serial): string
+    {
+        switch ($key) {
+            case 'sno':
+                return (string) $serial;
+            case 'course':
+                return $row->course->course_name ?? 'N/A';
+            case 'effective_from':
+                return $row->effective_from ? $row->effective_from->format('d-m-Y') : 'N/A';
+            case 'pt_timing':
+                $cutoffTime = $row->course->pt_start_time ?? $row->apply_cutoff_time;
+                return blank($cutoffTime) ? 'N/A' : \Carbon\Carbon::parse($cutoffTime)->format('h:i A');
+            case 'gender':
+                return (string) $row->gender;
+            case 'days':
+                return number_format((float) $row->exemption_days, 1) . ' Days';
+            case 'status':
+                return (int) $row->active_inactive === 1 ? 'Active' : 'Inactive';
+        }
+
+        return '';
     }
 
     public function collection(): Collection
@@ -33,17 +78,8 @@ class PtExemptionMasterExport implements FromCollection, WithEvents, WithCustomV
 
         return $this->rows->map(function ($row) use (&$serial) {
             $serial++;
-            $cutoffTime = $row->course->pt_start_time ?? $row->apply_cutoff_time;
 
-            return [
-                $serial,
-                $row->course->course_name ?? 'N/A',
-                $row->effective_from ? $row->effective_from->format('d-m-Y') : 'N/A',
-                blank($cutoffTime) ? 'N/A' : \Carbon\Carbon::parse($cutoffTime)->format('h:i A'),
-                $row->gender,
-                number_format((float) $row->exemption_days, 1) . ' Days',
-                (int) $row->active_inactive === 1 ? 'Active' : 'Inactive',
-            ];
+            return array_map(fn ($key) => self::cellValue($key, $row, $serial), $this->columns);
         });
     }
 
@@ -53,7 +89,7 @@ class PtExemptionMasterExport implements FromCollection, WithEvents, WithCustomV
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
 
-                $colCount = count(self::HEADINGS);
+                $colCount = count($this->columns);
                 $lastCol = Coordinate::stringFromColumnIndex($colCount);
 
                 $metaLines = [];
@@ -108,8 +144,8 @@ class PtExemptionMasterExport implements FromCollection, WithEvents, WithCustomV
                     }
                 }
 
-                foreach (self::HEADINGS as $ci => $heading) {
-                    $sheet->setCellValueByColumnAndRow($ci + 1, $headingRow, $heading);
+                foreach ($this->columns as $ci => $key) {
+                    $sheet->setCellValueByColumnAndRow($ci + 1, $headingRow, self::COLUMNS[$key][0]);
                 }
                 $headingRange = "A{$headingRow}:{$lastCol}{$headingRow}";
                 $sheet->getStyle($headingRange)->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('FFFFFF');
@@ -128,7 +164,11 @@ class PtExemptionMasterExport implements FromCollection, WithEvents, WithCustomV
                         ->setVertical(Alignment::VERTICAL_TOP)
                         ->setWrapText(true);
 
-                    foreach (['A', 'C', 'D', 'E', 'F', 'G'] as $letter) {
+                    foreach ($this->columns as $ci => $key) {
+                        if (! self::COLUMNS[$key][2]) {
+                            continue;
+                        }
+                        $letter = Coordinate::stringFromColumnIndex($ci + 1);
                         $sheet->getStyle("{$letter}{$firstDataRow}:{$letter}{$lastDataRow}")
                             ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                     }
@@ -145,9 +185,8 @@ class PtExemptionMasterExport implements FromCollection, WithEvents, WithCustomV
                 $sheet->getStyle("A{$headingRow}:{$lastCol}{$tableBottom}")->getBorders()
                     ->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('8FA3BD');
 
-                $widths = [10, 28, 16, 14, 12, 20, 12];
-                foreach ($widths as $i => $w) {
-                    $sheet->getColumnDimensionByColumn($i + 1)->setWidth($w);
+                foreach ($this->columns as $i => $key) {
+                    $sheet->getColumnDimensionByColumn($i + 1)->setWidth(self::COLUMNS[$key][1]);
                 }
 
                 $logoPath = public_path('admin_assets/images/logos/logo_new.png');

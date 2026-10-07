@@ -404,9 +404,34 @@ $(function () {
     });
 
     /* ── Download: export current filters/search to PDF/Excel ── */
+    // Grid column (DataTables `data`) → export column key
+    // (PtExemptionMasterExport::COLUMNS). Action has no export column.
+    const exemptionExportKeys = {
+        DT_RowIndex: 'sno',
+        course_name: 'course',
+        effective_from_display: 'effective_from',
+        apply_cutoff_time_display: 'pt_timing',
+        gender: 'gender',
+        exemption_days_display: 'days',
+        status: 'status',
+    };
+
+    // Only the columns switched on in Column Visibility go into the file.
+    function exemptionExportCols() {
+        const keys = [];
+        table.columns().every(function () {
+            const key = exemptionExportKeys[this.dataSrc()];
+            if (key && this.visible()) {
+                keys.push(key);
+            }
+        });
+        return keys.join(',');
+    }
+
     function exemptionExportUrl(format) {
         const params = $.param({
             format: format,
+            cols: exemptionExportCols(),
             status_filter: currentStatus,
             course_filter: $('#courseFilter').val() || '',
             from_date: $period.data('from') || '',
