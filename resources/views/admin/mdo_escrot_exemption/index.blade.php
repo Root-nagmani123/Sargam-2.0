@@ -210,7 +210,9 @@
         </div>
     </div>
 
-    <div class="card overflow-hidden rounded-3">
+    {{-- No overflow-hidden: the "+3 Filters" menu (and the Year list inside it)
+         is positioned within this card and would be clipped when the grid is short. --}}
+    <div class="card rounded-3">
         <div class="card-body p-3 p-md-4">
 
             <div class="d-flex flex-column flex-lg-row flex-lg-wrap align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
@@ -391,6 +393,19 @@ $(document).ready(function() {
     var pendingDeleteForm = null;
     var meeDeleteModalEl = document.getElementById('meeDeleteConfirmModal');
     var meeDeleteModal = meeDeleteModalEl ? bootstrap.Modal.getOrCreateInstance(meeDeleteModalEl) : null;
+
+    // A date input accepts a half-typed year (0025 for 2025); the server rejects
+    // anything outside 2000–2099, so catch it here with the field's own error.
+    function meeCheckDate($input, $error) {
+        var value = $input.val();
+        var year = value ? parseInt(value.slice(0, 4), 10) : NaN;
+        if (value && year >= 2000 && year <= 2099) {
+            return true;
+        }
+        $error.text(value ? 'Please enter a valid date (check the year).' : 'Start date is required.').removeClass('d-none');
+        $input.addClass('is-invalid');
+        return false;
+    }
 
     initMeeAddModal(table);
     initMeeEditModal(table);
@@ -580,8 +595,8 @@ $(document).ready(function() {
     // Export columns = every visible table column except the "Action" column.
     function meeExportColumns() {
         var cols = [];
-        (table.settings()[0].aoColumns || []).forEach(function(c) {
-            if (c.data === 'actions') {
+        (table.settings()[0].aoColumns || []).forEach(function(c, idx) {
+            if (c.data === 'actions' || !table.column(idx).visible()) {
                 return;
             }
             cols.push({ data: c.data, title: $('<div>').html(c.sTitle || '').text() });
@@ -1018,9 +1033,7 @@ $(document).ready(function() {
                 $('#mdo_duty_type_master_pk').addClass('is-invalid');
                 valid = false;
             }
-            if (!$('#mdo_date').val()) {
-                $('#meeErrorDate').removeClass('d-none');
-                $('#mdo_date').addClass('is-invalid');
+            if (!meeCheckDate($('#mdo_date'), $('#meeErrorDate'))) {
                 valid = false;
             }
             if (!$('#Time_from').val()) {
@@ -1091,9 +1104,8 @@ $(document).ready(function() {
                 $('#meeCourseDropdown').addClass('is-invalid').focus();
                 return;
             }
-            if (!$('#mdo_date').val()) {
-                $('#meeErrorDate').removeClass('d-none');
-                $('#mdo_date').addClass('is-invalid').focus();
+            if (!meeCheckDate($('#mdo_date'), $('#meeErrorDate'))) {
+                $('#mdo_date').focus();
                 return;
             }
             // Time is required so the picker can exclude students already busy in
@@ -1288,7 +1300,7 @@ $(document).ready(function() {
             clearEditErrors();
             var valid = true;
             if (!$('#meeEditDutyType').val()) { $('#meeEditErrorDutyType').removeClass('d-none'); $('#meeEditDutyType').addClass('is-invalid'); valid = false; }
-            if (!$('#meeEditDate').val()) { $('#meeEditErrorDate').removeClass('d-none'); $('#meeEditDate').addClass('is-invalid'); valid = false; }
+            if (!meeCheckDate($('#meeEditDate'), $('#meeEditErrorDate'))) { valid = false; }
             if (!$('#meeEditTimeFrom').val()) { $('#meeEditErrorTimeFrom').removeClass('d-none'); $('#meeEditTimeFrom').addClass('is-invalid'); valid = false; }
             if (!$('#meeEditTimeTo').val()) { $('#meeEditErrorTimeTo').removeClass('d-none'); $('#meeEditTimeTo').addClass('is-invalid'); valid = false; }
             if ($('#meeEditTimeFrom').val() && $('#meeEditTimeTo').val() && $('#meeEditTimeTo').val() <= $('#meeEditTimeFrom').val()) {

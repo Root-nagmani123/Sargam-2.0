@@ -71,7 +71,7 @@
                                     Start Date <span class="mst-req" aria-hidden="true">*</span>
                                 </label>
                                 <input type="date" name="mdo_date" id="meeEditDate" class="form-control mst-control"
-                                    required aria-required="true" aria-describedby="meeEditErrorDate">
+                                    min="2000-01-01" max="2099-12-31" required aria-required="true" aria-describedby="meeEditErrorDate">
                                 <small class="text-danger mee-field-error d-none" id="meeEditErrorDate">Start date is required.</small>
                             </div>
 
