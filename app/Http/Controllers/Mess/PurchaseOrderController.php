@@ -497,6 +497,14 @@ class PurchaseOrderController extends Controller
             'bill_file.max' => 'Bill size must not exceed 5 MB.',
         ]);
 
+        if ($purchaseOrder->status === 'approved') {
+            $shortfalls = $this->purchaseOrderEditStockShortfalls($purchaseOrder, $request);
+            if ($shortfalls !== []) {
+                return redirect()->route('admin.mess.purchaseorders.index')
+                    ->with('po_edit_error', 'Nothing was saved. ' . implode(' ', $shortfalls));
+            }
+        }
+
         DB::transaction(function () use ($request, $purchaseOrder) {
             $grandTotal = 0;
             foreach ($request->items as $item) {
@@ -559,6 +567,68 @@ class PurchaseOrderController extends Controller
         self::bumpPurchaseOrderListingCacheEpoch();
 
         return redirect()->route('admin.mess.purchaseorders.index')->with('success', 'Purchase order updated successfully');
+    }
+
+    /**
+     * An approved PO is already in stock. Lowering a line's quantity, changing its item, or moving
+     * the PO to another store takes that quantity back out of the store, so it must not have been
+     * issued yet - otherwise stock goes below zero.
+     *
+     * @return array<int, string>  one message per item and store that is short of stock
+     */
+    private function purchaseOrderEditStockShortfalls(PurchaseOrder $purchaseOrder, Request $request): array
+    {
+        $oldStoreId = (int) ($purchaseOrder->store_id ?? 0);
+        $newStoreId = (int) ($request->store_id ?: 0);
+
+        // store id => item id => quantity this edit takes out of that store (negative: puts in).
+        // A PO without a store is in no store's stock, so that side is skipped.
+        $takenOut = [];
+        if ($oldStoreId > 0) {
+            foreach ($purchaseOrder->items()->get(['item_subcategory_id', 'quantity']) as $line) {
+                $itemId = (int) ($line->item_subcategory_id ?? 0);
+                if ($itemId > 0) {
+                    $takenOut[$oldStoreId][$itemId] = ($takenOut[$oldStoreId][$itemId] ?? 0) + (float) $line->quantity;
+                }
+            }
+        }
+        if ($newStoreId > 0) {
+            foreach ($request->items as $item) {
+                $itemId = $this->coerceItemSubcategoryId($item['item_subcategory_id'] ?? null);
+                if ($itemId) {
+                    $takenOut[$newStoreId][$itemId] = ($takenOut[$newStoreId][$itemId] ?? 0) - (float) $item['quantity'];
+                }
+            }
+        }
+
+        $itemIds = collect($takenOut)->flatMap(fn ($items) => array_keys($items))->unique()->all();
+        $subcategories = ItemSubcategory::whereIn('id', $itemIds)->get()->keyBy('id');
+        $storeNames = Store::whereIn('id', array_keys($takenOut))->pluck('store_name', 'id');
+
+        $messages = [];
+        foreach ($takenOut as $storeId => $items) {
+            $reductions = [];
+            foreach ($items as $itemId => $qty) {
+                if (round($qty, 4) > 0) {
+                    $sub = $subcategories->get($itemId);
+                    $reductions[$itemId] = [
+                        'qty' => $qty,
+                        'name' => $sub ? ($sub->item_name ?? $sub->name ?? ('Item #' . $itemId)) : ('Item #' . $itemId),
+                    ];
+                }
+            }
+            if ($reductions === []) {
+                continue;
+            }
+
+            $available = AvailableQuantityService::availableQuantitiesForStore('store', $storeId, true);
+            $storeName = $storeNames[$storeId] ?? ('Store #' . $storeId);
+            foreach (AvailableQuantityService::stockShortfalls($available, $reductions) as $s) {
+                $messages[] = "{$s['name']}: quantity in {$storeName} cannot be reduced by {$s['qty']}, only {$s['in_stock']} is still in stock (the rest has already been issued).";
+            }
+        }
+
+        return $messages;
     }
 
     public function destroy($id)
