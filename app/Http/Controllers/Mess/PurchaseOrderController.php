@@ -253,7 +253,8 @@ class PurchaseOrderController extends Controller
             $request->validate([
                 'po_number' => 'required|unique:mess_purchase_orders,po_number',
                 'vendor_id' => 'required|exists:mess_vendors,id',
-                'store_id' => 'nullable|exists:mess_stores,id',
+                // Stock is counted per store; a PO without one is in nobody's stock.
+                'store_id' => 'required|exists:mess_stores,id',
                 'po_date' => 'required|date|before_or_equal:today',
                 'delivery_date' => 'nullable|date',
                 'payment_code' => 'nullable|string|max:50',
@@ -270,6 +271,7 @@ class PurchaseOrderController extends Controller
                 'items.*.tax_percent' => 'nullable|numeric|min:0|max:100',
                 'bill_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
             ], [
+                'store_id.required' => 'Please select a store.',
                 'contact_number.regex' => 'The contact number must be exactly 10 digits and contain only numbers (no letters or special characters).',
                 'bill_file.mimes' => 'Bill must be PDF or image (jpg, jpeg, png, webp).',
                 'bill_file.max' => 'Bill size must not exceed 5 MB.',
@@ -464,10 +466,16 @@ class PurchaseOrderController extends Controller
             }
         }
 
+        // A failed validation here reopens the create modal, so report a missing store on the list instead.
+        if (! $request->filled('store_id')) {
+            return redirect()->route('admin.mess.purchaseorders.index')
+                ->with('po_edit_error', 'Please select a store for purchase order ' . $purchaseOrder->po_number . '. Nothing was saved.');
+        }
+
         $this->normalizePurchaseOrderItemsInRequest($request);
         $request->validate([
             'vendor_id' => 'required|exists:mess_vendors,id',
-            'store_id' => 'nullable|exists:mess_stores,id',
+            'store_id' => 'required|exists:mess_stores,id',
             'po_date' => 'required|date|before_or_equal:today',
             'delivery_date' => 'nullable|date',
             'payment_code' => 'nullable|string|max:50',
