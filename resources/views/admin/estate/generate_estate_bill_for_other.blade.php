@@ -1,9 +1,11 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Generate Estate Bill for Other')
+@section('title', 'View Estate Bill for Other - Sargam')
 
 @section('setup_content')
 @push('styles')
+{{-- Shared Estate controls (Download menu, Name & ID, links) — estate-request-admin.css. --}}
+<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
 <style>
     /* ── Generate Estate Bill for Other — page-scoped chrome on top of
        programme-dt. Namespaced under .gebo-page so nothing leaks
@@ -89,7 +91,9 @@
 @endpush
 
 <div class="container-fluid px-2 px-sm-3 px-md-4 gebo-page">
-    <x-breadcrum title="Generate Estate Bill for Other"></x-breadcrum>
+    {{-- Title = the menu item's own name, so the trail ends on it as the active crumb
+         instead of hanging a non-existent "Generate …" page beneath it. --}}
+    <x-breadcrum title="View Estate Bill for Other" :showBack="false"></x-breadcrum>
     <x-session_message />
 
     {{-- No status pills on this grid, so Select All sits left and the export row
@@ -109,16 +113,7 @@
                 <i class="bi bi-printer" aria-hidden="true"></i>
                 <span>Print Selected</span>
             </button>
-            <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="geboDownloadBtn"
-                title="Download as Excel">
-                <i class="bi bi-download" aria-hidden="true"></i>
-                <span>Download</span>
-            </button>
-            <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="geboPrintBtn"
-                title="Print this list">
-                <i class="bi bi-printer" aria-hidden="true"></i>
-                <span>Print</span>
-            </button>
+            @include('admin.estate.partials.export_actions', ['prefix' => 'gebo'])
         </div>
     </div>
 
@@ -497,9 +492,11 @@
             return false;
         }
 
-        $('#geboDownloadBtn').on('click', function () {
+        // Download menu (CSV · Excel · PDF) — partials/export_actions.
+        $(document).on('click', '[data-export-for="gebo"]', function () {
+            var format = $(this).data('format');
             if (!requireMonth()) return;
-            window.location.href = downloadUrl + '?' + exportQuery();
+            window.location.href = downloadUrl + '?' + exportQuery() + '&format=' + encodeURIComponent(format);
         });
 
         $('#geboPrintBtn').on('click', function () {

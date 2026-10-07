@@ -166,7 +166,8 @@ class EstatePossessionOtherDataTable extends DataTable
 
         $dataTable = $dataTable
             ->editColumn('request_id', fn($row) => self::valueOrDash($row->estateOtherRequest->request_no_oth ?? $row->request_no_oth ?? null))
-            ->editColumn('name', fn($row) => self::nameWithId($row->estateOtherRequest->emp_name ?? $row->emp_name ?? '', null))
+            // Name & ID: name, with the request's linked employee id beneath.
+            ->editColumn('name', fn($row) => self::nameWithId($row->estateOtherRequest->emp_name ?? $row->emp_name ?? '', $row->eor_emp_id ?? null))
             ->editColumn('section_name', fn($row) => self::valueOrDash(static::sectionLabel($row)))
             ->editColumn('estate_name', fn($row) => self::valueOrDash($row->campus_name ?? null))
             ->editColumn('unit_type', fn($row) => self::valueOrDash($row->unit_type_name ?? null))
@@ -218,7 +219,19 @@ class EstatePossessionOtherDataTable extends DataTable
                     ])
                     : '';
 
-                return '<div class="rfe-actions" role="group" aria-label="Row actions">' . $edit . $delete . '</div>';
+                // Meter Reading: opens Update Meter Reading for this one record — its estate,
+                // building and sub-type prefilled and its meters loaded from the server.
+                // Estate authorities only, the same rule the meter reading screen enforces.
+                $meter = $canMutate
+                    ? self::actionLink('electric_meter', 'Meter Reading', 'possession', [
+                        'href' => route('admin.estate.update-meter-reading-of-other', ['possession_pks' => (int) $row->pk]),
+                        'title' => 'Update meter reading',
+                        'class' => 'js-epo-meter',
+                        'attrs' => 'data-id="' . (int) $row->pk . '"',
+                    ])
+                    : '';
+
+                return '<div class="rfe-actions" role="group" aria-label="Row actions">' . $edit . $meter . $delete . '</div>';
             })
             ->rawColumns(array_values(array_filter([
                 'name',
@@ -296,6 +309,10 @@ class EstatePossessionOtherDataTable extends DataTable
                 'eb.block_name',
                 'eor.request_no_oth',
                 'eor.emp_name',
+                // employee_master.emp_id link — not on every database yet, so fall back to NULL.
+                \Illuminate\Support\Facades\Schema::hasColumn('estate_other_req', 'employee_master_emp_id')
+                    ? 'eor.employee_master_emp_id as eor_emp_id'
+                    : DB::raw('NULL as eor_emp_id'),
                 'eor.section',
                 'eor.designation',
                 'eor.designation as eor_designation',
@@ -402,7 +419,7 @@ class EstatePossessionOtherDataTable extends DataTable
         return array_merge($columns, [
             Column::computed('DT_RowIndex')->title('S. No.')->addClass('epo-col-sno')->orderable(true)->searchable(false)->width('72px'),
             Column::make('request_id')->title('Request ID')->addClass('epo-col-req')->orderable(true)->searchable(true),
-            Column::make('name')->title('Employee Name')->addClass('pd-col-name')->orderable(true)->searchable(true),
+            Column::make('name')->title('Name & ID')->addClass('pd-col-name')->orderable(true)->searchable(true),
             Column::make('section_name')->title('Section Name')->orderable(true)->searchable(true),
             Column::make('estate_name')->title('Estate Name')->orderable(true)->searchable(true),
             Column::make('building_name')->title('Building Name')->orderable(true)->searchable(true),

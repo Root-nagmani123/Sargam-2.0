@@ -55,7 +55,7 @@ trait RendersEstateRowActions
     }
 
     /**
-     * "Name — muted employee id", the shared Name & ID cell.
+     * The shared Name & ID cell: name, with the muted employee id beneath it.
      */
     protected static function nameWithId(?string $name, ?string $employeeId): string
     {
@@ -66,11 +66,16 @@ trait RendersEstateRowActions
             return '—';
         }
 
-        $html = $name !== '' ? '<span class="rfe-name">' . e($name) . '</span>' : '';
+        // Name on top, ID beneath, in one cell (.estate-name-id in estate-request-admin.css) —
+        // the Figma "Name / ID" layout, rather than one run-on "NAME - ID" string.
+        $html = '<span class="estate-name-id">';
+        if ($name !== '') {
+            $html .= '<span class="estate-name-id__name rfe-name">' . e($name) . '</span>';
+        }
         if ($employeeId !== '') {
-            $html .= ($html !== '' ? ' ' : '') . '<span class="rfe-emp-id">' . ($html !== '' ? '- ' : '') . e($employeeId) . '</span>';
+            $html .= '<span class="estate-name-id__id rfe-emp-id">' . e($employeeId) . '</span>';
         }
 
-        return $html;
+        return $html . '</span>';
     }
 }

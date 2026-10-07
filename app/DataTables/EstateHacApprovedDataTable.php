@@ -112,6 +112,17 @@ class EstateHacApprovedDataTable extends DataTable
                 ? self::statusBadge('Change Request', 'change-request')
                 : self::statusBadge('New Request', 'new-request'))
             ->addColumn('name_id', fn ($row) => self::nameWithId($row->emp_name ?? '', $row->employee_id ?? ''))
+            // Status: change requests carry the HAC decision; a new request listed here is
+            // always still awaiting allotment (allotted ones are excluded by query()).
+            ->addColumn('status', function ($row) {
+                $label = static::statusLabel($row);
+
+                return self::statusBadge($label, match ($label) {
+                    'Approved' => 'allotted',
+                    'Rejected' => 'rejected',
+                    default => 'pending',
+                });
+            })
             ->editColumn('current_or_availability', function ($row) {
                 // Change request: show current allotment/availability only after approval
                 if (($row->request_type ?? '') === 'change') {
@@ -179,7 +190,7 @@ class EstateHacApprovedDataTable extends DataTable
                     . $view . $allot . $approve . $reject
                     . '</div>';
             })
-            ->rawColumns(['request_type', 'name_id', 'action'])
+            ->rawColumns(['request_type', 'name_id', 'status', 'action'])
             ->filter(function ($query) {
                 static::applyFilters(
                     $query,
@@ -197,6 +208,9 @@ class EstateHacApprovedDataTable extends DataTable
                 ->orderByRaw('LOWER(COALESCE(employee_id, "")) ' . $order))
             ->orderColumn('emp_designation', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(emp_designation, "")) ' . $order))
             ->orderColumn('pay_scale', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(pay_scale, "")) ' . $order))
+            ->orderColumn('status', fn ($query, $order) => $query->reorder()
+                ->orderByRaw('COALESCE(change_ap_dis_status, 0) ' . $order)
+                ->orderBy('pk', $order))
             ->setRowId('pk');
     }
 
@@ -363,6 +377,7 @@ class EstateHacApprovedDataTable extends DataTable
             Column::computed('name_id')->title('Name & ID')->addClass('hac-col-name')->orderable(true)->searchable(true),
             Column::make('emp_designation')->title('Designation')->orderable(true)->searchable(true),
             Column::make('pay_scale')->title('Pay Scale')->orderable(true)->searchable(true),
+            Column::computed('status')->title('Status')->addClass('hac-col-status')->orderable(true)->searchable(false),
             // Wide enough for the four actions to sit on one row - see .hac-col-action.
             Column::computed('action')->title('Action')->addClass('hac-col-action')->orderable(false)->searchable(false)->width('215px'),
         ];
@@ -416,6 +431,12 @@ class EstateHacApprovedDataTable extends DataTable
             2 => 'Rejected',
             default => 'Pending',
         };
+    }
+
+    /** Row status for the Status column and the exports: Pending | Approved | Rejected. */
+    public static function statusLabel($row): string
+    {
+        return ($row->request_type ?? '') === 'change' ? static::decisionLabel($row) : 'Pending';
     }
 
     protected function filename(): string

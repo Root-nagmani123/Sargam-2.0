@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\DataTables\Concerns\RendersEstateRowActions;
 use App\Models\EstateHomeRequestDetails;
 use App\Support\DataTableRedisCache;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
@@ -14,6 +15,8 @@ use Yajra\DataTables\Services\DataTable;
 
 class EstateRequestPutInHacDataTable extends DataTable
 {
+    use RendersEstateRowActions;
+
     public const LISTING_CACHE_EPOCH_KEY = 'estate_pih_list_epoch';
 
     public static function bumpListingCacheEpoch(): void
@@ -76,8 +79,8 @@ class EstateRequestPutInHacDataTable extends DataTable
                 $d = $row->req_date;
                 return $d ? \Carbon\Carbon::parse($d)->format('d-m-Y') : '—';
             })
-            ->editColumn('emp_name', fn ($row) => e($row->emp_name ?? '—'))
-            ->editColumn('employee_id', fn ($row) => e($row->employee_id ?? '—'))
+            // Name & ID in one cell — name, employee id beneath (shared estate pattern).
+            ->editColumn('emp_name', fn ($row) => self::nameWithId($row->emp_name, $row->employee_id))
             ->editColumn('emp_designation', fn ($row) => e($row->emp_designation ?? '—'))
             ->editColumn('pay_scale', fn ($row) => e($row->pay_scale ?? '—'))
             ->editColumn('doj_pay_scale', function ($row) {
@@ -114,21 +117,51 @@ class EstateRequestPutInHacDataTable extends DataTable
                         aria-label="Select request ' . $reqId . ' for HAC">
                 </div>';
             })
-            ->rawColumns(['remarks', 'put_in_hac'])
+            ->addColumn('actions', function ($row) {
+                $reqId = e($row->req_id ?? '');
+
+                // View opens the request record; Put in HAC asks for confirmation first
+                // (same dialog as the bulk button) and then posts to put-in-hac.action.
+                return '<div class="rfe-actions" role="group" aria-label="Row actions">'
+                    . self::actionLink('visibility', 'View', 'view', [
+                        'href' => route('admin.estate.request-details', ['id' => $row->pk]),
+                        'title' => 'View request ' . ($row->req_id ?? ''),
+                    ])
+                    . self::actionLink('how_to_reg', 'Put in HAC', 'approve', [
+                        'class' => 'js-pih-single',
+                        'title' => 'Put request ' . ($row->req_id ?? '') . ' in HAC',
+                        'attrs' => 'data-pk="' . (int) $row->pk . '" data-req-id="' . $reqId . '"',
+                    ])
+                    . '</div>';
+            })
+            ->rawColumns(['emp_name', 'remarks', 'put_in_hac', 'actions'])
             ->filter(function ($query) {
-                $searchValue = trim((string) request()->input('search.value', ''));
-                if ($searchValue !== '') {
-                    $searchLike = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $searchValue) . '%';
-                    $query->where(function ($q) use ($searchLike) {
-                        $q->where('estate_home_request_details.req_id', 'like', $searchLike)
-                            ->orWhere('estate_home_request_details.emp_name', 'like', $searchLike)
-                            ->orWhere('estate_home_request_details.employee_id', 'like', $searchLike)
-                            ->orWhere('estate_home_request_details.current_alot', 'like', $searchLike)
-                            ->orWhere('estate_home_request_details.remarks', 'like', $searchLike);
-                    });
-                }
+                static::applySearch($query, (string) request()->input('search.value', ''));
             }, true)
             ->setRowId('pk');
+    }
+
+    /**
+     * Free-text search, shared by the grid and the Download / Print export so the
+     * two can never disagree about which rows match.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $query
+     */
+    public static function applySearch($query, string $searchValue): void
+    {
+        $searchValue = trim($searchValue);
+        if ($searchValue === '') {
+            return;
+        }
+
+        $searchLike = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $searchValue) . '%';
+        $query->where(function ($q) use ($searchLike) {
+            $q->where('estate_home_request_details.req_id', 'like', $searchLike)
+                ->orWhere('estate_home_request_details.emp_name', 'like', $searchLike)
+                ->orWhere('estate_home_request_details.employee_id', 'like', $searchLike)
+                ->orWhere('estate_home_request_details.current_alot', 'like', $searchLike)
+                ->orWhere('estate_home_request_details.remarks', 'like', $searchLike);
+        });
     }
 
     public function query(EstateHomeRequestDetails $model): QueryBuilder
@@ -221,8 +254,7 @@ class EstateRequestPutInHacDataTable extends DataTable
             Column::computed('DT_RowIndex')->title('S. No.')->orderable(false)->searchable(false)->width('64px'),
             Column::make('req_id')->title('Request ID')->orderable(true)->searchable(true),
             Column::make('req_date')->title('Request Date')->orderable(true)->searchable(false),
-            Column::make('emp_name')->title('Name')->addClass('pih-col-name')->orderable(true)->searchable(true),
-            Column::make('employee_id')->title('Employee ID')->orderable(true)->searchable(true),
+            Column::make('emp_name')->title('Name & ID')->addClass('pih-col-name')->orderable(true)->searchable(true),
             Column::make('emp_designation')->title('Designation')->orderable(true)->searchable(true),
             Column::make('pay_scale')->title('Current Pay Scale')->orderable(true)->searchable(true),
             Column::make('doj_pay_scale')->title('DOJ (Current Pay Scale)')->orderable(false)->searchable(false),
@@ -230,6 +262,7 @@ class EstateRequestPutInHacDataTable extends DataTable
             Column::make('doj_academic')->title('DOJ (Academy)')->orderable(false)->searchable(false),
             Column::make('current_alot')->title('Current Allotment')->orderable(true)->searchable(true),
             Column::make('remarks')->title('Remarks')->orderable(false)->searchable(true),
+            Column::computed('actions')->title('Action')->addClass('pih-col-action')->orderable(false)->searchable(false),
         ];
     }
 

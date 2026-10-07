@@ -167,7 +167,10 @@ class EstateReturnHouseDataTable extends DataTable
                 if (!$path) return '—';
 
                 $url = Storage::disk('public')->url($path);
-                return '<a href="' . e($url) . '" target="_blank" rel="noopener">View</a>';
+                // A real hyperlink (.estate-link: underline, brand colour, focus ring), not
+                // plain text — it opens the uploaded document in a new tab.
+                return '<a href="' . e($url) . '" class="estate-link" target="_blank" rel="noopener">View'
+                    . '<span class="visually-hidden"> document (opens in a new tab)</span></a>';
             })
             ->editColumn('remarks', function ($row) use ($meta) {
                 $scope = (string) ($row->scope ?? '');

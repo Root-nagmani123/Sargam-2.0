@@ -1778,6 +1778,7 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     Route::get('request-for-estate/print', [EstateController::class, 'printRequestForEstate'])->name('request-for-estate.print');
     // Put In HAC workflow
     Route::get('put-in-hac', [EstateController::class, 'putInHac'])->name('put-in-hac');
+    Route::get('put-in-hac/export', [EstateController::class, 'exportPutInHac'])->name('put-in-hac.export');
     Route::post('put-in-hac', [EstateController::class, 'putInHacAction'])->name('put-in-hac.action');
     Route::get('request-for-estate/employees', [EstateController::class, 'getRequestForEstateEmployees'])->name('request-for-estate.employees');
     Route::get('request-for-estate/employee-details/{pk}', [EstateController::class, 'getRequestForEstateEmployeeDetails'])->name('request-for-estate.employee-details');

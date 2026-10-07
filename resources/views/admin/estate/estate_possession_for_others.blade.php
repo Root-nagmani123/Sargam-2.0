@@ -24,26 +24,18 @@
 
     {{-- Exports sit above the card (docs/new-design-index-page.md §1). Both honour
          the applied filters, the search box and the Columns choice. --}}
-    <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3">
-        <button type="button" class="btn rfe-export-btn border-0" id="epoDownloadBtn">
-            <i class="bi bi-download" aria-hidden="true"></i>
-            <span>Download</span>
-        </button>
-        <button type="button" class="btn rfe-export-btn border-0" id="epoPrintBtn">
-            <i class="bi bi-printer" aria-hidden="true"></i>
-            <span>Print</span>
-        </button>
-    </div>
+    @include('admin.estate.partials.export_actions', ['prefix' => 'epo'])
 
     <div class="card overflow-hidden rounded-1">
         <div class="card-body p-3 p-md-4" id="possessionCardBody">
 
             <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
                 <div class="d-flex flex-wrap align-items-center gap-3">
-                    <span class="programme-dt-filters-label">Filter</span>
+                    <span class="programme-dt-filters-label">Filters</span>
 
                     <div class="programme-dt-filter-select">
-                        <select id="epoEstateFilter" class="form-select" aria-label="Filter by estate name">
+                        <select id="epoEstateFilter" class="form-select" aria-label="Filter by estate name"
+                            data-searchable="true" data-placeholder="Estate Name" data-allow-clear="true">
                             <option value="">Estate Name</option>
                             @foreach($estateCampuses ?? [] as $campus)
                                 <option value="{{ $campus->pk }}">{{ $campus->campus_name }}</option>
@@ -57,7 +49,7 @@
                     </div>
 
                     <button type="button" id="epoClearFilter" class="btn programme-dt-btn-reset">
-                        Remove Filter
+                        Reset Filters
                     </button>
                 </div>
 
@@ -185,6 +177,7 @@
 @endsection
 
 @push('styles')
+@include('admin.layouts.partials.select2-assets')
 <link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
 @endpush
 
@@ -230,13 +223,18 @@
         var meterModalEl = document.getElementById('updateMeterReadingModal');
         var meterModal = meterModalEl ? new bootstrap.Modal(meterModalEl) : null;
 
-        $('#btnUpdateReading').on('click', function(e) {
-            if (!isPlainClick(e) || !meterModal) return;
-            e.preventDefault();
+        // possessionPks: the rows to load meters for. The server resolves them (only
+        // active possessions), prefills estate / building / sub-type and the form then
+        // fetches exactly those meters. Empty = the plain filter form.
+        function openMeterReading(possessionPks) {
+            if (!meterModal) return;
             $('#updateMeterReadingModalContent').html(modalLoading());
             meterModal.show();
 
-            $.get('{{ route('admin.estate.update-meter-reading-of-other') }}', { modal: 1 })
+            var params = { modal: 1 };
+            if (possessionPks && possessionPks.length) params.possession_pks = possessionPks.join(',');
+
+            $.get('{{ route('admin.estate.update-meter-reading-of-other') }}', params)
                 .done(function(html) {
                     // The partial ships its own cascade, grid and save wiring.
                     $('#updateMeterReadingModalContent').html(html);
@@ -247,6 +245,22 @@
                         ? xhr.responseJSON.message
                         : 'Unable to open the meter reading form.');
                 });
+        }
+
+        // Header button: the ticked rows, if any.
+        $('#btnUpdateReading').on('click', function(e) {
+            if (!isPlainClick(e) || !meterModal) return;
+            e.preventDefault();
+            openMeterReading($('.row-select-possession:checked').map(function() {
+                return parseInt($(this).data('id'), 10);
+            }).get().filter(Boolean));
+        });
+
+        // Row action: that one record.
+        $(document).on('click', '.js-epo-meter', function(e) {
+            if (!isPlainClick(e) || !meterModal) return;
+            e.preventDefault();
+            openMeterReading([parseInt($(this).data('id'), 10)]);
         });
 
         document.addEventListener('epo:readings-saved', function(e) {
@@ -304,7 +318,8 @@
         $(document).on('change', '#epoEstateFilter, #epoAllotmentDateFilter', reloadTable);
 
         $('#epoClearFilter').on('click', function() {
-            $('#epoEstateFilter').val('');
+            // change.select2 repaints the searchable box without re-firing the reload.
+            $('#epoEstateFilter').val('').trigger('change.select2');
             $('#epoAllotmentDateFilter').val('');
             if (!$.fn.DataTable.isDataTable($table)) return;
             // "Remove Filter" resets the whole toolbar, search included.
@@ -527,8 +542,12 @@
             return params;
         }
 
-        $('#epoDownloadBtn').on('click', function() {
-            window.location.href = '{{ route('admin.estate.possession-for-others.export') }}?' + $.param(epoExportParams());
+        // Download menu (CSV · Excel · PDF) — partials/export_actions; every format runs the
+        // same server payload, so it carries the filters, search and Columns choice.
+        $(document).on('click', '[data-export-for="epo"]', function() {
+            var params = epoExportParams();
+            params.format = $(this).data('format');
+            window.location.href = '{{ route('admin.estate.possession-for-others.export') }}?' + $.param(params);
         });
 
         $('#epoPrintBtn').on('click', function() {

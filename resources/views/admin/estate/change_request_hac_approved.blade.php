@@ -14,16 +14,7 @@
 
     {{-- Exports sit above the card (docs/new-design-index-page.md §1). Both honour
          the applied Request Type filter, the search box and the Columns choice. --}}
-    <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3">
-        <button type="button" class="btn rfe-export-btn border-0" id="hacDownloadBtn">
-            <i class="bi bi-download" aria-hidden="true"></i>
-            <span>Download</span>
-        </button>
-        <button type="button" class="btn rfe-export-btn border-0" id="hacPrintBtn">
-            <i class="bi bi-printer" aria-hidden="true"></i>
-            <span>Print</span>
-        </button>
-    </div>
+    @include('admin.estate.partials.export_actions', ['prefix' => 'hac'])
 
     <div class="card overflow-hidden rounded-1">
         <div class="card-body p-3 p-md-4">
@@ -336,8 +327,9 @@
         /* ---------- Column visibility (persisted per browser, per user) ---------- */
         // Header index -> export column key. POSITIONAL: adding a table column means
         // adding an entry here too. Index 1 is the hidden Request Date column.
-        var HAC_EXPORT_COLUMN_KEYS = ['sno', '', 'request_type', 'request_id', 'name_id', 'emp_designation', 'pay_scale', ''];
-        var hacColStorageKey = 'sargam.hacApproved.hiddenCols.{{ auth()->id() ?? 'guest' }}';
+        var HAC_EXPORT_COLUMN_KEYS = ['sno', '', 'request_type', 'request_id', 'name_id', 'emp_designation', 'pay_scale', 'status', ''];
+        // v2: Status inserted before Action — hidden columns are stored by index.
+        var hacColStorageKey = 'sargam.hacApproved.hiddenCols.v2.{{ auth()->id() ?? 'guest' }}';
 
         function hacGetHiddenCols() {
             try {
@@ -430,8 +422,12 @@
             return params;
         }
 
-        $('#hacDownloadBtn').on('click', function() {
-            window.location.href = '{{ route('admin.estate.change-request-hac-approved.export') }}?' + $.param(hacExportParams());
+        // Download menu (CSV · Excel · PDF) — partials/export_actions; every format runs the
+        // same server payload, so it carries the filters, search and Columns choice.
+        $(document).on('click', '[data-export-for="hac"]', function() {
+            var params = hacExportParams();
+            params.format = $(this).data('format');
+            window.location.href = '{{ route('admin.estate.change-request-hac-approved.export') }}?' + $.param(params);
         });
 
         $('#hacPrintBtn').on('click', function() {

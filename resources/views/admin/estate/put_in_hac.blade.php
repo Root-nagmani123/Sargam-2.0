@@ -31,6 +31,9 @@
 
     <x-session_message />
 
+    {{-- Download (CSV · Excel · PDF) + Print — the queue as filtered on screen. --}}
+    @include('admin.estate.partials.export_actions', ['prefix' => 'pih'])
+
     <div class="card overflow-hidden rounded-1">
         <div class="card-body p-3 p-md-4">
             <div id="put-in-hac-card-body">
@@ -82,6 +85,25 @@
         </div>
     </div>
 </div>
+{{-- Put in HAC confirmation (.ds-modal-confirm, affirmative variant). Nothing is
+     posted until the user confirms here. --}}
+<div class="modal fade ds-modal ds-modal-confirm ds-modal-confirm--success" id="pihConfirmModal" tabindex="-1"
+    aria-labelledby="pihConfirmTitle" aria-describedby="pihConfirmText" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body">
+                <div class="ds-confirm-icon" aria-hidden="true"><i class="bi bi-check2"></i></div>
+                <h5 class="ds-confirm-title" id="pihConfirmTitle">Put in HAC?</h5>
+                <p class="ds-confirm-text" id="pihConfirmText"></p>
+                <p class="ds-confirm-text pih-confirm-ids mt-2 mb-0" id="pihConfirmIds"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn ds-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn ds-btn-submit" id="pihConfirmBtn">Yes, Put in HAC</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('styles')
@@ -123,7 +145,9 @@
         $table.on('draw.dt', updateSelectedCount);
 
         /* ---------- Column visibility (persisted per browser, per user) ---------- */
-        var pihColStorageKey = 'sargam.putInHac.hiddenCols.{{ auth()->id() ?? 'guest' }}';
+        // v2: Name and Employee ID merged and an Action column added — hidden columns are
+        // stored by index, so the v1 value would now hide the wrong ones.
+        var pihColStorageKey = 'sargam.putInHac.hiddenCols.v2.{{ auth()->id() ?? 'guest' }}';
 
         function pihGetHiddenCols() {
             try {
@@ -194,23 +218,78 @@
             setupPihColumns($table.DataTable());
         }
 
-        /* ---------- Put selected in HAC ---------- */
+        /* ---------- Download / Print (server-side, same rows as the grid) ---------- */
+        // Header index -> export column key; '' = never exported (Select, Action).
+        var PIH_EXPORT_KEYS = ['', 'sno', 'req_id', 'req_date', 'name_id', 'designation', 'pay_scale',
+            'doj_pay_scale', 'doj_service', 'doj_academic', 'current_alot', 'remarks', ''];
+        function pihExportParams() {
+            var params = {};
+            var hidden = pihGetHiddenCols();
+            if ($.fn.DataTable.isDataTable($table)) {
+                var searchValue = $table.DataTable().search();
+                if (searchValue) params.search = searchValue;
+            }
+            params.cols = PIH_EXPORT_KEYS.filter(function(key, idx) {
+                return key !== '' && hidden.indexOf(idx) === -1;
+            }).join(',');
+            return params;
+        }
+        var pihExportUrl = @json(route('admin.estate.put-in-hac.export'));
+        $(document).on('click', '[data-export-for="pih"]', function() {
+            var params = pihExportParams();
+            params.format = $(this).data('format');
+            window.location.href = pihExportUrl + '?' + $.param(params);
+        });
+        $('#pihPrintBtn').on('click', function() {
+            var params = pihExportParams();
+            params.format = 'print';
+            window.open(pihExportUrl + '?' + $.param(params), '_blank');
+        });
+
+        /* ---------- Put in HAC: confirm first, then post ---------- */
+        var confirmEl = document.getElementById('pihConfirmModal');
+        var confirmModal = confirmEl ? bootstrap.Modal.getOrCreateInstance(confirmEl) : null;
+        var pendingIds = [];
+
+        function askToPutInHac(items) {
+            if (!items.length || !confirmModal) return;
+            pendingIds = items.map(function(it) { return it.pk; });
+            var n = items.length;
+            $('#pihConfirmTitle').text(n === 1 ? 'Put this request in HAC?' : 'Put ' + n + ' requests in HAC?');
+            $('#pihConfirmText').text(n === 1
+                ? 'The request will move to HAC Approval and leave this queue.'
+                : 'These requests will move to HAC Approval and leave this queue.');
+            $('#pihConfirmIds').text(items.map(function(it) { return it.reqId || ('#' + it.pk); }).join(', '));
+            $('#pihConfirmBtn').prop('disabled', false).text('Yes, Put in HAC');
+            confirmModal.show();
+        }
+
+        // Bulk: the ticked rows.
         $('#btnPutInHac').on('click', function() {
-            var ids = $('.put-in-hac-checkbox:checked').map(function() { return $(this).data('pk'); }).get();
-            if (ids.length === 0) return;
+            askToPutInHac($('.put-in-hac-checkbox:checked').map(function() {
+                return { pk: $(this).data('pk'), reqId: String($(this).data('req-id') || '') };
+            }).get());
+        });
 
-            var btn = $(this);
-            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status"></span>Processing…');
+        // Single: the row's own Action.
+        $(document).on('click', '.js-pih-single', function(e) {
+            e.preventDefault();
+            askToPutInHac([{ pk: $(this).data('pk'), reqId: String($(this).data('req-id') || '') }]);
+        });
 
-            var requestSucceeded = false;
+        $('#pihConfirmBtn').on('click', function() {
+            if (!pendingIds.length) return;
+            var $confirmBtn = $(this).prop('disabled', true)
+                .html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing…');
+            $('#btnPutInHac').prop('disabled', true);
+
             $.ajax({
                 url: putInHacUrl,
                 type: 'POST',
-                data: { _token: csrf, ids: ids },
+                data: { _token: csrf, ids: pendingIds },
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
                 success: function(res) {
                     if (res.success && res.message) {
-                        requestSucceeded = true;
                         $table.DataTable().ajax.reload(null, false);
                         pihNotify('success', res.message);
                     }
@@ -221,13 +300,10 @@
                         : 'Failed to put in HAC. Please try again.');
                 },
                 complete: function() {
-                    btn.text('Put Selected in HAC');
-                    if (requestSucceeded) {
-                        btn.prop('disabled', true);
-                        $('#selectedCountText').text('0 selected');
-                    } else {
-                        updateSelectedCount();
-                    }
+                    pendingIds = [];
+                    if (confirmModal) confirmModal.hide();
+                    $confirmBtn.prop('disabled', false).text('Yes, Put in HAC');
+                    updateSelectedCount();
                 }
             });
         });

@@ -515,8 +515,16 @@ table.dataTable.programme-dt-table thead th,
     background: var(--ds-primary);
     border: 1px solid var(--ds-primary);
 }
-.ds-btn-primary:hover {
+/* Bootstrap's `.btn:hover` / `:active` repaint background-color from
+   --bs-btn-hover-bg, which this role never set — so on hover the navy fell back
+   to transparent and the white label vanished on a white surface (1:1). The
+   background is restated for every interactive state so it always wins. */
+.ds-btn-primary:hover,
+.ds-btn-primary:active,
+.ds-btn-primary:focus-visible {
     color: var(--ds-surface);
+    background: var(--ds-primary);
+    border-color: var(--ds-primary);
     filter: brightness(0.92);
 }
 .ds-btn-cancel {
@@ -667,8 +675,23 @@ table.dataTable.programme-dt-table thead th,
     background: var(--ds-primary);
     border-color: var(--ds-primary);
 }
-.ds-btn-submit:hover { filter: brightness(0.92); color: #fff; }
-.ds-btn-submit:disabled { opacity: 0.65; }
+/* Same trap as .ds-btn-primary above: restate the background on every state,
+   or Bootstrap's .btn:hover paints it transparent (white text on white). */
+.ds-btn-submit:hover,
+.ds-btn-submit:active,
+.ds-btn-submit:focus-visible {
+    color: #fff;
+    background: var(--ds-primary);
+    border-color: var(--ds-primary);
+    filter: brightness(0.92);
+}
+.ds-btn-submit:disabled,
+.ds-btn-primary:disabled {
+    color: #fff;
+    background: var(--ds-primary);
+    border-color: var(--ds-primary);
+    opacity: 0.65;
+}
 .ds-btn-danger {
     color: #fff;
     background: #f5222d;

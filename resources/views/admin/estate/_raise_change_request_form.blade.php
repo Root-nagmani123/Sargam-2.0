@@ -98,7 +98,7 @@
             <div class="col-md-6">
                 <label class="form-label" for="{{ $formId }}_remarks">Remarks</label>
                 <textarea class="form-control" name="remarks" id="{{ $formId }}_remarks" rows="3" maxlength="500"
-                    placeholder="e.g. Lorem Ipsum dolor sit amet">{{ old('remarks', optional($detail)->remarks ?? '') }}</textarea>
+                    placeholder="Enter remarks, if any (optional)">{{ old('remarks', optional($detail)->remarks ?? '') }}</textarea>
                 <div class="text-danger small field-error" data-field="remarks" role="alert"></div>
             </div>
         </div>

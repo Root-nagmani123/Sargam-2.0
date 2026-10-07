@@ -371,6 +371,19 @@
     letter-spacing: 0;
 }
 
+/* View + Put in HAC row actions. */
+.pih-page .programme-dt-table th.pih-col-action,
+.pih-page .programme-dt-table td.pih-col-action {
+    min-width: 120px;
+}
+
+/* The request ids being confirmed, so the user can see what will move. */
+.pih-confirm-ids {
+    font-weight: 600;
+    color: var(--ds-ink);
+    overflow-wrap: anywhere;
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    HAC Approval (admin/estate/change-request-hac-approved)
    ══════════════════════════════════════════════════════════════════════════ */
@@ -389,6 +402,13 @@
 /* Approve / Reject tones for the row actions. */
 .hac-page .rfe-action--approve { color: #12b76a; }
 .hac-page .rfe-action--reject { color: #f04438; }
+
+/* Status pill (Pending / Approved / Rejected) — one line, never squeezed. */
+.hac-page .programme-dt-table th.hac-col-status,
+.hac-page .programme-dt-table td.hac-col-status {
+    min-width: 110px;
+    white-space: nowrap;
+}
 
 /* Four labelled actions on one row; a fifth would wrap rather than overflow. */
 .hac-page .programme-dt-table th.hac-col-action,
@@ -640,6 +660,35 @@
 /* ══════════════════════════════════════════════════════════════════════════
    Update Meter Reading (filter + readings grid, page and modal)
    ══════════════════════════════════════════════════════════════════════════ */
+
+/* Opened for specific possession rows: who the meters below belong to. */
+.umr-form .umr-selected {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ds-space-1) var(--ds-space-2);
+    padding: var(--ds-space-2) var(--ds-space-3);
+    font-size: 0.875rem;
+    color: var(--ds-ink);
+    background: var(--ds-surface-2);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius);
+}
+
+.umr-form .umr-selected__label {
+    font-weight: 600;
+}
+
+.umr-form .umr-selected__item {
+    padding: 0.125rem var(--ds-space-2);
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius);
+}
+
+.umr-form .umr-selected__id {
+    color: var(--ds-ink-muted);
+}
 
 /* "Allotment Details" over the grid — the modal's only sub-heading. */
 .umr-form .umr-section-title {
@@ -1105,4 +1154,132 @@
     .er-report .er-scroll {
         max-height: none;
     }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Estate — shared controls (every Estate screen)
+   Prefixed estate-* rather than scoped to a page root, because they are used
+   by many pages; the prefix alone keeps them from touching other modules.
+   Tokens only (docs/design.md, Layer A).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Download (dropdown) + Print, above the card — partials/export_actions ── */
+.estate-export-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    min-height: var(--ds-control-h);
+    padding: 0 var(--ds-space-3);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--ds-primary);
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius);
+    white-space: nowrap;
+}
+
+/* Hover / open / keyboard focus invert to solid navy — unmistakable, and white on
+   #004384 is 9.6:1. */
+.estate-export-btn:hover,
+.estate-export-btn.show,
+.estate-export-btn:focus-visible {
+    color: var(--ds-surface);
+    background: var(--ds-primary);
+    border-color: var(--ds-primary);
+}
+
+.estate-export-btn:focus-visible {
+    box-shadow: var(--ds-focus-ring);
+}
+
+.estate-export-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.estate-export-btn i {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.estate-export-menu {
+    min-width: 10rem;
+    padding: var(--ds-space-1);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius);
+    box-shadow: var(--ds-shadow-lg);
+}
+
+.estate-export-menu .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    padding: var(--ds-space-2) var(--ds-space-3);
+    font-size: 0.875rem;
+    color: var(--ds-ink);
+    border-radius: var(--ds-radius);
+}
+
+.estate-export-menu .dropdown-item:hover,
+.estate-export-menu .dropdown-item:focus-visible {
+    color: var(--ds-primary);
+    background: var(--ds-surface-2);
+}
+
+.estate-export-menu .dropdown-item i {
+    font-size: 1rem;
+    color: var(--ds-ink-muted);
+}
+
+/* ── Name + ID in one cell: name on top, ID beneath (Figma "Name / ID") ───── */
+.estate-name-id {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+    line-height: 1.35;
+}
+
+.estate-name-id__name {
+    font-weight: 500;
+    color: var(--ds-ink);
+    white-space: normal;
+}
+
+.estate-name-id__id {
+    font-size: 0.8125rem;
+    color: var(--ds-ink-muted);
+}
+
+/* ── Hyperlink action (Return House → View) ──────────────────────────────── */
+.estate-link {
+    padding: 0;
+    font-weight: 500;
+    color: var(--ds-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+.estate-link:hover {
+    color: var(--ds-secondary);
+    text-decoration-thickness: 2px;
+}
+
+.estate-link:focus-visible {
+    outline: 0;
+    border-radius: var(--ds-radius);
+    box-shadow: var(--ds-focus-ring);
+}
+
+/* Disabled row action (e.g. Approve / Reject on an already-approved request). */
+.estate-action-disabled,
+.estate-action-disabled:hover {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+    text-decoration: none;
 }

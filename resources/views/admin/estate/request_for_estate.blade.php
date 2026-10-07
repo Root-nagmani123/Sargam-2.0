@@ -25,16 +25,7 @@
 
     {{-- Exports sit above the card (docs/new-design-index-page.md §1). Both honour
          the applied Request Status filter, the search box and the Columns choice. --}}
-    <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3">
-        <button type="button" class="btn rfe-export-btn border-0" id="rfeDownloadBtn">
-            <i class="bi bi-download" aria-hidden="true"></i>
-            <span>Download</span>
-        </button>
-        <button type="button" class="btn rfe-export-btn border-0" id="rfePrintBtn">
-            <i class="bi bi-printer" aria-hidden="true"></i>
-            <span>Print</span>
-        </button>
-    </div>
+    @include('admin.estate.partials.export_actions', ['prefix' => 'rfe'])
 
     <div class="card overflow-hidden rounded-1">
         <div class="card-body p-3 p-md-4">
@@ -188,7 +179,7 @@
                         </div>
                         <div class="col-12">
                             <label for="modal_remarks" class="form-label">Remarks</label>
-                            <textarea class="form-control" id="modal_remarks" name="remarks" rows="3" maxlength="500" placeholder="e.g. Lorem Ipsum dolor sit amet"></textarea>
+                            <textarea class="form-control" id="modal_remarks" name="remarks" rows="3" maxlength="500" placeholder="Enter remarks, if any (optional)"></textarea>
                         </div>
                     </div>
                 </div>
@@ -382,8 +373,12 @@
             return params;
         }
 
-        $('#rfeDownloadBtn').on('click', function() {
-            window.location.href = '{{ route('admin.estate.request-for-estate.export') }}?' + $.param(rfeExportParams());
+        // Download menu (CSV · Excel · PDF) — partials/export_actions; every format runs the
+        // same server payload, so it carries the filters, search and Columns choice.
+        $(document).on('click', '[data-export-for="rfe"]', function() {
+            var params = rfeExportParams();
+            params.format = $(this).data('format');
+            window.location.href = '{{ route('admin.estate.request-for-estate.export') }}?' + $.param(params);
         });
 
         $('#rfePrintBtn').on('click', function() {

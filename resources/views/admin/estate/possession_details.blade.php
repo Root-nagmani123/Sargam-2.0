@@ -29,16 +29,7 @@
 
     {{-- Exports sit above the card (docs/new-design-index-page.md §1). Both honour
          the applied filters, the search box and the Columns choice. --}}
-    <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3">
-        <button type="button" class="btn rfe-export-btn border-0" id="pdDownloadBtn">
-            <i class="bi bi-download" aria-hidden="true"></i>
-            <span>Download</span>
-        </button>
-        <button type="button" class="btn rfe-export-btn border-0" id="pdPrintBtn">
-            <i class="bi bi-printer" aria-hidden="true"></i>
-            <span>Print</span>
-        </button>
-    </div>
+    @include('admin.estate.partials.export_actions', ['prefix' => 'pd'])
 
     <div class="card overflow-hidden rounded-1">
         <div class="card-body p-3 p-md-4" id="possessionDetailsCardBody">
@@ -539,8 +530,12 @@
             return params;
         }
 
-        $('#pdDownloadBtn').on('click', function() {
-            window.location.href = '{{ route('admin.estate.possession-details.export') }}?' + $.param(pdExportParams());
+        // Download menu (CSV · Excel · PDF) — partials/export_actions; every format runs the
+        // same server payload, so it carries the filters, search and Columns choice.
+        $(document).on('click', '[data-export-for="pd"]', function() {
+            var params = pdExportParams();
+            params.format = $(this).data('format');
+            window.location.href = '{{ route('admin.estate.possession-details.export') }}?' + $.param(params);
         });
 
         $('#pdPrintBtn').on('click', function() {
