@@ -6,8 +6,6 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 // use App\DataTables\HostelBuildingFloorRoomMappingDataTable;
 use App\DataTables\BuildingFloorRoomMappingDataTable;
-use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\FloorRoomMappingExport;
 use App\Models\{
     HostelBuildingFloorMapping,
     HostelRoomMaster,
@@ -22,6 +20,8 @@ use App\Models\{
 
 class HostelBuildingFloorRoomMappingController extends Controller
 {
+    use \App\Http\Controllers\Concerns\ExportsMasterGrid;
+
     public $roomTypes;
 
     public function __construct()
@@ -31,8 +31,30 @@ class HostelBuildingFloorRoomMappingController extends Controller
     // public function index(HostelBuildingFloorRoomMappingDataTable $dataTable)
     public function index(Request $request)
     {
+        $query = $this->filteredQuery($request);
+
+        $perPage = (int) $request->input('per_page', 10);
+        if ($perPage < 1) {
+            $perPage = 10;
+        }
+
+        $mappings = $query->paginate($perPage)->withQueryString();
+        $buildings = BuildingMaster::active()->get();
+        $floors = FloorMaster::active()->get();
+        $roomTypes = $this->roomTypes;
+
+        return view('admin.building_floor_room_mapping.index', compact('mappings', 'buildings', 'floors', 'roomTypes'));
+    }
+
+    /**
+     * The grid's query: Building / Room Type / Status filters and the search
+     * box, newest first. Shared by the grid and Print so a printout is exactly
+     * the filtered list on screen (every page of it, not just the current one).
+     */
+    private function filteredQuery(Request $request)
+    {
         $query = BuildingFloorRoomMapping::with(['building', 'floor'])->latest('pk');
-        
+
         // Apply filters
         if ($request->filled('building_id')) {
             $query->where('building_master_pk', $request->building_id);
@@ -51,18 +73,78 @@ class HostelBuildingFloorRoomMappingController extends Controller
                   ->orWhere('comment', 'like', "%{$search}%");
             });
         }
-        
-        $perPage = (int) $request->input('per_page', 10);
-        if ($perPage < 1) {
-            $perPage = 10;
+
+        return $query;
+    }
+
+    /**
+     * Download / Print columns (ExportsMasterGrid). Keys are what the index
+     * page sends as ?cols= (HR_EXPORT_COLUMN_KEYS there).
+     */
+    private function printColumnDefs(): array
+    {
+        return [
+            'sno' => ['heading' => 'S. No.', 'width' => '6%', 'align' => 'center',
+                'value' => fn ($row, int $index) => $index + 1],
+            'building' => ['heading' => 'Building Name', 'width' => '16%', 'align' => 'left',
+                'value' => fn ($row) => $row->building->building_name ?? '—'],
+            'floor' => ['heading' => 'Floor Name', 'width' => '9%', 'align' => 'center',
+                'value' => fn ($row) => $row->floor->floor_name ?? '—'],
+            'room_name' => ['heading' => 'Room Name', 'width' => '16%', 'align' => 'left',
+                'value' => fn ($row) => $row->room_name ?? '—'],
+            'room_type' => ['heading' => 'Room Type', 'width' => '12%', 'align' => 'left',
+                'value' => fn ($row) => $row->room_type ?? '—'],
+            'capacity' => ['heading' => 'Capacity', 'width' => '9%', 'align' => 'center',
+                'value' => fn ($row) => $row->capacity ?? '—'],
+            'comment' => ['heading' => 'Comment', 'width' => '22%', 'align' => 'left',
+                'value' => fn ($row) => $row->comment ?: '—'],
+            'status' => ['heading' => 'Status', 'width' => '10%', 'align' => 'center',
+                'value' => fn ($row) => ((int) $row->active_inactive === 1) ? 'Active' : 'Inactive'],
+        ];
+    }
+
+    public function print(Request $request)
+    {
+        return $this->export($request, 'print');
+    }
+
+    /**
+     * Download (csv | excel | pdf) and Print — one query, one column list
+     * (ExportsMasterGrid), so every format matches the grid and each other:
+     * same filters and search, only the columns left on in Columns.
+     */
+    public function export(Request $request, string $format = 'excel')
+    {
+        $format = strtolower($format);
+        abort_unless(in_array($format, self::$exportFormats, true), 404);
+
+        $rows = $this->filteredQuery($request)->get();
+
+        // Name the filters on the sheet the way the grid shows them.
+        $filters = [];
+        if ($request->filled('building_id')) {
+            $filters[] = 'Building: ' . (BuildingMaster::find($request->building_id)->building_name ?? $request->building_id);
+        }
+        if ($request->filled('room_type')) {
+            $filters[] = 'Room Type: ' . $request->room_type;
+        }
+        if ($request->filled('status')) {
+            $filters[] = 'Status: ' . ((string) $request->status === '1' ? 'Active' : 'Inactive');
+        }
+        if ($request->filled('search')) {
+            $filters[] = 'Search: ' . $request->search;
         }
 
-        $mappings = $query->paginate($perPage)->withQueryString();
-        $buildings = BuildingMaster::active()->get();
-        $floors = FloorMaster::active()->get();
-        $roomTypes = $this->roomTypes;
-
-        return view('admin.building_floor_room_mapping.index', compact('mappings', 'buildings', 'floors', 'roomTypes'));
+        return $this->renderMasterExport(
+            $format,
+            $rows,
+            $this->resolveExportColumns($request, $this->printColumnDefs()),
+            'Hostel Floor Room Map',
+            'HostelFloorRoomMap',
+            $filters === [] ? null : implode('  |  ', $filters),
+            'No rooms to export',
+            'landscape'
+        );
     }
 
     public function create()
@@ -182,14 +264,6 @@ class HostelBuildingFloorRoomMappingController extends Controller
 
         $roomTypes = $this->roomTypes;
         return compact('building', 'floor', 'roomTypes');
-    }
-
-    function export(Request $request) {
-        try {
-            return \Excel::download(new \App\Exports\FloorRoomMappingExport($request->all()), 'floor_room_mapping.xlsx');
-        } catch (\Exception $e) {
-            return redirect()->route('hostel.building.floor.room.map.index')->with('error', 'Error exporting data: ' . $e->getMessage());
-        }
     }
 
     function destroy($id) {

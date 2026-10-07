@@ -33,7 +33,8 @@
 @section('setup_content')
 @php
     $currentQuery = request()->getQueryString();
-    $exportUrl = route('hostel.building.floor.room.map.export') . ($currentQuery ? ('?' . $currentQuery) : '');
+    $hrQs = $currentQuery ? ('?' . $currentQuery) : '';
+    $hrExportUrl = fn (string $format) => route('hostel.building.floor.room.map.export', ['format' => $format]) . $hrQs;
 @endphp
 <div class="container-fluid mst-page hostel-room-page">
     <x-breadcrum title="Hostel Floor Room Map" :showBack="false">
@@ -47,17 +48,40 @@
 
     <x-session_message />
 
-    {{-- Secondary actions (Download / Print) — above the card (§1). Download
-         carries the current filter query string, so the .xlsx matches the grid;
-         Print prints this screen (master-admin.css drops the toolbar, pager
-         and Action column on paper). --}}
+    {{-- Secondary actions (Download / Print) — above the card (§1). Every link
+         carries the current filter query string, so it matches the grid, and
+         covers every filtered row (not just this page). The page script adds
+         ?cols= for the columns left on in Columns. All four formats come from
+         ExportsMasterGrid; Print is its branded sheet, not window.print(). --}}
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 mst-secondary-actions">
-        <a href="{{ $exportUrl }}" class="btn programme-dt-btn-columns border-0 text-primary" title="Download as Excel (.xlsx)">
-            <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-        </a>
-        <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="hrPrintBtn" title="Print">
+        <div class="dropdown">
+            <button type="button" id="hrDownloadToggle"
+                    class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                    data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="hrDownloadToggle">
+                <li>
+                    <a class="dropdown-item js-hr-export" id="hrCsvLink" href="{{ $hrExportUrl('csv') }}">
+                        <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i> CSV
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item js-hr-export" id="hrExcelLink" href="{{ $hrExportUrl('excel') }}">
+                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Excel (.xlsx)
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item js-hr-export" id="hrPdfLink" href="{{ $hrExportUrl('pdf') }}">
+                        <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <a href="{{ $hrExportUrl('print') }}" id="hrPrintLink" target="_blank" rel="noopener"
+           class="btn programme-dt-btn-columns border-0 text-primary js-hr-export" title="Print">
             <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
-        </button>
+        </a>
     </div>
 
     <div class="card overflow-hidden rounded-3">
@@ -382,9 +406,24 @@
             window.location.href = url.toString();
         });
 
-        /* ---- Print ---- */
-        $('#hrPrintBtn').on('click', function () {
-            window.print();
+        /* ---- Download / Print: carry the Columns choice as ?cols= ----
+         * Positional map: header index -> export key the server understands
+         * (HostelBuildingFloorRoomMappingController::printColumnDefs()).
+         * '' = not exported (Action). ⚠️ Adding a column means adding it here. */
+        var HR_EXPORT_COLUMN_KEYS = ['sno', 'building', 'floor', 'room_name', 'room_type', 'capacity', 'comment', 'status', ''];
+
+        $('.js-hr-export').on('click', function () {
+            var hidden = hrGetHiddenCols();
+            var keys = HR_EXPORT_COLUMN_KEYS.filter(function (key, idx) {
+                return key && hidden.indexOf(idx) === -1;
+            });
+            var url = new URL(this.href, window.location.href);
+            url.searchParams.delete('cols');
+            // No ?cols= while every column is on — the server reads that as "all".
+            if (keys.length !== HR_EXPORT_COLUMN_KEYS.filter(Boolean).length) {
+                url.searchParams.set('cols', keys.join(','));
+            }
+            this.href = url.toString();
         });
 
         /* ---- Inline comment edit (unchanged behaviour) ---- */

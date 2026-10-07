@@ -1250,7 +1250,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/create', 'create')->name('create');
         Route::post('store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::get('/export', 'export')->name('export');
+        // Download (csv | excel | pdf) + Print via ExportsMasterGrid — same
+        // filters/search as the grid. {format} optional: old /export = .xlsx.
+        Route::get('/export/{format?}', 'export')->name('export')
+            ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
+        Route::get('/print', 'print')->name('print');
         Route::post('/update-comment', 'updateComment')->name('update.comment');
         Route::delete('/destroy/{id}', 'destroy')->name('destroy');
     });
