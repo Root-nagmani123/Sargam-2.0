@@ -3,229 +3,278 @@
 @section('title', 'Pending Meter Reading - Sargam')
 
 @section('setup_content')
-<div class="container-fluid px-2 px-sm-3 px-md-4">
-    <x-breadcrum title="Pending Meter Reading"></x-breadcrum>
+<div class="container-fluid er-report pmr-page">
+    <x-breadcrum title="Pending Meter Reading" :showBack="false" />
     <x-session_message />
 
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <div class="row align-items-end">
-                <div class="col-md-4">
-                    <label for="bill_month" class="form-label">Select Bill Month <span class="text-danger">*</span></label>
-                    <div class="input-group">
-                        <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ date('Y-m') }}" max="{{ date('Y-m') }}" required>
-                    </div>
-                </div>
-                <div class="col-md-3 mt-3 mt-md-0">
-                    <label for="employee_type_filter" class="form-label">Employee Type</label>
-                    <select class="form-select rounded-1" id="employee_type_filter" name="employee_type_filter">
-                        <option value="all" selected>All</option>
-                        <option value="lbsnaa">LBSNAA</option>
-                        <option value="other">OTHER</option>
-                    </select>
-                </div>
-                <div class="col-md-2 mt-3 mt-md-0">
-                    <button type="button" id="showPendingBtn" class="btn btn-primary rounded-1 px-3 w-100">Show</button>
-                </div>
+    {{-- Print sits above the card (new-design-index-page.md §1); enabled once data loads. --}}
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 er-export">
+        <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="btnPrintPendingMeter" title="Print the filtered list" disabled>
+            <i class="bi bi-printer" aria-hidden="true"></i>
+            <span>Print</span>
+        </button>
+    </div>
+
+    {{-- KPI tiles — counts of the rows the selected month returned. --}}
+    <div class="er-stats mb-4" aria-live="polite">
+        <div class="ds-stat-card">
+            <div>
+                <p class="ds-stat-label">Pending readings</p>
+                <div class="ds-stat-value" id="pmrStatTotal">—</div>
             </div>
-            <small class="text-muted d-block mt-2">
-                <i class="bi bi-info-circle"></i> Select Bill Month and click Show to load data.
-            </small>
+            <span class="ds-stat-icon"><i class="bi bi-speedometer2" aria-hidden="true"></i></span>
+        </div>
+        <div class="ds-stat-card">
+            <div>
+                <p class="ds-stat-label">LBSNAA</p>
+                <div class="ds-stat-value" id="pmrStatLbsnaa">—</div>
+            </div>
+            <span class="ds-stat-icon"><i class="bi bi-person-badge" aria-hidden="true"></i></span>
+        </div>
+        <div class="ds-stat-card er-stat--other">
+            <div>
+                <p class="ds-stat-label">Other employees</p>
+                <div class="ds-stat-value" id="pmrStatOther">—</div>
+            </div>
+            <span class="ds-stat-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
+        </div>
+        <div class="ds-stat-card er-stat--renovation">
+            <div>
+                <p class="ds-stat-label">Bill month</p>
+                <div class="ds-stat-value fs-5" id="pmrStatMonth">—</div>
+            </div>
+            <span class="ds-stat-icon"><i class="bi bi-calendar3" aria-hidden="true"></i></span>
         </div>
     </div>
 
-    <div class="card shadow-sm">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table align-middle mb-0" id="pendingMeterReadingTable">
-                    <thead>
-                        <tr>
-                            <th>S.No.</th>
-                            <th>Employee Type</th>
-                            <th>Name</th>
-                            <th>Designation</th>
-                            <th>House No.</th>
-                            <th>Meter Reading Date</th>
-                            <th>Last Meter Reading</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr id="initialInfoRow">
-                            <td colspan="7" class="text-center text-muted">Select Bill Month and click Show to load pending meter readings.</td>
-                        </tr>
-                    </tbody>
-                </table>
+    <div class="card border-0 shadow-sm rounded-1">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex flex-column flex-lg-row align-items-lg-end justify-content-between gap-3 mb-3 programme-dt-toolbar">
+                <form id="pmrFilterForm" class="er-filters" novalidate>
+                    <div class="programme-dt-filter-select">
+                        <label for="bill_month" class="er-filter-label">Bill Month <span class="text-danger" aria-hidden="true">*</span></label>
+                        <input type="month" class="form-control" id="bill_month" name="bill_month"
+                            value="{{ date('Y-m') }}" max="{{ date('Y-m') }}" required aria-required="true">
+                    </div>
+                    <div class="programme-dt-filter-select">
+                        <label for="employee_type_filter" class="er-filter-label">Employee Type</label>
+                        <select class="form-select" id="employee_type_filter" name="employee_type_filter" data-searchable="true">
+                            <option value="all" selected>All</option>
+                            <option value="lbsnaa">LBSNAA</option>
+                            <option value="other">OTHER</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn programme-dt-btn-reset" id="pmrResetBtn">Reset Filters</button>
+                </form>
+
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="pmrColumnsBtn"
+                        data-bs-toggle="modal" data-bs-target="#pmrColumnModal" title="Show / hide columns" disabled>
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div id="pmrDtSearch" class="programme-dt-search" data-dt-search-for="pendingMeterReadingTable"></div>
+                </div>
+            </div>
+
+            <p class="er-summary mb-3" id="pmrSummary" aria-live="polite">Readings not yet entered for the selected bill month.</p>
+
+            <div class="programme-dt-panel">
+                <div class="table-responsive er-scroll">
+                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table ds-table-sticky" id="pendingMeterReadingTable"
+                        aria-describedby="pmrSummary">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="no-sort">S. No.</th>
+                                <th scope="col">Employee Type</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Designation</th>
+                                <th scope="col">House No.</th>
+                                <th scope="col">Meter Reading Date</th>
+                                <th scope="col" class="er-num">Last Meter Reading</th>
+                                <th scope="col">Status</th>
+                                <th scope="col" class="no-sort">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                data-dt-footer-for="pendingMeterReadingTable"></div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="pmrColumnModal" tabindex="-1" aria-labelledby="pmrColumnModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content rounded-1 border-0 shadow">
+                <div class="modal-header border-0 pb-2">
+                    <h5 class="modal-title fw-bold" id="pmrColumnModalLabel">Column Visibility</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-0">
+                    <hr class="mt-0">
+                    <div class="row g-3" id="pmrColumnToggleGrid"></div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn ds-btn-cancel--primary ds-btn-cancel" data-bs-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
     </div>
 </div>
 @endsection
 
-@push('scripts')
-<script>
-$(document).ready(function() {
-    var dataTableInstance = null;
-    var tableSelector = '#pendingMeterReadingTable';
+@push('styles')
+@include('admin.layouts.partials.select2-assets')
+<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
+@endpush
 
-    function destroyDataTable() {
-        if ($.fn.DataTable.isDataTable(tableSelector)) {
-            $(tableSelector).DataTable().destroy();
-        }
-        dataTableInstance = null;
-        $(tableSelector + ' tbody').empty();
+@push('scripts')
+@include('admin.estate.partials.report_print_assets')
+<script>
+$(function () {
+    var G = window.EstateReportGrid;
+    var esc = G.esc;
+    var $table = $('#pendingMeterReadingTable');
+    var dt = null;
+    var request = null;
+    var dataUrl = @json(route('admin.estate.reports.pending-meter-reading.data'));
+    // "Required action" — where a pending reading is entered (same pages as the sidebar).
+    var entryUrl = {
+        LBSNAA: @json(route('admin.estate.update-meter-reading')),
+        OTHER: @json(route('admin.estate.update-meter-reading-of-other'))
+    };
+
+    function monthLabel(ym) {
+        var p = String(ym || '').split('-');
+        if (p.length < 2) return '—';
+        var d = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, 1);
+        return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
     }
 
-    function loadPendingMeterReading() {
+    function setStats(rows, ym) {
+        var lbsnaa = rows.filter(function (r) { return String(r.employee_type).toUpperCase() === 'LBSNAA'; }).length;
+        $('#pmrStatTotal').text(rows ? rows.length : '—');
+        $('#pmrStatLbsnaa').text(rows ? lbsnaa : '—');
+        $('#pmrStatOther').text(rows ? rows.length - lbsnaa : '—');
+        $('#pmrStatMonth').text(monthLabel(ym));
+    }
+
+    function destroyTable() {
+        if ($.fn.DataTable.isDataTable($table)) $table.DataTable().destroy();
+        dt = null;
+        $('#btnPrintPendingMeter, #pmrColumnsBtn').prop('disabled', true);
+        $('[data-dt-footer-for="pendingMeterReadingTable"], #pmrDtSearch').empty();
+    }
+
+    function rowHtml(row, i) {
+        var type = String(row.employee_type || '').toUpperCase();
+        var typeBadge = type === 'OTHER'
+            ? '<span class="er-badge er-badge--other">OTHER</span>'
+            : (type === 'LBSNAA' ? '<span class="er-badge er-badge--lbsnaa">LBSNAA</span>' : '<span class="er-badge er-badge--neutral">' + esc(type || 'N/A') + '</span>');
+        var url = entryUrl[type];
+        return '<tr>' +
+            '<td>' + esc(row.sno || (i + 1)) + '</td>' +
+            '<td data-search="' + esc(type) + '">' + typeBadge + '</td>' +
+            '<td class="er-col-wrap fw-medium">' + esc(row.name || 'N/A') + '</td>' +
+            '<td class="er-col-wrap">' + esc(row.designation || 'N/A') + '</td>' +
+            '<td>' + esc(row.house_no || 'N/A') + '</td>' +
+            '<td>' + esc(row.meter_reading_date || '—') + '</td>' +
+            '<td class="er-num">' + esc(row.last_meter_reading || 'N/A') + '</td>' +
+            '<td><span class="er-badge er-badge--pending">Pending</span></td>' +
+            '<td>' + (url ? '<a class="er-row-action" href="' + esc(url) + '" aria-label="Enter reading for ' + esc(row.name || '') + '">' +
+                '<i class="bi bi-pencil-square" aria-hidden="true"></i>Enter Reading</a>' : '') + '</td>' +
+            '</tr>';
+    }
+
+    function load() {
         var billMonth = $('#bill_month').val();
         if (!billMonth) {
-            alert('Please select Bill Month.');
+            destroyTable();
+            setStats([], '');
+            $('#pmrSummary').text('Select a bill month to see pending readings.');
+            G.stateRow($table, 'idle', 'Select a bill month to see pending readings.');
+            $('#bill_month').trigger('focus');
             return;
         }
-
-        var parts = billMonth.split('-');
-        var billYear = parts.length >= 1 ? parts[0] : '';
         var employeeType = $('#employee_type_filter').val() || 'all';
-        destroyDataTable();
-        $(tableSelector + ' tbody').html('<tr><td colspan="7" class="text-center">Loading...</td></tr>');
+        if (request) request.abort();
+        destroyTable();
+        G.stateRow($table, 'loading', 'Loading pending meter readings…');
+        $('#pmrSummary').text('Loading…');
 
-        $.ajax({
-            url: '{{ route("admin.estate.reports.pending-meter-reading.data") }}',
+        request = $.ajax({
+            url: dataUrl,
             type: 'GET',
-            data: { bill_month: billMonth, bill_year: billYear, employee_type: employeeType },
-            dataType: 'json',
-            success: function(res) {
-                var tbody = $(tableSelector + ' tbody');
-                tbody.empty();
-
-                if (res.status && res.data && res.data.length > 0) {
-                    $.each(res.data, function(i, row) {
-                        tbody.append(
-                            '<tr>' +
-                                '<td>' + (row.sno || (i + 1)) + '</td>' +
-                                '<td>' + (row.employee_type || 'N/A') + '</td>' +
-                                '<td>' + (row.name || 'N/A') + '</td>' +
-                                '<td>' + (row.designation || 'N/A') + '</td>' +
-                                '<td>' + (row.house_no || 'N/A') + '</td>' +
-                                '<td>' + (row.meter_reading_date || '-') + '</td>' +
-                                '<td>' + (row.last_meter_reading || 'N/A') + '</td>' +
-                            '</tr>'
-                        );
-                    });
-
-                    dataTableInstance = $(tableSelector).DataTable({
-                        order: [[0, 'asc']],
-                        pageLength: 10,
-                        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-                        searching: true,
-                        language: {
-                            search: 'Search:',
-                            lengthMenu: 'Show _MENU_ entries',
-                            info: 'Showing _START_ to _END_ of _TOTAL_ entries',
-                            infoEmpty: 'Showing 0 to 0 of 0 entries',
-                            infoFiltered: '(filtered from _MAX_ total entries)',
-                            paginate: {
-                                first: 'First',
-                                last: 'Last',
-                                next: 'Next',
-                                previous: 'Previous'
-                            }
-                        },
-                        responsive: true,
-                        autoWidth: false,
-                        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
-                    });
-
-                    // Toolbar: right-align filter, add Show/Hide columns + Print
-                    var $wrapper = $(tableSelector).closest('.dataTables_wrapper');
-                    var $filter = $wrapper.find('.dataTables_filter');
-                    $filter.addClass('d-flex align-items-center justify-content-end flex-wrap gap-2');
-
-                    var colLabels = ['S.No.', 'Employee Type', 'Name', 'Designation', 'House No.', 'Meter Reading Date', 'Last Meter Reading'];
-                    var $colDropdown = $('<div class="dropdown d-inline-block" data-bs-auto-close="outside">' +
-                        '<button class="btn btn-outline-secondary btn-sm rounded-1 dropdown-toggle" type="button" id="pendingMeterColDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Show/Hide columns"><i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle">view_column</i> Columns</button>' +
-                        '<ul class="dropdown-menu dropdown-menu-end py-2" aria-labelledby="pendingMeterColDropdown" id="pendingMeterColMenu"></ul></div>');
-                    var $colMenu = $colDropdown.find('#pendingMeterColMenu');
-                    colLabels.forEach(function(label, idx) {
-                        var $li = $('<li>' +
-                            '<div class="dropdown-item px-3 py-1">' +
-                                '<div class="form-check d-flex align-items-center mb-0">' +
-                                    '<input type="checkbox" class="form-check-input me-2 column-toggle" data-column="' + idx + '" checked>' +
-                                    '<label class="form-check-label cursor-pointer">' + label + '</label>' +
-                                '</div>' +
-                            '</div>' +
-                        '</li>');
-                        $li.find('input.column-toggle').on('change', function(e) {
-                            e.stopPropagation();
-                            dataTableInstance.column($(this).data('column')).visible(this.checked);
-                        });
-                        $li.find('label.form-check-label').on('click', function(e) {
-                            e.preventDefault();
-                            var $checkbox = $(this).closest('.form-check').find('input.column-toggle');
-                            $checkbox.prop('checked', !$checkbox.prop('checked')).trigger('change');
-                        });
-                        $colMenu.append($li);
-                    });
-                    $colDropdown.find('.dropdown-item').on('click', function(e) { e.stopPropagation(); });
-
-                    var $printBtn = $('<button type="button" class="btn btn-outline-secondary btn-sm rounded-1 d-inline-flex align-items-center" id="btnPrintPendingMeter" title="Print"><i class="material-icons material-symbols-rounded" style="font-size:18px">print</i></button>');
-                    $filter.append($colDropdown).append($printBtn);
-
-                    $('#btnPrintPendingMeter').on('click', function() {
-                        var dt = $(tableSelector).DataTable();
-                        var visibleIndexes = [];
-                        dt.columns().every(function(i) {
-                            if (this.visible()) visibleIndexes.push(i);
-                        });
-                        if (visibleIndexes.length === 0) {
-                            alert('At least one column must be visible to print.');
-                            return;
-                        }
-                        var tableHtml = '<table class="table align-middle mb-0" style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr>';
-                        visibleIndexes.forEach(function(colIdx) {
-                            var h = ($(dt.column(colIdx).header()).text() || '').trim();
-                            tableHtml += '<th style="border:1px solid #ddd;padding:8px;background:#f5f5f5;">' + h + '</th>';
-                        });
-                        tableHtml += '</tr></thead><tbody>';
-                        dt.rows({ search: 'applied' }).nodes().each(function(rowNode) {
-                            var $row = $(rowNode);
-                            if ($row.find('td').length === 0) return;
-                            tableHtml += '<tr>';
-                            visibleIndexes.forEach(function(colIdx) {
-                                var cellNode = dt.cell(rowNode, colIdx).node();
-                                var cellHtml = (cellNode && cellNode.innerHTML) ? $(cellNode).text().trim() : '';
-                                tableHtml += '<td style="border:1px solid #ddd;padding:8px;">' + (cellHtml || '') + '</td>';
-                            });
-                            tableHtml += '</tr>';
-                        });
-                        tableHtml += '</tbody></table>';
-                        var win = window.open('', '_blank', 'width=1000,height=700');
-                        if (!win) { alert('Please allow popups to print.'); return; }
-                        win.document.write('<!doctype html><html><head><title>Pending Meter Reading</title><style>body{font-family:Arial,sans-serif;padding:16px;} table{width:100%;border-collapse:collapse;font-size:12px;} th,td{border:1px solid #ddd;padding:8px;} th{background:#f5f5f5;}</style></head><body><h2>Pending Meter Reading</h2>' + tableHtml + '</body></html>');
-                        win.document.close();
-                        win.onafterprint = function() { win.close(); };
-                        setTimeout(function() { win.focus(); win.print(); }, 250);
-                    });
-                } else {
-                    tbody.append('<tr id="noDataRow"><td colspan="7" class="text-center text-muted">' + (res.message || 'No pending meter readings for the selected month.') + '</td></tr>');
-                }
-            },
-            error: function(xhr) {
-                var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to load data.';
-                $(tableSelector + ' tbody').empty().append('<tr><td colspan="7" class="text-center text-danger">' + msg + '</td></tr>');
+            // Unchanged request contract: Y-m month, its year, and the employee type.
+            data: { bill_month: billMonth, bill_year: billMonth.split('-')[0], employee_type: employeeType },
+            dataType: 'json'
+        }).done(function (res) {
+            var rows = (res && res.status && Array.isArray(res.data)) ? res.data : [];
+            setStats(rows, billMonth);
+            if (!rows.length) {
+                $('#pmrSummary').text('No pending readings for ' + monthLabel(billMonth) + '.');
+                G.stateRow($table, 'empty', (res && res.message) || 'No pending meter readings for the selected month.');
+                return;
             }
-        });
+            $('#pmrSummary').html('<strong>' + rows.length + '</strong> reading' + (rows.length === 1 ? '' : 's') +
+                ' pending for <strong>' + esc(monthLabel(billMonth)) + '</strong>.');
+            $table.find('tbody').html(rows.map(rowHtml).join(''));
+            dt = $table.DataTable({
+                order: [],
+                responsive: false, // the panel scrolls; never fold columns into child rows
+                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+                columnDefs: [{ targets: [0, -1], orderable: false, searchable: false }]
+            });
+            // S. No. follows what is on screen after a sort or search.
+            dt.on('draw.dt', function () {
+                var start = dt.page.info().start;
+                dt.column(0, { page: 'current' }).nodes().each(function (cell, i) { cell.textContent = start + i + 1; });
+            });
+            G.columnVisibility(dt, {
+                grid: '#pmrColumnToggleGrid',
+                storageKey: 'sargam.pendingMeterReading.hiddenCols.' + @json(auth()->id() ?? 'guest'),
+                skip: ['Action']
+            });
+            $('#btnPrintPendingMeter, #pmrColumnsBtn').prop('disabled', false);
+        }).fail(function (xhr, status) {
+            if (status === 'abort') return;
+            setStats([], billMonth);
+            var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to load data. Please try again.';
+            $('#pmrSummary').text('');
+            G.stateRow($table, 'error', msg);
+        }).always(function () { request = null; });
     }
 
-    $('#showPendingBtn').on('click', function() {
-        loadPendingMeterReading();
+    // Filters apply as soon as they change; Enter in the month box does the same.
+    $('#bill_month').on('change', load);
+    $('#employee_type_filter').on('change', load); // jQuery handler: Select2 fires a jQuery change
+    $('#pmrFilterForm').on('submit', function (e) { e.preventDefault(); load(); });
+
+    $('#pmrResetBtn').on('click', function () {
+        $('#bill_month').val(@json(date('Y-m')));
+        $('#employee_type_filter').val('all').trigger('change.select2');
+        load();
     });
 
-    $('#bill_month').on('keypress', function(e) {
-        if (e.which === 13) {
-            e.preventDefault();
-            loadPendingMeterReading();
+    $('#btnPrintPendingMeter').on('click', function () {
+        if (!dt) return;
+        var data = G.collectRows(dt, { skip: ['Action', 'Status'] });
+        if (!data.headers.length) {
+            alert('At least one column must be visible to print.');
+            return;
         }
+        var type = $('#employee_type_filter option:selected').text();
+        G.printGrid({
+            title: 'Pending Meter Reading',
+            meta: ['Bill Month: ' + monthLabel($('#bill_month').val()) + '  |  Employee Type: ' + type],
+            headers: data.headers,
+            rows: data.rows
+        });
     });
+
+    load(); // current month on open
 });
 </script>
 @endpush
