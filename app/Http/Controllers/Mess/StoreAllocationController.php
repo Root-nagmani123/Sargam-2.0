@@ -238,11 +238,13 @@ class StoreAllocationController extends Controller
                 'allocation_date' => $request->allocation_date,
             ]);
 
+            $subcategories = ItemSubcategory::whereIn('id', collect($request->items)->pluck('item_subcategory_id'))->get()->keyBy('id');
+
             foreach ($request->items as $item) {
                 $qty = (float) $item['quantity'];
                 $unitPrice = (float) $item['unit_price'];
                 $totalPrice = round($qty * $unitPrice, 2);
-                $sub = ItemSubcategory::find($item['item_subcategory_id']);
+                $sub = $subcategories->get($item['item_subcategory_id']);
                 StoreAllocationItem::create([
                     'store_allocation_id' => $allocation->id,
                     'item_subcategory_id' => $item['item_subcategory_id'],
@@ -300,11 +302,13 @@ class StoreAllocationController extends Controller
                 'allocation_date' => $request->allocation_date,
             ]);
             $allocation->items()->delete();
+            $subcategories = ItemSubcategory::whereIn('id', collect($request->items)->pluck('item_subcategory_id'))->get()->keyBy('id');
+
             foreach ($request->items as $item) {
                 $qty = (float) $item['quantity'];
                 $unitPrice = (float) $item['unit_price'];
                 $totalPrice = round($qty * $unitPrice, 2);
-                $sub = ItemSubcategory::find($item['item_subcategory_id']);
+                $sub = $subcategories->get($item['item_subcategory_id']);
                 StoreAllocationItem::create([
                     'store_allocation_id' => $allocation->id,
                     'item_subcategory_id' => $item['item_subcategory_id'],

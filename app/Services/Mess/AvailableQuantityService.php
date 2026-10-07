@@ -20,6 +20,9 @@ class AvailableQuantityService
 
     private const CACHE_KEY_PREFIX = 'mess_available_qty:';
 
+    /** Fallback Redis TTL (seconds) when MESS_AVAILABLE_QTY_CACHE_SECONDS is unset. Write-time validation always passes $fresh=true and bypasses this cache, so this only bounds display staleness, not overselling risk. */
+    private const DEFAULT_CACHE_TTL = 300;
+
     /**
      * Get available quantities by item_subcategory_id for a store/sub-store.
      * Subtracts issued quantities from BOTH Selling Voucher (kitchen_issue) and Selling Voucher with Date Range.
@@ -183,6 +186,6 @@ class AvailableQuantityService
 
     private static function cacheTtlSeconds(): int
     {
-        return max(0, (int) env('MESS_AVAILABLE_QTY_CACHE_SECONDS', 90));
+        return max(0, (int) env('MESS_AVAILABLE_QTY_CACHE_SECONDS', self::DEFAULT_CACHE_TTL));
     }
 }

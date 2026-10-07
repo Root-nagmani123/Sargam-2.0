@@ -138,6 +138,9 @@
             </tbody>
         </table>
     </div>
+    <p class="ssr-valuation-note small text-body-secondary px-3 px-lg-4 pt-2 mb-0">
+        Note: Opening, Sale and Closing are valued at the running average buying price: each purchase updates the average, and each sale is valued at the average on its date (not the selling price). Purchase value uses the buying price of this period, including tax.
+    </p>
     @if(isset($reportPage) && $reportPage->hasPages())
         <div class="ssr-pagination-bar px-3 px-lg-4 py-3 border-top">
             {{ $reportPage->appends(request()->query())->links('pagination::bootstrap-5') }}

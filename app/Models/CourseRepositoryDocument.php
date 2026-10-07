@@ -96,14 +96,20 @@ class CourseRepositoryDocument extends Model
     }
 
     /**
-     * Public URL for browser download/view links.
+     * URL for browser download/view links.
+     *
+     * Deliberately NOT asset('storage/…') any more. These documents are
+     * access-controlled, and anything under public/storage is served by the web
+     * server before Laravel loads — so that URL was readable without a session.
+     * Points at the authenticated stream route instead; the name is kept because
+     * several Blades and JSON payloads already read it.
      */
     public function getPublicFileUrlAttribute()
     {
-        if (!$this->normalized_full_path) {
+        if (!$this->normalized_full_path && !$this->full_path) {
             return null;
         }
 
-        return asset('storage/' . $this->normalized_full_path);
+        return route('course-repository.document.stream', ['pk' => $this->pk]);
     }
 }

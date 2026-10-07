@@ -1,0 +1,66 @@
+/* =====================================================================
+   Select2 — Sargam admin-grid sizing
+   ---------------------------------------------------------------------
+   MUST load AFTER select2.min.css AND select2-theme.css.
+
+   select2-theme.css already gives every single-select the Bootstrap
+   .form-select look; it was written for the Student Medical Exemption forms
+   and sizes the closed control at 44px. The new-design admin chrome is 40px
+   (`.programme-dt-filter-select`, `.programme-dt-btn-columns`,
+   `.programme-dt-btn-reset` in custom.css) and the modal controls are 40px
+   too, so a 44px Select2 stands a visible 4px proud of the Columns button
+   beside it. Everything here is sizing only — colours stay with the theme.
+
+   Loaded via resources/views/admin/layouts/partials/select2-assets.blade.php,
+   which pulls all three files in the right order.
+   ===================================================================== */
+
+/* --- Closed control: match the 40px grid chrome --------------------- */
+.programme-dt-filter-select .select2-container--default .select2-selection--single,
+.rp-modal .select2-container--default .select2-selection--single,
+.sbm-modal .select2-container--default .select2-selection--single,
+.users-page .select2-container--default .select2-selection--single {
+    height: 40px;
+}
+
+.programme-dt-filter-select .select2-container--default .select2-selection--single .select2-selection__rendered,
+.rp-modal .select2-container--default .select2-selection--single .select2-selection__rendered,
+.sbm-modal .select2-container--default .select2-selection--single .select2-selection__rendered,
+.users-page .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 38px;
+    font-size: 0.875rem;
+}
+
+.programme-dt-filter-select .select2-container--default .select2-selection--single .select2-selection__arrow,
+.rp-modal .select2-container--default .select2-selection--single .select2-selection__arrow,
+.sbm-modal .select2-container--default .select2-selection--single .select2-selection__arrow,
+.users-page .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 38px;
+}
+
+/* The wrapper is a fixed 180px (custom.css:143) sized for a native select;
+   Select2 replaces the select with its own container, which must fill it. */
+.programme-dt-filter-select .select2-container {
+    width: 100% !important;
+}
+
+/* The native <select> is hidden by Select2, but until its JS runs the raw
+   control flashes at the theme's height. Pin it so there is no jump. */
+.programme-dt-filter-select select.select2 {
+    height: 40px;
+}
+
+/* --- Dropdown panel --------------------------------------------------
+   The panel is appended to the nearest .card-body / .modal-body (see
+   DropdownSearch's dropdownParent), NOT to <body>, so it inherits the
+   card's stacking context. Lift it above the sticky grid header and the
+   modal's own layers. */
+.card-body > .select2-container--open,
+.modal-body > .select2-container--open {
+    z-index: 1080;
+}
+
+/* Keep a long option list from running off the bottom of a short modal. */
+.select2-container--default .select2-results > .select2-results__options {
+    max-height: 240px;
+}

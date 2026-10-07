@@ -728,7 +728,27 @@ function mess_cw_slip_remark_for_date_group(string $displayDate, array $remarks)
 }
 
 /**
- * Per-row remark layout: rowspan when consecutive rows share the same display date.
+ * Stable per-voucher identity, used to keep one voucher's remark off another voucher's rows.
+ */
+function mess_cw_slip_row_voucher_key(object $row): string
+{
+    $voucher = $row->voucher ?? null;
+    if (! $voucher) {
+        return '';
+    }
+
+    $requestNo = trim((string) ($voucher->request_no ?? ''));
+    if ($requestNo !== '') {
+        return $requestNo;
+    }
+
+    return get_class($voucher) . '#' . (string) $voucher->getKey();
+}
+
+/**
+ * Per-row remark layout: rowspan when consecutive rows belong to the same voucher AND share the same
+ * display date. Grouping on the date alone merges distinct vouchers issued on the same day, leaking a
+ * remark entered on one voucher onto every other voucher's items in that buyer section.
  *
  * @param  \Illuminate\Support\Collection<int, object>  $displayRows
  * @return array<int, array{show: bool, rowspan: int, remark: string}>
@@ -741,10 +761,15 @@ function mess_cw_slip_section_remark_layout(\Illuminate\Support\Collection $disp
 
     while ($i < $count) {
         $displayDate = mess_cw_slip_row_display_date($displayRows[$i]);
+        $voucherKey = mess_cw_slip_row_voucher_key($displayRows[$i]);
         $remarks = [];
         $j = $i;
 
-        while ($j < $count && mess_cw_slip_row_display_date($displayRows[$j]) === $displayDate) {
+        while (
+            $j < $count
+            && mess_cw_slip_row_display_date($displayRows[$j]) === $displayDate
+            && mess_cw_slip_row_voucher_key($displayRows[$j]) === $voucherKey
+        ) {
             $remarks[] = (string) ($displayRows[$j]->voucher->remarks ?? '');
             $j++;
         }
@@ -872,12 +897,148 @@ function isSidebarPrivilegedUser(): bool
 }
 
 /**
+ * A PDF-safe <img src> for a local image, as a base64 data URI.
+ *
+ * Returns the first readable candidate under public/, or '' - NEVER a remote URL.
+ * That last part is the point. dompdf renders server-side, so an http(s) src makes the
+ * SERVER fetch it while building the document: a third-party outage becomes a broken
+ * export, a slow response becomes a slow one, and the fetch is what forces
+ * isRemoteEnabled to stay on across every export in this application.
+ *
+ * Review finding F-027. Before this, the mess PDF exports resolved the national emblem
+ * by calling https://upload.wikimedia.org/... on EVERY render (Http::timeout(20)), and
+ * handed dompdf the raw URL when that call failed.
+ *
+ * @param  string[]  $relativePaths  candidates relative to public/, best first
+ */
+function pdf_local_image_data_uri(array $relativePaths): string
+{
+    foreach ($relativePaths as $relative) {
+        $path = public_path($relative);
+
+        if (! is_file($path) || ! is_readable($path)) {
+            continue;
+        }
+
+        $raw = @file_get_contents($path);
+
+        if ($raw === false || $raw === '') {
+            continue;
+        }
+
+        $mime = match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
+            'png' => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'webp' => 'image/webp',
+            'gif' => 'image/gif',
+            'svg' => 'image/svg+xml',
+            default => 'image/png',
+        };
+
+        return 'data:' . $mime . ';base64,' . base64_encode($raw);
+    }
+
+    return '';
+}
+
+/** The national emblem for a PDF header. Local only. See pdf_local_image_data_uri(). */
+function pdf_emblem_src(): string
+{
+    return pdf_local_image_data_uri([
+        'admin_assets/images/logos/ashoka.png',
+        'images/ashoka.png',
+    ]);
+}
+
+/**
+ * The LBSNAA header logo for a PDF. Local only.
+ *
+ * admin_assets/images/logos/logo.png first: it is the local copy of the very file the
+ * old remote fallback fetched (/admin_assets/images/logo.png) and is a third the size
+ * of images/lbsnaa_logo.jpg, which every render would otherwise embed.
+ */
+function pdf_lbsnaa_logo_src(): string
+{
+    return pdf_local_image_data_uri([
+        'admin_assets/images/logos/logo.png',
+        'admin_assets/images/logos/logo_new.png',
+        'images/lbsnaa_logo.jpg',
+        'images/lbsnaa_logo.png',
+    ]);
+}
+
+/**
+ * Does the current user pass an `EnsureMenuPermission:<name>` gate?
+ *
+ * Callers: `EnsureMenuPermission` (the route gate), `UserController::assignRoleSave()`
+ * (its in-method re-check), and `setup_activities.blade.php`, which decides with it
+ * whether to draw the "Roles" and "User Permissions" links - so those two links are
+ * never offered to someone their route will refuse.
+ *
+ * It is NOT what the rest of the sidebar uses. `SidebarController` and `MenuService`
+ * decide menu visibility with their own `menuVisibleToUser()`; a route gated with
+ * `EnsureMenuPermission` and a menu drawn by those two can still disagree.
+ *
+ * The divergence this closed was real: `setup_activities.blade.php` gated the User
+ * Management block on five ROLE names while the routes gated on the `users` and
+ * `roles` PERMISSIONS (PR #311 review F-017) - a populated role was shown both links
+ * and got 403 on both. Three of those five role names ('Admin', 'Training-MCTP', 'IST')
+ * do not exist in this database at all.
+ *
+ * Holding ANY of the listed permissions passes, matching the middleware's variadic
+ * contract. Super Admin passes without holding any, which is why this is not `can:`
+ * - see the note on EnsureMenuPermission.
+ */
+function hasMenuPermission(string ...$permissions): bool
+{
+    if (isSidebarPrivilegedUser()) {
+        return true;
+    }
+
+    $user = \Illuminate\Support\Facades\Auth::user();
+
+    if (! $user || empty($permissions)) {
+        return false;
+    }
+
+    $held = $user->getAllPermissions()->pluck('name');
+
+    foreach ($permissions as $permission) {
+        if ($held->contains($permission)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
  * Estate authority: can manage all estate records (Estate Admin role or Super Admin).
  * DB role names: 'Estate Admin' (id:8), 'Super Admin' (id:1).
  */
 function isEstateAuthority(): bool
 {
     return hasRole('Estate Admin') || hasRole('Super Admin');
+}
+
+/**
+ * Estate Master screens (Define Campus / Unit Type / Unit Sub Type / Block-Building /
+ * Pay Scale / Electric Slab / Eligibility Criteria).
+ *
+ * Deliberately the UNION of the two estate role vocabularies this codebase uses:
+ *   - hasRole('Estate')     — what the Estate Master sidebar block gates on
+ *                             (components/menu/setup_estate_management.blade.php)
+ *   - isEstateAuthority()   — 'Estate Admin' || 'Super Admin', what EstateController gates on
+ *
+ * hasRole() checks session roles before Spatie roles, so the same operator can satisfy one
+ * vocabulary or the other depending on how they logged in. Taking the union means nobody who
+ * can reach these screens today loses access, while every other role (Student-OT, Faculty,
+ * Training, HAC Person, ...) is refused — the Admin/Estate/* controllers previously had no
+ * server-side check at all and relied on the sidebar hiding the link.
+ */
+function isEstateMasterAuthority(): bool
+{
+    return hasRole('Estate') || isEstateAuthority();
 }
 
 /**
@@ -1386,15 +1547,21 @@ function get_Role_by_course()
         return [-1];
     }
 
+    // course_master.user_role_master_pk stores a Spatie roles.id — confirmed
+    // by CourseController@create/@edit, which populates and reads this exact
+    // field via Spatie's Role model (Role::pluck('name','id') /
+    // Role::where('id', $course->user_role_master_pk)). Despite the
+    // misleading column name, this is NOT a foreign key into the separate
+    // legacy `user_role_master` table.
     $role_course = DB::table('course_master as cm')
         ->join('roles as r', 'cm.user_role_master_pk', '=', 'r.id')
         ->whereIn('r.id', $userRoleIds)
         ->pluck('cm.pk')
         ->toArray();
+
     if (empty($role_course)) {
         // Non-admin user with roles but no mapped courses should see no data.
         return [-1];
-        // return [-1];
     }
 
     return $role_course;
@@ -1915,16 +2082,182 @@ if (! function_exists('fc_report_login_username_sql')) {
     function fc_report_login_username_sql(string $trackerTable, ?string $alias = null): string
     {
         $t = $alias ?? $trackerTable;
-        $parts = ["NULLIF(TRIM(uc.user_name), '')"];
+        $u = fc_user_col($trackerTable);
 
-        if (fc_schema_has_table('fc_registration_master')) {
+        // `frm` / `uc_frm` only exist when the tracker is keyed by user_id — mirror the
+        // join conditions in fc_report_apply_tracker_user_resolution() exactly, or this
+        // SQL references aliases that were never joined.
+        $hasRoster = $u === 'user_id' && fc_schema_has_table('fc_registration_master');
+
+        $parts = [];
+
+        if ($hasRoster) {
+            // The tracker's user_id is NOT one id space: it holds a user_credentials.pk for a
+            // migrated trainee and an fc_registration_master.pk for one who registered through
+            // /fc/login and was never migrated (see fc_user_val()). Both tables number from 1,
+            // so one integer can be a live credentials pk AND a live roster pk belonging to two
+            // DIFFERENT people. Reading credentials first therefore rendered a stranger's
+            // username — roster pk 3 ("shailitm") displayed as credentials pk 3 ("rohit.kumar").
+            //
+            // fc_user_val() switches to storing the CREDENTIALS pk the moment a trainee is
+            // migrated. So a roster row whose username owns no credentials record proves this
+            // id is still in the roster id space, and the roster username is the right one.
+            // Resolve that case first; every other case keeps the original ordering.
+            $parts[] = fc_report_roster_username_case('frm');
+        }
+
+        $parts[] = "NULLIF(TRIM(uc.user_name), '')";
+
+        if ($hasRoster) {
             $parts[] = "NULLIF(TRIM(frm.user_id), '')";
             $parts[] = "NULLIF(TRIM(uc_frm.user_name), '')";
         }
 
-        $parts[] = "CAST(`{$t}`.`user_id` AS CHAR)";
+        $parts[] = "CAST(`{$t}`.`{$u}` AS CHAR)";
 
         return 'COALESCE('.implode(', ', $parts).')';
+    }
+}
+
+if (! function_exists('fc_archive_entry_stem')) {
+    /**
+     * The ONE archive naming rule: <username>_<rank>_<exam year>.
+     *
+     * Every FC download that names something after a trainee — ZIP folders, per-trainee PDFs,
+     * exported photos — goes through this, because five call sites previously each rolled their
+     * own and drifted: two used the full name instead of the username, and two disagreed on
+     * whether the name or the username came first.
+     *
+     * Blank parts are dropped rather than left as stray underscores ("lbs0999", not "lbs0999__"),
+     * and $fallback is used when the username reduces to nothing — a folder called "_154_2026"
+     * identifies nobody.
+     *
+     * Collisions get a numeric suffix and are tracked case-insensitively, because Windows and
+     * macOS treat "Ravi_Kumar" and "ravi_kumar" as the same entry when the archive is unpacked.
+     *
+     * @param  array<string,int>  $used  by reference — the collision ledger for this archive
+     */
+    function fc_archive_entry_stem(
+        ?string $username,
+        ?string $rank,
+        ?string $examYear,
+        string $fallback,
+        array &$used
+    ): string {
+        $clean = static fn ($v) => trim((string) preg_replace('/[^A-Za-z0-9]+/', '_', (string) $v), '_');
+
+        $name = $clean($username);
+        if ($name === '') {
+            $name = $clean($fallback);
+        }
+        if ($name === '') {
+            $name = 'trainee_'.(count($used) + 1);
+        }
+
+        $stem = implode('_', array_filter(
+            [$name, $clean($rank), $clean($examYear)],
+            static fn ($v) => $v !== ''
+        ));
+
+        $key = strtolower($stem);
+        if (isset($used[$key])) {
+            $stem .= '_'.(++$used[$key]);
+        } else {
+            $used[$key] = 1;
+        }
+
+        return $stem;
+    }
+}
+
+if (! function_exists('fc_report_roster_username_case')) {
+    /**
+     * SQL deciding when the ROSTER username is the right one for a tracker row.
+     *
+     * The tracker's user_id is either a user_credentials.pk or an fc_registration_master.pk,
+     * and both tables number from 1 — so one integer can be a live credentials pk AND a live
+     * roster pk belonging to two different people. fc_user_val() stores the CREDENTIALS pk from
+     * the moment a trainee is migrated, so a roster row whose username owns no credentials
+     * record proves this id is still a roster pk and the roster username is the correct one.
+     *
+     * Returns an expression usable as the FIRST arm of a COALESCE; NULL when it does not apply.
+     */
+    function fc_report_roster_username_case(string $frmAlias = 'frm', ?string $identityAlias = 's1'): string
+    {
+        $f = $frmAlias;
+
+        // IDENTITY CORROBORATION.
+        //
+        // A roster row sitting at the same number proves nothing on its own. The migration test
+        // below establishes that the roster PERSON has no login — it does not establish that the
+        // roster person is the trainee on this row. Because the two pk spaces overlap, the row
+        // may belong to somebody else entirely, and preferring their username would be the same
+        // wrong-identity bug this CASE exists to fix, running in the other direction.
+        //
+        // So where the trainee's own profile carries a mobile or an email, require it to match
+        // the roster row before trusting the roster username. Where it carries neither there is
+        // nothing to compare against and the migration test stands alone — that residue is the
+        // only case this cannot decide, and it is the one where no evidence exists either way.
+        $corroborated = '1 = 1';
+        if ($identityAlias !== null) {
+            $s = $identityAlias;
+            $checks = [];
+
+            if (fc_schema_has_column('student_master_firsts', 'mobile_no')
+                && fc_schema_has_column('fc_registration_master', 'contact_no')) {
+                $checks[] = "NULLIF(TRIM(`{$s}`.`mobile_no`), '') IS NULL";
+                $checks[] = "NULLIF(TRIM(`{$f}`.`contact_no`), '') IS NULL";
+                $checks[] = "TRIM(`{$s}`.`mobile_no`) = TRIM(`{$f}`.`contact_no`)";
+            }
+
+            if (fc_schema_has_column('student_master_firsts', 'email')
+                && fc_schema_has_column('fc_registration_master', 'email')) {
+                $checks[] = "(NULLIF(TRIM(`{$s}`.`email`), '') IS NOT NULL
+                              AND LOWER(TRIM(`{$s}`.`email`)) = LOWER(TRIM(`{$f}`.`email`)))";
+            }
+
+            if ($checks !== []) {
+                $corroborated = '('.implode("\n                           OR ", $checks).')';
+            }
+        }
+
+        return "CASE WHEN `{$f}`.`pk` IS NOT NULL
+                      AND NULLIF(TRIM(`{$f}`.`user_id`), '') IS NOT NULL
+                      AND NOT EXISTS (
+                            SELECT 1 FROM user_credentials uc_chk
+                             WHERE uc_chk.user_name = `{$f}`.`user_id`
+                      )
+                      AND {$corroborated}
+                     THEN TRIM(`{$f}`.`user_id`) END";
+    }
+}
+
+if (! function_exists('fc_report_roster_alias_joined')) {
+    /**
+     * Is the `frm` roster alias part of this query?
+     *
+     * fc_report_apply_tracker_user_resolution() joins it only for user_id-keyed trackers, and
+     * the search builders have no $form to re-derive that from, so the query's own join list is
+     * the authority — naming frm.user_id without the join is an unknown-column error.
+     *
+     * @param  \Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder  $query
+     */
+    function fc_report_roster_alias_joined($query): bool
+    {
+        if (! fc_schema_has_table('fc_registration_master')) {
+            return false;
+        }
+
+        $inner = method_exists($query, 'getQuery') ? $query->getQuery() : $query;
+
+        foreach ($inner->joins ?? [] as $join) {
+            $table = $join->table ?? null;
+            if (is_string($table) && preg_match('/\bas\s+frm\b/i', $table)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 
@@ -2170,5 +2503,36 @@ if (! function_exists('fc_kra_sn_img')) {
         }
 
         return '<img src="'.$data.'" alt="क्र.सं." style="height:'.$height.'; vertical-align:middle;">';
+    }
+}
+
+if (! function_exists('safe_upload_extension')) {
+    /**
+     * The extension an uploaded file should be STORED under.
+     *
+     * Always derived from the file's content, never from the name the client sent.
+     * getClientOriginalExtension() is attacker-controlled: Laravel's mimes:/image
+     * rules validate guessExtension() (content), so the two are independent, and
+     * naming a stored file from the client value lets a genuine PNG called
+     * "payload.html" land as .html on a public disk, where the browser reads it back
+     * as markup rather than as an image. Laravel's own upload guard blocks only
+     * php/php3/php4/php5/php7/php8/phtml/phar, so .html, .htm, .svg and .xhtml are
+     * not covered by it.
+     *
+     * Safe wherever the field carries a mimes:, mimetypes: or image rule, because
+     * validateMimes() then guarantees guessExtension() is a member of the allow-list.
+     * On an UNVALIDATED field guessExtension() is unconstrained and may return null,
+     * which is what $fallback is for - but an unvalidated upload field is itself the
+     * thing to fix.
+     *
+     * @param  \Illuminate\Http\UploadedFile|null  $file
+     */
+    function safe_upload_extension($file, string $fallback = 'dat'): string
+    {
+        if (! $file || ! is_object($file) || ! method_exists($file, 'guessExtension')) {
+            return $fallback;
+        }
+
+        return strtolower((string) $file->guessExtension() ?: $fallback);
     }
 }

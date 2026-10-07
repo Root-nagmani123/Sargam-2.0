@@ -71,7 +71,11 @@ class FcDescriptiveDataReportDataTable extends DataTable
             return $this->selected;
         }
 
-        $cols = trim((string) request()->query('cols', ''));
+        // input(), NOT query(): the table POSTs its draw request (see the route comment on
+        // why — ~99 columns is a 25 KB query string and a 414), so `cols` arrives in the
+        // BODY. query() reads the query string alone, so it always came back empty and this
+        // whole narrowing silently fell through to "select everything" on every draw.
+        $cols = trim((string) request()->input('cols', ''));
         if ($cols === '') {
             return $this->selected = $this->fields;
         }
@@ -82,7 +86,15 @@ class FcDescriptiveDataReportDataTable extends DataTable
             $keys[] = $ordered;
         }
 
-        return $this->selected = array_intersect_key($this->fields, array_flip($keys));
+        $visible = array_intersect_key($this->fields, array_flip($keys));
+
+        // Nothing recognised at all — a stale `cols` from a course that has since been
+        // switched, or a hand-made request. Fall back to the whole report rather than draw a
+        // table of nothing but S.No. and Username, matching what the export path already does
+        // (DescriptiveDataReportController::selection()). Only reachable now that `cols` is
+        // actually read: while it was being looked for in the query string it was always
+        // empty, so this branch could never be hit.
+        return $this->selected = $visible !== [] ? $visible : $this->fields;
     }
 
     /**
@@ -228,7 +240,9 @@ class FcDescriptiveDataReportDataTable extends DataTable
             return '<span class="text-muted">—</span>';
         }
 
-        return '<a href="'.e(FcUploadUrl::for($path)).'" target="_blank" rel="noopener" '
+        // DEFAULT_PATH named explicitly — photographs and signatures, served by the
+        // deliberately unauthenticated route so a forwarded export keeps resolving.
+        return '<a href="'.e(FcUploadUrl::for($path, FcUploadUrl::DEFAULT_PATH)).'" target="_blank" rel="noopener" '
             .'class="btn btn-outline-primary py-0 px-2" style="font-size:11px;" '
             .'title="'.e($label).'"><i class="bi bi-box-arrow-up-right me-1"></i>View</a>';
     }

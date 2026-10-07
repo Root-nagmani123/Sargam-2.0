@@ -19,6 +19,7 @@ use App\Support\DataTableSearchHelper;
 use App\Support\MessBuyerClientFilter;
 use App\Support\RedisBackedCache;
 use Carbon\Carbon;
+use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -36,12 +37,24 @@ class ProcessMessBillsEmployeeController extends Controller
     /** Client type slugs used in SellingVoucherDateRangeReport */
     private const ALLOWED_CLIENT_SLUGS = ['employee', 'ot', 'course', 'other'];
 
-    /** Cache grouped bills so DataTables page/sort/search does not re-query the union on every request. */
-    private const COMBINED_BILLS_CACHE_TTL_SECONDS = 300;
+    /**
+     * Cache grouped bills so DataTables page/sort/search does not re-query the union on every request.
+     * Writes bump the cache version (see {@see bumpProcessMessBillsCombinedCache()}), so a longer TTL
+     * does not serve stale bills — it only keeps read-heavy browsing off the union query.
+     */
+    private const COMBINED_BILLS_CACHE_TTL_SECONDS = 1800;
 
     /** Redis-backed combined bills cache TTL; store is resolved via {@see RedisBackedCache}. */
 
     private const COMBINED_BILLS_CACHE_VERSION_KEY = 'process_mess_bills_combined_cache_version';
+
+    /**
+     * Version key for caches that depend on invoice-notification state only (not on bill/payment
+     * rows). Sending an invoice changes which line items are "notified" but never changes bills,
+     * totals or payments, so it bumps this key alone — leaving the expensive grouped-bill and modal
+     * summary caches intact instead of forcing a full union re-query on the next page load.
+     */
+    private const NOTIFICATION_CACHE_VERSION_KEY = 'process_mess_bills_notification_cache_version';
 
     /** Max rows returned for print/export (avoids multi‑MB JSON responses). */
     private const PRINT_MAX_ROWS = 500;
@@ -67,8 +80,25 @@ class ProcessMessBillsEmployeeController extends Controller
 
     private array $messCombinedNotificationsByReceiver = [];
 
+    /** Per-request memoization for name -> receiver user id lookups (avoids repeat DB hits for the same buyer). */
+    private array $receiverUserIdByClientNameCache = [];
+
+    private array $receiverUserIdByStudentNameCache = [];
+
+    /** Per-request memoization for FacultyMaster::exists() checks by client pk (avoids repeat DB hits per bill). */
+    private array $facultyMasterExistsByClientIdCache = [];
+
     /** First working store per request: redis, then file if Redis extension/server unavailable. */
     private ?string $processMessBillsResolvedCacheStore = null;
+
+    /**
+     * Cache keys of modal summary entries written this request, so a payment can patch just the
+     * paying buyer's row instead of dropping every buyer's cached summaries.
+     */
+    private const MODAL_SUMMARY_KEY_INDEX = 'process_mess_bills_bill_summary_keys';
+
+    /** Max tracked summary cache keys; entries beyond this are evicted, never silently dropped. */
+    private const MODAL_SUMMARY_KEY_INDEX_MAX = 200;
 
     public function index(Request $request)
     {
@@ -530,10 +560,25 @@ class ProcessMessBillsEmployeeController extends Controller
 
     private function processMessBillsCombinedCacheVersion(): int
     {
+        return $this->readProcessMessBillsCacheVersion(self::COMBINED_BILLS_CACHE_VERSION_KEY);
+    }
+
+    /**
+     * Version for caches keyed on invoice-notification state.
+     * Also folds in the combined version so bill/payment writes still invalidate these entries.
+     */
+    private function processMessBillsNotificationCacheVersion(): int
+    {
+        return $this->readProcessMessBillsCacheVersion(self::COMBINED_BILLS_CACHE_VERSION_KEY)
+            + $this->readProcessMessBillsCacheVersion(self::NOTIFICATION_CACHE_VERSION_KEY);
+    }
+
+    private function readProcessMessBillsCacheVersion(string $versionKey): int
+    {
         $version = 1;
         foreach ($this->processMessBillsCacheStoreNames() as $storeName) {
             try {
-                $v = (int) RedisBackedCache::repositoryForStore($storeName)->get(self::COMBINED_BILLS_CACHE_VERSION_KEY, 0);
+                $v = (int) RedisBackedCache::repositoryForStore($storeName)->get($versionKey, 0);
                 if ($v > $version) {
                     $version = $v;
                 }
@@ -547,18 +592,148 @@ class ProcessMessBillsEmployeeController extends Controller
 
     private function bumpProcessMessBillsCombinedCache(): void
     {
+        $this->bumpProcessMessBillsCacheVersion(self::COMBINED_BILLS_CACHE_VERSION_KEY);
+    }
+
+    /**
+     * Called by the Kitchen Issue and Selling Voucher (Date Range) controllers after every
+     * write, so a new, edited, deleted or returned voucher shows on Process Mess Bills
+     * at once instead of after the cache TTL.
+     */
+    public static function invalidateCombinedBillsCache(): void
+    {
+        (new static())->bumpProcessMessBillsCombinedCache();
+    }
+
+    /**
+     * Invalidate only the notification-derived caches. Used when an invoice notification is sent:
+     * bills, totals and payments are unchanged, so the grouped-bill and modal summary caches stay
+     * warm and the next modal load does not have to re-run the union query.
+     */
+    private function bumpProcessMessBillsNotificationCache(): void
+    {
+        $this->bumpProcessMessBillsCacheVersion(self::NOTIFICATION_CACHE_VERSION_KEY);
+    }
+
+    /**
+     * Remember that a modal summary entry lives under $cacheKey, so payments can forget those exact
+     * entries instead of bumping the global version (which would also throw away the grouped-bill
+     * cache for every other buyer and date range).
+     */
+    private function rememberModalSummaryCacheKey(string $cacheKey): void
+    {
+        // Read-modify-write on a shared index: without a lock two concurrent requests can lose one
+        // another's key, and a lost key means a later payment cannot forget that entry (it would
+        // serve stale totals until TTL). Serialise on the cache store's lock when it offers one.
+        $store = null;
+        try {
+            $store = $this->processMessBillsCacheRepository()->getStore();
+        } catch (\Throwable $e) {
+            $store = null;
+        }
+
+        if ($store instanceof LockProvider) {
+            $lock = $store->lock(self::MODAL_SUMMARY_KEY_INDEX . '_lock', 5);
+            try {
+                $lock->block(3, function () use ($cacheKey) {
+                    $this->writeModalSummaryCacheKey($cacheKey);
+                });
+
+                return;
+            } catch (\Throwable $e) {
+                // Lock unavailable or timed out — fall through to the unlocked write below.
+            } finally {
+                try {
+                    $lock->release();
+                } catch (\Throwable $e) {
+                    // Releasing a lock we no longer hold is not an error worth surfacing.
+                }
+            }
+        }
+
+        $this->writeModalSummaryCacheKey($cacheKey);
+    }
+
+    private function writeModalSummaryCacheKey(string $cacheKey): void
+    {
+        try {
+            $repo = $this->processMessBillsCacheRepository();
+            $keys = $repo->get(self::MODAL_SUMMARY_KEY_INDEX, []);
+            $keys = is_array($keys) ? $keys : [];
+            if (in_array($cacheKey, $keys, true)) {
+                return;
+            }
+            $keys[] = $cacheKey;
+            // Bound the index so it cannot grow without limit across many filter combinations.
+            // Dropping a key from the index would orphan its cache entry (a later payment could not
+            // forget it, so it would serve stale totals until TTL). So evict the entries we drop.
+            if (count($keys) > self::MODAL_SUMMARY_KEY_INDEX_MAX) {
+                $overflow = array_slice($keys, 0, count($keys) - self::MODAL_SUMMARY_KEY_INDEX_MAX);
+                foreach ($overflow as $staleKey) {
+                    if (is_string($staleKey) && $staleKey !== '') {
+                        $repo->forget($staleKey);
+                    }
+                }
+                $keys = array_slice($keys, -self::MODAL_SUMMARY_KEY_INDEX_MAX);
+            }
+            $repo->put(self::MODAL_SUMMARY_KEY_INDEX, $keys, self::COMBINED_BILLS_CACHE_TTL_SECONDS * 10);
+        } catch (\Throwable $e) {
+            // The index is an optimisation: a key it fails to record is not forgotten by name
+            // on the next payment. That entry is stale rather than merely cold, which is why
+            // forgetProcessMessBillsSummaryCaches() bumps the version unconditionally.
+        }
+    }
+
+    /**
+     * Drop the cached bill summaries after a payment.
+     *
+     * Forgetting the indexed entries is the cheap path: it spares the grouped-bill cache for
+     * every other buyer and date range. It is not sufficient on its own, though — a key that
+     * never reached the index (a swallowed index write, a lock timeout falling through to the
+     * unlocked write, or an entry written to a different store) would keep serving the pre-payment
+     * paid/due figures until the TTL expires, which is half an hour. On the money path that is a
+     * wrong total, not a cold cache, so the combined version is bumped as well: one increment
+     * that makes every version-keyed entry unreachable regardless of what the index recorded.
+     * The notification caches key on their own version and are deliberately left warm.
+     */
+    private function forgetProcessMessBillsSummaryCaches(): void
+    {
+        try {
+            $repo = $this->processMessBillsCacheRepository();
+            $keys = $repo->get(self::MODAL_SUMMARY_KEY_INDEX, []);
+            foreach (is_array($keys) ? $keys : [] as $cacheKey) {
+                if (is_string($cacheKey) && $cacheKey !== '') {
+                    $repo->forget($cacheKey);
+                }
+            }
+            $repo->forget(self::MODAL_SUMMARY_KEY_INDEX);
+        } catch (\Throwable $e) {
+            Log::warning('ProcessMessBillsEmployeeController: failed to forget modal summary caches.', [
+                'message' => $e->getMessage(),
+            ]);
+        }
+
+        // Unconditional: the forget above covers only what the index happens to hold, and the
+        // index is best-effort by construction. The bump is what actually guarantees the next
+        // read sees the post-payment totals.
+        $this->bumpProcessMessBillsCombinedCache();
+    }
+
+    private function bumpProcessMessBillsCacheVersion(string $versionKey): void
+    {
         foreach ($this->processMessBillsCacheStoreNames() as $storeName) {
             try {
                 $repo = RedisBackedCache::repositoryForStore($storeName);
-                if (! $repo->has(self::COMBINED_BILLS_CACHE_VERSION_KEY)) {
-                    $repo->put(self::COMBINED_BILLS_CACHE_VERSION_KEY, 2, self::COMBINED_BILLS_CACHE_TTL_SECONDS * 10);
+                if (! $repo->has($versionKey)) {
+                    $repo->put($versionKey, 2, self::COMBINED_BILLS_CACHE_TTL_SECONDS * 10);
 
                     continue;
                 }
-                $repo->increment(self::COMBINED_BILLS_CACHE_VERSION_KEY);
+                $repo->increment($versionKey);
             } catch (\Throwable $e) {
                 Log::warning('ProcessMessBillsEmployeeController: failed to bump combined bills cache version.', [
                     'store' => $storeName,
+                    'key' => $versionKey,
                     'message' => $e->getMessage(),
                 ]);
             }
@@ -571,8 +746,16 @@ class ProcessMessBillsEmployeeController extends Controller
      */
     private function combinedBillsCacheKey(string $dateFrom, string $dateTo, array $filters): string
     {
+        // The "Invoice sent" list is pre-filtered to buyers who have been invoiced, so it must
+        // change when an invoice goes out. Sending bumps only the notification version (see
+        // bumpProcessMessBillsNotificationCache()), which leaves the "All" list and the modal
+        // summaries warm while this list is rebuilt.
+        $version = ($filters['invoice_sent_filter'] ?? null) === 'sent'
+            ? $this->processMessBillsNotificationCacheVersion()
+            : $this->processMessBillsCombinedCacheVersion();
+
         return 'process_mess_bills_combined_v8:'
-            . $this->processMessBillsCombinedCacheVersion()
+            . $version
             . ':'
             . md5(json_encode([
                 'from' => $dateFrom,
@@ -598,6 +781,7 @@ class ProcessMessBillsEmployeeController extends Controller
         array $filters
     ): array {
         $cacheKey = $this->combinedBillsCacheKey($dateFrom, $dateTo, $filters);
+        $this->rememberModalSummaryCacheKey($cacheKey);
 
         $combinedBills = $this->rememberProcessMessBillsCombined(
             $cacheKey,
@@ -662,6 +846,7 @@ class ProcessMessBillsEmployeeController extends Controller
         array $buyerNames
     ): Collection {
         $cacheKey = $this->modalBillsSummaryCacheKey($dateFrom, $dateTo, $clientTypes, $clientTypePks, $buyerNames);
+        $this->rememberModalSummaryCacheKey($cacheKey);
 
         $rows = $this->rememberProcessMessBillsCombined(
             $cacheKey,
@@ -810,6 +995,7 @@ class ProcessMessBillsEmployeeController extends Controller
             }
             $summaries = $this->modalSummariesFromCombinedBillRows($combinedBills, $dateFrom, $dateTo);
             $repo->put($cacheKey, $summaries, max(30, self::COMBINED_BILLS_CACHE_TTL_SECONDS));
+            $this->rememberModalSummaryCacheKey($cacheKey);
         } catch (\Throwable $e) {
             Log::debug('ProcessMessBillsEmployeeController: modal summary warm cache skipped.', [
                 'message' => $e->getMessage(),
@@ -939,7 +1125,7 @@ class ProcessMessBillsEmployeeController extends Controller
         }
 
         if ($slug === 'employee' && $clientId > 0) {
-            if (FacultyMaster::where('pk', $clientId)->exists()) {
+            if ($this->facultyMasterExistsForClientId($clientId)) {
                 return (int) ($this->resolveReceiverUserIdFromFacultyClientId($clientId) ?? 0);
             }
 
@@ -1230,10 +1416,66 @@ class ProcessMessBillsEmployeeController extends Controller
         );
 
         $combinedBills = $combinedBills
-            ->filter(function ($cb) use ($authLinkedUserIds) {
+            ->map(function ($cb) use ($authLinkedUserIds) {
                 $rid = $this->resolveReceiverUserIdFromAnyBill($cb->bills->all());
-                return $rid !== null && in_array((int) $rid, $authLinkedUserIds, true);
+                if ($rid === null || ! in_array((int) $rid, $authLinkedUserIds, true)) {
+                    return null;
+                }
+                $cb->receiver_user_id = (int) $rid;
+
+                return $cb;
             })
+            ->filter()
+            ->values();
+
+        // Self-service: an item stays invisible to the user until its invoice has actually been sent.
+        $this->preloadMessCombinedNotificationsForReceivers($combinedBills->pluck('receiver_user_id')->unique()->all());
+        $combinedBills = $combinedBills
+            ->map(function ($cb) use ($dateFrom, $dateTo) {
+                $bills = $cb->bills->all();
+                $receiverUserId = $cb->receiver_user_id;
+                $lineItemKeys = $this->collectMessBillLineItemKeys($bills);
+
+                $notifiedKeys = $this->getMessCombinedNotifiedLineItemKeys(
+                    $receiverUserId,
+                    $cb->combined_id,
+                    $dateFrom,
+                    $dateTo,
+                    $bills
+                );
+
+                // Legacy notifications (sent before per-item tracking existed) count everything as sent.
+                if ($notifiedKeys === [] && $this->messCombinedHasInvoiceNotificationInDateRange($receiverUserId, $cb->combined_id, $dateFrom, $dateTo)) {
+                    return $cb;
+                }
+
+                if (empty($lineItemKeys)) {
+                    // No trackable line items on this bill — nothing to hold back.
+                    return $notifiedKeys === [] ? null : $cb;
+                }
+
+                $notifiedKeySet = array_fill_keys($notifiedKeys, true);
+                $currentNotifiedKeys = array_intersect($lineItemKeys, $notifiedKeys);
+
+                if (count($currentNotifiedKeys) === count($lineItemKeys)) {
+                    // Every current item has already been invoiced — totals are accurate as-is.
+                    return $cb;
+                }
+
+                $sentTotal = $this->roundMoney($this->sumMessBillNotifiedItemAmount($bills, $notifiedKeySet));
+
+                if ($sentTotal <= 0.0 && $cb->paid <= 0.0) {
+                    // Nothing sent, nothing paid — genuinely nothing to show for this user yet.
+                    return null;
+                }
+
+                $cb->total = $sentTotal;
+                $cb->due = $this->billDueAmount($sentTotal, $cb->paid);
+                $cb->status = $this->isBillFullyPaid($cb->paid, $sentTotal) ? 2 : ($cb->paid > 0 ? 1 : 0);
+
+                return $cb;
+            })
+            ->filter()
             ->values();
 
         $effectiveDateFrom = $request->filled('date_from') ? $request->date_from : now()->startOfMonth()->format('d-m-Y');
@@ -1538,7 +1780,7 @@ class ProcessMessBillsEmployeeController extends Controller
             ? []
             : $this->batchLineItemKeysByProcessIndexStubKey($voucherStubs);
 
-        return [$this->groupProcessIndexVouchersByBuyer($voucherStubs, $dateTo, true, $stubLineKeysMap, $deferReceiverUserId), $voucherStubs];
+        return [$this->groupProcessIndexVouchersByBuyer($voucherStubs, $dateTo, true, $stubLineKeysMap, $deferReceiverUserId, $skipLineItemKeys), $voucherStubs];
     }
 
     /**
@@ -1852,14 +2094,15 @@ class ProcessMessBillsEmployeeController extends Controller
         ?string $dateToYmd = null,
         bool $deferLifetimeDue = false,
         array $stubLineKeysMap = [],
-        bool $deferReceiverUserId = false
+        bool $deferReceiverUserId = false,
+        bool $skipLineItemKeys = false
     ): Collection {
         $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
 
         return $vouchers->groupBy(fn ($bill) => $deferReceiverUserId
             ? $this->messBillBuyerGroupKeyFast($bill)
             : $this->messBillBuyerGroupKey($bill))
-            ->map(function ($group) use ($paymentTypeMap, $dateToYmd, $deferLifetimeDue, $stubLineKeysMap, $deferReceiverUserId) {
+            ->map(function ($group) use ($paymentTypeMap, $dateToYmd, $deferLifetimeDue, $stubLineKeysMap, $deferReceiverUserId, $skipLineItemKeys) {
             $first = $group->first();
             $buyerName = $deferReceiverUserId
                 ? $this->resolveMessBillBuyerDisplayNameFast($first, $group)
@@ -1935,9 +2178,15 @@ class ProcessMessBillsEmployeeController extends Controller
             $receiverUserId = $deferReceiverUserId
                 ? 0
                 : $this->resolveReceiverUserIdFromAnyBill($group->all());
-            $lineItemKeys = $stubLineKeysMap !== []
-                ? $this->collectMessBillLineItemKeysWithStubMap($group->all(), $stubLineKeysMap)
-                : $this->collectMessBillLineItemKeys($group->all());
+            // When the caller discards line_item_keys (modal summaries keep bill_stub_keys and
+            // re-derive keys in bulk per page), computing them here would issue one query per
+            // voucher for nothing. $stubLineKeysMap === [] is not enough to detect that: it is also
+            // the "no stubs matched" case, which is why this needs an explicit flag.
+            $lineItemKeys = $skipLineItemKeys
+                ? []
+                : ($stubLineKeysMap !== []
+                    ? $this->collectMessBillLineItemKeysWithStubMap($group->all(), $stubLineKeysMap)
+                    : $this->collectMessBillLineItemKeys($group->all()));
 
             $billStubKeys = $group->map(function ($b) {
                 return ($b->source_type ?? '') === 'date_range'
@@ -2374,6 +2623,95 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
+     * Sum of line-item amounts whose key is present in $notifiedKeySet (self-service "My Mess Bills":
+     * show only what's actually been invoiced to the user). Works off already-loaded `items` relations
+     * so it respects any date-range constraint applied to the eager load, same as collectMessBillLineItemKeys().
+     *
+     * @param  array<int, SellingVoucherDateRangeReport|KitchenIssueMaster|object>  $bills
+     * @param  array<string, bool>  $notifiedKeySet
+     */
+    private function sumMessBillNotifiedItemAmount(array $bills, array $notifiedKeySet): float
+    {
+        $sum = 0.0;
+        foreach ($bills as $bill) {
+            if ($bill instanceof SellingVoucherDateRangeReport) {
+                foreach ($bill->items ?? [] as $item) {
+                    $id = (int) ($item->id ?? 0);
+                    if ($id > 0 && isset($notifiedKeySet['dr-' . $id])) {
+                        $sum += $this->lineItemNetAmount($item);
+                    }
+                }
+            } elseif ($bill instanceof KitchenIssueMaster) {
+                $items = $bill->relationLoaded('items') ? $bill->items : collect();
+                if ($items->isNotEmpty()) {
+                    foreach ($items as $item) {
+                        $pk = (int) ($item->pk ?? 0);
+                        if ($pk > 0 && isset($notifiedKeySet['ki-' . $pk])) {
+                            $sum += $this->lineItemNetAmount($item);
+                        }
+                    }
+                } else {
+                    $masterPk = (int) ($bill->pk ?? 0);
+                    if ($masterPk > 0 && isset($notifiedKeySet['ki-bill-' . $masterPk])) {
+                        $sum += (float) ($bill->net_total ?? 0);
+                    }
+                }
+            } elseif ($this->isProcessIndexVoucherStub($bill)) {
+                $sum += $this->sumMessBillNotifiedItemAmountFromStub($bill, $notifiedKeySet);
+            }
+        }
+
+        return $sum;
+    }
+
+    /**
+     * Same as sumMessBillNotifiedItemAmount() for a single lightweight process-index voucher stub
+     * (no Eloquent items loaded) — queries item amounts directly.
+     *
+     * @param  array<string, bool>  $notifiedKeySet
+     */
+    private function sumMessBillNotifiedItemAmountFromStub(object $bill, array $notifiedKeySet): float
+    {
+        $sum = 0.0;
+        if (($bill->source_type ?? '') === 'date_range') {
+            $reportId = (int) ($bill->id ?? 0);
+            if ($reportId <= 0) {
+                return 0.0;
+            }
+            foreach (DB::table('sv_date_range_report_items')
+                ->where('sv_date_range_report_id', $reportId)
+                ->select(['id', 'quantity', 'return_quantity', 'rate'])
+                ->get() as $item) {
+                $id = (int) $item->id;
+                if ($id > 0 && isset($notifiedKeySet['dr-' . $id])) {
+                    $sum += max(0.0, (float) $item->quantity - (float) ($item->return_quantity ?? 0)) * (float) $item->rate;
+                }
+            }
+        } elseif (($bill->source_type ?? '') === 'kitchen_issue') {
+            $masterPk = (int) ($bill->pk ?? $bill->id ?? 0);
+            if ($masterPk <= 0) {
+                return 0.0;
+            }
+            $items = DB::table('kitchen_issue_items')
+                ->where('kitchen_issue_master_pk', $masterPk)
+                ->select(['pk', 'quantity', 'return_quantity', 'rate'])
+                ->get();
+            if ($items->isNotEmpty()) {
+                foreach ($items as $item) {
+                    $pk = (int) $item->pk;
+                    if ($pk > 0 && isset($notifiedKeySet['ki-' . $pk])) {
+                        $sum += max(0.0, (float) $item->quantity - (float) ($item->return_quantity ?? 0)) * (float) $item->rate;
+                    }
+                }
+            } elseif (isset($notifiedKeySet['ki-bill-' . $masterPk])) {
+                $sum += (float) ($bill->net_total ?? 0);
+            }
+        }
+
+        return $sum;
+    }
+
+    /**
      * For notifications created before line-item tracking: items issued on/before notification date.
      *
      * @param  array<int, SellingVoucherDateRangeReport|KitchenIssueMaster>  $bills
@@ -2691,30 +3029,61 @@ class ProcessMessBillsEmployeeController extends Controller
     {
         $dateFromYmd = $dateFromYmd ?? now()->startOfMonth()->format('Y-m-d');
         $dateToYmd = $dateToYmd ?? now()->endOfMonth()->format('Y-m-d');
-        $allowlist = [];
 
-        foreach (Notification::query()
-            ->where('type', 'mess')
-            ->where('module_name', 'MessInvoiceCombined')
-            ->get(['message']) as $notification) {
-            $parsed = NotificationService::parseMessCombinedReceiptPayload($notification->message);
-            if ($parsed === null || empty($parsed['i'])) {
+        $entries = $this->getMessCombinedInvoiceNotificationEntriesCached();
+
+        $allowlist = [];
+        foreach ($entries as $entry) {
+            if (! $this->messCombinedDateRangesOverlap($entry['f'], $entry['t'], $dateFromYmd, $dateToYmd)) {
                 continue;
             }
-            $nf = (string) ($parsed['f'] ?? '');
-            $nt = (string) ($parsed['t'] ?? '');
-            if (! $this->messCombinedDateRangesOverlap($nf, $nt, $dateFromYmd, $dateToYmd)) {
-                continue;
-            }
-            $buyer = $this->parseProcessMessCombinedBillId((string) $parsed['i']);
-            if ($buyer === null) {
-                continue;
-            }
-            $key = $buyer['name'] . '|' . $buyer['slug'];
-            $allowlist[$key] = $buyer;
+            $key = $entry['name'] . '|' . $entry['slug'];
+            $allowlist[$key] = ['name' => $entry['name'], 'slug' => $entry['slug']];
         }
 
         return array_values($allowlist);
+    }
+
+    /**
+     * Decoded {name, slug, f, t} for every MessInvoiceCombined notification, cached (shares the
+     * combined-bills cache version, so it is invalidated whenever a new invoice notification is sent).
+     *
+     * @return list<array{name: string, slug: string, f: string, t: string}>
+     */
+    private function getMessCombinedInvoiceNotificationEntriesCached(): array
+    {
+        $cacheKey = 'process_mess_bills_invoice_notification_entries_v1:'
+            . $this->processMessBillsNotificationCacheVersion();
+
+        $entries = $this->rememberProcessMessBillsCombined(
+            $cacheKey,
+            function () {
+                $result = [];
+                foreach (Notification::query()
+                    ->where('type', 'mess')
+                    ->where('module_name', 'MessInvoiceCombined')
+                    ->get(['message']) as $notification) {
+                    $parsed = NotificationService::parseMessCombinedReceiptPayload($notification->message);
+                    if ($parsed === null || empty($parsed['i'])) {
+                        continue;
+                    }
+                    $buyer = $this->parseProcessMessCombinedBillId((string) $parsed['i']);
+                    if ($buyer === null) {
+                        continue;
+                    }
+                    $result[] = [
+                        'name' => $buyer['name'],
+                        'slug' => $buyer['slug'],
+                        'f' => (string) ($parsed['f'] ?? ''),
+                        't' => (string) ($parsed['t'] ?? ''),
+                    ];
+                }
+
+                return $result;
+            }
+        );
+
+        return is_array($entries) ? $entries : [];
     }
 
     /**
@@ -3038,6 +3407,25 @@ class ProcessMessBillsEmployeeController extends Controller
             $clientTypeDisplay = $bills[0]->client_type_display ?? ($bills[0]->client_type_label ?? '—');
             $courseName = null;
 
+            // Self-service: hold back items whose invoice hasn't been sent to the user yet.
+            // Notifications store combined_id URL-encoded (see groupBillsByBuyer()); routing may
+            // hand back a decoded $id, so rebuild the encoded form from the resolved bill's
+            // buyer name/client type before matching against stored notifications.
+            $isSelfService = ! $this->currentUserCanAdminMessBills();
+            $notifiedKeySet = [];
+            $sentTotal = 0.0;
+            if ($isSelfService) {
+                $normalizedCombinedId = 'combined-' . rawurlencode($buyerName) . '-' . $clientTypeSlug;
+                $receiverUserId = (int) ($this->resolveReceiverUserIdFromAnyBill($bills) ?? 0);
+                $notifiedKeys = $this->getMessCombinedNotifiedLineItemKeys($receiverUserId, $normalizedCombinedId, $filterDateFromYmd, $filterDateToYmd, $bills);
+                if ($notifiedKeys === [] && $this->messCombinedHasInvoiceNotificationInDateRange($receiverUserId, $normalizedCombinedId, $filterDateFromYmd, $filterDateToYmd)) {
+                    // Legacy notification predating per-item tracking — treat everything as sent.
+                    $isSelfService = false;
+                } else {
+                    $notifiedKeySet = array_fill_keys($notifiedKeys, true);
+                }
+            }
+
             if ($paymentOnly) {
                 try {
                     $first = $bills[0];
@@ -3100,7 +3488,14 @@ class ProcessMessBillsEmployeeController extends Controller
                 if (!empty($b->remarks)) {
                     $remarksList[] = trim((string) $b->remarks);
                 }
+                $isDateRangeBill = $b instanceof SellingVoucherDateRangeReport;
                 foreach ($b->items ?? [] as $item) {
+                    if ($isSelfService) {
+                        $itemKey = $isDateRangeBill ? 'dr-' . (int) ($item->id ?? 0) : 'ki-' . (int) ($item->pk ?? 0);
+                        if (! isset($notifiedKeySet[$itemKey])) {
+                            continue;
+                        }
+                    }
                     $itemIssueDate = null;
                     $itemIssueYmd = null;
                     try {
@@ -3119,6 +3514,7 @@ class ProcessMessBillsEmployeeController extends Controller
                             $dateMin = $itemIssueYmd;
                         }
                     }
+                    $sentTotal += $this->lineItemNetAmount($item);
                     $items[] = (object) [
                         'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
                         'quantity' => $item->quantity,
@@ -3128,6 +3524,7 @@ class ProcessMessBillsEmployeeController extends Controller
                         'itemSubcategory' => null,
                         'store_name' => $storeName,
                         'issue_date' => $itemIssueDate ?: $purchaseDateStr,
+                        'issue_date_sort' => $itemIssueYmd ?? ($b->issue_date ? $b->issue_date->format('Y-m-d') : ''),
                     ];
                 }
                 if ($b->issue_date) {
@@ -3156,11 +3553,19 @@ class ProcessMessBillsEmployeeController extends Controller
             $referenceNumber = collect($referenceNumbers)->filter()->unique()->implode(', ');
             $orderBy = collect($orderBys)->filter()->unique()->implode(', ');
             $remarks = collect($remarksList)->filter()->unique()->implode(' | ');
-            $dueAmount = $financials['due'];
+            if ($isSelfService) {
+                $totalAmount = $this->roundMoney($sentTotal);
+            }
+            $dueAmount = $isSelfService ? $this->billDueAmount($totalAmount, $paidAmount) : $financials['due'];
             $totalDueAmount = $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, null, $filterDateToYmd)['due'];
             $paymentStatusLabel = $this->isBillFullyPaid($paidAmount, $totalAmount) ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid');
             $invoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
             $clientNameCourse = $courseName ? trim($buyerName . ' – ' . $courseName) : $buyerName;
+            $items = collect($items)->sortBy('issue_date_sort')->values()->map(function ($row) {
+                unset($row->issue_date_sort);
+
+                return $row;
+            })->all();
             $bill = (object) [
                 'items' => collect($items),
                 'client_name' => $buyerName,
@@ -3324,10 +3729,11 @@ class ProcessMessBillsEmployeeController extends Controller
             if (empty($bills)) {
                 return response()->json(['error' => 'No bills found for this buyer in the selected date range.'], 404);
             }
+            $resolvedReceiverUserId = null;
             if (!$this->currentUserCanAdminMessBills()) {
-                $rid = $this->resolveReceiverUserIdFromAnyBill($bills);
+                $resolvedReceiverUserId = $this->resolveReceiverUserIdFromAnyBill($bills);
                 $uid = (int) (auth()->user()->user_id ?? 0);
-                if ($rid === null || $rid <= 0 || (int) $rid !== $uid) {
+                if ($resolvedReceiverUserId === null || $resolvedReceiverUserId <= 0 || (int) $resolvedReceiverUserId !== $uid) {
                     return response()->json(['error' => 'You do not have access to this bill.'], 403);
                 }
             }
@@ -3345,6 +3751,22 @@ class ProcessMessBillsEmployeeController extends Controller
             $financials = $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, $filterDateFromYmd, $filterDateToYmd);
             $totalAmount = $financials['total'];
             $paidAmount = $financials['paid'];
+
+            // Self-service: hold back items whose invoice hasn't been sent to the user yet.
+            $isSelfService = ! $this->currentUserCanAdminMessBills();
+            $notifiedKeySet = [];
+            if ($isSelfService) {
+                $receiverUserId = (int) ($resolvedReceiverUserId ?? 0);
+                $notifiedKeys = $this->getMessCombinedNotifiedLineItemKeys($receiverUserId, $id, $filterDateFromYmd, $filterDateToYmd, $bills);
+                if ($notifiedKeys === [] && $this->messCombinedHasInvoiceNotificationInDateRange($receiverUserId, $id, $filterDateFromYmd, $filterDateToYmd)) {
+                    // Legacy notification predating per-item tracking — treat everything as sent.
+                    $isSelfService = false;
+                } else {
+                    $notifiedKeySet = array_fill_keys($notifiedKeys, true);
+                }
+            }
+
+            $sentTotal = 0.0;
             foreach ($bills as $bill) {
                 $storeName = $bill->resolved_store_name ?? '—';
                 $storeNames[$storeName] = true;
@@ -3352,14 +3774,23 @@ class ProcessMessBillsEmployeeController extends Controller
                 if ($clientTypeDisplay === '') {
                     $clientTypeDisplay = $bill->client_type_display ?? ($bill->client_type_label ?? ($bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : '—'));
                 }
+                $isDateRangeBill = $bill instanceof SellingVoucherDateRangeReport;
                 foreach ($bill->items ?? [] as $item) {
+                    if ($isSelfService) {
+                        $itemKey = $isDateRangeBill ? 'dr-' . (int) ($item->id ?? 0) : 'ki-' . (int) ($item->pk ?? 0);
+                        if (! isset($notifiedKeySet[$itemKey])) {
+                            continue;
+                        }
+                    }
                     $itemIssueDate = null;
+                    $itemIssueYmd = null;
                     try {
                         if (isset($item->issue_date) && $item->issue_date) {
                             $idt = $item->issue_date instanceof Carbon
                                 ? $item->issue_date
                                 : Carbon::parse($item->issue_date);
                             $itemIssueDate = $idt->format('d-m-Y');
+                            $itemIssueYmd = $idt->format('Y-m-d');
                         }
                     } catch (\Throwable $e) {
                         $itemIssueDate = null;
@@ -3368,13 +3799,24 @@ class ProcessMessBillsEmployeeController extends Controller
                         'store_name' => $storeName,
                         'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
                         'issue_date' => $itemIssueDate ?: $purchaseDate,
+                        'issue_date_sort' => $itemIssueYmd ?? ($bill->issue_date ? $bill->issue_date->format('Y-m-d') : ''),
                         'price' => number_format($item->rate ?? 0, 1),
                         'quantity' => $item->quantity,
                         'amount' => number_format($item->amount ?? 0, 2),
                     ];
+                    $sentTotal += $this->lineItemNetAmount($item);
                 }
             }
-            $dueAmount = $financials['due'];
+            $items = collect($items)->sortBy('issue_date_sort')->values()->map(function ($row) {
+                unset($row['issue_date_sort']);
+
+                return $row;
+            })->all();
+
+            if ($isSelfService) {
+                $totalAmount = $this->roundMoney($sentTotal);
+            }
+            $dueAmount = $isSelfService ? $this->billDueAmount($totalAmount, $paidAmount) : $financials['due'];
             $totalDueAmount = $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, null, $filterDateToYmd)['due'];
             $combinedInvoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
 
@@ -3844,7 +4286,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 ], 500);
             }
             $clientName = trim((string) ($first->client_name ?? ($first->clientTypeCategory->client_name ?? '—')));
-            $this->bumpProcessMessBillsCombinedCache();
+            $this->bumpProcessMessBillsNotificationCache();
 
             return response()->json([
                 'success' => true,
@@ -3890,7 +4332,7 @@ class ProcessMessBillsEmployeeController extends Controller
             ], 500);
         }
 
-        $this->bumpProcessMessBillsCombinedCache();
+        $this->bumpProcessMessBillsNotificationCache();
 
         return response()->json([
             'success' => true,
@@ -3942,6 +4384,19 @@ class ProcessMessBillsEmployeeController extends Controller
         return [$bill, false];
     }
 
+    /** Memoized per client pk: avoids one FacultyMaster query per bill when resolving many bills for distinct buyers. */
+    private function facultyMasterExistsForClientId(int $clientId): bool
+    {
+        if (array_key_exists($clientId, $this->facultyMasterExistsByClientIdCache)) {
+            return $this->facultyMasterExistsByClientIdCache[$clientId];
+        }
+
+        $exists = FacultyMaster::where('pk', $clientId)->exists();
+        $this->facultyMasterExistsByClientIdCache[$clientId] = $exists;
+
+        return $exists;
+    }
+
     /**
      * Resolve receiver user_id (user_credentials.user_id) for the bill's buyer for notifications.
      *
@@ -3965,7 +4420,7 @@ class ProcessMessBillsEmployeeController extends Controller
             // Employee (1): client_id = employee_master.pk = user_credentials.user_id
             if ($clientType === KitchenIssueMaster::CLIENT_EMPLOYEE) {
                 if ($clientId > 0) {
-                    if (FacultyMaster::where('pk', $clientId)->exists()) {
+                    if ($this->facultyMasterExistsForClientId($clientId)) {
                         return $this->resolveReceiverUserIdFromFacultyClientId($clientId);
                     }
 
@@ -3995,7 +4450,7 @@ class ProcessMessBillsEmployeeController extends Controller
         $clientId = isset($bill->client_id) ? (int) $bill->client_id : 0;
 
         if ($slug === 'employee' && $clientId > 0) {
-            if (FacultyMaster::where('pk', $clientId)->exists()) {
+            if ($this->facultyMasterExistsForClientId($clientId)) {
                 return $this->resolveReceiverUserIdFromFacultyClientId($clientId);
             }
 
@@ -4052,6 +4507,19 @@ class ProcessMessBillsEmployeeController extends Controller
      * Tries exact match first, then LIKE match; returns null if no single match.
      */
     private function resolveReceiverUserIdByClientName(string $clientName): ?int
+    {
+        $cacheKey = trim($clientName);
+        if (array_key_exists($cacheKey, $this->receiverUserIdByClientNameCache)) {
+            return $this->receiverUserIdByClientNameCache[$cacheKey];
+        }
+
+        $resolved = $this->resolveReceiverUserIdByClientNameUncached($clientName);
+        $this->receiverUserIdByClientNameCache[$cacheKey] = $resolved;
+
+        return $resolved;
+    }
+
+    private function resolveReceiverUserIdByClientNameUncached(string $clientName): ?int
     {
         $candidates = [
             trim($clientName),
@@ -4110,6 +4578,19 @@ class ProcessMessBillsEmployeeController extends Controller
      * Resolve student portal user (user_credentials.user_id = student_master.pk, user_category S) from buyer name.
      */
     private function resolveReceiverUserIdByStudentName(string $clientName): ?int
+    {
+        $cacheKey = trim($clientName);
+        if (array_key_exists($cacheKey, $this->receiverUserIdByStudentNameCache)) {
+            return $this->receiverUserIdByStudentNameCache[$cacheKey];
+        }
+
+        $resolved = $this->resolveReceiverUserIdByStudentNameUncached($clientName);
+        $this->receiverUserIdByStudentNameCache[$cacheKey] = $resolved;
+
+        return $resolved;
+    }
+
+    private function resolveReceiverUserIdByStudentNameUncached(string $clientName): ?int
     {
         if (!Schema::hasTable('student_master')) {
             return null;
@@ -4707,7 +5188,9 @@ class ProcessMessBillsEmployeeController extends Controller
             return $this->roundMoney((float) ($bill->paid_amount ?? 0));
         }
         if ($bill instanceof KitchenIssueMaster) {
-            $bill->load('paymentDetails');
+            if (! $bill->relationLoaded('paymentDetails')) {
+                $bill->load('paymentDetails');
+            }
 
             return $this->roundMoney((float) $bill->paymentDetails->sum('paid_amount'));
         }
@@ -4914,8 +5397,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 }
             }
             $remainingDueCombined = $this->billDueAmount($actualTotalDue, $amount);
-            $this->bumpProcessMessBillsCombinedCache();
-
+            $this->forgetProcessMessBillsSummaryCaches();
 
             return response()->json([
                 'success' => true,
@@ -5052,7 +5534,7 @@ class ProcessMessBillsEmployeeController extends Controller
             }
         }
 
-        $this->bumpProcessMessBillsCombinedCache();
+        $this->forgetProcessMessBillsSummaryCaches();
 
         return response()->json([
             'success' => true,
