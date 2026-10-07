@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use App\DataTables\MemoTypeMasterDataTable;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 
 
@@ -27,11 +28,30 @@ class MemoTypeMasterController extends Controller
 
     public function store(Request $request)
     {
+        // The listing's modal posts the raw pk; the standalone edit page posts it encrypted.
+        $id = null;
+        if ($request->filled('pk')) {
+            try {
+                $id = is_numeric($request->pk) ? (int) $request->pk : (int) decrypt($request->pk);
+            } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+                return response()->json(['status' => false, 'message' => 'Record not found.'], 404);
+            }
+        }
+
         // ✅ Validation (AJAX compatible)
         $validator = Validator::make($request->all(), [
-            'memo_type_name'   => 'required|string|max:100',
+            'memo_type_name'   => [
+                'required',
+                'string',
+                'max:100',
+                // Column collation is case-insensitive and TrimStrings runs first,
+                // so "Warning" and " warning " count as the same name.
+                Rule::unique('memo_type_master', 'memo_type_name')->ignore($id, 'pk'),
+            ],
             'memo_doc_upload'  => 'nullable|mimes:pdf,doc,docx|max:2048',
             'active_inactive'  => 'required|in:1,2',
+        ], [
+            'memo_type_name.unique' => 'This memo type name already exists.',
         ]);
 
         if ($validator->fails()) {
@@ -43,8 +63,8 @@ class MemoTypeMasterController extends Controller
 
         try {
             // ✅ Add / Edit logic
-            if ($request->filled('pk')) {
-                $memoType = MemoTypeMaster::findOrFail($request->pk);
+            if ($id) {
+                $memoType = MemoTypeMaster::findOrFail($id);
             } else {
                 $memoType = new MemoTypeMaster();
             }
