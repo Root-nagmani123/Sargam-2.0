@@ -1096,8 +1096,9 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                                                 value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label small mb-1">Store</label>
-                                            <select name="store_id" class="form-select form-select-sm">
+                                            <label class="form-label small mb-1">Store <span
+                                                    class="text-danger">*</span></label>
+                                            <select name="store_id" class="form-select form-select-sm" required>
                                                 <option value="">Select Store</option>
                                                 @foreach($stores as $store)
                                                 <option value="{{ $store->id }}">{{ $store->store_name }}</option>
@@ -1314,9 +1315,10 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                                         max="{{ date('Y-m-d') }}" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Store</label>
+                                    <label class="form-label fw-bold small mb-2 text-dark">Store <span
+                                            class="text-danger">*</span></label>
                                     <select name="store_id" id="editStoreId"
-                                        class="form-select form-select-lg rounded-3 shadow border-2">
+                                        class="form-select form-select-lg rounded-3 shadow border-2" required>
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
                                         <option value="{{ $store->id }}">{{ $store->store_name }}</option>
