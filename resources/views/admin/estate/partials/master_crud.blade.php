@@ -2,9 +2,11 @@
     Estate master grid — one implementation for Define Estate/Campus, Unit Type,
     Unit Sub Type and Block/Building, so the four screens cannot drift apart.
 
-    Page chrome: docs/new-design-index-page.md (programme-dt toolbar / panel /
-    footer, §3b row actions, §3c Add/Edit modal). Tokens: docs/design.md.
-    Styles: public/css/estate-request-admin.css → "Estate Masters" (.em-page / .em-modal).
+    Design: docs/design.md — Layer C components from sargam-app.css
+    (.ds-page-header, .ds-card, .ds-toolbar, .ds-table-wrap / .ds-table-sticky,
+    .ds-actions + .btn-icon, .ds-empty-state, .ds-form-label / .ds-req,
+    .ds-btn-primary / .ds-btn-cancel) and --ds-* tokens. Page-scoped styles:
+    partials/master_styles.blade.php, pushed into @stack('styles').
 
     Add / Edit is a plain form POST to the controller's existing store / update
     routes — no AJAX, no controller change. A validation failure redirects back
@@ -15,7 +17,7 @@
     Expects $cfg:
       key          short id prefix ('campus')
       title        page title
-      intro        one-line description under the toolbar
+      intro        one-line description under the title
       singular     record noun for captions ('Estate/Campus')
       routePrefix  'admin.estate.define-campus' (.store / .update / .destroy)
       tableId      DataTables id
@@ -30,121 +32,124 @@
     $singular = $cfg['singular'];
     $reopen = $errors->any() && old('_em_form') === $key;
     $reopenPk = $reopen ? (string) old('_em_edit_pk', '') : '';
+    $isReopenEdit = $reopen && $reopenPk !== '';
     $updateTemplate = route($cfg['routePrefix'] . '.update', ['id' => '__ID__']);
 @endphp
 
 <div class="container-fluid em-page">
-    <x-breadcrum :title="$cfg['title']" :showBack="false">
-        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold text-nowrap"
-            id="{{ $key }}AddBtn">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            <span>Add {{ $singular }}</span>
-        </button>
-    </x-breadcrum>
+    {{-- Breadcrumb trail + page title (the app-wide header component). --}}
+    <x-breadcrum :title="$cfg['title']" :showBack="false" />
 
     <x-session_message />
 
-    <div class="card border-0 shadow-sm rounded-1">
-        <div class="card-body p-3 p-md-4">
-            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
-                <p class="em-intro">{{ $cfg['intro'] }}</p>
-                @if($items->isNotEmpty())
-                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
-                    {{-- Search slot: datatable-global-ui.js moves the DataTables filter here. --}}
-                    <div id="{{ $key }}DtSearch" class="programme-dt-search" data-dt-search-for="{{ $cfg['tableId'] }}"></div>
-                </div>
-                @endif
-            </div>
+    {{-- .ds-page-header: what the screen is for, and its one primary action. --}}
+    <div class="ds-page-header">
+        <p class="ds-page-subtitle">{{ $cfg['intro'] }}</p>
+        <button type="button" class="btn ds-btn-primary" id="{{ $key }}AddBtn">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <span>Add {{ $singular }}</span>
+        </button>
+    </div>
 
+    <section class="card ds-card" aria-labelledby="{{ $key }}CardTitle">
+        <div class="ds-card-header">
+            <h2 class="em-card-title" id="{{ $key }}CardTitle">{{ $cfg['title'] }} list</h2>
+            <span class="em-count">{{ $items->count() }} {{ $items->count() === 1 ? 'record' : 'records' }}</span>
+        </div>
+
+        <div class="ds-card-body">
             @if($items->isEmpty())
-            <div class="ds-empty-state em-empty" role="status">
+            <div class="ds-empty-state" role="status">
                 <i class="bi bi-{{ $cfg['emptyIcon'] ?? 'inbox' }}" aria-hidden="true"></i>
                 <p class="em-empty-title">No {{ strtolower($singular) }} records yet</p>
                 <p class="small mb-3">Add the first one to make it available across the Estate module.</p>
-                <button type="button" class="btn ds-btn-submit js-em-add">Add {{ $singular }}</button>
+                <button type="button" class="btn ds-btn-primary js-em-add">Add {{ $singular }}</button>
             </div>
             @else
-            <div class="programme-dt-panel">
-                <div class="table-responsive">
-                    <table id="{{ $cfg['tableId'] }}" class="table table-hover align-middle mb-0 w-100 programme-dt-table"
-                        aria-describedby="{{ $key }}Caption">
-                        <thead>
-                            <tr>
-                                <th scope="col" class="em-col-sno no-sort">S. No.</th>
-                                @foreach($fields as $f)
-                                <th scope="col">{{ $f['label'] }}</th>
-                                @endforeach
-                                <th scope="col" class="em-col-action no-sort">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($items as $i => $row)
-                            @php
-                                $values = collect($fields)->mapWithKeys(fn ($f) => [$f['name'] => (string) ($row->{$f['name']} ?? '')])->all();
-                                $label = $values[$fields[0]['name']] ?? '';
-                            @endphp
-                            <tr>
-                                <td class="em-col-sno">{{ $loop->iteration }}</td>
-                                @foreach($fields as $f)
-                                @php $v = trim($values[$f['name']]); @endphp
-                                <td @class(['em-col-wrap' => ! empty($f['wrap']), 'fw-medium' => $loop->first])>
-                                    @if($v === '' || $v === '--')
-                                    <span class="em-muted" aria-label="Not set">—</span>
-                                    @else
-                                    {{ $v }}
-                                    @endif
-                                </td>
-                                @endforeach
-                                <td class="em-col-action">
-                                    <div class="em-act-group" role="group" aria-label="Actions for {{ $label }}">
-                                        <button type="button" class="em-act em-act--edit js-em-edit"
-                                            data-pk="{{ $row->pk }}" data-values="{{ json_encode($values) }}"
-                                            aria-label="Edit {{ $label }}">
-                                            <span class="em-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
-                                            <span class="em-act__label">Edit</span>
-                                        </button>
-                                        {{-- The server refuses a delete that would break a reference
-                                             (FK) and says so in the flash message. --}}
-                                        <button type="button" class="em-act em-act--delete js-em-delete"
-                                            data-url="{{ route($cfg['routePrefix'] . '.destroy', $row->pk) }}"
-                                            data-name="{{ $label }}" aria-label="Delete {{ $label }}">
-                                            <span class="em-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>
-                                            <span class="em-act__label">Delete</span>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+            {{-- .ds-toolbar: search on the right. The slot keeps its programme-dt
+                 hook; datatable-global-ui.js moves the DataTables filter into it. --}}
+            <div class="ds-toolbar">
+                <span class="ds-toolbar-spacer"></span>
+                <div id="{{ $key }}DtSearch" class="programme-dt-search" data-dt-search-for="{{ $cfg['tableId'] }}"></div>
             </div>
-            <div id="{{ $key }}Caption" class="visually-hidden">{{ $cfg['title'] }} list</div>
 
-            {{-- DataTables paginates, so the footer is an empty slot the global UI fills (§4A). --}}
-            <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
-                data-dt-footer-for="{{ $cfg['tableId'] }}"></div>
+            <div class="ds-table-wrap">
+                <table id="{{ $cfg['tableId'] }}" class="table table-hover align-middle w-100 ds-table-sticky em-table"
+                    aria-describedby="{{ $key }}CardTitle">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="em-col-sno no-sort">S. No.</th>
+                            @foreach($fields as $f)
+                            <th scope="col">{{ $f['label'] }}</th>
+                            @endforeach
+                            <th scope="col" class="em-col-action no-sort">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($items as $row)
+                        @php
+                            $values = collect($fields)->mapWithKeys(fn ($f) => [$f['name'] => (string) ($row->{$f['name']} ?? '')])->all();
+                            $label = $values[$fields[0]['name']] ?? '';
+                        @endphp
+                        <tr>
+                            <td class="em-col-sno">{{ $loop->iteration }}</td>
+                            @foreach($fields as $f)
+                            @php $v = trim($values[$f['name']]); @endphp
+                            <td @class(['em-col-wrap' => ! empty($f['wrap']), 'fw-medium' => $loop->first])>
+                                @if($v === '' || $v === '--')
+                                <span class="em-muted" aria-label="Not set">—</span>
+                                @else
+                                {{ $v }}
+                                @endif
+                            </td>
+                            @endforeach
+                            <td class="em-col-action">
+                                {{-- .ds-actions + .btn-icon: 32px, 4px-radius icon buttons. --}}
+                                <div class="ds-actions" role="group" aria-label="Actions for {{ $label }}">
+                                    <button type="button" class="btn btn-icon em-act-edit js-em-edit"
+                                        data-pk="{{ $row->pk }}" data-values="{{ json_encode($values) }}"
+                                        title="Edit" aria-label="Edit {{ $label }}">
+                                        <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                    </button>
+                                    {{-- The server refuses a delete that would break a reference
+                                         (FK) and says so in the flash message. --}}
+                                    <button type="button" class="btn btn-icon em-act-delete js-em-delete"
+                                        data-url="{{ route($cfg['routePrefix'] . '.destroy', $row->pk) }}"
+                                        data-name="{{ $label }}" title="Delete" aria-label="Delete {{ $label }}">
+                                        <i class="bi bi-trash3" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
             @endif
         </div>
-    </div>
+
+        @if($items->isNotEmpty())
+        {{-- DataTables paginates, so the footer is an empty slot the global UI fills. --}}
+        <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+            data-dt-footer-for="{{ $cfg['tableId'] }}"></div>
+        @endif
+    </section>
 </div>
 
-{{-- Add / Edit — one modal for both so they look alike (§3c). --}}
+{{-- Add / Edit — one modal for both so they look alike. --}}
 <div class="modal fade ds-modal em-modal" id="{{ $key }}FormModal" tabindex="-1"
     aria-labelledby="{{ $key }}FormModalLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form id="{{ $key }}Form" method="POST"
-                action="{{ $reopen && $reopenPk !== '' ? str_replace('__ID__', $reopenPk, $updateTemplate) : route($cfg['routePrefix'] . '.store') }}">
+                action="{{ $isReopenEdit ? str_replace('__ID__', $reopenPk, $updateTemplate) : route($cfg['routePrefix'] . '.store') }}">
                 @csrf
-                <input type="hidden" name="_method" id="{{ $key }}FormMethod" value="{{ $reopen && $reopenPk !== '' ? 'PUT' : 'POST' }}">
+                <input type="hidden" name="_method" id="{{ $key }}FormMethod" value="{{ $isReopenEdit ? 'PUT' : 'POST' }}">
                 <input type="hidden" name="_em_form" value="{{ $key }}">
                 <input type="hidden" name="_em_edit_pk" id="{{ $key }}EditPk" value="{{ $reopenPk }}">
 
                 <div class="modal-header">
-                    <h5 class="modal-title" id="{{ $key }}FormModalLabel">
-                        {{ $reopen && $reopenPk !== '' ? 'Edit' : 'Add' }} {{ $singular }}
-                    </h5>
+                    <h5 class="modal-title" id="{{ $key }}FormModalLabel">{{ $isReopenEdit ? 'Edit' : 'Add' }} {{ $singular }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
@@ -156,7 +161,7 @@
                         $val = $reopen ? old($f['name'], '') : '';
                     @endphp
                     <div class="{{ $loop->last ? 'mb-0' : 'mb-3' }}">
-                        <label class="form-label" for="{{ $id }}">
+                        <label class="ds-form-label" for="{{ $id }}">
                             {{ $f['label'] }}@if(! empty($f['required']))<span class="ds-req" aria-hidden="true">*</span>@endif
                         </label>
                         @if(($f['type'] ?? 'text') === 'textarea')
@@ -183,17 +188,15 @@
 
                 <div class="modal-footer">
                     <button type="button" class="btn ds-btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn ds-btn-submit" id="{{ $key }}FormSubmit">
-                        {{ $reopen && $reopenPk !== '' ? 'Update' : 'Add' }} {{ $singular }}
-                    </button>
+                    <button type="submit" class="btn ds-btn-primary" id="{{ $key }}FormSubmit">{{ $isReopenEdit ? 'Update' : 'Add' }} {{ $singular }}</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-{{-- Delete confirmation — the module's shared confirm dialog. --}}
-<div class="modal fade ds-modal ds-modal-confirm" id="{{ $key }}DeleteModal" tabindex="-1"
+{{-- Delete confirmation (.ds-modal-confirm). --}}
+<div class="modal fade ds-modal ds-modal-confirm em-modal" id="{{ $key }}DeleteModal" tabindex="-1"
     aria-labelledby="{{ $key }}DeleteModalLabel" aria-describedby="{{ $key }}DeleteText" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -207,7 +210,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn ds-btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn ds-btn-danger">Yes, Delete</button>
+                    <button type="submit" class="btn ds-btn-primary em-btn-delete">Yes, Delete</button>
                 </div>
             </form>
         </div>
@@ -215,7 +218,7 @@
 </div>
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
+@include('admin.estate.partials.master_styles')
 @endpush
 
 @push('scripts')
@@ -291,7 +294,7 @@ $(function () {
     // The controller already sends newest-first; order: [] keeps that until a header is clicked.
     var dt = $table.DataTable({
         order: [],
-        responsive: false, // the panel scrolls; never fold columns into child rows
+        responsive: false, // the wrap scrolls; never fold columns into child rows
         columnDefs: [
             { targets: [0, -1], orderable: false, searchable: false }
         ]
