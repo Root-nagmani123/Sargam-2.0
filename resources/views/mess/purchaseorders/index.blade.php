@@ -1275,6 +1275,8 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                 <input type="hidden" name="all_lines_loaded" id="editAllLinesLoaded" value="0">
                 {{-- Number of lines in the form; kept above the line fields so it survives if the server cuts the request short. --}}
                 <input type="hidden" name="items_count" id="editItemsCount" value="">
+                {{-- All lines as one JSON field, filled on submit; see the editPOForm submit handler. --}}
+                <input type="hidden" name="items_json" id="editItemsJson" value="">
                 <div class="modal-header border-0 border-bottom py-3 px-4 bg-gradient"
                     style="background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);">
                     <div>
@@ -2750,6 +2752,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                     editPendingItems = [];
                     document.getElementById('editAllLinesLoaded').value = '0';
                     document.getElementById('editItemsCount').value = '';
+                    document.getElementById('editItemsJson').value = '';
                     if (items.length === 0) {
                         tbody.innerHTML = getItemRowHtml(0, null, true);
                         editItemRowIndex = 1;
@@ -3227,6 +3230,24 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
         renderPendingEditRows();
         document.getElementById('editAllLinesLoaded').value = editPendingItems.length ? '0' : '1';
         document.getElementById('editItemsCount').value = document.querySelectorAll('#editPoItemsBody .po-item-row').length;
+
+        // Post the lines as one JSON field instead of ~5 fields per line. PHP's max_input_vars
+        // (1000 by default) silently drops fields beyond the limit, which cut large POs short.
+        // The per-line inputs are disabled so they are not posted as well.
+        const lines = [];
+        document.querySelectorAll('#editPoItemsBody .po-item-row').forEach(function(row) {
+            const line = {};
+            row.querySelectorAll('[name^="items["]').forEach(function(el) {
+                const m = el.name.match(/^items\[\d+\]\[([^\]]+)\]/);
+                if (!m) return;
+                line[m[1]] = el.multiple
+                    ? Array.from(el.selectedOptions).map(function(o) { return o.value; })
+                    : el.value;
+                el.disabled = true;
+            });
+            lines.push(line);
+        });
+        document.getElementById('editItemsJson').value = JSON.stringify(lines);
     });
 
     // Large POs: append the next chunk of line items as the modal nears the bottom.

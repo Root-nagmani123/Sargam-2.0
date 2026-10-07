@@ -423,6 +423,15 @@ class PurchaseOrderController extends Controller
     {
         $purchaseOrder = PurchaseOrder::findOrFail($id);
 
+        // The edit modal posts its lines as one JSON field (items_json) so a large PO is not cut
+        // short by PHP's max_input_vars; turn it back into items[] before anything reads the lines.
+        if ($request->filled('items_json')) {
+            $jsonItems = json_decode((string) $request->input('items_json'), true);
+            if (is_array($jsonItems)) {
+                $request->merge(['items' => array_values($jsonItems)]);
+            }
+        }
+
         // The edit modal loads the lines of a large PO in parts and sets all_lines_loaded to 1
         // only once every line is in the form. Below, every existing line is deleted and only the
         // posted lines are re-created, so a save that may be missing lines is refused untouched.
