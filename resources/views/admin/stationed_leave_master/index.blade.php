@@ -421,9 +421,34 @@ $(function () {
     });
 
     /* ── Download ── */
+    // Grid column (DataTables `data`) → export column key
+    // (StationedLeaveMasterExport::COLUMNS). Action has no export column.
+    const stationedExportKeys = {
+        DT_RowIndex: 'sno',
+        course_name: 'course',
+        effective_from_display: 'effective_from',
+        apply_cutoff_time_display: 'pt_timing',
+        approval_required_display: 'approval',
+        faculty_count_display: 'faculty_count',
+        status: 'status',
+    };
+
+    // Only the columns switched on in Column Visibility go into the file.
+    function stationedExportCols() {
+        const keys = [];
+        table.columns().every(function () {
+            const key = stationedExportKeys[this.dataSrc()];
+            if (key && this.visible()) {
+                keys.push(key);
+            }
+        });
+        return keys.join(',');
+    }
+
     function stationedExportUrl(format) {
         const params = $.param({
             format: format,
+            cols: stationedExportCols(),
             course_filter: $('#courseFilter').val() || '',
             from_date: $period.data('from') || '',
             to_date: $period.data('to') || '',
