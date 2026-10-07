@@ -75,6 +75,13 @@
     white-space: normal;
 }
 
+/* An exception can have several faculty: one name per line, none dropped. */
+.mst-page.fme-page .fme-names { list-style: none; margin: 0; padding: 0; }
+.mst-page.fme-page .fme-names > li + li { margin-top: var(--ds-space-1); }
+
+/* While a filter request is in flight the old rows are dimmed, not hidden. */
+.mst-page.fme-page #fmeReport[aria-busy="true"] { opacity: 0.55; pointer-events: none; }
+
 /* Wide enough tracks that Apply + Reset Filters share one row. */
 .mst-page.fme-page .mst-filter-grid { grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); }
 
@@ -92,14 +99,19 @@
     // Admin view: headline counts derived from the rows the controller built
     // (display only — nothing is re-queried or re-filtered here).
     $fmeFaculties = $isFacultyView ? [] : ($facultyData ?? []);
+    // An exception with several faculty sits under each of their cards, so the
+    // totals count distinct exceptions, not rows.
     $fmeCourseIds = [];
-    $fmeExceptionTotal = 0;
+    $fmeDutyIds = [];
     foreach ($fmeFaculties as $fmeFac) {
         foreach ($fmeFac['courses'] as $fmeCourse) {
             $fmeCourseIds[$fmeCourse['course_id']] = true;
-            $fmeExceptionTotal += (int) $fmeCourse['duty_count'];
+            foreach ($fmeCourse['student_duties'] as $fmeDuty) {
+                $fmeDutyIds[$fmeDuty['duty_pk']] = true;
+            }
         }
     }
+    $fmeExceptionTotal = count($fmeDutyIds);
     // A long list starts collapsed so the faculty names read as an index;
     // a short one (e.g. one faculty filtered) starts open.
     $fmeOpenByDefault = count($fmeFaculties) <= 5;
@@ -110,35 +122,34 @@
 
     <x-session_message />
 
-    {{-- Admin: course scope tabs left (each is its own ?course_status=, keeping
-         the faculty pick; the course list differs per tab so it is dropped) ·
+    {{-- Course scope tabs left (each is its own ?course_status=; admin keeps the
+         faculty pick, the course list differs per tab so it is dropped) ·
          Print right — above the card (docs/new-design-index-page.md §1). --}}
     @php
         $fmeStatus = ($courseStatus ?? 'active') === 'archive' ? 'archive' : 'active';
-        $fmeTabParams = filled($facultyFilter ?? null) ? ['faculty_filter' => $facultyFilter] : [];
+        $fmeTabParams = !$isFacultyView && filled($facultyFilter ?? null) ? ['faculty_filter' => $facultyFilter] : [];
+        $fmeResetParams = $fmeStatus === 'archive' ? ['course_status' => 'archive'] : [];
     @endphp
     <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-between gap-3 mb-3">
-        @if(!$isFacultyView)
-            <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0" role="group"
-                aria-label="Course status filter">
-                <li class="nav-item" role="presentation">
-                    <a href="{{ route('faculty.mdo.escort.exception.view', $fmeTabParams) }}"
-                        class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $fmeStatus === 'active' ? 'active' : '' }}"
-                        aria-pressed="{{ $fmeStatus === 'active' ? 'true' : 'false' }}"
-                        @if ($fmeStatus === 'active') aria-current="true" @endif>
-                        Active
-                    </a>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <a href="{{ route('faculty.mdo.escort.exception.view', $fmeTabParams + ['course_status' => 'archive']) }}"
-                        class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $fmeStatus === 'archive' ? 'active' : '' }}"
-                        aria-pressed="{{ $fmeStatus === 'archive' ? 'true' : 'false' }}"
-                        @if ($fmeStatus === 'archive') aria-current="true" @endif>
-                        Archived
-                    </a>
-                </li>
-            </ul>
-        @endif
+        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0" role="group"
+            aria-label="Course status filter">
+            <li class="nav-item" role="presentation">
+                <a href="{{ route('faculty.mdo.escort.exception.view', $fmeTabParams) }}"
+                    class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $fmeStatus === 'active' ? 'active' : '' }}"
+                    aria-pressed="{{ $fmeStatus === 'active' ? 'true' : 'false' }}"
+                    @if ($fmeStatus === 'active') aria-current="true" @endif>
+                    Active
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a href="{{ route('faculty.mdo.escort.exception.view', $fmeTabParams + ['course_status' => 'archive']) }}"
+                    class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $fmeStatus === 'archive' ? 'active' : '' }}"
+                    aria-pressed="{{ $fmeStatus === 'archive' ? 'true' : 'false' }}"
+                    @if ($fmeStatus === 'archive') aria-current="true" @endif>
+                    Archived
+                </a>
+            </li>
+        </ul>
         <div class="d-flex flex-wrap justify-content-lg-end gap-2 ms-lg-auto mst-secondary-actions">
             <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" onclick="printContent()" title="Print">
                 <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
@@ -152,7 +163,10 @@
         <div class="card mst-form-card">
             <div class="card-body">
                 <h2 class="mst-form-section-title h6">Filters</h2>
-                <form method="GET" action="{{ route('faculty.mdo.escort.exception.view') }}" class="mst-filter-grid" role="search" aria-label="Filter exceptions">
+                <form method="GET" action="{{ route('faculty.mdo.escort.exception.view') }}" class="mst-filter-grid fme-filter-form" role="search" aria-label="Filter exceptions">
+                    @if($fmeStatus === 'archive')
+                        <input type="hidden" name="course_status" value="archive">
+                    @endif
                     <div>
                         <label for="course_filter" class="mst-form-label d-block">Course</label>
                         <select id="course_filter" name="course_filter" class="form-select mst-control mst-searchable" data-placeholder="All Courses">
@@ -164,7 +178,8 @@
                     </div>
                     <div class="mst-filter-actions">
                         <button type="submit" class="btn mst-btn-submit px-4">Apply</button>
-                        <a href="{{ route('faculty.mdo.escort.exception.view') }}" class="btn programme-dt-btn-reset">Reset Filters</a>
+                        {{-- Reset clears Course but stays on the current tab. --}}
+                        <a href="{{ route('faculty.mdo.escort.exception.view', $fmeResetParams) }}" class="btn programme-dt-btn-reset">Reset Filters</a>
                     </div>
                 </form>
             </div>
@@ -173,7 +188,7 @@
         <div class="card mst-form-card">
             <div class="card-body">
                 <h2 class="mst-form-section-title h6">Filters</h2>
-                <form method="GET" action="{{ route('faculty.mdo.escort.exception.view') }}" class="mst-filter-grid" role="search" aria-label="Filter exceptions">
+                <form method="GET" action="{{ route('faculty.mdo.escort.exception.view') }}" class="mst-filter-grid fme-filter-form" role="search" aria-label="Filter exceptions">
                     @if($fmeStatus === 'archive')
                         <input type="hidden" name="course_status" value="archive">
                     @endif
@@ -198,7 +213,7 @@
                     <div class="mst-filter-actions">
                         <button type="submit" class="btn mst-btn-submit px-4">Apply</button>
                         {{-- Reset clears Faculty / Course but stays on the current tab. --}}
-                        <a href="{{ route('faculty.mdo.escort.exception.view', $fmeStatus === 'archive' ? ['course_status' => 'archive'] : []) }}" class="btn programme-dt-btn-reset">Reset Filters</a>
+                        <a href="{{ route('faculty.mdo.escort.exception.view', $fmeResetParams) }}" class="btn programme-dt-btn-reset">Reset Filters</a>
                     </div>
                 </form>
             </div>
@@ -233,7 +248,12 @@
 
                 <div class="card overflow-hidden rounded-3">
                     <div class="card-body p-3 p-md-4">
-                        <h2 class="mst-form-section-title h6">Student Exceptions</h2>
+                        <h2 class="mst-form-section-title h6">
+                            Student Exceptions
+                            @if($fmeHasFilter)
+                                <span class="fw-normal text-muted">(filtered)</span>
+                            @endif
+                        </h2>
                         @php $displayedRows = 0; @endphp
                         <div class="programme-dt-panel">
                             <div class="table-responsive">
@@ -264,7 +284,15 @@
                                                         <td><strong>{{ $student['student_name'] }}</strong></td>
                                                         <td class="text-nowrap">{{ $student['ot_code'] }}</td>
                                                         <td class="text-nowrap">{{ $student['email'] ?? 'N/A' }}</td>
-                                                        <td class="mst-col-wrap">{{ $exemption['faculty'] ?? 'N/A' }}</td>
+                                                        <td class="mst-col-wrap">
+                                                            @forelse($exemption['faculty'] ?? [] as $fmeName)
+                                                                @if($loop->first)<ul class="fme-names">@endif
+                                                                <li>{{ $fmeName }}</li>
+                                                                @if($loop->last)</ul>@endif
+                                                            @empty
+                                                                N/A
+                                                            @endforelse
+                                                        </td>
                                                         <td class="mst-col-wrap">{{ $exemption['course_name'] ?? 'N/A' }}</td>
                                                         <td class="text-nowrap">{{ $exemption['date'] ? \Carbon\Carbon::parse($exemption['date'])->format('d/m/Y') : 'N/A' }}</td>
                                                         <td class="text-nowrap">{{ $exemption['duty_type'] ?? 'N/A' }}</td>
@@ -390,6 +418,7 @@
                                                             <th scope="col" class="text-nowrap">S. No.</th>
                                                             <th scope="col">Student Name</th>
                                                             <th scope="col" class="text-nowrap">OT Code</th>
+                                                            <th scope="col">Faculty</th>
                                                             <th scope="col" class="text-nowrap">Date</th>
                                                             <th scope="col" class="text-nowrap">Duty Type</th>
                                                             <th scope="col" class="text-nowrap">Time</th>
@@ -402,6 +431,15 @@
                                                                 <td>{{ $loop->iteration }}</td>
                                                                 <td><strong>{{ $duty['student_name'] }}</strong></td>
                                                                 <td class="text-nowrap">{{ $duty['ot_code'] }}</td>
+                                                                <td class="mst-col-wrap">
+                                                                    @forelse($duty['faculty'] as $fmeName)
+                                                                        @if($loop->first)<ul class="fme-names">@endif
+                                                                        <li>{{ $fmeName }}</li>
+                                                                        @if($loop->last)</ul>@endif
+                                                                    @empty
+                                                                        N/A
+                                                                    @endforelse
+                                                                </td>
                                                                 <td class="text-nowrap">{{ $duty['date'] ? \Carbon\Carbon::parse($duty['date'])->format('d/m/Y') : 'N/A' }}</td>
                                                                 <td class="text-nowrap">{{ $duty['duty_type'] }}</td>
                                                                 <td class="text-nowrap">{{ $duty['time'] }}</td>
@@ -479,6 +517,7 @@
             + 'td{padding:6px 8px;border:1px solid #e5e7eb;vertical-align:top}'
             + 'tr{page-break-inside:avoid}'
             + '.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}'
+            + '.fme-names{list-style:none;margin:0;padding:0}'
             + '.text-center{text-align:center}'
             + '.text-muted{color:#667085}';
 
@@ -497,9 +536,38 @@
         }, 250);
     }
 
+    // Filtering reloads the page: show it is loading and stop a double submit.
+    function fmeShowLoading() {
+        $('#fmeReport').attr('aria-busy', 'true');
+        $('.fme-filter-form button[type=submit]').each(function () {
+            var btn = $(this);
+            if (!btn.data('fmeLabel')) {
+                btn.data('fmeLabel', btn.html());
+            }
+            btn.prop('disabled', true)
+                .html('<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Applying…');
+        });
+    }
+
+    // Back/forward restores the page from cache with the loading state still on.
+    window.addEventListener('pageshow', function (e) {
+        if (!e.persisted) {
+            return;
+        }
+        $('#fmeReport').removeAttr('aria-busy');
+        $('.fme-filter-form button[type=submit]').each(function () {
+            var btn = $(this);
+            if (btn.data('fmeLabel')) {
+                btn.prop('disabled', false).html(btn.data('fmeLabel'));
+            }
+        });
+    });
+
     $(document).ready(function () {
+        $('.fme-filter-form').on('submit', fmeShowLoading);
+
         // Course filter handler for faculty view (applies on change, as before;
-        // the Apply button submits the same parameter).
+        // the Apply button submits the same parameter). The URL keeps course_status.
         if ($('#course_filter').length > 0) {
             $('#course_filter').on('change', function () {
                 var courseFilter = $(this).val();
@@ -511,6 +579,7 @@
                     url.searchParams.delete('course_filter');
                 }
 
+                fmeShowLoading();
                 window.location.href = url.toString();
             });
         }
