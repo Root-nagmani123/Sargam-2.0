@@ -350,6 +350,82 @@ class MemberWizardPayrollAndStepsTest extends TestCase
     }
 
     /**
+     * PR #319 re-review F-077: the update-side refusal. An administrator's update whose
+     * only ticked role has been deactivated is refused before anything is written, and the
+     * member keeps the role mapping they already had.
+     */
+    public function test_an_admin_update_with_only_inactive_roles_is_rejected_and_changes_nothing(): void
+    {
+        $actor = $this->makeActor('update_only_inactive');
+        $actor->assignRole('Super Admin');
+
+        $rolePk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'Soon Retired ' . uniqid(),
+            'user_role_display_name' => 'Soon Retired',
+            'active_inactive'        => 1,
+        ]);
+
+        $createPayload = $this->basicMemberPayload('UpdateOnlyInactive');
+        $createPayload['userrole'] = [$rolePk];
+        $this->actingAs($actor)->post(route('member.store'), $createPayload)->assertOk();
+
+        $employeePk = DB::table('employee_master')->where('emp_id', $createPayload['id'])->value('pk');
+        $credentialPk = DB::table('user_credentials')->where('user_name', $createPayload['userid'])->value('pk');
+        $this->assertNotNull($employeePk);
+
+        DB::table('user_role_master')->where('pk', $rolePk)->update(['active_inactive' => 0]);
+
+        $updatePayload = $this->basicMemberPayload('UpdateOnlyInactive', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['first_name'] = 'Changed';
+        $updatePayload['userrole'] = [$rolePk];
+
+        $this->actingAs($actor)->postJson(route('member.update'), $updatePayload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['userrole'], 'errors');
+
+        $this->assertSame('Wizard', DB::table('employee_master')->where('pk', $employeePk)->value('first_name'), 'A refused update must write nothing.');
+        $this->assertTrue(
+            DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)->where('user_role_master_pk', $rolePk)->exists(),
+            'The member keeps the mapping they already had.'
+        );
+    }
+
+    /**
+     * F-077, the other branch: the refusal applies only to an actor whose role selection is
+     * saved. A non-admin editing their own record has 'userrole' ignored, so an inactive pk
+     * in it must not block their save — and must not be written either.
+     */
+    public function test_a_non_admin_own_save_with_an_inactive_role_is_not_blocked(): void
+    {
+        $employeePk = $this->makeEmployee('selfsave');
+        $email = 'selfsave_' . uniqid() . '@example.test';
+        DB::table('employee_master')->where('pk', $employeePk)->update(['email' => $email]);
+
+        $actor = $this->makeActor('selfsave');
+        $actor->user_id = $employeePk;
+        $actor->email_id = $email;
+        $actor->save();
+        $this->assertSame([], $actor->getRoleNames()->all(), 'Fixture assumption: the actor holds no Spatie roles.');
+
+        $inactiveRolePk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'Self Retired ' . uniqid(),
+            'user_role_display_name' => 'Self Retired',
+            'active_inactive'        => 0,
+        ]);
+
+        $payload = $this->basicMemberPayload('SelfSave', $employeePk);
+        $payload['userrole'] = [$inactiveRolePk];
+
+        $this->actingAs($actor)->post(route('member.update'), $payload)->assertOk();
+
+        $this->assertFalse(
+            DB::table('employee_role_mapping')->where('user_credentials_pk', $actor->pk)->exists(),
+            "A non-admin's userrole is ignored, so nothing is written."
+        );
+    }
+
+    /**
      * F-075 (c): two skipped roles read as plural.
      */
     public function test_the_skipped_role_warning_agrees_in_number(): void
