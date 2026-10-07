@@ -198,11 +198,20 @@
         // Trust the DB trail only when it resolved past Home; otherwise fall back
         // to the legacy section-based trail for pages not yet in the menu tree.
         if (is_array($dbTrail) && count($dbTrail) > 1) {
-            $lastLabel = trim((string) ($dbTrail[array_key_last($dbTrail)]['label'] ?? ''));
-
             // Append the page title as the active crumb when it differs from the
             // resolved menu name (e.g. Create/Edit sub-pages under a list menu).
-            if ($normalizedTitle !== '' && strcasecmp($lastLabel, $normalizedTitle) !== 0) {
+            //
+            // Compared against the WHOLE trail, not just its last crumb: on Roles the
+            // menu tree is "Role & Permission > Roles" while the page is titled
+            // "Role & Permission", so a last-crumb-only check appended it a second
+            // time and the trail read "… / Role & Permission / Roles / Role &
+            // Permission". A title already somewhere in the trail is the page we are
+            // on — there is nothing to add.
+            $alreadyInTrail = collect($dbTrail)->contains(
+                fn ($crumb) => strcasecmp(trim((string) ($crumb['label'] ?? '')), $normalizedTitle) === 0
+            );
+
+            if ($normalizedTitle !== '' && ! $alreadyInTrail) {
                 $dbTrail[] = ['label' => $normalizedTitle, 'url' => null];
             }
 

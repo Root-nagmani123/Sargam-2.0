@@ -67,6 +67,9 @@ class ReportController extends Controller
         'seconds' => 'STOCK_BALANCE_TILL_DATE_CACHE_SECONDS',
     ];
 
+    /** Redis TTL (seconds) for Stock Balance Till Date report (screen + Excel/PDF export). Kept short so exports used for reconciliation don't go stale. */
+    private const STOCK_BALANCE_TILL_DATE_CACHE_TTL = 300;
+
     private const SALE_VOUCHER_BUYERS_PER_PAGE = 8;
     private const STOCK_BALANCE_TILL_DATE_PER_PAGE = 50;
 
@@ -603,6 +606,26 @@ class ReportController extends Controller
     }
 
     /**
+     * Shared base join for Selling Voucher (kitchen_issue_items -> kitchen_issue_master) aggregations.
+     * Callers add their own where/select/groupBy on top.
+     */
+    private static function kitchenIssueItemsBaseQuery(): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('kitchen_issue_items as kii')
+            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk');
+    }
+
+    /**
+     * Shared base join for Selling Voucher Date Range (sv_date_range_report_items -> sv_date_range_reports) aggregations.
+     * Callers add their own where/select/groupBy on top.
+     */
+    private static function svDateRangeItemsBaseQuery(): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('sv_date_range_report_items as svi')
+            ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id');
+    }
+
+    /**
      * @param  array{fromDate: string, toDate: string, vendorIds: array<int>, storeIds: array<int>}  $filters
      */
     private function stockPurchaseDetailLinesBaseQuery(array $filters): \Illuminate\Database\Query\Builder
@@ -895,7 +918,7 @@ class ReportController extends Controller
 
         // Expensive report: cache full dataset (Redis/file via RedisBackedCache). Pagination reuses cache.
         // Apply filters sends refresh=1 to recompute and overwrite cache.
-        $cacheKey = 'stock-summary:v4:' . md5(json_encode([$fromDate, $toDate, $storeType, $storeIds]));
+        $cacheKey = 'stock-summary:v9:' . md5(json_encode([$fromDate, $toDate, $storeType, $storeIds]));
         $loadReport = function () use ($fromDate, $toDate, $storeIds, $storeType) {
             [$data, $storeName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeIds, $storeType);
             $totals = [
@@ -1015,7 +1038,7 @@ class ReportController extends Controller
      * @param  callable(): mixed  $callback
      * @return array{0: mixed, 1: bool}
      */
-    private function rememberMessReportCache(string $cacheKey, array $envKeys, string $logLabel, callable $callback): array
+    private function rememberMessReportCache(string $cacheKey, array $envKeys, string $logLabel, callable $callback, ?int $ttlSeconds = null): array
     {
         $enabled = ! in_array(
             strtolower((string) env($envKeys['enabled'], 'true')),
@@ -1043,7 +1066,7 @@ class ReportController extends Controller
         }
 
         return [
-            DataTableRedisCache::remember($cacheKey, $envKeys, $logLabel, $callback),
+            DataTableRedisCache::remember($cacheKey, $envKeys, $logLabel, $callback, $ttlSeconds),
             false,
         ];
     }
@@ -1051,7 +1074,7 @@ class ReportController extends Controller
     /**
      * @param  array{enabled: string, seconds: string}  $envKeys
      */
-    private function putMessReportCache(string $cacheKey, mixed $payload, array $envKeys, string $logLabel): void
+    private function putMessReportCache(string $cacheKey, mixed $payload, array $envKeys, string $logLabel, ?int $ttlSeconds = null): void
     {
         $enabled = ! in_array(
             strtolower((string) env($envKeys['enabled'], 'true')),
@@ -1062,7 +1085,7 @@ class ReportController extends Controller
             return;
         }
 
-        $ttl = max(30, (int) env($envKeys['seconds'], 300));
+        $ttl = max(30, $ttlSeconds ?? (int) env($envKeys['seconds'], 300));
         try {
             RedisBackedCache::repositoryForStore(RedisBackedCache::projectDefaultStoreName())
                 ->put($cacheKey, $payload, $ttl);
@@ -1141,70 +1164,33 @@ class ReportController extends Controller
         return 'data:'.$mime.';base64,'.base64_encode($raw);
     }
 
-    /**
-     * Fetch an image over HTTP and return a data URI for Dompdf embedding.
-     */
-    private function pdfTryHttpToDataUri(string $url, string $mime): ?string
-    {
-        try {
-            $response = Http::timeout(20)->connectTimeout(8)->get($url);
-            if ($response->successful()) {
-                $body = $response->body();
-                if ($body !== '' && strlen($body) > 100) {
-                    return 'data:'.$mime.';base64,'.base64_encode($body);
-                }
-            }
-        } catch (\Throwable $e) {
-            // Fall back to returning the raw URL for the view / Dompdf remote loader
-        }
-
-        return null;
-    }
 
     /**
-     * LBSNAA header logo for Stock Summary PDF: local academy assets first, then official site, then URL fallback.
+     * LBSNAA header logo for the mess PDF headers. Local assets only.
+     *
+     * Review finding F-027. This used to try the local files, then fetch
+     * https://www.lbsnaa.gov.in/admin_assets/images/logo.png over HTTP, then hand dompdf
+     * that raw URL if even the fetch failed - so a server-side render depended on the
+     * public website being up, and dompdf needed isRemoteEnabled to load the fallback.
      */
     private function messPdfLbsnaaLogoForDompdf(): string
     {
-        foreach ([public_path('images/lbsnaa_logo.jpg'), public_path('images/lbsnaa_logo.png')] as $path) {
-            $uri = $this->pdfTryFileToDataUri($path);
-            if ($uri !== null) {
-                return $uri;
-            }
-        }
-
-        $official = 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
-        $embedded = $this->pdfTryHttpToDataUri($official, 'image/png');
-        if ($embedded !== null) {
-            return $embedded;
-        }
-
-        foreach ([
-            public_path('admin_assets/images/logos/logo.png'),
-            public_path('admin_assets/images/logos/logo.svg'),
-            public_path('admin_assets/images/logos/logo-icon.svg'),
-        ] as $path) {
-            $uri = $this->pdfTryFileToDataUri($path);
-            if ($uri !== null) {
-                return $uri;
-            }
-        }
-
-        return $official;
+        return pdf_lbsnaa_logo_src();
     }
 
     /**
-     * India emblem (PNG) for PDF header — embedded when fetch succeeds.
+     * India emblem for the mess PDF headers. Local assets only.
+     *
+     * Review finding F-027, and the sharper half of it: this method did not try a local
+     * file at all. Every mess PDF export called
+     * https://upload.wikimedia.org/.../Emblem_of_India.svg.png with Http::timeout(20) while
+     * building the document, and returned the raw URL for dompdf to fetch when that failed.
+     * public/admin_assets/images/logos/ashoka.png has been sitting in the repository the
+     * whole time, and is what every other PDF header in this application already uses.
      */
     private function messPdfIndiaEmblemForDompdf(): string
     {
-        $url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
-        $embedded = $this->pdfTryHttpToDataUri($url, 'image/png');
-        if ($embedded !== null) {
-            return $embedded;
-        }
-
-        return $url;
+        return pdf_emblem_src();
     }
 
     /**
@@ -1258,7 +1244,7 @@ class ReportController extends Controller
             ->setOptions([
                 'defaultFont'           => 'DejaVu Sans',
                 'isHtml5ParserEnabled'  => true,
-                'isRemoteEnabled'       => true,
+                'isRemoteEnabled'       => false,
                 'dpi'                   => 96,
             ]);
 
@@ -1313,7 +1299,7 @@ class ReportController extends Controller
             ->setOptions([
                 'defaultFont'           => 'DejaVu Sans',
                 'isHtml5ParserEnabled'  => true,
-                'isRemoteEnabled'       => true,
+                'isRemoteEnabled'       => false,
                 'dpi'                   => 96,
             ]);
 
@@ -1328,7 +1314,7 @@ class ReportController extends Controller
     {
         $tillDate = $request->filled('till_date') ? $request->till_date : now()->format('Y-m-d');
         $storeIds = $this->normalizedIdList($request, 'store_id');
-        $reportData = $this->buildStockBalanceTillDateData($tillDate, $storeIds);
+        [$reportData, ] = $this->loadStockBalanceTillDateReportData($request, $tillDate, $storeIds);
         $selectedStoreName = $this->resolveStoreNamesLabel($storeIds);
 
         $fileName = 'stock-balance-till-date-' . $tillDate . '-' . now()->format('Y-m-d_His') . '.xlsx';
@@ -1349,9 +1335,10 @@ class ReportController extends Controller
 
         $tillDate = $request->filled('till_date') ? $request->till_date : now()->format('Y-m-d');
         $storeIds = $this->normalizedIdList($request, 'store_id');
+        [$reportData, ] = $this->loadStockBalanceTillDateReportData($request, $tillDate, $storeIds);
 
         $data = [
-            'reportData' => $this->buildStockBalanceTillDateData($tillDate, $storeIds),
+            'reportData' => $reportData,
             'tillDate' => $tillDate,
             'selectedStoreName' => $this->resolveStoreNamesLabel($storeIds),
             'emblemSrc' => $this->messPdfIndiaEmblemForDompdf(),
@@ -1363,7 +1350,7 @@ class ReportController extends Controller
             ->setOptions([
                 'defaultFont'           => 'DejaVu Sans',
                 'isHtml5ParserEnabled'  => true,
-                'isRemoteEnabled'       => true,
+                'isRemoteEnabled'       => false,
                 'dpi'                   => 96,
                 'isPhpEnabled'          => false,
             ]);
@@ -1441,7 +1428,7 @@ class ReportController extends Controller
             ->setOptions([
                 'defaultFont'           => 'DejaVu Sans',
                 'isHtml5ParserEnabled'  => true,
-                'isRemoteEnabled'       => true,
+                'isRemoteEnabled'       => false,
                 'dpi'                   => 96,
             ]);
 
@@ -1531,7 +1518,7 @@ class ReportController extends Controller
             ->setOptions([
                 'defaultFont' => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => true,
+                'isRemoteEnabled' => false,
                 'isPhpEnabled' => false,
                 'chroot' => realpath(public_path()) ?: public_path(),
                 'dpi' => 96,
@@ -1640,188 +1627,38 @@ class ReportController extends Controller
     {
         $previousDate = date('Y-m-d', strtotime($fromDate . ' -1 day'));
         $reportData = [];
-        $kimStoreType = $storeType === 'main' ? 'store' : 'sub_store';
 
-        $kitchenIssueSales = function (string $dateOperator, $dateValue, bool $withAmount) use ($storeIds, $kimStoreType) {
-            $query = DB::table('kitchen_issue_items as kii')
-                ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
-                ->whereNotNull('kii.item_subcategory_id')
-                ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-                ->where('kim.store_type', $kimStoreType)
-                ->when($storeIds !== [], fn ($q) => $q->whereIn('kim.store_id', $storeIds));
-
-            $dateOperator === 'between'
-                ? $query->whereBetween('kim.issue_date', $dateValue)
-                : $query->where('kim.issue_date', $dateOperator, $dateValue);
-
-            if ($withAmount) {
-                $query->join('mess_item_subcategories as mis', 'mis.id', '=', 'kii.item_subcategory_id')
-                    ->selectRaw('
-                        kii.item_subcategory_id,
-                        SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as total_qty,
-                        SUM((kii.quantity - COALESCE(kii.return_quantity, 0)) * COALESCE(kii.rate, mis.standard_cost, 0)) as total_amount
-                    ');
-            } else {
-                $query->selectRaw('
-                    kii.item_subcategory_id,
-                    SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as total_qty
-                ');
-            }
-
-            return $query->groupBy('kii.item_subcategory_id')->get()->keyBy('item_subcategory_id');
-        };
-
-        $dateRangeSales = function (string $dateOperator, $dateValue, bool $withAmount) use ($storeIds, $kimStoreType) {
-            $query = DB::table('sv_date_range_report_items as svi')
-                ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
-                ->whereNotNull('svi.item_subcategory_id')
-                ->where('svr.store_type', $kimStoreType)
-                ->when($storeIds !== [], fn ($q) => $q->whereIn('svr.store_id', $storeIds));
-
-            // Line-level issue dates (matches per-item logic elsewhere in this report).
-            $dateOperator === 'between'
-                ? $query->whereBetween('svi.issue_date', $dateValue)
-                : $query->where('svi.issue_date', $dateOperator, $dateValue);
-
-            if ($withAmount) {
-                $query->join('mess_item_subcategories as mis', 'mis.id', '=', 'svi.item_subcategory_id')
-                    ->selectRaw('
-                        svi.item_subcategory_id,
-                        SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as total_qty,
-                        SUM((svi.quantity - COALESCE(svi.return_quantity, 0)) * COALESCE(svi.rate, mis.standard_cost, 0)) as total_amount
-                    ');
-            } else {
-                $query->selectRaw('
-                    svi.item_subcategory_id,
-                    SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as total_qty
-                ');
-            }
-
-            return $query->groupBy('svi.item_subcategory_id')->get()->keyBy('item_subcategory_id');
-        };
-
-        $openingKitchenIssueSales = $kitchenIssueSales('<=', $previousDate, false);
-        $openingDateRangeSales = $dateRangeSales('<=', $previousDate, false);
-        $periodKitchenIssueSales = $kitchenIssueSales('between', [$fromDate, $toDate], true);
-        $periodDateRangeSales = $dateRangeSales('between', [$fromDate, $toDate], true);
-
-        if ($storeType === 'main') {
-            $incomingQuery = DB::table('mess_purchase_order_items as poi')
-                ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
-                ->whereNotNull('poi.item_subcategory_id')
-                ->where('po.status', 'approved')
-                ->when($storeIds !== [], fn ($q) => $q->whereIn('po.store_id', $storeIds));
-
-            $openingIncoming = (clone $incomingQuery)
-                ->where('po.po_date', '<=', $previousDate)
-                ->selectRaw('poi.item_subcategory_id, SUM(poi.quantity) as total_qty')
-                ->groupBy('poi.item_subcategory_id')
-                ->get()
-                ->keyBy('item_subcategory_id');
-            $periodIncoming = (clone $incomingQuery)
-                ->whereBetween('po.po_date', [$fromDate, $toDate])
-                ->selectRaw('poi.item_subcategory_id, SUM(poi.quantity) as total_qty, AVG(poi.unit_price) as avg_rate')
-                ->groupBy('poi.item_subcategory_id')
-                ->get()
-                ->keyBy('item_subcategory_id');
-            $closingRates = (clone $incomingQuery)
-                ->where('po.po_date', '<=', $toDate)
-                ->selectRaw('poi.item_subcategory_id, COALESCE(SUM(poi.quantity), 0) as qty_sum, COALESCE(SUM(poi.quantity * poi.unit_price), 0) as val_sum')
-                ->groupBy('poi.item_subcategory_id')
-                ->get()
-                ->keyBy('item_subcategory_id');
-        } else {
-            $incomingQuery = DB::table('mess_store_allocation_items as sai')
-                ->join('mess_store_allocations as sa', 'sai.store_allocation_id', '=', 'sa.id')
-                ->whereNotNull('sai.item_subcategory_id')
-                ->when($storeIds !== [], fn ($q) => $q->whereIn('sa.sub_store_id', $storeIds));
-
-            $openingIncoming = (clone $incomingQuery)
-                ->where('sa.allocation_date', '<=', $previousDate)
-                ->selectRaw('sai.item_subcategory_id, SUM(sai.quantity) as total_qty')
-                ->groupBy('sai.item_subcategory_id')
-                ->get()
-                ->keyBy('item_subcategory_id');
-            $periodIncoming = (clone $incomingQuery)
-                ->whereBetween('sa.allocation_date', [$fromDate, $toDate])
-                ->selectRaw('sai.item_subcategory_id, SUM(sai.quantity) as total_qty, AVG(sai.unit_price) as avg_rate')
-                ->groupBy('sai.item_subcategory_id')
-                ->get()
-                ->keyBy('item_subcategory_id');
-            $closingRates = (clone $incomingQuery)
-                ->where('sa.allocation_date', '<=', $toDate)
-                ->selectRaw('sai.item_subcategory_id, COALESCE(SUM(sai.quantity), 0) as qty_sum, COALESCE(SUM(sai.quantity * COALESCE(sai.unit_price, 0)), 0) as val_sum')
-                ->groupBy('sai.item_subcategory_id')
-                ->get()
-                ->keyBy('item_subcategory_id');
-        }
-
-        $itemIds = $openingIncoming->keys()
-            ->merge($periodIncoming->keys())
-            ->merge($openingKitchenIssueSales->keys())
-            ->merge($openingDateRangeSales->keys())
-            ->merge($periodKitchenIssueSales->keys())
-            ->merge($periodDateRangeSales->keys())
-            ->filter()
-            ->unique()
-            ->values();
+        $ledgerDays = $this->stockLedgerDays($storeType, $storeIds, $toDate);
 
         $items = ItemSubcategory::where('status', 'active')
-            ->whereIn('id', $itemIds)
+            ->whereIn('id', array_keys($ledgerDays))
             ->orderBy('name')
             ->get(ItemSubcategory::listSelectColumns());
 
         foreach ($items as $item) {
+            $ledger = $this->stockRunningAverage($ledgerDays[$item->id], $previousDate, (float) ($item->standard_cost ?? 0));
+
             $itemData = [
                 'item_name' => $item->item_name ?? $item->subcategory_name ?? $item->name,
                 'item_code' => $item->item_code ?? $item->subcategory_code ?? '—',
                 'unit' => $item->unit_measurement ?? 'Unit',
-                'opening_qty' => 0,
-                'opening_rate' => $item->standard_cost ?? 0,
-                'opening_amount' => 0,
-                'purchase_qty' => 0,
-                'purchase_rate' => $item->standard_cost ?? 0,
-                'purchase_amount' => 0,
-                'sale_qty' => 0,
-                'sale_rate' => $item->standard_cost ?? 0,
-                'sale_amount' => 0,
-                'closing_qty' => 0,
-                'closing_rate' => $item->standard_cost ?? 0,
-                'closing_amount' => 0,
+                'opening_qty' => $ledger['opening_qty'],
+                'opening_rate' => $ledger['opening_rate'],
+                'opening_amount' => $ledger['opening_value'],
+                'purchase_qty' => $ledger['purchase_qty'],
+                'purchase_rate' => $ledger['purchase_qty'] > 0
+                    ? $ledger['purchase_value'] / $ledger['purchase_qty']
+                    : ($item->standard_cost ?? 0),
+                'purchase_amount' => $ledger['purchase_value'],
+                'sale_qty' => $ledger['sale_qty'],
+                'sale_rate' => $ledger['sale_qty'] != 0
+                    ? $ledger['sale_value'] / $ledger['sale_qty']
+                    : $ledger['closing_rate'],
+                'sale_amount' => $ledger['sale_value'],
+                'closing_qty' => $ledger['closing_qty'],
+                'closing_rate' => $ledger['closing_rate'],
+                'closing_amount' => $ledger['closing_value'],
             ];
-
-            $openingIncomingQty = (float) ($openingIncoming->get($item->id)->total_qty ?? 0);
-            $openingSaleKiQty = (float) ($openingKitchenIssueSales->get($item->id)->total_qty ?? 0);
-            $openingSaleSvQty = (float) ($openingDateRangeSales->get($item->id)->total_qty ?? 0);
-            $itemData['opening_qty'] = $openingIncomingQty - $openingSaleKiQty - $openingSaleSvQty;
-
-            $itemData['opening_amount'] = $itemData['opening_qty'] * $itemData['opening_rate'];
-
-            $incoming = $periodIncoming->get($item->id);
-            $itemData['purchase_qty'] = (float) ($incoming->total_qty ?? 0);
-            $itemData['purchase_rate'] = $incoming->avg_rate ?? $itemData['purchase_rate'];
-
-            $itemData['purchase_amount'] = $itemData['purchase_qty'] * $itemData['purchase_rate'];
-
-            $salesKi = $periodKitchenIssueSales->get($item->id);
-            $saleQtyKi = (float) ($salesKi->total_qty ?? 0);
-            $saleAmountKi = (float) ($salesKi->total_amount ?? 0);
-
-            $salesSv = $periodDateRangeSales->get($item->id);
-            $saleQtySv = (float) ($salesSv->total_qty ?? 0);
-            $saleAmountSv = (float) ($salesSv->total_amount ?? 0);
-
-            $itemData['sale_qty'] = $saleQtyKi + $saleQtySv;
-            $itemData['sale_amount'] = $saleAmountKi + $saleAmountSv;
-            $itemData['sale_rate'] = $itemData['sale_qty'] > 0 ? $itemData['sale_amount'] / $itemData['sale_qty'] : $itemData['sale_rate'];
-
-            $itemData['closing_qty'] = $itemData['opening_qty'] + $itemData['purchase_qty'] - $itemData['sale_qty'];
-            $closingRateRow = $closingRates->get($item->id);
-            $closingValRate = (float) ($closingRateRow->qty_sum ?? 0) > 0
-                ? round(((float) ($closingRateRow->val_sum ?? 0)) / (float) $closingRateRow->qty_sum, 6)
-                : null;
-            $itemData['closing_rate'] = $closingValRate ?? ($item->standard_cost ?? 0);
-            $itemData['closing_amount'] = $itemData['closing_qty'] * $itemData['closing_rate'];
 
             if ($itemData['opening_qty'] != 0 || $itemData['purchase_qty'] != 0 || $itemData['sale_qty'] != 0) {
                 $reportData[] = $itemData;
@@ -1835,9 +1672,180 @@ class ReportController extends Controller
             } else {
                 $selectedStoreName = SubStore::whereIn('id', $storeIds)->orderBy('sub_store_name')->pluck('sub_store_name')->implode(', ');
             }
+        } else {
+            $selectedStoreName = $storeType == 'main' ? 'All Main Stores' : 'All Sub Stores';
         }
 
         return [$reportData, $selectedStoreName];
+    }
+
+    /**
+     * Day-wise stock movement per item up to $toDate, for the running-average ledger.
+     * Incoming is approved purchase order lines with tax (main store) or allocations (sub-store);
+     * outgoing is selling-voucher sales net of returns.
+     *
+     * @param  array<int>  $storeIds  Empty: all stores for the store type; non-empty: filter with whereIn.
+     * @return array<int, array<string, array{in_qty: float, in_value: float, sale_qty: float}>>  item id => Y-m-d => movement
+     */
+    private function stockLedgerDays(string $storeType, array $storeIds, string $toDate): array
+    {
+        $kimStoreType = $storeType === 'main' ? 'store' : 'sub_store';
+
+        if ($storeType === 'main') {
+            $incoming = DB::table('mess_purchase_order_items as poi')
+                ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
+                ->whereNotNull('poi.item_subcategory_id')
+                ->where('po.status', 'approved')
+                ->where('po.po_date', '<=', $toDate)
+                ->when($storeIds !== [], fn ($q) => $q->whereIn('po.store_id', $storeIds))
+                // Line value with tax, the same way Stock Purchase Details totals a line.
+                ->selectRaw('poi.item_subcategory_id as item_id, po.po_date as txn_date, SUM(poi.quantity) as qty,
+                    SUM(COALESCE(poi.quantity, 0) * COALESCE(poi.unit_price, 0)
+                        + ROUND(COALESCE(poi.quantity, 0) * COALESCE(poi.unit_price, 0) * COALESCE(poi.tax_percent, 0) / 100, 2)) as value')
+                ->groupBy('poi.item_subcategory_id', 'po.po_date')
+                ->get();
+        } else {
+            $incoming = DB::table('mess_store_allocation_items as sai')
+                ->join('mess_store_allocations as sa', 'sai.store_allocation_id', '=', 'sa.id')
+                ->whereNotNull('sai.item_subcategory_id')
+                ->where('sa.allocation_date', '<=', $toDate)
+                ->when($storeIds !== [], fn ($q) => $q->whereIn('sa.sub_store_id', $storeIds))
+                ->selectRaw('sai.item_subcategory_id as item_id, sa.allocation_date as txn_date, SUM(sai.quantity) as qty,
+                    SUM(sai.quantity * COALESCE(sai.unit_price, 0)) as value')
+                ->groupBy('sai.item_subcategory_id', 'sa.allocation_date')
+                ->get();
+        }
+
+        $kitchenIssueSales = self::kitchenIssueItemsBaseQuery()
+            ->whereNotNull('kii.item_subcategory_id')
+            ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->where('kim.store_type', $kimStoreType)
+            ->where('kim.issue_date', '<=', $toDate)
+            ->when($storeIds !== [], fn ($q) => $q->whereIn('kim.store_id', $storeIds))
+            ->selectRaw('kii.item_subcategory_id as item_id, kim.issue_date as txn_date, SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as qty')
+            ->groupBy('kii.item_subcategory_id', 'kim.issue_date')
+            ->get();
+
+        // Line-level issue dates (matches per-item logic elsewhere in this report).
+        $dateRangeSales = self::svDateRangeItemsBaseQuery()
+            ->whereNotNull('svi.item_subcategory_id')
+            ->where('svr.store_type', $kimStoreType)
+            ->where('svi.issue_date', '<=', $toDate)
+            ->when($storeIds !== [], fn ($q) => $q->whereIn('svr.store_id', $storeIds))
+            ->selectRaw('svi.item_subcategory_id as item_id, svi.issue_date as txn_date, SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as qty')
+            ->groupBy('svi.item_subcategory_id', 'svi.issue_date')
+            ->get();
+
+        $days = [];
+        $empty = ['in_qty' => 0.0, 'in_value' => 0.0, 'sale_qty' => 0.0];
+        foreach ($incoming as $row) {
+            $day = &$days[(int) $row->item_id][(string) $row->txn_date];
+            $day ??= $empty;
+            $day['in_qty'] += (float) $row->qty;
+            $day['in_value'] += (float) $row->value;
+            unset($day);
+        }
+        foreach ([$kitchenIssueSales, $dateRangeSales] as $sales) {
+            foreach ($sales as $row) {
+                $day = &$days[(int) $row->item_id][(string) $row->txn_date];
+                $day ??= $empty;
+                $day['sale_qty'] += (float) $row->qty;
+                unset($day);
+            }
+        }
+
+        return $days;
+    }
+
+    /**
+     * Running weighted-average valuation of one item's stock. Days are walked in date order with
+     * incoming before sales on the same day: incoming adds its value, and a sale is valued at the
+     * average rate of the stock on hand that day. So a sale has value only when it has quantity
+     * (or re-costs stock that was oversold before), opening + purchase - sale = closing, and the
+     * closing of one day is the opening of the next.
+     *
+     * @param  array<string, array{in_qty: float, in_value: float, sale_qty: float}>  $days  from stockLedgerDays()
+     * @param  string|null  $openingDate  Opening is the stock at the end of this day; null: no opening, everything is in the period.
+     * @param  float  $fallbackRate  Rate used before the item has any priced stock (standard cost).
+     * @return array<string, float>
+     */
+    private function stockRunningAverage(array $days, ?string $openingDate, float $fallbackRate): array
+    {
+        ksort($days);
+
+        $qty = 0.0;
+        $value = 0.0;
+        $rate = null;
+        $result = [
+            'opening_qty' => 0.0, 'opening_value' => 0.0, 'opening_rate' => $fallbackRate,
+            'purchase_qty' => 0.0, 'purchase_value' => 0.0,
+            'sale_qty' => 0.0, 'sale_value' => 0.0,
+        ];
+        $rateOf = function () use (&$qty, &$value, &$rate, $fallbackRate) {
+            return $qty != 0 ? $value / $qty : ($rate ?? $fallbackRate);
+        };
+        $openingTaken = $openingDate === null;
+
+        foreach ($days as $date => $day) {
+            if (! $openingTaken && $date > $openingDate) {
+                $result['opening_qty'] = $qty;
+                $result['opening_value'] = $value;
+                $result['opening_rate'] = $rateOf();
+                $openingTaken = true;
+            }
+            $inPeriod = $openingTaken;
+
+            if ($day['in_qty'] != 0 || $day['in_value'] != 0) {
+                if ($qty < 0 && $day['in_qty'] > 0) {
+                    // Stock was oversold: the short quantity was issued at the old rate. Re-cost it at
+                    // this incoming rate and add the difference to sale cost, so value stays qty x rate.
+                    $adjustment = $qty * ($day['in_value'] / $day['in_qty']) - $value;
+                    $value += $adjustment;
+                    if ($inPeriod) {
+                        $result['sale_value'] -= $adjustment;
+                    }
+                }
+                // Quantities are stored to 2 decimals; rounding drops float noise such as 0.030000000000001.
+                $qty = round($qty + $day['in_qty'], 4);
+                $value += $day['in_value'];
+                if ($inPeriod) {
+                    $result['purchase_qty'] = round($result['purchase_qty'] + $day['in_qty'], 4);
+                    $result['purchase_value'] += $day['in_value'];
+                }
+                if ($qty > 0) {
+                    $rate = $value / $qty;
+                } elseif ($day['in_qty'] > 0) {
+                    $rate = $day['in_value'] / $day['in_qty'];
+                }
+            }
+
+            if ($day['sale_qty'] != 0) {
+                $saleValue = $day['sale_qty'] * ($rate ?? $fallbackRate);
+                $qty = round($qty - $day['sale_qty'], 4);
+                $value -= $saleValue;
+                if ($inPeriod) {
+                    $result['sale_qty'] = round($result['sale_qty'] + $day['sale_qty'], 4);
+                    $result['sale_value'] += $saleValue;
+                }
+            }
+
+            if ($qty == 0) {
+                $qty = 0.0; // also turns -0.0 into 0.0
+                $value = 0.0;
+            }
+        }
+
+        if (! $openingTaken) {
+            $result['opening_qty'] = $qty;
+            $result['opening_value'] = $value;
+            $result['opening_rate'] = $rateOf();
+        }
+
+        $result['closing_qty'] = $qty;
+        $result['closing_value'] = $value;
+        $result['closing_rate'] = $rateOf();
+
+        return $result;
     }
 
     /**
@@ -2827,7 +2835,7 @@ class ReportController extends Controller
     {
         $sortedStoreIds = $storeIds;
         sort($sortedStoreIds);
-        $cacheKey = 'stock-balance-till-date:v2:' . md5(json_encode([$tillDate, $sortedStoreIds]));
+        $cacheKey = 'stock-balance-till-date:v4:' . md5(json_encode([$tillDate, $sortedStoreIds]));
         $loadReport = fn () => $this->buildStockBalanceTillDateData($tillDate, $sortedStoreIds);
 
         if ($request->boolean('refresh')) {
@@ -2836,7 +2844,8 @@ class ReportController extends Controller
                 $cacheKey,
                 $rawReportData,
                 self::STOCK_BALANCE_TILL_DATE_CACHE_ENV_KEYS,
-                'ReportController@stockBalanceTillDate'
+                'ReportController@stockBalanceTillDate',
+                self::STOCK_BALANCE_TILL_DATE_CACHE_TTL
             );
             $cacheHit = false;
         } else {
@@ -2844,7 +2853,8 @@ class ReportController extends Controller
                 $cacheKey,
                 self::STOCK_BALANCE_TILL_DATE_CACHE_ENV_KEYS,
                 'ReportController@stockBalanceTillDate',
-                $loadReport
+                $loadReport,
+                self::STOCK_BALANCE_TILL_DATE_CACHE_TTL
             );
         }
 
@@ -2939,80 +2949,15 @@ class ReportController extends Controller
      */
     private function buildStockBalanceTillDateData(string $tillDate, array $storeIds = []): array
     {
-        $purchaseAgg = DB::table('mess_purchase_order_items as poi')
-            ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
-            ->where('po.status', 'approved')
-            ->where('po.po_date', '<=', $tillDate)
-            ->whereNotNull('poi.item_subcategory_id')
-            ->when($storeIds !== [], fn ($q) => $q->whereIn('po.store_id', $storeIds))
-            ->groupBy('poi.item_subcategory_id')
-            ->selectRaw('
-                poi.item_subcategory_id,
-                COALESCE(SUM(poi.quantity), 0) as total_qty,
-                COALESCE(SUM(poi.quantity * poi.unit_price), 0) as total_value
-            ')
-            ->get()
-            ->keyBy('item_subcategory_id');
+        // Same running-average valuation as Stock Summary, so the balance equals Stock Summary closing.
+        $ledgerDays = $this->stockLedgerDays('main', $storeIds, $tillDate);
 
-        $issuedKiAgg = DB::table('kitchen_issue_items as kii')
-            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
-            ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-            ->where('kim.store_type', 'store')
-            ->where('kim.issue_date', '<=', $tillDate)
-            ->whereNotNull('kii.item_subcategory_id')
-            ->when($storeIds !== [], fn ($q) => $q->whereIn('kim.store_id', $storeIds))
-            ->groupBy('kii.item_subcategory_id')
-            ->selectRaw('
-                kii.item_subcategory_id,
-                COALESCE(SUM(kii.quantity - COALESCE(kii.return_quantity, 0)), 0) as total_issued
-            ')
-            ->get()
-            ->keyBy('item_subcategory_id');
-
-        $issuedSvAgg = DB::table('sv_date_range_report_items as svi')
-            ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
-            ->where('svr.store_type', 'store')
-            ->where('svi.issue_date', '<=', $tillDate)
-            ->whereNotNull('svi.item_subcategory_id')
-            ->when($storeIds !== [], fn ($q) => $q->whereIn('svr.store_id', $storeIds))
-            ->groupBy('svi.item_subcategory_id')
-            ->selectRaw('
-                svi.item_subcategory_id,
-                COALESCE(SUM(svi.quantity - COALESCE(svi.return_quantity, 0)), 0) as total_issued
-            ')
-            ->get()
-            ->keyBy('item_subcategory_id');
-
-        $candidateIds = $purchaseAgg->keys()
-            ->merge($issuedKiAgg->keys())
-            ->merge($issuedSvAgg->keys())
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
-
-        if ($candidateIds === []) {
-            return [];
-        }
-
-        $positiveItemIds = [];
-        foreach ($candidateIds as $itemId) {
-            $itemId = (int) $itemId;
-            $totalPurchased = (float) ($purchaseAgg->get($itemId)->total_qty ?? 0);
-            $totalIssuedKi = (float) ($issuedKiAgg->get($itemId)->total_issued ?? 0);
-            $totalIssuedSv = (float) ($issuedSvAgg->get($itemId)->total_issued ?? 0);
-            $remainingQty = $totalPurchased - ($totalIssuedKi + $totalIssuedSv);
-            if ($remainingQty > 0) {
-                $positiveItemIds[] = $itemId;
-            }
-        }
-
-        if ($positiveItemIds === []) {
+        if ($ledgerDays === []) {
             return [];
         }
 
         $items = ItemSubcategory::where('status', 'active')
-            ->whereIn('id', $positiveItemIds)
+            ->whereIn('id', array_keys($ledgerDays))
             ->orderBy('name')
             ->get(ItemSubcategory::listSelectColumns(true, true));
 
@@ -3020,21 +2965,13 @@ class ReportController extends Controller
         $hasAlertQtyColumn = Schema::hasColumn('mess_item_subcategories', 'alert_quantity');
 
         foreach ($items as $item) {
-            $totalPurchased = (float) ($purchaseAgg->get($item->id)->total_qty ?? 0);
-            $totalIssuedKi = (float) ($issuedKiAgg->get($item->id)->total_issued ?? 0);
-            $totalIssuedSv = (float) ($issuedSvAgg->get($item->id)->total_issued ?? 0);
+            $ledger = $this->stockRunningAverage($ledgerDays[$item->id], null, (float) ($item->standard_cost ?? 0));
 
-            $remainingQty = $totalPurchased - ($totalIssuedKi + $totalIssuedSv);
+            $remainingQty = $ledger['closing_qty'];
             if ($remainingQty <= 0) {
                 continue;
             }
 
-            $purchaseRow = $purchaseAgg->get($item->id);
-            $purchaseQty = (float) ($purchaseRow->total_qty ?? 0);
-            $purchaseValue = (float) ($purchaseRow->total_value ?? 0);
-            $rate = $purchaseQty > 0
-                ? round($purchaseValue / $purchaseQty, 6)
-                : (float) ($item->standard_cost ?? 0);
             $reportData[] = [
                 'item_code' => $item->item_code ?? $item->subcategory_code ?? '-',
                 'item_name' => $item->item_name ?? $item->subcategory_name ?? $item->name,
@@ -3042,8 +2979,8 @@ class ReportController extends Controller
                 'remaining_qty' => $remainingQty,
                 'remaining_quantity' => $remainingQty,
                 'alert_quantity' => $hasAlertQtyColumn ? $item->alert_quantity : null,
-                'rate' => $rate,
-                'amount' => $remainingQty * $rate,
+                'rate' => $ledger['closing_rate'],
+                'amount' => $ledger['closing_value'],
             ];
         }
 
@@ -3154,8 +3091,7 @@ class ReportController extends Controller
             ->get()
             ->keyBy('item_subcategory_id');
 
-        $issuedKiAgg = DB::table('kitchen_issue_items as kii')
-            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+        $issuedKiAgg = self::kitchenIssueItemsBaseQuery()
             ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
             ->where('kim.store_type', 'store')
             ->where('kim.issue_date', '<=', $tillDate)
@@ -3166,8 +3102,7 @@ class ReportController extends Controller
             ->get()
             ->keyBy('item_subcategory_id');
 
-        $issuedSvAgg = DB::table('sv_date_range_report_items as svi')
-            ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+        $issuedSvAgg = self::svDateRangeItemsBaseQuery()
             ->where('svr.store_type', 'store')
             ->where('svi.issue_date', '<=', $tillDate)
             ->whereIn('svi.item_subcategory_id', $itemIds)
@@ -3372,7 +3307,7 @@ class ReportController extends Controller
             ->setOptions([
                 'defaultFont'           => 'DejaVu Sans',
                 'isHtml5ParserEnabled'  => true,
-                'isRemoteEnabled'       => true,
+                'isRemoteEnabled'       => false,
                 'dpi'                   => 96,
             ]);
 
@@ -3531,8 +3466,7 @@ class ReportController extends Controller
             ->get()
             ->keyBy('item_subcategory_id');
 
-        $saleKiAgg = DB::table('kitchen_issue_items as kii')
-            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+        $saleKiAgg = $this->kitchenIssueItemsBaseQuery()
             ->join('mess_item_subcategories as mis_ki', 'mis_ki.id', '=', 'kii.item_subcategory_id')
             ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
             ->where('kim.store_type', 'store')
@@ -3549,8 +3483,7 @@ class ReportController extends Controller
             ->get()
             ->keyBy('item_subcategory_id');
 
-        $saleSvAgg = DB::table('sv_date_range_report_items as svi')
-            ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+        $saleSvAgg = $this->svDateRangeItemsBaseQuery()
             ->join('mess_item_subcategories as mis_sv', 'mis_sv.id', '=', 'svi.item_subcategory_id')
             ->where('svr.store_type', 'store')
             ->where('svi.issue_date', '>=', $fromDate)

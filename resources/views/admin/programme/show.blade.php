@@ -2,6 +2,11 @@
 
 @section('title', 'View Course')
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<link rel="stylesheet" href="{{ asset('css/programme-admin.css') }}?v={{ @filemtime(public_path('css/programme-admin.css')) ?: time() }}">
+@endpush
+
 @section('setup_content')
     @php
         $assistantList = collect($assistantCoordinatorsData ?? [])->values();
@@ -55,120 +60,99 @@
         };
     @endphp
 
-    <div class="container-fluid" id="programme-show-top">
- <x-breadcrum title="{{ $course->course_name }}" />
+    <div class="container-fluid prog-page programme-show-page" id="programme-show-top">
+    {{-- The hero carries the course name (§3d), so the crumb stays short. It also
+         must NOT be an interpolated attribute: `title="{{ $name }}"` escapes once
+         into the attribute and the component escapes again, which is why a name
+         containing ' and & rendered as &#039; and &amp; here. --}}
+    <x-breadcrum title="Course Details" />
 
-        <div class="row g-3 mb-4">
-            <div class="col-6 col-md-4 col-xl">
-                <div class="card border-0 shadow-sm rounded-3 h-100 programme-show-stat-card hover-lift">
-                    <div class="card-body d-flex align-items-center gap-3 py-3">
-                        <span class="programme-show-stat-icon bg-primary-subtle text-primary">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">calendar_month</i>
-                        </span>
-                        <div class="min-w-0">
-                            <div class="small text-body-secondary">Course Year</div>
-                            <div class="fw-bold text-dark">{{ $display($course->course_year) }}</div>
-                        </div>
+        {{-- Detail = hero + facts grid (docs/new-design-index-page.md §3d). The
+             hero carries the record name, the headline facts and the current
+             state; the badge is white on the tinted hero rather than a *-subtle
+             tint, which would read as a smudge. --}}
+        <div class="prog-hero">
+            <div class="min-w-0">
+                <h1 class="prog-hero-name">{{ $display($course->course_name) }}</h1>
+                <div class="prog-facts prog-facts--hero">
+                    <div class="prog-fact">
+                        <span class="prog-fact__label">Short Name</span>
+                        <div class="prog-fact__value">{{ $display($course->couse_short_name) }}</div>
+                    </div>
+                    <div class="prog-fact">
+                        <span class="prog-fact__label">Course Year</span>
+                        <div class="prog-fact__value">{{ $display($course->course_year) }}</div>
+                    </div>
+                    <div class="prog-fact">
+                        <span class="prog-fact__label">Coordinator</span>
+                        <div class="prog-fact__value">{{ $coordinatorDisplay }}</div>
+                    </div>
+                    <div class="prog-fact">
+                        <span class="prog-fact__label">Total Members</span>
+                        <div class="prog-fact__value">{{ $totalMembers }}</div>
                     </div>
                 </div>
             </div>
-            <div class="col-6 col-md-4 col-xl">
-                <div class="card border-0 shadow-sm rounded-3 h-100 programme-show-stat-card hover-lift">
-                    <div class="card-body d-flex align-items-center gap-3 py-3">
-                        <span class="programme-show-stat-icon bg-success-subtle text-success">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">people</i>
-                        </span>
-                        <div class="min-w-0">
-                            <div class="small text-body-secondary">Total Members</div>
-                            <div class="fw-bold text-dark">{{ $totalMembers }}</div>
-                        </div>
-                    </div>
+
+            <span class="status-pill badge rounded-1 {{ $isActive ? 'is-active' : 'is-archived' }}">
+                {{ $statusLabel }}
+            </span>
+        </div>
+
+        {{-- Course Information — only what the hero does not already state.
+             The course name is the hero title, and Short Name / Course Year /
+             Coordinator are hero facts, so repeating them here (as the old
+             "Course Information" + "Record Summary" pair did) just made the
+             page say the same thing three times. --}}
+        <div class="prog-card">
+            <div class="prog-section"><h2 class="prog-section-title">Course Information</h2></div>
+            <div class="prog-facts">
+                <div class="prog-fact">
+                    <span class="prog-fact__label">Supporting Section</span>
+                    <div class="prog-fact__value {{ filled($supportingSectionName ?? null) ? '' : 'is-empty' }}">{{ filled($supportingSectionName ?? null) ? $supportingSectionName : '—' }}</div>
                 </div>
-            </div>
-            <div class="col-6 col-md-4 col-xl">
-                <div class="card border-0 shadow-sm rounded-3 h-100 programme-show-stat-card hover-lift">
-                    <div class="card-body d-flex align-items-center gap-3 py-3">
-                        <span class="programme-show-stat-icon programme-show-stat-icon--purple">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">person</i>
-                        </span>
-                        <div class="min-w-0">
-                            <div class="small text-body-secondary">Coordinator</div>
-                            <div class="fw-bold text-dark text-truncate" title="{{ $coordinatorDisplay }}">{{ $coordinatorDisplay }}</div>
-                        </div>
-                    </div>
+                <div class="prog-fact">
+                    <span class="prog-fact__label">Created By</span>
+                    <div class="prog-fact__value {{ filled($createdByName ?? null) ? '' : 'is-empty' }}">{{ filled($createdByName ?? null) ? $createdByName : '—' }}</div>
                 </div>
-            </div>
-            <div class="col-6 col-md-4 col-xl">
-                <div class="card border-0 shadow-sm rounded-3 h-100 programme-show-stat-card hover-lift">
-                    <div class="card-body d-flex align-items-center gap-3 py-3">
-                        <span class="programme-show-stat-icon bg-success-subtle text-success">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">check_circle</i>
-                        </span>
-                        <div class="min-w-0">
-                            <div class="small text-body-secondary">Status</div>
-                            <div class="fw-bold {{ $isActive ? 'text-success' : 'text-secondary' }}">{{ $statusLabel }}</div>
-                        </div>
-                    </div>
+
+                <div class="prog-fact prog-fact--wide">
+                    <span class="prog-fact__label">Description</span>
+                    <div class="prog-fact__value {{ filled($course->description) ? '' : 'is-empty' }}">{{ filled($course->description) ? $course->description : '—' }}</div>
                 </div>
             </div>
         </div>
 
-        <div class="row g-4 align-items-start">
-            <div class="col-lg-8">
-                <div class="card border-0 shadow-sm rounded-3 mb-4">
-                    <div class="card-body p-4">
-                        <h2 class="h5 fw-bold text-dark mb-2">Course Information</h2>
-                        <hr class="programme-show-divider mb-4">
-
-                        <div class="row g-4">
-                            <div class="col-md-6">
-                                <div class="programme-show-field">
-                                    <div class="programme-show-field__label">Course Full Name</div>
-                                    <div class="programme-show-field__value">{{ $display($course->course_name) }}</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="programme-show-field">
-                                    <div class="programme-show-field__label">Course Short Name</div>
-                                    <div class="programme-show-field__value">{{ $display($course->couse_short_name) }}</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="programme-show-field">
-                                    <div class="programme-show-field__label">Supporting Section</div>
-                                    <div class="programme-show-field__value">{{ $display($supportingSectionName ?? null) }}</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="programme-show-field">
-                                    <div class="programme-show-field__label">Duration</div>
-                                    <div class="programme-show-field__value">{{ $durationLabel ?? 'NA' }}</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="programme-show-field">
-                                    <div class="programme-show-field__label">Coordinator</div>
-                                    <div class="programme-show-field__value">{{ $primaryContactCount }}</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        @if ($course->description)
-                            <div class="mt-4 pt-2">
-                                <div class="programme-show-field">
-                                    <div class="programme-show-field__label">Description</div>
-                                    <div class="programme-show-field__value fw-normal text-body-secondary">{{ $course->description }}</div>
-                                </div>
-                            </div>
-                        @endif
-                    </div>
+        {{-- Schedule --}}
+        <div class="prog-card">
+            <div class="prog-section"><h2 class="prog-section-title">Schedule</h2></div>
+            <div class="prog-facts">
+                <div class="prog-fact">
+                    <span class="prog-fact__label">Start Date</span>
+                    <div class="prog-fact__value {{ $startDate ? '' : 'is-empty' }}">{{ $startDate ?: '—' }}</div>
                 </div>
+                <div class="prog-fact">
+                    <span class="prog-fact__label">End Date</span>
+                    <div class="prog-fact__value {{ $endDate ? '' : 'is-empty' }}">{{ $endDate ?: '—' }}</div>
+                </div>
+                <div class="prog-fact">
+                    <span class="prog-fact__label">Duration</span>
+                    <div class="prog-fact__value {{ $durationLabel ? '' : 'is-empty' }}">{{ $durationLabel ?: '—' }}</div>
+                </div>
+                <div class="prog-fact">
+                    <span class="prog-fact__label">PT Timing</span>
+                    <div class="prog-fact__value {{ $ptTimeLabel ? '' : 'is-empty' }}">{{ $ptTimeLabel ?: '—' }}</div>
+                </div>
+                <div class="prog-fact">
+                    <span class="prog-fact__label">Last Updated</span>
+                    <div class="prog-fact__value">{{ $updatedAt }}</div>
+                </div>
+            </div>
+        </div>
 
-                <div class="card border-0 shadow-sm rounded-3">
-                    <div class="card-body p-4">
-                        <h2 class="h5 fw-bold text-dark mb-2">Faculty Team</h2>
-                        <hr class="programme-show-divider mb-4">
-
+        {{-- Faculty Team --}}
+        <div class="prog-card">
+            <div class="prog-section"><h2 class="prog-section-title">Faculty Team</h2></div>
                         <p class="small text-body-secondary mb-3">
                             Primary Contacts: {{ str_pad((string) $primaryContactCount, 2, '0', STR_PAD_LEFT) }}
                         </p>
@@ -214,14 +198,11 @@
                                 <p class="mb-0 small text-body-secondary">No assistant coordinators assigned for this course.</p>
                             </div>
                         @endforelse
-                    </div>
-                </div>
+        </div>
 
-                @if ($course->objectives || $course->learning_outcomes || $course->prerequisites)
-                    <div class="card border-0 shadow-sm rounded-3 mt-4">
-                        <div class="card-body p-4">
-                            <h2 class="h5 fw-bold text-dark mb-2">Additional Information</h2>
-                            <hr class="programme-show-divider mb-4">
+        @if ($course->objectives || $course->learning_outcomes || $course->prerequisites)
+            <div class="prog-card">
+                <div class="prog-section"><h2 class="prog-section-title">Additional Information</h2></div>
                             <div class="row g-4">
                                 @if ($course->objectives)
                                     <div class="col-md-4">
@@ -247,45 +228,8 @@
                                         </div>
                                     </div>
                                 @endif
-                            </div>
-                        </div>
-                    </div>
-                @endif
             </div>
-
-            <div class="col-lg-4">
-                <div class="card border-0 shadow-sm rounded-3 programme-show-summary-card">
-                    <div class="card-body p-4">
-                        <h2 class="h5 fw-bold text-dark mb-2">Record Summary</h2>
-                        <hr class="programme-show-divider mb-4">
-
-                        <div class="programme-show-field mb-3">
-                            <div class="programme-show-field__label">Course Short Name</div>
-                            <div class="programme-show-field__value">{{ $display($course->couse_short_name) }}</div>
-                        </div>
-                        <div class="programme-show-field mb-3">
-                            <div class="programme-show-field__label">Created By</div>
-                            <div class="programme-show-field__value">{{ $display($createdByName ?? null) }}</div>
-                        </div>
-                        <div class="programme-show-field mb-3">
-                            <div class="programme-show-field__label">Start Date</div>
-                            <div class="programme-show-field__value">{{ $startDate ?: 'NA' }}</div>
-                        </div>
-                        <div class="programme-show-field mb-3">
-                            <div class="programme-show-field__label">End Date</div>
-                            <div class="programme-show-field__value">{{ $endDate ?: 'NA' }}</div>
-                        </div>
-                        <div class="programme-show-field mb-3">
-                            <div class="programme-show-field__label">PT Time</div>
-                            <div class="programme-show-field__value">{{ $ptTimeLabel ?: 'NA' }}</div>
-                        </div>
-                        <div class="programme-show-field mb-0">
-                            <div class="programme-show-field__label">Last Updated</div>
-                            <div class="programme-show-field__value">{{ $updatedAt }}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        @endif
         </div>
     </div>
 

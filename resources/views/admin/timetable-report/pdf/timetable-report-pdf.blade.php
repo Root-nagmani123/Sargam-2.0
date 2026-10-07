@@ -2,10 +2,10 @@
     $printedOn = now()->format('d-m-Y H:i');
 
     // Emblem
-    $emblemSrc = $emblemSrc ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
+    $emblemSrc = $emblemSrc ?? pdf_emblem_src();
 
     // LBSNAA logo
-    $lbsnaaLogoSrc = $lbsnaaLogoSrc ?? 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
+    $lbsnaaLogoSrc = $lbsnaaLogoSrc ?? pdf_lbsnaa_logo_src();
     foreach ([public_path('images/lbsnaa_logo.jpg'), public_path('images/lbsnaa_logo.png')] as $logoPath) {
         if (is_file($logoPath) && is_readable($logoPath)) {
             $raw = @file_get_contents($logoPath);

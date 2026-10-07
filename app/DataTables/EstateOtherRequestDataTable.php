@@ -20,38 +20,43 @@ class EstateOtherRequestDataTable extends DataTable
         return (new EloquentDataTable($query))
             ->addIndexColumn()
             ->editColumn('request_no_oth', function ($row) {
-                $val = trim((string) ($row->request_no_oth ?? ''));
-
-                return $val !== '' ? '<span title="' . e($val) . '">' . e($val) . '</span>' : '—';
+                $val = $row->request_no_oth ?? 'N/A';
+                return '<span title="' . e($val) . '">' . e($val) . '</span>';
             })
-            ->editColumn('emp_name', fn ($row) => self::nameWithId($row->emp_name, null))
-            ->editColumn('section', fn ($row) => self::plainOrDash($row->section))
-            ->editColumn('doj_acad', fn ($row) => self::dateOrDash($row->doj_acad))
+            ->editColumn('emp_name', fn($row) => $row->emp_name ?? 'N/A')
+            ->editColumn('employee_master_emp_id', fn($row) => $row->employee_master_emp_id ?: '-')
+            ->filter(function ($query) {
+                $searchValue = request()->input('search.value');
+
+                if (!empty($searchValue)) {
+                    $query->where(function ($subQuery) use ($searchValue) {
+                        $subQuery->where('emp_name', 'like', "%{$searchValue}%")
+                            ->orWhere('f_name', 'like', "%{$searchValue}%")
+                            ->orWhere('section', 'like', "%{$searchValue}%")
+                            ->orWhere('request_no_oth', 'like', "%{$searchValue}%")
+                            ->orWhere('employee_master_emp_id', 'like', "%{$searchValue}%");
+                    });
+                }
+            }, true)
+            ->orderColumn('DT_RowIndex', 'estate_other_req.pk $1')
             ->addColumn('actions', function ($row) {
                 $deleteUrl = route('admin.estate.other-estate-request.destroy', ['id' => $row->pk]);
                 $doj = $row->doj_acad ? $row->doj_acad->format('Y-m-d') : '';
 
-                $attrs = [
-                    'data-id' => (int) $row->pk,
-                    'data-employee_name' => e($row->emp_name ?? ''),
-                    'data-father_name' => e($row->f_name ?? ''),
-                    'data-section' => e($row->section ?? ''),
-                    'data-doj_academy' => $doj,
-                ];
-                $dataAttrs = implode(' ', array_map(fn ($k, $v) => $k . '="' . $v . '"', array_keys($attrs), $attrs));
-
-                return '<div class="rfe-actions" role="group" aria-label="Row actions">'
-                    . self::actionLink('edit', 'Edit', 'edit', [
-                        'class' => 'btn-edit-other-request',
-                        'title' => 'Edit',
-                        'attrs' => $dataAttrs,
-                    ])
-                    . self::actionLink('delete', 'Delete', 'delete', [
-                        'class' => 'btn-delete-other-request',
-                        'title' => 'Delete',
-                        'attrs' => 'data-url="' . e($deleteUrl) . '"',
-                    ])
-                    . '</div>';
+                return '<div class="d-inline-flex align-items-center gap-1" role="group">
+                    <a href="javascript:void(0);" class="text-primary btn-edit-other-request" title="Edit"
+                        data-id="' . (int) $row->pk . '"
+                        data-employee_name="' . e($row->emp_name ?? '') . '"
+                        data-father_name="' . e($row->f_name ?? '') . '"
+                        data-section="' . e($row->section ?? '') . '"
+                        data-doj_academy="' . e($doj) . '"
+                        data-employee_master_emp_id="' . e($row->employee_master_emp_id ?? '') . '">
+                        <i class="material-symbols-rounded" style="font-size:18px;">edit</i>
+                    </a>
+                    <a href="javascript:void(0);" class="text-primary btn-delete-other-request" data-url="' . e($deleteUrl) . '" data-id="' . $row->pk . '" title="Delete">
+                        <i class="material-symbols-rounded" style="font-size:18px;">delete</i>
+                    </a>
+                </div>';
             })
             ->rawColumns(['request_no_oth', 'emp_name', 'actions'])
             ->filter(function ($query) {
@@ -198,15 +203,11 @@ class EstateOtherRequestDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S. No.')->orderable(true)->searchable(false)->width('64px'),
-            Column::make('request_no_oth')->title('Request ID')->addClass('eor-col-req')->orderable(true)->searchable(true),
-            Column::make('emp_name')->title('Employee Name')->addClass('rfe-col-name')->orderable(true)->searchable(true),
-            // Father Name is captured on the form but filled on ~10% of the rows, so it
-            // stays in the Add / Edit modal and out of the grid — it is still searchable.
-            Column::make('section')->title('Section')->addClass('eor-col-section')->orderable(true)->searchable(true),
-            Column::make('doj_acad')->title('DOJ in Academy')->addClass('eor-col-doj')->orderable(true)->searchable(false),
-            // Only Edit + Delete here — see .eor-page .rfe-col-action.
-            Column::computed('actions')->title('Action')->addClass('rfe-col-action')->orderable(false)->searchable(false)->width('120px'),
+            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(true)->searchable(false)->width('80px'),
+            Column::make('request_no_oth')->title('Request ID')->orderable(false)->searchable(true)->width('180px'),
+            Column::make('emp_name')->title('Employee Name')->orderable(false)->searchable(true)->width('220px'),
+            Column::make('employee_master_emp_id')->title('Emp ID')->orderable(false)->searchable(true)->width('160px'),
+            Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false)->width('120px'),
         ];
     }
 

@@ -166,6 +166,35 @@
         </div>
     </div>
 
+    {{-- Conditional display (field groups only) --}}
+    @if($showConditional ?? false)
+    <div class="col-12">
+        <div class="border rounded-3 p-3 bg-body-tertiary">
+            <h6 class="small fw-semibold mb-1">Show this field only when&hellip;</h6>
+            <p class="small text-muted mb-2 mb-md-3">
+                Optional. Pick another field in the same section and the answer it must hold.
+                The field then stays hidden — and is saved blank — until that answer is given.
+            </p>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Depends on field</label>
+                    <select name="condition_field" class="form-select form-select-sm fc-condition-field-select">
+                        <option value="">Always show</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Shown when the answer is</label>
+                    <input type="text" name="condition_value"
+                           class="form-control form-control-sm fc-condition-value-input"
+                           value="{{ $field->condition_value ?? '' }}"
+                           placeholder="e.g. Yes">
+                    <small class="text-muted">Must match the option value exactly (case-sensitive).</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <div class="col-12 pt-2 border-top">
         <p class="small text-uppercase fw-semibold text-muted mb-2">Status</p>
         <div class="d-flex flex-wrap gap-4">

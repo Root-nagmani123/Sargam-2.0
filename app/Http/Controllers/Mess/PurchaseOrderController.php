@@ -312,13 +312,17 @@ class PurchaseOrderController extends Controller
                     $purchaseOrder->update(['bill_path' => $path]);
                 }
 
+                $subcategories = ItemSubcategory::whereIn('id', collect($request->items)->map(
+                    fn ($item) => $this->coerceItemSubcategoryId($item['item_subcategory_id'] ?? null)
+                )->filter())->get()->keyBy('id');
+
                 foreach ($request->items as $item) {
                     $qty = (float) $item['quantity'];
                     $unitPrice = (float) $item['unit_price'];
                     $taxPercent = isset($item['tax_percent']) ? (float) $item['tax_percent'] : 0;
                     $lineTotal = round($qty * $unitPrice * (1 + $taxPercent / 100), 2);
                     $itemSubcategoryId = $this->coerceItemSubcategoryId($item['item_subcategory_id'] ?? null);
-                    $sub = ItemSubcategory::find($itemSubcategoryId);
+                    $sub = $itemSubcategoryId ? $subcategories->get($itemSubcategoryId) : null;
                     PurchaseOrderItem::create([
                         'purchase_order_id' => $purchaseOrder->id,
                         'inventory_id' => null,
@@ -418,6 +422,39 @@ class PurchaseOrderController extends Controller
     public function update(Request $request, $id)
     {
         $purchaseOrder = PurchaseOrder::findOrFail($id);
+
+        // The edit modal loads the lines of a large PO in parts and sets all_lines_loaded to 1
+        // only once every line is in the form. Below, every existing line is deleted and only the
+        // posted lines are re-created, so a save that may be missing lines is refused untouched.
+        // Requests that do not send the field are handled exactly as before.
+        if ($request->has('all_lines_loaded') && $request->input('all_lines_loaded') !== '1') {
+            return redirect()->route('admin.mess.purchaseorders.index')
+                ->with('po_edit_error', 'Not all lines of this purchase order were loaded, so nothing was saved. Please reload the page and save again.');
+        }
+
+        // PHP drops request fields beyond max_input_vars without an error, so a very large PO can
+        // arrive with only part of its lines. items_count is sent ahead of the line fields; if fewer
+        // lines arrived than the form held, refuse the save so no existing line is deleted.
+        if ($request->filled('items_count')) {
+            $expectedLines = (int) $request->input('items_count');
+            // Count only complete lines: PHP can cut the last line in half, leaving a line with no
+            // quantity or price, which would otherwise pass this check and fail validation instead.
+            $receivedLines = collect(is_array($request->input('items')) ? $request->input('items') : [])
+                ->filter(fn ($line) => is_array($line) && array_key_exists('quantity', $line) && array_key_exists('unit_price', $line))
+                ->count();
+            if ($receivedLines < $expectedLines) {
+                return redirect()->route('admin.mess.purchaseorders.index')
+                    ->with('po_edit_error', "Only {$receivedLines} of {$expectedLines} lines of this purchase order reached the server, so nothing was saved. Please contact the administrator (PHP max_input_vars is too low for this order).");
+            }
+
+            // items_end is the form's last field. PHP drops fields from the end, so if it is missing the
+            // request was cut somewhere - even inside the last line (for example only its tax_percent).
+            if (! $request->has('items_end')) {
+                return redirect()->route('admin.mess.purchaseorders.index')
+                    ->with('po_edit_error', 'This purchase order did not reach the server completely, so nothing was saved. Please contact the administrator (PHP max_input_vars is too low for this order).');
+            }
+        }
+
         $this->normalizePurchaseOrderItemsInRequest($request);
         $request->validate([
             'vendor_id' => 'required|exists:mess_vendors,id',
@@ -478,13 +515,17 @@ class PurchaseOrderController extends Controller
             }
 
             $purchaseOrder->items()->delete();
+            $subcategories = ItemSubcategory::whereIn('id', collect($request->items)->map(
+                fn ($item) => $this->coerceItemSubcategoryId($item['item_subcategory_id'] ?? null)
+            )->filter())->get()->keyBy('id');
+
             foreach ($request->items as $item) {
                 $qty = (float) $item['quantity'];
                 $unitPrice = (float) $item['unit_price'];
                 $taxPercent = isset($item['tax_percent']) ? (float) $item['tax_percent'] : 0;
                 $lineTotal = round($qty * $unitPrice * (1 + $taxPercent / 100), 2);
                 $itemSubcategoryId = $this->coerceItemSubcategoryId($item['item_subcategory_id'] ?? null);
-                $sub = ItemSubcategory::find($itemSubcategoryId);
+                $sub = $itemSubcategoryId ? $subcategories->get($itemSubcategoryId) : null;
                 PurchaseOrderItem::create([
                     'purchase_order_id' => $purchaseOrder->id,
                     'inventory_id' => null,

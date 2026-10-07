@@ -6,8 +6,8 @@
     $toText = $toLabel ?? 'End';
     $dateRangeLine = 'Stock Summary Report Between ' . $fromText . ' To ' . $toText;
     $printedOn = now()->format('d/m/Y') . ' ' . now()->format('g:i:s A');
-    $emblemSrc = $emblemSrc ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
-    $lbsnaaLogoSrc = $lbsnaaLogoSrc ?? 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
+    $emblemSrc = $emblemSrc ?? pdf_emblem_src();
+    $lbsnaaLogoSrc = $lbsnaaLogoSrc ?? pdf_lbsnaa_logo_src();
 @endphp
 <!doctype html>
 <html lang="en">
@@ -281,6 +281,10 @@
         </tbody>
     </table>
 @endif
+
+<p style="font-size: 11px; color: #555; margin: 8px 0 0;">
+    Note: Opening, Sale and Closing are valued at the running average buying price: each purchase updates the average, and each sale is valued at the average on its date (not the selling price). Purchase value uses the buying price of this period, including tax.
+</p>
 
 <div class="footer">
     <small>Officer's Mess LBSNAA Mussoorie &mdash; Stock Summary Report</small>

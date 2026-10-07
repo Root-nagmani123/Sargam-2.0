@@ -1,0 +1,1581 @@
+parameters:
+	ignoreErrors:
+		-
+			message: "#^Relation 'estateHomeRequestDetails' is not found in App\\\\Models\\\\EstateChangeHomeReqDetails model\\.$#"
+			count: 1
+			path: app/DataTables/EstateChangeRequestDataTable.php
+
+		-
+			message: "#^Relation 'unitType' is not found in App\\\\Models\\\\EstateElectricSlab model\\.$#"
+			count: 1
+			path: app/DataTables/EstateElectricSlabDataTable.php
+
+		-
+			message: "#^Relation 'estateOtherRequest' is not found in App\\\\Models\\\\EstatePossessionOther model\\.$#"
+			count: 1
+			path: app/DataTables/EstatePossessionOtherDataTable.php
+
+		-
+			message: "#^Relation 'activityMaster' is not found in App\\\\Models\\\\FC\\\\FcOtActivity model\\.$#"
+			count: 2
+			path: app/DataTables/FC/FcActivitiesHomeDataTable.php
+
+		-
+			message: "#^Relation 'studentMasterDirect' is not found in App\\\\Models\\\\FC\\\\FcOtActivity model\\.$#"
+			count: 1
+			path: app/DataTables/FC/FcActivitiesHomeDataTable.php
+
+		-
+			message: "#^Relation 'studentViaCredentials' is not found in App\\\\Models\\\\FC\\\\FcOtActivity model\\.$#"
+			count: 1
+			path: app/DataTables/FC/FcActivitiesHomeDataTable.php
+
+		-
+			message: "#^Relation 'Faculty' is not found in App\\\\Models\\\\GroupTypeMasterCourseMasterMap model\\.$#"
+			count: 1
+			path: app/DataTables/GroupMappingDataTable.php
+
+		-
+			message: "#^Relation 'courseGroup' is not found in App\\\\Models\\\\GroupTypeMasterCourseMasterMap model\\.$#"
+			count: 4
+			path: app/DataTables/GroupMappingDataTable.php
+
+		-
+			message: "#^Relation 'courseGroupType' is not found in App\\\\Models\\\\GroupTypeMasterCourseMasterMap model\\.$#"
+			count: 1
+			path: app/DataTables/GroupMappingDataTable.php
+
+		-
+			message: "#^Relation 'building' is not found in App\\\\Models\\\\HostelBuildingFloorMapping model\\.$#"
+			count: 1
+			path: app/DataTables/HostelBuildingFloorMappingDataTable.php
+
+		-
+			message: "#^Relation 'floor' is not found in App\\\\Models\\\\HostelBuildingFloorMapping model\\.$#"
+			count: 1
+			path: app/DataTables/HostelBuildingFloorMappingDataTable.php
+
+		-
+			message: "#^Relation 'buildingFloor' is not found in App\\\\Models\\\\HostelFloorRoomMapping model\\.$#"
+			count: 1
+			path: app/DataTables/HostelBuildingFloorRoomMappingDataTable.php
+
+		-
+			message: "#^Relation 'courseMaster' is not found in App\\\\Models\\\\MDOEscotDutyMap model\\.$#"
+			count: 3
+			path: app/DataTables/MDOEscrotExemptionDataTable.php
+
+		-
+			message: "#^Relation 'facultyMaster' is not found in App\\\\Models\\\\MDOEscotDutyMap model\\.$#"
+			count: 1
+			path: app/DataTables/MDOEscrotExemptionDataTable.php
+
+		-
+			message: "#^Relation 'mdoDutyTypeMaster' is not found in App\\\\Models\\\\MDOEscotDutyMap model\\.$#"
+			count: 1
+			path: app/DataTables/MDOEscrotExemptionDataTable.php
+
+		-
+			message: "#^Relation 'studentMaster' is not found in App\\\\Models\\\\MDOEscotDutyMap model\\.$#"
+			count: 1
+			path: app/DataTables/MDOEscrotExemptionDataTable.php
+
+		-
+			message: "#^Relation 'department' is not found in App\\\\Models\\\\EmployeeMaster model\\.$#"
+			count: 1
+			path: app/DataTables/MemberDataTable.php
+
+		-
+			message: "#^Relation 'employeeGroup' is not found in App\\\\Models\\\\EmployeeMaster model\\.$#"
+			count: 1
+			path: app/DataTables/MemberDataTable.php
+
+		-
+			message: "#^Relation 'employeeType' is not found in App\\\\Models\\\\EmployeeMaster model\\.$#"
+			count: 1
+			path: app/DataTables/MemberDataTable.php
+
+		-
+			message: "#^Relation 'studentsMaster' is not found in App\\\\Models\\\\StudentCourseGroupMap model\\.$#"
+			count: 2
+			path: app/DataTables/StudentAttendanceListDataTable.php
+
+		-
+			message: "#^Call to static method latest\\(\\) on an unknown class App\\\\Models\\\\EmployeeIDCardRequest\\.$#"
+			count: 1
+			path: app/Exports/EmployeeIDCardExport.php
+
+		-
+			message: "#^Call to static method onlyTrashed\\(\\) on an unknown class App\\\\Models\\\\EmployeeIDCardRequest\\.$#"
+			count: 1
+			path: app/Exports/EmployeeIDCardExport.php
+
+		-
+			message: "#^Call to static method where\\(\\) on an unknown class App\\\\Models\\\\EmployeeIDCardRequest\\.$#"
+			count: 1
+			path: app/Exports/EmployeeIDCardExport.php
+
+		-
+			message: "#^Call to static method whereIn\\(\\) on an unknown class App\\\\Models\\\\EmployeeIDCardRequest\\.$#"
+			count: 1
+			path: app/Exports/EmployeeIDCardExport.php
+
+		-
+			message: "#^Call to static method withTrashed\\(\\) on an unknown class App\\\\Models\\\\EmployeeIDCardRequest\\.$#"
+			count: 1
+			path: app/Exports/EmployeeIDCardExport.php
+
+		-
+			message: "#^Relation 'employee' is not found in App\\\\Models\\\\SecurityParmIdApply model\\.$#"
+			count: 4
+			path: app/Exports/EmployeeIDCardExport.php
+
+		-
+			message: "#^Relation 'facultyExpertiseMap' is not found in App\\\\Models\\\\FacultyMaster model\\.$#"
+			count: 1
+			path: app/Exports/FacultyExport.php
+
+		-
+			message: "#^Call to static method latest\\(\\) on an unknown class App\\\\Models\\\\FamilyIDCardRequest\\.$#"
+			count: 1
+			path: app/Exports/FamilyIDCardExport.php
+
+		-
+			message: "#^Call to static method onlyTrashed\\(\\) on an unknown class App\\\\Models\\\\FamilyIDCardRequest\\.$#"
+			count: 1
+			path: app/Exports/FamilyIDCardExport.php
+
+		-
+			message: "#^Call to static method withTrashed\\(\\) on an unknown class App\\\\Models\\\\FamilyIDCardRequest\\.$#"
+			count: 1
+			path: app/Exports/FamilyIDCardExport.php
+
+		-
+			message: "#^Relation 'building' is not found in App\\\\Models\\\\BuildingFloorRoomMapping model\\.$#"
+			count: 2
+			path: app/Exports/FloorRoomMappingExport.php
+
+		-
+			message: "#^Relation 'floor' is not found in App\\\\Models\\\\BuildingFloorRoomMapping model\\.$#"
+			count: 1
+			path: app/Exports/FloorRoomMappingExport.php
+
+		-
+			message: "#^Relation 'category' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 2
+			path: app/Exports/MedicalExemptionReportDetailExport.php
+
+		-
+			message: "#^Relation 'category' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 2
+			path: app/Exports/StudentMedicalExemptionExport.php
+
+		-
+			message: "#^Relation 'course' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 4
+			path: app/Exports/StudentMedicalExemptionExport.php
+
+		-
+			message: "#^Relation 'creator' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 1
+			path: app/Exports/StudentMedicalExemptionExport.php
+
+		-
+			message: "#^Relation 'employee' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 2
+			path: app/Exports/StudentMedicalExemptionExport.php
+
+		-
+			message: "#^Relation 'speciality' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 2
+			path: app/Exports/StudentMedicalExemptionExport.php
+
+		-
+			message: "#^Relation 'student' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 2
+			path: app/Exports/StudentMedicalExemptionExport.php
+
+		-
+			message: "#^Relation 'employee' is not found in App\\\\Models\\\\VehiclePassTWApply model\\.$#"
+			count: 1
+			path: app/Exports/VehiclePassExport.php
+
+		-
+			message: "#^Relation 'vehicleType' is not found in App\\\\Models\\\\VehiclePassTWApply model\\.$#"
+			count: 1
+			path: app/Exports/VehiclePassExport.php
+
+		-
+			message: "#^Relation 'attendance' is not found in App\\\\Models\\\\StudentCourseGroupMap model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/AttendanceController.php
+
+		-
+			message: "#^Relation 'groupTypeMasterCourseMasterMap' is not found in App\\\\Models\\\\StudentCourseGroupMap model\\.$#"
+			count: 8
+			path: app/Http/Controllers/Admin/AttendanceController.php
+
+		-
+			message: "#^Relation 'studentsMaster' is not found in App\\\\Models\\\\StudentCourseGroupMap model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/AttendanceController.php
+
+		-
+			message: "#^Relation 'timetable' is not found in App\\\\Models\\\\CourseGroupTimetableMapping model\\.$#"
+			count: 16
+			path: app/Http/Controllers/Admin/AttendanceController.php
+
+		-
+			message: "#^Undefined variable\\: \\$r$#"
+			count: 1
+			path: app/Http/Controllers/Admin/CalendarController.php
+
+		-
+			message: "#^Call to static method disk\\(\\) on an unknown class App\\\\Http\\\\Controllers\\\\Admin\\\\Storage\\.$#"
+			count: 4
+			path: app/Http/Controllers/Admin/CourseAttendanceNoticeMapController.php
+
+		-
+			message: "#^Relation 'timetable' is not found in App\\\\Models\\\\CourseGroupTimetableMapping model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/CourseAttendanceNoticeMapController.php
+
+		-
+			message: "#^Relation 'courseCordinatorMater' is not found in App\\\\Models\\\\CourseMaster model\\.$#"
+			count: 4
+			path: app/Http/Controllers/Admin/CourseController.php
+
+		-
+			message: "#^Relation 'course' is not found in App\\\\Models\\\\CourseMemoDecisionMapp model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/CourseMemoDecisionMappController.php
+
+		-
+			message: "#^Relation 'memo' is not found in App\\\\Models\\\\CourseMemoDecisionMapp model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/CourseMemoDecisionMappController.php
+
+		-
+			message: "#^Relation 'memoConclusion' is not found in App\\\\Models\\\\CourseMemoDecisionMapp model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/CourseMemoDecisionMappController.php
+
+		-
+			message: "#^Relation 'author' is not found in App\\\\Models\\\\CourseRepositoryDetail model\\.$#"
+			count: 4
+			path: app/Http/Controllers/Admin/CourseRepositoryController.php
+
+		-
+			message: "#^Relation 'children' is not found in App\\\\Models\\\\CourseRepositoryMaster model\\.$#"
+			count: 8
+			path: app/Http/Controllers/Admin/CourseRepositoryController.php
+
+		-
+			message: "#^Relation 'course' is not found in App\\\\Models\\\\CourseRepositoryDetail model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/CourseRepositoryController.php
+
+		-
+			message: "#^Relation 'detail' is not found in App\\\\Models\\\\CourseRepositoryDocument model\\.$#"
+			count: 4
+			path: app/Http/Controllers/Admin/CourseRepositoryController.php
+
+		-
+			message: "#^Relation 'details' is not found in App\\\\Models\\\\CourseRepositoryMaster model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/CourseRepositoryController.php
+
+		-
+			message: "#^Relation 'documents' is not found in App\\\\Models\\\\CourseRepositoryDetail model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/CourseRepositoryController.php
+
+		-
+			message: "#^Relation 'documents' is not found in App\\\\Models\\\\CourseRepositoryMaster model\\.$#"
+			count: 9
+			path: app/Http/Controllers/Admin/CourseRepositoryController.php
+
+		-
+			message: "#^Relation 'master' is not found in App\\\\Models\\\\CourseRepositoryDetail model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/CourseRepositoryController.php
+
+		-
+			message: "#^Relation 'parent' is not found in App\\\\Models\\\\CourseRepositoryMaster model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/CourseRepositoryController.php
+
+		-
+			message: "#^Relation 'subject' is not found in App\\\\Models\\\\CourseRepositoryDetail model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/CourseRepositoryController.php
+
+		-
+			message: "#^Relation 'topic' is not found in App\\\\Models\\\\CourseRepositoryDetail model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/CourseRepositoryController.php
+
+		-
+			message: "#^Relation 'classSession' is not found in App\\\\Models\\\\CalendarEvent model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/DashboardController.php
+
+		-
+			message: "#^Relation 'courseGroupTypeMaster' is not found in App\\\\Models\\\\CalendarEvent model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/DashboardController.php
+
+		-
+			message: "#^Relation 'venue' is not found in App\\\\Models\\\\CalendarEvent model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/DashboardController.php
+
+		-
+			message: "#^Relation 'department' is not found in App\\\\Models\\\\EmployeeMaster model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/DuplicateIDCardRequestController.php
+
+		-
+			message: "#^Relation 'designation' is not found in App\\\\Models\\\\EmployeeMaster model\\.$#"
+			count: 5
+			path: app/Http/Controllers/Admin/DuplicateIDCardRequestController.php
+
+		-
+			message: "#^Relation 'employee' is not found in App\\\\Models\\\\SecurityDupPermIdApply model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/DuplicateIDCardRequestController.php
+
+		-
+			message: "#^Relation 'employee' is not found in App\\\\Models\\\\SecurityParmIdApply model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/DuplicateIDCardRequestController.php
+
+		-
+			message: "#^Relation 'approvals' is not found in App\\\\Models\\\\SecurityParmIdApply model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/EmployeeIDCardRequestController.php
+
+		-
+			message: "#^Relation 'department' is not found in App\\\\Models\\\\EmployeeMaster model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/EmployeeIDCardRequestController.php
+
+		-
+			message: "#^Relation 'designation' is not found in App\\\\Models\\\\EmployeeMaster model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/EmployeeIDCardRequestController.php
+
+		-
+			message: "#^Relation 'employee' is not found in App\\\\Models\\\\SecurityParmIdApply model\\.$#"
+			count: 5
+			path: app/Http/Controllers/Admin/EmployeeIDCardRequestController.php
+
+		-
+			message: "#^Relation 'estateHomeRequestDetails' is not found in App\\\\Models\\\\EstateChangeHomeReqDetails model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/EstateController.php
+
+		-
+			message: "#^Relation 'estateOtherRequest' is not found in App\\\\Models\\\\EstatePossessionOther model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/EstateController.php
+
+		-
+			message: "#^Relation 'estatePossessionOther' is not found in App\\\\Models\\\\EstateMonthReadingDetailsOther model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/EstateController.php
+
+		-
+			message: "#^Relation 'course' is not found in App\\\\Models\\\\ExemptionMaster model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/ExemptionMasterController.php
+
+		-
+			message: "#^Relation 'facultyExperienceMap' is not found in App\\\\Models\\\\FacultyMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/FacultyController.php
+
+		-
+			message: "#^Relation 'facultyExpertiseMap' is not found in App\\\\Models\\\\FacultyMaster model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/FacultyController.php
+
+		-
+			message: "#^Relation 'facultyQualificationMap' is not found in App\\\\Models\\\\FacultyMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/FacultyController.php
+
+		-
+			message: "#^Relation 'attachments' is not found in App\\\\Models\\\\LeaveApplication model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/FacultyLeaveApprovalController.php
+
+		-
+			message: "#^Relation 'course' is not found in App\\\\Models\\\\LeaveApplication model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/FacultyLeaveApprovalController.php
+
+		-
+			message: "#^Relation 'nature' is not found in App\\\\Models\\\\LeaveApplication model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/FacultyLeaveApprovalController.php
+
+		-
+			message: "#^Relation 'student' is not found in App\\\\Models\\\\LeaveApplication model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/FacultyLeaveApprovalController.php
+
+		-
+			message: "#^Relation 'courseMaster' is not found in App\\\\Models\\\\MDOEscotDutyMap model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/FacultyMDOEscortExceptionViewController.php
+
+		-
+			message: "#^Relation 'facultyMaster' is not found in App\\\\Models\\\\MDOEscotDutyMap model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/FacultyMDOEscortExceptionViewController.php
+
+		-
+			message: "#^Relation 'mdoDutyTypeMaster' is not found in App\\\\Models\\\\MDOEscotDutyMap model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/FacultyMDOEscortExceptionViewController.php
+
+		-
+			message: "#^Relation 'mdoEscotDutyMaps' is not found in App\\\\Models\\\\FacultyMaster model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/FacultyMDOEscortExceptionViewController.php
+
+		-
+			message: "#^Relation 'department' is not found in App\\\\Models\\\\EmployeeMaster model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/FamilyIDCardRequestController.php
+
+		-
+			message: "#^Relation 'designation' is not found in App\\\\Models\\\\EmployeeMaster model\\.$#"
+			count: 4
+			path: app/Http/Controllers/Admin/FamilyIDCardRequestController.php
+
+		-
+			message: "#^Called 'pluck' on Laravel collection, but could have been retrieved as a query\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/FeedbackController.php
+
+		-
+			message: "#^Class App\\\\Http\\\\Controllers\\\\Admin\\\\Collection not found\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/FeedbackController.php
+
+		-
+			message: "#^Relation 'students' is not found in App\\\\Models\\\\CourseMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/FeedbackController.php
+
+		-
+			message: "#^Relation 'Faculty' is not found in App\\\\Models\\\\GroupTypeMasterCourseMasterMap model\\.$#"
+			count: 4
+			path: app/Http/Controllers/Admin/GroupMappingController.php
+
+		-
+			message: "#^Relation 'courseGroup' is not found in App\\\\Models\\\\GroupTypeMasterCourseMasterMap model\\.$#"
+			count: 12
+			path: app/Http/Controllers/Admin/GroupMappingController.php
+
+		-
+			message: "#^Relation 'courseGroupType' is not found in App\\\\Models\\\\GroupTypeMasterCourseMasterMap model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/GroupMappingController.php
+
+		-
+			message: "#^Relation 'studentsMaster' is not found in App\\\\Models\\\\StudentCourseGroupMap model\\.$#"
+			count: 4
+			path: app/Http/Controllers/Admin/GroupMappingController.php
+
+		-
+			message: "#^Relation 'building' is not found in App\\\\Models\\\\BuildingFloorRoomMapping model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/HostelBuildingFloorRoomMappingController.php
+
+		-
+			message: "#^Relation 'floor' is not found in App\\\\Models\\\\BuildingFloorRoomMapping model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/HostelBuildingFloorRoomMappingController.php
+
+		-
+			message: "#^Relation 'employee' is not found in App\\\\Models\\\\IssueCategoryEmployeeMap model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/IssueManagement/IssueEscalationMatrixController.php
+
+		-
+			message: "#^Relation 'category' is not found in App\\\\Models\\\\IssueLogManagement model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/IssueManagement/IssueManagementController.php
+
+		-
+			message: "#^Relation 'creator' is not found in App\\\\Models\\\\IssueLogManagement model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/IssueManagement/IssueManagementController.php
+
+		-
+			message: "#^Relation 'nodal_officer' is not found in App\\\\Models\\\\IssueLogManagement model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/IssueManagement/IssueManagementController.php
+
+		-
+			message: "#^Relation 'priority' is not found in App\\\\Models\\\\IssueLogManagement model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/IssueManagement/IssueManagementController.php
+
+		-
+			message: "#^Relation 'subCategoryMappings' is not found in App\\\\Models\\\\IssueLogManagement model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/IssueManagement/IssueManagementController.php
+
+		-
+			message: "#^Relation 'category' is not found in App\\\\Models\\\\IssueSubCategoryMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/IssueManagement/IssueSubCategoryController.php
+
+		-
+			message: "#^Relation 'nature' is not found in App\\\\Models\\\\LeaveApplication model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/LeaveApplicationController.php
+
+		-
+			message: "#^Relation 'district' is not found in App\\\\Models\\\\City model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/LocationController.php
+
+		-
+			message: "#^Relation 'state' is not found in App\\\\Models\\\\City model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/LocationController.php
+
+		-
+			message: "#^Relation 'courseMaster' is not found in App\\\\Models\\\\MDOEscotDutyMap model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/MDOEscrotExemptionController.php
+
+		-
+			message: "#^Relation 'studentMaster' is not found in App\\\\Models\\\\MDOEscotDutyMap model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/MDOEscrotExemptionController.php
+
+		-
+			message: "#^Relation 'timetableCourses' is not found in App\\\\Models\\\\FacultyMaster model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/MedicalExceptionFacultyViewController.php
+
+		-
+			message: "#^Relation 'category' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/MedicalExceptionOTViewController.php
+
+		-
+			message: "#^Relation 'course' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/MedicalExceptionOTViewController.php
+
+		-
+			message: "#^Relation 'speciality' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/MedicalExceptionOTViewController.php
+
+		-
+			message: "#^Relation 'category' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/MedicalExemptionReportController.php
+
+		-
+			message: "#^Relation 'department' is not found in App\\\\Models\\\\EmployeeMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/MemberController.php
+
+		-
+			message: "#^Relation 'employeeGroup' is not found in App\\\\Models\\\\EmployeeMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/MemberController.php
+
+		-
+			message: "#^Relation 'employeeType' is not found in App\\\\Models\\\\EmployeeMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/MemberController.php
+
+		-
+			message: "#^Relation 'chosenTemplate' is not found in App\\\\Models\\\\MemoDiscipline model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/MemoDisciplineController.php
+
+		-
+			message: "#^Relation 'course' is not found in App\\\\Models\\\\MemoDiscipline model\\.$#"
+			count: 10
+			path: app/Http/Controllers/Admin/MemoDisciplineController.php
+
+		-
+			message: "#^Relation 'discipline' is not found in App\\\\Models\\\\MemoDiscipline model\\.$#"
+			count: 15
+			path: app/Http/Controllers/Admin/MemoDisciplineController.php
+
+		-
+			message: "#^Relation 'messages' is not found in App\\\\Models\\\\MemoDiscipline model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/MemoDisciplineController.php
+
+		-
+			message: "#^Relation 'student' is not found in App\\\\Models\\\\MemoDiscipline model\\.$#"
+			count: 7
+			path: app/Http/Controllers/Admin/MemoDisciplineController.php
+
+		-
+			message: "#^Relation 'template' is not found in App\\\\Models\\\\MemoDiscipline model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/MemoDisciplineController.php
+
+		-
+			message: "#^Relation 'course' is not found in App\\\\Models\\\\MemoNoticeTemplate model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/MemoNoticeController.php
+
+		-
+			message: "#^Relation 'course' is not found in App\\\\Models\\\\NoticeNotification model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/NoticeNotificationController.php
+
+		-
+			message: "#^Relation 'user' is not found in App\\\\Models\\\\NoticeNotification model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/NoticeNotificationController.php
+
+		-
+			message: "#^Relation 'courseMaster' is not found in App\\\\Models\\\\MDOEscotDutyMap model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/OTMDOEscrotExemptionController.php
+
+		-
+			message: "#^Relation 'facultyMaster' is not found in App\\\\Models\\\\MDOEscotDutyMap model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/OTMDOEscrotExemptionController.php
+
+		-
+			message: "#^Relation 'mdoDutyTypeMaster' is not found in App\\\\Models\\\\MDOEscotDutyMap model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/OTMDOEscrotExemptionController.php
+
+		-
+			message: "#^Relation 'course' is not found in App\\\\Models\\\\StudentMasterCourseMap model\\.$#"
+			count: 4
+			path: app/Http/Controllers/Admin/Registration/EnrollementController.php
+
+		-
+			message: "#^Relation 'courses' is not found in App\\\\Models\\\\StudentMaster model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/Registration/EnrollementController.php
+
+		-
+			message: "#^Relation 'studentMaster' is not found in App\\\\Models\\\\StudentMasterCourseMap model\\.$#"
+			count: 7
+			path: app/Http/Controllers/Admin/Registration/EnrollementController.php
+
+		-
+			message: "#^Relation 'createdByUser' is not found in App\\\\Models\\\\FcExemptionMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/Registration/FcExemptionMasterController.php
+
+		-
+			message: "#^Relation 'modifiedByUser' is not found in App\\\\Models\\\\FcExemptionMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/Registration/FcExemptionMasterController.php
+
+		-
+			message: "#^Array has 2 duplicate keys with value 'birth_state' \\('birth_state', 'birth_state'\\)\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/Registration/FormController.php
+
+		-
+			message: "#^Array has 2 duplicate keys with value 'country_master_pk' \\('country_master_pk', 'country_master_pk'\\)\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/Registration/FormController.php
+
+		-
+			message: "#^Array has 2 duplicate keys with value 'state_district_mapping_pk' \\('state_district_mapping_pk', 'state_district_mapping_pk'\\)\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/Registration/FormController.php
+
+		-
+			message: "#^Array has 2 duplicate keys with value 'state_master_pk' \\('state_master_pk', 'state_master_pk'\\)\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/Registration/FormController.php
+
+		-
+			message: "#^Relation 'creator' is not found in App\\\\Models\\\\ExemptionCategory model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/Registration/FrontPageController.php
+
+		-
+			message: "#^Relation 'faqs' is not found in App\\\\Models\\\\PathPage model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/Registration/FrontPageController.php
+
+		-
+			message: "#^Relation 'updater' is not found in App\\\\Models\\\\ExemptionCategory model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/Registration/FrontPageController.php
+
+		-
+			message: "#^Class App\\\\Exports\\\\FcRegistrationExport does not have a constructor and must be instantiated without any parameters\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/Registration/RegistrationImportController.php
+
+		-
+			message: "#^Relation 'approvals' is not found in App\\\\Models\\\\VehiclePassDuplicateApplyTwfw model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/Security/DuplicateVehiclePassApprovalController.php
+
+		-
+			message: "#^Relation 'createdBy' is not found in App\\\\Models\\\\VehiclePassDuplicateApplyTwfw model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/Security/DuplicateVehiclePassApprovalController.php
+
+		-
+			message: "#^Relation 'employee' is not found in App\\\\Models\\\\VehiclePassDuplicateApplyTwfw model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/Security/DuplicateVehiclePassApprovalController.php
+
+		-
+			message: "#^Relation 'vehicleType' is not found in App\\\\Models\\\\VehiclePassDuplicateApplyTwfw model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/Security/DuplicateVehiclePassApprovalController.php
+
+		-
+			message: "#^Relation 'department' is not found in App\\\\Models\\\\EmployeeMaster model\\.$#"
+			count: 4
+			path: app/Http/Controllers/Admin/Security/DuplicateVehiclePassController.php
+
+		-
+			message: "#^Relation 'designation' is not found in App\\\\Models\\\\EmployeeMaster model\\.$#"
+			count: 4
+			path: app/Http/Controllers/Admin/Security/DuplicateVehiclePassController.php
+
+		-
+			message: "#^Relation 'employee' is not found in App\\\\Models\\\\VehiclePassDuplicateApplyTwfw model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/Security/DuplicateVehiclePassController.php
+
+		-
+			message: "#^Relation 'vehicleType' is not found in App\\\\Models\\\\VehiclePassDuplicateApplyTwfw model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/Security/DuplicateVehiclePassController.php
+
+		-
+			message: "#^Relation 'employee' is not found in App\\\\Models\\\\SecurityParmIdApply model\\.$#"
+			count: 9
+			path: app/Http/Controllers/Admin/Security/EmployeeIDCardApprovalController.php
+
+		-
+			message: "#^Undefined variable\\: \\$authEmpPk$#"
+			count: 5
+			path: app/Http/Controllers/Admin/Security/EmployeeIDCardApprovalController.php
+
+		-
+			message: "#^Relation 'approvals' is not found in App\\\\Models\\\\SecurityFamilyIdApply model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/Security/FamilyIDCardApprovalController.php
+
+		-
+			message: "#^Relation 'approvals' is not found in App\\\\Models\\\\VehiclePassFWApply model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/Security/VehiclePassApprovalController.php
+
+		-
+			message: "#^Relation 'approvals' is not found in App\\\\Models\\\\VehiclePassTWApply model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/Security/VehiclePassApprovalController.php
+
+		-
+			message: "#^Relation 'createdBy' is not found in App\\\\Models\\\\VehiclePassDuplicateApplyTwfw model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/Security/VehiclePassApprovalController.php
+
+		-
+			message: "#^Relation 'createdBy' is not found in App\\\\Models\\\\VehiclePassFWApply model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/Security/VehiclePassApprovalController.php
+
+		-
+			message: "#^Relation 'createdBy' is not found in App\\\\Models\\\\VehiclePassTWApply model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/Security/VehiclePassApprovalController.php
+
+		-
+			message: "#^Relation 'department' is not found in App\\\\Models\\\\EmployeeMaster model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/Security/VehiclePassApprovalController.php
+
+		-
+			message: "#^Relation 'designation' is not found in App\\\\Models\\\\EmployeeMaster model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/Security/VehiclePassApprovalController.php
+
+		-
+			message: "#^Relation 'employee' is not found in App\\\\Models\\\\VehiclePassDuplicateApplyTwfw model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/Security/VehiclePassApprovalController.php
+
+		-
+			message: "#^Relation 'employee' is not found in App\\\\Models\\\\VehiclePassFWApply model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/Security/VehiclePassApprovalController.php
+
+		-
+			message: "#^Relation 'employee' is not found in App\\\\Models\\\\VehiclePassTWApply model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/Security/VehiclePassApprovalController.php
+
+		-
+			message: "#^Relation 'vehicleType' is not found in App\\\\Models\\\\VehiclePassDuplicateApplyTwfw model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/Security/VehiclePassApprovalController.php
+
+		-
+			message: "#^Relation 'vehicleType' is not found in App\\\\Models\\\\VehiclePassFWApply model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/Security/VehiclePassApprovalController.php
+
+		-
+			message: "#^Relation 'vehicleType' is not found in App\\\\Models\\\\VehiclePassTWApply model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/Security/VehiclePassApprovalController.php
+
+		-
+			message: "#^Undefined variable\\: \\$fwHasApplicantName$#"
+			count: 1
+			path: app/Http/Controllers/Admin/Security/VehiclePassApprovalController.php
+
+		-
+			message: "#^Undefined variable\\: \\$twHasApplicantName$#"
+			count: 1
+			path: app/Http/Controllers/Admin/Security/VehiclePassApprovalController.php
+
+		-
+			message: "#^Relation 'vehicleType' is not found in App\\\\Models\\\\SecVehiclePassConfig model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/Security/VehiclePassConfigController.php
+
+		-
+			message: "#^Relation 'approvals' is not found in App\\\\Models\\\\VehiclePassTWApply model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/Security/VehiclePassController.php
+
+		-
+			message: "#^Relation 'department' is not found in App\\\\Models\\\\EmployeeMaster model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/Security/VehiclePassController.php
+
+		-
+			message: "#^Relation 'designation' is not found in App\\\\Models\\\\EmployeeMaster model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/Security/VehiclePassController.php
+
+		-
+			message: "#^Relation 'employee' is not found in App\\\\Models\\\\VehiclePassTWApply model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/Security/VehiclePassController.php
+
+		-
+			message: "#^Relation 'vehicleType' is not found in App\\\\Models\\\\VehiclePassTWApply model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/Security/VehiclePassController.php
+
+		-
+			message: "#^Relation 'approvers' is not found in App\\\\Models\\\\StationedLeaveMaster model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/StationedLeaveMasterController.php
+
+		-
+			message: "#^Relation 'course' is not found in App\\\\Models\\\\StationedLeaveMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/StationedLeaveMasterController.php
+
+		-
+			message: "#^Relation 'category' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/StudentMedicalExemptionController.php
+
+		-
+			message: "#^Relation 'course' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 5
+			path: app/Http/Controllers/Admin/StudentMedicalExemptionController.php
+
+		-
+			message: "#^Relation 'creator' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/StudentMedicalExemptionController.php
+
+		-
+			message: "#^Relation 'employee' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/StudentMedicalExemptionController.php
+
+		-
+			message: "#^Relation 'speciality' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/StudentMedicalExemptionController.php
+
+		-
+			message: "#^Relation 'student' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/StudentMedicalExemptionController.php
+
+		-
+			message: "#^Relation 'approvals' is not found in App\\\\Models\\\\SecurityFamilyIdApply model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'approvals' is not found in App\\\\Models\\\\VehiclePassFWApply model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'approvals' is not found in App\\\\Models\\\\VehiclePassTWApply model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'approvedByFaculty' is not found in App\\\\Models\\\\LeaveApplication model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'attachments' is not found in App\\\\Models\\\\LeaveApplication model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'cadre' is not found in App\\\\Models\\\\StudentMaster model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'category' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'classSession' is not found in App\\\\Models\\\\CalendarEvent model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'course' is not found in App\\\\Models\\\\LeaveApplication model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'course' is not found in App\\\\Models\\\\StudentMasterCourseMap model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'course' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'courseMaster' is not found in App\\\\Models\\\\MDOEscotDutyMap model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'courses' is not found in App\\\\Models\\\\StudentMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'employee' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'faculty' is not found in App\\\\Models\\\\CalendarEvent model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'facultyMaster' is not found in App\\\\Models\\\\MDOEscotDutyMap model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'groupTypeMasterCourseMasterMap' is not found in App\\\\Models\\\\StudentCourseGroupMap model\\.$#"
+			count: 5
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'mdoDutyTypeMaster' is not found in App\\\\Models\\\\MDOEscotDutyMap model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'nature' is not found in App\\\\Models\\\\LeaveApplication model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'roles' is not found in App\\\\Models\\\\DashboardCard model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'sender' is not found in App\\\\Models\\\\Notification model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'service' is not found in App\\\\Models\\\\StudentMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'speciality' is not found in App\\\\Models\\\\StudentMedicalExemption model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'student' is not found in App\\\\Models\\\\StudentCourseGroupMap model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'studentMaster' is not found in App\\\\Models\\\\StudentMasterCourseMap model\\.$#"
+			count: 3
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'venue' is not found in App\\\\Models\\\\CalendarEvent model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Admin/UserController.php
+
+		-
+			message: "#^Relation 'course' is not found in App\\\\Models\\\\StudentMasterCourseMap model\\.$#"
+			count: 5
+			path: app/Http/Controllers/Admin/WhosWhoController.php
+
+		-
+			message: "#^Relation 'studentMaster' is not found in App\\\\Models\\\\StudentMasterCourseMap model\\.$#"
+			count: 5
+			path: app/Http/Controllers/Admin/WhosWhoController.php
+
+		-
+			message: "#^Relation 'documentMaster' is not found in App\\\\Models\\\\FC\\\\FcJoiningRelatedDocumentsDetailsMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/FC/RegistrationStatusController.php
+
+		-
+			message: "#^Relation 'language' is not found in App\\\\Models\\\\FC\\\\StudentMasterLanguageKnown model\\.$#"
+			count: 1
+			path: app/Http/Controllers/FC/RegistrationStep3Controller.php
+
+		-
+			message: "#^Relation 'session' is not found in App\\\\Models\\\\FC\\\\StudentMasterFirst model\\.$#"
+			count: 1
+			path: app/Http/Controllers/FC/RegistrationStep3Controller.php
+
+		-
+			message: "#^Relation 'sport' is not found in App\\\\Models\\\\FC\\\\StudentSportsFitnessTeachMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/FC/RegistrationStep3Controller.php
+
+		-
+			message: "#^Relation 'sport' is not found in App\\\\Models\\\\FC\\\\StudentSportsTrgTeachMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/FC/RegistrationStep3Controller.php
+
+		-
+			message: "#^Undefined variable\\: \\$courseMasterPk$#"
+			count: 2
+			path: app/Http/Controllers/FC/RegistrationStep3Controller.php
+
+		-
+			message: "#^Relation 'allottedState' is not found in App\\\\Models\\\\FC\\\\StudentMasterFirst model\\.$#"
+			count: 1
+			path: app/Http/Controllers/FC/ReportController.php
+
+		-
+			message: "#^Relation 'category' is not found in App\\\\Models\\\\FC\\\\StudentMasterSecond model\\.$#"
+			count: 1
+			path: app/Http/Controllers/FC/ReportController.php
+
+		-
+			message: "#^Relation 'fatherProfession' is not found in App\\\\Models\\\\FC\\\\StudentMasterSecond model\\.$#"
+			count: 1
+			path: app/Http/Controllers/FC/ReportController.php
+
+		-
+			message: "#^Relation 'permState' is not found in App\\\\Models\\\\FC\\\\StudentMasterSecond model\\.$#"
+			count: 1
+			path: app/Http/Controllers/FC/ReportController.php
+
+		-
+			message: "#^Relation 'religion' is not found in App\\\\Models\\\\FC\\\\StudentMasterSecond model\\.$#"
+			count: 1
+			path: app/Http/Controllers/FC/ReportController.php
+
+		-
+			message: "#^Relation 'service' is not found in App\\\\Models\\\\FC\\\\StudentMasterFirst model\\.$#"
+			count: 1
+			path: app/Http/Controllers/FC/ReportController.php
+
+		-
+			message: "#^Relation 'session' is not found in App\\\\Models\\\\FC\\\\StudentMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/FC/ReportController.php
+
+		-
+			message: "#^Relation 'session' is not found in App\\\\Models\\\\FC\\\\StudentMasterFirst model\\.$#"
+			count: 1
+			path: app/Http/Controllers/FC/ReportController.php
+
+		-
+			message: "#^Relation 'legs' is not found in App\\\\Models\\\\FC\\\\StudentTravelPlanMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/FC/TravelPlanController.php
+
+		-
+			message: "#^Relation 'fcArrivalSlot' is not found in App\\\\Models\\\\FC\\\\StudentTravelPlanMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/FC/TravelPlanReportController.php
+
+		-
+			message: "#^Relation 'category' is not found in App\\\\Models\\\\Mess\\\\ItemSubcategory model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Mess/ItemSubcategoryController.php
+
+		-
+			message: "#^Relation 'employee' is not found in App\\\\Models\\\\KitchenIssueMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Mess/KitchenIssueController.php
+
+		-
+			message: "#^Relation 'items' is not found in App\\\\Models\\\\KitchenIssueMaster model\\.$#"
+			count: 5
+			path: app/Http/Controllers/Mess/KitchenIssueController.php
+
+		-
+			message: "#^Relation 'items' is not found in App\\\\Models\\\\Mess\\\\SellingVoucherDateRangeReport model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Mess/KitchenIssueController.php
+
+		-
+			message: "#^Relation 'store' is not found in App\\\\Models\\\\KitchenIssueMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Mess/KitchenIssueController.php
+
+		-
+			message: "#^Relation 'student' is not found in App\\\\Models\\\\KitchenIssueMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Mess/KitchenIssueController.php
+
+		-
+			message: "#^Relation 'clientTypeCategory' is not found in App\\\\Models\\\\KitchenIssueMaster model\\.$#"
+			count: 4
+			path: app/Http/Controllers/Mess/ProcessMessBillsEmployeeController.php
+
+		-
+			message: "#^Relation 'clientTypeCategory' is not found in App\\\\Models\\\\Mess\\\\SellingVoucherDateRangeReport model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Mess/ProcessMessBillsEmployeeController.php
+
+		-
+			message: "#^Relation 'course' is not found in App\\\\Models\\\\KitchenIssueMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Mess/ProcessMessBillsEmployeeController.php
+
+		-
+			message: "#^Relation 'items' is not found in App\\\\Models\\\\KitchenIssueMaster model\\.$#"
+			count: 9
+			path: app/Http/Controllers/Mess/ProcessMessBillsEmployeeController.php
+
+		-
+			message: "#^Relation 'items' is not found in App\\\\Models\\\\Mess\\\\SellingVoucherDateRangeReport model\\.$#"
+			count: 9
+			path: app/Http/Controllers/Mess/ProcessMessBillsEmployeeController.php
+
+		-
+			message: "#^Relation 'paymentDetails' is not found in App\\\\Models\\\\KitchenIssueMaster model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Mess/ProcessMessBillsEmployeeController.php
+
+		-
+			message: "#^Relation 'store' is not found in App\\\\Models\\\\KitchenIssueMaster model\\.$#"
+			count: 4
+			path: app/Http/Controllers/Mess/ProcessMessBillsEmployeeController.php
+
+		-
+			message: "#^Relation 'store' is not found in App\\\\Models\\\\Mess\\\\SellingVoucherDateRangeReport model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Mess/ProcessMessBillsEmployeeController.php
+
+		-
+			message: "#^Relation 'subStore' is not found in App\\\\Models\\\\KitchenIssueMaster model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Mess/ProcessMessBillsEmployeeController.php
+
+		-
+			message: "#^Relation 'subStore' is not found in App\\\\Models\\\\Mess\\\\SellingVoucherDateRangeReport model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Mess/ProcessMessBillsEmployeeController.php
+
+		-
+			message: "#^Relation 'items' is not found in App\\\\Models\\\\Mess\\\\PurchaseOrder model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Mess/PurchaseOrderController.php
+
+		-
+			message: "#^Relation 'category' is not found in App\\\\Models\\\\Mess\\\\ItemSubcategory model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Mess/ReportController.php
+
+		-
+			message: "#^Relation 'items' is not found in App\\\\Models\\\\KitchenIssueMaster model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Mess/ReportController.php
+
+		-
+			message: "#^Relation 'items' is not found in App\\\\Models\\\\Mess\\\\PurchaseOrder model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Mess/ReportController.php
+
+		-
+			message: "#^Relation 'items' is not found in App\\\\Models\\\\Mess\\\\SellingVoucherDateRangeReport model\\.$#"
+			count: 8
+			path: app/Http/Controllers/Mess/ReportController.php
+
+		-
+			message: "#^Relation 'purchaseOrder' is not found in App\\\\Models\\\\Mess\\\\PurchaseOrderItem model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Mess/ReportController.php
+
+		-
+			message: "#^Relation 'items' is not found in App\\\\Models\\\\KitchenIssueMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Mess/SellingVoucherDateRangeController.php
+
+		-
+			message: "#^Relation 'items' is not found in App\\\\Models\\\\Mess\\\\SellingVoucherDateRangeReport model\\.$#"
+			count: 7
+			path: app/Http/Controllers/Mess/SellingVoucherDateRangeController.php
+
+		-
+			message: "#^Relation 'report' is not found in App\\\\Models\\\\Mess\\\\SellingVoucherDateRangeReportItem model\\.$#"
+			count: 2
+			path: app/Http/Controllers/Mess/SellingVoucherDateRangeController.php
+
+		-
+			message: "#^Relation 'items' is not found in App\\\\Models\\\\Mess\\\\StoreAllocation model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Mess/StoreAllocationController.php
+
+		-
+			message: "#^Method App\\\\Http\\\\Controllers\\\\RoleController\\:\\:create\\(\\) should return Illuminate\\\\Http\\\\Response but return statement is missing\\.$#"
+			count: 1
+			path: app/Http/Controllers/RoleController.php
+
+		-
+			message: "#^Method App\\\\Http\\\\Controllers\\\\RoleController\\:\\:destroy\\(\\) should return Illuminate\\\\Http\\\\Response but return statement is missing\\.$#"
+			count: 1
+			path: app/Http/Controllers/RoleController.php
+
+		-
+			message: "#^Method App\\\\Http\\\\Controllers\\\\RoleController\\:\\:edit\\(\\) should return Illuminate\\\\Http\\\\Response but return statement is missing\\.$#"
+			count: 1
+			path: app/Http/Controllers/RoleController.php
+
+		-
+			message: "#^Relation 'groups' is not found in App\\\\Models\\\\SidebarMenu\\\\SidebarCategory model\\.$#"
+			count: 1
+			path: app/Http/Controllers/RoleController.php
+
+		-
+			message: "#^Relation 'groups' is not found in App\\\\Models\\\\SidebarMenu\\\\SidebarCategory model\\.$#"
+			count: 1
+			path: app/Http/Controllers/SidebarController.php
+
+		-
+			message: "#^Relation 'menus' is not found in App\\\\Models\\\\SidebarMenu\\\\MenuGroup model\\.$#"
+			count: 1
+			path: app/Http/Controllers/SidebarController.php
+
+		-
+			message: "#^Result of method App\\\\Http\\\\Middleware\\\\Authenticate\\:\\:unauthenticated\\(\\) \\(void\\) is used\\.$#"
+			count: 1
+			path: app/Http/Middleware/Authenticate.php
+
+		-
+			message: "#^Called 'pluck' on Laravel collection, but could have been retrieved as a query\\.$#"
+			count: 1
+			path: app/Models/City.php
+
+		-
+			message: "#^Called 'pluck' on Laravel collection, but could have been retrieved as a query\\.$#"
+			count: 1
+			path: app/Models/Country.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/FcFinalFinding.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/FcFormDocumentVerification.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/FcJoiningAttendanceMahanadiMaster.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/FcJoiningAttendanceSilverwoodMaster.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/FcJoiningMedicalDetailsMaster.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/FcJoiningRelatedDocumentsDetailsMaster.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/FcOtActivity.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/FcOtDetail.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/FcPathReport.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/FcPreHistory.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/NewRegistrationBankDetailsMaster.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/StudentConfirmMaster.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/StudentKnowledgeHindiMaster.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/StudentMaster.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/StudentMasterAcademicDistinction.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/StudentMasterEmploymentDetails.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/StudentMasterFirst.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/StudentMasterHigherEducationalDetails.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/StudentMasterHobbiesDetails.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/StudentMasterLanguageKnown.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/StudentMasterModuleMaster.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/StudentMasterQualificationDetails.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/StudentMasterSecond.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/StudentMasterSpouseMaster.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/StudentRegisterMaster.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/StudentSkillDetailsMaster.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/StudentSportsFitnessTeachMaster.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/StudentSportsTrgTeachMaster.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/FC/StudentTravelPlanMaster.php
+
+		-
+			message: "#^Class App\\\\Models\\\\Employee not found\\.$#"
+			count: 1
+			path: app/Models/KitchenIssueApproval.php
+
+		-
+			message: "#^Unsafe usage of new static\\(\\)\\.$#"
+			count: 1
+			path: app/Models/Mess/ItemSubcategory.php
+
+		-
+			message: "#^Relation 'children' is not found in App\\\\Models\\\\SidebarMenu\\\\Menu model\\.$#"
+			count: 1
+			path: app/Models/SidebarMenu/Menu.php
+
+		-
+			message: "#^Relation 'children' is not found in App\\\\Models\\\\SidebarMenu\\\\Menu model\\.$#"
+			count: 1
+			path: app/Models/SidebarMenu/MenuGroup.php
+
+		-
+			message: "#^Called 'pluck' on Laravel collection, but could have been retrieved as a query\\.$#"
+			count: 1
+			path: app/Models/State.php
+
+		-
+			message: "#^Class App\\\\Models\\\\ActionLog not found\\.$#"
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: "#^Relation 'session' is not found in App\\\\Models\\\\FC\\\\StudentMasterFirst model\\.$#"
+			count: 1
+			path: app/Services/FC/DynamicFormService.php
+
+		-
+			message: "#^Relation 'allottedState' is not found in App\\\\Models\\\\FC\\\\StudentMasterFirst model\\.$#"
+			count: 1
+			path: app/Services/FC/RegistrationService.php
+
+		-
+			message: "#^Relation 'category' is not found in App\\\\Models\\\\FC\\\\StudentMasterSecond model\\.$#"
+			count: 1
+			path: app/Services/FC/RegistrationService.php
+
+		-
+			message: "#^Relation 'documentMaster' is not found in App\\\\Models\\\\FC\\\\FcJoiningRelatedDocumentsDetailsMaster model\\.$#"
+			count: 1
+			path: app/Services/FC/RegistrationService.php
+
+		-
+			message: "#^Relation 'fcArrivalSlot' is not found in App\\\\Models\\\\FC\\\\StudentTravelPlanMaster model\\.$#"
+			count: 1
+			path: app/Services/FC/RegistrationService.php
+
+		-
+			message: "#^Relation 'permState' is not found in App\\\\Models\\\\FC\\\\StudentMasterSecond model\\.$#"
+			count: 1
+			path: app/Services/FC/RegistrationService.php
+
+		-
+			message: "#^Relation 'presState' is not found in App\\\\Models\\\\FC\\\\StudentMasterSecond model\\.$#"
+			count: 1
+			path: app/Services/FC/RegistrationService.php
+
+		-
+			message: "#^Relation 'religion' is not found in App\\\\Models\\\\FC\\\\StudentMasterSecond model\\.$#"
+			count: 1
+			path: app/Services/FC/RegistrationService.php
+
+		-
+			message: "#^Relation 'service' is not found in App\\\\Models\\\\FC\\\\StudentMasterFirst model\\.$#"
+			count: 1
+			path: app/Services/FC/RegistrationService.php
+
+		-
+			message: "#^Relation 'session' is not found in App\\\\Models\\\\FC\\\\StudentMasterFirst model\\.$#"
+			count: 1
+			path: app/Services/FC/RegistrationService.php
+
+		-
+			message: "#^Call to an undefined method App\\\\Services\\\\RoleService\\:\\:find\\(\\)\\.$#"
+			count: 2
+			path: app/Services/RoleService.php
+
+		-
+			message: "#^Relation 'category' is not found in App\\\\Models\\\\SidebarMenu\\\\MenuGroup model\\.$#"
+			count: 1
+			path: app/Services/SidebarMenu/MenuGroupService.php
+
+		-
+			message: "#^Relation 'group' is not found in App\\\\Models\\\\SidebarMenu\\\\Menu model\\.$#"
+			count: 1
+			path: app/Services/SidebarMenu/MenuService.php
+
+		-
+			message: "#^Relation 'groups' is not found in App\\\\Models\\\\SidebarMenu\\\\SidebarCategory model\\.$#"
+			count: 1
+			path: app/Services/SidebarMenu/MenuService.php
+
+		-
+			message: "#^Relation 'parent' is not found in App\\\\Models\\\\SidebarMenu\\\\Menu model\\.$#"
+			count: 1
+			path: app/Services/SidebarMenu/MenuService.php
+
+		-
+			message: "#^Relation 'group' is not found in App\\\\Models\\\\SidebarMenu\\\\Menu model\\.$#"
+			count: 1
+			path: app/Services/SidebarMenu/SidebarNavResolver.php
+
+		-
+			message: "#^Class Database\\\\Seeders\\\\FC\\\\AdminUserSeeder not found\\.$#"
+			count: 1
+			path: database/seeders/FC/FcMasterDatabaseSeeder.php

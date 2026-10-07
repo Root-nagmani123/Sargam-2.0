@@ -386,7 +386,9 @@ class FcDescriptiveDataQuery
             'father_name', 'mother_name',
         ]));
 
-        $query->where(function ($sub) use ($searchable, $like) {
+        $rosterJoined = fc_report_roster_alias_joined($query);
+
+        $query->where(function ($sub) use ($searchable, $like, $rosterJoined) {
             foreach ($searchable as $field) {
                 foreach ($field['columns'] as $column) {
                     $sub->orWhere("{$field['alias']}.{$column}", 'like', $like);
@@ -394,6 +396,14 @@ class FcDescriptiveDataQuery
             }
             // The login/username the rest of the FC reports search on.
             $sub->orWhere('uc.user_name', 'like', $like);
+
+            // ...but the Username COLUMN is not always uc.user_name: an unmigrated trainee's
+            // tracker id is an fc_registration_master.pk, so fc_report_login_username_sql()
+            // renders the roster username for them. Without this, searching the exact text
+            // shown in the column returned nothing.
+            if ($rosterJoined) {
+                $sub->orWhere('frm.user_id', 'like', $like);
+            }
         });
     }
 }

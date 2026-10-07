@@ -3,14 +3,18 @@
 namespace App\Http\Controllers\Admin\Estate;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Admin\Estate\Concerns\AuthorizesEstateMaster;
 use App\Models\UnitType;
 use Illuminate\Http\Request;
 
 class UnitTypeController extends Controller
 {
+    use AuthorizesEstateMaster;
+
     public function index()
     {
-        $items = UnitType::orderBy('unit_type')->paginate(request('per_page', 10));
+        // Naya record hamesha sabse upar — isliye pk desc, naam se nahi.
+        $items = UnitType::orderBy('pk', 'desc')->paginate(request('per_page', 10));
         return view('admin.estate.define_unit_type.index', compact('items'));
     }
 
@@ -47,7 +51,19 @@ class UnitTypeController extends Controller
 
     public function destroy(Request $request, string $id)
     {
-        UnitType::findOrFail($id)->delete();
+        $item = UnitType::findOrFail($id);
+
+        try {
+            $item->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Unit type abhi bhi sub types / houses se referenced hai (FK constraint).
+            $message = 'This Unit Type is used by other estate records and cannot be deleted.';
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'message' => $message], 409);
+            }
+            return redirect()->route('admin.estate.define-unit-type.index')->with('error', $message);
+        }
+
         if ($request->ajax()) {
             return response()->json(['success' => true, 'message' => 'Unit type deleted successfully.']);
         }

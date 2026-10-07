@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CourseCordinatorMaster;
 use App\Models\CourseMaster;
 use App\Models\FacultyMaster;
+use App\Support\FeedbackReportGrouping;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -155,20 +156,10 @@ class FacultyFeedbackReportService
             ->where('tf.is_submitted', 1)
             ->whereIn('cm.pk', $accessibleIds);
 
-        $query->groupBy(
-            'tf.topic_name',
-            'cm.pk',
-            'cm.course_name',
-            'cm.active_inactive',
-            'cm.end_date',
-            'fm.full_name',
-            'fm.faculty_type',
-            'tf.faculty_pk',
-            'tt.START_DATE',
-            'tt.END_DATE',
-            'tt.class_session',
-            'tf.timetable_pk'
-        );
+        // Group on the determining keys only; the rest are functionally dependent on them
+        // (fm.faculty_type here hangs off tf.faculty_pk, as fm.full_name does).
+        // See App\Support\FeedbackReportGrouping.
+        $query->groupBy(FeedbackReportGrouping::FACULTY_VIEW);
 
         $query->where('tf.faculty_pk', $viewerFacultyPk);
 

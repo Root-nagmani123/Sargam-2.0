@@ -93,4 +93,4 @@
     }
 </script>
 
-@ensection
+@endsection

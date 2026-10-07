@@ -59,6 +59,16 @@
                     </div>
                 </div>
                 <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="employee_master_emp_id" class="form-label">Employee Emp ID</label>
+                        <input type="text" class="form-control" id="employee_master_emp_id" name="employee_master_emp_id"
+                            value="{{ old('employee_master_emp_id', $prefill['employee_master_emp_id'] ?? '') }}" maxlength="255" placeholder="e.g. SOC00237">
+                        <small class="text-muted d-block mt-1">Optional. Set karne par is allotment ka bill us employee ko "My Estate Bill" me dikhega.</small>
+                        <div class="text-danger small field-error" data-field="employee_master_emp_id" role="alert">@error('employee_master_emp_id'){{ $message }}@enderror</div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
                         <div class="col-md-6">
                         <label for="doj_academy" class="form-label">DOJ in Academy <span class="text-danger">*</span></label>
                         <input type="date" class="form-control" id="doj_academy" name="doj_academy" value="{{ old('doj_academy', $prefill['doj_academy'] ?? '') }}" required min="1950-01-01" max="{{ date('Y-m-d') }}" title="Date must be between 01-01-1950 and today.">

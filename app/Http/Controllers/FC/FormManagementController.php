@@ -9,7 +9,6 @@ use App\Models\FC\FcFormStep;
 use App\Models\FC\FcFormFieldGroup;
 use App\Services\FC\FcDescriptiveDataFieldResolver;
 use App\Services\FC\FcStepApplicabilityService;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\JsonResponse;
@@ -68,23 +67,31 @@ class FormManagementController extends Controller
             ->withCount('steps');
 
         $statusFilter = $request->input('status_filter', 'active');
-        $currentDate  = Carbon::now()->format('Y-m-d');
 
         if ($statusFilter === 'archive') {
-            $query->whereHas('courseMaster', function ($q) use ($currentDate) {
-                $q->whereNotNull('end_date')
-                    ->where('end_date', '<', $currentDate);
+            // CourseMaster::scopeArchived() is written as the exact complement of
+            // scopeActiveRunning(), which the active branch below defers to. Delegating
+            // to it rather than restating "end_date < today" is what keeps the two tabs
+            // exhaustive: a course with a null end_date, or a disabled one still dated in
+            // the future, fails activeRunning() and so has to land here - otherwise its
+            // forms show under neither tab and become uneditable, since the only edit
+            // link lives in this grid.
+            //
+            // orWhereDoesntHave() covers the one row archived() cannot reach: whereHas()
+            // compiles to EXISTS, so a form whose course_master_pk points at a course row
+            // that no longer exists satisfies neither branch. The active branch admits a
+            // form with a NULL course_master_pk explicitly (scopeOnRunningCourse), so the
+            // two tabs were complements over linked forms only. A form with no reachable
+            // course has no lifecycle left to be in, and its edit link lives here.
+            $query->where(function ($q) {
+                $q->whereHas('courseMaster', fn ($c) => $c->archived())
+                    ->orWhereDoesntHave('courseMaster');
             });
         } else {
-            $query->where(function ($q) use ($currentDate) {
-                $q->whereNull('course_master_pk')
-                    ->orWhereHas('courseMaster', function ($c) use ($currentDate) {
-                        $c->where(function ($e) use ($currentDate) {
-                            $e->whereNull('end_date')
-                                ->orWhere('end_date', '>=', $currentDate);
-                        });
-                    });
-            });
+            // One definition of "the course is still running", shared with the bulk-send
+            // scope - see FcForm::scopeOnRunningCourse(). Not is_active-filtered: this
+            // list shows disabled forms too, so they can be edited.
+            $query->onRunningCourse();
         }
 
         if ($request->filled('course_filter')) {

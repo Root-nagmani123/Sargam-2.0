@@ -7,13 +7,25 @@ use Illuminate\Database\Eloquent\Model;
 class HostelBuildingMaster extends Model
 {
     protected $table = 'hostel_building_master';
+
     protected $primaryKey = 'pk';
+
     public $timestamps = false;
 
     public $guarded = [];
 
-    public function scopeActive()
+    /**
+     * hostel_building_master stores its status in `active_room`; it has no
+     * `active_inactive` column, so the previous scope threw "Unknown column"
+     * on every caller. It is the same column the toggle allow-list uses.
+     *
+     * Checked, not assumed: SHOW COLUMNS FROM
+     * hostel_building_master on testsargam6, 2026-09-25 -> pk, building_name,
+     * active_room. tests/Feature/ToggleStatusSchemaTest asserts it on any
+     * connection that has the table.
+     */
+    public function scopeActive($query)
     {
-        return $this->where('active_inactive', 1);
+        return $query->where('active_room', 1);
     }
 }

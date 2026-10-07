@@ -43,6 +43,7 @@ class KitchenIssueController extends Controller
         DataTableRedisCache::bumpListEpoch(self::SELLING_VOUCHER_DT_LIST_EPOCH, 'KitchenIssueController@sellingVouchersDatatable');
         AvailableQuantityService::bumpCacheEpoch();
         DataTableRedisCache::bumpListEpoch(self::INDEX_MASTER_CACHE_EPOCH, 'KitchenIssueController@indexMasterData');
+        ProcessMessBillsEmployeeController::invalidateCombinedBillsCache();
     }
 
     /**

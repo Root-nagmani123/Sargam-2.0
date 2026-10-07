@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\Estate;
 use App\DataTables\EstateElectricSlabDataTable;
 use App\Exports\EstateElectricSlabExport;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Admin\Estate\Concerns\AuthorizesEstateMaster;
 use App\Models\EstateElectricSlab;
 use App\Models\UnitType;
 use Illuminate\Http\Request;
@@ -12,18 +13,7 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class EstateElectricSlabController extends Controller
 {
-    /** The rules are identical for create and update — one definition. */
-    private const RULES = [
-        'start_unit_range' => 'required|integer|min:0',
-        'end_unit_range' => 'required|integer|min:0|gte:start_unit_range',
-        'rate_per_unit' => 'required|numeric|min:0',
-        'estate_unit_type_master_pk' => 'required|integer|exists:estate_unit_type_master,pk',
-    ];
-
-    private function unitTypes()
-    {
-        return UnitType::orderBy('unit_type')->pluck('unit_type', 'pk');
-    }
+    use AuthorizesEstateMaster;
 
     public function index(EstateElectricSlabDataTable $dataTable)
     {

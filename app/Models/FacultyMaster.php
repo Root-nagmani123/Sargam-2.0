@@ -3,17 +3,44 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FacultyMaster extends Model
 {
-    protected $table = "faculty_master";
+    protected $table = 'faculty_master';
+
     protected $guarded = [];
+
     public $timestamps = false;
-    public $primaryKey = "pk";
+
+    public $primaryKey = 'pk';
 
     protected $casts = [
-        'joining_date' => 'date'
+        'joining_date' => 'date',
     ];
+
+    private static ?bool $hasAbbreviation = null;
+
+    /**
+     * Whether migration 2026_09_22_090000 has added faculty_master.abbreviation.
+     * Faculty saves and the timetable PDFs read and write it only when it has,
+     * so a release that runs that migration late degrades instead of failing.
+     */
+    public static function hasAbbreviationColumn(): bool
+    {
+        return self::$hasAbbreviation ??= \Illuminate\Support\Facades\Schema::hasColumn('faculty_master', 'abbreviation');
+    }
+
+    /**
+     * The abbreviation column for a select list - "f.abbreviation" with a table
+     * alias - or NULL under the same name while the column does not exist yet.
+     */
+    public static function abbreviationSelect(string $alias = '')
+    {
+        return self::hasAbbreviationColumn()
+            ? ($alias !== '' ? $alias . '.abbreviation' : 'abbreviation')
+            : \Illuminate\Support\Facades\DB::raw('NULL as abbreviation');
+    }
 
     public function facultyQualificationMap()
     {
@@ -65,19 +92,18 @@ class FacultyMaster extends Model
         return $this->hasMany(MDOEscotDutyMap::class, 'faculty_master_pk', 'pk');
     }
 
-   /*  public function setCurrentDesignationAttribute($value)
-    {
-        $this->attributes['current_designation_name'] = $value;
-    }
+    /*  public function setCurrentDesignationAttribute($value)
+     {
+         $this->attributes['current_designation_name'] = $value;
+     }
 
-    public function setCurrentDepartmentAttribute($value)
-    {
-        $this->attributes['current_department_name'] = $value;
-    }*/
+     public function setCurrentDepartmentAttribute($value)
+     {
+         $this->attributes['current_department_name'] = $value;
+     }*/
 
-   public function createdByUser()
+    public function createdByUser(): BelongsTo
     {
         return $this->belongsTo(EmployeeMaster::class, 'created_by', 'pk');
-    } 
-        
+    }
 }
