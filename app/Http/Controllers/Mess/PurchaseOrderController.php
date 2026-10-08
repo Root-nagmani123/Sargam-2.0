@@ -554,7 +554,14 @@ class PurchaseOrderController extends Controller
             'bill_file.max' => 'Bill size must not exceed 5 MB.',
         ]);
 
-        DB::transaction(function () use ($request, $purchaseOrder) {
+        $savedStatus = DB::transaction(function () use ($request, $purchaseOrder) {
+            // The status was read before validation; an approval or rejection may have landed since.
+            // Lock the row and re-check so an approved PO's lines are never replaced.
+            $current = PurchaseOrder::whereKey($purchaseOrder->id)->lockForUpdate()->value('status');
+            if (in_array($current, ['approved', 'rejected'], true)) {
+                return $current;
+            }
+
             $grandTotal = 0;
             foreach ($request->items as $item) {
                 $qty = (float) $item['quantity'];
@@ -606,7 +613,13 @@ class PurchaseOrderController extends Controller
                     'description' => $item['description'] ?? null,
                 ]);
             }
+
+            return null;
         });
+        if ($savedStatus !== null) {
+            return redirect()->route('admin.mess.purchaseorders.index')
+                ->with('po_edit_error', 'Purchase order ' . $purchaseOrder->po_number . ' was ' . $savedStatus . ' while you were editing it, so nothing was saved.');
+        }
         self::bumpPurchaseOrderListingCacheEpoch();
 
         return redirect()->route('admin.mess.purchaseorders.index')->with('success', 'Purchase order updated successfully');
@@ -681,8 +694,20 @@ class PurchaseOrderController extends Controller
             return redirect()->route('admin.mess.purchaseorders.index')
                 ->with('po_edit_error', 'Purchase order ' . $purchaseOrder->po_number . ' is approved and in stock, so it cannot be deleted.');
         }
-        $purchaseOrder->items()->delete();
-        $purchaseOrder->delete();
+        // Re-check under a row lock: the PO may have been approved after it was read above.
+        $deleted = DB::transaction(function () use ($purchaseOrder) {
+            if (PurchaseOrder::whereKey($purchaseOrder->id)->lockForUpdate()->value('status') === 'approved') {
+                return false;
+            }
+            $purchaseOrder->items()->delete();
+            $purchaseOrder->delete();
+
+            return true;
+        });
+        if (! $deleted) {
+            return redirect()->route('admin.mess.purchaseorders.index')
+                ->with('po_edit_error', 'Purchase order ' . $purchaseOrder->po_number . ' is approved and in stock, so it cannot be deleted.');
+        }
         self::bumpPurchaseOrderListingCacheEpoch();
 
         return redirect()->route('admin.mess.purchaseorders.index')->with('success', 'Purchase order deleted successfully');
@@ -694,11 +719,16 @@ class PurchaseOrderController extends Controller
         if ($refusal = $this->approvalRefusal($purchaseOrder)) {
             return redirect()->route('admin.mess.purchaseorders.index')->with('po_edit_error', $refusal);
         }
-        $purchaseOrder->update([
+        // Only a still-pending PO changes: if another approve/reject landed first, nothing is written.
+        $changed = PurchaseOrder::whereKey($purchaseOrder->id)->where('status', 'pending')->update([
             'status' => 'approved',
             'approved_by' => Auth::id(),
             'approved_at' => now(),
         ]);
+        if ($changed === 0) {
+            return redirect()->route('admin.mess.purchaseorders.index')
+                ->with('po_edit_error', $this->approvalRefusal($purchaseOrder->refresh()) ?? 'Purchase order ' . $purchaseOrder->po_number . ' was not changed.');
+        }
         self::bumpPurchaseOrderListingCacheEpoch();
 
         return redirect()->route('admin.mess.purchaseorders.index')
@@ -711,7 +741,11 @@ class PurchaseOrderController extends Controller
         if ($refusal = $this->approvalRefusal($purchaseOrder)) {
             return redirect()->route('admin.mess.purchaseorders.index')->with('po_edit_error', $refusal);
         }
-        $purchaseOrder->update(['status' => 'rejected']);
+        $changed = PurchaseOrder::whereKey($purchaseOrder->id)->where('status', 'pending')->update(['status' => 'rejected']);
+        if ($changed === 0) {
+            return redirect()->route('admin.mess.purchaseorders.index')
+                ->with('po_edit_error', $this->approvalRefusal($purchaseOrder->refresh()) ?? 'Purchase order ' . $purchaseOrder->po_number . ' was not changed.');
+        }
         self::bumpPurchaseOrderListingCacheEpoch();
 
         return redirect()->route('admin.mess.purchaseorders.index')
