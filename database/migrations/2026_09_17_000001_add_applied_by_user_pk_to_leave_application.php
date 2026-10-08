@@ -28,13 +28,10 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (! Schema::hasColumn('leave_application', 'applied_by_user_pk')) {
-            return;
-        }
-
-        Schema::table('leave_application', function (Blueprint $table) {
-            $table->dropIndex('leave_application_applied_by_user_pk_index');
-            $table->dropColumn('applied_by_user_pk');
-        });
+        // Deliberately one-way, like 2026_09_17_000003. Once deployed,
+        // applied_by_user_pk is the only record that the training section entered a
+        // leave on an officer trainee's behalf; dropping it would make every such
+        // APPROVED stationed leave read as self-applied. If this change must be
+        // reverted, restore leave_application from a backup instead (PR #334 F-061).
     }
 };

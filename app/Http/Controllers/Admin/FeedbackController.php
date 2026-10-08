@@ -4048,10 +4048,12 @@ class FeedbackController extends Controller
      *    offers it for every faculty_master entry stored as a JSON string pk — `["84"]`
      *    or a bare `"84"`, never a number — so it owes the viewer 1 when their pk is one
      *    of those (PR #334 F-054). JSON_CONTAINS with a quoted pk matches exactly those
-     *    shapes, except that it also looks inside a nested array, which the Add Event
-     *    form never writes and no row holds.
+     *    shapes, except that it also looks inside a nested array (`[["84"]]`), which
+     *    the trainee page skips. The Add Event form does not write that shape; whether
+     *    any stored row holds it is not verified.
      * Each JSON_CONTAINS sits in a nested CASE so it is never evaluated on invalid JSON.
-     * {@see viewerIsTeachingOnSession()} is the same rule for the detail rows.
+     * The detail rows select this same expression (mergePendingGroupedAggregatesWithDetailRows),
+     * so the listed sessions and the totals cannot disagree on any JSON shape (PR #334 F-059).
      */
     private function viewerExpectedFeedbackSql(int $facultyPk, string $alias = 't'): string
     {
@@ -4067,62 +4069,6 @@ class FeedbackController extends Controller
                      THEN 1 ELSE 0 END
             ELSE 0
         END)";
-    }
-
-    /**
-     * PHP twin of {@see viewerExpectedFeedbackSql()}: whether the trainee pages would
-     * offer feedback for this viewer on a session with these faculty_details /
-     * faculty_master values.
-     */
-    private function viewerIsTeachingOnSession(?string $facultyDetailsJson, $facultyMasterRaw, int $facultyPk): bool
-    {
-        if ($facultyDetailsJson !== null) {
-            $details = json_decode($facultyDetailsJson, true);
-            if (json_last_error() === JSON_ERROR_NONE) {
-                if (! is_array($details)) {
-                    return false;
-                }
-
-                foreach ($details as $d) {
-                    if (is_array($d)
-                        && ($d['role'] ?? null) === 'Teaching'
-                        && is_int($d['faculty_pk'] ?? null)
-                        && $d['faculty_pk'] === $facultyPk) {
-                        return true;
-                    }
-                }
-
-                return false;
-            }
-        }
-
-        // Legacy session: no valid faculty_details, so the faculty_master list decides.
-        if ($facultyMasterRaw === null) {
-            return false;
-        }
-        $master = json_decode((string) $facultyMasterRaw, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return false;
-        }
-
-        // JSON_CONTAINS(target, "<pk>"): a string equal to it, or a list holding one.
-        $pk = (string) $facultyPk;
-        $contains = function ($value) use (&$contains, $pk): bool {
-            if (is_string($value)) {
-                return $value === $pk;
-            }
-            if (is_array($value) && array_is_list($value)) {
-                foreach ($value as $v) {
-                    if ($contains($v)) {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        };
-
-        return $contains($master);
     }
 
     /**
@@ -4330,6 +4276,39 @@ class FeedbackController extends Controller
     }
 
     /**
+     * Session rows behind the Pending Students aggregate, for the given students.
+     *
+     * On the faculty portal each row also carries viewer_expected — the very
+     * expression the totals sum ({@see viewerExpectedFeedbackSql()}) — so whether a
+     * session is listed is decided by the same SQL that counted it, not by a PHP
+     * re-implementation of JSON_CONTAINS (PR #334 F-059).
+     */
+    private function pendingStudentsDetailQuery(Request $request, array $studentPks): \Illuminate\Database\Query\Builder
+    {
+        $columns = [
+            'sm.pk as student_pk',
+            't.pk as timetable_pk',
+            't.subject_topic as session_name',
+            't.START_DATE as date',
+            't.class_session as time',
+            'c.course_name',
+            't.faculty_details',
+            't.faculty_master',
+        ];
+
+        $viewerFacultyPk = $this->facultyReportViewerPk();
+        if ($viewerFacultyPk !== null) {
+            $columns[] = DB::raw($this->viewerExpectedFeedbackSql($viewerFacultyPk, 't') . ' as viewer_expected');
+        }
+
+        return $this->buildPendingStudentsGroupedBaseQuery($request)
+            ->whereIn('sm.pk', $studentPks)
+            ->select($columns)
+            ->orderByRaw("TRIM(CONCAT(COALESCE(sm.first_name,''),' ',COALESCE(sm.middle_name,''),' ',COALESCE(sm.last_name,'')))")
+            ->orderBy('t.START_DATE');
+    }
+
+    /**
      * Attach session rows for each aggregate row (same order as $aggRows).
      *
      * @param  \Illuminate\Support\Collection<int, object>  $aggRows
@@ -4342,21 +4321,7 @@ class FeedbackController extends Controller
 
         $pks = $aggRows->pluck('student_pk')->all();
 
-        $detailRows = $this->buildPendingStudentsGroupedBaseQuery($request)
-            ->whereIn('sm.pk', $pks)
-            ->select([
-                'sm.pk as student_pk',
-                't.pk as timetable_pk',
-                't.subject_topic as session_name',
-                't.START_DATE as date',
-                't.class_session as time',
-                'c.course_name',
-                't.faculty_details',
-                't.faculty_master',
-            ])
-            ->orderByRaw("TRIM(CONCAT(COALESCE(sm.first_name,''),' ',COALESCE(sm.middle_name,''),' ',COALESCE(sm.last_name,'')))")
-            ->orderBy('t.START_DATE')
-            ->get();
+        $detailRows = $this->pendingStudentsDetailQuery($request, $pks)->get();
 
         // Which faculty the student has actually submitted feedback for, keyed by
         // "timetablePk_studentPk" -> [faculty_pk, ...]. Used to mark each faculty
@@ -4387,9 +4352,9 @@ class FeedbackController extends Controller
             // faculty portal the other names are out of scope, so only the viewer's
             // line remains — otherwise the detail contradicts the totals above it.
             if ($viewerFacultyPk !== null) {
-                // Same rule as the totals (viewerExpectedFeedbackSql()), so a session
-                // the trainee form never offers is not listed either (F-048).
-                $facultyPks = $this->viewerIsTeachingOnSession($row->faculty_details, $row->faculty_master, $viewerFacultyPk)
+                // viewer_expected is the totals' own expression (viewerExpectedFeedbackSql()),
+                // so a session the totals do not count is not listed either (F-048, F-059).
+                $facultyPks = (int) $row->viewer_expected === 1
                     ? [$viewerFacultyPk]
                     : [];
                 // Not Teaching on this session: it owes the viewer nothing

@@ -6910,6 +6910,18 @@ class UserController extends Controller
     }
 
     /**
+     * Whether the login is an officer trainee whose user_id is a student_master pk.
+     *
+     * The Student-OT role alone is not enough: the Moodle token login grants it to
+     * whatever account the token names, and for a non-'S' account user_id is an
+     * employee / faculty pk that can equal another trainee's pk (PR #334 F-055,
+     * the F-047 rule).
+     */
+    private function isMyGroupsTrainee(): bool
+    {
+        return hasRole('Student-OT') && (Auth::user()->user_category ?? null) === 'S';
+    }
+    /**
      * Base query for the groups an OT belongs to, per the Course Group Mapping module.
      *
      * One row of group_type_master_course_master_map IS one group — a named group of a
@@ -6928,18 +6940,6 @@ class UserController extends Controller
      *                                 auth()->user()->user_id, as used across the
      *                                 attendance, calendar and exemption screens.
      */
-    /**
-     * Whether the login is an officer trainee whose user_id is a student_master pk.
-     *
-     * The Student-OT role alone is not enough: the Moodle token login grants it to
-     * whatever account the token names, and for a non-'S' account user_id is an
-     * employee / faculty pk that can equal another trainee's pk (PR #334 F-055,
-     * the F-047 rule).
-     */
-    private function isMyGroupsTrainee(): bool
-    {
-        return hasRole('Student-OT') && (Auth::user()->user_category ?? null) === 'S';
-    }
 
     private function myGroupsQuery($studentPk)
     {
