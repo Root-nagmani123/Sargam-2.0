@@ -4039,46 +4039,90 @@ class FeedbackController extends Controller
      * offered feedback for Teaching faculty (CalendarController::studentFacultyFeedback),
      * so a Sectional/Administration slot can never be answered.
      *
-     * The condition is the trainee form's own (CalendarController::studentFacultyFeedback):
-     * valid faculty_details holding {faculty_pk: <int pk>, role: Teaching}. A session
-     * with NULL / invalid details, or a string faculty_pk, is offered to no trainee,
-     * so it owes the viewer nothing either (PR #334 F-048). The JSON_CONTAINS sits in
-     * a nested CASE so it is never evaluated on invalid JSON.
+     * The conditions are the trainee pages' own:
+     *  - valid faculty_details: it must hold {faculty_pk: <int pk>, role: Teaching}
+     *    (CalendarController::studentFacultyFeedback / studentFeedback "new logic").
+     *    A string faculty_pk is offered to no trainee (PR #334 F-048).
+     *  - NULL / empty / invalid faculty_details: a legacy session. The trainee's
+     *    Student Feedback page ("old logic", CalendarController::OLD_FACULTY_JSON_TABLE)
+     *    offers it for every faculty_master entry stored as a JSON string pk — `["84"]`
+     *    or a bare `"84"`, never a number — so it owes the viewer 1 when their pk is one
+     *    of those (PR #334 F-054). JSON_CONTAINS with a quoted pk matches exactly those
+     *    shapes, except that it also looks inside a nested array, which the Add Event
+     *    form never writes and no row holds.
+     * Each JSON_CONTAINS sits in a nested CASE so it is never evaluated on invalid JSON.
      * {@see viewerIsTeachingOnSession()} is the same rule for the detail rows.
      */
     private function viewerExpectedFeedbackSql(int $facultyPk, string $alias = 't'): string
     {
         $details = "{$alias}.faculty_details";
+        $master = "{$alias}.faculty_master";
 
         return "(CASE
             WHEN JSON_VALID({$details}) = 1 THEN
                 CASE WHEN JSON_CONTAINS({$details}, JSON_OBJECT('faculty_pk', {$facultyPk}, 'role', 'Teaching')) = 1
+                     THEN 1 ELSE 0 END
+            WHEN JSON_VALID({$master}) = 1 THEN
+                CASE WHEN JSON_CONTAINS({$master}, JSON_QUOTE('{$facultyPk}')) = 1
                      THEN 1 ELSE 0 END
             ELSE 0
         END)";
     }
 
     /**
-     * PHP twin of {@see viewerExpectedFeedbackSql()}: whether the trainee form would
-     * offer feedback for this viewer on a session with these faculty_details.
+     * PHP twin of {@see viewerExpectedFeedbackSql()}: whether the trainee pages would
+     * offer feedback for this viewer on a session with these faculty_details /
+     * faculty_master values.
      */
-    private function viewerIsTeachingOnSession(?string $facultyDetailsJson, int $facultyPk): bool
+    private function viewerIsTeachingOnSession(?string $facultyDetailsJson, $facultyMasterRaw, int $facultyPk): bool
     {
-        $details = $facultyDetailsJson === null ? null : json_decode($facultyDetailsJson, true);
-        if (! is_array($details)) {
-            return false;
-        }
+        if ($facultyDetailsJson !== null) {
+            $details = json_decode($facultyDetailsJson, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                if (! is_array($details)) {
+                    return false;
+                }
 
-        foreach ($details as $d) {
-            if (is_array($d)
-                && ($d['role'] ?? null) === 'Teaching'
-                && is_int($d['faculty_pk'] ?? null)
-                && $d['faculty_pk'] === $facultyPk) {
-                return true;
+                foreach ($details as $d) {
+                    if (is_array($d)
+                        && ($d['role'] ?? null) === 'Teaching'
+                        && is_int($d['faculty_pk'] ?? null)
+                        && $d['faculty_pk'] === $facultyPk) {
+                        return true;
+                    }
+                }
+
+                return false;
             }
         }
 
-        return false;
+        // Legacy session: no valid faculty_details, so the faculty_master list decides.
+        if ($facultyMasterRaw === null) {
+            return false;
+        }
+        $master = json_decode((string) $facultyMasterRaw, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return false;
+        }
+
+        // JSON_CONTAINS(target, "<pk>"): a string equal to it, or a list holding one.
+        $pk = (string) $facultyPk;
+        $contains = function ($value) use (&$contains, $pk): bool {
+            if (is_string($value)) {
+                return $value === $pk;
+            }
+            if (is_array($value) && array_is_list($value)) {
+                foreach ($value as $v) {
+                    if ($contains($v)) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        };
+
+        return $contains($master);
     }
 
     /**
@@ -4187,7 +4231,10 @@ class FeedbackController extends Controller
     private function buildPendingStudentsAggregateSubquery(Request $request): \Illuminate\Database\Query\Builder
     {
         $pExpr = $this->pendingStudentsPendingExpressionSql();
-        $expectedExpr = expected_feedback_count_sql('t');
+        // The same expected count the pending column uses: on the faculty portal it
+        // is the viewer's own (0 or 1), so "given" cannot count a session the detail
+        // rows do not list (PR #334 F-054).
+        $expectedExpr = $this->pendingStudentsExpectedExpressionSql();
 
         $aggSub = (clone $this->buildPendingStudentsGroupedBaseQuery($request))
             ->select([
@@ -4342,7 +4389,7 @@ class FeedbackController extends Controller
             if ($viewerFacultyPk !== null) {
                 // Same rule as the totals (viewerExpectedFeedbackSql()), so a session
                 // the trainee form never offers is not listed either (F-048).
-                $facultyPks = $this->viewerIsTeachingOnSession($row->faculty_details, $viewerFacultyPk)
+                $facultyPks = $this->viewerIsTeachingOnSession($row->faculty_details, $row->faculty_master, $viewerFacultyPk)
                     ? [$viewerFacultyPk]
                     : [];
                 // Not Teaching on this session: it owes the viewer nothing

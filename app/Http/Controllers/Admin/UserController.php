@@ -306,9 +306,10 @@ class UserController extends Controller
                 ->count();
 
             // "My Groups" card: how many Course Group Mapping groups this OT is in.
-            $myGroupsCount = $this->myGroupsQuery($userId)
-                ->distinct()
-                ->count('gmap.pk');
+            // Same trainee check as the page it opens (F-055).
+            $myGroupsCount = $this->isMyGroupsTrainee()
+                ? $this->myGroupsQuery($userId)->distinct()->count('gmap.pk')
+                : 0;
 
             // Fetch today's timetable for the logged-in student
             $todayTimetable = $this->getTodayTimetableForStudent($userId);
@@ -6927,6 +6928,19 @@ class UserController extends Controller
      *                                 auth()->user()->user_id, as used across the
      *                                 attendance, calendar and exemption screens.
      */
+    /**
+     * Whether the login is an officer trainee whose user_id is a student_master pk.
+     *
+     * The Student-OT role alone is not enough: the Moodle token login grants it to
+     * whatever account the token names, and for a non-'S' account user_id is an
+     * employee / faculty pk that can equal another trainee's pk (PR #334 F-055,
+     * the F-047 rule).
+     */
+    private function isMyGroupsTrainee(): bool
+    {
+        return hasRole('Student-OT') && (Auth::user()->user_category ?? null) === 'S';
+    }
+
     private function myGroupsQuery($studentPk)
     {
         return DB::table('student_course_group_map as scgm')
@@ -6943,7 +6957,7 @@ class UserController extends Controller
      */
     public function myGroups()
     {
-        if (! hasRole('Student-OT')) {
+        if (! $this->isMyGroupsTrainee()) {
             return redirect()->route('admin.dashboard');
         }
 
@@ -7172,7 +7186,7 @@ class UserController extends Controller
      */
     private function assertOwnGroup($mapPk)
     {
-        if (! hasRole('Student-OT')) {
+        if (! $this->isMyGroupsTrainee()) {
             return null;
         }
 

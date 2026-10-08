@@ -28,12 +28,10 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (! Schema::hasColumn('leave_application', 'time_from')) {
-            return;
-        }
-
-        Schema::table('leave_application', function (Blueprint $table) {
-            $table->dropColumn(['time_from', 'time_to']);
-        });
+        // Deliberately one-way, like 2026_09_03_000000. Once deployed, time_from /
+        // time_to are the only copy of every stationed-leave departure and return
+        // time (from_date / to_date hold days only), so dropping them would silently
+        // delete those times. If this change must be reverted, restore
+        // leave_application from a backup instead (PR #334 F-057).
     }
 };

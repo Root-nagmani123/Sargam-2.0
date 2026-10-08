@@ -833,7 +833,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </small>
                                     <div class="form-check form-switch mt-2">
                                         <input class="form-check-input" type="checkbox" role="switch"
-                                            id="video_download_enabled_course" name="video_download_enabled_course" value="1">
+                                            id="video_download_enabled_course" name="video_download_enabled_course" value="1" checked>
                                         <label class="form-check-label small" for="video_download_enabled_course">
                                             Allow users to download this video
                                         </label>
@@ -1032,7 +1032,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         placeholder="https://www.youtube.com/watch?v=...">
                                     <div class="form-check form-switch mt-2">
                                         <input class="form-check-input" type="checkbox" role="switch"
-                                            id="video_download_enabled_other" name="video_download_enabled_other" value="1">
+                                            id="video_download_enabled_other" name="video_download_enabled_other" value="1" checked>
                                         <label class="form-check-label small" for="video_download_enabled_other">
                                             Allow users to download this video
                                         </label>
