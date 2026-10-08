@@ -310,8 +310,12 @@ class NoticeNotificationController extends Controller
         $id = Crypt::decrypt($encId);
         $data = Notice::findOrFail($id);
         if ($data->active_inactive == 0) {
-            $data->audienceMaps()->delete();
-            $data->delete();
+            // One unit: a failure between the two must not leave the notice with no
+            // audience rows, which the feed reads as "everyone" (PR #334 F-065).
+            DB::transaction(function () use ($data) {
+                $data->audienceMaps()->delete();
+                $data->delete();
+            });
             return back()->with('success', 'Notice deleted!');
         } else {
             return back()->with('error', 'Active Notice cannot be deleted!');

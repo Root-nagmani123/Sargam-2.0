@@ -554,7 +554,21 @@ class UserController extends Controller
 
         $issueReportModules = \App\Http\Controllers\Admin\IssueReportController::moduleOptions();
 
-        $cardsToRender = $baseCards->filter(fn ($c) => ! str_starts_with($c->key, 'widget_'))->map(function ($card) use ($cardDefinitions, $cardCounts) {
+        // Cards whose 'visible' flag is enforced: the OT and faculty-portal cards,
+        // whose role mapping alone would show them to a login the page behind them
+        // refuses (an OT card to a non-OT, opening a 403). The older cards' flags
+        // were never applied and their role mappings are what admins have tuned
+        // against, so they are left as they are.
+        $gatedCardKeys = [
+            'my_groups', 'discipline_marks_deducted', 'pending_feedback',
+            'total_sessions', 'total_feedback', 'my_counsellees', 'house_wise_details', 'whos_who',
+            'academic_timetable', 'my_timetable',
+        ];
+
+        $cardsToRender = $baseCards->filter(fn ($c) => ! str_starts_with($c->key, 'widget_'))->filter(function ($card) use ($cardDefinitions, $gatedCardKeys) {
+            return ! in_array($card->key, $gatedCardKeys, true)
+                || ($cardDefinitions[$card->key]['visible'] ?? true);
+        })->map(function ($card) use ($cardDefinitions, $cardCounts) {
             $def = $cardDefinitions[$card->key] ?? null;
 
             return [
@@ -5557,6 +5571,8 @@ class UserController extends Controller
                 $studentMap->session_topic = null;
                 $studentMap->session_faculty_master = null;
                 $studentMap->session_internal_faculty = null;
+                $studentMap->session_timetable_pk = null;
+                $studentMap->session_course_pk = null;
                 $studentMap->has_session_in_range = false;
                 $expanded->push($studentMap);
 
@@ -5573,6 +5589,10 @@ class UserController extends Controller
                 $row->session_topic = $session['session_topic'];
                 $row->session_faculty_master = $session['session_faculty_master'] ?? null;
                 $row->session_internal_faculty = $session['session_internal_faculty'] ?? null;
+                // The session and the course its attendance was marked under: what
+                // dashboardSessionCoverage() asks OtExemptionResolver about.
+                $row->session_timetable_pk = $session['timetable_pk'] ?? null;
+                $row->session_course_pk = $session['course_master_pk'] ?? null;
                 $row->has_session_in_range = true;
                 $expanded->push($row);
                 $emittedByStudent[$studentPk][] = (int) ($session['attendance_pk'] ?? 0);
@@ -5859,14 +5879,15 @@ class UserController extends Controller
         $present = collect();
         $absent = collect();
 
-        // Which rows a duty/exemption covers. Resolved for the whole set up front —
-        // two queries — so a session the OT was on duty for lands in Present rather
-        // than being counted as an absence against them, the same way the badge and
-        // AttendanceController::save treat it.
-        $dutyFlags = $this->dashboardDutyExemptionFlags(collect($rows)->values());
+        // Which rows a duty/exemption covers. Resolved for the whole set up front,
+        // with a fixed number of queries, so a session the OT was on duty for lands
+        // in Present rather than being counted as an absence against them, the same
+        // way the badge and AttendanceController::save treat it.
+        $rowList = collect($rows)->values();
+        $coverage = $this->dashboardSessionCoverage($rowList);
         $dutyCovered = [];
-        foreach (collect($rows)->values() as $i => $row) {
-            if ($this->dashboardRowIsDutyPresent((int) ($row->attendance_status ?? 0), $dutyFlags[$i] ?? [])) {
+        foreach ($rowList as $i => $row) {
+            if ($this->dashboardRowIsDutyPresent((int) ($row->attendance_status ?? 0), $coverage[$i] ?? false)) {
                 $dutyCovered[spl_object_id($row)] = true;
             }
         }
@@ -5964,6 +5985,8 @@ class UserController extends Controller
             $row->session_topic = null;
             $row->session_faculty_master = null;
             $row->session_internal_faculty = null;
+            $row->session_timetable_pk = null;
+            $row->session_course_pk = null;
             $row->has_session_in_range = true;
             $absentAll->push($row);
         }
@@ -6112,6 +6135,10 @@ class UserController extends Controller
         // cross-reference the source tables here. Batched for the current page.
         $dutyExemptionFlags = $this->dashboardDutyExemptionFlags($pagedStudents);
 
+        // Whether a duty/exemption covers each row's session: the status rule, which
+        // the date-only flags above are not.
+        $sessionCoverage = $this->dashboardSessionCoverage($pagedStudents);
+
         // Carry the Time Period filter into the detail-page section links so the
         // opened section (MDO/Escort duty, Medical exemption) shows the same
         // date-scoped data as the list row.
@@ -6144,7 +6171,7 @@ class UserController extends Controller
             $showEscort = $statusCode === 5 || $flags['escort'];
             $showMedical = $statusCode === 6 || $flags['medical'];
             $showOther = $statusCode === 7 || $flags['other'];
-            $dutyPresent = $this->dashboardRowIsDutyPresent($statusCode, $flags);
+            $dutyPresent = $this->dashboardRowIsDutyPresent($statusCode, $sessionCoverage[$idx] ?? false);
 
             $data[] = [
                 's_no' => $start + $idx + 1,
@@ -6379,6 +6406,12 @@ class UserController extends Controller
      * both source tables here, keyed by student pk + date, and OR the result into the
      * columns. Duty type (mdo_duty_type_master.name) decides MDO vs Escort vs Other.
      *
+     * These flags fill the MDO / Escort / Other Exemptions COLUMNS only: they say a
+     * duty or exemption exists that day, in any course and at any time. Whether it
+     * makes the session Present is a stricter question (same course, overlapping
+     * the session) and is answered by dashboardSessionCoverage() — so a row can show
+     * an Escort duty that day and still be Absent for a session the duty missed.
+     *
      * @return array<int, array{mdo: bool, escort: bool, medical: bool, other: bool}>
      */
     private function dashboardDutyExemptionFlags(Collection $pagedStudents): array
@@ -6471,28 +6504,59 @@ class UserController extends Controller
     }
 
     /**
-     * Whether a duty or exemption covers this row's session, which makes the OT
-     * Present however the attendance row was saved.
+     * Whether this row counts as Present on account of a duty or exemption, however
+     * the attendance row was saved.
      *
-     * An OT on MDO / Escort / Other duty or a medical exemption is away on Academy
-     * work, not missing, and AttendanceController::save writes Present for exactly
-     * these. The saved row can still hold a Late/Absent marked before the duty was
-     * assigned, so the listing resolves it rather than trusting the code — which is
-     * why an MDO row here used to read "Late" while the MDO column beside it said
-     * "MDO".
+     * Saved as MDO / Escort / Medical / Other (4–7), or $covered: a duty or exemption
+     * covers the session by OtExemptionResolver's rule. The saved row can still hold
+     * a Late/Absent marked before the duty was assigned, so the listing resolves it
+     * rather than trusting the code.
      *
-     * $flags come from dashboardDutyExemptionFlags(), the same source that fills the
-     * MDO / Escort / Other Exemptions columns, so a row cannot contradict itself.
-     *
-     * @param array{mdo: bool, escort: bool, medical: bool, other: bool} $flags
+     * $covered comes from dashboardSessionCoverage(), not from the date-only column
+     * flags: a duty on another course, or at a time the session does not overlap,
+     * leaves the absence standing — as it does in AttendanceController::save,
+     * My Counsellees and Student Detail (PR #334 F-062).
      */
-    private function dashboardRowIsDutyPresent(int $statusCode, array $flags): bool
+    private function dashboardRowIsDutyPresent(int $statusCode, bool $covered): bool
     {
-        return in_array($statusCode, [4, 5, 6, 7], true)
-            || ! empty($flags['mdo'])
-            || ! empty($flags['escort'])
-            || ! empty($flags['medical'])
-            || ! empty($flags['other']);
+        return in_array($statusCode, [4, 5, 6, 7], true) || $covered;
+    }
+
+    /**
+     * Per row (by position), whether a duty or exemption covers the row's session.
+     *
+     * Asks OtExemptionResolver::coveredSessions() — the rule isExempt() gives
+     * AttendanceController::save: the same course, and an MDO / Escort / Other duty
+     * or a medical exemption that overlaps the session. A row without a session
+     * (no timetable, e.g. a leave-based absentee) is never covered.
+     *
+     * @return array<int, bool>
+     */
+    private function dashboardSessionCoverage(Collection $rows): array
+    {
+        $rows = $rows->values();
+        $sessions = [];
+        foreach ($rows as $row) {
+            $timetablePk = (int) ($row->session_timetable_pk ?? 0);
+            $coursePk = (int) ($row->session_course_pk ?? 0);
+            $studentPk = (int) ($row->student_master_pk ?? 0);
+            if ($timetablePk && $coursePk && $studentPk) {
+                $sessions[] = ['student' => $studentPk, 'course' => $coursePk, 'timetable' => $timetablePk];
+            }
+        }
+
+        $covered = OtExemptionResolver::coveredSessions($sessions);
+
+        $coverage = [];
+        foreach ($rows as $idx => $row) {
+            $coverage[$idx] = isset($covered[OtExemptionResolver::sessionKey(
+                (int) ($row->student_master_pk ?? 0),
+                (int) ($row->session_course_pk ?? 0),
+                (int) ($row->session_timetable_pk ?? 0)
+            )]);
+        }
+
+        return $coverage;
     }
 
     /**
@@ -6608,6 +6672,7 @@ class UserController extends Controller
         // dashboardStudentListDataTableResponse() logic, keyed by row position.
         $absentReasons = $this->dashboardAbsentReasons($students);
         $dutyExemptionFlags = $this->dashboardDutyExemptionFlags($students);
+        $sessionCoverage = $this->dashboardSessionCoverage($students);
 
         $headings = [
             'S. No.',
@@ -6640,8 +6705,7 @@ class UserController extends Controller
             // Attendance status text: Present / Late / Absent, with the leave-based
             // reason (PT Exemption / Stationed Leave) appended for an absent row —
             // matching the on-screen badge (Late = status 2 attended-but-late).
-            $flagsForStatus = $dutyExemptionFlags[$index] ?? ['mdo' => false, 'escort' => false, 'medical' => false, 'other' => false];
-            $statusText = $this->dashboardRowIsDutyPresent($statusCode, $flagsForStatus)
+            $statusText = $this->dashboardRowIsDutyPresent($statusCode, $sessionCoverage[$index] ?? false)
                 ? 'Present'
                 : ($isAbsent ? 'Absent' : ($statusCode === 2 ? 'Late' : 'Present'));
             if ($isAbsent) {
