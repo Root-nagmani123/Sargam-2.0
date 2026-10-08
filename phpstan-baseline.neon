@@ -427,22 +427,12 @@ parameters:
 
 		-
 			message: "#^Relation 'courseMaster' is not found in App\\\\Models\\\\MDOEscotDutyMap model\\.$#"
-			count: 2
-			path: app/Http/Controllers/Admin/FacultyMDOEscortExceptionViewController.php
-
-		-
-			message: "#^Relation 'facultyMaster' is not found in App\\\\Models\\\\MDOEscotDutyMap model\\.$#"
-			count: 1
+			count: 3
 			path: app/Http/Controllers/Admin/FacultyMDOEscortExceptionViewController.php
 
 		-
 			message: "#^Relation 'mdoDutyTypeMaster' is not found in App\\\\Models\\\\MDOEscotDutyMap model\\.$#"
 			count: 1
-			path: app/Http/Controllers/Admin/FacultyMDOEscortExceptionViewController.php
-
-		-
-			message: "#^Relation 'mdoEscotDutyMaps' is not found in App\\\\Models\\\\FacultyMaster model\\.$#"
-			count: 3
 			path: app/Http/Controllers/Admin/FacultyMDOEscortExceptionViewController.php
 
 		-
@@ -462,11 +452,6 @@ parameters:
 
 		-
 			message: "#^Class App\\\\Http\\\\Controllers\\\\Admin\\\\Collection not found\\.$#"
-			count: 1
-			path: app/Http/Controllers/Admin/FeedbackController.php
-
-		-
-			message: "#^Relation 'students' is not found in App\\\\Models\\\\CourseMaster model\\.$#"
 			count: 1
 			path: app/Http/Controllers/Admin/FeedbackController.php
 
@@ -539,16 +524,6 @@ parameters:
 			message: "#^Relation 'nature' is not found in App\\\\Models\\\\LeaveApplication model\\.$#"
 			count: 1
 			path: app/Http/Controllers/Admin/LeaveApplicationController.php
-
-		-
-			message: "#^Relation 'district' is not found in App\\\\Models\\\\City model\\.$#"
-			count: 1
-			path: app/Http/Controllers/Admin/LocationController.php
-
-		-
-			message: "#^Relation 'state' is not found in App\\\\Models\\\\City model\\.$#"
-			count: 1
-			path: app/Http/Controllers/Admin/LocationController.php
 
 		-
 			message: "#^Relation 'courseMaster' is not found in App\\\\Models\\\\MDOEscotDutyMap model\\.$#"
