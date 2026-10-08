@@ -1889,8 +1889,22 @@ if (!function_exists('notice_feed_query_by_role')) {
                     ->orWhere(function ($o) use ($user, $courseIds, $groupIds) {
                         $o->where('notices_notification.target_audience', 'like', '%Office trainee%');
 
-                        // No course rows = the author picked "Select All" courses.
-                        notice_audience_unpinned_or_any($o, 'C', $courseIds->all());
+                        // No course rows = the author picked "Select All" courses —
+                        // but only on a notice saved through the targeting form,
+                        // which always sets audience_mode. A notice from before it
+                        // (NULL mode) reached only the OTs of its course_master_pk,
+                        // and the backfill wrote a C row only where that was > 0;
+                        // with no C row it reached nobody, and still does, rather
+                        // than every OT after deploy (PR #334 F-046).
+                        $o->where(function ($c) use ($courseIds) {
+                            $c->where(function ($legacy) use ($courseIds) {
+                                $legacy->whereNull('notices_notification.audience_mode');
+                                notice_audience_has_any($legacy, 'C', $courseIds->all());
+                            })->orWhere(function ($targeted) use ($courseIds) {
+                                $targeted->whereNotNull('notices_notification.audience_mode');
+                                notice_audience_unpinned_or_any($targeted, 'C', $courseIds->all());
+                            });
+                        });
 
                         $o->where(function ($m) use ($user, $groupIds) {
                             // NULL mode = a notice written before this targeting
