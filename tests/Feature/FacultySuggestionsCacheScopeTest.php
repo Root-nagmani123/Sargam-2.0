@@ -19,7 +19,12 @@ use Tests\TestCase;
  */
 class FacultySuggestionsCacheScopeTest extends TestCase
 {
-    use RollsBackAgainstAppDatabase;
+    // Aliased: this class defines its own setUp()/tearDown(), which would
+    // otherwise replace the trait's and never open or roll back the transaction.
+    use RollsBackAgainstAppDatabase {
+        setUp as openRollbackTransaction;
+        tearDown as rollBackTransaction;
+    }
 
     private const TERM = 'Zqxsuggest';
 
@@ -29,7 +34,7 @@ class FacultySuggestionsCacheScopeTest extends TestCase
 
     protected function setUp(): void
     {
-        parent::setUp();
+        $this->openRollbackTransaction();
 
         $prop = new \ReflectionProperty(FeedbackReportCache::class, 'resolvedStore');
         $prop->setAccessible(true);
@@ -62,7 +67,7 @@ class FacultySuggestionsCacheScopeTest extends TestCase
         $prop->setAccessible(true);
         $prop->setValue(null, null);
 
-        parent::tearDown();
+        $this->rollBackTransaction();
     }
 
     private function names($response): array

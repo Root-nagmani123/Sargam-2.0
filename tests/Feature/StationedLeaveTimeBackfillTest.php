@@ -21,13 +21,18 @@ use Tests\TestCase;
  */
 class StationedLeaveTimeBackfillTest extends TestCase
 {
-    use RollsBackAgainstAppDatabase;
+    // Aliased: this class defines its own setUp()/tearDown(), which would
+    // otherwise replace the trait's and never open or roll back the transaction.
+    use RollsBackAgainstAppDatabase {
+        setUp as openRollbackTransaction;
+        tearDown as rollBackTransaction;
+    }
 
     private const MIGRATION = '2026_10_08_000001_backfill_stationed_leave_time_from_time_to.php';
 
     protected function setUp(): void
     {
-        parent::setUp();
+        $this->openRollbackTransaction();
 
         if (! Schema::hasColumn('leave_application', 'time_from')) {
             $this->markTestSkipped('leave_application has no time_from column');
@@ -50,7 +55,7 @@ class StationedLeaveTimeBackfillTest extends TestCase
     protected function tearDown(): void
     {
         DB::statement('DROP TEMPORARY TABLE IF EXISTS leave_application');
-        parent::tearDown();
+        $this->rollBackTransaction();
     }
 
     private function leave(string $type, string $from, string $to, ?string $timeFrom = null): int

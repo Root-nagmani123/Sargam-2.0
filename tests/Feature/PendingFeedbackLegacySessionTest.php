@@ -23,7 +23,12 @@ use Tests\TestCase;
  */
 class PendingFeedbackLegacySessionTest extends TestCase
 {
-    use RollsBackAgainstAppDatabase;
+    // Aliased: this class defines its own setUp()/tearDown(), which would
+    // otherwise replace the trait's and never open or roll back the transaction.
+    use RollsBackAgainstAppDatabase {
+        setUp as openRollbackTransaction;
+        tearDown as rollBackTransaction;
+    }
 
     private const VIEWER = 990001;
 
@@ -100,7 +105,7 @@ class PendingFeedbackLegacySessionTest extends TestCase
 
     protected function setUp(): void
     {
-        parent::setUp();
+        $this->openRollbackTransaction();
 
         // The aggregate groups by sm.pk alone and selects the name columns, which
         // MySQL 5.7+ accepts as functionally dependent on the primary key. MariaDB
@@ -136,7 +141,7 @@ class PendingFeedbackLegacySessionTest extends TestCase
             $this->savedSqlMode = null;
         }
 
-        parent::tearDown();
+        $this->rollBackTransaction();
     }
 
     public function test_legacy_sessions_listing_the_viewer_reconcile_with_their_detail_rows(): void
