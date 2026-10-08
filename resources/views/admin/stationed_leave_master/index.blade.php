@@ -252,6 +252,13 @@ $(function () {
             .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
+    // Feed columns arrive HTML-escaped (config/datatables.php 'escape' => '*');
+    // decode to plain text before lmEscape() so "A & B" is not shown as "A &amp; B".
+    // DOMParser builds an inert document: nothing in the value runs.
+    function lmDecode(value) {
+        return new DOMParser().parseFromString(String(value == null ? '' : value), 'text/html').documentElement.textContent;
+    }
+
     // The Edit link is read from the controller's own action HTML so it stays
     // exactly the URL the server built (course + effective-from date).
     function lmEditHref(serverHtml) {
@@ -285,7 +292,7 @@ $(function () {
         return (isActiveRow(row) ? tpl.actionsOn : tpl.actionsOff)
             .split('__LM_ID__').join(lmEscape(row.pk))
             .split('__LM_EDIT__').join(lmEscape(lmEditHref(data)))
-            .split('__LM_NAME__').join(lmEscape(row.course_name || ''));
+            .split('__LM_NAME__').join(lmEscape(lmDecode(row.course_name || '')));
     }
 
     function syncListUrl() {
