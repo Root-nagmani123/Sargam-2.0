@@ -170,6 +170,22 @@
             }
         }
         $meeScope = $filter ?? 'active';
+
+        // Time Period picker defaults: only real Y-m-d dates, handed to the
+        // script JSON-encoded below. The values come from the query string, and
+        // e() inside a quoted JS string lets a trailing backslash break out.
+        $meeFpDefaults = [];
+        $meeFrom = request('from_date_filter');
+        $meeTo = request('to_date_filter');
+        if (is_string($meeFrom) && is_string($meeTo)) {
+            $meeFromDate = \DateTime::createFromFormat('!Y-m-d', $meeFrom);
+            $meeToDate = \DateTime::createFromFormat('!Y-m-d', $meeTo);
+            if ($meeFromDate && $meeToDate
+                && $meeFromDate->format('Y-m-d') === $meeFrom
+                && $meeToDate->format('Y-m-d') === $meeTo) {
+                $meeFpDefaults = [$meeFrom, $meeTo];
+            }
+        }
     @endphp
 
     {{-- Course scope (links: each is its own ?filter=) left · Download / Print
@@ -461,10 +477,7 @@ $(document).ready(function() {
 
     // 📅 Time Period range picker
     if (typeof flatpickr !== 'undefined') {
-        var fpDefaults = [];
-        @if(request('from_date_filter') && request('to_date_filter'))
-        fpDefaults = ['{{ request('from_date_filter') }}', '{{ request('to_date_filter') }}'];
-        @endif
+        var fpDefaults = @json($meeFpDefaults);
 
         meeTimePeriodPicker = flatpickr('#mee_time_period_picker', {
             mode: 'range',
