@@ -19,6 +19,10 @@ use Tests\TestCase;
  * given" tab listed trainees whose only sessions with the viewer owed nothing,
  * at 0 given / 0 pending (F-050).
  *
+ * F-048 went too far for legacy sessions (NULL / invalid faculty_details): the
+ * trainee's Student Feedback page offers those for every faculty_master entry
+ * stored as a string pk, so they owe the viewer 1 when listed there (F-054).
+ *
  * The expressions are evaluated by MySQL itself against synthetic faculty_details
  * values — no table row is read or written.
  */
@@ -28,7 +32,10 @@ class PendingFeedbackTeachingOnlyTest extends TestCase
 
     private const VIEWER = 990001;
 
-    private function pendingFor(?string $facultyDetails, int $submitted = 0): int
+    /** pendingFor() default: faculty_master lists the viewer as a string pk. */
+    private const MASTER = '__viewer__';
+
+    private function pendingFor(?string $facultyDetails, int $submitted = 0, ?string $facultyMaster = self::MASTER): int
     {
         request()->attributes->set('is_faculty_feedback_report', true);
         request()->attributes->set('faculty_report_faculty_pk', self::VIEWER);
@@ -41,7 +48,7 @@ class PendingFeedbackTeachingOnlyTest extends TestCase
             "SELECT GREATEST({$expr}, 0) AS pending
              FROM (SELECT ? AS faculty_details, ? AS faculty_master) t
              CROSS JOIN (SELECT ? AS submitted_count) tf",
-            [$facultyDetails, json_encode([(string) self::VIEWER]), $submitted]
+            [$facultyDetails, $facultyMaster === self::MASTER ? json_encode([(string) self::VIEWER]) : $facultyMaster, $submitted]
         );
 
         return (int) $row->pending;
@@ -78,15 +85,61 @@ class PendingFeedbackTeachingOnlyTest extends TestCase
         $this->assertSame(0, $this->pendingFor($this->details('Teaching', (string) self::VIEWER)));
     }
 
-    // F-048: the trainee form requires JSON_VALID(faculty_details) = 1.
-    public function test_a_session_without_faculty_details_owes_nothing(): void
+    // F-054: a legacy session is offered by the trainee's Student Feedback page
+    // ("old logic") for each faculty_master entry stored as a string pk.
+    public function test_a_legacy_session_listing_the_viewer_owes_one_feedback(): void
     {
-        $this->assertSame(0, $this->pendingFor(null));
+        $this->assertSame(1, $this->pendingFor(null));
+        $this->assertSame(1, $this->pendingFor(''));
+        $this->assertSame(1, $this->pendingFor('not json'));
+        $this->assertSame(1, $this->pendingFor(null, 0, json_encode(['4242', (string) self::VIEWER])));
+        $this->assertSame(1, $this->pendingFor(null, 0, json_encode((string) self::VIEWER)), 'bare "pk"');
+        $this->assertSame(0, $this->pendingFor(null, 1));
     }
 
-    public function test_a_session_with_invalid_faculty_details_owes_nothing(): void
+    // F-054: the shapes the trainee page skips (CalendarController::OLD_FACULTY_JSON_TABLE).
+    public function test_a_legacy_session_the_trainee_page_skips_owes_nothing(): void
     {
-        $this->assertSame(0, $this->pendingFor('not json'));
+        $this->assertSame(0, $this->pendingFor(null, 0, json_encode([self::VIEWER])), 'numeric pk');
+        $this->assertSame(0, $this->pendingFor(null, 0, (string) self::VIEWER), 'bare number');
+        $this->assertSame(0, $this->pendingFor(null, 0, json_encode(['0' . self::VIEWER])), 'leading zero');
+        $this->assertSame(0, $this->pendingFor(null, 0, json_encode(['4242'])), 'someone else');
+        $this->assertSame(0, $this->pendingFor(null, 0, null), 'no faculty_master');
+        $this->assertSame(0, $this->pendingFor('not json', 0, 'not json either'));
+    }
+
+    // The detail rows use a PHP twin of the SQL; both must agree on every shape.
+    public function test_the_detail_row_rule_agrees_with_the_totals(): void
+    {
+        $twin = new \ReflectionMethod(FeedbackController::class, 'viewerIsTeachingOnSession');
+        $twin->setAccessible(true);
+        $controller = new FeedbackController;
+
+        $viewerStr = json_encode([(string) self::VIEWER]);
+        $cases = [
+            [$this->details('Teaching'), $viewerStr],
+            [$this->details('Sectional'), $viewerStr],
+            [$this->details('Teaching', (string) self::VIEWER), $viewerStr],
+            ['null', $viewerStr],
+            ['[]', $viewerStr],
+            [null, $viewerStr],
+            ['', $viewerStr],
+            ['not json', $viewerStr],
+            [null, json_encode([self::VIEWER])],
+            [null, json_encode((string) self::VIEWER)],
+            [null, (string) self::VIEWER],
+            [null, json_encode(['4242', (string) self::VIEWER])],
+            [null, json_encode([['x' => (string) self::VIEWER]])],
+            [null, json_encode(['0' . self::VIEWER])],
+            [null, null],
+            [null, ''],
+        ];
+
+        foreach ($cases as [$details, $master]) {
+            $sql = $this->pendingFor($details, 0, $master);
+            $php = $twin->invoke($controller, $details, $master, self::VIEWER) ? 1 : 0;
+            $this->assertSame($sql, $php, 'details=' . var_export($details, true) . ' master=' . var_export($master, true));
+        }
     }
 
     /** Whether one trainee with these sessions lands in the given / not-given tab. */
