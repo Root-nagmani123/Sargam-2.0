@@ -38,9 +38,10 @@ class StockBalanceTillDateExport implements FromCollection, WithCustomStartCell,
                 $item['item_code'] ?? '—',
                 $item['item_name'] ?? '—',
                 $item['unit'] ?? '—',
-                number_format($item['remaining_qty'] ?? $item['remaining_quantity'] ?? 0, 2),
-                number_format($item['rate'] ?? 0, 2),
-                number_format($item['amount'] ?? 0, 2),
+                // Raw numbers (not number_format strings) so Excel stores them as numbers; display format is applied in AfterSheet.
+                round((float) ($item['remaining_qty'] ?? $item['remaining_quantity'] ?? 0), 2),
+                round((float) ($item['rate'] ?? 0), 2),
+                round((float) ($item['amount'] ?? 0), 2),
             ];
         }
         return collect($rows);
@@ -117,13 +118,19 @@ class StockBalanceTillDateExport implements FromCollection, WithCustomStartCell,
                 $sheet->getColumnDimension('B')->setWidth(14);  // Item Code
                 $sheet->getColumnDimension('C')->setWidth(26);  // Item Name
                 $sheet->getColumnDimension('D')->setWidth(10);  // Unit
-                $sheet->getColumnDimension('E')->setWidth(16);  // Remaining Quantity
+                $sheet->getColumnDimension('E')->setWidth(20);  // Remaining Quantity
                 $sheet->getColumnDimension('F')->setWidth(12);  // Avg Rate
                 $sheet->getColumnDimension('G')->setWidth(16);  // Amount
 
                 // Right-align numeric columns (E–G).
                 $sheet->getStyle("E{$headerRow}:G{$lastRow}")
                     ->getAlignment()->setHorizontal('right');
+
+                // Thousands separator + 2 decimals while keeping cells numeric.
+                if ($lastRow > $headerRow) {
+                    $sheet->getStyle('E' . ($headerRow + 1) . ":G{$lastRow}")
+                        ->getNumberFormat()->setFormatCode('#,##0.00');
+                }
 
                 // Freeze pane below header + column titles.
                 $sheet->freezePane("A" . ($headerRow + 1));
