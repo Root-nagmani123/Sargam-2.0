@@ -16,19 +16,28 @@ class FacultyMDOEscortExceptionViewController extends Controller
     /** mdo_duty_type_master.pk of "Escort" — the only duty type this view lists. */
     private const ESCORT_DUTY_TYPE = 2;
 
+    /** menus.permission_name of this screen (menus row "Faculty MDO Escort Exception"). */
+    private const ADMIN_PERMISSION = 'faculty_mdo_escort_exception_view';
+
     public function index(Request $request)
     {
         $currentDate = now()->format('Y-m-d');
 
-        if (hasRole('Internal Faculty') || hasRole('Guest Faculty')) {
+        // Faculty accounts hold the "Faculty" role (it also holds this screen's
+        // menu permission), so it must route here before the admin branch.
+        if (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Faculty')) {
             $facultyPk = Auth::user()->user_id;
 
             // Faculty Login View - Show only their courses
             return $this->facultyLoginView($request, $facultyPk, $currentDate);
-        }else{
-            // Admin View - Show all faculties with filters (only for admin users)
-            return $this->adminView($request, $currentDate);
         }
+
+        // Admin View lists every trainee's escort exceptions, so it needs the
+        // screen's menu permission (Super Admin always passes); the route itself
+        // is auth-only because the faculty branch above must stay reachable.
+        abort_unless(hasMenuPermission(self::ADMIN_PERMISSION), 403, 'You do not have permission to open this screen.');
+
+        return $this->adminView($request, $currentDate);
     }
 
     /**
@@ -89,7 +98,26 @@ class FacultyMDOEscortExceptionViewController extends Controller
     }
 
     /**
-     * Faculty Login View - Shows MDO/Escort exceptions for courses where faculty is assigned
+     * Escort duties a faculty login may see, decided per course: every duty of
+     * a course they are CC or ACC of, and on any other course only the duties
+     * they are assigned to (any position of faculty_master_pks, or a legacy
+     * faculty_master_pk). The table and the Course filter both start here.
+     */
+    private function facultyDutiesQuery(int $facultyMasterPk, \Closure $courseScope)
+    {
+        $coordinatedCourseIds = CourseCordinatorMaster::courseIdsForFaculty($facultyMasterPk);
+
+        return MDOEscotDutyMap::where('mdo_duty_type_master_pk', self::ESCORT_DUTY_TYPE)
+            ->whereHas('courseMaster', $courseScope)
+            ->where(function ($q) use ($coordinatedCourseIds, $facultyMasterPk) {
+                $q->whereIn('course_master_pk', $coordinatedCourseIds)
+                  ->orWhere(fn ($own) => $own->associatedWithFaculty($facultyMasterPk));
+            });
+    }
+
+    /**
+     * Faculty Login View - escort exceptions per facultyDutiesQuery(): the whole
+     * course for its CC/ACC, otherwise only the faculty's own duties.
      */
     private function facultyLoginView(Request $request, $facultyPk, $currentDate)
     {
@@ -104,26 +132,10 @@ class FacultyMDOEscortExceptionViewController extends Controller
             return redirect()->back()->with('error', 'Faculty record not found.');
         }
 
-        // Get course IDs where faculty is coordinator or assistant coordinator (single query with proper grouping)
-        $courseIds = CourseCordinatorMaster::where(function($query) use ($faculty) {
-                $query->where('Coordinator_name', $faculty->pk)
-                      ->orWhere('assistant_coordinator_name', $faculty->pk);
-            })
-            ->pluck('courses_master_pk')
-            ->unique()
-            ->values()
-            ->toArray();
+        $availableCourses = $this->getAvailableCourses($faculty->pk, $courseScope);
 
-        if (empty($courseIds)) {
-            return $this->getEmptyFacultyView($courseFilter, $courseStatus);
-        }
-
-        $availableCourses = $this->getAvailableCourses($courseIds, $courseScope);
-
-        // Only the coordinator's own courses, in the selected tab (Active / Archived).
-        $dutyMapsQuery = MDOEscotDutyMap::whereIn('course_master_pk', $courseIds)
-            ->where('mdo_duty_type_master_pk', self::ESCORT_DUTY_TYPE)
-            ->whereHas('courseMaster', $courseScope)
+        // Visible duties in the selected tab (Active / Archived).
+        $dutyMapsQuery = $this->facultyDutiesQuery($faculty->pk, $courseScope)
             ->with([
                 'courseMaster:pk,course_name',
                 'mdoDutyTypeMaster:pk,mdo_duty_type_name',
@@ -206,12 +218,13 @@ class FacultyMDOEscortExceptionViewController extends Controller
     }
 
     /**
-     * Get available courses for filter dropdown — the coordinator's courses in the selected tab.
+     * Get available courses for filter dropdown — courses in the selected tab
+     * with at least one escort duty this faculty may see (facultyDutiesQuery()).
      */
-    private function getAvailableCourses(array $courseIds, \Closure $courseScope): array
+    private function getAvailableCourses(int $facultyMasterPk, \Closure $courseScope): array
     {
-        return CourseMaster::whereIn('pk', $courseIds)
-            ->where($courseScope)
+        return CourseMaster::where($courseScope)
+            ->whereIn('pk', $this->facultyDutiesQuery($facultyMasterPk, $courseScope)->select('course_master_pk'))
             ->orderBy('course_name')
             ->pluck('course_name', 'pk')
             ->toArray();

@@ -59,8 +59,19 @@ class CourseCordinatorMaster extends Model
             return [];
         }
 
-        $facultyPk = (int) $facultyPk;
+        return static::courseIdsForFaculty((int) $facultyPk);
+    }
 
+    /**
+     * Courses whose Coordinator_name or Assistant_Coordinator_name names the
+     * given faculty_master pk, read with peopleIn(). Callers that have already
+     * resolved the faculty record use this; courseIdsForUser() adds the login
+     * checks on top.
+     *
+     * @return int[]
+     */
+    public static function courseIdsForFaculty(int $facultyPk): array
+    {
         // LIKE only narrows the rows fetched; peopleIn() decides the match.
         return static::query()
             ->where(function ($q) use ($facultyPk) {
