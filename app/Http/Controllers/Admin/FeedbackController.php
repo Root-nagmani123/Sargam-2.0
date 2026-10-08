@@ -4011,16 +4011,23 @@ class FeedbackController extends Controller
      */
     private function pendingStudentsPendingExpressionSql(): string
     {
+        return '(' . $this->pendingStudentsExpectedExpressionSql() . ' - COALESCE(tf.submitted_count, 0))';
+    }
+
+    /**
+     * Feedbacks expected per timetable row, before subtracting what was submitted.
+     */
+    private function pendingStudentsExpectedExpressionSql(): string
+    {
         // A session with three Teaching faculty expects three feedbacks — but on the
         // faculty portal only the viewer's own is in scope, so at most one is
         // expected. Leaving it at three counted colleagues' missing feedback as this
         // faculty's, which is what made the totals read too high.
         $viewerFacultyPk = $this->facultyReportViewerPk();
-        $expected = $viewerFacultyPk !== null
+
+        return $viewerFacultyPk !== null
             ? $this->viewerExpectedFeedbackSql($viewerFacultyPk, 't')
             : expected_feedback_count_sql('t');
-
-        return '(' . $expected . ' - COALESCE(tf.submitted_count, 0))';
     }
 
     /**
@@ -4030,22 +4037,48 @@ class FeedbackController extends Controller
      * The faculty-portal scope (FacultySessionScope::applyFaculty) matches every
      * faculty listed on the session whatever their role, but trainees are only
      * offered feedback for Teaching faculty (CalendarController::studentFacultyFeedback),
-     * so a Sectional/Administration slot can never be answered. Same branches as
-     * expected_feedback_count_sql(): faculty_details decides when present, the
-     * legacy faculty_master list otherwise (every listed faculty is expected there).
-     * faculty_pk is stored as an int, but older rows may carry a string — match both.
+     * so a Sectional/Administration slot can never be answered.
+     *
+     * The condition is the trainee form's own (CalendarController::studentFacultyFeedback):
+     * valid faculty_details holding {faculty_pk: <int pk>, role: Teaching}. A session
+     * with NULL / invalid details, or a string faculty_pk, is offered to no trainee,
+     * so it owes the viewer nothing either (PR #334 F-048). The JSON_CONTAINS sits in
+     * a nested CASE so it is never evaluated on invalid JSON.
+     * {@see viewerIsTeachingOnSession()} is the same rule for the detail rows.
      */
     private function viewerExpectedFeedbackSql(int $facultyPk, string $alias = 't'): string
     {
         $details = "{$alias}.faculty_details";
 
         return "(CASE
-            WHEN JSON_VALID({$details}) THEN
-                CASE WHEN JSON_CONTAINS({$details}, JSON_OBJECT('faculty_pk', {$facultyPk}, 'role', 'Teaching'))
-                       OR JSON_CONTAINS({$details}, JSON_OBJECT('faculty_pk', '{$facultyPk}', 'role', 'Teaching'))
+            WHEN JSON_VALID({$details}) = 1 THEN
+                CASE WHEN JSON_CONTAINS({$details}, JSON_OBJECT('faculty_pk', {$facultyPk}, 'role', 'Teaching')) = 1
                      THEN 1 ELSE 0 END
-            ELSE 1
+            ELSE 0
         END)";
+    }
+
+    /**
+     * PHP twin of {@see viewerExpectedFeedbackSql()}: whether the trainee form would
+     * offer feedback for this viewer on a session with these faculty_details.
+     */
+    private function viewerIsTeachingOnSession(?string $facultyDetailsJson, int $facultyPk): bool
+    {
+        $details = $facultyDetailsJson === null ? null : json_decode($facultyDetailsJson, true);
+        if (! is_array($details)) {
+            return false;
+        }
+
+        foreach ($details as $d) {
+            if (is_array($d)
+                && ($d['role'] ?? null) === 'Teaching'
+                && is_int($d['faculty_pk'] ?? null)
+                && $d['faculty_pk'] === $facultyPk) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -4184,10 +4217,14 @@ class FeedbackController extends Controller
     private function applyPendingStudentsFeedbackStateHaving($query, Request $request): void
     {
         $pExpr = $this->pendingStudentsPendingExpressionSql();
+        $eExpr = $this->pendingStudentsExpectedExpressionSql();
 
         if ($request->input('filter_feedback_state', 'not_given') === 'given') {
+            // "Given" needs at least one session that owed feedback and got it. A
+            // session that owed none (expected 0, e.g. the viewer is only Sectional
+            // on it) is not evidence of anything given (PR #334 F-050).
             $query->havingRaw("SUM(CASE WHEN {$pExpr} > 0 THEN 1 ELSE 0 END) = 0")
-                ->havingRaw("SUM(CASE WHEN {$pExpr} <= 0 THEN 1 ELSE 0 END) >= 1");
+                ->havingRaw("SUM(CASE WHEN {$eExpr} > 0 AND {$pExpr} <= 0 THEN 1 ELSE 0 END) >= 1");
         } else {
             $query->havingRaw("SUM(CASE WHEN {$pExpr} > 0 THEN 1 ELSE 0 END) >= 1");
         }
@@ -4303,7 +4340,11 @@ class FeedbackController extends Controller
             // faculty portal the other names are out of scope, so only the viewer's
             // line remains — otherwise the detail contradicts the totals above it.
             if ($viewerFacultyPk !== null) {
-                $facultyPks = array_values(array_filter($facultyPks, fn ($pk) => (int) $pk === $viewerFacultyPk));
+                // Same rule as the totals (viewerExpectedFeedbackSql()), so a session
+                // the trainee form never offers is not listed either (F-048).
+                $facultyPks = $this->viewerIsTeachingOnSession($row->faculty_details, $viewerFacultyPk)
+                    ? [$viewerFacultyPk]
+                    : [];
                 // Not Teaching on this session: it owes the viewer nothing
                 // (viewerExpectedFeedbackSql() counts it as 0), so it is not listed.
                 if (empty($facultyPks)) {

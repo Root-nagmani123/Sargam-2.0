@@ -100,9 +100,12 @@ class LeaveOnBehalfController extends Controller
             // text column the grid actually shows.
             ->filter(function ($query) use ($request) {
                 $search = $request->input('search.value');
-                if (empty($search)) {
+                // ?search[value][]=x would be interpolated into the LIKE patterns
+                // below as "Array to string conversion", a 500 (PR #334 F-051).
+                if (! is_scalar($search) || (string) $search === '') {
                     return;
                 }
+                $search = (string) $search;
 
                 $query->where(function ($q) use ($search) {
                     $q->whereHas('student', function ($qs) use ($search) {

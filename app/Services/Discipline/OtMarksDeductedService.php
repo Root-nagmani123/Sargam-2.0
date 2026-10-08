@@ -54,6 +54,23 @@ class OtMarksDeductedService
      */
     public function totalsForStudents(array $studentPks, ?array $courseIds = null): Collection
     {
+        return $this->totalsForStudentsByCourse($studentPks, $courseIds)
+            ->map(fn (array $byCourse) => (float) array_sum($byCourse));
+    }
+
+    /**
+     * {@see totalsForStudents()} split by the course each deduction was raised on.
+     *
+     * A house is a group on ONE course, so its total may only take the marks an OT
+     * lost on that course — an OT in house X on course A and house Y on course B
+     * must not carry course A's marks into Y (PR #334 F-052).
+     *
+     * @param  list<int>  $studentPks
+     * @param  list<int>|null  $courseIds  null = every course
+     * @return Collection<int, array<int, float>>  student_master_pk => [course_master_pk => marks]
+     */
+    public function totalsForStudentsByCourse(array $studentPks, ?array $courseIds = null): Collection
+    {
         if ($studentPks === []) {
             return collect();
         }
@@ -63,10 +80,11 @@ class OtMarksDeductedService
             : $query->whereIn($column, $courseIds ?: [-1]);
 
         $totals = [];
-        $add = function ($studentPk, $marks) use (&$totals) {
+        $add = function ($studentPk, $coursePk, $marks) use (&$totals) {
             $pk = (int) $studentPk;
             if ($pk > 0) {
-                $totals[$pk] = ($totals[$pk] ?? 0.0) + (float) $marks;
+                $cpk = (int) $coursePk;
+                $totals[$pk][$cpk] = ($totals[$pk][$cpk] ?? 0.0) + (float) $marks;
             }
         };
 
@@ -76,12 +94,12 @@ class OtMarksDeductedService
                 ->whereIn('student_master_pk', $studentPks)
                 ->where('status', MemoDiscipline::STATUS_CLOSED),
             'course_master_pk'
-        )->selectRaw('student_master_pk, SUM(COALESCE(final_mark_deduction, 0)) AS marks')
-            ->groupBy('student_master_pk')
+        )->selectRaw('student_master_pk, course_master_pk, SUM(COALESCE(final_mark_deduction, 0)) AS marks')
+            ->groupBy('student_master_pk', 'course_master_pk')
             ->get();
 
         foreach ($discipline as $row) {
-            $add($row->student_master_pk, $row->marks);
+            $add($row->student_master_pk, $row->course_master_pk, $row->marks);
         }
 
         // Closed memos — their own figure, falling back to the notice they came from.
@@ -91,10 +109,10 @@ class OtMarksDeductedService
                 ->whereIn('m.student_pk', $studentPks)
                 ->where('m.status', self::MEMO_NOTICE_CLOSED),
             'm.course_master_pk'
-        )->get(['m.student_pk', 'm.mark_of_deduction', 'n.mark_of_deduction as notice_mark']);
+        )->get(['m.student_pk', 'm.course_master_pk', 'm.mark_of_deduction', 'n.mark_of_deduction as notice_mark']);
 
         foreach ($memos as $row) {
-            $add($row->student_pk, $row->mark_of_deduction !== null && $row->mark_of_deduction !== ''
+            $add($row->student_pk, $row->course_master_pk, $row->mark_of_deduction !== null && $row->mark_of_deduction !== ''
                 ? $row->mark_of_deduction
                 : ($row->notice_mark ?: 0));
         }
@@ -116,17 +134,17 @@ class OtMarksDeductedService
                         ->where('sms.status', self::MEMO_NOTICE_CLOSED);
                 }),
             'n.course_master_pk'
-        )->selectRaw('COALESCE(csa.Student_master_pk, n.student_pk) AS spk, SUM(COALESCE(n.mark_of_deduction, 0)) AS marks')
-            ->groupBy(DB::raw('COALESCE(csa.Student_master_pk, n.student_pk)'))
+        )->selectRaw('COALESCE(csa.Student_master_pk, n.student_pk) AS spk, n.course_master_pk AS cpk, SUM(COALESCE(n.mark_of_deduction, 0)) AS marks')
+            ->groupBy(DB::raw('COALESCE(csa.Student_master_pk, n.student_pk)'), 'n.course_master_pk')
             ->get();
 
         foreach ($notices as $row) {
-            $add($row->spk, $row->marks);
+            $add($row->spk, $row->cpk, $row->marks);
         }
 
-        // A student with no deduction still belongs in the result, at zero.
+        // A student with no deduction still belongs in the result, with none.
         return collect($studentPks)
-            ->mapWithKeys(fn ($pk) => [(int) $pk => (float) ($totals[(int) $pk] ?? 0.0)]);
+            ->mapWithKeys(fn ($pk) => [(int) $pk => $totals[(int) $pk] ?? []]);
     }
 
     /**
@@ -158,10 +176,11 @@ class OtMarksDeductedService
                 ->where('d.status', MemoDiscipline::STATUS_CLOSED),
             'd.course_master_pk'
         )->get([
-            'd.student_master_pk', 'd.date', 'd.final_mark_deduction', 'd.minor_major',
+            'd.student_master_pk', 'd.course_master_pk', 'd.date', 'd.final_mark_deduction', 'd.minor_major',
             'd.remarks', 'cm.course_name', 'dm.discipline_name',
         ])->map(fn ($r) => [
             'student_pk' => (int) $r->student_master_pk,
+            'course_pk' => (int) $r->course_master_pk,
             'date' => $r->date,
             'type' => 'Discipline Memo',
             'course' => (string) ($r->course_name ?? '—'),
@@ -183,10 +202,11 @@ class OtMarksDeductedService
                 ->where('m.status', self::MEMO_NOTICE_CLOSED),
             'm.course_master_pk'
         )->get([
-            'm.student_pk', 'm.date', 'm.mark_of_deduction', 'cm.course_name',
+            'm.student_pk', 'm.course_master_pk', 'm.date', 'm.mark_of_deduction', 'cm.course_name',
             'n.mark_of_deduction as notice_mark', 'n.subject_topic as notice_topic',
         ])->map(fn ($r) => [
             'student_pk' => (int) $r->student_pk,
+            'course_pk' => (int) $r->course_master_pk,
             'date' => $r->date,
             'type' => 'Memo',
             'course' => (string) ($r->course_name ?? '—'),
@@ -215,9 +235,10 @@ class OtMarksDeductedService
             'n.course_master_pk'
         )->get([
             DB::raw('COALESCE(csa.Student_master_pk, n.student_pk) AS student_pk'),
-            'n.date_ as date', 'n.mark_of_deduction', 'n.subject_topic', 'cm.course_name',
+            'n.course_master_pk', 'n.date_ as date', 'n.mark_of_deduction', 'n.subject_topic', 'cm.course_name',
         ])->map(fn ($r) => [
             'student_pk' => (int) $r->student_pk,
+            'course_pk' => (int) $r->course_master_pk,
             'date' => $r->date,
             'type' => 'Notice',
             'course' => (string) ($r->course_name ?? '—'),

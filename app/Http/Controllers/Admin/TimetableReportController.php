@@ -215,7 +215,9 @@ class TimetableReportController extends Controller
         // sends is honoured here; anything not in SORTABLE_COLUMNS (the columns
         // built in PHP) falls back to newest session first.
         $orderColumn = (int) data_get($request->all(), 'order.0.column', -1);
-        $orderDir = strtolower((string) data_get($request->all(), 'order.0.dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+        // is_scalar: ?order[0][dir][]=x must not reach the cast (PR #334 F-051).
+        $rawDir = data_get($request->all(), 'order.0.dir', 'desc');
+        $orderDir = is_scalar($rawDir) && strtolower((string) $rawDir) === 'asc' ? 'asc' : 'desc';
 
         if (isset(self::SORTABLE_COLUMNS[$orderColumn])) {
             $query->orderBy(DB::raw(self::SORTABLE_COLUMNS[$orderColumn]), $orderDir);

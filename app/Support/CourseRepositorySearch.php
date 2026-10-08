@@ -206,17 +206,20 @@ class CourseRepositorySearch
     // ---------------------------------------------------------------- documents
 
     /**
-     * Every stored file, joined to the session record that describes it.
+     * Every stored file, joined to the session record that describes it — plus every
+     * session uploaded with only a video link.
      *
-     * Documents are the base table (not details): a detail row without a document has
-     * neither a file nor a video link, so there would be nothing to open. The joins
-     * are LEFT so the handful of documents whose detail or folder row is missing still
+     * Documents are the base table, but the upload form also accepts a session with a
+     * video link and no file (attachments are optional), which has no document row.
+     * Those come in through {@see documentBase()} as file-less rows, so every filter,
+     * sort and count below applies to them unchanged (PR #334 F-049). The joins are
+     * LEFT so the handful of documents whose detail or folder row is missing still
      * come back rather than silently disappearing from results.
      */
     public static function documentQuery(array $c): Builder
     {
         $query = CourseRepositoryDocument::query()
-            ->from('course_repository_documents as doc')
+            ->fromSub(self::documentBase(), 'doc')
             ->leftJoin('course_repository_details as dt', 'dt.pk', '=', 'doc.course_repository_details_pk')
             ->leftJoin('course_repository_master as m', 'm.pk', '=', 'dt.course_repository_master_pk')
             ->where('doc.del_type', 1)
@@ -295,6 +298,38 @@ class CourseRepositorySearch
         self::applySort($query, $c);
 
         return $query;
+    }
+
+    /**
+     * course_repository_documents, with one file-less row added for each detail that
+     * has a video link and no live document. The added row has no pk, no file and no
+     * title, so the Documents tab drops it and the result links to the video page.
+     */
+    private static function documentBase(): \Illuminate\Database\Query\Builder
+    {
+        $columns = [
+            'pk', 'upload_document', 'course_repository_details_pk', 'course_repository_master_pk',
+            'course_repository_type', 'file_title', 'del_type', 'deleted_date', 'deleted_by', 'full_path',
+        ];
+
+        $videoOnly = DB::table('course_repository_details as vd')
+            ->whereNotNull('vd.videolink')
+            ->whereRaw("TRIM(vd.videolink) <> ''")
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('course_repository_documents as vdoc')
+                    ->whereColumn('vdoc.course_repository_details_pk', 'vd.pk')
+                    ->where('vdoc.del_type', 1);
+            })
+            ->selectRaw(
+                'NULL as pk, NULL as upload_document, vd.pk as course_repository_details_pk,'
+                . ' vd.course_repository_master_pk, vd.course_repository_type, NULL as file_title,'
+                . ' 1 as del_type, NULL as deleted_date, NULL as deleted_by, NULL as full_path'
+            );
+
+        return DB::table('course_repository_documents')
+            ->select($columns)
+            ->unionAll($videoOnly);
     }
 
     /**
@@ -399,7 +434,9 @@ class CourseRepositorySearch
             $title = trim((string) $doc->file_title);
             $doc->display_title = $title !== ''
                 ? $title
-                : (trim((string) $doc->upload_document) ?: 'Untitled document');
+                // A video-only session has no file name to fall back on; its topic
+                // is the best title it has.
+                : (trim((string) $doc->upload_document) ?: ($doc->display_topic ?: 'Untitled document'));
 
             $doc->display_date = self::formatDate($doc->raw_session_date);
 

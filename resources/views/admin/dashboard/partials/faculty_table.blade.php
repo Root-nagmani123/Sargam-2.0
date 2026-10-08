@@ -439,13 +439,21 @@ $(document).ready(function() {
                     '<i class="bi bi-download me-1"></i>Export' +
                 '</button>' +
                 '<ul class="dropdown-menu dropdown-menu-end">' +
-                    '<li><a class="dropdown-item" href="' + exportUrl + '?format=excel">' +
+                    '<li><a class="dropdown-item" data-export-format="excel" href="' + exportUrl + '?format=excel">' +
                         '<i class="bi bi-file-earmark-excel me-2"></i>Excel (.xlsx)</a></li>' +
-                    '<li><a class="dropdown-item" href="' + exportUrl + '?format=pdf">' +
+                    '<li><a class="dropdown-item" data-export-format="pdf" href="' + exportUrl + '?format=pdf">' +
                         '<i class="bi bi-file-earmark-pdf me-2"></i>PDF (.pdf)</a></li>' +
                 '</ul>' +
             '</div>'
         );
+        // Carry the search box into the download, so the file holds the rows on
+        // screen rather than every faculty member (PR #334 F-053).
+        $exportGroup.on('click', 'a[data-export-format]', function () {
+            this.href = exportUrl + '?' + $.param({
+                format: $(this).data('export-format'),
+                search: api.search() || ''
+            });
+        });
         $toolbar.find('.dt-toolbar-right').append($exportGroup);
 
         try {

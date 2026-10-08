@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Exports\LbsnaaTableExport;
 use App\Http\Controllers\Controller;
+use App\Support\DataTableSearchHelper;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
@@ -57,13 +58,27 @@ function inhouse_faculty(){
  * Average too, which cost a per-faculty session query plus a feedback rollup;
  * with those columns gone that work fed nothing, so it went with them.
  */
-private function getFacultyContactList(int $facultyType)
+/**
+ * @param  string  $search  the listing's search box, applied the way DataTables
+ *                          applies it: every word must appear in one of the
+ *                          columns shown (name, email, mobile). '' = everyone.
+ */
+private function getFacultyContactList(int $facultyType, string $search = '')
 {
-    return DB::table('faculty_master')
+    $query = DB::table('faculty_master')
         ->where('faculty_type', $facultyType)
-        ->where('active_inactive', 1)
-        ->orderBy('full_name')
-        ->get(['pk', 'full_name', 'email_id', 'mobile_no']);
+        ->where('active_inactive', 1);
+
+    foreach (DataTableSearchHelper::tokens($search) as $token) {
+        $like = DataTableSearchHelper::likePattern($token);
+        $query->where(function ($q) use ($like) {
+            $q->where('full_name', 'like', $like)
+                ->orWhere('email_id', 'like', $like)
+                ->orWhere('mobile_no', 'like', $like);
+        });
+    }
+
+    return $query->orderBy('full_name')->get(['pk', 'full_name', 'email_id', 'mobile_no']);
 }
 
 /**
@@ -87,7 +102,12 @@ public function inhouse_faculty_export(Request $request)
 
 private function exportFacultyList(int $facultyType, string $reportTitle, Request $request)
 {
-    $faculties = $this->getFacultyContactList($facultyType);
+    // The page posts its on-screen search with the export, so the download holds
+    // what the user was looking at, as the old client-side export did (PR #334 F-053).
+    $search = $request->query('search');
+    $search = is_scalar($search) ? (string) $search : '';
+
+    $faculties = $this->getFacultyContactList($facultyType, $search);
 
     // The four columns the listing shows, in the same order.
     $headings = ['S. No.', 'Faculty Name', 'Email', 'Mobile Number'];

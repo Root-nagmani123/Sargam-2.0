@@ -18,9 +18,13 @@
     $showTopic = $doc->display_topic
         && mb_strtolower(trim($doc->display_topic)) !== mb_strtolower(trim($doc->display_title));
 
-    $viewUrl = $doc->detail_pk
-        ? route('admin.course-repository.user.document-view', $doc->detail_pk)
-        : route('course-repository.document.stream', ['pk' => $doc->pk]);
+    // A video-only session (no document row, so no pk) has nothing for the
+    // document viewer to show; it opens on its video instead.
+    $viewUrl = match (true) {
+        $doc->pk === null && $doc->detail_pk => route('admin.course-repository.user.document-video', $doc->detail_pk),
+        (bool) $doc->detail_pk => route('admin.course-repository.user.document-view', $doc->detail_pk),
+        default => route('course-repository.document.stream', ['pk' => $doc->pk]),
+    };
 
     $meta = array_values(array_filter([
         $doc->display_course ? ['bi-mortarboard', $doc->display_course] : null,

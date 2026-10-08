@@ -323,9 +323,14 @@ class UserController extends Controller
          // above: Student-OT is a session pseudo-role set at login, so an OT who
          // arrives holding only the Spatie "Officer Trainee" role would have been
          // shown a card reading zero over real deductions.
+         //
+         // And only for user_category 'S' (PR #334 F-047): user_id is a student_master
+         // pk only for a trainee login. A staff login that also holds the role has an
+         // employee / faculty pk there, which can equal another trainee's pk — the
+         // pages behind both cards refuse it for that reason.
          $disciplineMarksDeducted = 0;
          $pendingFeedbackCount = 0;
-         if (isOfficerTraineeUser()) {
+         if (isOfficerTraineeUser() && (Auth::user()->user_category ?? null) === 'S') {
              $disciplineMarksDeducted = app(OtMarksDeductedService::class)->totalFor((int) $userId);
              $pendingFeedbackCount = $this->getOtPendingFeedbackCount($userId);
          }
@@ -829,16 +834,21 @@ class UserController extends Controller
         // OtMarksDeductedService owns those rules, and the OT's own card and page
         // already read it, so a house total and the OTs' own totals cannot disagree.
         // Scoped to running courses, the same way the houses above are.
+        //
+        // Per (student, course): a house belongs to one course, so it takes only the
+        // marks its OTs lost on that course (PR #334 F-052).
         $marksByStudent = app(OtMarksDeductedService::class)
-            ->totalsForStudents($studentPks, $currentCourseIds instanceof \Illuminate\Support\Collection
+            ->totalsForStudentsByCourse($studentPks, $currentCourseIds instanceof \Illuminate\Support\Collection
                 ? $currentCourseIds->all()
                 : (array) $currentCourseIds);
 
         return collect($studentsByHouse)
             ->map(function (array $students, string $house) use ($marksByStudent) {
                 $total = 0.0;
-                foreach (array_keys($students) as $pk) {
-                    $total += (float) ($marksByStudent[(int) $pk] ?? 0);
+                foreach ($students as $pk => $courses) {
+                    foreach (array_keys($courses) as $coursePk) {
+                        $total += (float) ($marksByStudent[(int) $pk][(int) $coursePk] ?? 0);
+                    }
                 }
 
                 return [
@@ -858,7 +868,10 @@ class UserController extends Controller
      * tile's figure and the page's rows are drawn from exactly the same set — a
      * house missing from one and present in the other would be indefensible.
      *
-     * @return array{houses: array<string, array<int, true>>, course_ids: mixed}
+     * Each member carries the course(s) of the mapping that put them in the house,
+     * so a total can take only that course's marks (PR #334 F-052).
+     *
+     * @return array{houses: array<string, array<int, array<int, true>>>, course_ids: mixed}  house => [student_pk => [course_pk => true]]
      */
     private function houseMemberships(?int $courseFilter = null): array
     {
@@ -893,15 +906,16 @@ class UserController extends Controller
             ->where('active_inactive', 1)
             ->whereNotNull('group_name')
             ->where('group_name', '<>', '')
-            ->get(['pk', 'group_name']);
+            ->get(['pk', 'group_name', 'course_name']);
 
         if ($mappings->isEmpty()) {
             return ['houses' => [], 'course_ids' => $currentCourseIds];
         }
 
         $houseByMapping = $mappings->pluck('group_name', 'pk');
+        $courseByMapping = $mappings->pluck('course_name', 'pk');
 
-        // house name => [student_master_pk => true]
+        // house name => [student_master_pk => [course_master_pk => true]]
         $studentsByHouse = [];
         foreach ($houseByMapping as $houseName) {
             $studentsByHouse[trim((string) $houseName)] ??= [];
@@ -917,7 +931,7 @@ class UserController extends Controller
             if ($house === '' || empty($row->student_master_pk)) {
                 continue;
             }
-            $studentsByHouse[$house][(int) $row->student_master_pk] = true;
+            $studentsByHouse[$house][(int) $row->student_master_pk][(int) ($courseByMapping[$row->map_pk] ?? 0)] = true;
         }
 
         return ['houses' => $studentsByHouse, 'course_ids' => $currentCourseIds];
@@ -1038,10 +1052,13 @@ class UserController extends Controller
         // and the house total, which is the sum of those rows.
         return collect($studentsByHouse)
             ->map(function (array $memberSet, string $house) use ($rowsByStudent, $students) {
-                $members = collect(array_keys($memberSet))
-                    ->map(function (int $pk) use ($rowsByStudent, $students) {
+                $members = collect($memberSet)
+                    ->map(function (array $courses, int $pk) use ($rowsByStudent, $students) {
                         $student = $students->get($pk);
-                        $rows = collect($rowsByStudent->get($pk, collect()))->values();
+                        // Only deductions on this house's course (PR #334 F-052).
+                        $rows = collect($rowsByStudent->get($pk, collect()))
+                            ->filter(fn (array $row) => isset($courses[$row['course_pk']]))
+                            ->values();
 
                         return [
                             'name' => $this->studentDisplayName($student),
@@ -2678,20 +2695,24 @@ class UserController extends Controller
 
         $status = $request->input('status') === 'archive' ? 'archive' : 'active';
 
+        // ?house[]=x is not a filter value: casting an array is "Array to string
+        // conversion", a 500 (PR #334 F-051, the F-025 family).
+        $in = fn (string $key) => is_scalar($v = $request->input($key, '')) ? (string) $v : '';
+
         $filters = [
-            'from_date' => (string) $request->input('from_date', ''),
-            'to_date' => (string) $request->input('to_date', ''),
-            'session' => (string) $request->input('session', ''),
-            'participant' => (string) $request->input('participant', ''),
-            'course_id' => (string) $request->input('course_id', ''),
-            'cadre' => (string) $request->input('cadre', ''),
+            'from_date' => $in('from_date'),
+            'to_date' => $in('to_date'),
+            'session' => $in('session'),
+            'participant' => $in('participant'),
+            'course_id' => $in('course_id'),
+            'cadre' => $in('cadre'),
             // House Name: applyDashboardStudentListFilters() has always honoured it,
             // but the page had no control to set it — the dashboard's House Wise
             // Details card opens here, so the filter is now on the toolbar.
-            'house' => (string) $request->input('house', ''),
+            'house' => $in('house'),
             'counsellor_faculty' => $counsellorFaculty,
-            'house_group' => (string) $request->input('house_group', ''),
-            'house_faculty' => (string) $request->input('house_faculty', ''),
+            'house_group' => $in('house_group'),
+            'house_faculty' => $in('house_faculty'),
             'status' => $status,
             // The House Wise Details view opens the list ordered by house.
             'sort' => ($isHouseView || $request->input('sort') === 'house') ? 'house' : '',

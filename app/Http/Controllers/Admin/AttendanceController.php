@@ -1038,6 +1038,12 @@ $currentPath = $segments[1] ?? null;
 
 
     public function OTmarkAttendanceView(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk){
+        // PR #334 F-044: a trainee may open only their own attendance. Outside the try,
+        // whose catch (\Exception) would swallow the 403.
+        if (hasRole('Student-OT') && ! $this->canViewOtStudentAttendance($student_pk)) {
+            abort(403);
+        }
+
         try {
         // Verify user has Student-OT role
             if (!hasRole('Student-OT')) {
@@ -1962,6 +1968,12 @@ $currentPath = $segments[1] ?? null;
 
     public function OTmarkAttendanceData(Request $request)
     {
+        // PR #334 F-044: the student_pk comes from the query string, so check it
+        // belongs to the caller (or that the caller is Training Section staff).
+        if (! $this->canViewOtStudentAttendance($request->input('student_pk'))) {
+            abort(403);
+        }
+
         try {
             $group_pk = $request->input('group_pk');
             $course_pk = $request->input('course_pk');
@@ -1983,6 +1995,28 @@ $currentPath = $segments[1] ?? null;
                 'message' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Who may read one officer trainee's attendance, medical-exemption details
+     * included (PR #334 F-044). A trainee login (user_category 'S', the only kind
+     * whose user_id is a student_master pk) sees only its own record — the rule
+     * exportOtStudentAttendanceExcel() applies. Any other login needs an explicit
+     * Training Section role, whatever else it holds: a staff login that also
+     * carries an Officer Trainee role is still staff.
+     */
+    private function canViewOtStudentAttendance($student_pk): bool
+    {
+        $user = auth()->user();
+        if (! $user || ! is_scalar($student_pk) || (string) $student_pk === '') {
+            return false;
+        }
+
+        if (($user->user_category ?? '') === 'S') {
+            return (string) $user->user_id === (string) $student_pk;
+        }
+
+        return isTrainingSectionUser();
     }
 
     /**
