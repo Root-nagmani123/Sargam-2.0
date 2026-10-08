@@ -26,10 +26,8 @@ class FacultyMDOEscortExceptionViewController extends Controller
         // Faculty accounts hold the "Faculty" role (it also holds this screen's
         // menu permission), so it must route here before the admin branch.
         if (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Faculty')) {
-            $facultyPk = Auth::user()->user_id;
-
             // Faculty Login View - Show only their courses
-            return $this->facultyLoginView($request, $facultyPk, $currentDate);
+            return $this->facultyLoginView($request, $this->loginFaculty(), $currentDate);
         }
 
         // Admin View lists every trainee's escort exceptions, so it needs the
@@ -116,17 +114,28 @@ class FacultyMDOEscortExceptionViewController extends Controller
     }
 
     /**
+     * The logged-in user's faculty_master row, or null. A faculty login
+     * (user_category F) stores the faculty pk itself in user_id; any other
+     * login stores an employee pk, linked through faculty_master.employee_master_pk.
+     */
+    private function loginFaculty(): ?FacultyMaster
+    {
+        $user = Auth::user();
+
+        return ($user->user_category ?? null) === 'F'
+            ? FacultyMaster::where('pk', $user->user_id)->first()
+            : FacultyMaster::where('employee_master_pk', $user->user_id)->first();
+    }
+
+    /**
      * Faculty Login View - escort exceptions per facultyDutiesQuery(): the whole
      * course for its CC/ACC, otherwise only the faculty's own duties.
      */
-    private function facultyLoginView(Request $request, $facultyPk, $currentDate)
+    private function facultyLoginView(Request $request, ?FacultyMaster $faculty, $currentDate)
     {
         $courseFilter = $this->filterId($request, 'course_filter');
         $courseStatus = $this->courseStatus($request);
         $courseScope = $this->courseScope($courseStatus, $currentDate);
-
-        // Get faculty record
-        $faculty = FacultyMaster::where('employee_master_pk', $facultyPk)->first();
 
         if (!$faculty) {
             return redirect()->back()->with('error', 'Faculty record not found.');

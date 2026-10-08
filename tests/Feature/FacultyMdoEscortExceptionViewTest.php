@@ -634,6 +634,63 @@ class FacultyMdoEscortExceptionViewTest extends TestCase
         }
     }
 
+    public function test_faculty_category_login_resolves_its_faculty_by_pk_on_both_tabs(): void
+    {
+        // A faculty login (user_category F) stores faculty_master.pk in user_id;
+        // it has no employee link. Same per-course rule as any faculty login.
+        foreach (['active', 'archive'] as $tab) {
+            $ex = $this->exampleCourse($tab);
+
+            $expected = [
+                'A' => [
+                    $ex['duties'][1] => [[$ex['names']['A']]],
+                    $ex['duties'][2] => [[$ex['names']['C']]],
+                    $ex['duties'][3] => [[$ex['names']['D'], $ex['names']['E']]],
+                ],
+                'C' => [$ex['duties'][2] => [[$ex['names']['C']]]],
+            ];
+
+            foreach ($expected as $key => $rows) {
+                $facultyPk = $ex['faculty'][$key]['pk'];
+                $userPk = DB::table('user_credentials')->insertGetId([
+                    'user_name' => 'fme.f.'.$facultyPk, 'user_id' => $facultyPk, 'user_category' => 'F',
+                ]);
+
+                $response = $this->asUser([User::find($userPk), ['Faculty']], $this->tabQuery($tab));
+                $response->assertOk();
+                $response->assertViewHas('isFacultyView', true);
+                $this->assertSame($rows, $this->facultyRows($response), "F login $key, $tab tab");
+                $this->assertSame([$ex['course'] => $ex['course_name']], $response->viewData('courseMaster'));
+            }
+        }
+    }
+
+    public function test_login_category_decides_which_link_is_read(): void
+    {
+        $ex = $this->exampleCourse('active');
+        $c = $ex['faculty']['C']['pk'];
+        $cEmployee = (int) DB::table('faculty_master')->where('pk', $c)->value('employee_master_pk');
+
+        // An F login whose user_id is C's employee pk is not C: F reads faculty pk only.
+        // A non-F login whose user_id is C's faculty pk is not C: it reads the employee link only.
+        $cases = [
+            'F login, employee pk' => ['F', $cEmployee],
+            'E login, faculty pk' => ['E', $c],
+        ];
+        foreach ($cases as $label => [$category, $userId]) {
+            $this->assertFalse(DB::table('faculty_master')->where($category === 'F' ? 'pk' : 'employee_master_pk', $userId)->exists(), "$label: fixture must not collide");
+
+            $userPk = DB::table('user_credentials')->insertGetId([
+                'user_name' => 'fme.cat.'.$category.'.'.$userId, 'user_id' => $userId, 'user_category' => $category,
+            ]);
+            $this->flushSession();
+            $response = $this->from('/dashboard')->asUser([User::find($userPk), ['Faculty']]);
+
+            $response->assertRedirect('/dashboard');
+            $response->assertSessionHas('error', 'Faculty record not found.');
+        }
+    }
+
     public function test_array_filter_input_is_ignored_not_a_500(): void
     {
         $this->asAdmin(['faculty_filter' => ['x'], 'course_filter' => ['1'], 'course_status' => ['archive']])->assertOk();
