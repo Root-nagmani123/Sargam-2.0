@@ -79,8 +79,8 @@ class AttendanceController extends Controller
             // Get courses based on attendance records for the logged-in user
             $userId = auth()->user()->user_id;
             
-            // Filter courses for Internal Faculty based on CC/ACC assignment
-            if (hasRole('Internal Faculty')) {
+            // Filter courses for Internal Faculty / Faculty based on CC/ACC assignment
+            if (hasRole('Internal Faculty') || hasRole('Faculty')) {
                 // Get faculty PK from user_id
                 $facultyPk = FacultyMaster::where('employee_master_pk', $userId)->value('pk');
                 
@@ -484,13 +484,14 @@ class AttendanceController extends Controller
     }
 
     /**
-     * Internal Faculty only ever see courses they coordinate (CC or ACC). Applied
-     * to the grid, the export and the filter-option lists from one place, so the
-     * panel can never offer a group or faculty from a course they can't open.
+     * Internal Faculty (and "Faculty", the role faculty accounts actually hold)
+     * only ever see courses they coordinate (CC or ACC). Applied to the grid, the
+     * export and the filter-option lists from one place, so the panel can never
+     * offer a group or faculty from a course they can't open.
      */
     private function applyInternalFacultyCourseScope($query): void
     {
-        if (!hasRole('Internal Faculty')) {
+        if (!hasRole('Internal Faculty') && !hasRole('Faculty')) {
             return;
         }
 

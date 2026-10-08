@@ -23,7 +23,8 @@ class MedicalExceptionFacultyViewController extends Controller
     {
         $currentDate = now()->format('Y-m-d');
         
-        if (hasRole('Internal Faculty') || hasRole('Guest Faculty')) {
+        // Faculty accounts hold the "Faculty" role; without it here they got the admin view.
+        if (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Faculty')) {
             $employeeMasterPk = Auth::user()->user_id;
         
             $facultyPk = DB::table('faculty_master')
