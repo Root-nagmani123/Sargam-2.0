@@ -69,14 +69,15 @@ class PurchaseOrderController extends Controller
         $filterVendorIds = $vendorIds;
         $filterStoreIds = $storeIds;
         $filterStatus = $this->purchaseOrderStatusFilter($request);
-        $pendingApprovalCount = $this->canApprovePurchaseOrders()
+        $canApprovePurchaseOrders = $this->canApprovePurchaseOrders();
+        $pendingApprovalCount = $canApprovePurchaseOrders
             ? PurchaseOrder::where('status', 'pending')->count()
             : 0;
 
         return view('mess.purchaseorders.index', compact(
             'vendors', 'stores', 'itemSubcategories', 'po_number', 'paymentModes',
             'filterDateFrom', 'filterDateTo', 'filterVendorIds', 'filterStoreIds',
-            'filterStatus', 'pendingApprovalCount'
+            'filterStatus', 'pendingApprovalCount', 'canApprovePurchaseOrders'
         ));
     }
 
@@ -629,7 +630,7 @@ class PurchaseOrderController extends Controller
      * An approved PO is in stock and may already be sold, so its purchase details (vendor, store,
      * date, lines) are frozen. Only the bill and delivery details can still be filled in: a bill
      * often arrives after the goods. An old approved PO saved without a store may be given one,
-     * which only puts its stock into that store.
+     * which puts its stock into that store, so only Mess Admin / Super Admin may do it.
      */
     private function updateApprovedPurchaseOrder(Request $request, PurchaseOrder $purchaseOrder)
     {
@@ -661,7 +662,7 @@ class PurchaseOrderController extends Controller
             'challan_date' => $request->challan_date,
             'remarks' => $request->remarks,
         ];
-        if (! $purchaseOrder->store_id && $request->filled('store_id')) {
+        if (! $purchaseOrder->store_id && $request->filled('store_id') && $this->canApprovePurchaseOrders()) {
             $details['store_id'] = (int) $request->store_id;
         }
 

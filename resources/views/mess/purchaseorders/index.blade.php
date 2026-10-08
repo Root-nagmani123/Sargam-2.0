@@ -2698,13 +2698,15 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 
     // An approved PO is in stock, so its vendor, store, date and lines are locked; only payment,
     // bill and challan details stay editable. The server ignores the locked fields as well.
-    // A store can still be picked once on an old approved PO saved without one.
+    // Mess Admin / Super Admin can still pick a store once on an old approved PO saved without one
+    // (it puts the PO's stock into that store); for everyone else the store stays locked.
+    const canAssignStoreOnApprovedPo = @json((bool) ($canApprovePurchaseOrders ?? false));
     function applyEditPoLock(locked, hasStore) {
         document.getElementById('editPoLockedNote').classList.toggle('d-none', !locked);
         document.getElementById('editPoDate').readOnly = locked;
         [
             [choicesInstances.edit.vendor, document.getElementById('editVendorId'), locked],
-            [choicesInstances.edit.store, document.getElementById('editStoreId'), locked && hasStore]
+            [choicesInstances.edit.store, document.getElementById('editStoreId'), locked && (hasStore || !canAssignStoreOnApprovedPo)]
         ].forEach(function(entry) {
             var instance = entry[0], selectEl = entry[1], disable = entry[2];
             if (instance && typeof instance.disable === 'function') {
