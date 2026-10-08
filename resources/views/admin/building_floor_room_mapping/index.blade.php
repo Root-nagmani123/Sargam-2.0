@@ -35,6 +35,9 @@
     $currentQuery = request()->getQueryString();
     $hrQs = $currentQuery ? ('?' . $currentQuery) : '';
     $hrExportUrl = fn (string $format) => route('hostel.building.floor.room.map.export', ['format' => $format]) . $hrQs;
+    // search[] / per_page[] would make the escaped echo throw (500); echo only scalars.
+    $hrSearch = is_scalar(request('search')) ? (string) request('search') : '';
+    $hrPerPageValue = is_scalar(request('per_page', 10)) ? (string) request('per_page', 10) : '10';
 @endphp
 <div class="container-fluid mst-page hostel-room-page">
     <x-breadcrum title="Hostel Floor Room Map" :showBack="false">
@@ -91,7 +94,7 @@
                  parameter of HostelBuildingFloorRoomMappingController::index(). --}}
             <form method="GET" action="{{ route('hostel.building.floor.room.map.index') }}" id="hrFilterForm"
                   class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
-                <input type="hidden" name="per_page" id="hrPerPage" value="{{ request('per_page', 10) }}">
+                <input type="hidden" name="per_page" id="hrPerPage" value="{{ $hrPerPageValue }}">
 
                 <div class="d-flex flex-wrap align-items-center gap-3">
                     <span class="programme-dt-filters-label">Filters</span>
@@ -138,7 +141,7 @@
                         <div class="dataTables_filter">
                             <label class="mb-0 w-100">
                                 <input type="search" name="search" class="form-control shadow-none"
-                                       placeholder="Search" value="{{ request('search') }}" aria-label="Search rooms">
+                                       placeholder="Search" value="{{ $hrSearch }}" aria-label="Search rooms">
                             </label>
                         </div>
                     </div>

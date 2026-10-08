@@ -56,17 +56,16 @@ class HostelBuildingFloorRoomMappingController extends Controller
         $query = BuildingFloorRoomMapping::with(['building', 'floor'])->latest('pk');
 
         // Apply filters
-        if ($request->filled('building_id')) {
-            $query->where('building_master_pk', $request->building_id);
+        if (($buildingId = $this->filterValue($request, 'building_id')) !== null) {
+            $query->where('building_master_pk', $buildingId);
         }
-        if ($request->filled('room_type')) {
-            $query->where('room_type', $request->room_type);
+        if (($roomType = $this->filterValue($request, 'room_type')) !== null) {
+            $query->where('room_type', $roomType);
         }
-        if ($request->filled('status')) {
-            $query->where('active_inactive', $request->status);
+        if (($status = $this->filterValue($request, 'status')) !== null) {
+            $query->where('active_inactive', $status);
         }
-        if ($request->filled('search')) {
-            $search = $request->search;
+        if (($search = $this->filterValue($request, 'search')) !== null) {
             $query->where(function($q) use ($search) {
                 $q->where('room_name', 'like', "%{$search}%")
                   ->orWhere('capacity', 'like', "%{$search}%")
@@ -75,6 +74,17 @@ class HostelBuildingFloorRoomMappingController extends Controller
         }
 
         return $query;
+    }
+
+    /**
+     * A grid filter, or null when absent, blank or not a scalar: room_type[]=x
+     * (or building_id[] / status[] / search[]) is ignored, not a 500.
+     */
+    private function filterValue(Request $request, string $key): ?string
+    {
+        $value = $request->input($key);
+
+        return is_scalar($value) && (string) $value !== '' ? (string) $value : null;
     }
 
     /**
@@ -122,17 +132,17 @@ class HostelBuildingFloorRoomMappingController extends Controller
 
         // Name the filters on the sheet the way the grid shows them.
         $filters = [];
-        if ($request->filled('building_id')) {
-            $filters[] = 'Building: ' . (BuildingMaster::find($request->building_id)->building_name ?? $request->building_id);
+        if (($buildingId = $this->filterValue($request, 'building_id')) !== null) {
+            $filters[] = 'Building: ' . (BuildingMaster::find($buildingId)->building_name ?? $buildingId);
         }
-        if ($request->filled('room_type')) {
-            $filters[] = 'Room Type: ' . $request->room_type;
+        if (($roomType = $this->filterValue($request, 'room_type')) !== null) {
+            $filters[] = 'Room Type: ' . $roomType;
         }
-        if ($request->filled('status')) {
-            $filters[] = 'Status: ' . ((string) $request->status === '1' ? 'Active' : 'Inactive');
+        if (($status = $this->filterValue($request, 'status')) !== null) {
+            $filters[] = 'Status: ' . ($status === '1' ? 'Active' : 'Inactive');
         }
-        if ($request->filled('search')) {
-            $filters[] = 'Search: ' . $request->search;
+        if (($search = $this->filterValue($request, 'search')) !== null) {
+            $filters[] = 'Search: ' . $search;
         }
 
         return $this->renderMasterExport(
