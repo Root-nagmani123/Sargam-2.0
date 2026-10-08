@@ -184,6 +184,30 @@ class PendingFeedbackLegacySessionTest extends TestCase
         $this->assertCount(1, $row['sessions']);
     }
 
+    // F-059: on these shapes the PHP twin and the SQL total disagreed, so a session
+    // was counted but not listed (or listed but not counted). Every counted session
+    // must now be listed, and no other.
+    public function test_every_counted_session_is_listed_whatever_its_json_shape(): void
+    {
+        $v = self::VIEWER;
+        $viewerOnly = json_encode([(string) $v]);
+
+        // Counted by the totals: the trainee Teaching-faculty page accepts these shapes.
+        $this->timetableRow("{\"faculty_pk\":{$v},\"role\":\"Teaching\"}", $viewerOnly);
+        $this->timetableRow("[{\"faculty_pk\":[{$v}],\"role\":\"Teaching\"}]", $viewerOnly);
+        $this->timetableRow("[[{\"faculty_pk\":{$v},\"role\":\"Teaching\"}]]", $viewerOnly);
+        $this->timetableRow("[{\"faculty_pk\":{$v}.0,\"role\":\"Teaching\"}]", $viewerOnly);
+        // Not counted: a legacy faculty_master stored as an object.
+        $this->timetableRow(null, "{\"0\":\"{$v}\"}");
+
+        $row = $this->pendingStudentsRow('not_given');
+
+        $this->assertNotNull($row);
+        $this->assertSame(0, $row['feedback_given']);
+        $this->assertSame(4, $row['feedback_not_given']);
+        $this->assertCount($row['feedback_given'] + $row['feedback_not_given'], $row['sessions']);
+    }
+
     // The "given" cap on its own: no legacy session involved.
     public function test_given_does_not_count_a_session_that_owes_the_viewer_nothing(): void
     {

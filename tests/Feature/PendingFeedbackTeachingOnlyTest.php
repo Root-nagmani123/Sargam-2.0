@@ -108,40 +108,38 @@ class PendingFeedbackTeachingOnlyTest extends TestCase
         $this->assertSame(0, $this->pendingFor('not json', 0, 'not json either'));
     }
 
-    // The detail rows use a PHP twin of the SQL; both must agree on every shape.
-    public function test_the_detail_row_rule_agrees_with_the_totals(): void
+    // F-059: the detail rows used a PHP twin of this SQL, which disagreed with it on
+    // five shapes. They now select the SQL itself, so these values are what both the
+    // totals and the detail rows see.
+    public function test_the_f059_shapes_follow_the_sql_rule(): void
     {
-        $twin = new \ReflectionMethod(FeedbackController::class, 'viewerIsTeachingOnSession');
-        $twin->setAccessible(true);
-        $controller = new FeedbackController;
+        $v = self::VIEWER;
 
-        $viewerStr = json_encode([(string) self::VIEWER]);
-        $cases = [
-            [$this->details('Teaching'), $viewerStr],
-            [$this->details('Sectional'), $viewerStr],
-            [$this->details('Teaching', (string) self::VIEWER), $viewerStr],
-            ['null', $viewerStr],
-            ['[]', $viewerStr],
-            [null, $viewerStr],
-            ['', $viewerStr],
-            ['not json', $viewerStr],
-            [null, json_encode([self::VIEWER])],
-            [null, json_encode((string) self::VIEWER)],
-            [null, (string) self::VIEWER],
-            [null, json_encode(['4242', (string) self::VIEWER])],
-            [null, json_encode([['x' => (string) self::VIEWER]])],
-            [null, json_encode(['0' . self::VIEWER])],
-            [null, null],
-            [null, ''],
-        ];
-
-        foreach ($cases as [$details, $master]) {
-            $sql = $this->pendingFor($details, 0, $master);
-            $php = $twin->invoke($controller, $details, $master, self::VIEWER) ? 1 : 0;
-            $this->assertSame($sql, $php, 'details=' . var_export($details, true) . ' master=' . var_export($master, true));
-        }
+        $this->assertSame(1, $this->pendingFor("{\"faculty_pk\":{$v},\"role\":\"Teaching\"}"), 'bare object');
+        $this->assertSame(1, $this->pendingFor("[{\"faculty_pk\":[{$v}],\"role\":\"Teaching\"}]"), 'pk in a list');
+        $this->assertSame(1, $this->pendingFor("[[{\"faculty_pk\":{$v},\"role\":\"Teaching\"}]]"), 'nested');
+        $this->assertSame(1, $this->pendingFor("[{\"faculty_pk\":{$v}.0,\"role\":\"Teaching\"}]"), 'float pk');
+        $this->assertSame(0, $this->pendingFor(null, 0, "{\"0\":\"{$v}\"}"), 'legacy object master');
     }
 
+    // F-059: there is one rule. The detail query selects the totals' expression for
+    // the viewer, and the PHP twin is gone.
+    public function test_the_detail_rows_select_the_totals_expression(): void
+    {
+        request()->attributes->set('is_faculty_feedback_report', true);
+        request()->attributes->set('faculty_report_faculty_pk', self::VIEWER);
+        $controller = new FeedbackController;
+
+        $rule = new \ReflectionMethod(FeedbackController::class, 'viewerExpectedFeedbackSql');
+        $rule->setAccessible(true);
+        $detail = new \ReflectionMethod(FeedbackController::class, 'pendingStudentsDetailQuery');
+        $detail->setAccessible(true);
+
+        $sql = $detail->invoke($controller, \Illuminate\Http\Request::create('/', 'GET'), [1])->toSql();
+
+        $this->assertStringContainsString($rule->invoke($controller, self::VIEWER, 't') . ' as viewer_expected', $sql);
+        $this->assertFalse(method_exists(FeedbackController::class, 'viewerIsTeachingOnSession'));
+    }
     /** Whether one trainee with these sessions lands in the given / not-given tab. */
     private function listedIn(string $tab, array $sessions): bool
     {
