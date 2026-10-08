@@ -65,6 +65,12 @@ class StreamController extends Controller
 
     public function destroy($id)
     {
+        // Same rule as the grid's disabled Delete (StreamMasterDataTable): an
+        // active stream is deactivated first, so a hand-made request can't skip it.
+        if (Stream::where('pk', $id)->where('active_inactive', 1)->exists()) {
+            return redirect()->route('stream.index')->with('error', 'Cannot delete an active stream. Deactivate it first.');
+        }
+
         Stream::where('pk', $id)->delete();
         return redirect()->route('stream.index')->with('success', 'Stream deleted successfully!');
     }
