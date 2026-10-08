@@ -11,7 +11,10 @@
 @php
     // The list's switch saves inactive as 0 but this form only offers 1 / 2; read
     // anything other than 1 as Inactive so saving can't silently re-activate it.
-    $countryStatus = (string) old('active_inactive', (int) ($country->active_inactive ?? 1) === 1 ? 1 : 2);
+    $countryStatusDefault = (int) ($country->active_inactive ?? 1) === 1 ? '1' : '2';
+    // old() is an array when the field came back as name[]: keep the default, not a 500.
+    $countryStatus = old('active_inactive', $countryStatusDefault);
+    $countryStatus = is_scalar($countryStatus) ? (string) $countryStatus : $countryStatusDefault;
 @endphp
 <div class="container-fluid mst-page">
     <x-breadcrum title="Edit Country" />

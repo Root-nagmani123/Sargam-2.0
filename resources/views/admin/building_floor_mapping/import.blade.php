@@ -9,7 +9,9 @@
 
 @section('setup_content')
 @php
-    $asSelectedCourse = (string) old('course_master_pk', session('selected_course'));
+    // old() is an array when the field came back as name[]: keep the default, not a 500.
+    $asSelectedCourse = old('course_master_pk', session('selected_course'));
+    $asSelectedCourse = is_scalar($asSelectedCourse) ? (string) $asSelectedCourse : '';
 @endphp
 <div class="container-fluid mst-page assign-student-page">
 

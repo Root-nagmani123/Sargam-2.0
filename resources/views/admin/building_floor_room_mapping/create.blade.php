@@ -20,9 +20,11 @@
         $middleStringArr ? $middleString = $middleStringArr[0] : $middleString = '';
     }
 
-    $hrSelBuilding = (string) old('building_master_pk', $hostelFloorMappingRoom->building_master_pk ?? '');
-    $hrSelFloor = (string) old('floor_master_pk', $hostelFloorMappingRoom->floor_master_pk ?? '');
-    $hrSelType = (string) old('room_type', $hostelFloorMappingRoom->room_type ?? '');
+    // old() is an array when the field came back as name[]: keep the default, not a 500.
+    $hrOld = fn (string $key, $default) => is_scalar($value = old($key, $default)) ? (string) $value : (string) $default;
+    $hrSelBuilding = $hrOld('building_master_pk', $hostelFloorMappingRoom->building_master_pk ?? '');
+    $hrSelFloor = $hrOld('floor_master_pk', $hostelFloorMappingRoom->floor_master_pk ?? '');
+    $hrSelType = $hrOld('room_type', $hostelFloorMappingRoom->room_type ?? '');
 @endphp
 <div class="container-fluid mst-page hostel-room-page">
 

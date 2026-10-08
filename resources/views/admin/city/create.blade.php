@@ -12,7 +12,9 @@
     // One value drives the Status select. The old markup defaulted each option
     // separately (?? 1 and ?? 2), so both were "selected" on Add and the browser
     // kept the last one — new cities silently defaulted to Inactive.
-    $cityStatus = (string) old('active_inactive', 1);
+    // old() is an array when the field came back as name[]: keep the default, not a 500.
+    $cityStatus = old('active_inactive', 1);
+    $cityStatus = is_scalar($cityStatus) ? (string) $cityStatus : '1';
 @endphp
 <div class="container-fluid mst-page">
     <x-breadcrum title="Add City" />

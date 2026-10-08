@@ -14,7 +14,10 @@
     // kept the last one — new records silently defaulted to Inactive.
     // The grid's switch saves inactive as 0, which neither option matches — read
     // anything other than 1 as Inactive so saving can't silently re-activate it.
-    $disciplineStatus = (string) old('active_inactive', isset($discipline) && (int) $discipline->active_inactive !== 1 ? 2 : 1);
+    $disciplineStatusDefault = isset($discipline) && (int) $discipline->active_inactive !== 1 ? '2' : '1';
+    // old() is an array when the field came back as name[]: keep the default, not a 500.
+    $disciplineStatus = old('active_inactive', $disciplineStatusDefault);
+    $disciplineStatus = is_scalar($disciplineStatus) ? (string) $disciplineStatus : $disciplineStatusDefault;
 @endphp
 <div class="container-fluid mst-page">
 
