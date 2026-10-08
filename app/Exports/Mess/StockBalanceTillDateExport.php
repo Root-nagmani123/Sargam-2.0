@@ -7,10 +7,12 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithCustomStartCell;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class StockBalanceTillDateExport implements FromCollection, WithCustomStartCell, WithHeadings, WithEvents
+// WithStrictNullComparison: numeric 0 is written as 0, not skipped as if it were null.
+class StockBalanceTillDateExport implements FromCollection, WithCustomStartCell, WithHeadings, WithEvents, WithStrictNullComparison
 {
     protected array $reportData;
     protected string $tillDate;
