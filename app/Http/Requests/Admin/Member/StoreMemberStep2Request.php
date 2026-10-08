@@ -31,7 +31,21 @@ class StoreMemberStep2Request extends FormRequest
 
         return [
             'type' => 'required|exists:employee_type_master,pk',
-            'id' => array_merge(['required', 'string', 'max:50'], $this->employeeIdUniqueness($empID)),
+            // PR #319 review (F-001): this was free-form string|max:50, and its only consumer
+            // is MemberDataTable::rawColumns()'s employee_id column. That column is now escaped
+            // with e() too, but a format rule closes the same gap at the source rather than
+            // relying solely on output escaping. Checked against live employee_master.emp_id
+            // data before choosing this shape: 225 of the existing rows contain letters,
+            // spaces or trailing whitespace (e.g. "a k singh", "COP00003   "), so an allowlist
+            // narrow enough to look like a real employee-code format would break editing any
+            // of them. This instead denies only the characters that matter for HTML injection
+            // (<, >, ", ', &) — zero false positives against current data. Combined with main's
+            // employeeIdUniqueness() (below), which handles the separate, pre-existing-duplicate
+            // problem the format rule doesn't touch.
+            'id' => array_merge(
+                ['required', 'string', 'max:50', 'regex:/^[^<>"\'&]+$/'],
+                $this->employeeIdUniqueness($empID)
+            ),
             'group' => 'required', // |exists:employee_groups,id
             'designation' => 'required', // |exists:designations,id
             'userid' => array_merge(
@@ -117,6 +131,7 @@ class StoreMemberStep2Request extends FormRequest
 
             'id.required' => 'Employee ID is required',
             'id.max' => 'Employee ID must not exceed 50 characters',
+            'id.regex' => 'Employee ID must not contain <, >, ", \', or & characters',
             'id.unique' => 'This employee ID already exists',
 
             'group.required' => 'Please select employee group',
