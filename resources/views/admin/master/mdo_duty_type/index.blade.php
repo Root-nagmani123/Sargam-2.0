@@ -262,6 +262,15 @@
                             timer: 1500,
                             showConfirmButton: false
                         });
+                    },
+                    // Refused (e.g. a system duty type): put the switch back.
+                    error: function(xhr) {
+                        checkbox.prop('checked', !active_inactive);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Not changed',
+                            text: (xhr.responseJSON && xhr.responseJSON.message) || 'Something went wrong'
+                        });
                     }
                 });
 
@@ -302,6 +311,13 @@
                             text: (response && response.message) || 'MDO Duty Type deleted successfully',
                             timer: 1500,
                             showConfirmButton: false
+                        });
+                    },
+                    error: function(xhr) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Not deleted',
+                            text: (xhr.responseJSON && xhr.responseJSON.message) || 'Something went wrong'
                         });
                     }
                 });
