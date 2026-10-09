@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\LeaveApplication;
+use App\Services\LeaveApplicationService;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\Concerns\RollsBackAgainstAppDatabase;
 use Tests\TestCase;
@@ -90,6 +92,38 @@ class LeaveOnBehalfDoubleSubmitTest extends TestCase
             ->where('student_master_pk', $payload['student_master_pk'])
             ->whereDate('from_date', $payload['from_date'])
             ->count());
+    }
+
+    /**
+     * PR #334 F-068, Product owner decision 2026-10-09: an OT's unsubmitted DRAFT must not
+     * block the operator's regularisation. The draft is left as it is, and a Pending or
+     * Approved leave still blocks.
+     */
+    public function test_an_ots_draft_does_not_block_the_operator_but_a_pending_leave_does(): void
+    {
+        $payload = $this->payload();
+        $onDay = fn (string $day) => DB::table('leave_application')
+            ->where('student_master_pk', $payload['student_master_pk'])->whereDate('from_date', $day);
+
+        // The OT's own draft for the day (made through the store, then set back to DRAFT).
+        $this->submit($payload)->assertSessionHasNoErrors();
+        $draft = $onDay($payload['from_date'])->value('pk');
+        DB::table('leave_application')->where('pk', $draft)->update(['status' => LeaveApplication::STATUS_DRAFT]);
+
+        // The OT's own path still counts the draft.
+        $this->assertNotNull(app(LeaveApplicationService::class)
+            ->findOverlappingApplication((int) $payload['student_master_pk'], $payload['from_date'], $payload['to_date']));
+
+        $this->submit($payload)->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertSame(2, $onDay($payload['from_date'])->count(), 'the operator records the leave over the draft');
+        $this->assertSame(LeaveApplication::STATUS_DRAFT, (int) DB::table('leave_application')->where('pk', $draft)->value('status'), 'the draft is left as it is');
+
+        // Control: a Pending leave on another day still blocks.
+        $other = ['from_date' => now()->addDays(401)->toDateString(), 'to_date' => now()->addDays(401)->toDateString()] + $payload;
+        $this->submit($other)->assertSessionHasNoErrors();
+        $onDay($other['from_date'])->update(['status' => LeaveApplication::STATUS_PENDING]);
+        $this->submit($other)->assertSessionHasErrors('from_date');
+        $this->assertSame(1, $onDay($other['from_date'])->count());
     }
 
     public function test_the_overlap_check_runs_inside_the_transaction_after_the_student_lock(): void

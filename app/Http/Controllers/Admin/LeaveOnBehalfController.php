@@ -448,7 +448,8 @@ class LeaveOnBehalfController extends Controller
                     $validated['from_date'],
                     $validated['to_date'],
                     null,
-                    $leaveType
+                    $leaveType,
+                    includeDrafts: false
                 );
             } catch (\InvalidArgumentException $e) {
                 $overlapError = $e->getMessage();

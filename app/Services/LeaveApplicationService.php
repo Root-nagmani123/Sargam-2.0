@@ -272,15 +272,17 @@ class LeaveApplicationService
         string $fromDate,
         string $toDate,
         ?int $ignoreApplicationPk = null,
-        ?string $leaveType = null
+        ?string $leaveType = null,
+        bool $includeDrafts = true
     ): ?LeaveApplication {
         $query = LeaveApplication::query()
             ->where('student_master_pk', $studentPk)
-            ->whereIn('status', [
-                LeaveApplication::STATUS_DRAFT,
+            // Leave on Behalf passes false: an OT's unsubmitted draft must not block the
+            // operator (PR #334 F-068, Product owner decision 2026-10-09).
+            ->whereIn('status', array_merge($includeDrafts ? [LeaveApplication::STATUS_DRAFT] : [], [
                 LeaveApplication::STATUS_PENDING,
                 LeaveApplication::STATUS_APPROVED,
-            ])
+            ]))
             ->when($leaveType !== null, fn ($q) => $q->where('leave_type', $leaveType))
             // whereDate in every clause: the columns are DATETIME and legacy stationed rows carry times (F-065).
             ->where(function ($q) use ($fromDate, $toDate) {
@@ -316,9 +318,10 @@ class LeaveApplicationService
         string $fromDate,
         string $toDate,
         ?int $ignoreApplicationPk = null,
-        ?string $leaveType = null
+        ?string $leaveType = null,
+        bool $includeDrafts = true
     ): void {
-        $existing = $this->findOverlappingApplication($studentPk, $fromDate, $toDate, $ignoreApplicationPk, $leaveType);
+        $existing = $this->findOverlappingApplication($studentPk, $fromDate, $toDate, $ignoreApplicationPk, $leaveType, $includeDrafts);
 
         if ($existing) {
             throw new \InvalidArgumentException($this->overlapErrorMessage($existing));
