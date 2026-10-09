@@ -100,6 +100,12 @@ class OtLeaveApplyFlowTest extends TestCase
 
             $this->assertMatchesRegularExpression('/<input[^>]*name="from_date"/', $html, "$type form must post from_date");
             $this->assertMatchesRegularExpression('/<input[^>]*name="to_date"/', $html, "$type form must post to_date");
+
+            // Stationed leave also requires the departure and return times (PR #334 F-064).
+            if ($type === 'STATIONED_LEAVE') {
+                $this->assertMatchesRegularExpression('/<input[^>]*name="time_from"/', $html, 'stationed leave must post time_from');
+                $this->assertMatchesRegularExpression('/<input[^>]*name="time_to"/', $html, 'stationed leave must post time_to');
+            }
         }
     }
 

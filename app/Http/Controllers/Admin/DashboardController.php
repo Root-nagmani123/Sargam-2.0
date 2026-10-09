@@ -102,6 +102,10 @@ public function inhouse_faculty_export(Request $request)
 
 private function exportFacultyList(int $facultyType, string $reportTitle, Request $request)
 {
+    // A bulk list of every faculty email and mobile is for staff, not trainees (PR #334
+    // F-057). Super Admin first, as in canUseStaffMenu() (F-059).
+    abort_if(isTraineeLogin() && ! isSidebarPrivilegedUser(), 403, 'This download is for staff.');
+
     // The page posts its on-screen search with the export, so the download holds
     // what the user was looking at, as the old client-side export did (PR #334 F-053).
     $search = $request->query('search');

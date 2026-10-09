@@ -31,6 +31,19 @@ class LeaveOnBehalfDoubleSubmitTest extends TestCase
             ->where(fn ($q) => $q->whereNull('c.end_date')->orWhereDate('c.end_date', '>=', now()->toDateString()))
             ->orderBy('m.pk')
             ->first(['m.course_master_pk', 'm.student_master_pk']);
+        if (! $enrolment) {
+            // No running course on the copy (F-024 closure gap): make one running
+            // inside the rolled-back transaction, as Pr334Round4LowFindingsTest does.
+            $enrolment = DB::table('student_master_course__map as m')
+                ->join('student_master as s', 's.pk', '=', 'm.student_master_pk')
+                ->where('m.active_inactive', 1)
+                ->orderBy('m.pk')
+                ->first(['m.course_master_pk', 'm.student_master_pk']);
+            if ($enrolment) {
+                DB::table('course_master')->where('pk', $enrolment->course_master_pk)
+                    ->update(['active_inactive' => 1, 'end_date' => now()->addYears(3)->toDateString()]);
+            }
+        }
         $nature = DB::table('leave_nature_master')->where('leave_type', 'LEAVE')->where('active_inactive', 1)->value('pk');
 
         if (! $enrolment || ! $nature) {

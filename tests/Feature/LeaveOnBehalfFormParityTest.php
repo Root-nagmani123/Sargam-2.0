@@ -24,7 +24,18 @@ class LeaveOnBehalfFormParityTest extends TestCase
             ->where(fn ($q) => $q->whereNull('c.end_date')->orWhereDate('c.end_date', '>=', now()->toDateString()))
             ->first(['m.course_master_pk', 'm.student_master_pk']);
         if (! $e) {
-            $this->markTestSkipped('needs a running enrolment');
+            // No running course on the copy: make one running inside the rolled-back
+            // transaction, as LeaveOnBehalfDoubleSubmitTest does.
+            $e = DB::table('student_master_course__map as m')
+                ->join('student_master as s', 's.pk', '=', 'm.student_master_pk')
+                ->where('m.active_inactive', 1)
+                ->orderBy('m.pk')
+                ->first(['m.course_master_pk', 'm.student_master_pk']);
+            if (! $e) {
+                $this->markTestSkipped('needs an active enrolment');
+            }
+            DB::table('course_master')->where('pk', $e->course_master_pk)
+                ->update(['active_inactive' => 1, 'end_date' => now()->addYears(3)->toDateString()]);
         }
 
         return $e;

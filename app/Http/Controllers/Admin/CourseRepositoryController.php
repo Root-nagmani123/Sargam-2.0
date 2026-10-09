@@ -1882,13 +1882,18 @@ class CourseRepositoryController extends Controller
     /**
      * Document view (PDF viewer)
      */
-    public function documentView($documentId)
+    public function documentView(Request $request, $documentId)
     {
         try {
             $document = CourseRepositoryDetail::with(['documents', 'author', 'subject'])
                 ->findOrFail($documentId);
 
-            $pdfDocument = $document->documents->first();
+            // One session can carry several attachments: ?doc= names the one the
+            // caller listed, and only a live attachment of this session is shown.
+            $live = $document->documents->where('del_type', 1)->sortBy('pk');
+            $pdfDocument = $request->filled('doc')
+                ? $live->firstWhere('pk', (int) $request->query('doc'))
+                : $live->first();
             if (!$pdfDocument) {
                 return redirect()->back()->with('error', 'Document not found');
             }

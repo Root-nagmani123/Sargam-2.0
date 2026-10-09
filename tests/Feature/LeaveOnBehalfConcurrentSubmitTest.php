@@ -43,6 +43,19 @@ class LeaveOnBehalfConcurrentSubmitTest extends TestCase
             ->where(fn ($q) => $q->whereNull('c.end_date')->orWhereDate('c.end_date', '>=', now()->toDateString()))
             ->orderBy('m.pk')
             ->first(['m.course_master_pk', 'm.student_master_pk']);
+        // No running course on the copy: one is made running for the probe and
+        // restored in the finally block (PR #334 F-024 closure gap).
+        $restoreCourse = null;
+        if (! $enrolment) {
+            $enrolment = DB::table('student_master_course__map as m')
+                ->join('student_master as s', 's.pk', '=', 'm.student_master_pk')
+                ->where('m.active_inactive', 1)
+                ->orderBy('m.pk')
+                ->first(['m.course_master_pk', 'm.student_master_pk']);
+            $restoreCourse = $enrolment
+                ? DB::table('course_master')->where('pk', $enrolment->course_master_pk)->first(['pk', 'active_inactive', 'end_date'])
+                : null;
+        }
         $nature = DB::table('leave_nature_master')->where('leave_type', 'LEAVE')->where('active_inactive', 1)->value('pk');
         $superAdmin = DB::table('model_has_roles as m')->join('roles as r', 'r.id', '=', 'm.role_id')
             ->where('r.name', 'Super Admin')->where('m.model_type', User::class)
@@ -56,6 +69,10 @@ class LeaveOnBehalfConcurrentSubmitTest extends TestCase
         $payloadFile = tempnam(sys_get_temp_dir(), 'lob');
 
         try {
+            if ($restoreCourse) {
+                DB::table('course_master')->where('pk', $restoreCourse->pk)
+                    ->update(['active_inactive' => 1, 'end_date' => now()->addYears(3)->toDateString()]);
+            }
             if (! $svc->stationedLeaveConfigured((int) $enrolment->course_master_pk, $day)) {
                 // Effective only from the probe day onward, so no live flow sees it.
                 $probeConfigPk = DB::table('stationed_leave_master')->insertGetId([
@@ -129,6 +146,10 @@ class LeaveOnBehalfConcurrentSubmitTest extends TestCase
             }
             if ($probeConfigPk) {
                 DB::table('stationed_leave_master')->where('pk', $probeConfigPk)->delete();
+            }
+            if ($restoreCourse) {
+                DB::table('course_master')->where('pk', $restoreCourse->pk)
+                    ->update(['active_inactive' => $restoreCourse->active_inactive, 'end_date' => $restoreCourse->end_date]);
             }
             @unlink($payloadFile);
 

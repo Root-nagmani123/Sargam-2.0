@@ -1186,7 +1186,7 @@ $currentPath = $segments[1] ?? null;
                         // Check MDO/Escort/Other duties
                         // Check MDO
                         if (!empty($mdoDutyTypes['mdo'])) {
-                            $mdoDuty = $findDuty('mdo', $timetableDate, $currentCoursePk);
+                            $mdoDuty = $findDuty('mdo', $timetableDate, $currentCoursePk, optional($courseGroup->timetable)->class_session);
 
                             // Get timetable class_session for time overlap checking
                             $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
@@ -1203,7 +1203,7 @@ $currentPath = $segments[1] ?? null;
 
                         // Check Escort
                         if (!$record['duty_type'] && !empty($mdoDutyTypes['escort'])) {
-                            $escortDuty = $findDuty('escort', $timetableDate, $currentCoursePk);
+                            $escortDuty = $findDuty('escort', $timetableDate, $currentCoursePk, optional($courseGroup->timetable)->class_session);
 
                             // Get timetable class_session for time overlap checking
                             $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
@@ -1220,7 +1220,7 @@ $currentPath = $segments[1] ?? null;
 
                         // Check Other
                         if (!$record['duty_type'] && !empty($mdoDutyTypes['other'])) {
-                            $otherDuty = $findDuty('other', $timetableDate, $currentCoursePk);
+                            $otherDuty = $findDuty('other', $timetableDate, $currentCoursePk, optional($courseGroup->timetable)->class_session);
 
                             // Get timetable class_session for time overlap checking
                             $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
@@ -1390,13 +1390,17 @@ $currentPath = $segments[1] ?? null;
             );
         };
 
-        $findDuty = function (?string $dutyKey, ?string $date, $cPk) use ($mdoDutyMap, $mdoDutyTypes): ?object {
+        $findDuty = function (?string $dutyKey, ?string $date, $cPk, ?string $classSession = null) use ($mdoDutyMap, $mdoDutyTypes): ?object {
             if ($date === null || empty($mdoDutyTypes[$dutyKey])) {
                 return null;
             }
             $key = $mdoDutyTypes[$dutyKey] . '|' . $cPk . '|' . substr($date, 0, 10);
-            $group = $mdoDutyMap->get($key);
-            return $group ? $group->first() : null;
+            $group = $mdoDutyMap->get($key, collect());
+
+            // One type can have several duties a day: prefer the one that overlaps
+            // the session, as OtExemptionResolver does (PR #334 F-061).
+            return ($classSession === null ? null : $group->first(fn ($d) => $this->checkTimeOverlap($classSession, $d->Time_from, $d->Time_to)))
+                ?? $group->first();
         };
 
         return [$findMedical, $findDuty];
@@ -1516,14 +1520,14 @@ $currentPath = $segments[1] ?? null;
                 } else {
                     $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
 
-                    $mdoDuty = $findDuty('mdo', $timetableDate, $currentCoursePk);
+                    $mdoDuty = $findDuty('mdo', $timetableDate, $currentCoursePk, optional($courseGroup->timetable)->class_session);
                     if ($mdoDuty && $this->checkTimeOverlap($timetableClassSession, $mdoDuty->Time_from, $mdoDuty->Time_to)) {
                         $record['attendance_status'] = 'Present';
                         $record['duty_type'] = 'MDO';
                     }
 
                     if (!$record['duty_type']) {
-                        $escortDuty = $findDuty('escort', $timetableDate, $currentCoursePk);
+                        $escortDuty = $findDuty('escort', $timetableDate, $currentCoursePk, optional($courseGroup->timetable)->class_session);
                         if ($escortDuty && $this->checkTimeOverlap($timetableClassSession, $escortDuty->Time_from, $escortDuty->Time_to)) {
                             $record['attendance_status'] = 'Present';
                             $record['duty_type'] = 'Escort';
@@ -1531,7 +1535,7 @@ $currentPath = $segments[1] ?? null;
                     }
 
                     if (!$record['duty_type']) {
-                        $otherDuty = $findDuty('other', $timetableDate, $currentCoursePk);
+                        $otherDuty = $findDuty('other', $timetableDate, $currentCoursePk, optional($courseGroup->timetable)->class_session);
                         if ($otherDuty && $this->checkTimeOverlap($timetableClassSession, $otherDuty->Time_from, $otherDuty->Time_to)) {
                             $record['attendance_status'] = 'Present';
                             $record['exemption_type'] = 'Other';
@@ -1792,7 +1796,8 @@ $currentPath = $segments[1] ?? null;
                                 ['course_master_pk', '=', $currentCoursePk],
                                 ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['mdo']],
                                 ['selected_student_list', '=', $student_pk]
-                            ])->whereDate('mdo_date', '=', $timetableDate)->first();
+                            ])->whereDate('mdo_date', '=', $timetableDate)->get()
+                                ->first(fn ($d) => $this->checkTimeOverlap(optional($courseGroup->timetable)->class_session, $d->Time_from, $d->Time_to));
 
                             // Get timetable class_session for time overlap checking
                             $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
@@ -1813,7 +1818,8 @@ $currentPath = $segments[1] ?? null;
                                 ['course_master_pk', '=', $currentCoursePk],
                                 ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['escort']],
                                 ['selected_student_list', '=', $student_pk]
-                            ])->whereDate('mdo_date', '=', $timetableDate)->first();
+                            ])->whereDate('mdo_date', '=', $timetableDate)->get()
+                                ->first(fn ($d) => $this->checkTimeOverlap(optional($courseGroup->timetable)->class_session, $d->Time_from, $d->Time_to));
 
                             // Get timetable class_session for time overlap checking
                             $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
@@ -1834,7 +1840,8 @@ $currentPath = $segments[1] ?? null;
                                 ['course_master_pk', '=', $currentCoursePk],
                                 ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['other']],
                                 ['selected_student_list', '=', $student_pk]
-                            ])->whereDate('mdo_date', '=', $timetableDate)->first();
+                            ])->whereDate('mdo_date', '=', $timetableDate)->get()
+                                ->first(fn ($d) => $this->checkTimeOverlap(optional($courseGroup->timetable)->class_session, $d->Time_from, $d->Time_to));
 
                             // Get timetable class_session for time overlap checking
                             $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;

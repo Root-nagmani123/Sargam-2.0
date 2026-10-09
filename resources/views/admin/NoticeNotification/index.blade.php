@@ -180,7 +180,7 @@
                             <label class="form-label fw-semibold mb-1">Search</label>
                             <div class="input-group input-group-sm">
                                 <input type="text" name="search" class="form-control"
-                                    value="{{ request('search') }}" placeholder="Title, type, course, creator...">
+                                    value="{{ is_scalar(request('search')) ? request('search') : '' }}" placeholder="Title, type, course, creator...">
                                 <button type="submit" class="btn btn-primary" aria-label="Search">
                                     <i class="material-icons material-symbols-rounded fs-6 lh-1"
                                         aria-hidden="true">search</i>

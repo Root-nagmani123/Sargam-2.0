@@ -91,6 +91,8 @@ class MedicalExceptionOTViewController extends Controller
             ->with(['employee', 'category', 'speciality'])
             ->join('course_master as cm', 'cm.pk', '=', 'student_medical_exemption.course_master_pk')
             ->where('student_medical_exemption.student_master_pk', $studentMasterPk)
+            // A cancelled exemption is not honoured by attendance (PR #334 F-063).
+            ->where('student_medical_exemption.active_inactive', 1)
             ->where('cm.active_inactive', 1)
             ->where('cm.end_date', '>=', now()->format('Y-m-d'))
             ->orderByDesc('student_medical_exemption.from_date')

@@ -206,6 +206,11 @@ class LeaveApplicationController extends Controller
             'attachments.*.file.mimes' => 'Allowed file types: PDF, JPG, JPEG, PNG, DOC, DOCX.',
         ]);
 
+        // `date` also admits "2027-05-27 00:00:01", which then slipped past the raw
+        // string comparison below and the overlap query (PR #334 F-054).
+        $validated['from_date'] = Carbon::parse($validated['from_date'])->toDateString();
+        $validated['to_date'] = Carbon::parse($validated['to_date'])->toDateString();
+
         // Only meaningful on a single-day leave — across days the return time is
         // naturally earlier in the day than the departure time.
         if ($isStationed

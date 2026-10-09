@@ -40,8 +40,12 @@ class CourseRepositoryVideoDownloadFlagTest extends TestCase
         // A staff Super Admin: repository writes refuse trainee-category logins
         // whatever they hold (PR #334 F-041), and on the development copy the
         // lowest-pk Super Admin is one.
+        // The edit itself must succeed: a refused edit also leaves the flag
+        // untouched, and "keeps download on" would then pass for the wrong reason (F-064).
         return $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])
-            ->post(route('course-repository.document.update', $docPk), $fields);
+            ->post(route('course-repository.document.update', $docPk), $fields)
+            ->assertOk()
+            ->assertJson(['success' => true]);
     }
 
     private function flag(int $detailPk): int

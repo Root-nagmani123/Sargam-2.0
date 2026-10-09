@@ -15,7 +15,7 @@
 <div class="d-inline-flex align-items-center justify-content-center gap-2 cru-table-actions">
     @if($hasPdfView)
         @if($detailPk)
-            <a href="{{ route('admin.course-repository.user.document-view', $detailPk) }}"
+            <a href="{{ route('admin.course-repository.user.document-view', array_filter(['documentId' => $detailPk, 'doc' => ($fileDoc->del_type ?? 1) == 1 ? ($fileDoc->pk ?? null) : null])) }}"
                class="btn btn-link btn-sm text-primary p-0 cru-btn-view"
                title="View document"
                aria-label="View document">

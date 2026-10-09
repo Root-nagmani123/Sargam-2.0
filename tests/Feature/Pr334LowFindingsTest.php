@@ -21,9 +21,10 @@ class Pr334LowFindingsTest extends TestCase
 {
     use RollsBackAgainstAppDatabase;
 
-    private function assertNotServerError($response, string $what): void
+    /** The exact status, not "below 500": a 403, 404 or redirect never reaches the code under test (F-064). */
+    private function assertAnswers(int $expected, $response, string $what): void
     {
-        $this->assertLessThan(500, $response->getStatusCode(), "{$what} must not be a server error");
+        $this->assertSame($expected, $response->getStatusCode(), $what);
     }
 
     /* ------------------------------------------------------------------
@@ -131,19 +132,22 @@ class Pr334LowFindingsTest extends TestCase
         $admin = $this->staffWithRole('Super Admin');
         $as = fn () => $this->as($admin, ['Super Admin']);
 
-        $this->assertNotServerError($as()->get(route('admin.dashboard.feed', ['tab' => 'notices', 'notice_type' => ['x']])), 'feed ?notice_type[]=');
-        $this->assertNotServerError($as()->get(route('admin.dashboard.feed', ['tab' => 'notices', 'q' => ['x'], 'notice_dept' => ['x']])), 'feed ?q[]=');
-        $this->assertNotServerError($as()->get(route('admin.dashboard.ot-participants', ['counsellor_faculty' => ['1']])), 'participants ?counsellor_faculty[]=');
-        $this->assertNotServerError($as()->getJson(route('admin.dashboard.ot-participants', ['counsellor_faculty' => ['1'], 'draw' => 1])), 'participants data ?counsellor_faculty[]=');
-        $this->assertNotServerError($as()->get(route('admin.dashboard.ot-participants.export', ['format' => 'excel', 'counsellor_faculty' => ['1']])), 'participants export ?counsellor_faculty[]=');
+        $this->assertAnswers(200, $as()->get(route('admin.dashboard.feed', ['tab' => 'notices', 'notice_type' => ['x']])), 'feed ?notice_type[]=');
+        $this->assertAnswers(200, $as()->get(route('admin.dashboard.feed', ['tab' => 'notices', 'q' => ['x'], 'notice_dept' => ['x']])), 'feed ?q[]=');
+        $this->assertAnswers(200, $as()->get(route('admin.dashboard.ot-participants', ['counsellor_faculty' => ['1']])), 'participants ?counsellor_faculty[]=');
+        $this->assertAnswers(200, $as()->getJson(route('admin.dashboard.ot-participants', ['counsellor_faculty' => ['1'], 'draw' => 1])), 'participants data ?counsellor_faculty[]=');
+        $this->assertAnswers(200, $as()->get(route('admin.dashboard.ot-participants.export', ['format' => 'csv', 'counsellor_faculty' => ['1']])), 'participants export ?counsellor_faculty[]=');
 
         $student = (int) DB::table('student_master')->orderByDesc('pk')->value('pk');
-        $this->assertNotServerError(
-            $as()->getJson(route('admin.dashboard.ot-participants.comments', ['id' => $student, 'search' => ['value' => ['a']]])),
+        $this->assertAnswers(
+            200,
+            $as()->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
+                ->getJson(route('admin.dashboard.ot-participants.comments', ['id' => Crypt::encrypt($student), 'draw' => 1, 'search' => ['value' => ['a']]])),
             'comments ?search[value][]='
         );
 
-        $this->assertNotServerError(
+        $this->assertAnswers(
+            200,
             $this->as($this->officerTrainee(), ['Student-OT'])->get('/leave/apply?leave_type[]=x'),
             '/leave/apply?leave_type[]='
         );

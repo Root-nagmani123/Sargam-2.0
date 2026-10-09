@@ -171,10 +171,11 @@ class OtExemptionResolver
             $date = substr((string) $timetable->START_DATE, 0, 10);
 
             foreach ($dutyTypes as $typePk) {
-                $group = $duties->get($session['student'] . '|' . $typePk . '|' . $session['course'] . '|' . $date);
-                $duty = $group ? $group->first() : null;
+                $group = $duties->get($session['student'] . '|' . $typePk . '|' . $session['course'] . '|' . $date, collect());
 
-                if ($duty && self::overlapsSession($timetable->class_session, $duty->Time_from, $duty->Time_to)) {
+                // Every duty of the day, not the first: a morning and an afternoon
+                // duty of one type both exist (PR #334 F-061).
+                if ($group->contains(fn ($duty) => self::overlapsSession($timetable->class_session, $duty->Time_from, $duty->Time_to))) {
                     $covered[$key] = true;
                     continue 2;
                 }
@@ -202,13 +203,12 @@ class OtExemptionResolver
                 return false;
             }
 
-            $duty = MDOEscotDutyMap::where([
+            return MDOEscotDutyMap::where([
                 ['course_master_pk', '=', $this->coursePk],
                 ['mdo_duty_type_master_pk', '=', $typePk],
                 ['selected_student_list', '=', $studentId],
-            ])->whereDate('mdo_date', '=', $timetable->START_DATE)->first();
-
-            return $duty && self::overlapsSession($timetable->class_session, $duty->Time_from, $duty->Time_to);
+            ])->whereDate('mdo_date', '=', $timetable->START_DATE)->get()
+                ->contains(fn ($duty) => self::overlapsSession($timetable->class_session, $duty->Time_from, $duty->Time_to));
         });
     }
 

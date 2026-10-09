@@ -1491,9 +1491,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/active-course', [DashboardController::class, 'active_course'])->name('admin.dashboard.active_course');
     Route::get('/incoming-course', [DashboardController::class, 'incoming_course'])->name('admin.dashboard.incoming_course');
     Route::get('/guest-faculty', [DashboardController::class, 'guest_faculty'])->name('admin.dashboard.guest_faculty');
-    Route::get('/guest-faculty/export', [DashboardController::class, 'guest_faculty_export'])->name('admin.dashboard.guest_faculty.export');
+    Route::get('/guest-faculty/export', [DashboardController::class, 'guest_faculty_export'])->middleware('throttle:10,1,faculty-contact-export')->name('admin.dashboard.guest_faculty.export');
     Route::get('/inhouse-faculty', [DashboardController::class, 'inhouse_faculty'])->name('admin.dashboard.inhouse_faculty');
-    Route::get('/inhouse-faculty/export', [DashboardController::class, 'inhouse_faculty_export'])->name('admin.dashboard.inhouse_faculty.export');
+    Route::get('/inhouse-faculty/export', [DashboardController::class, 'inhouse_faculty_export'])->middleware('throttle:10,1,faculty-contact-export')->name('admin.dashboard.inhouse_faculty.export');
 
     // Who's Who Routes
     Route::get('/faculty/whos-who', [WhosWhoController::class, 'index'])->name('admin.faculty.whos-who');

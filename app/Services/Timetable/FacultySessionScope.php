@@ -286,7 +286,10 @@ class FacultySessionScope
      */
     public static function lockedFacultyPk(): ?int
     {
-        if (! is_faculty_portal_user() || hasRole('Super Admin')) {
+        // Training administrators are exempt, as on the calendar (CalendarController),
+        // even when they also hold a faculty role (PR #334 F-060).
+        if (! is_faculty_portal_user() || hasRole('Super Admin')
+            || hasRole('Training') || hasRole('Training-Induction') || hasRole('Training MCTP Admin') || hasRole('Training IST')) {
             return null;
         }
 

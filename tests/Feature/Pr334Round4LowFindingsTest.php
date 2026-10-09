@@ -52,7 +52,8 @@ class Pr334Round4LowFindingsTest extends TestCase
             'export' => $as()->get(route('attendance.OT.student_mark.export', $params))->getStatusCode(),
         ];
 
-        $this->assertSame(['page' => true, 'feed' => true, 'export' => true], array_map(fn ($s) => $s < 500, $statuses), json_encode($statuses));
+        // Exactly 200: "below 500" also passed a 403 or a redirect that never reached the filter (F-064).
+        $this->assertSame(['page' => 200, 'feed' => 200, 'export' => 200], $statuses);
     }
 
     /* ---------------- F-051 ---------------- */

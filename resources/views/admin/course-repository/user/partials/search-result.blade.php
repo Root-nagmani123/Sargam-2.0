@@ -22,7 +22,7 @@
     // document viewer to show; it opens on its video instead.
     $viewUrl = match (true) {
         $doc->pk === null && $doc->detail_pk => route('admin.course-repository.user.document-video', $doc->detail_pk),
-        (bool) $doc->detail_pk => route('admin.course-repository.user.document-view', $doc->detail_pk),
+        (bool) $doc->detail_pk => route('admin.course-repository.user.document-view', ['documentId' => $doc->detail_pk, 'doc' => $doc->pk]),
         default => route('course-repository.document.stream', ['pk' => $doc->pk]),
     };
 

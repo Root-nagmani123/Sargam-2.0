@@ -932,7 +932,10 @@ function isTraineeLogin(): bool
  */
 function canUseStaffMenu(string ...$permissions): bool
 {
-    return Auth::check() && ! isTraineeLogin() && hasMenuPermission(...$permissions);
+    // Super Admin first: a Super Admin whose login is category S is still an
+    // administrator (PR #334 F-059). hasRole() reads the database role here.
+    return Auth::check()
+        && (isSidebarPrivilegedUser() || (! isTraineeLogin() && hasMenuPermission(...$permissions)));
 }
 
 /**
@@ -1925,9 +1928,13 @@ if (!function_exists('notice_feed_query_by_role')) {
             // A category-F login's user_id is a faculty_master.pk, not an employee
             // pk (see get_auth_faculty_master_pk()); its employee is the faculty
             // row's employee_master_pk, and a guest faculty has none.
-            $employeePk = $category === 'F'
-                ? DB::table('faculty_master')->where('pk', $user->user_id)->value('employee_master_pk')
-                : $user->user_id;
+            // Only a category-E login's user_id is an employee pk; any other category
+            // is matched by role alone, never as an employee (PR #334 F-058).
+            $employeePk = match ($category) {
+                'F' => DB::table('faculty_master')->where('pk', $user->user_id)->value('employee_master_pk'),
+                'E' => $user->user_id,
+                default => null,
+            };
 
             $departmentIds = $employeePk === null ? [] : DB::table('employee_master')
                 ->where('pk', $employeePk)
@@ -1945,14 +1952,17 @@ if (!function_exists('notice_feed_query_by_role')) {
                     ->orWhere(function ($o) use ($employeeIds, $departmentIds) {
                         $o->where('notices_notification.target_audience', 'like', '%Staff/Faculty%');
 
-                        notice_audience_unpinned_or_any($o, 'D', $departmentIds);
-
-                        $o->where(function ($m) use ($employeeIds) {
-                            $m->where('notices_notification.audience_mode', '!=', 'individual')
-                                ->orWhereNull('notices_notification.audience_mode')
-                                ->orWhere(function ($i) use ($employeeIds) {
-                                    notice_audience_has_any($i, 'E', $employeeIds);
-                                });
+                        // An individual notice reaches its named employees wherever they
+                        // now work (PR #334 F-044); any other notice by department.
+                        $o->where(function ($m) use ($employeeIds, $departmentIds) {
+                            $m->where(function ($i) use ($employeeIds) {
+                                $i->where('notices_notification.audience_mode', 'individual');
+                                notice_audience_has_any($i, 'E', $employeeIds);
+                            })->orWhere(function ($d) use ($departmentIds) {
+                                $d->where(fn ($mode) => $mode->where('notices_notification.audience_mode', '!=', 'individual')
+                                    ->orWhereNull('notices_notification.audience_mode'));
+                                notice_audience_unpinned_or_any($d, 'D', $departmentIds);
+                            });
                         });
                     });
             });

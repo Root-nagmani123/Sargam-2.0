@@ -47,6 +47,15 @@ class RollbackTraitNotShadowedTest extends TestCase
             "class A {\n    use RollsBackAgainstAppDatabase {\n        setUp as openRollbackTransaction;\n    }\n{$body}}"
         ), 'aliased but never called');
 
+        // PHP method names are case-insensitive, and a call inside a comment is not a call (PR #334 F-064).
+        $this->assertSame(['setUp'], self::offendersIn(
+            "class A {\n    use RollsBackAgainstAppDatabase;\n    protected function setup(): void\n    {\n        parent::setUp();\n    }\n}"
+        ), 'lowercase setup()');
+        $this->assertSame(['setUp'], self::offendersIn(
+            "class A {\n    use RollsBackAgainstAppDatabase {\n        setUp as openRollbackTransaction;\n    }\n"
+            ."    protected function setUp(): void\n    {\n        // \$this->openRollbackTransaction();\n        parent::setUp();\n    }\n}"
+        ), 'alias called only in a comment');
+
         $this->assertSame([], self::offendersIn(
             "class A {\n    use WithFaker, RollsBackAgainstAppDatabase {\n        setUp as openRollbackTransaction;\n    }\n"
             ."    protected function setUp(): void\n    {\n        \$this->openRollbackTransaction();\n    }\n}"
@@ -63,14 +72,21 @@ class RollbackTraitNotShadowedTest extends TestCase
             return [];
         }
 
+        // Comments out, so a commented-out call does not count as one.
+        $code = '';
+        foreach (token_get_all(str_starts_with(ltrim($src), '<?php') ? $src : "<?php\n".$src) as $token) {
+            $code .= is_array($token) ? (in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true) ? ' ' : $token[1]) : $token;
+        }
+
         $offenders = [];
         foreach (['setUp', 'tearDown'] as $method) {
-            if (! preg_match('/function\s+'.$method.'\s*\(/', $src)) {
+            // `i`: PHP method names are case-insensitive, so setup() overrides setUp().
+            if (! preg_match('/function\s+'.$method.'\s*\(/i', $code)) {
                 continue;
             }
 
-            $called = preg_match('/\b'.$method.'\s+as\s+(\w+)/', $src, $alias)
-                && preg_match('/\$this->'.preg_quote($alias[1], '/').'\s*\(/', $src);
+            $called = preg_match('/\b'.$method.'\s+as\s+(\w+)/i', $code, $alias)
+                && preg_match('/\$this->'.preg_quote($alias[1], '/').'\s*\(/i', $code);
 
             if (! $called) {
                 $offenders[] = $method;

@@ -132,8 +132,8 @@ class AcademicTimetableScopeTest extends TestCase
         $f = $this->fixture();
         $as = $this->as($f['ot'], ['Student-OT']);
 
-        $this->assertLessThan(500, $as->getJson(route('calendar.event.calendar-details', ['start' => ['x'], 'end' => ['y']]))->getStatusCode());
-        $this->assertLessThan(500, $as->getJson(route('calendar.event.calendar-details', ['start' => 'junk', 'end' => 'junk']))->getStatusCode());
+        $as->getJson(route('calendar.event.calendar-details', ['start' => ['x'], 'end' => ['y']]))->assertOk();
+        $as->getJson(route('calendar.event.calendar-details', ['start' => 'junk', 'end' => 'junk']))->assertOk();
     }
 
     /** A range wider than any calendar view is clamped rather than answered whole. */
@@ -144,6 +144,11 @@ class AcademicTimetableScopeTest extends TestCase
         if (! $faculty) {
             $this->markTestSkipped('no faculty login');
         }
+
+        // Positive control: the same wide range, starting on DAY, still answers DAY,
+        // so the absence below is the clamp and not an empty or refused feed (F-064).
+        $ids = $this->feedIds($this->as($faculty, ['Faculty']), ['scope' => 'academy', 'start' => self::DAY, 'end' => '2032-12-31']);
+        $this->assertContains($f['foreign'], $ids, 'DAY is the start of the clamped window');
 
         $ids = $this->feedIds($this->as($faculty, ['Faculty']), ['scope' => 'academy', 'start' => '2030-01-01', 'end' => '2032-12-31']);
 
