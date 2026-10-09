@@ -91,7 +91,7 @@ class LeaveOnBehalfCourseScopeTest extends TestCase
     {
         [, , $foreign] = $this->operatorAndCourses();
 
-        $status = $this->as($this->userWithRole('Super Admin'), ['Super Admin'])
+        $status = $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])
             ->getJson('/admin/leave-on-behalf/context?' . http_build_query(['course_master_pk' => $foreign, 'student_master_pk' => $this->studentOf($foreign)]))
             ->getStatusCode();
 

@@ -34,7 +34,7 @@ class LeaveOnBehalfFormParityTest extends TestCase
     {
         $e ??= $this->enrolment();
 
-        return $this->as($this->userWithRole('Super Admin'), ['Super Admin'])
+        return $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])
             ->post(route('admin.leave-on-behalf.store'), array_merge([
                 'course_master_pk' => $e->course_master_pk,
                 'student_master_pk' => $e->student_master_pk,

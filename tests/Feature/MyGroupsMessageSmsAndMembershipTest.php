@@ -11,8 +11,9 @@ use Tests\Feature\Concerns\RollsBackAgainstAppDatabase;
 use Tests\TestCase;
 
 /**
- * F-011 (PR #334): the SMS channel is audited like email, and a login outside the
- * group cannot message it. The SMS gateway is mocked — nothing is sent.
+ * PR #334 F-005: the SMS channel is audited like email, and a login outside the
+ * group cannot message it. The SMS gateway is mocked — nothing is sent. Messaging
+ * is enabled per test: it is off by default until the Product owner decides.
  */
 class MyGroupsMessageSmsAndMembershipTest extends TestCase
 {
@@ -44,7 +45,7 @@ class MyGroupsMessageSmsAndMembershipTest extends TestCase
 
     public function test_an_sms_send_goes_through_the_gateway_and_is_audited(): void
     {
-        config(['cache.limiter' => 'array']);
+        config(['cache.limiter' => 'array', 'my_groups.messaging_enabled' => true]);
         Log::spy();
         $sms = Mockery::mock(SmsService::class);
         $sms->shouldReceive('sendBulk')->once()->andReturn([]);
@@ -70,7 +71,7 @@ class MyGroupsMessageSmsAndMembershipTest extends TestCase
 
     public function test_an_officer_trainee_outside_the_group_is_refused_and_nothing_is_sent(): void
     {
-        config(['cache.limiter' => 'array']);
+        config(['cache.limiter' => 'array', 'my_groups.messaging_enabled' => true]);
         $sms = Mockery::mock(SmsService::class);
         $sms->shouldNotReceive('sendBulk');
         $this->app->instance(SmsService::class, $sms);

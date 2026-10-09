@@ -42,7 +42,7 @@ class ArrayValuedInputRound6Test extends TestCase
 
     public function test_leave_on_behalf_list_with_an_array_search_value(): void
     {
-        $response = $this->as($this->userWithRole('Super Admin'), ['Super Admin'])
+        $response = $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])
             ->getJson(route('admin.leave-on-behalf.index', [
                 'draw' => 1, 'start' => 0, 'length' => 10, 'search' => ['value' => ['x']],
             ]), ['X-Requested-With' => 'XMLHttpRequest']);
@@ -55,7 +55,7 @@ class ArrayValuedInputRound6Test extends TestCase
 
     public function test_timetable_report_with_an_array_order_direction(): void
     {
-        $response = $this->as($this->userWithRole('Super Admin'), ['Super Admin'])
+        $response = $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])
             ->getJson(route('timetable-report.data', [
                 'draw' => 1, 'start' => 0, 'length' => 10,
                 'order' => [['column' => 0, 'dir' => ['asc']]],

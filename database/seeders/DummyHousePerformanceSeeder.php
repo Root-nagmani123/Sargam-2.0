@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Demo data for the House wise Performance panel and its detail page.
  *
- * NOT for production. The panel draws houses from the courses running NOW, and
+ * Local / testing only (see ALLOWED_ENVIRONMENTS). The panel draws houses from the courses running NOW, and
  * on a development copy every course with houses mapped has usually already
  * ended — so the panel renders its empty state and the screen cannot be looked
  * at. This puts four houses on the running course, fills them with officer
@@ -45,12 +45,20 @@ class DummyHousePerformanceSeeder extends Seeder
     /** Officer trainees placed in each house. */
     private const MEMBERS_PER_HOUSE = 8;
 
+    /**
+     * The only environments it may write in. An allow-list, not a production
+     * deny-list: a staging or UAT copy holds real trainees too, and the earlier
+     * `isProduction()` check let APP_ENV=staging book fabricated memos (PR #334
+     * F-021).
+     */
+    public const ALLOWED_ENVIRONMENTS = ['local', 'testing'];
+
     public function run(): void
     {
         // It books closed discipline memos with marks against real trainees, so it
-        // refuses to run on production whatever the operator types (PR #334 F-015).
-        if (app()->isProduction()) {
-            $this->command?->error('DummyHousePerformanceSeeder writes demo deductions against real officer trainees - refused on production.');
+        // refuses anywhere but a developer's own copy, whatever the operator types.
+        if (! app()->environment(self::ALLOWED_ENVIRONMENTS)) {
+            $this->command?->error('DummyHousePerformanceSeeder writes demo deductions against real officer trainees - it runs only when APP_ENV is local or testing.');
 
             return;
         }

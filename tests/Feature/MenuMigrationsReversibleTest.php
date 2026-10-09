@@ -9,19 +9,22 @@ use Tests\Feature\Concerns\RollsBackAgainstAppDatabase;
 use Tests\TestCase;
 
 /**
- * F-027 (PR #334): the two menu migrations grant their permission with raw
- * inserts, so they must flush Spatie's permission cache — and both must survive
- * down() then up(). Both migrations are DML only (no Schema:: / DDL), so the
- * whole round trip runs inside the test's transaction and is rolled back.
+ * The menu and dashboard-card migrations of PR #334 (F-027 / F-036).
  *
- * This is local evidence only. The staging migrate, and a granted role seeing
- * both menus there, remain a human check (condition 5).
+ * up() leaves any existing row alone and records nothing about what it inserted,
+ * so a down() that deleted by name or key removed rows an administrator had made
+ * before the migration ran. down() is now forward-fix only: it must change nothing.
+ * up() must still create what is missing, grant it, and flush Spatie's cache so a
+ * holder sees a raw-inserted grant at once.
+ *
+ * All of these migrations are DML only (no Schema:: / DDL), so everything runs
+ * inside the test's transaction and is rolled back.
  */
 class MenuMigrationsReversibleTest extends TestCase
 {
     use RollsBackAgainstAppDatabase;
 
-    public static function migrations(): array
+    public static function menuMigrations(): array
     {
         return [
             'leave on behalf' => ['2026_09_17_000002_add_leave_on_behalf_menu.php', 'apply_leave_on_behalf_of_ot', 'admin/leave-on-behalf', 'stationed_leave_master'],
@@ -29,41 +32,85 @@ class MenuMigrationsReversibleTest extends TestCase
         ];
     }
 
-    /** @dataProvider migrations */
-    public function test_down_then_up_restores_the_menu_and_a_granted_role_holds_the_permission(string $file, string $permission, string $route, string $sibling): void
+    public static function dataMigrations(): array
+    {
+        return array_map(fn ($f) => [$f], [
+            'faculty cards' => '2026_08_31_000000_add_faculty_total_sessions_and_feedback_dashboard_cards.php',
+            'ot marks card' => '2026_08_31_000001_add_ot_discipline_marks_deducted_dashboard_card.php',
+            'timetable / counsellee cards' => '2026_09_09_120000_add_faculty_timetable_counsellee_dashboard_cards.php',
+            'house widget' => '2026_09_09_140000_add_house_wise_performance_dashboard_widget.php',
+            'ot timetable / feedback cards' => '2026_09_14_120000_add_ot_timetable_and_feedback_dashboard_cards.php',
+            'leave on behalf menu' => '2026_09_17_000002_add_leave_on_behalf_menu.php',
+            'whos who card' => '2026_09_17_000004_add_whos_who_faculty_dashboard_card.php',
+            'leave nature menu' => '2026_09_18_000001_add_leave_nature_master_menu_and_seed_leave_natures.php',
+        ]);
+    }
+
+    private function snapshot(): array
+    {
+        $rows = fn (string $table, array $cols) => DB::table($table)->orderBy($cols[0])->get($cols)
+            ->map(fn ($r) => array_values((array) $r))->all();
+
+        return [
+            'menus' => $rows('menus', ['id', 'route', 'permission_name']),
+            'permissions' => $rows('permissions', ['id', 'name']),
+            'role_has_permissions' => $rows('role_has_permissions', ['permission_id', 'role_id']),
+            'leave_nature_master' => $rows('leave_nature_master', ['pk', 'nature_name', 'leave_type']),
+            'dashboard_cards' => $rows('dashboard_cards', ['id', 'key', 'label']),
+            'role_dashboard_cards' => $rows('role_dashboard_cards', ['dashboard_card_id', 'role_id']),
+        ];
+    }
+
+    /** @dataProvider dataMigrations */
+    public function test_down_leaves_every_existing_row_alone(string $file): void
+    {
+        $before = $this->snapshot();
+
+        (require database_path('migrations/'.$file))->down();
+
+        $this->assertSame($before, $this->snapshot(), "{$file} down() must not delete or detach rows it cannot prove it created");
+    }
+
+    /** @dataProvider menuMigrations */
+    public function test_up_recreates_a_missing_menu_grants_it_and_flushes_the_cache(string $file, string $permission, string $route, string $sibling): void
     {
         $siblingId = DB::table('permissions')->where('name', $sibling)->value('id');
         if (! $siblingId) {
             $this->markTestSkipped("sibling permission {$sibling} does not exist here");
         }
 
-        $migration = require database_path('migrations/'.$file);
+        $registrar = app(PermissionRegistrar::class);
 
-        $migration->down();
-        $this->assertFalse(DB::table('menus')->where('route', $route)->exists(), 'down() removes the menu');
-        $this->assertFalse(DB::table('permissions')->where('name', $permission)->exists(), 'down() removes the permission');
+        try {
+            // As on an environment that never ran the migration.
+            $permId = DB::table('permissions')->where('name', $permission)->value('id');
+            if ($permId) {
+                DB::table('role_has_permissions')->where('permission_id', $permId)->delete();
+                DB::table('model_has_permissions')->where('permission_id', $permId)->delete();
+                DB::table('permissions')->where('id', $permId)->delete();
+            }
+            DB::table('menus')->where('route', $route)->delete();
+            $registrar->forgetCachedPermissions();
+            $registrar->getPermissions(); // warm the cache WITHOUT the permission
 
-        $migration->up();
-        $this->assertTrue(DB::table('menus')->where('route', $route)->exists(), 'up() restores the menu');
-        $permId = DB::table('permissions')->where('name', $permission)->value('id');
-        $this->assertNotNull($permId, 'up() restores the permission');
+            (require database_path('migrations/'.$file))->up();
 
-        $siblingRoles = DB::table('role_has_permissions')->where('permission_id', $siblingId)->pluck('role_id')->sort()->values()->all();
-        $granted = DB::table('role_has_permissions')->where('permission_id', $permId)->pluck('role_id')->sort()->values()->all();
-        $this->assertSame($siblingRoles, $granted, 'granted to exactly the roles holding the sibling permission');
+            $this->assertTrue(DB::table('menus')->where('route', $route)->exists(), 'up() creates the menu');
+            $newId = DB::table('permissions')->where('name', $permission)->value('id');
+            $this->assertNotNull($newId, 'up() creates the permission');
 
-        // Spatie reads its cached map; up() flushed it, so a holder of a granted
-        // role sees the new permission straight away.
-        if ($siblingRoles !== []) {
-            $holder = DB::table('model_has_roles')->whereIn('role_id', $siblingRoles)
+            $siblingRoles = DB::table('role_has_permissions')->where('permission_id', $siblingId)->pluck('role_id')->sort()->values()->all();
+            $granted = DB::table('role_has_permissions')->where('permission_id', $newId)->pluck('role_id')->sort()->values()->all();
+            $this->assertSame($siblingRoles, $granted, 'granted to exactly the roles holding the sibling permission');
+
+            $holder = $siblingRoles === [] ? null : DB::table('model_has_roles')->whereIn('role_id', $siblingRoles)
                 ->where('model_type', User::class)->value('model_id');
             if ($holder) {
-                app(PermissionRegistrar::class)->forgetCachedPermissions(); // isolate from earlier tests' cache reads
-                $migration->down();
-                app(PermissionRegistrar::class)->getPermissions(); // warm the cache WITHOUT the permission
-                $migration->up();                                   // must flush it again
                 $this->assertTrue(User::findOrFail($holder)->hasPermissionTo($permission), 'the flush in up() makes the grant visible');
             }
+        } finally {
+            // The transaction rolls these rows back; never leave a cache built from them.
+            $registrar->forgetCachedPermissions();
         }
     }
 }

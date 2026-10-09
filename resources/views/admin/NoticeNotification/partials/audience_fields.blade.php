@@ -28,10 +28,27 @@
                     <button type="button" class="btn btn-link btn-sm p-0 text-secondary js-audience-clear" data-target="courseSelect">Clear</button>
                 </label>
                 <select name="course_master_pks[]" id="courseSelect" class="form-control" multiple></select>
+                @if(!empty($legacyCourseless))
+                    {{-- PR #334 F-032: a pre-targeting notice with no course reaches no
+                         trainee. Saving it with the list empty keeps it that way; only
+                         picking courses or ticking the box below widens it. --}}
+                    <div class="alert alert-warning small py-2 px-3 mt-2 mb-1" role="status">
+                        This older notice has no course, so it is not shown to any Officer Trainee.
+                        Saving with no course selected keeps it that way.
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="all_courses_confirmed" value="1"
+                            id="allCoursesConfirmed" @checked(old('all_courses_confirmed'))>
+                        <label class="form-check-label small" for="allCoursesConfirmed">
+                            Send this notice to every Officer Trainee in every course
+                        </label>
+                    </div>
+                @else
                 <div class="form-text text-muted small">
                     <i class="bi bi-info-circle me-1" aria-hidden="true"></i>Leave empty to send this notice to
                     <strong>every Officer Trainee in every course</strong>. Pick one or more to narrow it.
                 </div>
+                @endif
             </div>
 
             <div class="col-md-6 d-none" id="otScopeBox">

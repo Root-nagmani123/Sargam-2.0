@@ -24,7 +24,7 @@ class NoticeAudienceTest extends TestCase
 
     private function postStaffNotice(array $departments, string $title)
     {
-        return $this->as($this->userWithRole('Super Admin'), ['Super Admin'])->post(route('admin.notice.store'), [
+        return $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])->post(route('admin.notice.store'), [
             'notice_title' => $title,
             'description' => 'audience probe',
             'notice_type' => 'Office notice',

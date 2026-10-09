@@ -18,7 +18,7 @@ class ArrayValuedInputExportsTest extends TestCase
 
     private function asSuperAdmin()
     {
-        return $this->as($this->userWithRole('Super Admin'), ['Super Admin']);
+        return $this->as($this->staffWithRole('Super Admin'), ['Super Admin']);
     }
 
     private function assertNotServerError($response): void

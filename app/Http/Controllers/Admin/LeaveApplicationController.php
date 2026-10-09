@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Maatwebsite\Excel\Facades\Excel;
 use Yajra\DataTables\Facades\DataTables;
@@ -39,7 +40,12 @@ class LeaveApplicationController extends Controller
     public function apply(Request $request)
     {
         $context = $this->leaveService->resolveStudentContext((int) Auth::user()->pk);
-        $leaveType = $request->query('leave_type', LeaveApplication::TYPE_PT_EXEMPTION);
+        // ?leave_type[]= reached getNatures(string) as an array and returned 500
+        // (PR #334 F-037); anything but a known type falls back to the default.
+        $leaveType = $request->query('leave_type');
+        if (! in_array($leaveType, [LeaveApplication::TYPE_PT_EXEMPTION, LeaveApplication::TYPE_STATIONED_LEAVE], true)) {
+            $leaveType = LeaveApplication::TYPE_PT_EXEMPTION;
+        }
         $natures = $this->getNatures($leaveType);
         $ptBalance = $this->leaveService->getPtBalance(
             $context['student_pk'],
@@ -163,7 +169,15 @@ class LeaveApplicationController extends Controller
 
         $validated = $request->validate([
             'leave_type' => 'required|in:PT_EXEMPTION,STATIONED_LEAVE',
-            'leave_nature_master_pk' => 'required|exists:leave_nature_master,pk',
+            // An active nature of the submitted type only — what the form lists
+            // (getNatures()). Plain `exists` let a deactivated nature, or one from the
+            // other leave type's bucket, be stored (PR #334 F-035).
+            'leave_nature_master_pk' => [
+                'required',
+                Rule::exists('leave_nature_master', 'pk')
+                    ->where('leave_type', is_string($request->input('leave_type')) ? $request->input('leave_type') : '')
+                    ->where('active_inactive', 1),
+            ],
             'from_date' => 'required|date',
             'to_date' => 'required|date|after_or_equal:from_date',
             // Stationed leave records when the trainee leaves the station and

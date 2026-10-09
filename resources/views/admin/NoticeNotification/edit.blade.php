@@ -4,7 +4,7 @@
 
 @push('styles')
 <link href="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-lite.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@11.2.4/public/assets/styles/choices.min.css" integrity="sha384-uLFsUvpIOC9MdzZeDr7vuIUG6LgTaguBn469csIwzNIG9N9TFVoYgM4Ov5PG1V1l" crossorigin="anonymous" />
 @include('admin.NoticeNotification.partials.audience_styles')
 <style>
     .notice-form-card {
@@ -167,7 +167,7 @@
                         <label class="form-label" for="editor">
                             Description <span class="text-danger" aria-hidden="true">*</span>
                         </label>
-                        <textarea id="editor" name="description" class="form-control">{!! old('description', $notice->description) !!}</textarea>
+                        <textarea id="editor" name="description" class="form-control">{{ old('description', notice_safe_html($notice->description)) }}</textarea>
                     </div>
 
                     {{-- Row 3: Display | Expiry --}}
@@ -248,7 +248,7 @@
 
 @section('scripts')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-lite.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/choices.js@11.2.4/public/assets/scripts/choices.min.js" integrity="sha384-0dGX4oSRqvcKtSNa5YGzTI3pkW4p3uoor1Izx0R5/7emRjiR619oCIBVnvM9k3tj" crossorigin="anonymous"></script>
 
 <script>
 $(document).ready(function() {

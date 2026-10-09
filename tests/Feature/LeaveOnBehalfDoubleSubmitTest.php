@@ -62,7 +62,7 @@ class LeaveOnBehalfDoubleSubmitTest extends TestCase
 
     private function submit(array $payload)
     {
-        return $this->as($this->userWithRole('Super Admin'), ['Super Admin'])
+        return $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])
             ->post('/admin/leave-on-behalf/store', $payload);
     }
 

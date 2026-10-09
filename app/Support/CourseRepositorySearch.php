@@ -302,8 +302,12 @@ class CourseRepositorySearch
 
     /**
      * course_repository_documents, with one file-less row added for each detail that
-     * has a video link and no live document. The added row has no pk, no file and no
-     * title, so the Documents tab drops it and the result links to the video page.
+     * has a video link and never had a document. The added row has no pk, no file and
+     * no title, so the Documents tab drops it and the result links to the video page.
+     *
+     * "Never had", not "has no live": documents are soft-deleted (del_type 0), and a
+     * session whose documents an admin deleted must not come back in search as a
+     * video-only result (PR #334 F-033).
      */
     private static function documentBase(): \Illuminate\Database\Query\Builder
     {
@@ -318,8 +322,7 @@ class CourseRepositorySearch
             ->whereNotExists(function ($q) {
                 $q->select(DB::raw(1))
                     ->from('course_repository_documents as vdoc')
-                    ->whereColumn('vdoc.course_repository_details_pk', 'vd.pk')
-                    ->where('vdoc.del_type', 1);
+                    ->whereColumn('vdoc.course_repository_details_pk', 'vd.pk');
             })
             ->selectRaw(
                 'NULL as pk, NULL as upload_document, vd.pk as course_repository_details_pk,'

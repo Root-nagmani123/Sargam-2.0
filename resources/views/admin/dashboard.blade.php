@@ -254,7 +254,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     <div class="card-header py-3 px-4">
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 gap-md-3">
                             <h5 class="dashboard-feed-panel__title mb-0">Notices</h5>
-                            @if(hasRole('Admin') || hasRole('Super Admin'))
+                            @if(canAuthorNotices())
                             <a href="{{ route('admin.notice.create') }}"
                                 class="btn btn-sm dashboard-feed-btn-primary d-inline-flex align-items-center gap-2">
                                 <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
@@ -270,7 +270,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                 <i class="bi bi-file-earmark-x"></i>
                             </span>
                             <p class="mb-3 text-body-secondary">No notices available.</p>
-                            @if(hasRole('Admin') || hasRole('Super Admin'))
+                            @if(canAuthorNotices())
                             <a href="{{ route('admin.notice.create') }}"
                                 class="btn dashboard-feed-btn-primary d-inline-flex align-items-center gap-2">
                                 <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
@@ -305,7 +305,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                 <div class="dashboard-notice-item"
                                     data-notice-pk="{{ $notice->pk }}"
                                     data-notice-title="{{ $notice->notice_title ?? '' }}"
-                                    data-notice-desc='@json($notice->description ?? "")'
+                                    data-notice-desc='@json(notice_safe_html($notice->description ?? ""))'
                                     data-notice-badge="{{ $noticeCategory }}"
                                     data-notice-meta="{{ $noticeMeta }}"
                                     data-notice-doc="{{ $notice->document ? asset('storage/' . $notice->document) : '' }}"

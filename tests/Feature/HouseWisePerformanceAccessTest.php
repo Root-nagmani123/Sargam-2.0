@@ -30,7 +30,7 @@ class HouseWisePerformanceAccessTest extends TestCase
 
     public function test_a_super_admin_sees_the_page(): void
     {
-        $this->as($this->userWithRole('Super Admin'), ['Super Admin'])->get(self::URL)->assertOk();
+        $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])->get(self::URL)->assertOk();
     }
 
     public function test_a_role_the_widget_is_assigned_to_sees_the_page(): void
@@ -38,8 +38,14 @@ class HouseWisePerformanceAccessTest extends TestCase
         $pk = DB::table('dashboard_cards as c')
             ->join('role_dashboard_cards as rc', 'rc.dashboard_card_id', '=', 'c.id')
             ->join('model_has_roles as m', 'm.role_id', '=', 'rc.role_id')
+            ->join('roles as r', 'r.id', '=', 'rc.role_id')
+            ->join('user_credentials as u', 'u.pk', '=', 'm.model_id')
             ->where('c.key', 'widget_house_performance')
             ->where('m.model_type', User::class)
+            // A staff holder of the widget role: a trainee login is refused whatever
+            // it holds (PR #334 F-034), and Super Admin is its own test above.
+            ->where('r.name', '!=', 'Super Admin')
+            ->where(fn ($q) => $q->whereNull('u.user_category')->orWhere('u.user_category', '!=', 'S'))
             ->value('m.model_id');
 
         if (! $pk) {

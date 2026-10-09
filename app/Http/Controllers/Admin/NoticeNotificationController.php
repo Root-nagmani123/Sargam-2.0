@@ -20,6 +20,29 @@ class NoticeNotificationController extends Controller
     private const TYPES = ['Course notice', 'Office order', 'Personal', 'Office notice', 'Service related'];
     private const TARGETS = ['Office trainee', 'Staff/Faculty', 'All'];
 
+    /**
+     * The menus that link to this screen (menus 17 "Notice Notifications" and 198
+     * "Notice"). Holding either, or being Super Admin, makes a notice author.
+     */
+    public const AUTHOR_PERMISSIONS = ['admin_notice', 'notice_sidebar'];
+
+    public function __construct()
+    {
+        // Every action here is authoring: the list with its edit / status / delete
+        // controls, the forms, the writes, and the staff / OT directory lookups that
+        // feed the audience picker. Until PR #334 F-003 / F-013 they carried only
+        // `auth`, so any login (an OT included) could publish a notice into every
+        // dashboard and read the staff and trainee directory. Reading notices is the
+        // dashboard feed, which does not route through this controller.
+        $this->middleware(function ($request, $next) {
+            if (! canAuthorNotices()) {
+                abort(403, 'You are not authorised to manage notices.');
+            }
+
+            return $next($request);
+        });
+    }
+
     // Notice List Page
     public function index(Request $request)
     {
@@ -199,6 +222,7 @@ class NoticeNotificationController extends Controller
             'target_audience',
         ]);
         $data['created_by'] = Auth::id();
+        $data['description'] = notice_safe_html($data['description'] ?? '');
         $data = array_merge($data, $this->audienceColumns($request));
 
         if ($request->hasFile('document')) {
@@ -257,7 +281,15 @@ class NoticeNotificationController extends Controller
             ->orderBy('department_name')
             ->get();
 
+        // A pre-targeting OT notice with no course reaches nobody; the form must say
+        // so, and offer an explicit "every course" choice rather than read an empty
+        // course list as one (PR #334 F-032).
+        $legacyCourseless = $notice->audience_mode === null
+            && $notice->isOfficerTraineeAudience()
+            && $selectedCourses === [];
+
         return view('admin.NoticeNotification.edit', compact(
+            'legacyCourseless',
             'notice',
             'types',
             'target',
@@ -287,11 +319,20 @@ class NoticeNotificationController extends Controller
             'expiry_date',
             'target_audience',
         ]);
-        $data = array_merge($data, $this->audienceColumns($request));
+        $data['description'] = notice_safe_html($data['description'] ?? '');
 
         if ($request->hasFile('document')) {
             $data['document'] = $request->file('document')->store('notice_docs', 'public');
         }
+
+        if ($this->keepsLegacyCourselessAudience($notice, $request)) {
+            // Audience untouched: no audience columns written, no rows re-synced.
+            $notice->update($data);
+
+            return redirect()->route('admin.notice.index')->with('success', 'Notice updated!');
+        }
+
+        $data = array_merge($data, $this->audienceColumns($request));
 
         // syncAudience() deletes every audience row before re-inserting; outside a
         // transaction a failed insert would leave the notice addressed to everyone.
@@ -546,6 +587,30 @@ class NoticeNotificationController extends Controller
         if ($rows) {
             NoticeAudienceMap::insert($rows);
         }
+    }
+
+    /**
+     * A notice saved before audience targeting (audience_mode NULL) for Officer
+     * Trainees with no course row reaches no trainee (PR #334 F-046). The edit form
+     * shows its course list empty, which on a targeted notice means "every course",
+     * so saving it through the ordinary path — even a title-only edit — wrote
+     * audience_mode 'all' and published it to every OT (F-032).
+     *
+     * Such a notice keeps its audience exactly as stored unless the author picks
+     * courses, or ticks the explicit "every Officer Trainee in every course" box the
+     * edit form offers for this case only. Changing the target audience also takes
+     * the ordinary path.
+     */
+    private function keepsLegacyCourselessAudience(Notice $notice, Request $request): bool
+    {
+        $target = is_string($request->input('target_audience')) ? $request->input('target_audience') : '';
+
+        return $notice->audience_mode === null
+            && $notice->isOfficerTraineeAudience()
+            && ! $notice->audienceMaps()->where('audience_type', NoticeAudienceMap::TYPE_COURSE)->exists()
+            && $this->isOfficerTrainee($target)
+            && $this->idsFrom($request, 'course_master_pks') === []
+            && ! $request->boolean('all_courses_confirmed');
     }
 
     private function isOfficerTrainee(string $target): bool

@@ -174,10 +174,9 @@
                     <a href="{{ route('admin.dashboard.feed', $noticeIsArchive ? ['tab' => 'notices', 'notice_scope' => 'archive'] : ['tab' => 'notices']) }}"
                         class="btn btn-sm notices-feed-reset-btn" id="notice-filter-reset">Reset Filters</a>
 
-                    {{-- Same gate as the dashboard widget's Add New Notice button
-                         (dashboard.blade.php:240,256). Checking only 'Admin' hid this
-                         from Super Admins, who could still add a notice from the widget. --}}
-                    @if(hasRole('Admin') || hasRole('Super Admin'))
+                    {{-- The notice screens' own gate (PR #334 F-003), so the button shows
+                         for exactly the accounts those routes admit. --}}
+                    @if(canAuthorNotices())
                     <a href="{{ route('admin.notice.create') }}" class="btn btn-sm notices-feed-add-btn ms-auto">
                         <i class="bi bi-plus-square me-1" aria-hidden="true"></i>Add New Notice
                     </a>
@@ -236,7 +235,8 @@
                             role="region" aria-labelledby="notice-head-{{ $feedNotice->pk }}">
                             <div class="notices-feed-item__panel-inner">
                                 @if(trim(strip_tags((string) ($feedNotice->description ?? ''))) !== '')
-                                <div class="notice-description-content">{!! $feedNotice->description !!}</div>
+                                {{-- Sanitised at render as well as on save: older rows were stored verbatim (PR #334 F-003). --}}
+                                <div class="notice-description-content">{!! notice_safe_html($feedNotice->description) !!}</div>
                                 @else
                                 <p class="text-muted fst-italic mb-0">No description provided.</p>
                                 @endif

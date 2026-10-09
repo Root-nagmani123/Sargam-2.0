@@ -1603,9 +1603,12 @@ $currentPath = $segments[1] ?? null;
      */
     public function exportOtStudentAttendanceExcel(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk)
     {
-        // F-278-01: Prevent IDOR — a Student-OT may only download their own attendance.
-        // Admin/staff users (no Student-OT role) are allowed to export any student's data.
-        if (hasRole('Student-OT') && (string) auth()->user()->user_id !== (string) $student_pk) {
+        // The same rule as the page and its feed, applied to every caller (PR #334
+        // F-031): a trainee only their own record, anyone else only with a Training
+        // Section role. The workbook carries the medical exemption description, and
+        // the old check (Student-OT role only) let every non-trainee login download
+        // any trainee's. Outside the try, whose catch (\Exception) would swallow it.
+        if (! $this->canViewOtStudentAttendance($student_pk)) {
             abort(403);
         }
 
@@ -2000,10 +2003,10 @@ $currentPath = $segments[1] ?? null;
     /**
      * Who may read one officer trainee's attendance, medical-exemption details
      * included (PR #334 F-044). A trainee login (user_category 'S', the only kind
-     * whose user_id is a student_master pk) sees only its own record — the rule
-     * exportOtStudentAttendanceExcel() applies. Any other login needs an explicit
-     * Training Section role, whatever else it holds: a staff login that also
-     * carries an Officer Trainee role is still staff.
+     * whose user_id is a student_master pk) sees only its own record. Any other
+     * login needs an explicit Training Section role, whatever else it holds: a staff
+     * login that also carries an Officer Trainee role is still staff. The page, its
+     * feed and the Excel export all apply this one rule (F-031).
      */
     private function canViewOtStudentAttendance($student_pk): bool
     {

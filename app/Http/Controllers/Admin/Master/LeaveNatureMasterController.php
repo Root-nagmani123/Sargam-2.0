@@ -19,6 +19,25 @@ use Illuminate\Validation\Rule;
  */
 class LeaveNatureMasterController extends Controller
 {
+    /** The permission of the "Nature Leave Master" menu (migration 2026_09_18_000001). */
+    public const MENU_PERMISSION = 'master_leave_nature_master';
+
+    public function __construct()
+    {
+        // The LEAVE bucket drives what the Training Section records on behalf of a
+        // trainee, so every action — the list, the forms, store / status / delete —
+        // takes the menu's own permission (Super Admin passes). Until PR #334 F-010
+        // these routes carried only `auth`, and any login could add, deactivate or
+        // delete a nature.
+        $this->middleware(function ($request, $next) {
+            if (! canUseStaffMenu(self::MENU_PERMISSION)) {
+                abort(403, 'You are not authorised to manage leave natures.');
+            }
+
+            return $next($request);
+        });
+    }
+
     public function index(LeaveNatureMasterDataTable $dataTable)
     {
         return $dataTable->render('admin.master.leave_nature.index');

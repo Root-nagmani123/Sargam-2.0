@@ -842,7 +842,12 @@ class CourseRepositoryController extends Controller
                     ? $validated['ministry_master']
                     : $detail->ministry_master_pk;
                 $detail->keyword = $validated['keywords'] ?? $detail->keyword;
-                $detail->videolink = $validated['video_link'] ?? $detail->videolink;
+                // Clearable like Sector / Ministry above: a submitted empty field
+                // (null via ConvertEmptyStringsToNull) removes the link; only an absent
+                // key keeps it (PR #334 F-033).
+                $detail->videolink = array_key_exists('video_link', $validated)
+                    ? $validated['video_link']
+                    : $detail->videolink;
                 // Only an edit form that shows the switch posts it (always 1 or 0);
                 // without it the stored choice stands (PR #334 F-017).
                 if ($request->has('video_download_enabled')) {

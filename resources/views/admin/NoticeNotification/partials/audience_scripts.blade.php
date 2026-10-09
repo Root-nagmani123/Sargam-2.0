@@ -84,6 +84,9 @@
 
         if (!choicesByEl[id]) {
             choicesByEl[id] = new Choices($el[0], {
+                // Labels are names from the database: render them as text, never
+                // HTML, whatever a future version's default is (PR #334 F-030).
+                allowHTML: false,
                 removeItemButton: true,
                 shouldSort: false,
                 searchEnabled: true,

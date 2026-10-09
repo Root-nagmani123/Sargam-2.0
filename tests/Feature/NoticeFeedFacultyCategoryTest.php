@@ -43,7 +43,7 @@ class NoticeFeedFacultyCategoryTest extends TestCase
     {
         $title = 'F-021 probe ' . Str::random(8);
 
-        $this->as($this->userWithRole('Super Admin'), ['Super Admin'])->post(route('admin.notice.store'), [
+        $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])->post(route('admin.notice.store'), [
             'notice_title' => $title,
             'description' => 'faculty category probe',
             'notice_type' => 'Office notice',

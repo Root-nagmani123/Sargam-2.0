@@ -113,6 +113,10 @@ class NoticeNotification extends Model
     /**
      * Comma-separated course names, or "All courses" when none are pinned.
      * Returns null when the notice is not aimed at Officer Trainees.
+     *
+     * A notice saved before audience targeting (audience_mode NULL) with no course
+     * reaches no trainee (PR #334 F-046), so it must not be listed as "All courses"
+     * (F-032).
      */
     public function getCourseLabelAttribute(): ?string
     {
@@ -122,7 +126,11 @@ class NoticeNotification extends Model
 
         $names = $this->courses->pluck('course_name')->filter();
 
-        return $names->isEmpty() ? 'All courses' : $names->implode(', ');
+        if ($names->isEmpty()) {
+            return $this->audience_mode === null ? 'No course (not shown to Officer Trainees)' : 'All courses';
+        }
+
+        return $names->implode(', ');
     }
 
     public function getDepartmentLabelAttribute(): ?string

@@ -235,7 +235,9 @@
                     <p class="text-center text-muted my-4 mb-0">Loading…</p>
                 </div>
 
-                {{-- Compose panel, hidden until Send SMS / Email is chosen. --}}
+                {{-- Compose panel, hidden until Send SMS / Email is chosen. Not rendered
+                     at all while messaging is disabled (PR #334 F-005). --}}
+                @if(config('my_groups.messaging_enabled'))
                 <div id="mgMessageBox" class="mt-3 d-none">
                     <div class="border rounded-3 p-3">
                         <div class="d-flex justify-content-between align-items-start mb-2">
@@ -259,6 +261,7 @@
                         </div>
                     </div>
                 </div>
+                @endif
             </div>
             <div class="modal-footer border-0 justify-content-between">
                 <div class="mg-modal-meta" id="mgSelectedCount">0 OT(s) selected</div>
@@ -269,9 +272,11 @@
                     <a href="#" class="btn btn-outline-danger rounded-3" id="mgExportPdf">
                         <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF
                     </a>
+                    @if(config('my_groups.messaging_enabled'))
                     <button type="button" class="btn btn-outline-primary rounded-3" id="mgToggleMessage">
                         <i class="bi bi-send-check me-1" aria-hidden="true"></i> Send SMS / Email
                     </button>
+                    @endif
                     <button type="button" class="btn btn-secondary rounded-3" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>

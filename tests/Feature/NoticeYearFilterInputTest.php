@@ -16,21 +16,21 @@ class NoticeYearFilterInputTest extends TestCase
 
     public function test_the_notice_index_ignores_an_array_year_field(): void
     {
-        $this->as($this->userWithRole('Super Admin'), ['Super Admin'])
+        $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])
             ->get(route('admin.notice.index') . '?year_field[]=created')
             ->assertOk();
     }
 
     public function test_the_notice_index_ignores_an_array_year(): void
     {
-        $this->as($this->userWithRole('Super Admin'), ['Super Admin'])
+        $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])
             ->get(route('admin.notice.index') . '?year[]=2024')
             ->assertOk();
     }
 
     public function test_a_scalar_year_field_is_still_honoured(): void
     {
-        $html = $this->as($this->userWithRole('Super Admin'), ['Super Admin'])
+        $html = $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])
             ->get(route('admin.notice.index') . '?year_field=created&year=2024')
             ->assertOk()
             ->getContent();
@@ -40,7 +40,7 @@ class NoticeYearFilterInputTest extends TestCase
 
     public function test_the_feed_archive_ignores_an_array_notice_year(): void
     {
-        $this->as($this->userWithRole('Super Admin'), ['Super Admin'])
+        $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])
             ->get(route('admin.dashboard.feed') . '?tab=notices&notice_scope=archive&notice_year[]=2024')
             ->assertOk();
     }

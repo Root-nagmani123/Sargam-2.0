@@ -39,12 +39,22 @@ use Yajra\DataTables\Facades\DataTables;
  */
 class LeaveOnBehalfController extends Controller
 {
+    /** The permission of the "Apply Leave on Behalf of OT" menu (migration 2026_09_17_000002). */
+    public const MENU_PERMISSION = 'apply_leave_on_behalf_of_ot';
+
     public function __construct(protected LeaveApplicationService $leaveService)
     {
         $this->middleware(function ($request, $next) {
             // Checked here, not left to sidebar visibility: a route with no visible
             // menu entry is still reachable by any authenticated user in this app.
-            if (! isTrainingSectionUser()) {
+            //
+            // One rule for the menu and the route (PR #334 F-009): the sidebar shows
+            // the menu to Super Admin and to holders of its permission, and this gate
+            // admits exactly those (trainees refused first). It used to admit a role
+            // list (isTrainingSectionUser()) that did not match who held the menu.
+            // To give another role this page, grant it the menu on the roles screen.
+            // Course scoping for everyone but Super Admin is applied per request below.
+            if (! canUseStaffMenu(self::MENU_PERMISSION)) {
                 abort(403, 'Only the training section can apply leave on behalf of officer trainees.');
             }
 

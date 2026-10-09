@@ -989,6 +989,13 @@ class UserController extends Controller
      */
     private function canSeeHousePerformance(): bool
     {
+        // A trainee login is refused before any role is consulted, as in
+        // canUseOtParticipants(): an OT account carrying a staff role must not read
+        // every trainee's discipline deductions (PR #334 F-034).
+        if (isTraineeLogin()) {
+            return false;
+        }
+
         if (hasRole('Super Admin')) {
             return true;
         }
@@ -1236,10 +1243,12 @@ class UserController extends Controller
         $filters = [
             'scope'    => $scope,
             'year'     => $year,
-            'type'     => trim((string) ($request?->query('notice_type') ?? '')),
-            'dept'     => trim((string) ($request?->query('notice_dept') ?? '')),
-            'audience' => trim((string) ($request?->query('notice_audience') ?? '')),
-            'q' => trim((string) ($request?->query('q') ?? '')),
+            // Scalar only: ?notice_type[]= reached the string cast and returned 500
+            // (PR #334 F-037).
+            'type'     => is_scalar($v = $request?->query('notice_type')) ? trim((string) $v) : '',
+            'dept'     => is_scalar($v = $request?->query('notice_dept')) ? trim((string) $v) : '',
+            'audience' => is_scalar($v = $request?->query('notice_audience')) ? trim((string) $v) : '',
+            'q'        => is_scalar($v = $request?->query('q')) ? trim((string) $v) : '',
         ];
 
         $base = notice_feed_query_by_role($scope);
@@ -2440,7 +2449,8 @@ class UserController extends Controller
         // Cadre Counsellor filter (the dependent dropdown beside Cadre). Resolved
         // from the group-map tables rather than the row objects — this page's
         // payload is loaded without group mappings.
-        $counsellorFaculty = (string) $request->input('counsellor_faculty', '');
+        // ?counsellor_faculty[]= is not a faculty (PR #334 F-037: was a 500).
+        $counsellorFaculty = is_scalar($v = $request->input('counsellor_faculty', '')) ? (string) $v : '';
         if ($counsellorFaculty !== '') {
             $counselled = $this->studentPksForCounsellorFaculty(
                 $counsellorFaculty,
@@ -2634,7 +2644,7 @@ class UserController extends Controller
         $availableCourses = $payload['availableCourses'];
 
         $participants = $this->otParticipantsRowsFor($request, $payload['students']);
-        $counsellorFaculty = (string) $request->input('counsellor_faculty', '');
+        $counsellorFaculty = is_scalar($v = $request->input('counsellor_faculty', '')) ? (string) $v : '';
 
         // Show every student of the selected course — no Present/Absent split.
         $rows = $participants;
@@ -3896,7 +3906,9 @@ class UserController extends Controller
             ->get();
 
         $searchInput = $request->input('search');
-        $search = strtolower(trim((string) (is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput)));
+        $searchValue = is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput;
+        // ?search[value][]= is not a search term (PR #334 F-037: was a 500).
+        $search = is_scalar($searchValue) ? strtolower(trim((string) $searchValue)) : '';
         if ($search !== '') {
             // The comment columns as the table shows them (PR #334 F-019: the merge
             // 7082e5204 had left the participants-list search body here).
@@ -6900,15 +6912,19 @@ class UserController extends Controller
                 ->when($coursePk > 0, fn ($q) => $q->where('course_master_pk', $coursePk))
                 ->selectRaw("COUNT(*) as total_sessions,
                     COALESCE(SUM(CASE WHEN status = '1' THEN 1 ELSE 0 END), 0) as present_count,
-                    COALESCE(SUM(CASE WHEN status = '2' THEN 1 ELSE 0 END), 0) as late_count
+                    COALESCE(SUM(CASE WHEN status = '2' THEN 1 ELSE 0 END), 0) as late_count,
+                    COALESCE(SUM(CASE WHEN status IN ('4', '5', '6', '7') THEN 1 ELSE 0 END), 0) as duty_count
                 ")
                 ->first();
             $totalSessions = (int) ($att->total_sessions ?? 0);
             $present = (int) ($att->present_count ?? 0);
             $late = (int) ($att->late_count ?? 0);
 
-            // Duty-covered absences read as Present, so they count towards the
-            // percentage instead of dragging it down.
+            // One presence rule with the student list (dashboardRowIsDutyPresent()):
+            // a session saved as MDO / Escort / Medical / Other (4-7) is Present, and
+            // so is a duty-covered absence. Only the second was counted, so the same
+            // duty gave a different % depending on how it was saved (PR #334 F-038).
+            $present += (int) ($att->duty_count ?? 0);
             $present += $dutyCoveredAbsences[$studentPk . '|' . $coursePk] ?? 0;
 
             $attendancePct = $totalSessions > 0 ? (int) round((($present + $late) / $totalSessions) * 100) : 0;
@@ -7159,6 +7175,16 @@ class UserController extends Controller
      */
     public function myGroupSendMessage(Request $request, $mapPk)
     {
+        // Whether Officer Trainees may send through the Academy's gateway at all is a
+        // Product owner decision that is not on record, so the send stays off until
+        // the environment enables it (PR #334 F-005).
+        if (! config('my_groups.messaging_enabled')) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Sending messages from My Groups is not enabled.',
+            ], 403);
+        }
+
         $group = $this->assertOwnGroup($mapPk);
 
         if (! $group) {
@@ -7184,6 +7210,10 @@ class UserController extends Controller
 
         $recipients = $roster->only($selected->all());
 
+        // Every message names its sender: it leaves under the Academy's identity, so
+        // without this a recipient could not tell an OT's text from an official one.
+        $text = $this->groupMessageAttribution() . "\n\n" . $validated['message'];
+
         if ($validated['channel'] === 'email') {
             $emails = $recipients->pluck('email')->filter(fn ($e) => filled($e) && $e !== '-');
 
@@ -7194,7 +7224,7 @@ class UserController extends Controller
                 ], 422);
             }
 
-            $failed = app(EmailService::class)->sendBulk($emails->values(), $validated['message']);
+            $failed = app(EmailService::class)->sendBulk($emails->values(), $text);
             $sent = $emails->count() - count($failed);
             $this->logGroupMessage((int) $mapPk, 'email', $emails->count(), $sent);
 
@@ -7213,7 +7243,7 @@ class UserController extends Controller
             ], 422);
         }
 
-        $failed = app(SmsService::class)->sendBulk($numbers->values(), $validated['message']);
+        $failed = app(SmsService::class)->sendBulk($numbers->values(), $text);
         $sent = $numbers->count() - count($failed);
         $this->logGroupMessage((int) $mapPk, 'sms', $numbers->count(), $sent);
 
@@ -7223,15 +7253,42 @@ class UserController extends Controller
         ], $sent > 0 ? 200 : 500);
     }
 
+    /** "Message from <name> (<OT code>), Officer Trainee, via Sargam My Groups:" */
+    private function groupMessageAttribution(): string
+    {
+        $sender = DB::table('student_master')
+            ->where('pk', (int) Auth::user()->user_id)
+            ->first(['display_name', 'first_name', 'last_name', 'generated_OT_code']);
+
+        $name = trim((string) ($sender->display_name ?? ''))
+            ?: trim(implode(' ', array_filter([$sender->first_name ?? '', $sender->last_name ?? ''])));
+        $name = $name !== '' ? $name : 'an Officer Trainee';
+        $code = trim((string) ($sender->generated_OT_code ?? ''));
+
+        return 'Message from ' . $name . ($code !== '' ? ' (' . $code . ')' : '')
+            . ', Officer Trainee, via Sargam My Groups:';
+    }
+
     /**
-     * Audit line for every My Groups send, so a message an OT pushes through the
-     * institutional gateway is attributable (PR #334 F-011). Same shape as
-     * DirectoryController::logDirectoryExport(). The message text is deliberately
-     * NOT logged: it is request text (a raw line feed would forge extra log
+     * Audit for every My Groups send, so a message an OT pushes through the
+     * institutional gateway is attributable (PR #334 F-005): a durable row in
+     * my_group_message_log, plus the log line. The message text is deliberately
+     * NOT recorded: it is request text (a raw line feed would forge extra log
      * records — trap 35) and it is the sender's private content.
      */
     private function logGroupMessage(int $mapPk, string $channel, int $recipients, int $sent): void
     {
+        DB::table('my_group_message_log')->insert([
+            'sender_user_pk' => (int) auth()->id(),
+            'sender_student_pk' => (int) Auth::user()->user_id,
+            'group_map_pk' => $mapPk,
+            'channel' => $channel,
+            'recipient_count' => $recipients,
+            'sent_count' => $sent,
+            'ip' => request()->ip(),
+            'created_at' => now(),
+        ]);
+
         \Illuminate\Support\Facades\Log::info('my_groups.message', [
             // user_credentials is keyed on `pk`, so auth()->id() is that pk.
             'user_pk' => auth()->id(),

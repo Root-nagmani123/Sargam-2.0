@@ -45,7 +45,7 @@ class LeaveMergeLeftoverRemovalTest extends TestCase
     {
         $this->assertFalse(view()->exists('admin.master.leave_nature_master.index'));
 
-        $this->as($this->userWithRole('Super Admin'), ['Super Admin'])
+        $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])
             ->get(route('master.leave-nature.index'))
             ->assertOk();
     }

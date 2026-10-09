@@ -57,13 +57,20 @@ return new class extends Migration
         }
     }
 
+    /**
+     * Forward-fix only (PR #334 F-027 / F-036).
+     *
+     * up() leaves alone any row that already exists, and records nothing about what
+     * it inserted, so down() cannot tell a row this migration created from one an
+     * administrator created or edited before it ran. Deleting by name or key — what
+     * this method used to do — removed pre-existing menus, permissions, role grants,
+     * dashboard cards or role links on rollback. It therefore changes nothing. If
+     * these rows must go after a code rollback, remove them by hand from the list in
+     * the PR #334 release and rollback plan, then flush the permission cache
+     * (php artisan permission:cache-reset).
+     */
     public function down(): void
     {
-        $cardId = DB::table('dashboard_cards')->where('key', self::KEY)->value('id');
-
-        if ($cardId) {
-            DB::table('role_dashboard_cards')->where('dashboard_card_id', $cardId)->delete();
-            DB::table('dashboard_cards')->where('id', $cardId)->delete();
-        }
+        //
     }
 };

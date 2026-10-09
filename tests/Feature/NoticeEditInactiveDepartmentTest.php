@@ -43,7 +43,7 @@ class NoticeEditInactiveDepartmentTest extends TestCase
         $departmentPk = (int) $departmentPk;
 
         $title = 'F-020 probe ' . Str::random(8);
-        $this->as($this->userWithRole('Super Admin'), ['Super Admin'])
+        $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])
             ->post(route('admin.notice.store'), $this->payload($departmentPk, $title))
             ->assertSessionHasNoErrors();
 
@@ -59,7 +59,7 @@ class NoticeEditInactiveDepartmentTest extends TestCase
     {
         [$departmentPk, $enc] = $this->noticeOnDeactivatedDepartment();
 
-        $html = $this->as($this->userWithRole('Super Admin'), ['Super Admin'])
+        $html = $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])
             ->get(route('admin.notice.edit', $enc))
             ->assertOk()
             ->getContent();
@@ -75,7 +75,7 @@ class NoticeEditInactiveDepartmentTest extends TestCase
     {
         [$departmentPk] = $this->noticeOnDeactivatedDepartment();
 
-        $html = $this->as($this->userWithRole('Super Admin'), ['Super Admin'])
+        $html = $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])
             ->get(route('admin.notice.create'))
             ->assertOk()
             ->getContent();
@@ -88,7 +88,7 @@ class NoticeEditInactiveDepartmentTest extends TestCase
         [$departmentPk, $enc] = $this->noticeOnDeactivatedDepartment();
         $noticePk = Crypt::decrypt($enc);
 
-        $this->as($this->userWithRole('Super Admin'), ['Super Admin'])
+        $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])
             ->put(route('admin.notice.update', $enc), $this->payload($departmentPk, 'F-020 probe edited ' . Str::random(4)))
             ->assertSessionHasNoErrors();
 

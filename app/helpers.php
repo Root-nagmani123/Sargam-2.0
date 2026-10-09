@@ -912,6 +912,40 @@ function isSidebarPrivilegedUser(): bool
 }
 
 /**
+ * A trainee login: user_category 'S' (whose user_id is a student_master pk), or a
+ * session carrying the Student-OT / Officer Trainee role.
+ */
+function isTraineeLogin(): bool
+{
+    $user = Auth::user();
+
+    return $user !== null
+        && ((($user->user_category ?? null) === 'S') || isOfficerTraineeUser());
+}
+
+/**
+ * A staff screen gated on the sidebar's own rule (hasMenuPermission(): Super Admin,
+ * or holding one of the menu permissions that link to it), with trainee logins
+ * refused first, whatever they hold. The route then agrees with the menu by
+ * construction, and granting the menu on the roles screen widens access with no
+ * deploy (PR #334 F-009).
+ */
+function canUseStaffMenu(string ...$permissions): bool
+{
+    return Auth::check() && ! isTraineeLogin() && hasMenuPermission(...$permissions);
+}
+
+/**
+ * Who may author notices — the list, create/edit/delete, and the audience lookups
+ * behind the form (PR #334 F-003, F-013). The Add Notice buttons ask the same
+ * question, so the screen never offers what the route refuses.
+ */
+function canAuthorNotices(): bool
+{
+    return canUseStaffMenu(...\App\Http\Controllers\Admin\NoticeNotificationController::AUTHOR_PERMISSIONS);
+}
+
+/**
  * A PDF-safe <img src> for a local image, as a base64 data URI.
  *
  * Returns the first readable candidate under public/, or '' - NEVER a remote URL.
@@ -1665,6 +1699,65 @@ function get_profile_pic()
             }
         });
         return $profile_pic;
+    }
+}
+if (!function_exists('notice_safe_html')) {
+    /**
+     * A notice description reduced to formatting HTML (PR #334 F-003).
+     *
+     * The description is rich text from the Summernote editor and is rendered as
+     * HTML in every reader's feed and dashboard, so it goes through HTMLPurifier
+     * with an allow-list: the formatting the editor produces stays, while script,
+     * event handlers, javascript: URLs, iframes, forms and style blocks are removed.
+     * Applied on save AND at every render, because rows saved before this existed
+     * were stored verbatim.
+     */
+    function notice_safe_html($html): string
+    {
+        if (! is_string($html) || trim($html) === '') {
+            return '';
+        }
+
+        static $purifier = null;
+
+        if ($purifier === null) {
+            $config = \HTMLPurifier_Config::createDefault();
+
+            $cacheDir = storage_path('framework/cache/htmlpurifier');
+            if (! is_dir($cacheDir)) {
+                @mkdir($cacheDir, 0755, true);
+            }
+            if (is_dir($cacheDir) && is_writable($cacheDir)) {
+                $config->set('Cache.SerializerPath', $cacheDir);
+            } else {
+                $config->set('Cache.DefinitionImpl', null);
+            }
+
+            $config->set('HTML.Allowed', implode(',', [
+                'p[style]', 'div[style]', 'span[style]', 'br', 'hr',
+                'b', 'strong', 'i', 'em', 'u', 's', 'strike', 'sub[style]', 'sup[style]',
+                'font[color|face|size]',
+                'h1[style]', 'h2[style]', 'h3[style]', 'h4[style]', 'h5[style]', 'h6[style]',
+                'ul[style]', 'ol[style]', 'li[style]', 'blockquote[style]', 'pre', 'code',
+                'a[href|title|target]', 'img[src|alt|title|width|height|style]',
+                'table[style|border]', 'thead', 'tbody', 'tfoot', 'tr[style]',
+                'th[colspan|rowspan|style]', 'td[colspan|rowspan|style]',
+            ]));
+            $config->set('CSS.AllowedProperties', implode(',', [
+                'color', 'background-color', 'font-size', 'font-family', 'font-weight',
+                'font-style', 'text-decoration', 'text-align', 'line-height',
+                'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
+                'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+                'border', 'width', 'height',
+            ]));
+            $config->set('Attr.AllowedFrameTargets', ['_blank']);
+            $config->set('HTML.TargetNoopener', true);
+            $config->set('URI.AllowedSchemes', ['http' => true, 'https' => true, 'mailto' => true, 'data' => true]);
+
+            $purifier = new \HTMLPurifier($config);
+        }
+
+        return $purifier->purify($html);
     }
 }
 if (!function_exists('notice_feed_base_query')) {
