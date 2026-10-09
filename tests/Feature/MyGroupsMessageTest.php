@@ -24,11 +24,15 @@ use Tests\TestCase;
  */
 class MyGroupsMessageTest extends TestCase
 {
-    use RollsBackAgainstAppDatabase;
+    // Aliased: this class needs its own setUp(), which would otherwise replace
+    // the trait's and so never open the rolled-back transaction.
+    use RollsBackAgainstAppDatabase {
+        setUp as openRollbackTransaction;
+    }
 
     protected function setUp(): void
     {
-        parent::setUp();
+        $this->openRollbackTransaction();
         // A fresh in-memory limiter, so this test neither reads nor writes the
         // application's shared cache.
         config(['cache.limiter' => 'array']);

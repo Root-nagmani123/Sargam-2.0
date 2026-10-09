@@ -21,7 +21,11 @@ use Tests\TestCase;
  */
 class DummyHousePerformanceSeederGuardTest extends TestCase
 {
-    use RollsBackAgainstAppDatabase;
+    // Aliased: this class needs its own setUp(), which would otherwise replace
+    // the trait's and so never open the rolled-back transaction.
+    use RollsBackAgainstAppDatabase {
+        setUp as openRollbackTransaction;
+    }
 
     private const MARKER = 'Dummy data - House wise Performance demo';
 
@@ -53,7 +57,7 @@ class DummyHousePerformanceSeederGuardTest extends TestCase
 
     protected function setUp(): void
     {
-        parent::setUp();
+        $this->openRollbackTransaction();
         DB::table('discipline_memo_status')->where('remarks', self::MARKER)->delete();
     }
 
