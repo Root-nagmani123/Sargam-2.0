@@ -1,94 +1,115 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Create District - Sargam | Lal Bahadur')
+@section('title', 'Add District')
+
+@push('styles')
+@include('admin.layouts.partials.select2-assets')
+<link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
+@endpush
 
 @section('setup_content')
+@php
+    // One value drives the Status select. The old markup defaulted each option
+    // separately (?? 1 and ?? 2), so both were "selected" on Add and the browser
+    // kept the last one — new districts silently defaulted to Inactive.
+    $districtStatus = (string) old('active_inactive', 1);
+@endphp
+<div class="container-fluid mst-page">
+    <x-breadcrum title="Add District" />
+    <x-session_message />
 
-    <div class="container-fluid">
-        <x-breadcrum title="District" />
-        <x-session_message />
+    {{-- Form root: the index opens this same form in a modal
+         (public/js/master-admin.js openFormModal). Keep form-specific JS in
+         the x-mst-form-init block inside it, bound to elements under root. --}}
+    <div data-mst-form-root data-mst-form-title="Add District">
+        <form action="{{ route('master.district.store') }}" method="POST">
+            @csrf
 
-        <!-- start Vertical Steps Example -->
-        <div class="card">
-            <div class="card-body">
-                <h4 class="card-title mb-3">Create District</h4>
-                <hr>
-                <form action="{{ route('master.district.store') }}" method="POST">
-                    @csrf
-                    <div class="row">
-                        <!-- State Dropdown -->
-                         <div class="col-6">
-                        <div class="mb-3">
-                            <label for="country_master_pk" class="form-label">Select Country</label>
-                            <select class="form-select" id="country_master_pk" name="country_master_pk" required>
-                                <option value="">-- Select Country --</option>
+            <div class="card mst-form-card">
+                <div class="card-body">
+                    <h2 class="mst-form-section-title h6">District Details</h2>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="country_master_pk" class="mst-form-label d-block">
+                                Country <span class="mst-req" aria-hidden="true">*</span>
+                            </label>
+                            <select name="country_master_pk" id="country_master_pk"
+                                    class="form-select mst-control mst-searchable @error('country_master_pk') is-invalid @enderror"
+                                    data-placeholder="Select Country" required aria-required="true">
+                                <option value="">Select Country</option>
                                 @foreach($countries as $country)
-                                <option value="{{ $country->pk }}"
-                                    {{ old('country_master_pk') == $country->pk ? 'selected' : '' }}>
-                                    {{ $country->country_name }}
-                                </option>
+                                    <option value="{{ $country->pk }}" {{ old('country_master_pk') == $country->pk ? 'selected' : '' }}>
+                                        {{ $country->country_name }}
+                                    </option>
                                 @endforeach
                             </select>
                             @error('country_master_pk')
-                            <p class="text-danger">{{ $message }}</p>
+                                <span class="mst-field-error">{{ $message }}</span>
                             @enderror
                         </div>
-                    </div>
+
+                        {{-- id="state" is kept: admin_assets/js/custom.js binds a
+                             delegated change handler to #state. --}}
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label" for="state">State:</label>
-                                <select class="form-select" id="state" name="state_master_pk" required>
-                                    <option value="">Select State</option>
-                                    @foreach($states as $state)
-                                        <option value="{{ $state->pk }}" {{ old('state_master_pk') == $state->pk ? 'selected' : '' }}>
-                                            {{ $state->state_name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('state_master_pk')
-                                    <p class="text-danger">{{ $message }}</p>
-                                @enderror
-                            </div>
+                            <label for="state" class="mst-form-label d-block">
+                                State <span class="mst-req" aria-hidden="true">*</span>
+                            </label>
+                            <select name="state_master_pk" id="state"
+                                    class="form-select mst-control mst-searchable @error('state_master_pk') is-invalid @enderror"
+                                    data-placeholder="Select State" required aria-required="true">
+                                <option value="">Select State</option>
+                                @foreach($states as $state)
+                                    <option value="{{ $state->pk }}" {{ old('state_master_pk') == $state->pk ? 'selected' : '' }}>
+                                        {{ $state->state_name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('state_master_pk')
+                                <span class="mst-field-error">{{ $message }}</span>
+                            @enderror
                         </div>
 
-                        <!-- District Name -->
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label" for="district_name">District Name:</label>
-                                <input type="text" class="form-control" id="district_name" name="district_name"
-                                    value="{{ old('district_name') }}" required>
-                                @error('district_name')
-                                    <p class="text-danger">{{ $message }}</p>
-                                @enderror
-                            </div>
+                            <label for="district_name" class="mst-form-label d-block">
+                                District Name <span class="mst-req" aria-hidden="true">*</span>
+                            </label>
+                            <input type="text" id="district_name" name="district_name"
+                                   class="form-control mst-control @error('district_name') is-invalid @enderror"
+                                   value="{{ old('district_name') }}" placeholder="District Name"
+                                   maxlength="100" required aria-required="true">
+                            @error('district_name')
+                                <span class="mst-field-error">{{ $message }}</span>
+                            @enderror
                         </div>
+
                         <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="active_inactive" class="form-label">Status <span style="color:red;">*</span></label>
-                            <select name="active_inactive" class="form-select" required>
-                                <option value="1" {{ (old('active_inactive', $district->active_inactive ?? 1) == 1) ? 'selected' : '' }}>Active</option>
-                                <option value="2" {{ (old('active_inactive', $district->active_inactive ?? 2) == 2) ? 'selected' : '' }}>Inactive</option>
+                            <label for="districtStatus" class="mst-form-label d-block">
+                                Status <span class="mst-req" aria-hidden="true">*</span>
+                            </label>
+                            <select name="active_inactive" id="districtStatus"
+                                    class="form-select mst-control mst-searchable @error('active_inactive') is-invalid @enderror"
+                                    data-placeholder="Select Status" required aria-required="true">
+                                <option value="1" @selected($districtStatus === '1')>Active</option>
+                                <option value="2" @selected($districtStatus === '2')>Inactive</option>
                             </select>
                             @error('active_inactive')
-                                <small class="text-danger">{{ $message }}</small>
+                                <span class="mst-field-error">{{ $message }}</span>
                             @enderror
                         </div>
                     </div>
+
+                    <div class="mst-form-footer">
+                        <a href="{{ route('master.district.index') }}" class="btn mst-btn-cancel px-4">Cancel</a>
+                        <button type="submit" class="btn mst-btn-submit px-4">Save</button>
                     </div>
-
-                    <hr>
-                    <div class="mb-3">
-                        <button class="btn btn-primary hstack gap-2 float-end" type="submit">
-                            <i class="material-icons menu-icon">send</i> Submit
-                        </button>
-                    </div>
-                </form>
-
-
+                </div>
             </div>
-        </div>
-        <!-- end Vertical Steps Example -->
+        </form>
     </div>
-
-
+</div>
 @endsection
+
+@push('scripts')
+<script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
+@endpush

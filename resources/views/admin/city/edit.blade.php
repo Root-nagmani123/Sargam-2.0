@@ -1,115 +1,134 @@
 @extends('admin.layouts.master')
 
-@section('title', 'City - Sargam | Lal Bahadur')
+@section('title', 'Edit City')
+
+@push('styles')
+@include('admin.layouts.partials.select2-assets')
+<link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
+@endpush
 
 @section('setup_content')
-
-<div class="container-fluid">
-
-    <x-breadcrum title="City" />
+@php
+    // The grid's status switch stores 0 for Inactive, the form stores 2.
+    // Map every non-1 value to the Inactive option: with no option matching 0
+    // the browser pre-selected Active, so saving re-activated the record.
+    $cityStatus = (string) old('active_inactive', $city->active_inactive ?? 1) === '1' ? '1' : '2';
+@endphp
+<div class="container-fluid mst-page">
+    <x-breadcrum title="Edit City" />
     <x-session_message />
 
-    <!-- start Vertical Steps Example -->
-    <div class="card" >
-        <div class="card-body">
-            <h4 class="card-title mb-3">Edit City</h4>
-            <hr>
-            <form action="{{ route('master.city.update', $city->pk) }}" method="POST">
-                @csrf
+    {{-- Form root: the index opens this same form in a modal
+         (public/js/master-admin.js openFormModal). Keep form-specific JS in
+         the x-mst-form-init block inside it, bound to elements under root. --}}
+    <div data-mst-form-root data-mst-form-title="Edit City">
+        <form action="{{ route('master.city.update', $city->pk) }}" method="POST">
+            @csrf
 
-                <div class="row">
-                     <div class="col-6">
-                        <div class="mb-3">
-                            <label for="country_master_pk" class="form-label">Select Country</label>
-                            <select class="form-select" id="country_master_pk" name="country_master_pk" required>
-                                <option value="">-- Select Country --</option>
+            <div class="card mst-form-card">
+                <div class="card-body">
+                    <h2 class="mst-form-section-title h6">City Details</h2>
+
+                    {{-- Edit lists every state and district (LocationController::cityEdit);
+                         unlike Add there is no AJAX cascade on this form. --}}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="country_master_pk" class="mst-form-label d-block">
+                                Country <span class="mst-req" aria-hidden="true">*</span>
+                            </label>
+                            <select name="country_master_pk" id="country_master_pk"
+                                    class="form-select mst-control mst-searchable @error('country_master_pk') is-invalid @enderror"
+                                    data-placeholder="Select Country" required aria-required="true">
+                                <option value="">Select Country</option>
                                 @foreach($countries as $country)
-                                <option value="{{ $country->pk }}"
-                                    {{ old('country_master_pk', $city->country_master_pk) == $country->pk ? 'selected' : '' }}>
-                                    {{ $country->country_name }}
-                                </option>
+                                    <option value="{{ $country->pk }}" {{ old('country_master_pk', $city->country_master_pk) == $country->pk ? 'selected' : '' }}>
+                                        {{ $country->country_name }}
+                                    </option>
                                 @endforeach
                             </select>
                             @error('country_master_pk')
-                            <p class="text-danger">{{ $message }}</p>
+                                <span class="mst-field-error">{{ $message }}</span>
                             @enderror
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="state" class="form-label">State</label>
-                            <select name="state_master_pk" class="form-select" required>
+
+                        <div class="col-md-6">
+                            <label for="state_master_pk" class="mst-form-label d-block">
+                                State <span class="mst-req" aria-hidden="true">*</span>
+                            </label>
+                            <select name="state_master_pk" id="state_master_pk"
+                                    class="form-select mst-control mst-searchable @error('state_master_pk') is-invalid @enderror"
+                                    data-placeholder="Select State" required aria-required="true">
                                 <option value="">Select State</option>
                                 @foreach($states as $state)
-                                <option value="{{ $state->pk }}"
-                                    {{ old('state_master_pk', $city->state_master_pk) == $state->pk ? 'selected' : '' }}>
-                                    {{ $state->state_name }}
-                                </option>
+                                    <option value="{{ $state->pk }}" {{ old('state_master_pk', $city->state_master_pk) == $state->pk ? 'selected' : '' }}>
+                                        {{ $state->state_name }}
+                                    </option>
                                 @endforeach
                             </select>
                             @error('state_master_pk')
-                            <p class="text-danger">{{ $message }}</p>
+                                <span class="mst-field-error">{{ $message }}</span>
                             @enderror
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="district" class="form-label">District</label>
-                            <select name="district_master_pk" class="form-select" required>
+
+                        <div class="col-md-6">
+                            <label for="district_master_pk" class="mst-form-label d-block">
+                                District <span class="mst-req" aria-hidden="true">*</span>
+                            </label>
+                            <select name="district_master_pk" id="district_master_pk"
+                                    class="form-select mst-control mst-searchable @error('district_master_pk') is-invalid @enderror"
+                                    data-placeholder="Select District" required aria-required="true">
                                 <option value="">Select District</option>
                                 @foreach($districts as $district)
-                                <option value="{{ $district->pk }}"
-                                    {{ old('district_master_pk', $city->district_master_pk) == $district->pk ? 'selected' : '' }}>
-                                    {{ $district->district_name }}
-                                </option>
+                                    <option value="{{ $district->pk }}" {{ old('district_master_pk', $city->district_master_pk) == $district->pk ? 'selected' : '' }}>
+                                        {{ $district->district_name }}
+                                    </option>
                                 @endforeach
                             </select>
                             @error('district_master_pk')
-                            <p class="text-danger">{{ $message }}</p>
+                                <span class="mst-field-error">{{ $message }}</span>
                             @enderror
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="city_name" class="form-label">City Name</label>
-                            <input type="text" name="city_name" class="form-control"
-                                value="{{ old('city_name', $city->city_name) }}" required>
+
+                        <div class="col-md-6">
+                            <label for="city_name" class="mst-form-label d-block">
+                                City Name <span class="mst-req" aria-hidden="true">*</span>
+                            </label>
+                            <input type="text" id="city_name" name="city_name"
+                                   class="form-control mst-control @error('city_name') is-invalid @enderror"
+                                   value="{{ old('city_name', $city->city_name) }}"
+                                   maxlength="100" required aria-required="true">
                             @error('city_name')
-                            <p class="text-danger">{{ $message }}</p>
+                                <span class="mst-field-error">{{ $message }}</span>
                             @enderror
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="active_inactive" class="form-label">Status <span
-                                    style="color:red;">*</span></label>
-                            <select name="active_inactive" class="form-select" required>
-                                <option value="1"
-                                    {{ (old('active_inactive', $city->active_inactive ?? 1) == 1) ? 'selected' : '' }}>
-                                    Active
-                                </option>
-                                <option value="2"
-                                    {{ (old('active_inactive', $city->active_inactive ?? 2) == 2) ? 'selected' : '' }}>
-                                    Inactive
-                                </option>
+
+                        <div class="col-md-6">
+                            <label for="cityStatus" class="mst-form-label d-block">
+                                Status <span class="mst-req" aria-hidden="true">*</span>
+                            </label>
+                            <select name="active_inactive" id="cityStatus"
+                                    class="form-select mst-control mst-searchable @error('active_inactive') is-invalid @enderror"
+                                    data-placeholder="Select Status" required aria-required="true">
+                                <option value="1" @selected($cityStatus === '1')>Active</option>
+                                <option value="2" @selected($cityStatus === '2')>Inactive</option>
                             </select>
                             @error('active_inactive')
-                            <small class="text-danger">{{ $message }}</small>
+                                <span class="mst-field-error">{{ $message }}</span>
                             @enderror
                         </div>
                     </div>
-                </div>
-                <hr>
-                <div class="text-end">
-                    <button type="submit" class="btn btn-primary">Update</button>
-                    <a href="{{ route('master.city.index') }}" class="btn btn-secondary">Back</a>
-                </div>
-            </form>
 
-        </div>
+                    <div class="mst-form-footer">
+                        <a href="{{ route('master.city.index') }}" class="btn mst-btn-cancel px-4">Cancel</a>
+                        <button type="submit" class="btn mst-btn-submit px-4">Update</button>
+                    </div>
+                </div>
+            </div>
+        </form>
     </div>
-    <!-- end Vertical Steps Example -->
 </div>
-
-
 @endsection
+
+@push('scripts')
+<script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
+@endpush

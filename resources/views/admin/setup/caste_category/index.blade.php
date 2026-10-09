@@ -1,5 +1,5 @@
 @extends('admin.layouts.master')
-@section('title', 'Caste Category - Sargam | Lal Bahadur Shastri')
+@section('title', 'Caste Category')
 @section('setup_content')
 <div class="container-fluid">
     <div class="card" style="border-left:4px solid #004a93;">

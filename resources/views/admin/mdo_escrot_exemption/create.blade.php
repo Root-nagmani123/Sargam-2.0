@@ -1,403 +1,334 @@
 @extends('admin.layouts.master')
-@section('css')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
-<style>
-.dual-list-container {
-    display: flex;
-    gap: 20px;
-    align-items: stretch;
-    margin-top: 15px;
-}
 
-.student-panel {
-    flex: 1;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    background: #fff;
+@push('styles')
+@include('admin.layouts.partials.select2-assets')
+<link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
+<style>
+/* Dual-list student picker — the one piece of this form the shared mst-*
+ * layer has no component for. Scoped to the page root, --ds-* tokens only.
+ * The script relies on .student-row being display:grid (filterStudents()
+ * writes style.display = 'grid'), on .arrow-btn.add / .remove and on the
+ * .no-students placeholder. */
+.mst-page.mee-form-page .dual-list-container {
+    display: flex;
+    gap: var(--ds-space-3);
+    align-items: stretch;
+}
+.mst-page.mee-form-page .student-panel {
+    flex: 1 1 0;
+    min-width: 0;
     display: flex;
     flex-direction: column;
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-card);
+    overflow: hidden;
 }
-
-.panel-header {
-    background: #f8f9fa;
-    padding: 12px 15px;
-    border-bottom: 2px solid #dee2e6;
-    border-radius: 8px 8px 0 0;
+.mst-page.mee-form-page .panel-header {
+    padding: var(--ds-space-2) var(--ds-space-3);
+    background: var(--ds-surface-2);
+    border-bottom: 1px solid var(--ds-line);
     font-weight: 600;
-    color: #495057;
+    color: var(--ds-ink);
 }
-
-.search-box {
-    padding: 10px 15px;
-    border-bottom: 1px solid #e9ecef;
+.mst-page.mee-form-page .search-box {
+    padding: var(--ds-space-2) var(--ds-space-3);
+    border-bottom: 1px solid var(--ds-line);
 }
-
-.search-box input {
-    width: 100%;
-    padding: 6px 12px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    font-size: 14px;
-}
-
-.select-all-box {
-    padding: 8px 15px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #e9ecef;
+.mst-page.mee-form-page .select-all-box {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--ds-space-2);
+    padding: var(--ds-space-2) var(--ds-space-3);
+    border-bottom: 1px solid var(--ds-line);
+    font-size: 0.875rem;
 }
-
-.table-header {
+.mst-page.mee-form-page .table-header,
+.mst-page.mee-form-page .student-row {
     display: grid;
-    grid-template-columns: 40px 1fr 120px 50px;
-    padding: 10px 15px;
-    background: #e9ecef;
-    font-weight: 600;
-    font-size: 13px;
-    color: #495057;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.student-list {
-    flex: 1;
-    overflow-y: auto;
-    max-height: 400px;
-    min-height: 300px;
-}
-
-.student-row {
-    display: grid;
-    grid-template-columns: 40px 1fr 120px 50px;
-    padding: 10px 15px;
-    border-bottom: 1px solid #f1f3f5;
+    grid-template-columns: 2.5rem minmax(0, 1fr) 7.5rem 2.75rem;
     align-items: center;
-    transition: background 0.2s;
+    gap: var(--ds-space-2);
+    padding: var(--ds-space-2) var(--ds-space-3);
 }
-
-.student-row:hover {
-    background: #f8f9fa;
+.mst-page.mee-form-page .table-header {
+    background: var(--ds-surface-2);
+    border-bottom: 1px solid var(--ds-line);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ds-ink-muted);
 }
-
-.student-row input[type="checkbox"] {
+.mst-page.mee-form-page .student-list {
+    flex: 1 1 auto;
+    min-height: 18rem;
+    max-height: 25rem;
+    overflow-y: auto;
+}
+.mst-page.mee-form-page .student-row {
+    border-bottom: 1px solid var(--ds-line);
+    font-size: 0.875rem;
+}
+.mst-page.mee-form-page .student-row:hover { background: var(--ds-surface-2); }
+.mst-page.mee-form-page .student-row .form-check-input { margin: 0; cursor: pointer; }
+.mst-page.mee-form-page .arrow-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--ds-space-1);
+    border: 0;
+    border-radius: var(--ds-radius);
+    background: transparent;
+    color: var(--ds-ink-muted);
     cursor: pointer;
 }
-
-.arrow-btn {
-    background: none;
-    border: none;
-    color: #6c757d;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
-    transition: all 0.2s;
-}
-
-.arrow-btn:hover {
-    background: #e9ecef;
-    color: #495057;
-}
-
-.arrow-btn.add:hover {
-    background: #d1e7dd;
-    color: #0f5132;
-}
-
-.arrow-btn.remove:hover {
-    background: #f8d7da;
-    color: #842029;
-}
-
-.transfer-btns {
+.mst-page.mee-form-page .arrow-btn:hover { background: var(--ds-surface-2); color: var(--ds-primary); }
+.mst-page.mee-form-page .arrow-btn.remove:hover { color: var(--bs-danger); }
+.mst-page.mee-form-page .arrow-btn:focus-visible,
+.mst-page.mee-form-page .transfer-btns .btn:focus-visible { outline: 0; box-shadow: var(--ds-focus-ring); }
+.mst-page.mee-form-page .transfer-btns {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 10px;
-    padding: 0 10px;
+    gap: var(--ds-space-2);
 }
-
-.transfer-btns button {
-    padding: 8px 12px;
-    border: 1px solid #dee2e6;
-    background: #fff;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 18px;
-}
-
-.transfer-btns button:hover:not(:disabled) {
-    background: #e9ecef;
-    border-color: #adb5bd;
-}
-
-.transfer-btns button:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-.no-students {
+.mst-page.mee-form-page .no-students {
+    padding: var(--ds-space-5) var(--ds-space-3);
     text-align: center;
-    padding: 40px 20px;
-    color: #6c757d;
-    font-style: italic;
+    color: var(--ds-ink-muted);
+    font-size: 0.875rem;
 }
-
-@media (max-width: 768px) {
-    .dual-list-container {
-        flex-direction: column;
-    }
-
-    .transfer-btns {
-        flex-direction: row;
-        justify-content: center;
-        padding: 15px 0;
-    }
+@media (max-width: 767.98px) {
+    .mst-page.mee-form-page .dual-list-container { flex-direction: column; }
+    .mst-page.mee-form-page .transfer-btns { flex-direction: row; justify-content: center; }
 }
-/* Main card section */
-.table-section {
-    border-left: 4px solid #004a93 !important;
-}
-
-/* Header */
-.enhanced-header span {
-    font-size: 0.85rem;
-}
-
-/* Student list styling */
-.modern-student-list {
-    max-height: 300px;
-    overflow-y: auto;
-    border-radius: 6px;
-}
-
-/* Student row */
-.modern-student-list .student-row {
-    display: grid;
-    grid-template-columns: 40px 1fr 1fr 40px;
-    align-items: center;
-    padding: 10px 12px;
-    border-bottom: 1px solid #e6e6e6;
-    transition: background 0.2s ease;
-}
-
-.modern-student-list .student-row:hover {
-    background: #f2f7ff;
-}
-
-.student-row input[type="checkbox"] {
-    transform: scale(1.1);
-    cursor: pointer;
-}
-
-/* No data */
-.no-students {
-    font-size: 0.9rem;
-    color: #6c757d;
-}
-
-/* Scrollbar (GIGW accessible visible scrollbar) */
-.modern-student-list::-webkit-scrollbar {
-    width: 8px;
-}
-
-.modern-student-list::-webkit-scrollbar-thumb {
-    background-color: #b5c7e3;
-    border-radius: 10px;
-}
-
-.modern-student-list::-webkit-scrollbar-track {
-    background: #f1f1f1;
-}
-
 </style>
-@endsection
+@endpush
+
 @section('title', 'MDO/Escort Exemption')
 
 @section('setup_content')
+@php
+    // $mdoDutyType is never passed by MDOEscrotExemptionController::create(); the
+    // `?? ''` fallbacks are kept from the old x-select / x-input markup.
+    $meeCourse = (string) old('course_master_pk', $mdoDutyType->course_master_pk ?? '');
+    $meeDuty = (string) old('mdo_duty_type_master_pk', $mdoDutyType->mdo_duty_type_master_pk ?? '');
+    $meeFaculty = old('faculty_master_pk', '');
+    $meeFaculty = is_array($meeFaculty) ? (string) ($meeFaculty[0] ?? '') : (string) $meeFaculty;
+@endphp
+<div class="container-fluid mst-page mee-form-page">
+    <x-breadcrum title="{{ !empty($mdoDutyType) ? 'Edit MDO/Escort Exemption' : 'Create MDO/Escort Exemption' }}" />
+    <x-session_message />
 
-<div class="container-fluid">
-    <!-- start Vertical Steps Example -->
-     <x-breadcrum title="Create MDO/Escort Exemption"></x-breadcrum>
-    <div class="card">
-        <div class="card-body">
-            <h4 class="card-title mb-3">
-                {{ !empty($mdoDutyType) ? 'Edit MDO/Escort Exemption' : 'Create MDO/Escort Exemption' }}
-            </h4>
-            <hr>
-            <form action="{{ route('mdo-escrot-exemption.store') }}" method="POST" id="mdoDutyTypeForm">
-                @csrf
-                @if(!empty($mdoDutyType))
-                <input type="hidden" name="id" value="{{ encrypt($mdoDutyType->pk) }}">
-                @endif
-                <div class="row">
+    <form action="{{ route('mdo-escrot-exemption.store') }}" method="POST" id="mdoDutyTypeForm">
+        @csrf
+        @if(!empty($mdoDutyType))
+        <input type="hidden" name="id" value="{{ encrypt($mdoDutyType->pk) }}">
+        @endif
 
+        <div class="card mst-form-card">
+            <div class="card-body">
+                <h2 class="mst-form-section-title h6">Duty Details</h2>
+
+                <div class="row g-3">
                     <div class="col-md-6">
-                        <div class="mb-3">
-                            <x-select name="course_master_pk" label="Course Name :" formLabelClass="form-label"
-                                formSelectClass="select2 course-selected" :options="$courseMaster" labelRequired="true"
-                                value="{{ old('course_master_pk', $mdoDutyType->course_master_pk ?? '') }}" />
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="mb-3">
-
-                            <x-select name="mdo_duty_type_master_pk" id="mdo_duty_type_master_pk" label="Duty Type :" formLabelClass="form-label"
-                                formSelectClass="select2 "
-                                value="{{ old('mdo_duty_type_master_pk', $mdoDutyType->mdo_duty_type_master_pk ?? '') }}"
-                                :options="$MDODutyTypeMaster" labelRequired="true" />
-                        </div>
-
-                    </div>
-                    <div class="col-md-6" id="faculty_field_container" style="display: none;">
-                        <div class="mb-3">
-                            <x-select name="faculty_master_pk" id="faculty_master_pk" label="Faculty :" formLabelClass="form-label"
-                                formSelectClass="select2"
-                                value="{{ old('faculty_master_pk', '') }}"
-                                :options="$facultyMaster" labelRequired="true" />
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <x-input type="date" name="mdo_date" label="Select Date & Time :"
-                                placeholder="Select Date & Time : " formLabelClass="form-label"
-                                value="{{ old('mdo_date', $mdoDutyType->mdo_date ?? '') }}" labelRequired="true" />
-                        </div>
-                    </div>
-
-                    <div class="col-md-3">
-
-                        <x-input type="time" name="Time_from" label="From Time :" placeholder="From Time : "
-                            formLabelClass="form-label" labelRequired="true"
-                            value="{{ old('Time_from', $mdoDutyType->Time_from ?? '') }}" />
-
-                    </div>
-                    <div class="col-md-3">
-
-                        <x-input type="time" name="Time_to" label="To Time :" placeholder="To Time : "
-                            formLabelClass="form-label" labelRequired="true"
-                            value="{{ old('Time_to', $mdoDutyType->Time_to ?? '') }}" />
-
-                    </div>
-
-                    <div class="col-md-12">
-                        <label class="form-label">Select Students <span class="text-danger">*</span></label>
-
-                        <div class="dual-list-container">
-                            <!-- Available Students Panel -->
-                            <div class="student-panel">
-                                <div class="panel-header">Available Students</div>
-                                <div class="search-box">
-                                    <input type="text" id="searchAvailable"
-                                        placeholder="🔍 Search by name or OT code...">
-                                </div>
-
-                                <div class="table-section border rounded-3 p-3 bg-white shadow-sm">
-
-                                    <div class="table-header enhanced-header d-flex align-items-center px-2 py-2 mb-2"
-                                        style="background:#af2910; border-bottom:2px solid #af2910; color:#ffffff;">
-
-                                        <div class="select-all-box me-3">
-                                            <input type="checkbox" id="selectAllAvailable" class="form-check-input"
-                                                aria-label="Select all students">
-                                        </div>
-
-                                        <span class="flex-fill fw-semibold text-white small">Username</span>
-                                        <span class="flex-fill fw-semibold text-white small">OT Code</span>
-                                        <span class="small fw-semibold text-white"></span>
-                                    </div>
-
-                                    <div class="student-list modern-student-list" id="availableList">
-                                        <div class="no-students text-center py-4 text-muted fst-italic small">
-                                            Please select a course and date
-                                        </div>
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-                            <!-- Transfer Buttons -->
-                            <div class="transfer-btns">
-                                <button type="button" id="moveRight" title="Add selected students"><i
-                                        class="material-icons material-symbols-rounded">keyboard_double_arrow_right</i></button>
-                                <button type="button" id="moveLeft" title="Remove selected students"><i
-                                        class="material-icons material-symbols-rounded">keyboard_double_arrow_left</i></button>
-                            </div>
-
-                            <!-- Selected Students Panel -->
-                            <div class="student-panel">
-                                <div class="panel-header">Selected Students</div>
-                                <div class="search-box">
-                                    <input type="text" id="searchSelected"
-                                        placeholder="🔍 Search by name or OT code...">
-                                </div>
-                                <div class="select-all-box">
-                                    <input type="checkbox" id="selectAllSelected" class="form-check-input">
-                                    <label for="selectAllSelected" class="mb-0">Select All</label>
-                                </div>
-                                <div class="table-header">
-                                    <span></span>
-                                    <span>Username</span>
-                                    <span>OT Code</span>
-                                    <span></span>
-                                </div>
-                                <div class="student-list" id="selectedList">
-                                    <div class="no-students">No students selected</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Hidden select for form submission -->
-                        <select name="selected_student_list[]" id="hiddenStudentSelect" multiple
-                            style="display:none;"></select>
-
-                        @error('selected_student_list')
-                        <span class="text-danger">{{ $message }}</span>
+                        <label for="course_master_pk" class="mst-form-label d-block">
+                            Course Name <span class="mst-req" aria-hidden="true">*</span>
+                        </label>
+                        <select name="course_master_pk" id="course_master_pk"
+                            class="form-select mst-control mst-searchable course-selected @error('course_master_pk') is-invalid @enderror"
+                            data-placeholder="Select Course" required aria-required="true"
+                            @error('course_master_pk') aria-describedby="meeCourseError" @enderror>
+                            <option value="">Select</option>
+                            @foreach ($courseMaster as $value => $label)
+                            <option value="{{ $value }}" @selected($meeCourse === (string) $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        @error('course_master_pk')
+                            <span class="mst-field-error" id="meeCourseError">{{ $message }}</span>
                         @enderror
                     </div>
 
-                    <div class="col-md-12 mt-4">
-                        <label for="textarea" class="form-label">Remarks (If Any) </label>
-                        <textarea class="form-control" id="textarea" rows="3" placeholder="Enter remarks..."
-                            name="Remark"></textarea>
-                        @error('Remark')
-                        <span class="text-danger">{{ $message }}</span>
+                    <div class="col-md-6">
+                        <label for="mdo_duty_type_master_pk" class="mst-form-label d-block">
+                            Duty Type <span class="mst-req" aria-hidden="true">*</span>
+                        </label>
+                        <select name="mdo_duty_type_master_pk" id="mdo_duty_type_master_pk"
+                            class="form-select mst-control mst-searchable @error('mdo_duty_type_master_pk') is-invalid @enderror"
+                            data-placeholder="Select Duty Type" required aria-required="true"
+                            @error('mdo_duty_type_master_pk') aria-describedby="meeDutyError" @enderror>
+                            <option value="">Select</option>
+                            @foreach ($MDODutyTypeMaster as $value => $label)
+                            <option value="{{ $value }}" @selected($meeDuty === (string) $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        @error('mdo_duty_type_master_pk')
+                            <span class="mst-field-error" id="meeDutyError">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    {{-- Shown by toggleFacultyField() when the duty type is Escort
+                         (jQuery .show()/.hide(), so no display utility class here). --}}
+                    <div class="col-md-6" id="faculty_field_container" style="display: none;">
+                        <label for="faculty_master_pk" class="mst-form-label d-block">
+                            Faculty <span class="mst-req" aria-hidden="true">*</span>
+                        </label>
+                        <select name="faculty_master_pk" id="faculty_master_pk"
+                            class="form-select mst-control mst-searchable @error('faculty_master_pk') is-invalid @enderror"
+                            data-placeholder="Select Faculty"
+                            @error('faculty_master_pk') aria-describedby="meeFacultyError" @enderror>
+                            <option value="">Select</option>
+                            @foreach ($facultyMaster as $value => $label)
+                            <option value="{{ $value }}" @selected($meeFaculty === (string) $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        @error('faculty_master_pk')
+                            <span class="mst-field-error" id="meeFacultyError">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="mdo_date" class="mst-form-label d-block">
+                            Date <span class="mst-req" aria-hidden="true">*</span>
+                        </label>
+                        <input type="date" name="mdo_date" id="mdo_date"
+                            class="form-control mst-control @error('mdo_date') is-invalid @enderror"
+                            value="{{ old('mdo_date', $mdoDutyType->mdo_date ?? '') }}" required aria-required="true"
+                            @error('mdo_date') aria-describedby="meeDateError" @enderror>
+                        @error('mdo_date')
+                            <span class="mst-field-error" id="meeDateError">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="Time_from" class="mst-form-label d-block">
+                            From Time <span class="mst-req" aria-hidden="true">*</span>
+                        </label>
+                        <input type="time" name="Time_from" id="Time_from"
+                            class="form-control mst-control @error('Time_from') is-invalid @enderror"
+                            value="{{ old('Time_from', $mdoDutyType->Time_from ?? '') }}" required aria-required="true"
+                            @error('Time_from') aria-describedby="meeTimeFromError" @enderror>
+                        @error('Time_from')
+                            <span class="mst-field-error" id="meeTimeFromError">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="Time_to" class="mst-form-label d-block">
+                            To Time <span class="mst-req" aria-hidden="true">*</span>
+                        </label>
+                        <input type="time" name="Time_to" id="Time_to"
+                            class="form-control mst-control @error('Time_to') is-invalid @enderror"
+                            value="{{ old('Time_to', $mdoDutyType->Time_to ?? '') }}" required aria-required="true"
+                            @error('Time_to') aria-describedby="meeTimeToError" @enderror>
+                        @error('Time_to')
+                            <span class="mst-field-error" id="meeTimeToError">{{ $message }}</span>
                         @enderror
                     </div>
                 </div>
-                <hr>
-                {{-- <div class="my-3 gap-2 d-flex justify-content-end">
-                        <button class="btn btn-primary" type="submit" id="saveFacultyForm">
-                            Save
-                        </button>
-                        <a href="{{ route('mdo-escrot-exemption.index') }}" class="btn btn-secondary ">
-                Back
-                </a>
-        </div> --}}
-
-        <div class="mb-3">
-            <button class="btn btn-primary hstack gap-6 float-end" type="submit">
-                <i class="material-icons menu-icon">save</i>
-                Save
-            </button>
-            <a href="{{ route('mdo-escrot-exemption.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
-                <i class="material-icons menu-icon">arrow_back</i>
-                Back
-            </a>
+            </div>
         </div>
 
-        </form>
-    </div>
-</div>
-<!-- end Vertical Steps Example -->
+        <div class="card mst-form-card">
+            <div class="card-body">
+                <h2 class="mst-form-section-title h6">
+                    Select Students <span class="mst-req" aria-hidden="true">*</span>
+                </h2>
+                <p class="small text-muted mb-3">Pick the course and date above to load the students who are free in that slot.</p>
+
+                <div class="dual-list-container">
+                    {{-- Available --}}
+                    <div class="student-panel">
+                        <div class="panel-header" id="meeAvailableHeading">Available Students</div>
+                        <div class="search-box">
+                            <label for="searchAvailable" class="visually-hidden">Search available students</label>
+                            <input type="text" id="searchAvailable" class="form-control mst-control"
+                                placeholder="Search by name or OT code" autocomplete="off">
+                        </div>
+                        <div class="table-header">
+                            <span class="select-all-cell">
+                                <input type="checkbox" id="selectAllAvailable" class="form-check-input m-0"
+                                    aria-label="Select all available students">
+                            </span>
+                            <span>Username</span>
+                            <span>OT Code</span>
+                            <span><span class="visually-hidden">Move</span></span>
+                        </div>
+                        <div class="student-list modern-student-list" id="availableList" aria-labelledby="meeAvailableHeading">
+                            <div class="no-students">
+                                Please select a course and date
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Transfer --}}
+                    <div class="transfer-btns">
+                        <button type="button" id="moveRight" class="btn btn-outline-primary rounded-1"
+                            title="Add selected students" aria-label="Add selected students">
+                            <i class="material-icons material-symbols-rounded" aria-hidden="true">keyboard_double_arrow_right</i>
+                        </button>
+                        <button type="button" id="moveLeft" class="btn btn-outline-primary rounded-1"
+                            title="Remove selected students" aria-label="Remove selected students">
+                            <i class="material-icons material-symbols-rounded" aria-hidden="true">keyboard_double_arrow_left</i>
+                        </button>
+                    </div>
+
+                    {{-- Selected --}}
+                    <div class="student-panel">
+                        <div class="panel-header" id="meeSelectedHeading">Selected Students</div>
+                        <div class="search-box">
+                            <label for="searchSelected" class="visually-hidden">Search selected students</label>
+                            <input type="text" id="searchSelected" class="form-control mst-control"
+                                placeholder="Search by name or OT code" autocomplete="off">
+                        </div>
+                        <div class="select-all-box">
+                            <input type="checkbox" id="selectAllSelected" class="form-check-input m-0">
+                            <label for="selectAllSelected" class="mb-0">Select All</label>
+                        </div>
+                        <div class="table-header">
+                            <span></span>
+                            <span>Username</span>
+                            <span>OT Code</span>
+                            <span><span class="visually-hidden">Move</span></span>
+                        </div>
+                        <div class="student-list" id="selectedList" aria-labelledby="meeSelectedHeading">
+                            <div class="no-students">No students selected</div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Hidden select for form submission (rebuilt by updateHiddenSelect()) --}}
+                <select name="selected_student_list[]" id="hiddenStudentSelect" multiple
+                    style="display:none;" aria-hidden="true" tabindex="-1"></select>
+
+                @error('selected_student_list')
+                    <span class="mst-field-error">{{ $message }}</span>
+                @enderror
+            </div>
+        </div>
+
+        <div class="card mst-form-card">
+            <div class="card-body">
+                <h2 class="mst-form-section-title h6">Remarks</h2>
+                <label for="textarea" class="mst-form-label d-block">Remarks (If Any)</label>
+                <textarea class="form-control mst-control @error('Remark') is-invalid @enderror" id="textarea" rows="3"
+                    placeholder="Enter remarks..." name="Remark">{{ old('Remark') }}</textarea>
+                @error('Remark')
+                    <span class="mst-field-error">{{ $message }}</span>
+                @enderror
+
+                <div class="mst-form-footer">
+                    <a href="{{ route('mdo-escrot-exemption.index') }}" class="btn mst-btn-cancel px-4">Cancel</a>
+                    <button type="submit" class="btn mst-btn-submit px-4">Save</button>
+                </div>
+            </div>
+        </div>
+    </form>
 </div>
 @endsection
 
 
 @section('scripts')
+<script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
 <script>
 const availableList = document.getElementById('availableList');
 const selectedList = document.getElementById('selectedList');

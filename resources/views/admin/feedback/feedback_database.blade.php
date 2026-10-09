@@ -3,7 +3,7 @@
 @endphp
 @extends('admin.layouts.master')
 
-@section('title', 'Feedback Database - Sargam | Lal Bahadur')
+@section('title', 'Feedback Database')
 
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">

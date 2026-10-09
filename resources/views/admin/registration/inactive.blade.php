@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Inactive Forms - Sargam | Lal Bahadur')
+@section('title', 'Inactive Forms')
 
 @section('setup_content')
     <div class="container-fluid">

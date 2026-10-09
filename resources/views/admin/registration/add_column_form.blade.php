@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Add Column - Sargam | Lal Bahadur')
+@section('title', 'Add Column')
 
 @section('setup_content')
 

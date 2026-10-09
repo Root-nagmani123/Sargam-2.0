@@ -1,138 +1,85 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Stream - Sargam | Lal Bahadur')
+@section('title', 'Stream')
+
+@push('styles')
+@include('admin.layouts.partials.select2-assets')
+<link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
+@endpush
 
 @section('setup_content')
-<div class="container-fluid">
-    <x-breadcrum title="Stream" />
-    <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card" style="border-left:4px solid #004a93;">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
-                            <h4>Stream</h4>
-                        </div>
-                        <div class="col-6">
-                            <div class="d-flex justify-content-end align-items-center gap-2">
+<div class="container-fluid mst-page">
+    <x-breadcrum title="Stream" :showBack="false">
+        <a href="{{ route('stream.create') }}" data-mst-modal-form
+           class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+            <span>Add Stream</span>
+        </a>
+    </x-breadcrum>
 
-                                <!-- Add Group Mapping -->
-                                <a href="{{route('stream.create')}}" class="btn btn-primary d-flex align-items-center">
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 20px; vertical-align: middle;">add</i>
-                                    Add Stream
-                                </a>
+    <x-session_message />
 
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
 
-                            </div>
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="table-responsive">
-
-                        <table class="table text-nowrap w-100">
-                            <thead>
-                                <!-- start row -->
-                                <tr>
-                                    <th class="col">S.No.</th>
-                                    <th class="col">Stream Name</th>
-                                    <th class="col">Status</th>
-                                    <th class="col">Action</th>
-
-                                </tr>
-                                <!-- end row -->
-                            </thead>
-                            <tbody>
-                                @foreach($streams as $key => $stream)
-                                <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
-                                    <td>{{ $key + 1 }}</td>
-                                    <td>
-                                        {{ $stream->stream_name }}
-                                    </td>
-                                    <td>
-                                        <div class="form-check form-switch">
-                                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                data-table="stream_master" data-column="active_inactive"
-                                                data-id="{{ $stream->pk }}" {{ $stream->active_inactive == 1 ? 'checked' : '' }}>
-                                        </div>
-                                    </td>
-                                    <td>
-
-                                        <div class="d-inline-flex align-items-center gap-2" role="group"
-                                            aria-label="Stream actions">
-
-                                            <!-- Edit -->
-                                            <a href="{{ route('stream.edit', $stream->pk) }}"
-                                                class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
-                                                aria-label="Edit stream">
-                                                <span class="material-symbols-rounded fs-6"
-                                                    aria-hidden="true">edit</span>
-                                                <span class="d-none d-md-inline">Edit</span>
-                                            </a>
-
-                                            <!-- Delete -->
-                                            @if($stream->active_inactive == 1)
-                                            <button type="button"
-                                                class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
-                                                disabled aria-disabled="true" title="Cannot delete active stream">
-                                                <span class="material-symbols-rounded fs-6"
-                                                    aria-hidden="true">delete</span>
-                                                <span class="d-none d-md-inline">Delete</span>
-                                            </button>
-                                            @else
-                                            <form action="{{ route('stream.destroy', $stream->pk) }}" method="POST"
-                                                class="d-inline"
-                                                onsubmit="return confirm('Are you sure you want to delete this stream?');">
-                                                @csrf
-                                                @method('DELETE')
-
-                                                <button type="submit"
-                                                    class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
-                                                    aria-label="Delete stream">
-                                                    <span class="material-symbols-rounded fs-6"
-                                                        aria-hidden="true">delete</span>
-                                                    <span class="d-none d-md-inline">Delete</span>
-                                                </button>
-                                            </form>
-                                            @endif
-
-                                        </div>
-
-
-                                    </td>
-
-
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-
-                        <!-- Pagination -->
-                        <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
-
-                            <div class="text-muted small mb-2">
-                                Showing {{ $streams->firstItem() }}
-                                to {{ $streams->lastItem() }}
-                                of {{ $streams->total() }} items
-                            </div>
-
-                            <div>
-                                {{ $streams->links('vendor.pagination.custom') }}
-                            </div>
-
-                        </div>
-
-                    </div>
-
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns"
+                            data-bs-toggle="modal" data-bs-target="#strmColumnVisibilityModal"
+                            title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div class="programme-dt-search" data-dt-search-for="stream-master-table"></div>
                 </div>
             </div>
+
+            {{-- Server-side grid (StreamMasterDataTable): search, sorting, page size and
+                 paging run on the whole table. Search, pager and "Showing N of M
+                 items" are moved into these slots by datatable-global-ui.js. --}}
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
+                </div>
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                     data-dt-footer-for="stream-master-table"></div>
+            </div>
+
         </div>
-        <!-- end Zero Configuration -->
     </div>
 </div>
 
-<script>
-window.statusToggleUrl = "{{ route('admin.toggleStatus') }}";
-</script>
+<!-- Column Visibility -->
+<div class="modal fade" id="strmColumnVisibilityModal" tabindex="-1"
+     aria-labelledby="strmColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-3 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="strmColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3 mst-colvis-grid" id="strmColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
+
+@push('scripts')
+{!! $dataTable->scripts() !!}
+<script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
+<script>
+    $(function () {
+        MstAdmin.columnVisibility({
+            table: '#stream-master-table',
+            grid: '#strmColumnToggleGrid',
+            storageKey: 'sargam.streamMaster.hiddenCols.{{ auth()->id() ?? 'guest' }}'
+        });
+    });
+</script>
+@endpush

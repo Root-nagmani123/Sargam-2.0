@@ -249,9 +249,36 @@ $(document).on('change', '.status-toggle', function () {
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 `);
-                 setTimeout(function() {
-                 $('.dataTable ').DataTable().ajax.reload();
-                }, 500);
+
+                // Only a server-side grid has a feed to reload. A table rendered
+                // into the page (e.g. Subject Master) has none: ajax.reload() on it
+                // fetches the page HTML as JSON and raises DataTables' "Invalid
+                // JSON response" alert. Its status badge and Delete button are
+                // drawn by the server, so reload the page to show the new state.
+                var $feedTables = $('table.dataTable').filter(function () {
+                    var s = $.fn.dataTable.isDataTable(this) ? $(this).DataTable().settings()[0] : null;
+                    return !!s && (s.ajax != null || s.sAjaxSource != null);
+                });
+
+                if ($feedTables.length) {
+                    setTimeout(function () {
+                        $feedTables.each(function () {
+                            $(this).DataTable().ajax.reload();
+                        });
+                    }, 500);
+                } else if (typeof Swal !== 'undefined' && typeof Swal.fire === 'function') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: response.message || 'Status updated successfully',
+                        timer: 1200,
+                        showConfirmButton: false
+                    }).then(function () {
+                        window.location.reload();
+                    });
+                } else {
+                    window.location.reload();
+                }
             },
             error: function () {
                 Swal.fire('Error', 'Status update failed', 'error');

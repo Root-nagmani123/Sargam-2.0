@@ -102,7 +102,10 @@ trait ExportsMasterGrid
      */
     protected function resolveExportColumns(Request $request, array $defs): array
     {
-        $wanted = array_filter(array_map('trim', explode(',', (string) $request->query('cols', ''))));
+        // ?cols[]=x arrives as an array; a (string) cast of it is a 500. Treat
+        // anything but a plain string as "no selection" (= every column).
+        $raw = $request->query('cols', '');
+        $wanted = is_string($raw) ? array_filter(array_map('trim', explode(',', $raw))) : [];
 
         if ($wanted === []) {
             return $defs;

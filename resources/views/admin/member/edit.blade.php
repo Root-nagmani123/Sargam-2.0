@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Member - Sargam | Lal Bahadur')
+@section('title', 'Member')
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/member-admin.css') }}?v={{ @filemtime(public_path('css/member-admin.css')) ?: time() }}">

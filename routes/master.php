@@ -246,7 +246,10 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
         Route::get('/create', 'create')->name('create');
         Route::post('store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::get('/export', 'export')->name('export');
+        // Grid exports: one query, one column list, four formats (ExportsMasterGrid).
+        // {format} optional so the old /export link still downloads (.xlsx).
+        Route::get('/export/{format?}', 'export')->name('export')
+            ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
         Route::delete('/destroy/{id}', 'destroy')->name('destroy');
         // Route::get('/get-building', 'getBuilding')->name('get.building');
     });
@@ -257,7 +260,10 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
         Route::get('/create', 'create')->name('create');
         Route::post('store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::get('/export', 'export')->name('export');
+        // Grid exports: one query, one column list, four formats (ExportsMasterGrid).
+        // {format} optional so the old /export link still downloads (.xlsx).
+        Route::get('/export/{format?}', 'export')->name('export')
+            ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
         Route::delete('/destroy/{id}', 'destroy')->name('destroy');
     });
 

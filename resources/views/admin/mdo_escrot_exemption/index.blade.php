@@ -3,159 +3,146 @@
 @section('title', 'MDO Escrot Exemption')
 
 @push('styles')
+@include('admin.layouts.partials.select2-assets')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
 <style>
-/* Make the Faculty searchable select match the modal's form-select look */
-.mee-faculty-select2 + .select2-container .select2-selection--single {
-    height: calc(1.5em + 0.75rem + 2px);
-    padding: 0.375rem 0.25rem;
-    border: 1px solid #ced4da;
-    border-radius: 0.5rem;
-    display: flex;
-    align-items: center;
-}
-.mee-faculty-select2 + .select2-container--default .select2-selection--single .select2-selection__arrow {
-    height: 100%;
-}
-.mee-faculty-select2.is-invalid + .select2-container .select2-selection--single {
-    border-color: #dc3545;
-}
-.select2-container--open { z-index: 1060; }
+/* Escort / Moderator Duty — page-only pieces the shared mst-* layer does not
+ * cover. Scoped to the page root (.mee-page) and to this page's modals
+ * (.mee-modal), built on the --ds-* tokens (docs/design.md). */
 
-/*
- * These modals wrap header/body/footer inside a <form>, which breaks Bootstrap's
- * .modal-dialog-scrollable (it expects them as direct children of .modal-content).
- * Make the form a flex column so the body scrolls and the footer (with the action
- * buttons) stays pinned and always visible, even when the content is long
- * (e.g. a big "skipped rows" list after a bulk upload).
- */
-.modal-dialog-scrollable .modal-content > form {
+/* Time Period chip: flatpickr's altInput copies these classes, so the icon
+ * sits over whichever input is visible. */
+.mst-page.mee-page .mee-time-period-filter { position: relative; }
+.mst-page.mee-page .mee-tp-input {
+    padding-left: calc(var(--ds-space-3) * 2.25);
+    cursor: pointer;
+}
+.mst-page.mee-page .mee-tp-ico {
+    position: absolute;
+    left: var(--ds-space-3);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ds-ink-muted);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Long-text columns (Student / Programme / Faculty / Remarks) wrap via
+ * .mst-col-wrap; give them a floor so an 11-column grid scrolls sideways in
+ * .table-responsive instead of squeezing those cells to one letter per line. */
+.mst-page.mee-page #mdoescot-table .mst-col-wrap { min-width: 11rem; }
+
+/* "+3 Filters" overflow menu */
+.mst-page.mee-page .mee-more-filters.mee-more-filters-active { font-weight: 700; }
+.mst-page.mee-page .mee-extra-menu { min-width: 16rem; }
+
+/* This grid keeps its Yajra `dom` (pager + "Showing … of N items" row); the
+ * page moves those nodes into the programme-dt-footer below the table, so the
+ * now-empty row is hidden rather than left as a gap. */
+.mst-page.mee-page .mee-dt-bottom.mee-dt-bottom--moved { display: none; }
+
+/* Column-visibility chips — the checked state is part of the existing JS. */
+.mee-col-grid .mee-col-chip.is-checked { border-color: var(--ds-primary) !important; }
+
+/* Add / Edit / Bulk modals wrap header, body and footer in a <form>, which
+ * breaks Bootstrap's .modal-dialog-scrollable (it expects them as direct
+ * children of .modal-content). Make the form a flex column so the body scrolls
+ * and the footer stays pinned, even with a long "skipped rows" list. */
+.mee-modal .modal-dialog-scrollable .modal-content > form {
     display: flex;
     flex-direction: column;
     max-height: 100%;
     overflow: hidden;
 }
-.modal-dialog-scrollable .modal-content > form > .modal-body {
+.mee-modal .modal-dialog-scrollable .modal-content > form > .modal-body { overflow-y: auto; }
+.mee-modal .modal-dialog-scrollable .modal-content > form > .modal-header,
+.mee-modal .modal-dialog-scrollable .modal-content > form > .modal-footer { flex-shrink: 0; }
+
+/* Select2 dropdowns opened from a modal stay above it. */
+.select2-container--open { z-index: 1060; }
+
+.mee-modal .mee-field-error {
+    display: block;
+    margin-top: var(--ds-space-1);
+    font-size: 0.8125rem;
+}
+.mee-modal .mee-hint {
+    display: block;
+    margin-top: var(--ds-space-1);
+    font-size: 0.8125rem;
+    color: var(--ds-ink-muted);
+}
+
+/* Assign Students: a button styled as a select, with the picked names as tags. */
+.mee-modal .mee-assign-students-trigger {
+    width: 100%;
+    text-align: left;
+}
+.mee-modal .mee-student-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-1);
+    background-color: var(--ds-primary);
+    color: var(--ds-surface);
+    padding: var(--ds-space-1) var(--ds-space-2);
+    font-weight: 500;
+}
+.mee-modal .mee-student-tag .btn-close { font-size: 0.55rem; }
+
+/* Student picker */
+.mee-modal .mee-student-search { position: relative; }
+.mee-modal .mee-student-search-icon {
+    position: absolute;
+    left: var(--ds-space-3);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ds-ink-muted);
+    pointer-events: none;
+}
+.mee-modal .mee-student-search-input { padding-left: calc(var(--ds-space-3) * 2.25); }
+.mee-modal .mee-student-selected-divider {
+    align-self: stretch;
+    width: 1px;
+    background: var(--ds-line);
+}
+.mee-modal .mee-student-list-wrap {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-card);
+    max-height: 22rem;
     overflow-y: auto;
 }
-.modal-dialog-scrollable .modal-content > form > .modal-header,
-.modal-dialog-scrollable .modal-content > form > .modal-footer {
-    flex-shrink: 0;
+
+/* Bulk upload */
+.mee-modal .mee-progress { height: calc(var(--ds-space-1) * 1.5); }
+.mee-modal .mee-bulk-errors {
+    max-height: 12.5rem;
+    overflow-y: auto;
+}
+.mee-modal .mee-bulk-result {
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-card);
+    background: var(--ds-surface);
+    padding: var(--ds-space-3);
 }
 </style>
 @endpush
 
 @section('setup_content')
-<style>
-/* Filter toolbar (matches updated design) */
-.mee-filters-label { font-weight: 600; font-size: 0.9rem; color: #1f2937; margin-right: 4px; }
-.mee-filter-control {
-    height: 44px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 0 14px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #1f2937;
-    background: #fff;
-    border: 1px solid #d0d5dd;
-    border-radius: 8px;
-    line-height: 1;
-}
-.mee-filter-control:hover { border-color: #b6c0cc; }
-.mee-filter-control:focus { outline: none; border-color: #86b7fe; box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.18); }
-select.mee-filter-control {
-    display: inline-block;
-    min-width: 160px;
-    max-width: 220px;
-    padding-right: 34px;
-    text-overflow: ellipsis;
-}
-.mee-icon-btn { width: 44px; padding: 0; justify-content: center; }
-
-/* Time Period chip */
-.mee-time-period-filter { display: inline-flex; }
-.mee-tp-input {
-    min-width: 170px;
-    padding-left: 38px;
-    padding-right: 32px;
-    background: #fff;
-    cursor: pointer;
-}
-.mee-tp-input::placeholder { color: #1f2937; opacity: 1; }
-.mee-tp-ico { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #667085; font-size: 16px; pointer-events: none; }
-.mee-tp-caret { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #667085; font-size: 12px; pointer-events: none; }
-
-/* +3 Filters link */
-.mee-more-filters { color: var(--bs-primary); font-weight: 600; text-decoration: underline; white-space: nowrap; }
-.mee-more-filters.mee-more-filters-active { font-weight: 700; }
-.mee-extra-menu { min-width: 240px; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 8px 24px rgba(16,24,40,0.12); }
-
-/* Reset Filters = red outline */
-.mee-reset { color: var(--bs-danger); border-color: var(--bs-danger); font-weight: 600; }
-.mee-reset:hover { background: var(--bs-danger); color: #fff; border-color: var(--bs-danger); }
-
-/* Search dropdown */
-.mee-search-menu { min-width: 260px; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 8px 24px rgba(16,24,40,0.12); }
-
-/* Column Visibility modal — grid of bordered checkbox chips */
-.mee-col-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-.mee-col-chip {
-    display: flex; align-items: center; gap: 8px; margin: 0;
-    padding: 0.65rem 0.85rem; border: 1px solid #e2e8f0; border-radius: 8px;
-    background: #fff; cursor: pointer; font-size: 0.9rem; font-weight: 500; color: #1f2937; user-select: none;
-}
-.mee-col-chip:hover { border-color: #b6c0cc; background: #f8fafc; }
-.mee-col-chip.is-checked { border-color: var(--bs-primary); box-shadow: inset 0 0 0 1px var(--bs-primary); }
-@media (max-width: 767.98px) { .mee-col-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 479.98px) { .mee-col-grid { grid-template-columns: 1fr; } }
-
-/* Bottom bar: pagination (left) + "Showing [n] of N items" (right) */
-.mee-master-page .mee-dt-bottom { margin-top: 1rem; }
-.mee-master-page .mee-dt-count,
-.mee-master-page .mee-dt-count .dataTables_info,
-.mee-master-page .mee-dt-count .dataTables_length {
-    color: #667085;
-    font-size: 0.875rem;
-}
-.mee-master-page .mee-dt-count .dataTables_length,
-.mee-master-page .mee-dt-count .dataTables_info { margin: 0; padding: 0; }
-.mee-master-page .mee-dt-count .dataTables_length label {
-    margin: 0;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-.mee-master-page .mee-dt-count .dataTables_length select.form-select,
-.mee-master-page .mee-dt-count .dataTables_length select {
-    width: auto;
-    min-width: 76px;
-    display: inline-block;
-    border-radius: 6px;
-    margin: 0 0.25rem;
-}
-.mee-student-tag {
-    background-color: #004a93;
-    color: #fff;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-}
-</style>
-<div class="container-fluid mee-master-page">
-    <x-breadcrum title="Escort/ Moderator Duty">
+<div class="container-fluid mst-page mee-page mee-master-page">
+    <x-breadcrum title="Escort/ Moderator Duty" :showBack="false">
         <div class="d-inline-flex flex-wrap align-items-center gap-2">
             <button type="button"
                 id="meeBulkUploadBtn"
-                class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-semibold shadow-sm text-nowrap">
+                class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm text-nowrap">
                 <i class="bi bi-upload" aria-hidden="true"></i>
                 <span>Bulk Upload</span>
             </button>
             <button type="button"
                 id="meeAddExemptionBtn"
-                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-semibold shadow-sm text-nowrap">
-                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm text-nowrap">
+                <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
                 <span>Add New MDO/ Escort Exemption</span>
             </button>
         </div>
@@ -182,94 +169,120 @@ select.mee-filter-control {
                 $timePeriodLabel = '';
             }
         }
+        $meeScope = $filter ?? 'active';
+
+        // Time Period picker defaults: only real Y-m-d dates, handed to the
+        // script JSON-encoded below. The values come from the query string, and
+        // e() inside a quoted JS string lets a trailing backslash break out.
+        $meeFpDefaults = [];
+        $meeFrom = request('from_date_filter');
+        $meeTo = request('to_date_filter');
+        if (is_string($meeFrom) && is_string($meeTo)) {
+            $meeFromDate = \DateTime::createFromFormat('!Y-m-d', $meeFrom);
+            $meeToDate = \DateTime::createFromFormat('!Y-m-d', $meeTo);
+            if ($meeFromDate && $meeToDate
+                && $meeFromDate->format('Y-m-d') === $meeFrom
+                && $meeToDate->format('Y-m-d') === $meeTo) {
+                $meeFpDefaults = [$meeFrom, $meeTo];
+            }
+        }
     @endphp
 
-    <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-between gap-3 mb-4">
-        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white shadow-sm mb-0" role="group"
-            aria-label="Course Status Filter">
+    {{-- Course scope (links: each is its own ?filter=) left · Download / Print
+         right — above the card (docs/new-design-index-page.md §1). Both
+         exports fetch the full filtered set from the grid's own feed. --}}
+    <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-between gap-3 mb-3">
+        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0" role="group"
+            aria-label="Course status filter">
             <li class="nav-item" role="presentation">
                 <a href="{{ route('mdo-escrot-exemption.index', $activeParams) }}"
-                    class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ ($filter ?? 'active') === 'active' ? 'active' : '' }}"
+                    class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $meeScope === 'active' ? 'active' : '' }}"
                     id="filterActive"
-                    aria-pressed="{{ ($filter ?? 'active') === 'active' ? 'true' : 'false' }}"
-                    {{ ($filter ?? 'active') === 'active' ? 'aria-current=true' : '' }}>
+                    aria-pressed="{{ $meeScope === 'active' ? 'true' : 'false' }}"
+                    @if ($meeScope === 'active') aria-current="true" @endif>
                     Active
                 </a>
             </li>
             <li class="nav-item" role="presentation">
                 <a href="{{ route('mdo-escrot-exemption.index', $archiveParams) }}"
-                    class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ ($filter ?? 'active') === 'archive' ? 'active' : '' }}"
+                    class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $meeScope === 'archive' ? 'active' : '' }}"
                     id="filterArchive"
-                    aria-pressed="{{ ($filter ?? 'active') === 'archive' ? 'true' : 'false' }}"
-                    {{ ($filter ?? 'active') === 'archive' ? 'aria-current=true' : '' }}>
+                    aria-pressed="{{ $meeScope === 'archive' ? 'true' : 'false' }}"
+                    @if ($meeScope === 'archive') aria-current="true" @endif>
                     Archived
                 </a>
             </li>
         </ul>
 
-        <div class="d-flex flex-wrap align-items-center justify-content-lg-end gap-2">
-            <button type="button" id="printDownloadBtn"
-                class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold shadow-sm" style="border:0;background:#fff;color:#004a93;">
-                <i class="material-icons material-symbols-rounded" aria-hidden="true">print</i>
-                <span>Print</span>
-            </button>
+        <div class="d-flex flex-wrap justify-content-lg-end gap-2 mst-secondary-actions">
             <button type="button" id="downloadBtn"
-                class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold shadow-sm" style="border:0;background:#fff;color:#004a93;">
-                <i class="material-icons material-symbols-rounded" aria-hidden="true">download</i>
-                <span>Download</span>
+                class="btn programme-dt-btn-columns border-0 text-primary" title="Download as CSV">
+                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+            </button>
+            <button type="button" id="printDownloadBtn"
+                class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
+                <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
             </button>
         </div>
     </div>
 
-    <div class="datatables">
-        <div class="card mee-dt-card border-0 shadow-sm rounded-1 overflow-hidden">
-            <div class="card-body p-3 p-md-4">
+    {{-- No overflow-hidden: the "+3 Filters" menu (and the Year list inside it)
+         is positioned within this card and would be clipped when the grid is short. --}}
+    <div class="card rounded-3">
+        <div class="card-body p-3 p-md-4">
 
-                {{-- Filter toolbar (matches updated design) --}}
-                <div class="mee-toolbar d-flex flex-wrap align-items-center gap-2 mb-4">
-                    <span class="mee-filters-label">Filters</span>
+            <div class="d-flex flex-column flex-lg-row flex-lg-wrap align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                {{-- LEFT: filters. Each one reloads the grid through preXhr.dt. --}}
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="programme-dt-filters-label">Filters</span>
 
-                    {{-- Course Name --}}
-                    <select id="course_filter" class="form-select mee-filter-control" aria-label="Filter by course name">
-                        <option value="">Course Name</option>
-                        @foreach ($courseMaster as $id => $name)
-                        <option value="{{ $id }}" {{ (string) request('course_filter') === (string) $id ? 'selected' : '' }}>{{ $name }}</option>
-                        @endforeach
-                    </select>
+                    <div class="programme-dt-filter-select">
+                        <select id="course_filter" class="form-select mst-control mst-searchable"
+                            data-placeholder="Course Name" aria-label="Filter by course name">
+                            <option value="">Course Name</option>
+                            @foreach ($courseMaster as $id => $name)
+                            <option value="{{ $id }}" {{ (string) request('course_filter') === (string) $id ? 'selected' : '' }}>{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
 
-                    {{-- Duty Type --}}
-                    <select id="duty_type_filter" class="form-select mee-filter-control" aria-label="Filter by duty type">
-                        <option value="">Duty Type</option>
-                        @foreach ($dutyTypes as $id => $name)
-                        <option value="{{ $id }}" {{ (string) request('duty_type_filter') === (string) $id ? 'selected' : '' }}>{{ $name }}</option>
-                        @endforeach
-                    </select>
+                    <div class="programme-dt-filter-select">
+                        <select id="duty_type_filter" class="form-select mst-control mst-searchable"
+                            data-placeholder="Duty Type" aria-label="Filter by duty type">
+                            <option value="">Duty Type</option>
+                            @foreach ($dutyTypes as $id => $name)
+                            <option value="{{ $id }}" {{ (string) request('duty_type_filter') === (string) $id ? 'selected' : '' }}>{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
 
                     {{-- Time Period (flatpickr range) --}}
-                    <div class="mee-time-period-filter position-relative">
+                    <div class="programme-dt-filter-select mee-time-period-filter">
                         <input type="hidden" id="from_date_filter" value="{{ request('from_date_filter') }}">
                         <input type="hidden" id="to_date_filter" value="{{ request('to_date_filter') }}">
                         <i class="bi bi-calendar3 mee-tp-ico" aria-hidden="true"></i>
                         <input type="text" id="mee_time_period_picker"
-                            class="mee-filter-control mee-tp-input"
+                            class="form-control mst-control mee-tp-input"
                             placeholder="Time Period" value="{{ $timePeriodLabel }}"
                             readonly autocomplete="off" aria-label="Filter by time period">
-                        <i class="bi bi-chevron-down mee-tp-caret" aria-hidden="true"></i>
                     </div>
 
-                    {{-- +3 Filters popover (Year, Time From, Time To) --}}
+                    {{-- +3 Filters (Year, Time From, Time To) --}}
                     <div class="dropdown">
-                        <button type="button" class="btn btn-link p-0 mee-more-filters" id="meeExtraFiltersToggle"
-                            data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                        <button type="button" class="btn btn-link p-0 fw-semibold text-primary text-decoration-underline mee-more-filters"
+                            id="meeExtraFiltersToggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                             +3 Filters
                         </button>
-                        <div class="dropdown-menu p-3 mee-extra-menu" aria-labelledby="meeExtraFiltersToggle">
-                            <h6 class="fw-semibold mb-0">Filters</h6>
+                        <div class="dropdown-menu p-3 shadow-sm border rounded-3 mee-extra-menu" id="meeExtraFiltersMenu"
+                            aria-labelledby="meeExtraFiltersToggle">
+                            <h2 class="h6 fw-semibold mb-0">More filters</h2>
                             <hr class="my-3 opacity-50">
                             <div class="d-flex flex-column gap-3">
                                 <div>
-                                    <label for="year_filter" class="form-label small fw-medium mb-1">Year</label>
-                                    <select id="year_filter" class="form-select form-select-sm" aria-label="Filter by year">
+                                    <label for="year_filter" class="mst-form-label d-block">Year</label>
+                                    {{-- Select2 is initialised by the page script with this menu as its
+                                         dropdownParent, so picking a year doesn't close the menu. --}}
+                                    <select id="year_filter" class="form-select mst-control" data-placeholder="Year">
                                         <option value="">Year</option>
                                         @foreach ($years as $year => $yearValue)
                                         <option value="{{ $year }}" {{ (string) request('year_filter') === (string) $year ? 'selected' : '' }}>{{ $year }}</option>
@@ -277,53 +290,53 @@ select.mee-filter-control {
                                     </select>
                                 </div>
                                 <div>
-                                    <label for="time_from_filter" class="form-label small fw-medium mb-1">Time From</label>
-                                    <input type="time" id="time_from_filter" class="form-control form-control-sm"
-                                        value="{{ request('time_from_filter') }}" aria-label="Filter by time from">
+                                    <label for="time_from_filter" class="mst-form-label d-block">Time From</label>
+                                    <input type="time" id="time_from_filter" class="form-control mst-control"
+                                        value="{{ request('time_from_filter') }}">
                                 </div>
                                 <div>
-                                    <label for="time_to_filter" class="form-label small fw-medium mb-1">Time To</label>
-                                    <input type="time" id="time_to_filter" class="form-control form-control-sm"
-                                        value="{{ request('time_to_filter') }}" aria-label="Filter by time to">
+                                    <label for="time_to_filter" class="mst-form-label d-block">Time To</label>
+                                    <input type="time" id="time_to_filter" class="form-control mst-control"
+                                        value="{{ request('time_to_filter') }}">
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {{-- Reset --}}
-                    <button type="button" class="mee-filter-control mee-reset" id="resetFilters">Reset Filters</button>
+                    <button type="button" class="btn programme-dt-btn-reset" id="resetFilters">Reset Filters</button>
+                </div>
 
-                    {{-- Right cluster: Columns + Search --}}
-                    <div class="ms-auto d-flex align-items-center gap-2">
-                        <button type="button" class="mee-filter-control" id="meeColumnsToggle"
-                            data-bs-toggle="modal" data-bs-target="#meeColumnsModal">
-                            <span class="d-none d-md-inline">Columns</span>
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">view_column</i>
-                        </button>
-
-                        <div class="dropdown">
-                            <button type="button" class="mee-filter-control mee-icon-btn" id="meeSearchToggle"
-                                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-label="Search">
-                                <i class="material-icons material-symbols-rounded" aria-hidden="true">search</i>
-                            </button>
-                            <div class="dropdown-menu dropdown-menu-end p-2 mee-search-menu">
-                                <input type="text" id="meeTableSearch" class="form-control"
-                                    placeholder="Search records..." autocomplete="off" aria-label="Search records">
-                            </div>
+                {{-- RIGHT: columns + search. The grid's Yajra `dom` has no filter
+                     element, so this box drives table.search() itself. --}}
+                <div class="d-flex flex-wrap flex-sm-nowrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="meeColumnsToggle"
+                        data-bs-toggle="modal" data-bs-target="#meeColumnsModal" title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div class="programme-dt-search">
+                        <div class="dataTables_filter">
+                            <label class="mb-0">
+                                <span class="visually-hidden">Search records</span>
+                                <input type="search" id="meeTableSearch" class="form-control shadow-none"
+                                    placeholder="Search" autocomplete="off" aria-label="Search records">
+                            </label>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <input type="hidden" id="filter_status" value="{{ $filter ?? 'active' }}">
+            <input type="hidden" id="filter_status" value="{{ $filter ?? 'active' }}">
 
-                <div class="programme-dt-panel mee-dt-panel">
-                    <div class="table-responsive mee-dt-scroll">
-                        {{-- This page renders its own bottom bar (pagination + "Showing … of N items")
-                             via the custom DataTables dom + .mee-dt-* CSS. Opt out of the global
-                             datatable-global-ui.js so it doesn't relocate/duplicate those controls. --}}
-                        {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table', 'data-sargam-dt-ui' => 'false']) !!}
-                    </div>
+            <div class="programme-dt-panel mee-dt-panel">
+                <div class="table-responsive mee-dt-scroll">
+                    {{-- Opted out of datatable-global-ui.js: this grid's Yajra `dom`
+                         renders its own pager row. The page script moves those
+                         nodes into #meeDtFooter (same footer the enhancer builds). --}}
+                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table', 'data-sargam-dt-ui' => 'false']) !!}
                 </div>
+                <div id="meeDtFooter"
+                     class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"></div>
             </div>
         </div>
     </div>
@@ -334,29 +347,30 @@ select.mee-filter-control {
 @include('admin.mdo_escrot_exemption.partials.student_list_modal')
 @include('admin.mdo_escrot_exemption.partials.bulk_upload_modal')
 
-<!-- Column Visibility modal -->
+{{-- Column Visibility --}}
 <div class="modal fade" id="meeColumnsModal" tabindex="-1" aria-labelledby="meeColumnsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-semibold" id="meeColumnsModalLabel">Column Visibility</h5>
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-3 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="meeColumnsModalLabel">Column Visibility</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <div class="mee-col-grid" id="meeColumnsGrid"></div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3 mst-colvis-grid mee-col-grid" id="meeColumnsGrid"></div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-primary px-4" data-bs-dismiss="modal">Close</button>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Delete confirmation -->
+{{-- Delete confirmation (shared programme-confirm component) --}}
 <div class="modal fade programme-confirm-modal-root" id="meeDeleteConfirmModal" tabindex="-1"
     aria-labelledby="meeDeleteConfirmTitle" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="true">
     <div class="modal-dialog modal-dialog-centered programme-confirm-dialog">
-        <div class="modal-content programme-confirm-modal border-0 shadow-lg rounded-5 overflow-hidden">
+        <div class="modal-content programme-confirm-modal border-0 shadow-lg rounded-3 overflow-hidden">
             <div class="modal-body text-center px-4 px-md-5 py-5">
                 <div class="programme-confirm-icon programme-confirm-icon--danger mb-4" role="img" aria-hidden="true">
                     <i class="bi bi-exclamation-lg"></i>
@@ -387,6 +401,7 @@ select.mee-filter-control {
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 {!! $dataTable->scripts() !!}
+<script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
 <script>
 $(document).ready(function() {
     var table = $('#mdoescot-table').DataTable();
@@ -395,41 +410,74 @@ $(document).ready(function() {
     var meeDeleteModalEl = document.getElementById('meeDeleteConfirmModal');
     var meeDeleteModal = meeDeleteModalEl ? bootstrap.Modal.getOrCreateInstance(meeDeleteModalEl) : null;
 
+    // A date input accepts a half-typed year (0025 for 2025); the server rejects
+    // anything outside 2000–2099, so catch it here with the field's own error.
+    function meeCheckDate($input, $error) {
+        var value = $input.val();
+        var year = value ? parseInt(value.slice(0, 4), 10) : NaN;
+        if (value && year >= 2000 && year <= 2099) {
+            return true;
+        }
+        $error.text(value ? 'Please enter a valid date (check the year).' : 'Start date is required.').removeClass('d-none');
+        $input.addClass('is-invalid');
+        return false;
+    }
+
     initMeeAddModal(table);
     initMeeEditModal(table);
     initMeeBulkUploadModal(table);
 
     function meeBindDeleteActions() {
-        $('#mdoescot-table form[id^="delete-form-"] button[type="submit"]').removeAttr('onclick');
+        $('#mdoescot-table form.mee-delete-form button[type="submit"]').removeAttr('onclick');
     }
+
+    // This grid opts out of datatable-global-ui.js (its Yajra `dom` renders
+    // the pager + "Showing [n] of N items" row itself), so move those DataTables
+    // nodes into the programme-dt footer under the table. Moving keeps
+    // DataTables' own references, so every redraw still updates them.
+    function meeRelocateFooter() {
+        var $footer = $('#meeDtFooter');
+        var $wrapper = $('#mdoescot-table_wrapper');
+        if (!$footer.length || !$wrapper.length || $footer.find('.dataTables_paginate').length) {
+            return;
+        }
+        var $paginate = $wrapper.find('.dataTables_paginate').first();
+        var $length = $wrapper.find('.dataTables_length').first();
+        var $info = $wrapper.find('.dataTables_info').first();
+        if (!$paginate.length && !$length.length && !$info.length) {
+            return;
+        }
+        $length.find('select').addClass('form-select form-select-sm');
+        $info.addClass('mb-0');
+        $footer.empty()
+            .append($('<div class="programme-dt-pagination"></div>').append($paginate))
+            .append($('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>').append($length).append($info));
+        $wrapper.find('.mee-dt-bottom').addClass('mee-dt-bottom--moved');
+    }
+    meeRelocateFooter();
 
     table.on('draw.dt', function() {
         var info = table.page.info();
         $('#total-records-count').text(info.recordsFiltered || info.recordsTotal || 0);
+        meeRelocateFooter();
         meeBindDeleteActions();
     });
 
     meeBindDeleteActions();
 
-    // 🔍 Search (icon dropdown) → server-side global search
+    // 🔍 Search box (toolbar slot) → server-side global search
     var meeSearchTimer;
-    $('#meeTableSearch').on('keyup', function() {
+    $('#meeTableSearch').on('keyup search', function() {
         var value = this.value;
         clearTimeout(meeSearchTimer);
         meeSearchTimer = setTimeout(function() {
             table.search(value).draw();
         }, 400);
     });
-    $('#meeSearchToggle').on('shown.bs.dropdown', function() {
-        setTimeout(function() { $('#meeTableSearch').trigger('focus'); }, 50);
-    });
 
     // 📅 Time Period range picker
     if (typeof flatpickr !== 'undefined') {
-        var fpDefaults = [];
-        @if(request('from_date_filter') && request('to_date_filter'))
-        fpDefaults = ['{{ request('from_date_filter') }}', '{{ request('to_date_filter') }}'];
-        @endif
+        var fpDefaults = @json($meeFpDefaults);
 
         meeTimePeriodPicker = flatpickr('#mee_time_period_picker', {
             mode: 'range',
@@ -439,7 +487,11 @@ $(document).ready(function() {
             showMonths: 2,
             defaultDate: fpDefaults.length ? fpDefaults : null,
             locale: { rangeSeparator: ' - ' },
-            onReady: function (_d, _s, instance) { instance.calendarContainer.classList.add('mee-flatpickr-theme'); },
+            onReady: function (_d, _s, instance) {
+                instance.calendarContainer.classList.add('mee-flatpickr-theme');
+                // altInput is the field users actually see; give it the label too.
+                if (instance.altInput) { instance.altInput.setAttribute('aria-label', 'Filter by time period'); }
+            },
             onChange: function (selectedDates) {
                 if (selectedDates.length === 2) {
                     $('#from_date_filter').val(meeTimePeriodPicker.formatDate(selectedDates[0], 'Y-m-d'));
@@ -457,6 +509,18 @@ $(document).ready(function() {
                     $('#to_date_filter').val('');
                 }
             }
+        });
+    }
+
+    // Year sits inside the "+3 Filters" dropdown menu: Select2 must render its
+    // results inside that menu, or Bootstrap treats a pick as an outside click
+    // and closes the menu. (Course / Duty Type use the shared .mst-searchable.)
+    if ($.fn.select2) {
+        $('#year_filter').select2({
+            width: '100%',
+            placeholder: $('#year_filter').data('placeholder') || 'Year',
+            allowClear: false,
+            dropdownParent: $('#meeExtraFiltersMenu')
         });
     }
 
@@ -486,11 +550,13 @@ $(document).ready(function() {
         var title = $.trim($(this.header()).text()) || ('Column ' + (idx + 1));
         var visible = this.visible();
         $meeColGrid.append(
-            '<label class="mee-col-chip' + (visible ? ' is-checked' : '') + '" for="meeColToggle' + idx + '">' +
-                '<input class="form-check-input mee-col-toggle" type="checkbox" ' + (visible ? 'checked ' : '') +
+            '<div class="col-12 col-sm-6 col-md-4">' +
+            '<label class="colvis-item mee-col-chip d-flex align-items-center gap-2 border rounded-1 px-3 py-2 mb-0 w-100' + (visible ? ' is-checked' : '') + '" for="meeColToggle' + idx + '">' +
+                '<input class="form-check-input mee-col-toggle m-0" type="checkbox" ' + (visible ? 'checked ' : '') +
                        'id="meeColToggle' + idx + '" data-column="' + idx + '">' +
                 '<span>' + title + '</span>' +
-            '</label>'
+            '</label>' +
+            '</div>'
         );
     });
     $meeColGrid.on('change', '.mee-col-toggle', function() {
@@ -510,7 +576,7 @@ $(document).ready(function() {
     });
 
     document.addEventListener('click', function(e) {
-        var btn = e.target.closest('#mdoescot-table form[id^="delete-form-"] button[type="submit"]');
+        var btn = e.target.closest('#mdoescot-table form.mee-delete-form button[type="submit"]');
         if (!btn) {
             return;
         }
@@ -542,8 +608,8 @@ $(document).ready(function() {
     // Export columns = every visible table column except the "Action" column.
     function meeExportColumns() {
         var cols = [];
-        (table.settings()[0].aoColumns || []).forEach(function(c) {
-            if (c.data === 'actions') {
+        (table.settings()[0].aoColumns || []).forEach(function(c, idx) {
+            if (c.data === 'actions' || !table.column(idx).visible()) {
                 return;
             }
             cols.push({ data: c.data, title: $('<div>').html(c.sTitle || '').text() });
@@ -795,7 +861,7 @@ $(document).ready(function() {
                 $tags.append(
                     '<span class="badge rounded-1 mee-student-tag" data-student-id="' + student.pk + '">' +
                     escapeHtml(student.display_name) +
-                    '<button type="button" class="btn-close btn-close-sm ms-1" aria-label="Remove ' + escapeHtml(student.display_name) + '"></button>' +
+                    '<button type="button" class="btn-close btn-close-white ms-1" aria-label="Remove ' + escapeHtml(student.display_name) + '"></button>' +
                     '</span>'
                 );
             });
@@ -816,7 +882,7 @@ $(document).ready(function() {
                 $tags.append(
                     '<span class="badge rounded-1 mee-student-tag" data-student-id="' + id + '">' +
                     escapeHtml(student.display_name) +
-                    '<button type="button" class="btn-close btn-close-sm ms-1" aria-label="Remove"></button>' +
+                    '<button type="button" class="btn-close btn-close-white ms-1" aria-label="Remove ' + escapeHtml(student.display_name) + '"></button>' +
                     '</span>'
                 );
             });
@@ -945,6 +1011,8 @@ $(document).ready(function() {
             if (form) {
                 form.reset();
             }
+            // form.reset() changes the native selects only; repaint Select2.
+            $('#meeCourseDropdown, #mdo_duty_type_master_pk').trigger('change.select2');
             meeAllStudents = [];
             meeAssignedStudents = [];
             meePickerSelectedIds.clear();
@@ -978,9 +1046,7 @@ $(document).ready(function() {
                 $('#mdo_duty_type_master_pk').addClass('is-invalid');
                 valid = false;
             }
-            if (!$('#mdo_date').val()) {
-                $('#meeErrorDate').removeClass('d-none');
-                $('#mdo_date').addClass('is-invalid');
+            if (!meeCheckDate($('#mdo_date'), $('#meeErrorDate'))) {
                 valid = false;
             }
             if (!$('#Time_from').val()) {
@@ -1051,9 +1117,8 @@ $(document).ready(function() {
                 $('#meeCourseDropdown').addClass('is-invalid').focus();
                 return;
             }
-            if (!$('#mdo_date').val()) {
-                $('#meeErrorDate').removeClass('d-none');
-                $('#mdo_date').addClass('is-invalid').focus();
+            if (!meeCheckDate($('#mdo_date'), $('#meeErrorDate'))) {
+                $('#mdo_date').focus();
                 return;
             }
             // Time is required so the picker can exclude students already busy in
@@ -1248,7 +1313,7 @@ $(document).ready(function() {
             clearEditErrors();
             var valid = true;
             if (!$('#meeEditDutyType').val()) { $('#meeEditErrorDutyType').removeClass('d-none'); $('#meeEditDutyType').addClass('is-invalid'); valid = false; }
-            if (!$('#meeEditDate').val()) { $('#meeEditErrorDate').removeClass('d-none'); $('#meeEditDate').addClass('is-invalid'); valid = false; }
+            if (!meeCheckDate($('#meeEditDate'), $('#meeEditErrorDate'))) { valid = false; }
             if (!$('#meeEditTimeFrom').val()) { $('#meeEditErrorTimeFrom').removeClass('d-none'); $('#meeEditTimeFrom').addClass('is-invalid'); valid = false; }
             if (!$('#meeEditTimeTo').val()) { $('#meeEditErrorTimeTo').removeClass('d-none'); $('#meeEditTimeTo').addClass('is-invalid'); valid = false; }
             if ($('#meeEditTimeFrom').val() && $('#meeEditTimeTo').val() && $('#meeEditTimeTo').val() <= $('#meeEditTimeFrom').val()) {
@@ -1280,7 +1345,7 @@ $(document).ready(function() {
                 success: function(res) {
                     var record = res.record || {};
                     $('#meeEditRecordPk').val(record.pk);
-                    $('#meeEditDutyType').val(record.mdo_duty_type_master_pk);
+                    $('#meeEditDutyType').val(record.mdo_duty_type_master_pk).trigger('change.select2');
                     $('#meeEditDate').val(record.mdo_date || '');
                     $('#meeEditTimeFrom').val(record.Time_from || '');
                     $('#meeEditTimeTo').val(record.Time_to || '');
@@ -1404,6 +1469,7 @@ $(document).ready(function() {
             if (form) {
                 form.reset();
             }
+            $('#meeBulkCourse, #meeBulkDutyType').trigger('change.select2');
             clearBulkErrors();
             toggleBulkFaculty();
         }
