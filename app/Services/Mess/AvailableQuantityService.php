@@ -32,6 +32,11 @@ class AvailableQuantityService
     public static function availableQuantitiesForStore(string $storeType, int $storeId, bool $fresh = false): array
     {
         if ($fresh) {
+            // $fresh is the write-validation read. Inside a transaction, lock the store first so two
+            // stock-changing requests for the same store cannot both pass the check on the same stock.
+            if (DB::transactionLevel() > 0) {
+                self::lockStoreForStockChange($storeType, $storeId);
+            }
             $map = self::computeAvailableQuantitiesForStore($storeType, $storeId);
             self::putCache($storeType, $storeId, $map);
 
@@ -62,6 +67,21 @@ class AvailableQuantityService
 
             return self::computeAvailableQuantitiesForStore($storeType, $storeId);
         }
+    }
+
+    /**
+     * Row-lock the store (until the surrounding transaction ends). A second request for the same
+     * store waits here, then reads stock that includes the first request's change.
+     */
+    public static function lockStoreForStockChange(string $storeType, int $storeId): void
+    {
+        if ($storeId <= 0) {
+            return;
+        }
+        DB::table($storeType === 'sub_store' ? 'mess_sub_stores' : 'mess_stores')
+            ->where('id', $storeId)
+            ->lockForUpdate()
+            ->value('id');
     }
 
     /**

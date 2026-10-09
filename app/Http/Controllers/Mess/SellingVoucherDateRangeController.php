@@ -563,52 +563,54 @@ class SellingVoucherDateRangeController extends Controller
             'bill_file.max' => 'Bill size must not exceed 5 MB.',
         ]);
 
-        // Enforce: Issue Qty cannot exceed available qty (server-side, cannot be bypassed)
-        $storeIdRaw = $request->inve_store_master_pk;
-        $storeType = 'store';
-        if (str_starts_with($storeIdRaw, 'sub_')) {
-            $storeIdRaw = str_replace('sub_', '', $storeIdRaw);
-            $storeType = 'sub_store';
-        }
-        $storeId = (int) $storeIdRaw;
-        $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId, true);
-
-        $requestedByItem = [];
-        foreach ((array) $request->items as $row) {
-            $itemId = (int) ($row['item_subcategory_id'] ?? 0);
-            $qty = (float) ($row['quantity'] ?? 0);
-            if ($itemId > 0) $requestedByItem[$itemId] = ($requestedByItem[$itemId] ?? 0) + $qty;
-        }
-
-        $subcategories = ItemSubcategory::whereIn('id', array_keys($requestedByItem))->get()->keyBy('id');
-        $qtyErrors = [];
-        foreach ($requestedByItem as $itemId => $totalQty) {
-            $avail = (float) ($availableMap[$itemId] ?? 0);
-            if ($totalQty > $avail) {
-                $sub = $subcategories->get($itemId);
-                $name = $sub ? ($sub->item_name ?? $sub->name ?? ('Item #' . $itemId)) : ('Item #' . $itemId);
-                $qtyErrors[] = "{$name}: issue {$totalQty} cannot exceed available {$avail}.";
-            }
-        }
-        if (!empty($qtyErrors)) {
-            $bag = new MessageBag(['items' => implode(' ', $qtyErrors)]);
-
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed.',
-                    'errors' => ['items' => [implode(' ', $qtyErrors)]],
-                ], 422);
-            }
-
-            return redirect()->route('admin.mess.selling-voucher-date-range.index')
-                ->withInput()
-                ->withErrors($bag)
-                ->with('open_add_modal', true);
-        }
-
         try {
             DB::beginTransaction();
+
+            // Enforce: Issue Qty cannot exceed available qty (server-side, cannot be bypassed).
+            // Checked inside the transaction so the store lock taken by the fresh read holds until commit.
+            $storeIdRaw = $request->inve_store_master_pk;
+            $storeType = 'store';
+            if (str_starts_with($storeIdRaw, 'sub_')) {
+                $storeIdRaw = str_replace('sub_', '', $storeIdRaw);
+                $storeType = 'sub_store';
+            }
+            $storeId = (int) $storeIdRaw;
+            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId, true);
+
+            $requestedByItem = [];
+            foreach ((array) $request->items as $row) {
+                $itemId = (int) ($row['item_subcategory_id'] ?? 0);
+                $qty = (float) ($row['quantity'] ?? 0);
+                if ($itemId > 0) $requestedByItem[$itemId] = ($requestedByItem[$itemId] ?? 0) + $qty;
+            }
+
+            $subcategories = ItemSubcategory::whereIn('id', array_keys($requestedByItem))->get()->keyBy('id');
+            $qtyErrors = [];
+            foreach ($requestedByItem as $itemId => $totalQty) {
+                $avail = (float) ($availableMap[$itemId] ?? 0);
+                if ($totalQty > $avail) {
+                    $sub = $subcategories->get($itemId);
+                    $name = $sub ? ($sub->item_name ?? $sub->name ?? ('Item #' . $itemId)) : ('Item #' . $itemId);
+                    $qtyErrors[] = "{$name}: issue {$totalQty} cannot exceed available {$avail}.";
+                }
+            }
+            if (!empty($qtyErrors)) {
+                DB::rollBack();
+                $bag = new MessageBag(['items' => implode(' ', $qtyErrors)]);
+
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Validation failed.',
+                        'errors' => ['items' => [implode(' ', $qtyErrors)]],
+                    ], 422);
+                }
+
+                return redirect()->route('admin.mess.selling-voucher-date-range.index')
+                    ->withInput()
+                    ->withErrors($bag)
+                    ->with('open_add_modal', true);
+            }
 
             $issueDate = now()->toDateString();
             $clientTypePk = $request->filled('client_type_pk') ? (int) $request->client_type_pk : null;
