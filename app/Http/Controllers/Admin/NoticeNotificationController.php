@@ -43,11 +43,30 @@ class NoticeNotificationController extends Controller
         });
     }
 
+    /**
+     * The notices this author may list, open, edit and delete: their own, or every
+     * notice for Super Admin. Holding the authoring menu used to mean administering
+     * every author's notices, Personal ones addressed to one named person included,
+     * which the dashboard feed would never show them (PR #334 F-039). Another
+     * author's notice is a 404, so its existence is not disclosed either.
+     */
+    private function manageableNotices()
+    {
+        $query = Notice::query();
+
+        if (! isSidebarPrivilegedUser()) {
+            $query->where('created_by', Auth::id());
+        }
+
+        return $query;
+    }
+
     // Notice List Page
     public function index(Request $request)
     {
         $types = self::TYPES;
-        $query = Notice::with(['user', 'courses', 'departments', 'groupTypeMaps.courseGroupType'])
+        $query = $this->manageableNotices()
+            ->with(['user', 'courses', 'departments', 'groupTypeMaps.courseGroupType'])
             ->withCount([
                 'audienceMaps as individual_count' => function ($q) {
                     $q->whereIn('audience_type', [NoticeAudienceMap::TYPE_STUDENT, NoticeAudienceMap::TYPE_EMPLOYEE]);
@@ -131,7 +150,7 @@ class NoticeNotificationController extends Controller
 
         // Only the years that actually carry notices on the chosen date column —
         // an open-ended range would list years the filter can never match.
-        $years = Notice::selectRaw("DISTINCT YEAR({$yearField}) as year")
+        $years = $this->manageableNotices()->selectRaw("DISTINCT YEAR({$yearField}) as year")
             ->whereNotNull($yearField)
             ->orderByDesc('year')
             ->pluck('year')
@@ -248,7 +267,7 @@ class NoticeNotificationController extends Controller
     public function edit($encId)
     {
         $id = Crypt::decrypt($encId);
-        $notice = Notice::with('audienceMaps')->findOrFail($id);
+        $notice = $this->manageableNotices()->with('audienceMaps')->findOrFail($id);
 
         $types = self::TYPES;
         $target = self::TARGETS;
@@ -309,7 +328,7 @@ class NoticeNotificationController extends Controller
         $this->validateNotice($request);
 
         $id = Crypt::decrypt($encId);
-        $notice = Notice::findOrFail($id);
+        $notice = $this->manageableNotices()->findOrFail($id);
 
         $data = $request->only([
             'notice_title',
@@ -349,7 +368,7 @@ class NoticeNotificationController extends Controller
     public function destroy($encId)
     {
         $id = Crypt::decrypt($encId);
-        $data = Notice::findOrFail($id);
+        $data = $this->manageableNotices()->findOrFail($id);
         if ($data->active_inactive == 0) {
             // One unit: a failure between the two must not leave the notice with no
             // audience rows, which the feed reads as "everyone" (PR #334 F-065).

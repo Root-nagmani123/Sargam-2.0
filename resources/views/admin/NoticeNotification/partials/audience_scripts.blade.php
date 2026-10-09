@@ -107,10 +107,22 @@
      *
      * Values are compared as strings: the preset arrives from JSON as numbers on
      * a fresh edit but as strings after a validation bounce.
+     *
+     * A selected value the list no longer offers (an employee who moved
+     * department, a deactivated trainee or group) is kept as a placeholder, as
+     * loadCourses() does: dropping it removed that recipient from the notice on
+     * the next save, even a title-only edit (PR #334 F-044).
      */
     function fillMultiSelect($el, items, selected) {
         var picked = asStrings(selected);
         var instance = multiSelect($el);
+        var known = items.map(function (item) { return String(item.pk); });
+
+        items = items.concat(picked.filter(function (pk) {
+            return known.indexOf(pk) === -1;
+        }).map(function (pk) {
+            return { pk: pk, label: 'Saved selection #' + pk + ' (no longer listed)' };
+        }));
 
         if (instance) {
             instance.clearStore();

@@ -531,6 +531,12 @@ class CourseRepositorySearch
      */
     public static function categoryMatches(array $c): Collection
     {
+        // No words, no category match: an empty token list matches every path, so a
+        // filter-only search (year, author, course) listed every folder (PR #334 F-045).
+        if (empty($c['tokens'])) {
+            return collect();
+        }
+
         $tree = self::folderTree();
 
         $allowed = $c['folder'] !== null ? array_flip(self::folderSubtreePks($c['folder'])) : null;

@@ -37,7 +37,10 @@ class CourseRepositoryVideoDownloadFlagTest extends TestCase
 
     private function update(int $docPk, array $fields)
     {
-        return $this->as($this->userWithRole('Super Admin'), ['Super Admin'])
+        // A staff Super Admin: repository writes refuse trainee-category logins
+        // whatever they hold (PR #334 F-041), and on the development copy the
+        // lowest-pk Super Admin is one.
+        return $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])
             ->post(route('course-repository.document.update', $docPk), $fields);
     }
 

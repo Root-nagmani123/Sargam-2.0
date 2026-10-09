@@ -11,6 +11,7 @@ use App\Models\LeaveNatureMaster;
 use App\Models\StudentMaster;
 use App\Services\LeaveApplicationService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -340,9 +341,11 @@ class LeaveOnBehalfController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'course_master_pk' => 'required|exists:course_master,pk',
-            'student_master_pk' => 'required|exists:student_master,pk',
-            'leave_nature_master_pk' => 'required|exists:leave_nature_master,pk',
+            // `integer` first: `exists` counts array values, so ?x[]=<pk> passed and
+            // reached LeaveNatureMaster::find(array) -> 500 (PR #334 F-042).
+            'course_master_pk' => 'required|integer|exists:course_master,pk',
+            'student_master_pk' => 'required|integer|exists:student_master,pk',
+            'leave_nature_master_pk' => 'required|integer|exists:leave_nature_master,pk',
             'from_date' => 'required|date',
             'to_date' => 'required|date|after_or_equal:from_date',
             // When the trainee leaves the station and when they report back.
@@ -368,6 +371,12 @@ class LeaveOnBehalfController extends Controller
 
         $coursePk = (int) $validated['course_master_pk'];
         $studentPk = (int) $validated['student_master_pk'];
+
+        // Dates as Y-m-d before any check: `date` accepts a time part, and
+        // '2026-10-09 00:00:01' then missed both the single-day comparison below
+        // and the overlap check against stored dates (PR #334 F-042).
+        $validated['from_date'] = Carbon::parse($validated['from_date'])->toDateString();
+        $validated['to_date'] = Carbon::parse($validated['to_date'])->toDateString();
 
         // One leave type on this page, shown simply as "Leave". It is stored as
         // STATIONED_LEAVE so these applications sit alongside the officer

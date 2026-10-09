@@ -1057,7 +1057,7 @@ $currentPath = $segments[1] ?? null;
             $course = CourseMaster::where('pk', $course_pk)->firstOrFail();
 
             // Get filter parameters
-            $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : date('Y-m-d');
+            $filterDate = $this->otFilterDate($request);
             $filterCourse = $request->input('filter_course');
             $filterStatus = $request->input('filter_status');
             $archiveMode = $request->input('archive_mode', 'active'); // Default to 'active'
@@ -1414,7 +1414,7 @@ $currentPath = $segments[1] ?? null;
         $student = StudentMaster::where('pk', $student_pk)->firstOrFail();
         $course = CourseMaster::where('pk', $course_pk)->firstOrFail();
 
-        $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : date('Y-m-d');
+        $filterDate = $this->otFilterDate($request);
         $filterCourse = $request->input('filter_course');
         $filterStatus = $request->input('filter_status');
         $archiveMode = $request->input('archive_mode', 'active');
@@ -1635,7 +1635,7 @@ $currentPath = $segments[1] ?? null;
 
         private function getOTAttendanceData(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk) {
             // Get filter parameters from request - Default to today's date if not provided
-            $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : Carbon::today()->format('Y-m-d');
+            $filterDate = $this->otFilterDate($request);
             $filterSessionTime = $request->input('filter_session_time');
             $filterCourse = $request->input('filter_course');
             $archiveMode = $request->input('archive_mode', 'active');
@@ -1998,6 +1998,18 @@ $currentPath = $segments[1] ?? null;
                 'message' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * The OT attendance page / feed / export date filter as Y-m-d, today when
+     * absent. Strings only: ?filter_date[]= reached strtotime(array), a TypeError
+     * that their catch (\Exception) does not catch, so 500 (PR #334 F-050).
+     */
+    private function otFilterDate(Request $request): string
+    {
+        $value = $request->input('filter_date');
+
+        return is_string($value) && $value !== '' ? date('Y-m-d', strtotime($value)) : date('Y-m-d');
     }
 
     /**

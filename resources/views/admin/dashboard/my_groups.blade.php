@@ -319,8 +319,6 @@ $(function () {
             + '<th scope="col" class="mg-col-no">S. No.</th>'
             + '<th scope="col">Student Name</th>'
             + '<th scope="col">OT Code</th>'
-            + '<th scope="col">Email</th>'
-            + '<th scope="col">Mobile No</th>'
             + '</tr></thead><tbody>';
 
         list.forEach(function (s, i) {
@@ -329,8 +327,6 @@ $(function () {
                 + '<td class="mg-col-no">' + (i + 1) + '</td>'
                 + '<td class="fw-semibold">' + escapeHtml(s.name) + '</td>'
                 + '<td>' + escapeHtml(s.ot_code) + '</td>'
-                + '<td>' + escapeHtml(s.email) + '</td>'
-                + '<td>' + escapeHtml(s.mobile) + '</td>'
                 + '</tr>';
         });
 

@@ -54,11 +54,20 @@ class MyGroupsTraineeCategoryTest extends TestCase
     {
         // A fresh in-memory limiter, so the route's throttle touches no shared cache.
         config(['cache.limiter' => 'array']);
+        // Sending on, and a request that would otherwise be accepted: with the
+        // switch off the endpoint answers 403 before the trainee check, so this
+        // test could not fail (PR #334 F-052).
+        config(['my_groups.messaging_enabled' => true]);
+        \Illuminate\Support\Facades\Mail::fake();
         [$user, $mapPk] = $this->nonTraineeInAGroup();
 
         $this->as($user, ['Student-OT'])
-            ->postJson("/dashboard/my-groups/{$mapPk}/students/message", ['channel' => 'email', 'message' => 'hi'])
+            ->postJson("/dashboard/my-groups/{$mapPk}/students/message", [
+                'channel' => 'email', 'message' => 'hi', 'student_ids' => [(int) $user->user_id],
+            ])
             ->assertStatus(403);
+
+        \Illuminate\Support\Facades\Mail::assertNothingSent();
     }
 
     public function test_a_non_trainee_login_holding_the_ot_role_is_sent_away_from_my_groups(): void

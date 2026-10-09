@@ -174,6 +174,9 @@ class LeaveApplicationController extends Controller
             // other leave type's bucket, be stored (PR #334 F-035).
             'leave_nature_master_pk' => [
                 'required',
+                // Scalar first: `exists` counts array values, so nature[]=<pk> passed
+                // and the insert threw "Array to string conversion" (PR #334 F-051).
+                'integer',
                 Rule::exists('leave_nature_master', 'pk')
                     ->where('leave_type', is_string($request->input('leave_type')) ? $request->input('leave_type') : '')
                     ->where('active_inactive', 1),
@@ -596,7 +599,15 @@ class LeaveApplicationController extends Controller
         // Serial, dates, times, day count and status centred; course, type,
         // nature stay left-aligned.
         $centreColumns = [0, 4, 5, 6, 7, 8, 9];
-        $filterLine = $this->myLeaveFilterLine($request);
+
+        // Name the trainee: the download is handed to coordinators, and without it
+        // the document says whose leave it is nowhere (PR #334 F-043).
+        $student = $this->leaveService->resolveStudentContext((int) Auth::user()->pk)['student'];
+        $code = trim((string) ($student->generated_OT_code ?? ''));
+        $filters = $this->myLeaveFilterLine($request);
+        $filterLine = 'Officer Trainee: ' . (trim((string) ($student->display_name ?? '')) ?: '-')
+            . ($code !== '' ? ' (' . $code . ')' : '')
+            . ($filters !== '' ? '  |  ' . $filters : '');
 
         if (is_string($request->get('format')) && strtolower($request->get('format')) === 'pdf') {
             @ini_set('memory_limit', '256M');
@@ -609,6 +620,8 @@ class LeaveApplicationController extends Controller
                 'filterLine' => $filterLine,
                 'centreColumns' => $centreColumns,
             ])->setPaper('a4', 'landscape');
+
+            $this->stampPageNumbers($pdf);
 
             return $pdf->download($baseName . '.pdf');
         }

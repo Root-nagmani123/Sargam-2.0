@@ -88,7 +88,7 @@ class NoticeAuthoringAuthorisationTest extends TestCase
     }
 
     /** A live, everyone-addressed notice written straight to the table, as a pre-fix row would be. */
-    private function rawNotice(string $description, int $active = 1): int
+    private function rawNotice(string $description, int $active = 1, ?User $author = null): int
     {
         return (int) DB::table('notices_notification')->insertGetId([
             'notice_title' => 'PR334 raw notice',
@@ -99,7 +99,7 @@ class NoticeAuthoringAuthorisationTest extends TestCase
             'target_audience' => 'All',
             'audience_mode' => 'all',
             'active_inactive' => $active,
-            'created_by' => (int) $this->staffWithRole('Super Admin')->pk,
+            'created_by' => (int) ($author ?? $this->staffWithRole('Super Admin'))->pk,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -222,9 +222,11 @@ class NoticeAuthoringAuthorisationTest extends TestCase
 
     public function test_the_edit_form_cannot_be_broken_out_of_by_a_stored_description(): void
     {
-        $pk = $this->rawNotice('<p>PR334-SAFE-TEXT</p></textarea><script>window.pr334edit=1</script>');
+        // The author's own notice: an author opens only their own (PR #334 F-039).
+        $author = $this->noticeAuthor();
+        $pk = $this->rawNotice('<p>PR334-SAFE-TEXT</p></textarea><script>window.pr334edit=1</script>', 1, $author);
 
-        $html = $this->asUser($this->noticeAuthor())
+        $html = $this->asUser($author)
             ->get(route('admin.notice.edit', Crypt::encrypt($pk)))
             ->assertOk()
             ->getContent();

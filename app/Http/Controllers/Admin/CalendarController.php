@@ -165,14 +165,41 @@ class CalendarController extends Controller
      * page's own AJAX calls.
      *
      * Only a faculty-portal viewer may ask: every other role already reaches the
-     * timetable through its own course scope, and this must not widen that.
+     * timetable through its own course scope, and this must not widen that. A
+     * trainee login never may, whatever roles it holds: the OT branch here gave
+     * every Officer Trainee every course's sessions (PR #334 F-047).
      */
     private function wantsAcademyScope(?Request $request = null): bool
     {
         $request ??= request();
 
         return $request->input('scope') === 'academy'
-            && (is_faculty_portal_user() || hasRole('Student-OT') || isOfficerTraineeUser());
+            && is_faculty_portal_user()
+            && ! isTraineeLogin();
+    }
+
+    /** Widest range the events feed answers; a month view asks for six weeks. */
+    private const FEED_MAX_RANGE_DAYS = 62;
+
+    /**
+     * The events feed's [start, end] as Y-m-d: the requested range when both ends
+     * are readable dates, clamped to FEED_MAX_RANGE_DAYS, else the current month.
+     * Array or junk input no longer reaches whereDate() (PR #334 F-047).
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function feedRange(Request $request): array
+    {
+        $start = is_string($request->input('start')) ? strtotime($request->input('start')) : false;
+        $end = is_string($request->input('end')) ? strtotime($request->input('end')) : false;
+
+        if ($start === false || $end === false || $end < $start) {
+            return [Carbon::now()->startOfMonth()->toDateString(), Carbon::now()->endOfMonth()->toDateString()];
+        }
+
+        $end = min($end, $start + self::FEED_MAX_RANGE_DAYS * 86400);
+
+        return [date('Y-m-d', $start), date('Y-m-d', $end)];
     }
 
     private function scopeTimetableForFaculty($query, int $facultyPk)
@@ -882,13 +909,7 @@ class CalendarController extends Controller
             }
         }
 
-        $cuurent_month_start_date = Carbon::now()->startOfMonth()->toDateString();
-        $cuurent_month_end_date = Carbon::now()->endOfMonth()->toDateString();
-        if (($request->start) && ($request->end)) {
-        } else {
-            $request->start = $cuurent_month_start_date;
-            $request->end = $cuurent_month_end_date;
-        }
+        [$rangeStart, $rangeEnd] = $this->feedRange($request);
 
 
         // Filter by course if provided
@@ -897,8 +918,8 @@ class CalendarController extends Controller
         }
 
         $events = $events
-            ->whereDate('START_DATE', '>=', $request->start)
-            ->whereDate('END_DATE', '<=', $request->end)
+            ->whereDate('START_DATE', '>=', $rangeStart)
+            ->whereDate('END_DATE', '<=', $rangeEnd)
             ->select(
                 'timetable.*',
                 'venue_master.venue_name as venue_name'
@@ -972,7 +993,7 @@ class CalendarController extends Controller
 
         // Fetch holidays
         $holidays = Holiday::active()
-            ->whereBetween('holiday_date', [$request->start, $request->end])
+            ->whereBetween('holiday_date', [$rangeStart, $rangeEnd])
             ->get()
             ->map(function ($holiday) {
                 $backgroundColor = '';

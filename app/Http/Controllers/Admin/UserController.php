@@ -498,8 +498,9 @@ class UserController extends Controller
             // No count on the two timetable cards: they open a calendar, not a list
             // whose rows could be counted. Academic = the whole Academy's timetable
             // (?scope=academy), My Timetable = the same page scoped to the viewer,
-            // which is what it already does for a faculty login.
-            'academic_timetable'      => [                                                         'link' => route('calendar.index', ['scope' => 'academy']),               'visible' => !$isSecurityRole && ($isFacultyPortalUser || $isOtUser)],
+            // which is what it already does for a faculty login. Faculty only: the
+            // academy scope refuses trainees (PR #334 F-047).
+            'academic_timetable'      => [                                                         'link' => route('calendar.index', ['scope' => 'academy']),               'visible' => !$isSecurityRole && $isFacultyPortalUser && !$isOtUser],
             // An OT's own timetable is their dedicated calendar — the sessions of
             // the groups they are enrolled in. A faculty's is the same page scoped
             // to their classes, which is what it already does for them.
@@ -7110,12 +7111,13 @@ class UserController extends Controller
                 'type' => $group->group_type ?? '—',
                 'course' => $group->course_name ?? '—',
             ],
+            // No email or mobile: group mates' personal contact details are not
+            // the viewer's to read or download (PR #334 F-040). Sending resolves
+            // the addresses server-side from the roster.
             'students' => $this->myGroupRoster((int) $mapPk)->map(fn ($s) => [
                 'pk' => $s['pk'],
                 'name' => $s['name'],
                 'ot_code' => $s['ot_code'],
-                'email' => $s['email'],
-                'mobile' => $s['mobile'],
             ])->values(),
         ]);
     }
@@ -7133,11 +7135,12 @@ class UserController extends Controller
 
         $roster = $this->myGroupRoster((int) $mapPk);
 
-        $headings = ['S. No.', 'Student Name', 'OT Code', 'Email', 'Mobile Number'];
-        $centreColumns = [0, 2, 4];
+        // Name and OT code only, as on screen (PR #334 F-040).
+        $headings = ['S. No.', 'Student Name', 'OT Code'];
+        $centreColumns = [0, 2];
 
         $rows = $roster->values()->map(fn ($s, $index) => [
-            $index + 1, $s['name'], $s['ot_code'], $s['email'], $s['mobile'],
+            $index + 1, $s['name'], $s['ot_code'],
         ])->values();
 
         $filterLine = 'Course: ' . ($group->course_name ?? '—')
@@ -7214,42 +7217,42 @@ class UserController extends Controller
         // without this a recipient could not tell an OT's text from an official one.
         $text = $this->groupMessageAttribution() . "\n\n" . $validated['message'];
 
-        if ($validated['channel'] === 'email') {
-            $emails = $recipients->pluck('email')->filter(fn ($e) => filled($e) && $e !== '-');
+        $isEmail = $validated['channel'] === 'email';
 
-            if ($emails->isEmpty()) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'None of the selected officer trainees have an email address on record.',
-                ], 422);
-            }
+        // De-duplicated here, as both services do, so the counts below count the
+        // addresses actually attempted: two OTs sharing a number are one SMS (F-048).
+        $addresses = $recipients->pluck($isEmail ? 'email' : 'mobile')
+            ->map(fn ($a) => trim((string) $a))
+            ->filter(fn ($a) => $a !== '' && $a !== '-')
+            ->unique()
+            ->values();
 
-            $failed = app(EmailService::class)->sendBulk($emails->values(), $text);
-            $sent = $emails->count() - count($failed);
-            $this->logGroupMessage((int) $mapPk, 'email', $emails->count(), $sent);
-
-            return response()->json([
-                'status' => $sent > 0 ? 'success' : 'error',
-                'message' => $sent > 0 ? "Email sent to {$sent} OT(s)." : 'Unable to send email to the selected OTs.',
-            ], $sent > 0 ? 200 : 500);
-        }
-
-        $numbers = $recipients->pluck('mobile')->filter(fn ($n) => filled($n) && $n !== '-');
-
-        if ($numbers->isEmpty()) {
+        if ($addresses->isEmpty()) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'None of the selected officer trainees have a contact number on record.',
+                'message' => $isEmail
+                    ? 'None of the selected officer trainees have an email address on record.'
+                    : 'None of the selected officer trainees have a contact number on record.',
             ], 422);
         }
 
-        $failed = app(SmsService::class)->sendBulk($numbers->values(), $text);
-        $sent = $numbers->count() - count($failed);
-        $this->logGroupMessage((int) $mapPk, 'sms', $numbers->count(), $sent);
+        // Audited before anything leaves: a send that throws still leaves its row
+        // (PR #334 F-048). sent_count is settled once the gateway has answered.
+        $logPk = $this->logGroupMessage((int) $mapPk, $validated['channel'], $addresses->count());
+        $sent = 0;
+
+        try {
+            $failed = app($isEmail ? EmailService::class : SmsService::class)->sendBulk($addresses, $text);
+            $sent = $addresses->diff($failed)->count();
+        } finally {
+            $this->settleGroupMessage($logPk, (int) $mapPk, $validated['channel'], $addresses->count(), $sent);
+        }
+
+        $noun = $isEmail ? 'Email' : 'SMS';
 
         return response()->json([
             'status' => $sent > 0 ? 'success' : 'error',
-            'message' => $sent > 0 ? "SMS sent to {$sent} OT(s)." : 'Unable to send SMS to the selected OTs.',
+            'message' => $sent > 0 ? "{$noun} sent to {$sent} OT(s)." : "Unable to send {$noun} to the selected OTs.",
         ], $sent > 0 ? 200 : 500);
     }
 
@@ -7275,19 +7278,30 @@ class UserController extends Controller
      * my_group_message_log, plus the log line. The message text is deliberately
      * NOT recorded: it is request text (a raw line feed would forge extra log
      * records — trap 35) and it is the sender's private content.
+     *
+     * The row is written before the send with sent_count 0, so a send that throws
+     * is still on record (F-048); settleGroupMessage() records the outcome.
+     *
+     * @return int the audit row's pk
      */
-    private function logGroupMessage(int $mapPk, string $channel, int $recipients, int $sent): void
+    private function logGroupMessage(int $mapPk, string $channel, int $recipients): int
     {
-        DB::table('my_group_message_log')->insert([
+        return (int) DB::table('my_group_message_log')->insertGetId([
             'sender_user_pk' => (int) auth()->id(),
             'sender_student_pk' => (int) Auth::user()->user_id,
             'group_map_pk' => $mapPk,
             'channel' => $channel,
             'recipient_count' => $recipients,
-            'sent_count' => $sent,
+            'sent_count' => 0,
             'ip' => request()->ip(),
             'created_at' => now(),
-        ]);
+        ], 'pk');
+    }
+
+    /** The outcome of a send logGroupMessage() opened: its count, and the log line. */
+    private function settleGroupMessage(int $logPk, int $mapPk, string $channel, int $recipients, int $sent): void
+    {
+        DB::table('my_group_message_log')->where('pk', $logPk)->update(['sent_count' => $sent]);
 
         \Illuminate\Support\Facades\Log::info('my_groups.message', [
             // user_credentials is keyed on `pk`, so auth()->id() is that pk.
@@ -7327,7 +7341,11 @@ class UserController extends Controller
             ->first(['gmap.group_name', 'gtype.type_name as group_type', 'cm.course_name']);
     }
 
-    /** Officer trainees mapped to a group, with the contact details the roster lists. */
+    /**
+     * Officer trainees mapped to a group, with their contact details. The details
+     * are for server-side sending only; no response or export may carry them
+     * (PR #334 F-040).
+     */
     private function myGroupRoster(int $mapPk): \Illuminate\Support\Collection
     {
         return DB::table('student_course_group_map as scgm')

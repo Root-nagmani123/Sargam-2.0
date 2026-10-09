@@ -23,9 +23,27 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Exception;
 
- 
+
 class CourseRepositoryController extends Controller
 {
+    /** The sidebar permission of the Central Course Repository admin screen. */
+    public const ADMIN_PERMISSION = 'course_repository';
+
+    public function __construct()
+    {
+        // Every repository write — folders and documents — was open to any login,
+        // officer trainees included (PR #334 F-041). Gated on the same rule the
+        // sidebar uses for the admin screen that offers these actions, so the route
+        // and the menu agree; the read-only user screens are unaffected.
+        $this->middleware(function ($request, $next) {
+            if (! canUseStaffMenu(self::ADMIN_PERMISSION)) {
+                abort(403);
+            }
+
+            return $next($request);
+        })->only(['store', 'update', 'destroy', 'uploadDocument', 'updateDocument', 'deleteDocument']);
+    }
+
     /**
      * Display listing of all course repositories
      * GET /course-repository
