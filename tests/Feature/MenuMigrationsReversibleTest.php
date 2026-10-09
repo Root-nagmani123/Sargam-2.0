@@ -71,6 +71,73 @@ class MenuMigrationsReversibleTest extends TestCase
         $this->assertSame($before, $this->snapshot(), "{$file} down() must not delete or detach rows it cannot prove it created");
     }
 
+    public static function cardMigrations(): array
+    {
+        return array_map(fn ($f) => [$f], [
+            'faculty cards' => '2026_08_31_000000_add_faculty_total_sessions_and_feedback_dashboard_cards.php',
+            'ot marks card' => '2026_08_31_000001_add_ot_discipline_marks_deducted_dashboard_card.php',
+            'timetable / counsellee cards' => '2026_09_09_120000_add_faculty_timetable_counsellee_dashboard_cards.php',
+            'house widget' => '2026_09_09_140000_add_house_wise_performance_dashboard_widget.php',
+            'ot timetable / feedback cards' => '2026_09_14_120000_add_ot_timetable_and_feedback_dashboard_cards.php',
+            'whos who card' => '2026_09_17_000004_add_whos_who_faculty_dashboard_card.php',
+            'my groups card' => '2026_10_08_100000_add_my_groups_dashboard_card.php',
+        ]);
+    }
+
+    /** The card keys a card migration creates, read from its own constants. */
+    private function cardKeys(object $migration): array
+    {
+        $c = (new \ReflectionClass($migration))->getConstants();
+
+        return array_values(array_filter(array_merge(
+            array_keys($c['CARDS'] ?? []),
+            array_keys($c['NEW_CARDS'] ?? []),
+            [$c['CARD_KEY'] ?? null, $c['KEY'] ?? null],
+        )));
+    }
+
+    /** @dataProvider cardMigrations */
+    public function test_up_keeps_an_existing_card_as_an_admin_left_it_and_adds_a_missing_one(string $file): void
+    {
+        $migration = require database_path('migrations/'.$file);
+        $keys = $this->cardKeys($migration);
+        $this->assertNotEmpty($keys, "{$file}: no card keys found");
+        $role = DB::table('roles')->value('id');
+
+        // Pre-existing: an admin relabelled, re-iconed and reordered the first card and linked a role.
+        $kept = array_shift($keys);
+        $edited = ['label' => 'Admin label', 'icon' => 'admin_icon', 'color_class' => 'admin-colour', 'sort_order' => 4242];
+        DB::table('dashboard_cards')->where('key', $kept)->exists()
+            ? DB::table('dashboard_cards')->where('key', $kept)->update($edited)
+            : DB::table('dashboard_cards')->insert(['key' => $kept] + $edited);
+        $keptId = DB::table('dashboard_cards')->where('key', $kept)->value('id');
+        DB::table('role_dashboard_cards')->where('dashboard_card_id', $keptId)->delete();
+        DB::table('role_dashboard_cards')->insert(['role_id' => $role, 'dashboard_card_id' => $keptId]);
+
+        // Missing (positive control): as on an environment that never ran the migration.
+        $missing = DB::table('dashboard_cards')->whereIn('key', $keys)->pluck('id');
+        DB::table('role_dashboard_cards')->whereIn('dashboard_card_id', $missing)->delete();
+        DB::table('dashboard_cards')->whereIn('id', $missing)->delete();
+
+        $migration->up();
+
+        $row = DB::table('dashboard_cards')->where('key', $kept)->first(['id', 'label', 'icon', 'color_class', 'sort_order']);
+        $this->assertSame($keptId, $row->id);
+        $this->assertSame($edited, ['label' => $row->label, 'icon' => $row->icon, 'color_class' => $row->color_class, 'sort_order' => (int) $row->sort_order],
+            "{$file} up() must not overwrite a card that already exists");
+        $this->assertSame(1, DB::table('role_dashboard_cards')->where('dashboard_card_id', $keptId)->where('role_id', $role)->count(),
+            'the existing role link is kept, not duplicated');
+
+        foreach ($keys as $key) {
+            $this->assertSame(1, DB::table('dashboard_cards')->where('key', $key)->count(), "{$file} up() creates missing card {$key}");
+        }
+
+        $migration->down();
+        $this->assertSame($keptId, DB::table('dashboard_cards')->where('key', $kept)->value('id'), 'down() keeps the pre-existing card');
+        $this->assertSame(1, DB::table('role_dashboard_cards')->where('dashboard_card_id', $keptId)->where('role_id', $role)->count(),
+            'down() keeps the pre-existing role link');
+    }
+
     /** @dataProvider menuMigrations */
     public function test_up_recreates_a_missing_menu_grants_it_and_flushes_the_cache(string $file, string $permission, string $route, string $sibling): void
     {

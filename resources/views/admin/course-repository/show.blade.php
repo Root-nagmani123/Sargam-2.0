@@ -2072,8 +2072,21 @@ window.crDocEdit = (function() {
         );
     }
 
+    // 'pending' until the latest enter()'s prefill settles. submit() refuses anything but
+    // 'ready': the form still holds reset defaults (empty video link, download on) (F-066).
+    var prefillState = 'ready';
+    var prefillSeq = 0;
+
+    function setUpdateBtnDisabled(on) {
+        var btn = $id('uploadBtn');
+        if (btn) btn.disabled = on;
+    }
+
     // Reset the upload modal back to "create" mode.
     function reset() {
+        prefillSeq++; // a prefill still running for a previous Edit must not touch this state
+        prefillState = 'ready';
+        setUpdateBtnDisabled(false);
         var pkEl = $id('upload_edit_pk');
         if (pkEl) pkEl.value = '';
         setEditChrome(false, '');
@@ -2105,10 +2118,28 @@ window.crDocEdit = (function() {
         setTitleRow(category, data.file_title);
 
         var d = data.detail || {};
+        var seq = ++prefillSeq;
+        prefillState = 'pending';
+        setUpdateBtnDisabled(true);
         var done;
-        if (category === 'Other') done = prefillOther(d);
-        else if (category === 'Institutional') done = prefillInstitutional(d);
-        else done = prefillCourse(d);
+        try {
+            if (category === 'Other') done = prefillOther(d);
+            else if (category === 'Institutional') done = prefillInstitutional(d);
+            else done = prefillCourse(d);
+        } catch (e) {
+            done = Promise.reject(e);
+        }
+        done = Promise.resolve(done).then(function() {
+            if (seq !== prefillSeq) return;
+            prefillState = 'ready';
+            setUpdateBtnDisabled(false);
+        }, function(e) {
+            if (seq !== prefillSeq) return;
+            // Re-enabled so a click reaches submit(), which names the failure instead of saving.
+            prefillState = 'failed';
+            setUpdateBtnDisabled(false);
+            if (window.console) console.error('Course Repository edit prefill failed', e);
+        });
 
         var modalEl = $id('uploadModal');
         if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
@@ -2132,6 +2163,14 @@ window.crDocEdit = (function() {
         var showError = helpers.showError || function(m) {
             alert(Array.isArray(m) ? m.join('\n') : m);
         };
+        if (prefillState === 'pending') {
+            showError('The saved values are still loading. Please wait a moment and try again.');
+            return true;
+        }
+        if (prefillState === 'failed') {
+            showError('The saved values could not be loaded, so saving now could overwrite them. Close this form and open Edit again.');
+            return true;
+        }
         var category = (document.querySelector('input[name="category"]:checked') || {}).value || 'Course';
 
         var fd = new FormData();

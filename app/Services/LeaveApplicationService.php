@@ -282,9 +282,10 @@ class LeaveApplicationService
                 LeaveApplication::STATUS_APPROVED,
             ])
             ->when($leaveType !== null, fn ($q) => $q->where('leave_type', $leaveType))
+            // whereDate in every clause: the columns are DATETIME and legacy stationed rows carry times (F-065).
             ->where(function ($q) use ($fromDate, $toDate) {
-                $q->whereBetween('from_date', [$fromDate, $toDate])
-                    ->orWhereBetween('to_date', [$fromDate, $toDate])
+                $q->where(fn ($in) => $in->whereDate('from_date', '>=', $fromDate)->whereDate('from_date', '<=', $toDate))
+                    ->orWhere(fn ($in) => $in->whereDate('to_date', '>=', $fromDate)->whereDate('to_date', '<=', $toDate))
                     ->orWhere(function ($inner) use ($fromDate, $toDate) {
                         $inner->whereDate('from_date', '<=', $fromDate)
                             ->whereDate('to_date', '>=', $toDate);

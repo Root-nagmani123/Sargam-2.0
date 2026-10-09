@@ -24,19 +24,19 @@ return new class extends Migration
     {
         $sortOrder = (int) DB::table('dashboard_cards')->max('sort_order') + 1;
 
-        // updateOrInsert, not insert: re-running the migration on an environment
-        // that already has the panel must not create a duplicate key.
-        DB::table('dashboard_cards')->updateOrInsert(
-            ['key' => self::KEY],
-            [
+        // Insert only when missing: an existing card keeps the label and order an
+        // admin gave it, and a re-run creates no duplicate (PR #334 F-036).
+        if (! DB::table('dashboard_cards')->where('key', self::KEY)->exists()) {
+            DB::table('dashboard_cards')->insert([
+                'key' => self::KEY,
                 'label' => self::LABEL,
                 'icon' => 'home_work',
                 'color_class' => 'stat-icon-rose',
                 'sort_order' => $sortOrder,
                 'updated_at' => now(),
                 'created_at' => now(),
-            ]
-        );
+            ]);
+        }
 
         $cardId = DB::table('dashboard_cards')->where('key', self::KEY)->value('id');
 

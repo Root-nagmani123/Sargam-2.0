@@ -1975,21 +1975,25 @@ if (!function_exists('notice_feed_query_by_role')) {
         // row (duplicate cards), and a joined query cannot be counted for
         // pagination without a distinct().
         if ($isStudent) {
+            // Only a category-S login's user_id is a student pk; any other category is
+            // matched by role alone, never as a student (PR #334 F-067, as F-058 for staff).
+            $studentIds = $category === 'S' ? [$user->user_id] : [];
+
             $courseIds = DB::table('student_master_course__map')
-                ->where('student_master_pk', $user->user_id)
+                ->whereIn('student_master_pk', $studentIds)
                 ->distinct()
                 ->pluck('course_master_pk');
 
             // Groups the OT belongs to, for notices aimed at one group type.
             $groupIds = DB::table('student_course_group_map')
-                ->where('student_master_pk', $user->user_id)
+                ->whereIn('student_master_pk', $studentIds)
                 ->where('active_inactive', 1)
                 ->distinct()
                 ->pluck('group_type_master_course_master_map_pk');
 
-            return $query->where(function ($w) use ($user, $courseIds, $groupIds) {
+            return $query->where(function ($w) use ($studentIds, $courseIds, $groupIds) {
                 $w->where('notices_notification.target_audience', 'All')
-                    ->orWhere(function ($o) use ($user, $courseIds, $groupIds) {
+                    ->orWhere(function ($o) use ($studentIds, $courseIds, $groupIds) {
                         $o->where('notices_notification.target_audience', 'like', '%Office trainee%');
 
                         // No course rows = the author picked "Select All" courses —
@@ -2009,7 +2013,7 @@ if (!function_exists('notice_feed_query_by_role')) {
                             });
                         });
 
-                        $o->where(function ($m) use ($user, $groupIds) {
+                        $o->where(function ($m) use ($studentIds, $groupIds) {
                             // NULL mode = a notice written before this targeting
                             // existed; it reaches the whole course.
                             $m->whereNull('notices_notification.audience_mode')
@@ -2019,10 +2023,10 @@ if (!function_exists('notice_feed_query_by_role')) {
 
                                     notice_audience_has_any($g, 'G', $groupIds->all());
                                 })
-                                ->orWhere(function ($i) use ($user) {
+                                ->orWhere(function ($i) use ($studentIds) {
                                     $i->where('notices_notification.audience_mode', 'individual');
 
-                                    notice_audience_has_any($i, 'S', [$user->user_id]);
+                                    notice_audience_has_any($i, 'S', $studentIds);
                                 });
                         });
                     });

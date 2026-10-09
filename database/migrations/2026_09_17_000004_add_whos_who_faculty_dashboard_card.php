@@ -26,19 +26,19 @@ return new class extends Migration
     {
         $sortOrder = (int) DB::table('dashboard_cards')->max('sort_order');
 
-        // updateOrInsert, not insert: re-running on an environment that already
-        // has the card must not create a duplicate key.
-        DB::table('dashboard_cards')->updateOrInsert(
-            ['key' => self::KEY],
-            [
+        // Insert only when missing: an existing card keeps the label and order an
+        // admin gave it, and a re-run creates no duplicate (PR #334 F-036).
+        if (! DB::table('dashboard_cards')->where('key', self::KEY)->exists()) {
+            DB::table('dashboard_cards')->insert([
+                'key' => self::KEY,
                 'label' => "Who's Who",
                 'icon' => 'contacts',
                 'color_class' => 'stat-icon-blue',
                 'sort_order' => $sortOrder + 1,
                 'updated_at' => now(),
                 'created_at' => now(),
-            ]
-        );
+            ]);
+        }
 
         $cardId = DB::table('dashboard_cards')->where('key', self::KEY)->value('id');
         $roleIds = DB::table('roles')->whereIn('name', self::FACULTY_ROLES)->pluck('id');
