@@ -21,13 +21,6 @@ class Kernel extends ConsoleKernel
         // File-cache entries retired by a FeedbackReportCache generation bump are never read
         // again, so FileStore never deletes them. Removes only already-expired files.
         $schedule->command('cache:prune-expired-files')->hourly()->withoutOverlapping();
-
-        // ज्ञानकोश notice feed: hourly catch-up (retries failures, pushes notices
-        // whose display date has arrived, withdraws expired ones), and once a day
-        // the published-id list that catches any withdrawal nobody signalled.
-        // Both are no-ops while KNOWLEDGE_INGEST_ENABLED is off.
-        $schedule->command('knowledge:sync-notices')->hourlyAt(15)->withoutOverlapping();
-        $schedule->command('knowledge:sync-notices --reconcile')->dailyAt('02:30')->withoutOverlapping();
     }
 
     /**

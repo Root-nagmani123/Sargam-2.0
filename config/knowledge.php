@@ -1,52 +1,46 @@
 <?php
 
 /**
- * ज्ञानकोश (ai.lbsnaa.gov.in/knowledge) ingest feed.
+ * ज्ञानकोश (ai.lbsnaa.gov.in/knowledge) notice feed.
  *
- * Notices published on Sargam are pushed to the Academy knowledge base so staff
- * can search them and get them quoted with a citation. Contract:
- * api-sargam-ingest.md from the AI Platform team (POST /ingest, /ingest/withdraw,
- * /ingest/reconcile).
+ * ज्ञानकोश polls Sargam for published notices and stores them on its side:
  *
- * Drivers:
- * - log  → nothing leaves this server; every call is written to the log and
- *          answered as a success. For local testing — the real endpoint is only
- *          reachable from the Academy LAN.
- * - http → the real API. Needs KNOWLEDGE_INGEST_URL and KNOWLEDGE_INGEST_KEY.
+ *   GET /api/knowledge/notices             everything published right now
+ *   GET /api/knowledge/notices/{id}/file   the document of one of them
+ *
+ * See App\Http\Controllers\Api\KnowledgeFeedController.
  */
 return [
 
-    // Master switch. Off → no job is dispatched and the command does nothing.
-    'enabled' => env('KNOWLEDGE_INGEST_ENABLED', false),
-
-    'driver' => env('KNOWLEDGE_INGEST_DRIVER', 'log'),
-
-    'base_url' => rtrim((string) env('KNOWLEDGE_INGEST_URL', 'https://ai.lbsnaa.gov.in/knowledge/api'), '/'),
-
-    // Bearer key issued to "sargam". Server-side only; never log it.
-    'key' => env('KNOWLEDGE_INGEST_KEY'),
-
-    // Must be exactly "sargam" — the API rejects anything else with 400.
     'external_source' => 'sargam',
 
     // external_id = prefix + notices_notification.pk. Never change this once live:
     // a new id makes ज्ञानकोश hold the same notice twice and quote the stale one.
     'notice_id_prefix' => env('KNOWLEDGE_NOTICE_ID_PREFIX', 'SARGAM-NOTICE-'),
 
-    'timeout' => (int) env('KNOWLEDGE_INGEST_TIMEOUT', 60),
-    'connect_timeout' => (int) env('KNOWLEDGE_INGEST_CONNECT_TIMEOUT', 10),
+    /*
+     * Auth is a Bearer key we issue to the AI Platform team. Only its SHA-256 is
+     * kept here — generate one with `php artisan knowledge:feed-key`.
+     */
+    'feed' => [
+        'enabled' => env('KNOWLEDGE_FEED_ENABLED', false),
 
-    // true, false, or a path to the Academy CA bundle if the LAN cert is internal.
-    'verify_tls' => env('KNOWLEDGE_INGEST_CA_BUNDLE', env('KNOWLEDGE_INGEST_VERIFY_TLS', true)),
+        'key_sha256' => env('KNOWLEDGE_FEED_KEY_SHA256'),
+
+        // Optional comma-separated client IPs. Empty = any IP holding the key.
+        'allowed_ips' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('KNOWLEDGE_FEED_ALLOWED_IPS', ''))
+        ))),
+    ],
 
     /*
-     * What may leave Sargam. Everything pushed becomes visible Academy-wide in
-     * ज्ञानकोश (their §5) — so anything addressed to a person or a single course
-     * is held back by default. Widen these only after the AI Platform team has
-     * been told (their §7 question 1).
+     * What may leave Sargam. Everything in the feed becomes visible Academy-wide
+     * in ज्ञानकोश — so anything addressed to a person or a single course is held
+     * back by default. Widen these only after the AI Platform team has been told.
      */
     'notices' => [
-        // notice_type values never sent.
+        // notice_type values never served.
         'exclude_types' => array_values(array_filter(array_map(
             'trim',
             explode(',', (string) env('KNOWLEDGE_NOTICE_EXCLUDE_TYPES', 'Personal'))
