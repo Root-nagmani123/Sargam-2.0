@@ -44,6 +44,7 @@ use App\Models\UserRoleMaster;
 use App\Models\VehiclePassFWApply;
 use App\Models\VehiclePassTWApply;
 use App\Services\FC\RegistrationService;
+use App\Services\Knowledge\NoticeKnowledgeSync;
 use App\Services\NotificationService;
 use App\Services\OTNoticeMemoService;
 use App\Support\DataTableRedisCache;
@@ -6936,6 +6937,12 @@ class UserController extends Controller
                 'to' => $status,
                 'privileged' => (bool) ($allowed['admin_only'] ?? false),
             ]));
+
+            // Activating a notice publishes it; deactivating withdraws it from
+            // ज्ञानकोश, which would otherwise keep quoting it with a citation.
+            if ($table === 'notices_notification') {
+                NoticeKnowledgeSync::queue((int) $id);
+            }
 
             if ($table === 'employee_type_master') {
                 EmployeeTypeMasterDataTable::bumpListingCacheEpoch();

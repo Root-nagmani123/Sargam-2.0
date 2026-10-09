@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\NoticeNotification as Notice;
 use App\Models\CourseMaster;
+use App\Services\Knowledge\NoticeKnowledgeSync;
 use Illuminate\Support\Facades\Crypt;
 use Auth;
 
@@ -117,7 +118,9 @@ public function store(Request $request)
                                     ->store('notice_docs', 'public');
     }
 
-    Notice::create($data);
+    $notice = Notice::create($data);
+
+    NoticeKnowledgeSync::queue((int) $notice->pk);
 
     return redirect()
         ->route('admin.notice.index')
@@ -173,6 +176,8 @@ public function store(Request $request)
 
     $notice->update($data);
 
+    NoticeKnowledgeSync::queue((int) $notice->pk);
+
     return redirect()->route('admin.notice.index')->with('success','Notice updated!');
 }
 
@@ -184,6 +189,7 @@ public function store(Request $request)
         $data = Notice::findOrFail($id);
         if($data->active_inactive ==0){
         Notice::findOrFail($id)->delete();
+        NoticeKnowledgeSync::queue((int) $id);
         return back()->with('success','Notice deleted!');
         }else{
         return back()->with('error','Active Notice cannot be deleted!');
