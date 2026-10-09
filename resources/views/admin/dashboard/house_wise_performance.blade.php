@@ -158,53 +158,136 @@
     font-size: 0.9rem;
 }
 
+/* Print-only letterhead — hidden on screen by d-none, shown by d-print-block. */
+.hwp-page .hwp-print-head {
+    margin-bottom: var(--ds-space-3);
+    padding-bottom: var(--ds-space-2);
+    border-bottom: 2px solid var(--ds-primary);
+    text-align: center;
+}
+
+.hwp-page .hwp-print-logo { height: 3rem; width: auto; }
+
+.hwp-page .hwp-print-title {
+    margin: var(--ds-space-2) 0 var(--ds-space-1);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--ds-primary);
+}
+
+.hwp-page .hwp-print-meta {
+    font-size: 0.75rem;
+    color: var(--ds-ink-muted);
+}
+
+/* =====================================================================
+   Paper. The sheet is the letterhead and the house tables — nothing else.
+
+   The admin layout's chrome (header_new's topbar, sidebar_new's icon rail
+   and menu panel, the page loader, the breadcrumb card) has no print rules
+   of its own, so it is all switched off here; otherwise a landscape print
+   lays the report out beside the sidebar and under the "Government of
+   India" strip on every page.
+   ===================================================================== */
 @media print {
-    .hwp-noprint, .app-sidebar, .app-header, nav, .breadcrumb { display: none !important; }
+    @page { size: A4 portrait; margin: 12mm 10mm; }
+
+    /* `html body` is load-bearing: header_new's own <style>, which comes
+       later in the document, forces #sidebarTabContent and the side panel
+       to display:block !important on any page 992px or wider — a landscape
+       sheet is — so an equally specific rule here loses. */
+    html body header.topbar,
+    html body #sidebarTabContent,
+    html body aside.side-mini-panel.with-vertical,
+    html body .left-sidebar,
+    html body .sidebar-overlay,
+    html body .sargam-loader,
+    html body .mess-dt-stale-hint,
+    html body .modern-breadcrumb-wrapper,
+    .hwp-noprint { display: none !important; }
+
+    /* With the sidebar gone, its reserved gutter and the fixed header's
+       offset must go too, or the sheet prints squeezed to the right.
+       Anchored on the layout's ids: sidebar-menu-enhanced.css reserves the
+       gutter with a five-class !important selector, and spacing-system.css
+       pads the container the same way, so only an id outranks them. */
+    html, body { height: auto !important; min-height: 0 !important; background: var(--ds-surface) !important; }
+
+    #main-wrapper,
+    #main-wrapper > .page-wrapper,
+    #main-wrapper .body-wrapper,
+    #main-content {
+        margin: 0 !important;
+        padding: 0 !important;
+        /* 100%, not auto: #main-wrapper is a flex row, and an auto-width
+           item there shrinks to its content instead of filling the sheet. */
+        width: 100% !important;
+        min-height: 0 !important;
+        height: auto !important;
+        overflow: visible !important;
+        background: var(--ds-surface) !important;
+    }
+
+    #main-content .hwp-page.container-fluid { max-width: none; padding: 0 !important; }
+
+    /* Backgrounds are dropped on paper by default, which would leave the
+       navy band white with white text on it. The tints carry meaning here
+       (band, subtotal, final), so the whole sheet keeps its colours. */
+    .hwp-page {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
 
     /* The card chrome is screen furniture; on paper the sheet is the tables. */
     .hwp-page .card,
     .hwp-page .programme-dt-panel {
         box-shadow: none !important;
         border: 0 !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+        background: transparent !important;
     }
 
     .hwp-page .card-body { padding: 0 !important; }
 
     /* .table-responsive scrolls on screen but CLIPS on paper — anything past
-       the viewport width is simply cut off the sheet. On paper the table has
-       the whole page, so let it out of the scroller. */
+       the viewport width is simply cut off the sheet. */
     .hwp-page .table-responsive { overflow: visible !important; }
 
-    .hwp-house {
-        page-break-inside: avoid;
-        border: 1px solid #999 !important;
+    /* A house is allowed to run across pages. Keeping one whole (the old
+       page-break-inside: avoid) pushed any house taller than a page onto
+       the next sheet, left the first page blank, and then split it anyway.
+       Instead: the band never ends a page, the column heads repeat on
+       every page, and no single row is cut in half. */
+    .hwp-page .hwp-house {
+        break-inside: auto;
+        margin-bottom: var(--ds-space-4);
+        border: 1px solid var(--ds-line) !important;
     }
 
-    /* Print drops backgrounds by default, which would leave the band white
-       with white text on it — the tints are load-bearing here, so they are
-       forced through. Literal colours, not tokens: print colour adjustment
-       is unreliable enough without an extra indirection. */
     .hwp-page .hwp-house-head {
-        background: #004384 !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+        break-inside: avoid;
+        break-after: avoid;
+        padding: var(--ds-space-2) var(--ds-space-3);
     }
 
-    .hwp-page .hwp-house-name,
-    .hwp-page .hwp-house-date,
-    .hwp-page .hwp-chip { color: #fff !important; }
+    .hwp-page .programme-dt-table thead { display: table-header-group; }
+    .hwp-page .programme-dt-table tr { break-inside: avoid; }
 
-    .hwp-page .programme-dt-table tbody tr.hwp-final td {
-        background: #d3e0ef !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+    /* A house's Final Marks never lands alone at the top of a page. */
+    .hwp-page .programme-dt-table tbody tr.hwp-final { break-before: avoid; }
+
+    /* Paper reads at a tighter scale than the screen grid; the theme sets
+       td size with !important (styles.css), so this has to as well. */
+    .hwp-page .programme-dt-table th,
+    .hwp-page .programme-dt-table td {
+        padding: var(--ds-space-1) var(--ds-space-2) !important;
+        font-size: 0.75rem !important;
+        border-bottom: 1px solid var(--ds-line) !important;
+        border-radius: 0 !important;
     }
 
-    .hwp-page .programme-dt-table tbody tr.hwp-student-total td {
-        background: #e3ebf5 !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
+    .hwp-page .programme-dt-table thead th { background: var(--ds-surface-2) !important; }
 }
 </style>
 @endpush
@@ -215,9 +298,25 @@
         // The downloads carry whatever the filter is showing, so a shared file
         // matches the screen it came from.
         $exportParams = array_filter(['course' => $courseFilter ?? null]);
+
+        // The printed sheet carries the same meta line as the PDF download
+        // (admin/exports/table_pdf): course when filtered, record count, date.
+        $printCourse = $courseFilter ? (($courses ?? collect())[$courseFilter] ?? null) : null;
+        $printRecords = collect($houses)->sum(
+            fn ($house) => collect($house['members'])->sum(fn ($member) => count($member['rows']))
+        );
     @endphp
 
     <x-breadcrum title="House wise Performance" />
+
+    <div class="hwp-print-head d-none d-print-block">
+        <img src="{{ asset('admin_assets/images/logos/logo-web.png') }}" alt="Lal Bahadur Shastri National Academy of Administration" class="hwp-print-logo">
+        <div class="hwp-print-title">House wise Performance</div>
+        <div class="hwp-print-meta">
+            @if($printCourse)Course: {{ $printCourse }} &nbsp;|&nbsp; @endif
+            Total Records: {{ $printRecords }} &nbsp;|&nbsp; Generated: {{ $generatedOn->format('d-m-Y H:i') }}
+        </div>
+    </div>
 
     {{-- Secondary actions (Download / Print) — above the card, right-aligned
          because the page has no status pills to sit opposite (§1). More than
