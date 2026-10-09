@@ -8,6 +8,7 @@ use App\Models\EmployeeMaster;
 use App\Models\SecVehicleType;
 use App\Models\VehiclePassFWApply;
 use App\Models\VehiclePassTWApply;
+use App\Services\SecurityRequestNotifier;
 use App\Support\DataTableRedisCache;
 use App\Support\IdCardSecurityMapper;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -710,6 +711,15 @@ class VehiclePassController extends Controller
         // Condition: Employee ID card must be valid (not expired), vehicle no must be valid.
 
         static::bumpIndexListCacheEpoch();
+
+        $notifier = app(SecurityRequestNotifier::class);
+        $notifier->toApproverII(
+            SecurityRequestNotifier::MODULE_VEHICLE_APPROVAL,
+            $vehiclePass->pk ?? null,
+            'New Vehicle Pass request',
+            $notifier->actorName() . ' has submitted a Vehicle Pass request for vehicle '
+                . $vehiclePass->vehicle_no . '. Awaiting your approval.'
+        );
 
         return redirect()->route('admin.security.vehicle_pass.index')->with('success', 'Vehicle Pass application submitted successfully');
     }

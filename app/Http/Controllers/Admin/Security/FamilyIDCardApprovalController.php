@@ -6,12 +6,14 @@ use App\Http\Controllers\Admin\FamilyIDCardRequestController;
 use App\Http\Controllers\Controller;
 use App\Models\SecurityFamilyIdApply;
 use App\Models\SecurityFamilyIdApplyApproval;
+use App\Services\SecurityRequestNotifier;
 use App\Support\IdCardSecurityMapper;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use App\Support\SecurityApproverRoles;
 
 /**
  * Family ID Card Approval - List pending family ID card requests and approve/reject.
@@ -25,8 +27,8 @@ class FamilyIDCardApprovalController extends Controller
         $dateFrom = $request->get('date_from');
         $dateTo = $request->get('date_to');
 
-        $hasSecurityCard = hasRole('Security Card');
-        $hasAdminSecurity = hasRole('Admin Security');
+        $hasSecurityCard = SecurityApproverRoles::isApproverII();
+        $hasAdminSecurity = SecurityApproverRoles::isApproverIII();
         // Mutual exclusivity: "only L1", "only L2", or BOTH (must still get can_approve for the current stage).
         $isLevel1Only = $hasSecurityCard && ! $hasAdminSecurity;
         $isLevel2Only = $hasAdminSecurity && ! $hasSecurityCard;
@@ -309,8 +311,8 @@ class FamilyIDCardApprovalController extends Controller
         $employeePk = $user->user_id ?? null;
 
         // Determine level based on role
-        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') || hasRole('Admin');
+        $isLevel1 = SecurityApproverRoles::isApproverII() && !SecurityApproverRoles::isApproverIII();
+        $isLevel2 = SecurityApproverRoles::isApproverIII() || hasRole('Admin');
 
         if (! $isLevel1 && ! $isLevel2) {
             return redirect()->back()->with('error', 'You are not authorized to approve this request.');
@@ -385,6 +387,7 @@ class FamilyIDCardApprovalController extends Controller
         }
 
         FamilyIDCardRequestController::bumpIndexListCacheEpoch();
+        $this->notifyFamilyApproved($application, $isLevel1, 1);
         return redirect()->route('admin.security.family_idcard_approval.index')
             ->with('success', 'Family ID Card approved successfully');
     }
@@ -422,6 +425,7 @@ class FamilyIDCardApprovalController extends Controller
         ]);
 
         FamilyIDCardRequestController::bumpIndexListCacheEpoch();
+        $this->notifyFamilyRejected($application, 1, $validated['approval_remarks']);
         return redirect()->route('admin.security.family_idcard_approval.index')
             ->with('success', 'Family ID Card rejected');
     }
@@ -454,8 +458,8 @@ class FamilyIDCardApprovalController extends Controller
         $employeePk = $user->user_id ?? null;
         $remarks = $request->input('approval_remarks', null);
 
-        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') || hasRole('Admin');
+        $isLevel1 = SecurityApproverRoles::isApproverII() && !SecurityApproverRoles::isApproverIII();
+        $isLevel2 = SecurityApproverRoles::isApproverIII() || hasRole('Admin');
 
         if (! $isLevel1 && ! $isLevel2) {
             return redirect()->route('admin.security.family_idcard_approval.index')
@@ -527,6 +531,7 @@ class FamilyIDCardApprovalController extends Controller
         }
 
         FamilyIDCardRequestController::bumpIndexListCacheEpoch();
+        $this->notifyFamilyApproved($application, $isLevel1, $groupRows->count());
         return redirect()->route('admin.security.family_idcard_approval.index')
             ->with('success', 'Family ID Card group approved (' . $groupRows->count() . ' members)');
     }
@@ -575,8 +580,62 @@ class FamilyIDCardApprovalController extends Controller
         }
 
         FamilyIDCardRequestController::bumpIndexListCacheEpoch();
+        $this->notifyFamilyRejected($application, $groupRows->count(), $validated['approval_remarks']);
         return redirect()->route('admin.security.family_idcard_approval.index')
             ->with('success', 'Family ID Card group rejected (' . $groupRows->count() . ' members)');
+    }
+
+    /**
+     * Level 1 (Approval II) done → tell Approval III; final approval → tell the applicant.
+     */
+    private function notifyFamilyApproved(SecurityFamilyIdApply $application, bool $wasLevel1, int $memberCount): void
+    {
+        $notifier = app(SecurityRequestNotifier::class);
+        $subject = $this->familySubject($application, $memberCount);
+
+        if ($wasLevel1) {
+            $notifier->toApproverIII(
+                SecurityRequestNotifier::MODULE_FAMILY_APPROVAL,
+                $application->fml_id_apply,
+                'Family ID Card awaiting final approval',
+                "Family ID Card request {$subject} has been recommended at Approval II and awaits your final approval."
+            );
+
+            return;
+        }
+
+        $notifier->toEmployee(
+            $application->created_by,
+            SecurityRequestNotifier::MODULE_FAMILY_STATUS,
+            $application->fml_id_apply,
+            'Family ID Card approved',
+            "Your Family ID Card request {$subject} has been approved."
+        );
+    }
+
+    private function notifyFamilyRejected(SecurityFamilyIdApply $application, int $memberCount, ?string $remarks): void
+    {
+        $subject = $this->familySubject($application, $memberCount);
+        $reason = trim((string) $remarks) !== '' ? ' Remarks: ' . trim((string) $remarks) : '';
+
+        app(SecurityRequestNotifier::class)->toEmployee(
+            $application->created_by,
+            SecurityRequestNotifier::MODULE_FAMILY_STATUS,
+            $application->fml_id_apply,
+            'Family ID Card rejected',
+            "Your Family ID Card request {$subject} has been rejected.{$reason}"
+        );
+    }
+
+    private function familySubject(SecurityFamilyIdApply $application, int $memberCount): string
+    {
+        $name = trim((string) ($application->family_name ?? ''));
+        $subject = $name !== '' ? "for {$name}" : '';
+        if ($memberCount > 1) {
+            $subject .= ($subject !== '' ? ' ' : '') . '(' . $memberCount . ' members)';
+        }
+
+        return $subject !== '' ? $subject : '(#' . $application->fml_id_apply . ')';
     }
 
     public function all()

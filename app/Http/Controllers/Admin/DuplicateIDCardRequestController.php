@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController;
 use App\Http\Controllers\Controller;
 use App\Support\DataTableRedisCache;
 use App\Models\DepartmentMaster;
@@ -12,6 +13,7 @@ use App\Models\SecurityDupPermIdApply;
 use App\Models\SecurityDupPermIdApplyApproval;
 use App\Models\SecurityParmIdApply;
 use App\Models\SecurityFamilyIdApply;
+use App\Services\SecurityRequestNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -27,6 +29,8 @@ class DuplicateIDCardRequestController extends Controller
     public static function bumpIndexListCacheEpoch(): void
     {
         DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'DuplicateIDCardRequestController@index');
+        // Contractual duplicate requests are listed (cached) on Approval I as well.
+        EmployeeIDCardApprovalController::bumpApproval1ListEpochOnly();
     }
 
     public function index(Request $request)
@@ -1049,7 +1053,8 @@ class DuplicateIDCardRequestController extends Controller
 
         $photoPath = $request->file('photo')->store('idcard/photos', 'public');
 
-        DB::transaction(function () use ($validated, $employeePk, $approvers, $now, $photoPath, $request, $cardReason) {
+        $approval1AuthorityPk = null; // set inside the transaction for contractual duplicates
+        DB::transaction(function () use ($validated, $employeePk, $approvers, $now, $photoPath, $request, $cardReason, &$approval1AuthorityPk) {
             if ($validated['id_card_type'] === 'Permanent') {
                 $nextPk = (int) DB::table('security_dup_perm_id_apply')->max('pk') + 1;
                 $applyId = 'DUP' . str_pad((string) $nextPk, 5, '0', STR_PAD_LEFT);
@@ -1132,6 +1137,9 @@ class DuplicateIDCardRequestController extends Controller
                 if (!$firstApproverPk) {
                     $firstApproverPk = $approvers->isNotEmpty() ? (int) $approvers->first() : null;
                 }
+                if (($validated['id_card_type'] ?? null) === 'Contractual') {
+                    $approval1AuthorityPk = $firstApproverPk;
+                }
 
                 SecurityDupOtherIdApply::create([
                     'emp_id_apply' => $applyId,
@@ -1174,6 +1182,20 @@ class DuplicateIDCardRequestController extends Controller
         });
 
         static::bumpIndexListCacheEpoch();
+
+        // Contractual duplicate → its Approval I authority; Permanent / Family duplicate → Approval II.
+        $notifier = app(SecurityRequestNotifier::class);
+        $applicant = trim((string) ($validated['employee_name'] ?? '')) ?: $notifier->actorName();
+        $cardType = (string) ($validated['id_card_type'] ?? '');
+        $reason = trim((string) ($validated['card_reason'] ?? ''));
+        $message = "{$applicant} has submitted a duplicate {$cardType} ID Card request"
+            . ($reason !== '' ? " ({$reason})" : '') . '. Awaiting your approval.';
+        if ($approval1AuthorityPk) {
+            $notifier->toEmployee($approval1AuthorityPk, SecurityRequestNotifier::MODULE_IDCARD_APPROVAL1, null, 'New duplicate ID Card request (Approval I)', $message);
+        } else {
+            $notifier->toApproverII(SecurityRequestNotifier::MODULE_IDCARD_APPROVAL2, null, 'New duplicate ID Card request', $message);
+        }
+
         return redirect()->route('admin.duplicate_idcard.index')->with('success', 'Duplicate ID Card request submitted successfully.');
     }
 

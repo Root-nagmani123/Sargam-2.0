@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController;
 use App\Http\Controllers\Controller;
 use App\Exports\EmployeeIDCardExport;
 use App\Models\DesignationMaster;
@@ -9,6 +10,7 @@ use App\Models\SecurityParmIdApply;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Models\SecurityParmIdApplyApproval;
 use App\Models\EmployeeMaster;
+use App\Services\SecurityRequestNotifier;
 use App\Support\DataTableRedisCache;
 use App\Support\IdCardSecurityMapper;
 use App\Support\IdCardSecurityLookup;
@@ -32,6 +34,8 @@ class EmployeeIDCardRequestController extends Controller
     public static function bumpIndexListCacheEpoch(): void
     {
         DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'EmployeeIDCardRequestController@index');
+        // Contractual requests are listed (cached) on Approval I as well.
+        EmployeeIDCardApprovalController::bumpApproval1ListEpochOnly();
     }
 
     public function index(Request $request)
@@ -1304,9 +1308,32 @@ class EmployeeIDCardRequestController extends Controller
         }
         static::bumpIndexListCacheEpoch();
         DuplicateIDCardRequestController::bumpIndexListCacheEpoch();
+        $this->notifyNewIdCardRequest($employeeType, $isDupOrExt, $validated);
         return redirect()
             ->route('admin.employee_idcard.index')
             ->with('success', $successMsg);
+    }
+
+    /**
+     * Tell the first approver a new ID card request is waiting:
+     *  - contractual new card → the Approval Authority chosen on the form (Approval I);
+     *  - permanent (new or duplicate) and contractual duplicate/extension → Approval II.
+     */
+    private function notifyNewIdCardRequest(string $employeeType, bool $isDupOrExt, array $validated): void
+    {
+        $notifier = app(SecurityRequestNotifier::class);
+        $applicant = trim((string) ($validated['name'] ?? '')) ?: $notifier->actorName();
+        $kind = $isDupOrExt ? 'duplicate / extension ID Card' : 'ID Card';
+        $message = "{$applicant} ({$employeeType}) has submitted a {$kind} request. Awaiting your approval.";
+
+        $authorityPk = ! empty($validated['approval_authority']) ? (int) $validated['approval_authority'] : 0;
+        if ($employeeType !== 'Permanent Employee' && ! $isDupOrExt && $authorityPk > 0) {
+            $notifier->toEmployee($authorityPk, SecurityRequestNotifier::MODULE_IDCARD_APPROVAL1, null, 'New ID Card request (Approval I)', $message);
+
+            return;
+        }
+
+        $notifier->toApproverII(SecurityRequestNotifier::MODULE_IDCARD_APPROVAL2, null, 'New ID Card request', $message);
     }
 
     /**

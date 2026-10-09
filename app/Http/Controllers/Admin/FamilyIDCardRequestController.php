@@ -7,6 +7,7 @@ use App\Exports\FamilyIDCardExport;
 use App\Models\EmployeeMaster;
 use App\Models\SecurityFamilyIdApply;
 use App\Models\SecurityParmIdApply;
+use App\Services\SecurityRequestNotifier;
 use App\Support\DataTableRedisCache;
 use App\Support\IdCardSecurityMapper;
 use Illuminate\Support\Collection;
@@ -642,6 +643,18 @@ class FamilyIDCardRequestController extends Controller
             : "{$count} Family ID Card requests created successfully!";
 
         static::bumpIndexListCacheEpoch();
+
+        if ($count > 0) {
+            $notifier = app(SecurityRequestNotifier::class);
+            $notifier->toApproverII(
+                SecurityRequestNotifier::MODULE_FAMILY_APPROVAL,
+                null,
+                'New Family ID Card request',
+                $notifier->actorName() . ' has submitted a Family ID Card request'
+                    . ($count > 1 ? " for {$count} members" : '') . '. Awaiting your approval.'
+            );
+        }
+
         return redirect()->route('admin.family_idcard.index')->with('success', $message);
     }
 

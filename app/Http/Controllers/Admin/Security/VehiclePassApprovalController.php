@@ -14,6 +14,8 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use App\Services\SecurityRequestNotifier;
+use App\Support\SecurityApproverRoles;
 
 class VehiclePassApprovalController extends Controller
 {
@@ -25,8 +27,8 @@ class VehiclePassApprovalController extends Controller
      */
     public function index(Request $request)
     {
-        $hasSecurityCard = hasRole('Security Card');
-        $hasAdminSecurity = hasRole('Admin Security');
+        $hasSecurityCard = SecurityApproverRoles::isApproverII();
+        $hasAdminSecurity = SecurityApproverRoles::isApproverIII();
         $isLevel1Only = $hasSecurityCard && ! $hasAdminSecurity;
         $isLevel2Only = $hasAdminSecurity && ! $hasSecurityCard;
         $hasBothApprovalRoles = $hasSecurityCard && $hasAdminSecurity;
@@ -40,21 +42,25 @@ class VehiclePassApprovalController extends Controller
         $fwHasApplicantName = Schema::hasColumn('vehicle_pass_fw_apply', 'applicant_name');
 
         // Two Wheeler applications (regular only)
-        $twQuery = VehiclePassTWApply::with([
-            'vehicleType',
-            'employee' => function ($q) {
-                $q->select(['pk', 'emp_id', 'first_name', 'last_name']);
-            },
-        ])
+        $twQuery = VehiclePassTWApply::with(['vehicleType'])
             ->orderBy('created_date', 'desc');
 
+        // Employees whose name matches the search box ("Search by Employee / Vehicle").
+        $searchEmployeeKeys = $search !== '' ? $this->employeeKeysMatchingName($search) : ['pks' => [], 'emp_ids' => []];
+
         if ($search !== '') {
-            $twQuery->where(function ($q) use ($search) {
+            $twQuery->where(function ($q) use ($search, $twHasApplicantName, $searchEmployeeKeys) {
                 $like = '%' . $search . '%';
                 $q->where('employee_id_card', 'like', $like)
                     ->orWhere('vehicle_no', 'like', $like);
                 if ($twHasApplicantName) {
                     $q->orWhere('applicant_name', 'like', $like);
+                }
+                if ($searchEmployeeKeys['pks'] !== []) {
+                    $q->orWhereIn('emp_master_pk', $searchEmployeeKeys['pks']);
+                }
+                if ($searchEmployeeKeys['emp_ids'] !== []) {
+                    $q->orWhereIn('employee_id_card', $searchEmployeeKeys['emp_ids']);
                 }
             });
         }
@@ -74,21 +80,22 @@ class VehiclePassApprovalController extends Controller
         }
 
         // Four Wheeler applications (regular only)
-        $fwQuery = VehiclePassFWApply::with([
-            'vehicleType',
-            'employee' => function ($q) {
-                $q->select(['pk', 'emp_id', 'first_name', 'last_name']);
-            },
-        ])
+        $fwQuery = VehiclePassFWApply::with(['vehicleType'])
             ->orderBy('created_date', 'desc');
 
         if ($search !== '') {
-            $fwQuery->where(function ($q) use ($search) {
+            $fwQuery->where(function ($q) use ($search, $fwHasApplicantName, $searchEmployeeKeys) {
                 $like = '%' . $search . '%';
                 $q->where('employee_id_card', 'like', $like)
                     ->orWhere('vehicle_no', 'like', $like);
                 if ($fwHasApplicantName) {
                     $q->orWhere('applicant_name', 'like', $like);
+                }
+                if ($searchEmployeeKeys['pks'] !== []) {
+                    $q->orWhereIn('emp_master_pk', $searchEmployeeKeys['pks']);
+                }
+                if ($searchEmployeeKeys['emp_ids'] !== []) {
+                    $q->orWhereIn('employee_id_card', $searchEmployeeKeys['emp_ids']);
                 }
             });
         }
@@ -138,7 +145,9 @@ class VehiclePassApprovalController extends Controller
                 ->keyBy('vehicle_TW_pk');
         }
 
-        $mapFn = function ($r, string $kind) use ($isLevel1Only, $isLevel2Only, $hasBothApprovalRoles, $approvalStats, $twHasApplicantName, $fwHasApplicantName) {
+        $employeeNames = $this->employeeNameLookup($twRows->concat($fwRows));
+
+        $mapFn = function ($r, string $kind) use ($isLevel1Only, $isLevel2Only, $hasBothApprovalRoles, $approvalStats, $twHasApplicantName, $fwHasApplicantName, $employeeNames) {
             $statusInt = (int) ($r->vech_card_status ?? 1);
             $vehicleKey = $kind === 'tw' ? $r->vehicle_tw_pk : $r->vehicle_fw_pk;
             $stat = $approvalStats->get($vehicleKey);
@@ -168,11 +177,11 @@ class VehiclePassApprovalController extends Controller
             }
 
             $employeeName = $r->employee_id_card ?? '--';
-            if (isset($r->employee) && $r->employee) {
-                $resolved = trim((string) (($r->employee->first_name ?? '') . ' ' . ($r->employee->last_name ?? '')));
-                if ($resolved !== '') {
-                    $employeeName = $resolved . ($r->employee_id_card ? ' (' . $r->employee_id_card . ')' : '');
-                }
+            // emp_master_pk holds employee_master.pk on new rows but pk_old on migrated ones,
+            // so the pk-only `employee` relation misses most rows; resolve through the lookup.
+            $resolved = $this->resolveEmployeeName($r, $employeeNames);
+            if ($resolved !== '') {
+                $employeeName = $resolved . ($r->employee_id_card ? ' (' . $r->employee_id_card . ')' : '');
             } elseif (($kind === 'tw' && $twHasApplicantName) || ($kind === 'fw' && $fwHasApplicantName)) {
                 $fallbackName = trim((string) ($r->applicant_name ?? ''));
                 if ($fallbackName !== '') {
@@ -317,8 +326,8 @@ class VehiclePassApprovalController extends Controller
         }
 
         $user = Auth::user();
-        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') || hasRole('Admin');
+        $isLevel1 = SecurityApproverRoles::isApproverII() && !SecurityApproverRoles::isApproverIII();
+        $isLevel2 = SecurityApproverRoles::isApproverIII() || hasRole('Admin');
 
         if ($kind === 'fw') {
             $application = VehiclePassFWApply::with([
@@ -422,8 +431,8 @@ class VehiclePassApprovalController extends Controller
         $user = Auth::user();
         $employeePk = $user->user_id ?? null;
 
-        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') || hasRole('Admin');
+        $isLevel1 = SecurityApproverRoles::isApproverII() && !SecurityApproverRoles::isApproverIII();
+        $isLevel2 = SecurityApproverRoles::isApproverIII() || hasRole('Admin');
 
         if (! $isLevel1 && ! $isLevel2) {
             return redirect()->back()->with('error', 'You are not authorized to approve this request.');
@@ -512,6 +521,25 @@ class VehiclePassApprovalController extends Controller
             VehiclePassController::bumpIndexListCacheEpoch();
         }
 
+        $notifier = app(SecurityRequestNotifier::class);
+        $vehicleLabel = $this->vehicleNotificationLabel($application);
+        if ($isLevel1) {
+            $notifier->toApproverIII(
+                SecurityRequestNotifier::MODULE_VEHICLE_APPROVAL,
+                $application->pk ?? null,
+                'Vehicle Pass awaiting final approval',
+                "Vehicle Pass request {$vehicleLabel} has been recommended at Approval II and awaits your final approval."
+            );
+        } else {
+            $notifier->toEmployee(
+                $application->veh_created_by ?? $application->emp_master_pk ?? null,
+                SecurityRequestNotifier::MODULE_VEHICLE_STATUS,
+                $application->pk ?? null,
+                'Vehicle Pass approved',
+                "Your Vehicle Pass request {$vehicleLabel} has been approved."
+            );
+        }
+
         return redirect()->route('admin.security.vehicle_pass_approval.index')
             ->with('success', 'Vehicle Pass approved successfully');
     }
@@ -570,8 +598,24 @@ class VehiclePassApprovalController extends Controller
             VehiclePassController::bumpIndexListCacheEpoch();
         }
 
+        app(SecurityRequestNotifier::class)->toEmployee(
+            $application->veh_created_by ?? $application->emp_master_pk ?? null,
+            SecurityRequestNotifier::MODULE_VEHICLE_STATUS,
+            $application->pk ?? null,
+            'Vehicle Pass rejected',
+            'Your Vehicle Pass request ' . $this->vehicleNotificationLabel($application)
+                . ' has been rejected. Remarks: ' . trim((string) $validated['veh_approval_remarks'])
+        );
+
         return redirect()->route('admin.security.vehicle_pass_approval.index')
             ->with('success', 'Vehicle Pass rejected');
+    }
+
+    private function vehicleNotificationLabel(object $application): string
+    {
+        $vehicleNo = trim((string) ($application->vehicle_no ?? ''));
+
+        return $vehicleNo !== '' ? "for vehicle {$vehicleNo}" : '(#' . ($application->vehicle_req_id ?? $application->pk ?? '') . ')';
     }
 
     public function allApplications()
@@ -661,5 +705,125 @@ class VehiclePassApprovalController extends Controller
         );
 
         return view('admin.security.vehicle_pass_approval.all', compact('applications'));
+    }
+
+    /**
+     * Names for the listed rows, keyed three ways because emp_master_pk may hold
+     * employee_master.pk or pk_old, and older rows only carry employee_id_card (= emp_id).
+     *
+     * @return array{pk: array<string,string>, pk_old: array<string,string>, emp_id: array<string,string>}
+     */
+    private function employeeNameLookup(\Illuminate\Support\Collection $rows): array
+    {
+        $lookup = ['pk' => [], 'pk_old' => [], 'emp_id' => []];
+
+        $empPks = $rows->pluck('emp_master_pk')->filter()->map(fn ($v) => (string) $v)->unique()->values()->all();
+        $cards = $rows->pluck('employee_id_card')->filter()->map(fn ($v) => trim((string) $v))->filter()->unique()->values()->all();
+        if ($empPks === [] && $cards === []) {
+            return $lookup;
+        }
+
+        $employees = collect();
+        foreach (array_chunk($empPks, 1000) as $chunk) {
+            $employees = $employees->concat(
+                DB::table('employee_master')
+                    ->whereIn('pk', $chunk)
+                    ->orWhereIn('pk_old', $chunk)
+                    ->get(['pk', 'pk_old', 'emp_id', 'first_name', 'last_name'])
+            );
+        }
+        foreach (array_chunk($cards, 1000) as $chunk) {
+            $employees = $employees->concat(
+                DB::table('employee_master')
+                    ->whereIn('emp_id', $chunk)
+                    ->get(['pk', 'pk_old', 'emp_id', 'first_name', 'last_name'])
+            );
+        }
+
+        foreach ($employees as $e) {
+            $name = trim(($e->first_name ?? '') . ' ' . ($e->last_name ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $lookup['pk'][(string) $e->pk] = $name;
+            if (! empty($e->pk_old)) {
+                $lookup['pk_old'][(string) $e->pk_old] = $name;
+            }
+            if (! empty($e->emp_id)) {
+                $lookup['emp_id'][trim((string) $e->emp_id)] ??= $name;
+            }
+        }
+
+        // Contractual / other applicants are not in employee_master: the vehicle row carries
+        // their printed ID card number, which names them on security_con_oth_id_apply
+        // (same source the vehicle pass show page uses).
+        $unresolvedCards = array_values(array_filter($cards, fn ($card) => ! isset($lookup['emp_id'][$card])));
+        if ($unresolvedCards !== [] && Schema::hasColumn('security_con_oth_id_apply', 'employee_name')) {
+            foreach (array_chunk($unresolvedCards, 1000) as $chunk) {
+                $contractual = DB::table('security_con_oth_id_apply')
+                    ->whereIn('id_card_no', $chunk)
+                    ->orderByDesc('created_date')
+                    ->get(['id_card_no', 'employee_name']);
+                foreach ($contractual as $c) {
+                    $name = trim((string) ($c->employee_name ?? ''));
+                    if ($name !== '') {
+                        $lookup['emp_id'][trim((string) $c->id_card_no)] ??= $name;
+                    }
+                }
+            }
+        }
+
+        return $lookup;
+    }
+
+    /**
+     * @param  array{pk: array<string,string>, pk_old: array<string,string>, emp_id: array<string,string>}  $lookup
+     */
+    private function resolveEmployeeName(object $row, array $lookup): string
+    {
+        $empPk = (string) ($row->emp_master_pk ?? '');
+        if ($empPk !== '') {
+            if (isset($lookup['pk'][$empPk])) {
+                return $lookup['pk'][$empPk];
+            }
+            if (isset($lookup['pk_old'][$empPk])) {
+                return $lookup['pk_old'][$empPk];
+            }
+        }
+
+        return $lookup['emp_id'][trim((string) ($row->employee_id_card ?? ''))] ?? '';
+    }
+
+    /**
+     * employee_master keys (pk, pk_old, emp_id) of employees whose name contains $search,
+     * so the list search also finds a request by the applicant's name.
+     *
+     * @return array{pks: list<string>, emp_ids: list<string>}
+     */
+    private function employeeKeysMatchingName(string $search): array
+    {
+        $like = '%' . $search . '%';
+        $matches = DB::table('employee_master')
+            ->where(function ($q) use ($like) {
+                $q->where('first_name', 'like', $like)
+                    ->orWhere('last_name', 'like', $like)
+                    ->orWhereRaw("CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) LIKE ?", [$like]);
+            })
+            ->limit(500)
+            ->get(['pk', 'pk_old', 'emp_id']);
+
+        $pks = [];
+        $empIds = [];
+        foreach ($matches as $m) {
+            $pks[] = (string) $m->pk;
+            if (! empty($m->pk_old)) {
+                $pks[] = (string) $m->pk_old;
+            }
+            if (! empty($m->emp_id)) {
+                $empIds[] = trim((string) $m->emp_id);
+            }
+        }
+
+        return ['pks' => array_values(array_unique($pks)), 'emp_ids' => array_values(array_unique($empIds))];
     }
 }
