@@ -2112,6 +2112,9 @@ class KitchenIssueController extends Controller
                     true
                 )
                 : null;
+            // Re-read the lines after the lock: a return on this voucher that committed while this
+            // request waited has changed return_quantity since the lines were loaded above.
+            $itemsByPk = $kitchenIssue->items()->get()->keyBy('pk');
             $returnReductions = [];
             foreach ($request->items as $row) {
                 $itemPk = (int) $row['id'];

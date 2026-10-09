@@ -1618,8 +1618,41 @@ class SellingVoucherDateRangeController extends Controller
         $multiStore = $request->input('multi_store') === '1';
         $targetReportCache = [];
 
+        // Every store this save can change stock in; locked as the transaction's first statements so
+        // the stock checks below see other saves that committed while this one waited.
+        $lockStores = [];
+        if ($anchorReport->store_id) {
+            $lockStores[] = [(string) $anchorReport->store_type, (int) $anchorReport->store_id];
+        }
+        if (!$multiStore) {
+            $headerStore = $this->parseStoreIdentifier((string) $request->inve_store_master_pk);
+            $lockStores[] = [$headerStore['store_type'], $headerStore['store_id']];
+        }
+        $existingLineIds = [];
+        foreach ((array) $request->items as $row) {
+            $lineId = (int) ($row['line_id'] ?? 0);
+            if ($lineId <= 0) {
+                $rowStore = $this->parseStoreIdentifier((string) ($row['store_id'] ?? ''));
+                $lockStores[] = [$rowStore['store_type'], $rowStore['store_id']];
+            } elseif ($allowedRows->has($lineId)) {
+                $existingLineIds[] = $lineId;
+            }
+        }
+        if ($existingLineIds !== []) {
+            DB::table('sv_date_range_report_items as svi')
+                ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+                ->whereIn('svi.id', $existingLineIds)
+                ->whereNotNull('svr.store_id')
+                ->distinct()
+                ->get(['svr.store_type', 'svr.store_id'])
+                ->each(function ($r) use (&$lockStores) {
+                    $lockStores[] = [(string) $r->store_type, (int) $r->store_id];
+                });
+        }
+
         try {
             DB::beginTransaction();
+            AvailableQuantityService::lockStoresForStockChange($lockStores);
 
             $headerUpdate = [
                 'remarks' => $request->remarks,
@@ -2021,8 +2054,26 @@ class SellingVoucherDateRangeController extends Controller
                 ->all()
             : $report->items->pluck('id')->map(fn ($itemId) => (int) $itemId)->all();
 
+        // Stores whose stock these returns can change; locked as the transaction's first statements.
+        $requestedItemIds = array_values(array_intersect(
+            array_map(fn ($row) => (int) ($row['id'] ?? 0), (array) $request->items),
+            $allowedItemIds
+        ));
+        $lockStores = DB::table('sv_date_range_report_items as svi')
+            ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+            ->whereIn('svi.id', $requestedItemIds)
+            ->whereNotNull('svr.store_id')
+            ->distinct()
+            ->get(['svr.store_type', 'svr.store_id'])
+            ->map(fn ($r) => [(string) $r->store_type, (int) $r->store_id])
+            ->all();
+        if ($report->store_id) {
+            $lockStores[] = [(string) $report->store_type, (int) $report->store_id];
+        }
+
         try {
             DB::beginTransaction();
+            AvailableQuantityService::lockStoresForStockChange($lockStores);
             // Per store: stock read before that store's first line changes, and how much its returns go down.
             $availableMaps = [];
             $returnReductions = [];

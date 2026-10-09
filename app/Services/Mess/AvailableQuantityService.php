@@ -32,8 +32,9 @@ class AvailableQuantityService
     public static function availableQuantitiesForStore(string $storeType, int $storeId, bool $fresh = false): array
     {
         if ($fresh) {
-            // $fresh is the write-validation read. Inside a transaction, lock the store first so two
+            // $fresh is the write-validation read. Inside a transaction, lock the store so two
             // stock-changing requests for the same store cannot both pass the check on the same stock.
+            // Callers that run other queries first lock up front with lockStoresForStockChange().
             if (DB::transactionLevel() > 0) {
                 self::lockStoreForStockChange($storeType, $storeId);
             }
@@ -70,8 +71,10 @@ class AvailableQuantityService
     }
 
     /**
-     * Row-lock the store (until the surrounding transaction ends). A second request for the same
-     * store waits here, then reads stock that includes the first request's change.
+     * Row-lock the store until the surrounding transaction ends; a second request for the same store
+     * waits here. Under REPEATABLE READ a transaction's snapshot is fixed by its first plain read, so
+     * the lock must come before any other query in the transaction, or the waiting request still
+     * checks the stock as it was before the first request committed.
      */
     public static function lockStoreForStockChange(string $storeType, int $storeId): void
     {
@@ -82,6 +85,27 @@ class AvailableQuantityService
             ->where('id', $storeId)
             ->lockForUpdate()
             ->value('id');
+    }
+
+    /**
+     * Lock several stores as the first statements of a transaction, always in the same order
+     * (main stores, then sub-stores, each by id), so two multi-store writes cannot deadlock.
+     *
+     * @param  array<int, array{0: string, 1: int}>  $stores  [store type, store id] pairs; duplicates are fine
+     */
+    public static function lockStoresForStockChange(array $stores): void
+    {
+        $keyed = [];
+        foreach ($stores as [$storeType, $storeId]) {
+            $type = $storeType === 'sub_store' ? 'sub_store' : 'store';
+            if ((int) $storeId > 0) {
+                $keyed[$type.':'.(int) $storeId] = [$type, (int) $storeId];
+            }
+        }
+        uasort($keyed, fn ($a, $b) => [$a[0] === 'sub_store', $a[1]] <=> [$b[0] === 'sub_store', $b[1]]);
+        foreach ($keyed as [$type, $id]) {
+            self::lockStoreForStockChange($type, $id);
+        }
     }
 
     /**
