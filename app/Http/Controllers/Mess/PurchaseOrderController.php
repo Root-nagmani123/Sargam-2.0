@@ -68,11 +68,34 @@ class PurchaseOrderController extends Controller
         $filterDateTo = $request->get('date_to', '');
         $filterVendorIds = $vendorIds;
         $filterStoreIds = $storeIds;
+        $filterStatus = $this->purchaseOrderStatusFilter($request);
+        $canApprovePurchaseOrders = $this->canApprovePurchaseOrders();
+        $pendingApprovalCount = $canApprovePurchaseOrders
+            ? PurchaseOrder::where('status', 'pending')->count()
+            : 0;
 
         return view('mess.purchaseorders.index', compact(
             'vendors', 'stores', 'itemSubcategories', 'po_number', 'paymentModes',
-            'filterDateFrom', 'filterDateTo', 'filterVendorIds', 'filterStoreIds'
+            'filterDateFrom', 'filterDateTo', 'filterVendorIds', 'filterStoreIds',
+            'filterStatus', 'pendingApprovalCount', 'canApprovePurchaseOrders'
         ));
+    }
+
+    /**
+     * A new PO is pending: it is not in stock, so nothing on it can be sold yet. Mess Admin or
+     * Super Admin verifies it and approves it (stock, sale allowed, purchase details frozen) or
+     * rejects it.
+     */
+    private function canApprovePurchaseOrders(): bool
+    {
+        return function_exists('hasRole') && (hasRole('Mess Admin') || hasRole('Super Admin'));
+    }
+
+    private function purchaseOrderStatusFilter(Request $request): string
+    {
+        $status = (string) $request->input('status', '');
+
+        return in_array($status, ['pending', 'approved', 'rejected'], true) ? $status : '';
     }
 
     /**
@@ -85,8 +108,10 @@ class PurchaseOrderController extends Controller
             'store_id' => $this->normalizeFilterIdList($request->input('store_id')),
             'date_from' => $request->input('date_from'),
             'date_to' => $request->input('date_to'),
+            'status' => $this->purchaseOrderStatusFilter($request),
             'for_print' => $request->boolean('for_print'),
             'can_delete' => function_exists('hasRole') && (hasRole('Admin') || hasRole('Mess-Admin')),
+            'can_approve' => $this->canApprovePurchaseOrders(),
         ];
     }
 
@@ -105,6 +130,10 @@ class PurchaseOrderController extends Controller
         }
         if ($storeIds !== []) {
             $query->whereIn('store_id', $storeIds);
+        }
+        $status = $this->purchaseOrderStatusFilter($request);
+        if ($status !== '') {
+            $query->where('status', $status);
         }
 
         return $query;
@@ -180,9 +209,10 @@ class PurchaseOrderController extends Controller
         $purchaseOrders = $paged->get();
         $forPrint = $request->boolean('for_print');
         $canDeletePurchaseOrder = function_exists('hasRole') && (hasRole('Admin') || hasRole('Mess-Admin'));
+        $canApprove = $this->canApprovePurchaseOrders();
         $rowStart = $start + 1;
 
-        $data = $purchaseOrders->map(function ($po, $index) use ($canDeletePurchaseOrder, $rowStart, $forPrint) {
+        $data = $purchaseOrders->map(function ($po, $index) use ($canDeletePurchaseOrder, $canApprove, $rowStart, $forPrint) {
             $statusBadgeClass = $po->status === 'approved'
                 ? 'text-bg-success'
                 : ($po->status === 'rejected' ? 'text-bg-danger' : ($po->status === 'completed' ? 'text-bg-primary' : 'text-bg-warning'));
@@ -199,12 +229,31 @@ class PurchaseOrderController extends Controller
                 $viewBtn = '<button type="button" class="btn btn-sm btn-outline-primary btn-view-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="View">'
                     . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">visibility</i>'
                     . '</button>';
-                $editBtn = '<button type="button" class="btn btn-sm btn-outline-info btn-edit-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="Edit">'
+                $editBtn = $po->status === 'rejected' ? '' : '<button type="button" class="btn btn-sm btn-outline-info btn-edit-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="' . ($po->status === 'approved' ? 'Edit bill details' : 'Edit') . '">'
                     . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">edit</i>'
                     . '</button>';
                 $deleteForm = '';
+                $approvalForms = '';
 
-                if ($canDeletePurchaseOrder) {
+                if ($canApprove && $po->status === 'pending') {
+                    $csrf = csrf_token();
+                    $poNumber = e(addslashes($po->po_number));
+                    $approvalForms = '<form action="' . e(route('admin.mess.purchaseorders.approve', $po->id)) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Approve purchase order ' . $poNumber . '? Its items go into stock and can be sold, and its quantities and rates are locked.\');">'
+                        . '<input type="hidden" name="_token" value="' . e($csrf) . '">'
+                        . '<button type="submit" class="btn btn-sm btn-outline-success rounded-2 po-action-btn" title="Approve">'
+                        . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">check_circle</i>'
+                        . '</button>'
+                        . '</form>'
+                        . '<form action="' . e(route('admin.mess.purchaseorders.reject', $po->id)) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Reject purchase order ' . $poNumber . '? Its items will not go into stock.\');">'
+                        . '<input type="hidden" name="_token" value="' . e($csrf) . '">'
+                        . '<button type="submit" class="btn btn-sm btn-outline-danger rounded-2 po-action-btn" title="Reject">'
+                        . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">cancel</i>'
+                        . '</button>'
+                        . '</form>';
+                }
+
+                // An approved PO is in stock and may already be sold, so it cannot be deleted.
+                if ($canDeletePurchaseOrder && $po->status !== 'approved') {
                     $deleteUrl = route('admin.mess.purchaseorders.destroy', $po->id);
                     $csrf = csrf_token();
                     $deleteForm = '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this purchase order?\');">'
@@ -216,7 +265,7 @@ class PurchaseOrderController extends Controller
                         . '</form>';
                 }
 
-                $row[] = '<div class="po-actions-cell d-inline-flex align-items-center justify-content-end gap-1">' . $viewBtn . $editBtn . $deleteForm . '</div>';
+                $row[] = '<div class="po-actions-cell d-inline-flex align-items-center justify-content-end gap-1">' . $viewBtn . $editBtn . $approvalForms . $deleteForm . '</div>';
             }
 
             return $row;
@@ -253,7 +302,8 @@ class PurchaseOrderController extends Controller
             $request->validate([
                 'po_number' => 'required|unique:mess_purchase_orders,po_number',
                 'vendor_id' => 'required|exists:mess_vendors,id',
-                'store_id' => 'nullable|exists:mess_stores,id',
+                // Stock is counted per store; a PO without one is in nobody's stock.
+                'store_id' => 'required|exists:mess_stores,id',
                 'po_date' => 'required|date|before_or_equal:today',
                 'delivery_date' => 'nullable|date',
                 'payment_code' => 'nullable|string|max:50',
@@ -270,6 +320,7 @@ class PurchaseOrderController extends Controller
                 'items.*.tax_percent' => 'nullable|numeric|min:0|max:100',
                 'bill_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
             ], [
+                'store_id.required' => 'Please select a store.',
                 'contact_number.regex' => 'The contact number must be exactly 10 digits and contain only numbers (no letters or special characters).',
                 'bill_file.mimes' => 'Bill must be PDF or image (jpg, jpeg, png, webp).',
                 'bill_file.max' => 'Bill size must not exceed 5 MB.',
@@ -302,7 +353,8 @@ class PurchaseOrderController extends Controller
                     'challan_date' => $request->challan_date,
                     'remarks' => $request->remarks,
                     'created_by' => Auth::id(),
-                    'status' => 'approved',
+                    // Not in stock until Mess Admin / Super Admin approves it.
+                    'status' => 'pending',
                 ]);
                 $purchaseOrderId = $purchaseOrder->id;
 
@@ -341,13 +393,13 @@ class PurchaseOrderController extends Controller
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Purchase order created successfully',
+                    'message' => 'Purchase order created. Its items can be sold once Mess Admin approves it.',
                     'purchase_order_id' => $purchaseOrderId,
                 ]);
             }
 
             return redirect()->route('admin.mess.purchaseorders.index')
-                ->with('success', 'Purchase order created successfully')
+                ->with('success', 'Purchase order created. Its items can be sold once Mess Admin approves it.')
                 ->with('open_create_po_modal', true);
         } catch (ValidationException $e) {
             if ($request->ajax() || $request->wantsJson()) {
@@ -423,6 +475,23 @@ class PurchaseOrderController extends Controller
     {
         $purchaseOrder = PurchaseOrder::findOrFail($id);
 
+        if ($purchaseOrder->status === 'approved') {
+            return $this->updateApprovedPurchaseOrder($request, $purchaseOrder);
+        }
+        if ($purchaseOrder->status === 'rejected') {
+            return redirect()->route('admin.mess.purchaseorders.index')
+                ->with('po_edit_error', 'Purchase order ' . $purchaseOrder->po_number . ' is rejected and cannot be edited.');
+        }
+
+        // The edit modal posts its lines as one JSON field (items_json) so a large PO is not cut
+        // short by PHP's max_input_vars; turn it back into items[] before anything reads the lines.
+        if ($request->filled('items_json')) {
+            $jsonItems = json_decode((string) $request->input('items_json'), true);
+            if (is_array($jsonItems)) {
+                $request->merge(['items' => array_values($jsonItems)]);
+            }
+        }
+
         // The edit modal loads the lines of a large PO in parts and sets all_lines_loaded to 1
         // only once every line is in the form. Below, every existing line is deleted and only the
         // posted lines are re-created, so a save that may be missing lines is refused untouched.
@@ -455,10 +524,16 @@ class PurchaseOrderController extends Controller
             }
         }
 
+        // A failed validation here reopens the create modal, so report a missing store on the list instead.
+        if (! $request->filled('store_id')) {
+            return redirect()->route('admin.mess.purchaseorders.index')
+                ->with('po_edit_error', 'Please select a store for purchase order ' . $purchaseOrder->po_number . '. Nothing was saved.');
+        }
+
         $this->normalizePurchaseOrderItemsInRequest($request);
         $request->validate([
             'vendor_id' => 'required|exists:mess_vendors,id',
-            'store_id' => 'nullable|exists:mess_stores,id',
+            'store_id' => 'required|exists:mess_stores,id',
             'po_date' => 'required|date|before_or_equal:today',
             'delivery_date' => 'nullable|date',
             'payment_code' => 'nullable|string|max:50',
@@ -480,7 +555,14 @@ class PurchaseOrderController extends Controller
             'bill_file.max' => 'Bill size must not exceed 5 MB.',
         ]);
 
-        DB::transaction(function () use ($request, $purchaseOrder) {
+        $savedStatus = DB::transaction(function () use ($request, $purchaseOrder) {
+            // The status was read before validation; an approval or rejection may have landed since.
+            // Lock the row and re-check so an approved PO's lines are never replaced.
+            $current = PurchaseOrder::whereKey($purchaseOrder->id)->lockForUpdate()->value('status');
+            if (in_array($current, ['approved', 'rejected'], true)) {
+                return $current;
+            }
+
             $grandTotal = 0;
             foreach ($request->items as $item) {
                 $qty = (float) $item['quantity'];
@@ -506,13 +588,7 @@ class PurchaseOrderController extends Controller
                 'remarks' => $request->remarks,
             ]);
 
-            if ($request->hasFile('bill_file')) {
-                if ($purchaseOrder->bill_path && Storage::disk('public')->exists($purchaseOrder->bill_path)) {
-                    Storage::disk('public')->delete($purchaseOrder->bill_path);
-                }
-                $path = $request->file('bill_file')->store('mess/purchase-orders/bills', 'public');
-                $purchaseOrder->update(['bill_path' => $path]);
-            }
+            $this->replaceBillFile($request, $purchaseOrder);
 
             $purchaseOrder->items()->delete();
             $subcategories = ItemSubcategory::whereIn('id', collect($request->items)->map(
@@ -538,17 +614,101 @@ class PurchaseOrderController extends Controller
                     'description' => $item['description'] ?? null,
                 ]);
             }
+
+            return null;
         });
+        if ($savedStatus !== null) {
+            return redirect()->route('admin.mess.purchaseorders.index')
+                ->with('po_edit_error', 'Purchase order ' . $purchaseOrder->po_number . ' was ' . $savedStatus . ' while you were editing it, so nothing was saved.');
+        }
         self::bumpPurchaseOrderListingCacheEpoch();
 
         return redirect()->route('admin.mess.purchaseorders.index')->with('success', 'Purchase order updated successfully');
     }
 
+    /**
+     * An approved PO is in stock and may already be sold, so its purchase details (vendor, store,
+     * date, lines) are frozen. Only the bill and delivery details can still be filled in: a bill
+     * often arrives after the goods. An old approved PO saved without a store may be given one,
+     * which puts its stock into that store, so only Mess Admin / Super Admin may do it.
+     */
+    private function updateApprovedPurchaseOrder(Request $request, PurchaseOrder $purchaseOrder)
+    {
+        $request->validate([
+            'store_id' => 'nullable|exists:mess_stores,id',
+            'delivery_date' => 'nullable|date',
+            'payment_code' => 'nullable|string|max:50',
+            'delivery_address' => 'nullable|string|max:500',
+            'contact_number' => ['nullable', 'string', 'regex:/^[0-9]{10}$/'],
+            'bill_no' => 'nullable|string|max:100',
+            'challan_no' => 'nullable|string|max:100',
+            'bill_date' => 'nullable|date|before_or_equal:today',
+            'challan_date' => 'nullable|date|before_or_equal:today',
+            'bill_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
+        ], [
+            'contact_number.regex' => 'The contact number must be exactly 10 digits and contain only numbers (no letters or special characters).',
+            'bill_file.mimes' => 'Bill must be PDF or image (jpg, jpeg, png, webp).',
+            'bill_file.max' => 'Bill size must not exceed 5 MB.',
+        ]);
+
+        $details = [
+            'delivery_date' => $request->delivery_date ?? null,
+            'payment_code' => $request->payment_code,
+            'delivery_address' => $request->delivery_address,
+            'contact_number' => $request->contact_number,
+            'bill_no' => $request->bill_no,
+            'challan_no' => $request->challan_no,
+            'bill_date' => $request->bill_date,
+            'challan_date' => $request->challan_date,
+            'remarks' => $request->remarks,
+        ];
+        if (! $purchaseOrder->store_id && $request->filled('store_id') && $this->canApprovePurchaseOrders()) {
+            $details['store_id'] = (int) $request->store_id;
+        }
+
+        DB::transaction(function () use ($request, $purchaseOrder, $details) {
+            $purchaseOrder->update($details);
+            $this->replaceBillFile($request, $purchaseOrder);
+        });
+        self::bumpPurchaseOrderListingCacheEpoch();
+
+        return redirect()->route('admin.mess.purchaseorders.index')
+            ->with('success', 'Purchase order ' . $purchaseOrder->po_number . ' updated. It is approved, so only bill and delivery details were saved; vendor, store, date and items are locked.');
+    }
+
+    private function replaceBillFile(Request $request, PurchaseOrder $purchaseOrder): void
+    {
+        if (! $request->hasFile('bill_file')) {
+            return;
+        }
+        if ($purchaseOrder->bill_path && Storage::disk('public')->exists($purchaseOrder->bill_path)) {
+            Storage::disk('public')->delete($purchaseOrder->bill_path);
+        }
+        $path = $request->file('bill_file')->store('mess/purchase-orders/bills', 'public');
+        $purchaseOrder->update(['bill_path' => $path]);
+    }
+
     public function destroy($id)
     {
         $purchaseOrder = PurchaseOrder::findOrFail($id);
-        $purchaseOrder->items()->delete();
-        $purchaseOrder->delete();
+        if ($purchaseOrder->status === 'approved') {
+            return redirect()->route('admin.mess.purchaseorders.index')
+                ->with('po_edit_error', 'Purchase order ' . $purchaseOrder->po_number . ' is approved and in stock, so it cannot be deleted.');
+        }
+        // Re-check under a row lock: the PO may have been approved after it was read above.
+        $deleted = DB::transaction(function () use ($purchaseOrder) {
+            if (PurchaseOrder::whereKey($purchaseOrder->id)->lockForUpdate()->value('status') === 'approved') {
+                return false;
+            }
+            $purchaseOrder->items()->delete();
+            $purchaseOrder->delete();
+
+            return true;
+        });
+        if (! $deleted) {
+            return redirect()->route('admin.mess.purchaseorders.index')
+                ->with('po_edit_error', 'Purchase order ' . $purchaseOrder->po_number . ' is approved and in stock, so it cannot be deleted.');
+        }
         self::bumpPurchaseOrderListingCacheEpoch();
 
         return redirect()->route('admin.mess.purchaseorders.index')->with('success', 'Purchase order deleted successfully');
@@ -557,23 +717,56 @@ class PurchaseOrderController extends Controller
     public function approve($id)
     {
         $purchaseOrder = PurchaseOrder::findOrFail($id);
-        $purchaseOrder->update([
+        if ($refusal = $this->approvalRefusal($purchaseOrder)) {
+            return redirect()->route('admin.mess.purchaseorders.index')->with('po_edit_error', $refusal);
+        }
+        // Only a still-pending PO changes: if another approve/reject landed first, nothing is written.
+        $changed = PurchaseOrder::whereKey($purchaseOrder->id)->where('status', 'pending')->update([
             'status' => 'approved',
             'approved_by' => Auth::id(),
             'approved_at' => now(),
         ]);
+        if ($changed === 0) {
+            return redirect()->route('admin.mess.purchaseorders.index')
+                ->with('po_edit_error', $this->approvalRefusal($purchaseOrder->refresh()) ?? 'Purchase order ' . $purchaseOrder->po_number . ' was not changed.');
+        }
         self::bumpPurchaseOrderListingCacheEpoch();
 
-        return redirect()->route('admin.mess.purchaseorders.index')->with('success', 'Purchase order approved successfully');
+        return redirect()->route('admin.mess.purchaseorders.index')
+            ->with('success', 'Purchase order ' . $purchaseOrder->po_number . ' approved. Its items are now in stock and can be sold.');
     }
 
     public function reject($id)
     {
         $purchaseOrder = PurchaseOrder::findOrFail($id);
-        $purchaseOrder->update(['status' => 'rejected']);
+        if ($refusal = $this->approvalRefusal($purchaseOrder)) {
+            return redirect()->route('admin.mess.purchaseorders.index')->with('po_edit_error', $refusal);
+        }
+        $changed = PurchaseOrder::whereKey($purchaseOrder->id)->where('status', 'pending')->update(['status' => 'rejected']);
+        if ($changed === 0) {
+            return redirect()->route('admin.mess.purchaseorders.index')
+                ->with('po_edit_error', $this->approvalRefusal($purchaseOrder->refresh()) ?? 'Purchase order ' . $purchaseOrder->po_number . ' was not changed.');
+        }
         self::bumpPurchaseOrderListingCacheEpoch();
 
-        return redirect()->route('admin.mess.purchaseorders.index')->with('success', 'Purchase order rejected');
+        return redirect()->route('admin.mess.purchaseorders.index')
+            ->with('success', 'Purchase order ' . $purchaseOrder->po_number . ' rejected');
+    }
+
+    /**
+     * Only Mess Admin / Super Admin decide, and only on a pending PO: an approved one is in stock
+     * and may be sold, so it cannot be rejected or approved again.
+     */
+    private function approvalRefusal(PurchaseOrder $purchaseOrder): ?string
+    {
+        if (! $this->canApprovePurchaseOrders()) {
+            return 'Only Mess Admin or Super Admin can approve or reject a purchase order.';
+        }
+        if ($purchaseOrder->status !== 'pending') {
+            return 'Purchase order ' . $purchaseOrder->po_number . ' is already ' . $purchaseOrder->status . '.';
+        }
+
+        return null;
     }
 
     public function getVendorItems($vendorId)
