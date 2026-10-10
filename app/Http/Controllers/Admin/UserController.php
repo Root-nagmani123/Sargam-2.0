@@ -6755,15 +6755,18 @@ class UserController extends Controller
      * `.plain-status-toggle`, which posts through a hidden form instead.
      *
      * Adding a status switch to a new screen means adding its row here.
+     *
+     * 'admin_only' rows are refused to anyone but Admin / Super Admin;
+     * 'permission' rows to anyone without that screen's menu permission.
      */
     private const TOGGLE_STATUS_ALLOWED = [
         'appellation_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'building_floor_room_mapping' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'building_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'caste_category_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'city_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'class_session_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'country_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'city_master' => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'permission' => 'city'],
+        'class_session_master' => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'permission' => 'class_session_master'],
+        'country_master' => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'permission' => 'country'],
         'course_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'course_memo_decision_mapp' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'department_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
@@ -6792,14 +6795,14 @@ class UserController extends Controller
         'ot_hostel_room_details' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'sec_id_cardno_config_map' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'sec_id_cardno_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'state_district_mapping' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
-        'state_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'state_district_mapping' => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'permission' => 'district'],
+        'state_master' => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'permission' => 'state'],
         'states' => ['id_column' => 'pk', 'columns' => ['status']],
-        'stream_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'stream_master' => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'permission' => 'stream'],
         'subject_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'subject_module_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'user_role_master' => ['id_column' => 'pk', 'columns' => ['active_inactive'], 'admin_only' => true],
-        'venue_master' => ['id_column' => 'venue_id', 'columns' => ['active_inactive']],
+        'venue_master' => ['id_column' => 'venue_id', 'columns' => ['active_inactive'], 'permission' => 'venue_master'],
     ];
 
     /**
@@ -6873,10 +6876,11 @@ class UserController extends Controller
             // two roles the application already treats as administrators
             // (authorizeAdmin() in the Setup controllers uses the same pair).
             //
-            // This closes the escalation path, not the whole of Trap 29: the
-            // remaining tables stay behind `auth` alone until the sidebar permission
-            // model covers their screens, and that is still the Engineering lead's
-            // call to make rather than this endpoint's.
+            // This closes the escalation path, not the whole of Trap 29: tables
+            // with neither admin_only nor a screen `permission` stay behind `auth`
+            // alone until the sidebar permission model covers their screens, and
+            // that is still the Engineering lead's call to make rather than this
+            // endpoint's.
             //
             // The check reads the role tables, not hasRole(): that helper answers
             // from the session list written at login, so an administrator whose
@@ -6893,6 +6897,21 @@ class UserController extends Controller
                     'user' => optional(auth()->user())->getKey(),
                     'table' => $table,
                     'column' => $column,
+                ]));
+
+                return response()->json([
+                    'message' => 'You do not have permission to change this record.',
+                ], 403);
+            }
+
+            // A row carrying `permission` names the menus.permission_name of the one
+            // screen that toggles it; the switch is refused to anyone that screen's
+            // sidebar entry is hidden from (Super Admin always passes, as there).
+            if (isset($allowed['permission']) && ! hasMenuPermission($allowed['permission'])) {
+                \Log::warning('Refused a toggle-status request without the screen permission', LogSafe::context([
+                    'user' => optional(auth()->user())->getKey(),
+                    'table' => $table,
+                    'permission' => $allowed['permission'],
                 ]));
 
                 return response()->json([

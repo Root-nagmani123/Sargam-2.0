@@ -332,6 +332,56 @@ class ToggleStatusEndpointTest extends TestCase
      * would break the functional roles (Estate, Mess-Admin, IST and the rest)
      * that maintain their own module's reference data today.
      */
+    /**
+     * PR #335 review F-002 (trap 29): the seven location / class-session /
+     * stream / venue grids rebuilt by PR #335 post here. Each table now needs
+     * its screen's menu permission (Super Admin always passes), so a signed-in
+     * account without it is refused and the row is not written.
+     *
+     * @dataProvider screenGatedTables
+     */
+    public function test_a_screen_gated_table_is_refused_to_an_account_without_its_permission(string $table, string $idColumn): void
+    {
+        $actor = $this->actor();
+        $this->assertFalse($this->isAdministrator($actor), 'this test needs a NON-administrator actor; the fixture user has changed');
+
+        $row = DB::table($table)->orderBy($idColumn)->first([$idColumn, 'active_inactive']);
+        if (! $row) {
+            $this->markTestSkipped("no {$table} row to target");
+        }
+
+        $this->actingAs($actor)->withSession(['user_roles' => ['Employee']])
+            ->post('/admin/toggle-status', [
+                'table' => $table, 'column' => 'active_inactive', 'id_column' => $idColumn,
+                'id' => $row->{$idColumn}, 'status' => (int) $row->active_inactive === 1 ? 0 : 1,
+            ])
+            ->assertStatus(403);
+
+        $this->assertSame((int) $row->active_inactive, (int) DB::table($table)->where($idColumn, $row->{$idColumn})->value('active_inactive'));
+
+        $this->actingAs($this->administrator())->withSession(['user_roles' => ['Super Admin']])
+            ->post('/admin/toggle-status', [
+                'table' => $table, 'column' => 'active_inactive', 'id_column' => $idColumn,
+                'id' => $row->{$idColumn}, 'status' => (int) $row->active_inactive === 1 ? 0 : 1,
+            ])
+            ->assertOk();
+
+        $this->assertNotSame((int) $row->active_inactive, (int) DB::table($table)->where($idColumn, $row->{$idColumn})->value('active_inactive'));
+    }
+
+    public static function screenGatedTables(): array
+    {
+        return [
+            'country' => ['country_master', 'pk'],
+            'state' => ['state_master', 'pk'],
+            'district' => ['state_district_mapping', 'pk'],
+            'city' => ['city_master', 'pk'],
+            'class session' => ['class_session_master', 'pk'],
+            'stream' => ['stream_master', 'pk'],
+            'venue' => ['venue_master', 'venue_id'],
+        ];
+    }
+
     public function test_an_ordinary_master_is_still_open_to_a_non_administrator(): void
     {
         $row = DB::table('faculty_expertise_master')->orderBy('pk')->first();
