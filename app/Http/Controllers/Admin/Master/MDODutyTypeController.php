@@ -48,6 +48,12 @@ class MDODutyTypeController extends Controller
 
     public function changeStatus(Request $request)
     {
+        // The guard and the update must see the same pk: an array binding is
+        // flattened to its first element, so pk[]=2 would pass a scalar-only guard.
+        if (! is_scalar($request->pk) || ! ctype_digit((string) $request->pk)) {
+            return $this->refuseSystemType($request, 'Invalid duty type.');
+        }
+
         if ($this->systemTypeKey($request->pk) !== null && (string) $request->active_inactive !== '1') {
             return $this->refuseSystemType($request, 'MDO, Escort and Other are system duty types and cannot be deactivated.');
         }

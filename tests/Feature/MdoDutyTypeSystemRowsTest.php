@@ -125,6 +125,58 @@ class MdoDutyTypeSystemRowsTest extends TestCase
         $this->assertSame($pk, MDOEscotDutyMap::getMdoDutyTypes()['escort']);
     }
 
+    /**
+     * PR #335 review F-009: the status guard read a scalar pk, the update bound
+     * the raw one, and Laravel flattens an array binding to its first element,
+     * so pk[]=2 deactivated Escort. A pk that is not a plain digit string is
+     * refused before any query; pk=2abc used to reach MySQL and 500.
+     *
+     * @dataProvider malformedPks
+     */
+    public function test_a_malformed_pk_is_refused_and_the_system_row_stays_active($pk): void
+    {
+        $pk = $pk === 'ESCORT[]' ? [(string) $this->types['escort']] : $pk;
+
+        $this->actingAs($this->admin())->withHeaders(self::XHR)
+            ->post(route('master.mdo_duty_type.status'), ['pk' => $pk, 'active_inactive' => 0])
+            ->assertStatus(422);
+
+        $this->assertSame(1, (int) $this->escortRow()->active_inactive);
+    }
+
+    public static function malformedPks(): array
+    {
+        return [
+            'array pk naming the Escort row' => ['ESCORT[]'],
+            'digits with trailing text' => ['2abc'],
+            'leading space' => [' 2'],
+        ];
+    }
+
+    /** The duty-type routes now need the screen's permission; an Officer Trainee has none. */
+    public function test_an_officer_trainee_is_refused_before_the_controller_runs(): void
+    {
+        $trainee = DB::table('user_credentials')->insertGetId([
+            'user_name' => 'fme.ot.duty.'.uniqid(), 'user_id' => 0, 'user_category' => 'S',
+        ]);
+
+        foreach ([
+            ['master.mdo_duty_type.status', ['pk' => [(string) $this->types['escort']], 'active_inactive' => 0]],
+            ['master.mdo_duty_type.store', ['id' => $this->types['escort'], 'mdo_duty_type_name' => 'Escort', 'active_inactive' => 0]],
+            ['master.mdo_duty_type.delete', ['id' => $this->types['escort']]],
+        ] as [$route, $data]) {
+            $this->actingAs(User::find($trainee))->withSession(['user_roles' => ['Student-OT']])
+                ->withHeaders(self::XHR)->post(route($route), $data)
+                ->assertStatus(403);
+        }
+
+        $this->actingAs(User::find($trainee))->withSession(['user_roles' => ['Student-OT']])
+            ->get(route('master.mdo_duty_type.index'))->assertStatus(403);
+
+        $this->assertSame(1, (int) $this->escortRow()->active_inactive);
+        $this->assertSame($this->types, MDOEscotDutyMap::getMdoDutyTypes());
+    }
+
     public function test_a_case_only_rename_of_a_system_row_is_still_allowed(): void
     {
         $this->store(['id' => $this->types['escort'], 'mdo_duty_type_name' => 'ESCORT', 'active_inactive' => 1])
