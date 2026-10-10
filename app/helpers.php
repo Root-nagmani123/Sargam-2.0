@@ -1112,29 +1112,47 @@ function faculty_pk_by_contact(?string $mobile, ?string $email, array $names): ?
         return null;
     }
 
+    foreach (faculty_rows_by_contact($mobile, $email) as $row) {
+        if (array_intersect(faculty_name_tokens((string) $row->full_name), $wanted) !== []) {
+            return (int) $row->pk;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * The faculty_master rows a real contact identifies on its own (no name check):
+ * for the mobile, then the email, the one row carrying it when exactly one does.
+ * Real means 10+ digits and not one repeated digit, or a valid email address.
+ *
+ * @return \App\Models\FacultyMaster[]
+ */
+function faculty_rows_by_contact(?string $mobile, ?string $email): array
+{
     $candidates = [];
 
     $mobile = trim((string) $mobile);
     $digits = preg_replace('/\D+/', '', $mobile);
     if (strlen($digits) >= 10 && ! preg_match('/^(\d)\1+$/', $digits)) {
-        $candidates[] = \App\Models\FacultyMaster::where('mobile_no', $mobile)->limit(2)->get(['pk', 'full_name']);
+        $candidates[] = \App\Models\FacultyMaster::where('mobile_no', $mobile)->limit(2)->get(['pk', 'full_name', 'employee_master_pk']);
     }
 
     $email = trim((string) $email);
     if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $candidates[] = \App\Models\FacultyMaster::where(function ($q) use ($email) {
             $q->where('email_id', $email)->orWhere('alternate_email_id', $email);
-        })->limit(2)->get(['pk', 'full_name']);
+        })->limit(2)->get(['pk', 'full_name', 'employee_master_pk']);
     }
 
-    foreach ($candidates as $rows) {
-        if ($rows->count() === 1
-            && array_intersect(faculty_name_tokens((string) $rows[0]->full_name), $wanted) !== []) {
-            return (int) $rows[0]->pk;
+    $rows = [];
+    foreach ($candidates as $found) {
+        if ($found->count() === 1) {
+            $rows[] = $found[0];
         }
     }
 
-    return null;
+    return $rows;
 }
 
 /**
@@ -1471,6 +1489,15 @@ function provision_faculty_profile_from_employee_user(): ?int
     // Already linked elsewhere
     if (\App\Models\FacultyMaster::where('employee_master_pk', $employeePk)->exists()) {
         return (int) \App\Models\FacultyMaster::where('employee_master_pk', $employeePk)->value('pk');
+    }
+
+    // The contact names an unlinked faculty whose name did not match (e.g. "Prem V R"
+    // / "Premkumar VR"): likely the same person, so creating a row would duplicate
+    // them. Leave the link to an administrator (PR #335 review F-013).
+    foreach (faculty_rows_by_contact($mobile, $email) as $row) {
+        if (empty($row->employee_master_pk)) {
+            return null;
+        }
     }
 
     $facultyType = hasRole('Guest Faculty') ? 2 : 1;

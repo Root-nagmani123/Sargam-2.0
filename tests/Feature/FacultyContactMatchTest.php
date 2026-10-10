@@ -151,6 +151,29 @@ class FacultyContactMatchTest extends TestCase
         $this->assertSame($otherEmployee, (int) DB::table('faculty_master')->where('pk', $taken)->value('employee_master_pk'));
     }
 
+    /**
+     * PR #335 review F-013: a real, unique mobile names an unlinked faculty
+     * spelt differently ("Premkumar VR" / "Prem V R"). The name rule rejects
+     * the match, and the resolver used to fall through to the create branch,
+     * writing a second faculty row for the same person. It must write nothing.
+     */
+    public function test_a_unique_contact_naming_an_unlinked_faculty_under_another_spelling_writes_no_faculty_row(): void
+    {
+        $mobile = $this->freshMobile();
+        $existing = $this->faculty('Premkumar  VR', $mobile);
+        $employeePk = $this->loginEmployee('Prem', 'V R', (int) $mobile, null);
+        DB::table('user_credentials')->where('user_name', 'fcm.'.$employeePk)->update(['mobile_no' => $mobile]);
+        $this->actingAs(User::where('user_name', 'fcm.'.$employeePk)->first());
+        $before = DB::table('faculty_master')->count();
+
+        $this->assertNull(get_auth_faculty_master_pk());
+        $this->assertNull(provision_faculty_profile_from_employee_user());
+
+        $this->assertSame($before, DB::table('faculty_master')->count(), 'no faculty_master row may be written');
+        $this->assertSame(0, DB::table('faculty_master')->where('employee_master_pk', $employeePk)->count());
+        $this->assertNull(DB::table('faculty_master')->where('pk', $existing)->value('employee_master_pk'), 'the existing record stays unlinked, for an administrator to link');
+    }
+
     public function test_auth_lookup_does_not_resolve_a_login_through_a_shared_placeholder_mobile(): void
     {
         $this->faculty('Fcm Placeholder Holder', '1234512345');
