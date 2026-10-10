@@ -13,7 +13,7 @@
     // options separately (?? 1 and ?? 2), so both were "selected" on Add and the
     // browser kept the last one (Inactive). Inactive posts 0: store() saves
     // `active_inactive ? 1 : 0`, so the old "2" was saved as Active.
-    $conclusionStatus = (string) old('active_inactive', $conclusion->active_inactive ?? 1);
+    $conclusionStatus = old_string('active_inactive', $conclusion->active_inactive ?? 1);
 @endphp
 <div class="container-fluid mst-page">
 

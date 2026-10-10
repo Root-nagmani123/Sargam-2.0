@@ -6,7 +6,7 @@
     // a close/reopen (the hidden handler resets to 1). Active is the default
     // everywhere now.
     $smAddIsOld = old('module_form') === 'add';
-    $smAddStatus = $smAddIsOld ? (string) old('active_inactive', '1') : '1';
+    $smAddStatus = $smAddIsOld ? old_string('active_inactive', '1') : '1';
 @endphp
 <div class="modal fade mst-modal sm-module-form-modal" id="smAddModuleModal" tabindex="-1"
      aria-labelledby="smAddModuleModalLabel" aria-hidden="true" data-bs-backdrop="static">

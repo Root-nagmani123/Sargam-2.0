@@ -2,7 +2,7 @@
      .mst-modal #dutyTypeModal body on the index page. store() requires
      active_inactive, so the Status field is part of the form. --}}
 @php
-    $mdoFormStatus = (string) old('active_inactive', $mdoDutyType->active_inactive ?? 1);
+    $mdoFormStatus = old_string('active_inactive', $mdoDutyType->active_inactive ?? 1);
 @endphp
 <form action="{{ route('master.mdo_duty_type.store') }}" method="POST" id="dutyTypeForm">
     @csrf

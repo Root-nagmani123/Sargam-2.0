@@ -9,7 +9,7 @@
 
 @section('setup_content')
 @php
-    $hbSelectedType = (string) old('building_type', $hostelBuildingMaster->building_type ?? '');
+    $hbSelectedType = old_string('building_type', $hostelBuildingMaster->building_type ?? '');
 @endphp
 <div class="container-fluid mst-page hostel-building-page">
 

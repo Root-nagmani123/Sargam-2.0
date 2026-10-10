@@ -10,7 +10,7 @@
 @section('setup_content')
 @php
     // One value drives the Status select (Active when nothing is set yet).
-    $emsStatus = (string) old('active_inactive', $speciality->active_inactive ?? 1);
+    $emsStatus = old_string('active_inactive', $speciality->active_inactive ?? 1);
 @endphp
 <div class="container-fluid mst-page ems-page">
 

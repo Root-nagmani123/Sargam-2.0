@@ -10,7 +10,7 @@
 @section('setup_content')
 @php
     // One value drives the Status select (Active when nothing is set yet).
-    $eccmStatus = (string) old('active_inactive', $exemptionCategory->active_inactive ?? 1);
+    $eccmStatus = old_string('active_inactive', $exemptionCategory->active_inactive ?? 1);
 @endphp
 <div class="container-fluid mst-page eccm-page">
 

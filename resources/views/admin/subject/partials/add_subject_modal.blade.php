@@ -5,7 +5,7 @@
     // handler resets to 1), and the controller defaults a missing status to 1 —
     // so Active is the default everywhere now.
     $smAddIsOld = old('subject_form') === 'add';
-    $smAddStatus = $smAddIsOld ? (string) old('status', '1') : '1';
+    $smAddStatus = $smAddIsOld ? old_string('status', '1') : '1';
 @endphp
 <div class="modal fade mst-modal sm-subject-form-modal" id="smAddSubjectModal" tabindex="-1"
      aria-labelledby="smAddSubjectModalLabel" aria-hidden="true" data-bs-backdrop="static">

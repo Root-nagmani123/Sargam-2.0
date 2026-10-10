@@ -13,7 +13,7 @@
     $cmdmFormAction = isset($courseMemoMap)
         ? route('course.memo.decision.update', ['id' => encrypt($courseMemoMap->pk)])
         : route('course.memo.decision.store');
-    $cmdmStatus = (string) old('active_inactive', $courseMemoMap->active_inactive ?? 1);
+    $cmdmStatus = old_string('active_inactive', $courseMemoMap->active_inactive ?? 1);
 @endphp
 <div class="container-fluid mst-page cmdm-page">
 

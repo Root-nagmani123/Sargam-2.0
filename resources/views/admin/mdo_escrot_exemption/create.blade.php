@@ -110,8 +110,8 @@
 @php
     // $mdoDutyType is never passed by MDOEscrotExemptionController::create(); the
     // `?? ''` fallbacks are kept from the old x-select / x-input markup.
-    $meeCourse = (string) old('course_master_pk', $mdoDutyType->course_master_pk ?? '');
-    $meeDuty = (string) old('mdo_duty_type_master_pk', $mdoDutyType->mdo_duty_type_master_pk ?? '');
+    $meeCourse = old_string('course_master_pk', $mdoDutyType->course_master_pk ?? '');
+    $meeDuty = old_string('mdo_duty_type_master_pk', $mdoDutyType->mdo_duty_type_master_pk ?? '');
     $meeFaculty = old('faculty_master_pk', '');
     $meeFaculty = is_array($meeFaculty) ? (string) ($meeFaculty[0] ?? '') : (string) $meeFaculty;
 @endphp

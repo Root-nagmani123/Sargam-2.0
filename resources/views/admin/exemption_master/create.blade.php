@@ -85,7 +85,7 @@
                                         data-start-date="{{ filled($course->start_year) ? \Carbon\Carbon::parse($course->start_year)->format('Y-m-d') : '' }}"
                                         data-pt-start-time="{{ filled($course->pt_start_time) ? \Carbon\Carbon::parse($course->pt_start_time)->format('H:i') : '' }}"
                                         data-pt-end-time="{{ filled($course->pt_end_time) ? \Carbon\Carbon::parse($course->pt_end_time)->format('H:i') : '' }}"
-                                        {{ (string) old('course_master_pk', $courseMasterPk) === (string) $course->pk ? 'selected' : '' }}>
+                                        {{ old_string('course_master_pk', $courseMasterPk) === (string) $course->pk ? 'selected' : '' }}>
                                         {{ $course->course_name }}
                                     </option>
                                 @endforeach

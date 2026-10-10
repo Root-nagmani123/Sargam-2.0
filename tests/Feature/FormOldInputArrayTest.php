@@ -95,6 +95,62 @@ class FormOldInputArrayTest extends TestCase
         }
     }
 
+    /**
+     * PR #335 review F-010: every other (string) old(...) the PR added, plus
+     * country create's per-entry country_name echo. The first eleven are the
+     * review's list; the rest share the root cause.
+     *
+     * @return array<string, array{string, array, 2?: array}> label => [url, old input, headers]
+     */
+    private function remainingForms(): array
+    {
+        $id = fn (string $table) => DB::table($table)->value('pk')
+            ?? $this->markTestSkipped("no {$table} row to edit");
+        $active = ['active_inactive' => ['1']];
+        $xhr = ['X-Requested-With' => 'XMLHttpRequest'];
+
+        return [
+            'state create' => [route('master.state.create'), $active],
+            'state edit' => [route('master.state.edit', $id('state_master')), $active],
+            'district create' => [route('master.district.create'), $active],
+            'district edit' => [route('master.district.edit', $id('state_district_mapping')), $active],
+            'course memo create' => [route('course.memo.decision.create'), $active],
+            'exemption category create' => [route('master.exemption.category.master.create'), $active],
+            'medical speciality create' => [route('master.exemption.medical.speciality.create'), $active],
+            'MDO duty type create' => [route('master.mdo_duty_type.create'), $active],
+            'MDO duty type _form' => [route('master.mdo_duty_type.create'), $active, $xhr],
+            'memo type create' => [route('master.memo.type.master.create'), $active],
+            'memo conclusion create' => [route('master.memo.conclusion.master.create'), $active],
+            'country create, nested country_name' => [route('master.country.create'), ['country_name' => ['ok', ['x']], 'active_inactive' => ['1']]],
+            'city edit' => [route('master.city.edit', $id('city_master')), $active],
+            'PT exemption create' => [route('admin.pt-exemption-master.create'), ['course_master_pk' => ['1']]],
+            'hostel building create' => [route('master.hostel.building.create'), ['building_type' => ['1']]],
+            'MDO/escort exemption create' => [route('mdo-escrot-exemption.create'), ['course_master_pk' => ['1'], 'mdo_duty_type_master_pk' => ['1']]],
+            'MDO/escort exemption edit' => [route('mdo-escrot-exemption.edit', $id('mdo_escot_duty_map')), ['mdo_duty_type_master_pk' => ['1']]],
+            'subject add modal' => [route('subject.index'), ['subject_form' => 'add', 'status' => ['1']]],
+            'subject module add modal' => [route('subject-module.index'), ['module_form' => 'add', 'active_inactive' => ['1']]],
+        ];
+    }
+
+    public function test_array_old_input_renders_every_remaining_rewritten_form(): void
+    {
+        $failed = [];
+        foreach ($this->remainingForms() as $label => $form) {
+            $status = $this->actingAs($this->admin())
+                ->withSession(['_old_input' => $form[1]])
+                ->withHeaders($form[2] ?? [])
+                ->get($form[0])
+                ->getStatusCode();
+            $this->flushHeaders();
+
+            if ($status !== 200) {
+                $failed[] = "$label: $status";
+            }
+        }
+
+        $this->assertSame([], $failed, 'forms that did not render with array old input');
+    }
+
     public function test_scalar_old_input_is_still_reselected(): void
     {
         // Inactive (2) flashed back is still the selected option.

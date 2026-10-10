@@ -12,7 +12,7 @@
     // The grid's status switch stores 0 for Inactive, the form stores 2.
     // Map every non-1 value to the Inactive option: with no option matching 0
     // the browser pre-selected Active, so saving re-activated the record.
-    $cityStatus = (string) old('active_inactive', $city->active_inactive ?? 1) === '1' ? '1' : '2';
+    $cityStatus = old_string('active_inactive', $city->active_inactive ?? 1) === '1' ? '1' : '2';
 @endphp
 <div class="container-fluid mst-page">
     <x-breadcrum title="Edit City" />

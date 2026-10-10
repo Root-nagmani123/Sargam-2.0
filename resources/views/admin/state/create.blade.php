@@ -12,7 +12,7 @@
     // One value drives the Status select. The old markup defaulted each option
     // separately (?? 1 and ?? 2), so both were "selected" on Add and the browser
     // kept the last one — new states silently defaulted to Inactive.
-    $stateStatus = (string) old('active_inactive', 1);
+    $stateStatus = old_string('active_inactive', 1);
 @endphp
 <div class="container-fluid mst-page">
     <x-breadcrum title="Add State" />

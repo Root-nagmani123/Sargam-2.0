@@ -9,7 +9,7 @@
 
 @section('setup_content')
 @php
-    $meeDuty = (string) old('mdo_duty_type_master_pk', $mdoDutyType->mdo_duty_type_master_pk ?? '');
+    $meeDuty = old_string('mdo_duty_type_master_pk', $mdoDutyType->mdo_duty_type_master_pk ?? '');
     $meeFaculty = old('faculty_master_pk', $mdoDutyType->faculty_master_pk ?? '');
     $meeFaculty = is_array($meeFaculty) ? (string) ($meeFaculty[0] ?? '') : (string) $meeFaculty;
 @endphp

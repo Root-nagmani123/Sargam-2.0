@@ -10,7 +10,7 @@
 @section('setup_content')
 @php
     // One value drives the Status select (Active unless the record says otherwise).
-    $memoTypeStatus = (string) old('active_inactive', $memoType->active_inactive ?? 1);
+    $memoTypeStatus = old_string('active_inactive', $memoType->active_inactive ?? 1);
 @endphp
 <div class="container-fluid mst-page">
 

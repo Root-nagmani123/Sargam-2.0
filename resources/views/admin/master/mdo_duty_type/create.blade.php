@@ -12,7 +12,7 @@
     // store() requires active_inactive, but this page never sent it, so every
     // full-page save failed validation. One value drives the Status select
     // (Active unless the record says otherwise); 1 / 0 as the grid writes them.
-    $mdoStatus = (string) old('active_inactive', $mdoDutyType->active_inactive ?? 1);
+    $mdoStatus = old_string('active_inactive', $mdoDutyType->active_inactive ?? 1);
 @endphp
 <div class="container-fluid mst-page">
 

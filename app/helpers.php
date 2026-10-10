@@ -1167,6 +1167,17 @@ function login_faculty_key_column(): string
 }
 
 /**
+ * old($key, $default) as a string for a form to re-select. A field posted as
+ * name[]=x comes back as an array, and (string) on it is a 500: use the default.
+ */
+function old_string(string $key, $default = ''): string
+{
+    $value = old($key, $default);
+
+    return is_scalar($value) ? (string) $value : (string) $default;
+}
+
+/**
  * Resolve faculty_master.pk for the authenticated user.
  *
  * Mapping used across the app:

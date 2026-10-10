@@ -12,7 +12,8 @@
     // One card per posted name, so a rejected submit comes back with every row.
     $countryNames = old('country_name', ['']);
     $countryNames = is_array($countryNames) && count($countryNames) ? array_values($countryNames) : [''];
-    $countryStatus = (string) old('active_inactive', 1);
+    $countryNames = array_map(fn ($name) => is_scalar($name) ? (string) $name : '', $countryNames);
+    $countryStatus = old_string('active_inactive', 1);
 @endphp
 <div class="container-fluid mst-page">
     <x-breadcrum title="Add Country" />
