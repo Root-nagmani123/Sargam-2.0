@@ -20,7 +20,7 @@ class FacultyRoleScopingTest extends TestCase
 {
     private bool $inTransaction = false;
 
-    private array $actor = [];
+    private int $employeePk = 0;
 
     private int $me = 0;
 
@@ -65,12 +65,7 @@ class FacultyRoleScopingTest extends TestCase
             ['courses_master_pk' => $this->courseY, 'Coordinator_name' => $this->other, 'created_date' => now()],
         ]);
 
-        $userPk = DB::table('user_credentials')->insertGetId([
-            'user_name' => 'frs.login.'.$employeePk, 'user_id' => $employeePk, 'user_category' => 'E',
-        ]);
-        $user = User::find($userPk);
-        $user->assignRole('Faculty');
-        $this->actor = [$user->fresh(), $user->roles()->pluck('name')->all()];
+        $this->employeePk = $employeePk;
     }
 
     protected function tearDown(): void
@@ -100,12 +95,29 @@ class FacultyRoleScopingTest extends TestCase
         ]);
     }
 
-    /** As a Faculty-role login, with the session roles login gives it. */
-    private function asFacultyRole()
+    /**
+     * As a Faculty-role login of $category, with the session roles login gives it.
+     * An employee login (E) stores the employee pk in user_id; a faculty login (F)
+     * stores faculty_master.pk itself. $userId overrides that, for the denial cases.
+     */
+    private function asFacultyRole(string $category = 'E', ?int $userId = null)
     {
-        [$user, $roles] = $this->actor;
+        $userId ??= $category === 'F' ? $this->me : $this->employeePk;
+        $user = User::where('user_name', "frs.login.{$category}.{$userId}")->first();
+        if (! $user) {
+            $user = User::find(DB::table('user_credentials')->insertGetId([
+                'user_name' => "frs.login.{$category}.{$userId}", 'user_id' => $userId, 'user_category' => $category,
+            ]));
+            $user->assignRole('Faculty');
+        }
 
-        return $this->actingAs($user)->withSession(['user_roles' => $roles]);
+        return $this->actingAs($user->fresh())->withSession(['user_roles' => $user->roles()->pluck('name')->all()]);
+    }
+
+    /** PR #335 review F-008: an employee login and a faculty login (user_category F) resolve to the same faculty. */
+    public static function logins(): array
+    {
+        return ['employee login (E)' => ['E'], 'faculty login (F)' => ['F']];
     }
 
     /**
@@ -137,7 +149,8 @@ class FacultyRoleScopingTest extends TestCase
         return [$timetablePk, DB::table('course_group_timetable_mapping')->insertGetId($row)];
     }
 
-    public function test_medical_exception_view_gives_a_faculty_role_login_its_cc_courses_not_the_admin_view(): void
+    /** @dataProvider logins */
+    public function test_medical_exception_view_gives_a_faculty_role_login_its_cc_courses_not_the_admin_view(string $category): void
     {
         $employee = DB::table('employee_master')->insertGetId(['first_name' => 'Frs Doctor']);
         $exemption = fn (int $course, string $student) => DB::table('student_medical_exemption')->insert([
@@ -150,7 +163,7 @@ class FacultyRoleScopingTest extends TestCase
         $exemption($this->courseX, 'FrsMedMine');
         $exemption($this->courseY, 'FrsMedOther');
 
-        $response = $this->asFacultyRole()->get('/medical-exception-faculty-view');
+        $response = $this->asFacultyRole($category)->get('/medical-exception-faculty-view');
 
         $response->assertOk();
         $response->assertViewMissing('facultyData');
@@ -159,12 +172,13 @@ class FacultyRoleScopingTest extends TestCase
         $response->assertDontSee('FrsMedOther');
     }
 
-    public function test_attendance_list_and_course_filter_scope_a_faculty_role_login_to_its_cc_courses(): void
+    /** @dataProvider logins */
+    public function test_attendance_list_and_course_filter_scope_a_faculty_role_login_to_its_cc_courses(string $category): void
     {
         [, $mine] = $this->timetableSession($this->courseX, $this->other);
         $this->timetableSession($this->courseY, $this->me);
 
-        $list = $this->asFacultyRole()->postJson('/attendance/get-attendance-list', [
+        $list = $this->asFacultyRole($category)->postJson('/attendance/get-attendance-list', [
             'page_context' => 'attendance', 'draw' => 1, 'start' => 0, 'length' => 100,
         ]);
         $list->assertOk();
@@ -172,14 +186,15 @@ class FacultyRoleScopingTest extends TestCase
         $this->assertSame([$this->courseX], array_map('intval', array_column($list->json('data'), 'Programme_pk')));
         $this->assertSame([$mine], array_map('intval', array_column($list->json('data'), 'pk')));
 
-        $index = $this->asFacultyRole()->get('/attendance');
+        $index = $this->asFacultyRole($category)->get('/attendance');
         $index->assertOk();
         $offered = collect($index->viewData('courseMasters'))->merge($index->viewData('archivedCourseMasters'))
             ->pluck('pk')->map(fn ($pk) => (int) $pk)->all();
         $this->assertSame([$this->courseX], $offered);
     }
 
-    public function test_feedback_details_shows_a_faculty_role_login_only_its_own_feedback(): void
+    /** @dataProvider logins */
+    public function test_feedback_details_shows_a_faculty_role_login_only_its_own_feedback(string $category): void
     {
         // Tag both courses with the Faculty role so get_Role_by_course() lets
         // them through; the own-feedback filter is then the only narrowing.
@@ -201,7 +216,7 @@ class FacultyRoleScopingTest extends TestCase
         $feedback($this->courseX, $this->other, 'FrsFbOther');
         $feedback($this->courseY, $this->other, 'FrsFbOtherY');
 
-        $response = $this->asFacultyRole()->getJson('/feedback_details?course_type=current');
+        $response = $this->asFacultyRole($category)->getJson('/feedback_details?course_type=current');
         $response->assertOk();
 
         $grouped = $response->json('groupedData') ?? [];
@@ -214,5 +229,35 @@ class FacultyRoleScopingTest extends TestCase
             }
         });
         $this->assertSame(['Frs Mine'], array_values(array_unique($names)));
+    }
+
+    /**
+     * Neither identity falls back to the other: a faculty login (F) whose
+     * user_id is an employee pk, and an employee login (E) whose user_id is a
+     * faculty pk, resolve to no faculty and see nobody's courses or feedback.
+     */
+    public function test_an_unrelated_login_sees_no_faculty_rows_on_any_of_the_three_screens(): void
+    {
+        $facultyRoleId = (int) DB::table('roles')->where('name', 'Faculty')->value('id');
+        DB::table('course_master')->whereIn('pk', [$this->courseX, $this->courseY])->update(['user_role_master_pk' => $facultyRoleId]);
+        [$timetablePk] = $this->timetableSession($this->courseX, $this->me);
+        DB::table('timetable')->where('pk', $timetablePk)->update(['START_DATE' => now()->subDay(), 'END_DATE' => now()->subDay()]);
+        DB::table('topic_feedback')->insert([
+            'timetable_pk' => $timetablePk, 'student_master_pk' => $this->student('FrsFbDenied'), 'topic_name' => 'Frs topic',
+            'faculty_pk' => $this->me, 'is_submitted' => 1, 'presentation' => '4', 'content' => '4', 'remark' => 'ok', 'created_date' => now(),
+        ]);
+
+        foreach (['F' => $this->employeePk, 'E' => $this->me] as $category => $userId) {
+            $list = $this->asFacultyRole($category, $userId)->postJson('/attendance/get-attendance-list', [
+                'page_context' => 'attendance', 'draw' => 1, 'start' => 0, 'length' => 100,
+            ])->assertOk();
+            $this->assertSame(0, $list->json('recordsTotal'), "$category login holding the other kind of id: attendance");
+
+            $medical = $this->asFacultyRole($category, $userId)->get('/medical-exception-faculty-view')->assertOk();
+            $this->assertSame([], collect($medical->viewData('courses'))->pluck('pk')->all(), "$category login: medical exception courses");
+
+            $feedback = $this->asFacultyRole($category, $userId)->getJson('/feedback_details?course_type=current')->assertOk();
+            $this->assertStringNotContainsString('Frs Mine', (string) $feedback->getContent(), "$category login: feedback");
+        }
     }
 }

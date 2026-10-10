@@ -1156,6 +1156,17 @@ function faculty_rows_by_contact(?string $mobile, ?string $email): array
 }
 
 /**
+ * The faculty_master column that holds the logged-in user's user_id. A faculty
+ * login (user_category F) stores faculty_master.pk itself; every other login
+ * stores an employee pk, linked through faculty_master.employee_master_pk.
+ * Neither falls back to the other.
+ */
+function login_faculty_key_column(): string
+{
+    return (Auth::user()->user_category ?? null) === 'F' ? 'pk' : 'employee_master_pk';
+}
+
+/**
  * Resolve faculty_master.pk for the authenticated user.
  *
  * Mapping used across the app:

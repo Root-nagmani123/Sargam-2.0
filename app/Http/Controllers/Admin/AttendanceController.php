@@ -82,7 +82,7 @@ class AttendanceController extends Controller
             // Filter courses for Internal Faculty / Faculty based on CC/ACC assignment
             if (hasRole('Internal Faculty') || hasRole('Faculty')) {
                 // Get faculty PK from user_id
-                $facultyPk = FacultyMaster::where('employee_master_pk', $userId)->value('pk');
+                $facultyPk = FacultyMaster::where(login_faculty_key_column(), $userId)->value('pk');
                 
                 if ($facultyPk) {
                     // Get course IDs where faculty is CC or ACC
@@ -495,7 +495,7 @@ class AttendanceController extends Controller
             return;
         }
 
-        $facultyPk = FacultyMaster::where('employee_master_pk', auth()->user()->user_id)->value('pk');
+        $facultyPk = FacultyMaster::where(login_faculty_key_column(), auth()->user()->user_id)->value('pk');
 
         if (!$facultyPk) {
             $query->whereRaw('1 = 0');

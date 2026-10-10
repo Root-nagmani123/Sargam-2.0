@@ -120,11 +120,7 @@ class FacultyMDOEscortExceptionViewController extends Controller
      */
     private function loginFaculty(): ?FacultyMaster
     {
-        $user = Auth::user();
-
-        return ($user->user_category ?? null) === 'F'
-            ? FacultyMaster::where('pk', $user->user_id)->first()
-            : FacultyMaster::where('employee_master_pk', $user->user_id)->first();
+        return FacultyMaster::where(login_faculty_key_column(), Auth::user()->user_id)->first();
     }
 
     /**

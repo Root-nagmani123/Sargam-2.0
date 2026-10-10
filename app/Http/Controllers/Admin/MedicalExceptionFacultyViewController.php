@@ -25,10 +25,10 @@ class MedicalExceptionFacultyViewController extends Controller
         
         // Faculty accounts hold the "Faculty" role; without it here they got the admin view.
         if (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Faculty')) {
-            $employeeMasterPk = Auth::user()->user_id;
+            $userId = Auth::user()->user_id;
         
             $facultyPk = DB::table('faculty_master')
-                ->where('employee_master_pk', $employeeMasterPk)
+                ->where(login_faculty_key_column(), $userId)
                 ->value('pk');
         
             // Faculty Login View - Show only their courses
