@@ -231,6 +231,11 @@ parameters:
 			path: app/Http/Controllers/Admin/CalendarController.php
 
 		-
+			message: "#^Relation 'students' is not found in App\\\\Models\\\\CourseMaster model\\.$#"
+			count: 1
+			path: app/Http/Controllers/Admin/Concerns/ScopesSessionFeedbackReports.php
+
+		-
 			message: "#^Call to static method disk\\(\\) on an unknown class App\\\\Http\\\\Controllers\\\\Admin\\\\Storage\\.$#"
 			count: 4
 			path: app/Http/Controllers/Admin/CourseAttendanceNoticeMapController.php
