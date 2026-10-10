@@ -10,7 +10,7 @@ use Tests\TestCase;
  * Hostel Floor Room Map grid, Download (csv | excel | pdf) and Print.
  *
  * A filter that arrives as an array (room_type[]=Room, building_id[]=1,
- * search[]=x, status[]=1) is ignored, not a 500: the export used to
+ * search[]=x, status[]=1) narrows by its first element, not a 500: the export used to
  * concatenate it into the filter line and look up BuildingMaster::find([..])
  * ->building_name. A plain scalar filter still narrows every format.
  */
@@ -140,6 +140,41 @@ class HostelRoomMapArrayFilterTest extends TestCase
                 $this->bodyOf($response);
 
                 $this->assertSame(200, $response->getStatusCode(), "$label on $format must be ignored, not a 500");
+            }
+        }
+    }
+
+    /**
+     * PR #335 review F-014: building_id[]=10 used to drop the building filter
+     * (483 rooms instead of 8). An array filter narrows like its first element,
+     * as the query did before this PR, on the grid and every text format.
+     */
+    public function test_an_array_building_filter_still_narrows_the_grid_and_every_export(): void
+    {
+        $this->probeRow();
+        $probeBuilding = (int) DB::table('building_floor_room_mapping')->where('room_name', self::PROBE)->value('building_master_pk');
+        $otherBuilding = (int) DB::table('building_master')->where('pk', '<>', $probeBuilding)->value('pk');
+        if (! $otherBuilding) {
+            $this->markTestSkipped('needs a second building_master row');
+        }
+
+        $grid = $this->actingAs($this->admin())
+            ->get(route('hostel.building.floor.room.map.index') . '?' . http_build_query(['building_id' => [(string) $otherBuilding]]))
+            ->assertOk();
+        $this->assertSame(
+            DB::table('building_floor_room_mapping')->where('building_master_pk', $otherBuilding)->count(),
+            $grid->viewData('mappings')->total(),
+            'the grid must list only the requested building'
+        );
+
+        foreach ([[$otherBuilding, false], [$probeBuilding, true]] as [$building, $expected]) {
+            $query = ['building_id' => [(string) $building], 'search' => self::PROBE];
+            foreach (['csv', 'print (export)', 'print'] as $format) {
+                $body = $this->bodyOf($this->actingAs($this->admin())->get($this->urls($query)[$format])->assertOk());
+                // A row cell, not the "Search: …" filter line: "PROBE," in CSV, ">PROBE<" in print.
+                $row = $format === 'csv' ? str_contains($body, self::PROBE . ',') : (bool) preg_match('/>\s*' . self::PROBE . '\s*</', $body);
+                $this->assertSame($expected, $row,
+                    "$format with building_id[]=$building must " . ($expected ? '' : 'not ') . 'list the probe room');
             }
         }
     }

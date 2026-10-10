@@ -77,12 +77,14 @@ class HostelBuildingFloorRoomMappingController extends Controller
     }
 
     /**
-     * A grid filter, or null when absent, blank or not a scalar: room_type[]=x
-     * (or building_id[] / status[] / search[]) is ignored, not a 500.
+     * A grid filter, or null when absent or blank. An array (building_id[]=10)
+     * narrows by its first element, as the query binding did before, rather
+     * than dropping the filter and listing every room.
      */
     private function filterValue(Request $request, string $key): ?string
     {
         $value = $request->input($key);
+        $value = is_array($value) ? head(\Illuminate\Support\Arr::flatten($value)) : $value;
 
         return is_scalar($value) && (string) $value !== '' ? (string) $value : null;
     }
