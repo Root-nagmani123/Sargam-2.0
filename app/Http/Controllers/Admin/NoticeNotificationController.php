@@ -13,6 +13,7 @@ use App\Models\DepartmentMaster;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Auth;
 
 class NoticeNotificationController extends Controller
@@ -307,8 +308,13 @@ class NoticeNotificationController extends Controller
             && $notice->isOfficerTraineeAudience()
             && $selectedCourses === [];
 
+        // A course-targeted OT notice widens to every course only through an explicit
+        // box, never through an empty (or not yet loaded) course list (PR #334 F-071).
+        $courseTargeted = $notice->isOfficerTraineeAudience() && $selectedCourses !== [];
+
         return view('admin.NoticeNotification.edit', compact(
             'legacyCourseless',
+            'courseTargeted',
             'notice',
             'types',
             'target',
@@ -329,6 +335,14 @@ class NoticeNotificationController extends Controller
 
         $id = Crypt::decrypt($encId);
         $notice = $this->manageableNotices()->findOrFail($id);
+
+        if ($this->dropsStoredCourseTargeting($notice, $request)) {
+            throw ValidationException::withMessages([
+                'course_master_pks' => 'This notice is sent to selected courses, and no course was received. '
+                    .'Select its courses again (the list may not have finished loading), or tick '
+                    .'"Send this notice to every Officer Trainee in every course" to widen it.',
+            ]);
+        }
 
         $data = $request->only([
             'notice_title',
@@ -630,6 +644,25 @@ class NoticeNotificationController extends Controller
             && $this->isOfficerTrainee($target)
             && $this->idsFrom($request, 'course_master_pks') === []
             && ! $request->boolean('all_courses_confirmed');
+    }
+
+    /**
+     * An empty course list is how the form posts "every course", but the edit form's
+     * list is also empty until its AJAX call fills it, and stays empty if that call
+     * fails. Saving then turned a notice for one trainee, group or course into one for
+     * every Officer Trainee (PR #334 F-071). A notice that has course rows keeps them
+     * unless the author ticks the explicit "every Officer Trainee" box; changing the
+     * target audience takes the ordinary path.
+     */
+    private function dropsStoredCourseTargeting(Notice $notice, Request $request): bool
+    {
+        $target = is_string($request->input('target_audience')) ? $request->input('target_audience') : '';
+
+        return $notice->isOfficerTraineeAudience()
+            && $this->isOfficerTrainee($target)
+            && $this->idsFrom($request, 'course_master_pks') === []
+            && ! $request->boolean('all_courses_confirmed')
+            && $notice->audienceMaps()->where('audience_type', NoticeAudienceMap::TYPE_COURSE)->exists();
     }
 
     private function isOfficerTrainee(string $target): bool

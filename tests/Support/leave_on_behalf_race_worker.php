@@ -4,13 +4,17 @@
 // Tests\Feature\LeaveOnBehalfConcurrentSubmitTest in its own PHP process, so it has
 // its own MySQL connection.
 //
-//   php tests/Support/leave_on_behalf_race_worker.php <holder|second> <payload.json> <userPk>
+//   php tests/Support/leave_on_behalf_race_worker.php <holder|second> <payload.json> <userPk> [behalf|ot]
 //
 // holder: runs store() inside an outer transaction and keeps it open 4 s before
 //         committing, so the student_master FOR UPDATE lock is held across the
 //         second call. second: waits 1 s, then runs the same store().
+// behalf (default): Leave on Behalf store() as a Super Admin. ot: the officer
+//         trainee's own LeaveApplicationController::store() as that trainee's login
+//         (PR #334 F-070); userPk is then the trainee's user_credentials pk.
 // Prints one JSON line: {"role", "started", "returned", "status", "errors"}.
 
+use App\Http\Controllers\Admin\LeaveApplicationController;
 use App\Http\Controllers\Admin\LeaveOnBehalfController;
 use App\Models\User;
 use Illuminate\Contracts\Console\Kernel;
@@ -19,6 +23,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 [, $role, $payloadFile, $userPk] = $argv;
+$path = $argv[4] ?? 'behalf';
 
 $root = dirname(__DIR__, 2);
 require $root.'/vendor/autoload.php';
@@ -30,17 +35,17 @@ $payload = json_decode(file_get_contents($payloadFile), true);
 
 $session = app('session.store');
 $session->start();
-$session->put('user_roles', ['Super Admin']);
+$session->put('user_roles', [$path === 'ot' ? 'Student-OT' : 'Super Admin']);
 
 $user = User::findOrFail((int) $userPk);
 Auth::setUser($user);
 
-$request = Request::create('/admin/leave-on-behalf/store', 'POST', $payload);
+$request = Request::create($path === 'ot' ? '/leave/store' : '/admin/leave-on-behalf/store', 'POST', $payload);
 $request->setLaravelSession($session);
 $request->setUserResolver(fn () => $user);
 app()->instance('request', $request);
 
-$controller = app(LeaveOnBehalfController::class);
+$controller = app($path === 'ot' ? LeaveApplicationController::class : LeaveOnBehalfController::class);
 
 if ($role === 'second') {
     usleep(1_000_000);

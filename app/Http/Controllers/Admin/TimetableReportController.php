@@ -60,11 +60,12 @@ class TimetableReportController extends Controller
      */
     private function getVisibleColumns(Request $request): array
     {
-        if (!$request->filled('visible_columns')) {
+        $requested = $this->textInput($request, 'visible_columns');
+        if (trim($requested) === '') {
             return self::COLUMN_MAP;
         }
 
-        $indices = array_map('intval', explode(',', $request->visible_columns));
+        $indices = array_map('intval', explode(',', $requested));
         $visible = [];
         foreach ($indices as $i) {
             if (isset(self::COLUMN_MAP[$i])) {
@@ -73,6 +74,17 @@ class TimetableReportController extends Controller
         }
 
         return !empty($visible) ? $visible : self::COLUMN_MAP;
+    }
+
+    /**
+     * A free-text request value, or '' when absent or not a scalar: ?subject_topic[]=x
+     * reached a string concatenation and returned 500 (PR #334 F-072).
+     */
+    private function textInput(Request $request, string $key): string
+    {
+        $value = $request->input($key, '');
+
+        return is_scalar($value) ? (string) $value : '';
     }
 
     /**
@@ -152,7 +164,7 @@ class TimetableReportController extends Controller
         $draw   = (int) $request->get('draw', 0);
         $start  = max(0, (int) $request->get('start', 0));
         $length = (int) $request->get('length', 10);
-        $searchValue = trim((string) data_get($request->all(), 'search.value', ''));
+        $searchValue = trim($this->textInput($request, 'search.value'));
 
         // ── Base query ──
         $query = DB::table('timetable as t')
@@ -272,8 +284,8 @@ class TimetableReportController extends Controller
         // Build filter summary for display
         $filterSummary = [
             'course_mode'   => $applied['course_mode'],
-            'subject_topic' => $request->subject_topic,
-            'module_name'   => $request->module_name,
+            'subject_topic' => $this->textInput($request, 'subject_topic'),
+            'module_name'   => $this->textInput($request, 'module_name'),
             'date_from'     => $request->date_from,
             'date_to'       => $request->date_to,
         ];
@@ -347,8 +359,8 @@ class TimetableReportController extends Controller
             FacultySessionScope::applyRole($query, $role, $facultyPk);
         }
 
-        if ($request->filled('subject_topic')) {
-            $query->where('t.subject_topic', 'LIKE', '%' . $request->subject_topic . '%');
+        if (trim($topic = $this->textInput($request, 'subject_topic')) !== '') {
+            $query->where('t.subject_topic', 'LIKE', '%' . $topic . '%');
         }
 
         if ($request->filled('faculty_type')) {
@@ -359,8 +371,8 @@ class TimetableReportController extends Controller
             $query->where('t.venue_id', $request->venue_id);
         }
 
-        if ($request->filled('module_name')) {
-            $query->where('smm.module_name', 'LIKE', '%' . $request->module_name . '%');
+        if (trim($module = $this->textInput($request, 'module_name')) !== '') {
+            $query->where('smm.module_name', 'LIKE', '%' . $module . '%');
         }
 
         if ($request->filled('date_from')) {

@@ -1977,7 +1977,18 @@ if (!function_exists('notice_feed_query_by_role')) {
         if ($isStudent) {
             // Only a category-S login's user_id is a student pk; any other category is
             // matched by role alone, never as a student (PR #334 F-067, as F-058 for staff).
+            // Exception: a login with no category that is provably the student's own -
+            // same user_id and email, and the student has no category-S login. Some
+            // trainees' only login looks like that (PR #334 F-069).
             $studentIds = $category === 'S' ? [$user->user_id] : [];
+            $email = strtolower(trim((string) ($user->email_id ?? '')));
+            if ($category === '' && ! empty($user->user_id) && $email !== ''
+                && DB::table('student_master')->where('pk', $user->user_id)
+                    ->whereRaw('LOWER(TRIM(email)) = ?', [$email])->exists()
+                && ! DB::table('user_credentials')->where('user_category', 'S')
+                    ->where('user_id', $user->user_id)->exists()) {
+                $studentIds = [$user->user_id];
+            }
 
             $courseIds = DB::table('student_master_course__map')
                 ->whereIn('student_master_pk', $studentIds)

@@ -13,6 +13,9 @@
     selection above each one is made, and re-applies $audiencePreset after a
     validation bounce or when editing an existing notice.
 --}}
+{{-- Filled by audience_scripts while a list is loading or after one failed to load. --}}
+<div class="col-12 d-none" id="audienceLoadStatus" role="status" aria-live="polite"></div>
+
 <div class="col-12 audience-block d-none" id="otAudienceBox">
     <div class="audience-panel rounded-3 p-3">
         <div class="audience-panel-title">
@@ -40,6 +43,20 @@
                         <input class="form-check-input" type="checkbox" name="all_courses_confirmed" value="1"
                             id="allCoursesConfirmed" @checked(old('all_courses_confirmed'))>
                         <label class="form-check-label small" for="allCoursesConfirmed">
+                            Send this notice to every Officer Trainee in every course
+                        </label>
+                    </div>
+                @elseif(!empty($courseTargeted))
+                    {{-- PR #334 F-071: an empty list here may only mean "still loading",
+                         so clearing the courses widens this notice only with the box. --}}
+                    <div class="form-text text-muted small">
+                        <i class="bi bi-info-circle me-1" aria-hidden="true"></i>This notice is sent only to the
+                        courses selected here. Clearing them does not widen it on its own.
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="all_courses_confirmed" value="1"
+                            id="allCoursesConfirmed" @checked(old('all_courses_confirmed'))>
+                        <label class="form-check-label small"   for="allCoursesConfirmed">
                             Send this notice to every Officer Trainee in every course
                         </label>
                     </div>

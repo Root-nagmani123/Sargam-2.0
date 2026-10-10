@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LeaveApplication;
 use App\Models\LeaveApplicationAttachment;
 use App\Models\LeaveNatureMaster;
+use App\Models\StudentMaster;
 use App\Services\FacultyLeaveApprovalService;
 use App\Services\LeaveApplicationService;
 use App\Services\NotificationService;
@@ -391,8 +392,28 @@ class LeaveApplicationController extends Controller
 
         $now = now();
         $isNew = $application === null;
+        $overlapError = null;
 
-        $application = DB::transaction(function () use ($validated, $context, $application, $totalDays, $status, $now, $request, $isSubmit, $autoApprove, $isStationed) {
+        $application = DB::transaction(function () use ($validated, $context, $application, $totalDays, $status, $now, $request, $isSubmit, $autoApprove, $isStationed, &$overlapError) {
+            // The check above ran with no lock, so an operator's Leave on Behalf entry
+            // for the same day could commit in between and both leaves stood (PR #334
+            // F-070). Take the student-row lock Leave on Behalf takes, then check again.
+            StudentMaster::whereKey($context['student_pk'])->lockForUpdate()->first();
+
+            try {
+                $this->leaveService->assertNoOverlap(
+                    $context['student_pk'],
+                    $validated['from_date'],
+                    $validated['to_date'],
+                    $application?->pk,
+                    $validated['leave_type']
+                );
+            } catch (\InvalidArgumentException $e) {
+                $overlapError = $e->getMessage();
+
+                return null;
+            }
+
             $data = [
                 'course_master_pk' => $context['course_pk'],
                 'student_master_pk' => $context['student_pk'],
@@ -449,6 +470,10 @@ class LeaveApplicationController extends Controller
 
             return $application;
         });
+
+        if ($overlapError !== null) {
+            return back()->withInput()->withErrors(['from_date' => $overlapError]);
+        }
 
         // Notify stationed-leave approvers when a request is submitted for their review.
         // PT exemptions and auto-approved stationed leave are not notified.

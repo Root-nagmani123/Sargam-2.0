@@ -53,7 +53,7 @@ class LeaveOnBehalfConcurrentSubmitTest extends TestCase
                 ->orderBy('m.pk')
                 ->first(['m.course_master_pk', 'm.student_master_pk']);
             $restoreCourse = $enrolment
-                ? DB::table('course_master')->where('pk', $enrolment->course_master_pk)->first(['pk', 'active_inactive', 'end_date'])
+                ? DB::table('course_master')->where('pk', $enrolment->course_master_pk)->first(['pk', 'active_inactive', 'end_date', 'modified_date'])
                 : null;
         }
         $nature = DB::table('leave_nature_master')->where('leave_type', 'LEAVE')->where('active_inactive', 1)->value('pk');
@@ -149,7 +149,8 @@ class LeaveOnBehalfConcurrentSubmitTest extends TestCase
             }
             if ($restoreCourse) {
                 DB::table('course_master')->where('pk', $restoreCourse->pk)
-                    ->update(['active_inactive' => $restoreCourse->active_inactive, 'end_date' => $restoreCourse->end_date]);
+                    // modified_date too: ON UPDATE CURRENT_TIMESTAMP moves it on the restore itself.
+                    ->update(['active_inactive' => $restoreCourse->active_inactive, 'end_date' => $restoreCourse->end_date, 'modified_date' => $restoreCourse->modified_date]);
             }
             @unlink($payloadFile);
 

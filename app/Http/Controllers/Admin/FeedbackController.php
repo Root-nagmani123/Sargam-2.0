@@ -1710,6 +1710,9 @@ class FeedbackController extends Controller
             $page = $request->input('page', 1);
         }
 
+        // ?faculty_name[]= reached a LIKE concatenation (PR #334 F-072: was a 500).
+        $facultyName = is_scalar($facultyName) ? (string) $facultyName : '';
+
         // Ensure faculty_type is always an array
         if (is_string($facultyType)) {
             $facultyType = [$facultyType];
@@ -2163,7 +2166,7 @@ class FeedbackController extends Controller
     {
         // Get filter parameters
         $programId = $request->input('program_id');
-        $facultyName = $request->input('faculty_name');
+        $facultyName = is_scalar($v = $request->input('faculty_name')) ? (string) $v : ''; // PR #334 F-072
         $fromDate = $request->input('from_date');
         $toDate = $request->input('to_date');
         $courseType = $request->input('course_type', 'current');
@@ -2471,7 +2474,7 @@ class FeedbackController extends Controller
     {
         try {
             $programId = $request->input('program_id');
-            $facultyName = $request->input('faculty_name');
+            $facultyName = is_scalar($v = $request->input('faculty_name')) ? (string) $v : ''; // PR #334 F-072
             $fromDate = $request->input('from_date');
             $toDate = $request->input('to_date');
             $courseType = $request->input('course_type', 'current');

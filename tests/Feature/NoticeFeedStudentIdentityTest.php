@@ -84,4 +84,83 @@ class NoticeFeedStudentIdentityTest extends TestCase
         $this->assertNotContains($individual, $feed, "another login does not get the student's individual notice");
         $this->assertNotContains($grouped, $feed, "another login does not get the student's group notice");
     }
+
+    /* ------------------------------------------------------------------
+     | PR #334 F-069: some trainees' only login has no category. It carries their
+     | own student pk and email, and arrives with the session role Student-OT
+     | through the Moodle token. The F-067 fix stopped such a login receiving its
+     | own course, group and individual notices.
+     * ----------------------------------------------------------------- */
+
+    /**
+     * The fixture student's login turned into the shape found on the dev databases:
+     * no category, user_id = the student, the student's email, and no category-S
+     * login left for that student. Returns [login, student, course, group, email].
+     */
+    private function noCategoryOwnLogin(): array
+    {
+        [$login, $student, $course, $group] = $this->studentFixture();
+        $email = 'f069.'.$student.'@probe.test';
+        DB::table('student_master')->where('pk', $student)->update(['email' => $email]);
+        DB::table('user_credentials')->where('user_category', 'S')->where('user_id', $student)
+            ->where('pk', '!=', $login->pk)->update(['user_category' => 'E']);
+        DB::table('user_credentials')->where('pk', $login->pk)
+            ->update(['user_category' => null, 'email_id' => strtoupper($email)]);
+
+        return [User::findOrFail($login->pk), $student, $course, $group, $email];
+    }
+
+    /** Individual, group and course-wide notices for the fixture student. */
+    private function noticesFor(int $student, int $course, int $group): array
+    {
+        return [
+            'individual' => $this->otNotice($course, 'individual', ['student_pks' => [(string) $student]]),
+            'group' => $this->otNotice($course, 'group', ['group_type_map_pks' => [(string) $group]]),
+            'course' => $this->otNotice($course, 'all', []),
+        ];
+    }
+
+    public function test_a_no_category_login_that_is_provably_the_students_own_gets_its_notices(): void
+    {
+        [$login, $student, $course, $group] = $this->noCategoryOwnLogin();
+        $notices = $this->noticesFor($student, $course, $group);
+
+        $feed = $this->feedFor($login, ['Student-OT']);
+
+        foreach ($notices as $kind => $pk) {
+            $this->assertContains($pk, $feed, "the trainee's own no-category login gets their {$kind} notice");
+        }
+    }
+
+    public function test_a_no_category_login_with_another_email_still_gets_none_of_them(): void
+    {
+        [$login, $student, $course, $group] = $this->noCategoryOwnLogin();
+        $notices = $this->noticesFor($student, $course, $group);
+        DB::table('user_credentials')->where('pk', $login->pk)->update(['email_id' => 'someone.else@probe.test']);
+
+        $feed = $this->feedFor($login->fresh(), ['Student-OT']);
+
+        foreach ($notices as $kind => $pk) {
+            $this->assertNotContains($pk, $feed, "a login that only shares the user_id does not get the {$kind} notice");
+        }
+    }
+
+    public function test_a_no_category_login_is_not_the_student_while_the_student_has_a_category_s_login(): void
+    {
+        // The F-067 shape with the email copied too: the category-S login is the
+        // student's, so a second, uncategorised login is not read as them.
+        [$login, $student, $course, $group, $email] = $this->noCategoryOwnLogin();
+        $notices = $this->noticesFor($student, $course, $group);
+        DB::table('user_credentials')->where('pk', $login->pk)->update(['user_category' => 'S']);
+
+        $other = DB::table('user_credentials')->where('pk', '!=', $login->pk)->orderBy('pk')->value('pk');
+        DB::table('user_credentials')->where('pk', $other)
+            ->update(['user_category' => null, 'user_id' => $student, 'email_id' => $email]);
+
+        $feed = $this->feedFor(User::findOrFail($other), ['Student-OT']);
+
+        foreach ($notices as $kind => $pk) {
+            $this->assertNotContains($pk, $feed, "a second login does not get the student's {$kind} notice");
+        }
+    }
 }

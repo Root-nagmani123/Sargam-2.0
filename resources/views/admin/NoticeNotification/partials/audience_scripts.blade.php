@@ -44,6 +44,48 @@
 
     var choicesByEl = {};
 
+    // A list still loading, or one that failed, posts as "none selected", and no
+    // course means "every course": saving then widened a targeted notice to every
+    // Officer Trainee (PR #334 F-071). Saving waits for every list, and stays
+    // refused after a failure until the page is reloaded.
+    var $form = $course.closest('form');
+    var $submit = $form.find('[type="submit"]');
+    var $loadStatus = $('#audienceLoadStatus');
+    var loading = 0;
+    var loadFailed = false;
+
+    function syncSaveState() {
+        var blocked = loading > 0 || loadFailed;
+
+        $submit.prop('disabled', blocked);
+        $loadStatus
+            .toggleClass('d-none', !blocked)
+            .toggleClass('alert alert-danger small py-2 px-3 mb-0', loadFailed)
+            .toggleClass('form-text text-muted small', blocked && !loadFailed)
+            .text(loadFailed
+                ? 'The audience lists could not be loaded, so this notice cannot be saved safely. Reload the page and try again.'
+                : (blocked ? 'Loading the audience lists…' : ''));
+    }
+
+    function track(request) {
+        loading++;
+        syncSaveState();
+
+        return request
+            .fail(function () { loadFailed = true; })
+            .always(function () {
+                loading--;
+                syncSaveState();
+            });
+    }
+
+    $form.on('submit', function (event) {
+        if (loading > 0 || loadFailed) {
+            event.preventDefault();
+            syncSaveState();
+        }
+    });
+
     // {pk, label} lists backing the two selects whose options do not change with
     // the cascade. Courses arrive by AJAX once; departments are rendered by the
     // server, so they are read out of the DOM before Choices takes the element
@@ -223,7 +265,7 @@
             params.include = saved;
         }
 
-        $.getJSON(ROUTES.courses, params, function (res) {
+        track($.getJSON(ROUTES.courses, params, function (res) {
             courseItems = (res.data || []).map(function (course) {
                 return { pk: String(course.pk), label: course.course_name };
             });
@@ -238,7 +280,7 @@
             });
 
             done(courseItems);
-        });
+        }));
     }
 
     function loadGroupTypes(courseIds, selected, done) {
@@ -248,10 +290,10 @@
             return;
         }
 
-        $.getJSON(ROUTES.groupTypes, { course_master_pks: courseIds }, function (res) {
+        track($.getJSON(ROUTES.groupTypes, { course_master_pks: courseIds }, function (res) {
             fillMultiSelect($group, res.data || [], selected);
             if (done) { done(); }
-        });
+        }));
     }
 
     function loadStudents(courseIds, groupIds, selected, mode) {
@@ -265,7 +307,7 @@
             params.group_type_map_pks = groupIds;
         }
 
-        $.getJSON(ROUTES.students, params, function (res) {
+        track($.getJSON(ROUTES.students, params, function (res) {
             var items = res.data || [];
 
             if (mode === 'preview') {
@@ -273,7 +315,7 @@
             } else {
                 fillMultiSelect($student, items, selected);
             }
-        });
+        }));
     }
 
     function loadEmployees(departmentIds, selected) {
@@ -281,9 +323,9 @@
             return;
         }
 
-        $.getJSON(ROUTES.employees, { department_master_pks: departmentIds }, function (res) {
+        track($.getJSON(ROUTES.employees, { department_master_pks: departmentIds }, function (res) {
             fillMultiSelect($employee, res.data || [], selected);
-        });
+        }));
     }
 
     /* ---------------- cascade ---------------- */

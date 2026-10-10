@@ -2465,7 +2465,8 @@ class UserController extends Controller
 
         // House Group Faculty — the dependent dropdown beside House Group, resolved
         // the same way off the house-group mapping.
-        $houseFaculty = (string) $request->input('house_faculty', '');
+        // ?house_faculty[]= as counsellor_faculty above (PR #334 F-072: was a 500).
+        $houseFaculty = is_scalar($v = $request->input('house_faculty', '')) ? (string) $v : '';
         if ($houseFaculty !== '') {
             $housed = $this->studentPksForHouseFaculty(
                 $houseFaculty,
