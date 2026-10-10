@@ -4,6 +4,8 @@
 
 @push('styles')
 <link href="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-lite.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@11.2.4/public/assets/styles/choices.min.css" integrity="sha384-uLFsUvpIOC9MdzZeDr7vuIUG6LgTaguBn469csIwzNIG9N9TFVoYgM4Ov5PG1V1l" crossorigin="anonymous" />
+@include('admin.NoticeNotification.partials.audience_styles')
 <style>
     .notice-form-card {
         border-left: 4px solid #004a93;
@@ -93,7 +95,9 @@
 @section('content')
 <div class="container-fluid notice-form-page">
     <x-breadcrum title="Notice notification List" />
-    <x-session_message />
+    {{-- No <x-session_message /> here: it renders every validation error as its
+         own dismissible pill, which duplicated the grouped list below — one
+         mistake showed up twice. Flash success/error land on the index page. --}}
 
     <div class="card notice-form-card border-0 shadow-sm rounded-3">
         @if ($errors->any())
@@ -163,7 +167,7 @@
                         <label class="form-label" for="editor">
                             Description <span class="text-danger" aria-hidden="true">*</span>
                         </label>
-                        <textarea id="editor" name="description" class="form-control">{!! old('description', $notice->description) !!}</textarea>
+                        <textarea id="editor" name="description" class="form-control">{{ old('description', notice_safe_html($notice->description)) }}</textarea>
                     </div>
 
                     {{-- Row 3: Display | Expiry --}}
@@ -221,13 +225,8 @@
                         </select>
                     </div>
 
-                    {{-- Conditional: Course --}}
-                    <div class="col-md-6 {{ old('target_audience', $notice->target_audience) == 'Office trainee' ? '' : 'd-none' }}" id="courseBox">
-                        <label class="form-label" for="courseSelect">Select Course</label>
-                        <select name="course_master_pk" id="courseSelect" class="form-control">
-                            <option value="">Select Course</option>
-                        </select>
-                    </div>
+                    {{-- Conditional: hierarchical audience cascade --}}
+                    @include('admin.NoticeNotification.partials.audience_fields')
 
                     {{-- Actions --}}
                     <div class="col-12">
@@ -249,6 +248,7 @@
 
 @section('scripts')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-lite.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/choices.js@11.2.4/public/assets/scripts/choices.min.js" integrity="sha384-0dGX4oSRqvcKtSNa5YGzTI3pkW4p3uoor1Izx0R5/7emRjiR619oCIBVnvM9k3tj" crossorigin="anonymous"></script>
 
 <script>
 $(document).ready(function() {
@@ -329,38 +329,29 @@ $(document).ready(function() {
         }
     });
 
-    let selectedCourse = "{{ $notice->course_master_pk }}";
-
-    function loadCourses(preselect) {
-        $.ajax({
-            url: "{{ route('admin.notice.getCourses') }}",
-            type: "GET",
-            success: function(res) {
-                $('#courseSelect').empty().append('<option value="">Select Course</option>');
-                $.each(res.data, function(index, item) {
-                    let selected = (preselect == item.pk) ? 'selected' : '';
-                    $('#courseSelect').append(
-                        `<option value="${item.pk}" ${selected}>${item.course_name}</option>`
-                    );
-                });
-            }
-        });
-    }
-
-    if ("{{ old('target_audience', $notice->target_audience) }}" === "Office trainee") {
-        loadCourses(selectedCourse);
-    }
-
-    $('#targetAudience').on('change', function() {
-        let val = $(this).val();
-        if (val === 'Office trainee') {
-            $('#courseBox').removeClass('d-none');
-            loadCourses();
-        } else {
-            $('#courseBox').addClass('d-none');
-            $('#courseSelect').empty();
-        }
-    });
 });
 </script>
+
+@php
+// The cascade's starting state: old() wins after a failed validation, otherwise
+// the saved notice's audience rows. audience_mode maps straight onto the scope
+// dropdown on both sides (the staff side has no Group option, so it falls back
+// to All).
+$savedMode = $notice->audience_mode ?: \App\Models\NoticeNotification::MODE_ALL;
+
+$audiencePreset = [
+    'target_audience'       => old('target_audience', $notice->target_audience),
+    'course_master_pks'     => old('course_master_pks', $selectedCourses),
+    'ot_scope'              => old('ot_scope', $savedMode),
+    'group_type_map_pks'    => old('group_type_map_pks', $selectedGroups),
+    'student_pks'           => old('student_pks', $selectedStudents),
+    'department_master_pks' => old('department_master_pks', $selectedDepartments),
+    'staff_scope'           => old('staff_scope', $savedMode === \App\Models\NoticeNotification::MODE_INDIVIDUAL
+        ? \App\Models\NoticeNotification::MODE_INDIVIDUAL
+        : \App\Models\NoticeNotification::MODE_ALL),
+    'employee_pks'          => old('employee_pks', $selectedEmployees),
+];
+@endphp
+
+@include('admin.NoticeNotification.partials.audience_scripts')
 @endsection

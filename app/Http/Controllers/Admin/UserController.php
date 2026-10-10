@@ -30,48 +30,85 @@ use App\Models\EmployeeMaster;
 use App\Models\EmployeeRoleMapping;
 use App\Models\FacultyMaster;
 use App\Models\Holiday;
+use App\Services\NotificationService;
+use App\Exports\LbsnaaTableExport;
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Excel as ExcelWriter;
+use Barryvdh\DomPDF\Facade\Pdf;
+
+use Illuminate\Support\Facades\Auth;
+
+
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+use App\Models\StudentMedicalExemption;
 use App\Models\LeaveApplication;
 use App\Models\MDOEscotDutyMap;
+use App\Models\StudentCourseGroupMap;
+use App\Models\ClassSessionMaster;
+use App\Models\VenueMaster;
+use App\Models\StudentMasterCourseMap;
+use App\Models\StudentMaster;
+use App\Services\Attendance\OtExemptionResolver;
+use App\Services\Discipline\OtMarksDeductedService;
+use App\Services\Messaging\EmailService;
+use App\Services\Messaging\SmsService;
+use App\Services\FacultyFeedbackReportService;
+use App\Services\Timetable\FacultySessionScope;
+use App\Services\FC\RegistrationService;
+use App\Models\MemoDiscipline;
+use App\Models\CourseGroupTimetableMapping;
+use App\Models\SecurityParmIdApply;
+use App\Models\SecurityDupPermIdApply;
 use App\Models\Notification;
 use App\Models\SecurityFamilyIdApply;
-use App\Models\SecurityParmIdApply;
-use App\Models\StudentCourseGroupMap;
-use App\Models\StudentMaster;
-use App\Models\StudentMasterCourseMap;
-use App\Models\StudentMedicalExemption;
 use App\Models\User;
 use App\Models\UserRoleMaster;
 use App\Models\VehiclePassFWApply;
 use App\Models\VehiclePassTWApply;
-use App\Services\FC\RegistrationService;
-use App\Services\NotificationService;
 use App\Services\OTNoticeMemoService;
 use App\Support\DataTableRedisCache;
 use App\Support\LogSafe;
 use App\Support\PdfPageNumbers;
-use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\OtParticipantComment;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
-use Maatwebsite\Excel\Excel as ExcelWriter;
-use Maatwebsite\Excel\Facades\Excel;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 class UserController extends Controller
 {
     /** Notices per page on the dashboard feed. */
     private const NOTICE_FEED_PER_PAGE = 10;
+
+    /**
+     * The courses that are running right now — flagged active in the master AND
+     * not past their end date. One definition for the faculty dashboard's three
+     * course-scoped features (My Counsellees, House Wise Details and the House
+     * wise Performance panel), so a batch leaves all of them on the same day.
+     *
+     * A course with no end date has not ended.
+     *
+     * @return \Illuminate\Support\Collection<int, int>
+     */
+    private function currentCourseIds(): \Illuminate\Support\Collection
+    {
+        return CourseMaster::where('active_inactive', 1)
+            ->where(function ($q) {
+                $q->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', now()->toDateString());
+            })
+            ->pluck('pk');
+    }
 
     private const ADMIN_USERS_INDEX_LIST_EPOCH_KEY = 'admin_users_index_list_epoch';
 
@@ -250,9 +287,14 @@ class UserController extends Controller
         //   print_r($emp_data);exit;
         $exemptionCount = 0;
         $MDO_count = 0;
+        $myGroupsCount = 0;
         $todayTimetable = collect([]);
         $totalSessions = 0;
         $totalStudents = 0;
+        $facultyTotalSessions = 0;
+        $facultyTotalFeedback = 0;
+        $facultyCounsellees = 0;
+        $facultyHouses = 0;
         $isCCorACC = false;
         $userId = Auth::user()->user_id;
         if (hasRole('Student-OT')) {
@@ -264,13 +306,40 @@ class UserController extends Controller
                 ->with(['courseMaster', 'mdoDutyTypeMaster', 'facultyMaster'])
                 ->count();
 
+            // "My Groups" card: how many Course Group Mapping groups this OT is in.
+            // Same trainee check as the page it opens (F-055).
+            $myGroupsCount = $this->isMyGroupsTrainee()
+                ? $this->myGroupsQuery($userId)->distinct()->count('gmap.pk')
+                : 0;
+
             // Fetch today's timetable for the logged-in student
             $todayTimetable = $this->getTodayTimetableForStudent($userId);
         }
 
-        // Calculate total sessions for faculty portal users (Faculty / Internal / Guest)
-        if (is_faculty_portal_user()) {
-            $facultyPk = get_auth_faculty_master_pk();
+         // "Total Marks Deducted in Discipline" — every concluded deduction against
+         // this OT, from BOTH registers: Discipline Memos and Memo/Notices. Counted
+         // through the service the page behind the card lists from, so the tile and
+         // the rows agree.
+         //
+         // Gated on isOfficerTraineeUser(), not hasRole('Student-OT') like the block
+         // above: Student-OT is a session pseudo-role set at login, so an OT who
+         // arrives holding only the Spatie "Officer Trainee" role would have been
+         // shown a card reading zero over real deductions.
+         //
+         // And only for user_category 'S' (PR #334 F-047): user_id is a student_master
+         // pk only for a trainee login. A staff login that also holds the role has an
+         // employee / faculty pk there, which can equal another trainee's pk — the
+         // pages behind both cards refuse it for that reason.
+         $disciplineMarksDeducted = 0;
+         $pendingFeedbackCount = 0;
+         if (isOfficerTraineeUser() && (Auth::user()->user_category ?? null) === 'S') {
+             $disciplineMarksDeducted = app(OtMarksDeductedService::class)->totalFor((int) $userId);
+             $pendingFeedbackCount = $this->getOtPendingFeedbackCount($userId);
+         }
+
+         // Calculate total sessions for faculty portal users (Faculty / Internal / Guest)
+         if (is_faculty_portal_user()) {
+             $facultyPk = get_auth_faculty_master_pk();
 
             if ($facultyPk) {
                 $totalSessions = CalendarEvent::where('active_inactive', 1)
@@ -280,8 +349,44 @@ class UserController extends Controller
                     })
                     ->count();
 
-                // Check if faculty is CC or ACC
-                $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
+                 // "Total Sessions" card — the sessions this faculty TEACHES, across
+                 // active and ended courses alike. Counted through the same scope the
+                 // Timetable Session Report filters by, and the card links to that
+                 // report's All Courses tab with the Role filter on Teaching, so the
+                 // page it opens holds exactly these rows.
+                 $facultyTotalSessions = FacultySessionScope::countFor(
+                     $facultyPk,
+                     'all',
+                     FacultySessionScope::ROLE_TEACHING
+                 );
+
+                 // "Total Running Courses Feedback" card — this faculty's submitted
+                 // feedback on running (active, not yet ended) courses, counted the way
+                 // the Faculty Feedback with Comments page the card opens counts it, so
+                 // the figure is verifiable on the page it leads to.
+                 $facultyTotalFeedback = app(FacultyFeedbackReportService::class)
+                     ->getTotalFeedbackCount($facultyPk);
+
+                 // Both cards count students off the Course Group Mapping page, for
+                 // the groups mapped to THIS faculty, and open the OT / Participants
+                 // list on exactly that scope so the number and the rows agree.
+                 //
+                 //   My Counsellees     -> their Counsellor Groups (the cadres)
+                 //   House Wise Details -> their House Groups, i.e. how many
+                 //                         students their house holds
+                 //
+                 // Both on current courses only: a course switched off in the master,
+                 // or one whose end date has passed, stops counting.
+                 // A COUNT(DISTINCT) over the same mappings facultyGroupRows() reads,
+                 // not the full hydrated rows: this runs on every faculty dashboard
+                 // load (PR #334 F-010; measured 22 -> 6 queries, ~50 -> ~8 ms for a
+                 // faculty with 48 + 46 students, identical counts).
+                 $facultyCounsellees = $this->facultyGroupStudentCount($facultyPk, '%counsel%', true);
+
+                 $facultyHouses = $this->facultyGroupStudentCount($facultyPk, '%house%', true);
+
+                 // Check if faculty is CC or ACC
+                 $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
 
                 // Flag CC/ACC so the "Total Students" / "Student Details" cards
                 // become visible for them (card visibility is unchanged).
@@ -351,34 +456,67 @@ class UserController extends Controller
 
         // Role flags used for card visibility
         $isSecurityRole = hasRole('Security Card') || hasRole('Admin Security');
-        $isSuperAdmin = hasRole('Super Admin');
-        $isStudentOT = hasRole('Student-OT');
-        $isFacultyRole = hasRole('Internal Faculty') || hasRole('Guest Faculty');
+        $isSuperAdmin   = hasRole('Super Admin');
+        $isStudentOT    = hasRole('Student-OT');
+        // Student-OT is a pseudo-role set at login; an OT who arrives holding only
+        // the Spatie "Officer Trainee" role does not have it. The OT cards below
+        // key off this instead, or their links would resolve to the staff pages —
+        // the same trap the discipline card documents.
+        $isOtUser       = $isStudentOT || isOfficerTraineeUser();
+        $isFacultyRole  = hasRole('Internal Faculty') || hasRole('Guest Faculty');
+        // The two faculty cards below key off portal membership, not those two role
+        // names — the only faculty role actually present is "Faculty", which
+        // $isFacultyRole does not match.
+        $isFacultyPortalUser = is_faculty_portal_user();
 
         // Role-scoped course IDs for "My Course Participant" ([] = all, [-1] = none, [pks] = restricted)
         $myCourseIds = get_Role_by_course();
 
         // Hardcoded card definitions: count, link, visibility
         $cardDefinitions = [
-            'pending_permanent_id' => ['count' => $todayPendingPermanentIdCardRequests ?? 0,    'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
-            'pending_contractual_id' => ['count' => $todayPendingContractualIdCardRequests ?? 0,  'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
-            'duplicate_permanent_id' => ['count' => $todayDuplicatePermIdCardRequests ?? 0,       'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
-            'duplicate_contractual_id' => ['count' => $todayDuplicateContractualIdCardRequests ?? 0, 'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
-            'requested_family_id' => ['count' => $todayFamilyApprovals ?? 0,                   'link' => route('admin.security.family_idcard_approval.index'),          'visible' => $isSecurityRole || $isSuperAdmin],
-            'requested_vehicle_pass' => ['count' => $todayVehicleApprovals ?? 0,                  'link' => route('admin.security.vehicle_pass_approval.index'),           'visible' => $isSecurityRole || $isSuperAdmin],
-            'total_active_courses' => ['count' => $totalActiveCourses,                          'link' => route('admin.dashboard.active_course'),                        'visible' => ! $isSecurityRole],
-            'upcoming_courses' => ['count' => $upcomingCourses,                             'link' => route('admin.dashboard.incoming_course'),                      'visible' => ! $isSecurityRole],
-            'upcoming_events' => ['count' => $upcomingEventsCount,                         'link' => route('admin.dashboard.upcoming_events'),                      'visible' => ! $isSecurityRole],
-            'medical_exception' => ['count' => $exemptionCount ?? 0,                         'link' => route('medical.exception.ot.view'),                            'visible' => ! $isSecurityRole && $isStudentOT],
-            'total_guest_faculty' => ['count' => $total_guest_faculty,                         'link' => route('admin.dashboard.guest_faculty'),                        'visible' => ! $isSecurityRole && ! $isStudentOT],
-            'pending_id_approval1' => ['count' => $todayApproval1IdCardRequests ?? 0,           'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => ! $isSecurityRole && ($todayApproval1IdCardRequests ?? 0) > 0],
-            'pending_dup_id_approval1' => ['count' => $todayApproval1DuplicateIdCardRequests ?? 0,  'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => ! $isSecurityRole && ($todayApproval1DuplicateIdCardRequests ?? 0) > 0],
-            'ot_mdo_escort' => ['count' => $MDO_count ?? 0,                              'link' => route('ot.mdo.escrot.exemption.view'),                         'visible' => ! $isSecurityRole && $isStudentOT],
-            'total_inhouse_faculty' => ['count' => $total_internal_faculty,                      'link' => route('admin.dashboard.inhouse_faculty'),                      'visible' => ! $isSecurityRole && ! $isStudentOT],
-            'session_details' => ['count' => $totalSessions,                               'link' => route('admin.dashboard.sessions'),                             'visible' => ! $isSecurityRole && ($isFacultyRole || $isSuperAdmin)],
-            'total_students' => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => ! $isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
-            'student_details' => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => ! $isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
-            'my_course_participant' => ['count' => StudentMasterCourseMap::query()->when(! empty($myCourseIds), fn ($q) => $q->whereIn('course_master_pk', $myCourseIds))->count(), 'link' => route('my.course.participant'),                                'visible' => true],
+            'pending_permanent_id'    => ['count' => $todayPendingPermanentIdCardRequests ?? 0,    'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
+            'pending_contractual_id'  => ['count' => $todayPendingContractualIdCardRequests ?? 0,  'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
+            'duplicate_permanent_id'  => ['count' => $todayDuplicatePermIdCardRequests ?? 0,       'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
+            'duplicate_contractual_id'=> ['count' => $todayDuplicateContractualIdCardRequests ?? 0,'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
+            'requested_family_id'     => ['count' => $todayFamilyApprovals ?? 0,                   'link' => route('admin.security.family_idcard_approval.index'),          'visible' => $isSecurityRole || $isSuperAdmin],
+            'requested_vehicle_pass'  => ['count' => $todayVehicleApprovals ?? 0,                  'link' => route('admin.security.vehicle_pass_approval.index'),           'visible' => $isSecurityRole || $isSuperAdmin],
+            'total_active_courses'    => ['count' => $totalActiveCourses,                          'link' => route('admin.dashboard.active_course'),                        'visible' => !$isSecurityRole],
+            'upcoming_courses'        => ['count' => $upcomingCourses,                             'link' => route('admin.dashboard.incoming_course'),                      'visible' => !$isSecurityRole],
+            'upcoming_events'         => ['count' => $upcomingEventsCount,                         'link' => route('admin.dashboard.upcoming_events'),                      'visible' => !$isSecurityRole],
+            'medical_exception'       => ['count' => $exemptionCount ?? 0,                         'link' => route('medical.exception.ot.view'),                            'visible' => !$isSecurityRole && $isStudentOT],
+            'total_guest_faculty'     => ['count' => $total_guest_faculty,                         'link' => route('admin.dashboard.guest_faculty'),                        'visible' => !$isSecurityRole && !$isStudentOT],
+            'pending_id_approval1'    => ['count' => $todayApproval1IdCardRequests ?? 0,           'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => !$isSecurityRole && ($todayApproval1IdCardRequests ?? 0) > 0],
+            'pending_dup_id_approval1'=> ['count' => $todayApproval1DuplicateIdCardRequests ?? 0,  'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => !$isSecurityRole && ($todayApproval1DuplicateIdCardRequests ?? 0) > 0],
+            'ot_mdo_escort'           => ['count' => $MDO_count ?? 0,                              'link' => route('ot.mdo.escrot.exemption.view'),                         'visible' => !$isSecurityRole && $isStudentOT],
+            'my_groups'               => ['count' => $myGroupsCount ?? 0,                          'link' => route('admin.dashboard.my-groups'),                            'visible' => !$isSecurityRole && $isStudentOT],
+            'total_inhouse_faculty'   => ['count' => $total_internal_faculty,                      'link' => route('admin.dashboard.inhouse_faculty'),                      'visible' => !$isSecurityRole && !$isStudentOT],
+            'session_details'         => ['count' => $totalSessions,                               'link' => route('admin.dashboard.sessions'),                             'visible' => !$isSecurityRole && ($isFacultyRole || $isSuperAdmin)],
+            // Faculty-only cards. Both open a report that scopes itself to the
+            // logged-in faculty server-side, so the count and the page agree.
+            'total_sessions'          => ['count' => $facultyTotalSessions,                        'link' => route('timetable-report.index', ['course_mode' => 'all', 'faculty_role' => FacultySessionScope::ROLE_TEACHING]), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            'total_feedback'          => ['count' => $facultyTotalFeedback,                        'link' => route('faculty.session_feedback.comments', ['course_type' => 'current', 'program_id' => 'all']), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            // No count on the two timetable cards: they open a calendar, not a list
+            // whose rows could be counted. Academic = the whole Academy's timetable
+            // (?scope=academy), My Timetable = the same page scoped to the viewer,
+            // which is what it already does for a faculty login. Faculty only: the
+            // academy scope refuses trainees (PR #334 F-047).
+            'academic_timetable'      => [                                                         'link' => route('calendar.index', ['scope' => 'academy']),               'visible' => !$isSecurityRole && $isFacultyPortalUser && !$isOtUser],
+            // An OT's own timetable is their dedicated calendar — the sessions of
+            // the groups they are enrolled in. A faculty's is the same page scoped
+            // to their classes, which is what it already does for them.
+            'my_timetable'            => ['link' => $isOtUser ? route('calendar.ot.index') : route('calendar.index'),                            'visible' => !$isSecurityRole && ($isFacultyPortalUser || $isOtUser)],
+            // Both open the OT / Participants list — the second ordered by House so it
+            // opens house-wise, with the page's House filter to narrow to one.
+            'my_counsellees'          => ['count' => $facultyCounsellees,                          'link' => route('admin.dashboard.ot-participants', ['view' => 'counsellees']), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            'house_wise_details'      => ['count' => $facultyHouses,                               'link' => route('admin.dashboard.ot-participants', ['view' => 'house']), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            // No count: Who's Who opens on a course picker, so there is no single
+            // number the tile could honestly show — same as the timetable cards.
+            'whos_who'                => [                                                         'link' => route('admin.faculty.whos-who'),                               'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            'total_students'          => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
+            'student_details'         => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
+            'my_course_participant'   => ['count' => StudentMasterCourseMap::query()->when(!empty($myCourseIds), fn($q) => $q->whereIn('course_master_pk', $myCourseIds))->count(), 'link' => route('my.course.participant'),                                'visible' => true],
+            'discipline_marks_deducted' => ['count' => $disciplineMarksDeducted,                   'link' => route('memo.discipline.ot_marks'),                              'visible' => !$isSecurityRole && $isOtUser],
+            'pending_feedback'        => ['count' => $pendingFeedbackCount,                        'link' => route('feedback.get.studentFeedbackUrl'),                      'visible' => !$isSecurityRole && $isOtUser],
         ];
 
         // Count map for custom cards added via UI.
@@ -404,9 +542,35 @@ class UserController extends Controller
 
         $enabledWidgetKeys = $baseCards->filter(fn ($c) => str_starts_with($c->key, 'widget_'))->pluck('key')->toArray();
 
-        $issueReportModules = IssueReportController::moduleOptions();
+        // House wise Performance panel. Built only when the panel is actually on
+        // this dashboard — it is four queries, and no other card needs them.
+        $houseOnDashboard = in_array('widget_house_performance', $enabledWidgetKeys, true);
+        // ?house_course= narrows the panel; the select posts back to the dashboard
+        // rather than fetching, so the figure and the page agree without a second
+        // code path computing it.
+        $houseCourseFilter = $request->filled('house_course') ? (int) $request->input('house_course') : null;
+        $housePerformance = $houseOnDashboard
+            ? $this->houseWisePerformance($houseCourseFilter)
+            : collect();
+        $houseCourses = $houseOnDashboard ? $this->houseCourseOptions() : collect();
 
-        $cardsToRender = $baseCards->filter(fn ($c) => ! str_starts_with($c->key, 'widget_'))->map(function ($card) use ($cardDefinitions, $cardCounts) {
+        $issueReportModules = \App\Http\Controllers\Admin\IssueReportController::moduleOptions();
+
+        // Cards whose 'visible' flag is enforced: the OT and faculty-portal cards,
+        // whose role mapping alone would show them to a login the page behind them
+        // refuses (an OT card to a non-OT, opening a 403). The older cards' flags
+        // were never applied and their role mappings are what admins have tuned
+        // against, so they are left as they are.
+        $gatedCardKeys = [
+            'my_groups', 'discipline_marks_deducted', 'pending_feedback',
+            'total_sessions', 'total_feedback', 'my_counsellees', 'house_wise_details', 'whos_who',
+            'academic_timetable', 'my_timetable',
+        ];
+
+        $cardsToRender = $baseCards->filter(fn ($c) => ! str_starts_with($c->key, 'widget_'))->filter(function ($card) use ($cardDefinitions, $gatedCardKeys) {
+            return ! in_array($card->key, $gatedCardKeys, true)
+                || ($cardDefinitions[$card->key]['visible'] ?? true);
+        })->map(function ($card) use ($cardDefinitions, $cardCounts) {
             $def = $cardDefinitions[$card->key] ?? null;
 
             return [
@@ -414,8 +578,12 @@ class UserController extends Controller
                 'label' => $card->label,
                 'icon' => $card->icon,
                 'color_class' => $card->color_class,
-                'link' => $def['link'] ?? null,
-                'count' => $def['count'] ?? ($cardCounts[$card->key] ?? 0),
+                'link'        => $def['link'] ?? null,
+                'count'       => $def['count'] ?? ($cardCounts[$card->key] ?? 0),
+                // A definition that omits 'count' is a card that opens something
+                // rather than counting it (the timetables) — it renders as a tile
+                // with no number, not as a zero.
+                'show_count'  => $def === null || array_key_exists('count', $def),
             ];
         })->values();
 
@@ -435,9 +603,12 @@ class UserController extends Controller
             'total_internal_faculty',
             'exemptionCount',
             'MDO_count',
+            'disciplineMarksDeducted',
             'todayTimetable',
             'totalSessions',
             'totalStudents',
+            'facultyTotalSessions',
+            'facultyTotalFeedback',
             'isCCorACC',
             'todayFamilyApprovals',
             'fullFamilyApprovals',
@@ -457,8 +628,579 @@ class UserController extends Controller
             'idCardApprovalRoute',
             'cardsToRender',
             'enabledWidgetKeys',
+            'housePerformance',
+            'houseCourses',
+            'houseCourseFilter',
             'issueReportModules'
         ));
+    }
+
+    /**
+     * The students of one KIND of group mapped to a faculty on the Course Group
+     * Mapping page — group type LIKE $typeNameLike, faculty = this faculty.
+     *
+     * That page is the definition behind two dashboard cards:
+     *
+     *   My Counsellees     -> Counsellor Group, whose group names are the cadres
+     *   House Wise Details -> House Group, whose group names are the houses
+     *
+     * so the same rows give both the card's count and the dropdown on the list it
+     * opens. Matched by type name rather than the hard-coded pks (8 and 20), so a
+     * renamed type still counts.
+     *
+     * Deliberately NOT resolveDashboardStudentListPayload(): that pulls in
+     * coordinator courses, every other group type the faculty owns and the
+     * sessions they taught — which is why My Counsellees read 00 while the mapping
+     * page listed 48 students.
+     *
+     * Rows carry the shape the OT / Participants list expects, plus the group name
+     * under $labelProperty, so the column and filter for that view can read the
+     * group rather than the student's own cadre master (70 of these students have
+     * no cadre on record) or their hostel room.
+     *
+     * @param  bool  $currentCoursesOnly  Only groups on a running course
+     *                                    ({@see currentCourseIds()}).
+     * @return \Illuminate\Support\Collection<int, \stdClass>
+     */
+    private function facultyGroupRows(
+        int $facultyPk,
+        string $typeNameLike,
+        string $labelProperty,
+        bool $currentCoursesOnly = false
+    ): \Illuminate\Support\Collection
+    {
+        $mappings = $this->facultyGroupMappings($facultyPk, $typeNameLike, $currentCoursesOnly);
+
+        if ($mappings->isEmpty()) {
+            return collect();
+        }
+
+        $groupMemberships = StudentCourseGroupMap::with([
+            'student.cadre',
+            'groupTypeMasterCourseMasterMap.courseGroup',
+            'groupTypeMasterCourseMasterMap.courseGroupType',
+            'groupTypeMasterCourseMasterMap.Faculty',
+        ])
+            ->whereIn('group_type_master_course_master_map_pk', $mappings->pluck('pk'))
+            ->where('active_inactive', 1)
+            ->get();
+
+        $groupByMapping = $mappings->keyBy('pk');
+        $courses = CourseMaster::whereIn('pk', $mappings->pluck('course_pk')->filter()->unique())->get()->keyBy('pk');
+
+        // House Name, the same lookup the payload does — the column stays on the
+        // grid even though the counsellee view offers no House filter.
+        $userIds = $groupMemberships->map(fn ($m) => $m->student->user_id ?? null)->filter()->unique()->values()->all();
+        $houseByUser = ! empty($userIds)
+            ? DB::table('ot_hostel_room_details')
+                ->where('active_inactive', 1)
+                ->whereIn('user_name', $userIds)
+                ->pluck('hostel_room_name', 'user_name')
+            : collect();
+
+        $rows = collect();
+        $seen = [];
+
+        foreach ($groupMemberships as $membership) {
+            $student = $membership->student;
+            $mapping = $groupByMapping[$membership->group_type_master_course_master_map_pk] ?? null;
+
+            if (! $student || ! $mapping) {
+                continue;
+            }
+
+            // One row per student per course, as the rest of the list expects.
+            $key = $student->pk . '_' . ($mapping->course_pk ?? 0);
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+
+            $row = new \stdClass();
+            $row->student_master_pk = $membership->student_master_pk;
+            $row->course_master_pk = $mapping->course_pk;
+            $row->studentMaster = $student;
+            $row->course = $courses[$mapping->course_pk] ?? null;
+            $row->groupMapping = $membership;
+            $row->{$labelProperty} = trim((string) $mapping->group_name);
+            // On the counsellee view the cadre IS the counsellor group, which is what
+            // the Cadre dropdown offers — the row filter reads cadre_name first.
+            if ($labelProperty === 'counsellor_group_name') {
+                $row->cadre_name = $row->counsellor_group_name;
+            }
+            $uid = $student->user_id ?? null;
+            $row->house_name = ($uid && isset($houseByUser[$uid])) ? $houseByUser[$uid] : null;
+            $row->source = 'faculty_group';
+
+            $rows->push($row);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * The faculty's group mappings of one group type — shared by
+     * facultyGroupRows() and facultyGroupStudentCount(), so a dashboard count and
+     * the list it opens can never select different groups.
+     *
+     * @return \Illuminate\Support\Collection<int, \stdClass>  pk, group_name, course_pk
+     */
+    private function facultyGroupMappings(int $facultyPk, string $typeNameLike, bool $currentCoursesOnly): \Illuminate\Support\Collection
+    {
+        $groupTypeIds = DB::table('course_group_type_master')
+            ->where('active_inactive', 1)
+            ->whereRaw('LOWER(type_name) LIKE ?', [$typeNameLike])
+            ->pluck('pk');
+
+        if ($groupTypeIds->isEmpty()) {
+            return collect();
+        }
+
+        return DB::table('group_type_master_course_master_map as g')
+            ->whereIn('g.type_name', $groupTypeIds)
+            ->where('g.facility_id', $facultyPk)
+            ->where('g.active_inactive', 1)
+            // Running courses only, when the caller asks: neither a switched-off
+            // course nor a finished batch keeps counting. An orphaned mapping —
+            // one whose course_name matches no course_master row — drops out with
+            // them, there being no course to call current.
+            ->when($currentCoursesOnly, fn ($q) => $q->whereIn('g.course_name', $this->currentCourseIds()))
+            ->get(['g.pk', 'g.group_name', 'g.course_name as course_pk']);
+    }
+
+    /**
+     * Distinct students in the faculty's groups of one type — the number the
+     * My Counsellees / House Wise Details cards show — as one COUNT(DISTINCT)
+     * instead of hydrating every membership through facultyGroupRows() just to
+     * count it (PR #334 F-010). Same mappings, same active membership filter,
+     * and the same "student row must exist" rule the rows apply.
+     */
+    private function facultyGroupStudentCount(int $facultyPk, string $typeNameLike, bool $currentCoursesOnly = false): int
+    {
+        $mappingPks = $this->facultyGroupMappings($facultyPk, $typeNameLike, $currentCoursesOnly)->pluck('pk');
+
+        if ($mappingPks->isEmpty()) {
+            return 0;
+        }
+
+        return (int) DB::table('student_course_group_map as scgm')
+            ->join('student_master as sm', 'sm.pk', '=', 'scgm.student_master_pk')
+            ->whereIn('scgm.group_type_master_course_master_map_pk', $mappingPks)
+            ->where('scgm.active_inactive', 1)
+            // facultyGroupRows()->pluck()->filter() dropped a 0 pk; keep parity.
+            ->where('scgm.student_master_pk', '<>', 0)
+            ->distinct()
+            ->count('scgm.student_master_pk');
+    }
+
+    /**
+     * "House wise Performance" panel: every house, worst behaviour last.
+     *
+     * A house is a group on the Course Group Mapping page whose group TYPE is the
+     * House one, on a course that is still running — the page's own Active list,
+     * so a house added there appears here without any further wiring, and one
+     * whose batch has finished leaves. Resolved by type name rather than a
+     * hard-coded pk so a renamed or duplicated House type still counts.
+     *
+     * The figure against each house is its students' Discipline Memos plus their
+     * Memo/Notices — memos AND notices together — counting only the CLOSED ones,
+     * and only those raised on a course that is still running. A case still being
+     * argued is not a result yet, and a finished or switched-off batch is not this
+     * term's record.
+     *
+     * Closed is each module's own end state:
+     *
+     *   discipline_memo_status.status = 3   (1 Recorded, 2 Memo Sent, 3 Closed)
+     *   student_memo_status.status    = 2   (what End Chat sets, alongside the
+     *   student_notice_status.status  = 2    "Memo Closed" notice to the OT)
+     *
+     * A notice can be closed as a notice OR converted into a memo, and a converted
+     * one keeps status 2 while its memo lives on in student_memo_status pointing
+     * back at it. Counting both would charge that single case twice — every memo
+     * on this data came from a notice — so a notice counts only when no memo
+     * references it, the same test the Notice/Memo listing makes.
+     *
+     * Memos sum memo_count, falling back to one per record for the older rows that
+     * leave it NULL — the same count the OT / Participants list prints
+     * ({@see otParticipantsRowMeta()}); discipline memos and notices are one per
+     * record.
+     *
+     * Students are deduplicated first — the mapping table holds repeat rows, and a
+     * student in two mappings of the same house must not pay twice.
+     *
+     * Ascending, lowest first, because the panel reads as a league table: the
+     * house at the top is the one with least against it.
+     *
+     * @return \Illuminate\Support\Collection<int, array{house: string, total: int, students: int}>
+     */
+    private function houseWisePerformance(?int $courseFilter = null): \Illuminate\Support\Collection
+    {
+        ['houses' => $studentsByHouse, 'course_ids' => $currentCourseIds] = $this->houseMemberships($courseFilter);
+
+        if ($studentsByHouse === []) {
+            return collect();
+        }
+
+        $studentPks = collect($studentsByHouse)->flatMap(fn ($set) => array_keys($set))->unique()->values()->all();
+
+        // Marks, not record counts (UAT 15-09-2026). A house's figure is the sum of
+        // every closed deduction against its OTs — final_mark_deduction on discipline
+        // memos plus mark_of_deduction on memos/notices. Counting records made two
+        // houses look equal when one had lost 2 marks and the other 20.
+        //
+        // OtMarksDeductedService owns those rules, and the OT's own card and page
+        // already read it, so a house total and the OTs' own totals cannot disagree.
+        // Scoped to running courses, the same way the houses above are.
+        //
+        // Per (student, course): a house belongs to one course, so it takes only the
+        // marks its OTs lost on that course (PR #334 F-052).
+        $marksByStudent = app(OtMarksDeductedService::class)
+            ->totalsForStudentsByCourse($studentPks, $currentCourseIds instanceof \Illuminate\Support\Collection
+                ? $currentCourseIds->all()
+                : (array) $currentCourseIds);
+
+        return collect($studentsByHouse)
+            ->map(function (array $students, string $house) use ($marksByStudent) {
+                $total = 0.0;
+                foreach ($students as $pk => $courses) {
+                    foreach (array_keys($courses) as $coursePk) {
+                        $total += (float) ($marksByStudent[(int) $pk][(int) $coursePk] ?? 0);
+                    }
+                }
+
+                return [
+                    'house' => $house,
+                    'total' => round($total, 2),
+                    'students' => count($students),
+                ];
+            })
+            ->sortBy([['total', 'asc'], ['house', 'asc']])
+            ->values();
+    }
+
+    /**
+     * Which officer trainees sit in which house, on the courses running now.
+     *
+     * Shared by the dashboard panel and the House wise Performance page, so the
+     * tile's figure and the page's rows are drawn from exactly the same set — a
+     * house missing from one and present in the other would be indefensible.
+     *
+     * Each member carries the course(s) of the mapping that put them in the house,
+     * so a total can take only that course's marks (PR #334 F-052).
+     *
+     * @return array{houses: array<string, array<int, array<int, true>>>, course_ids: mixed}  house => [student_pk => [course_pk => true]]
+     */
+    private function houseMemberships(?int $courseFilter = null): array
+    {
+        $currentCourseIds = collect($this->currentCourseIds())->map(fn ($id) => (int) $id);
+
+        // A course filter narrows the running courses rather than replacing them,
+        // so a finished or switched-off course cannot be reached by passing its id.
+        if ($courseFilter !== null) {
+            $currentCourseIds = $currentCourseIds->filter(fn ($id) => $id === $courseFilter)->values();
+
+            if ($currentCourseIds->isEmpty()) {
+                return ['houses' => [], 'course_ids' => collect([-1])];
+            }
+        }
+
+        $houseTypeIds = DB::table('course_group_type_master')
+            ->where('active_inactive', 1)
+            ->whereRaw('LOWER(type_name) LIKE ?', ['%house%'])
+            ->pluck('pk');
+
+        if ($houseTypeIds->isEmpty()) {
+            return ['houses' => [], 'course_ids' => $currentCourseIds];
+        }
+
+        // Every house on a RUNNING course. A house whose batch has finished, or
+        // whose course was switched off in the master, drops out with it —
+        // otherwise the list grows a row per past programme and stops being
+        // this term's table.
+        $mappings = DB::table('group_type_master_course_master_map')
+            ->whereIn('type_name', $houseTypeIds)
+            ->whereIn('course_name', $currentCourseIds)
+            ->where('active_inactive', 1)
+            ->whereNotNull('group_name')
+            ->where('group_name', '<>', '')
+            ->get(['pk', 'group_name', 'course_name']);
+
+        if ($mappings->isEmpty()) {
+            return ['houses' => [], 'course_ids' => $currentCourseIds];
+        }
+
+        $houseByMapping = $mappings->pluck('group_name', 'pk');
+        $courseByMapping = $mappings->pluck('course_name', 'pk');
+
+        // house name => [student_master_pk => [course_master_pk => true]]
+        $studentsByHouse = [];
+        foreach ($houseByMapping as $houseName) {
+            $studentsByHouse[trim((string) $houseName)] ??= [];
+        }
+
+        $memberships = DB::table('student_course_group_map')
+            ->whereIn('group_type_master_course_master_map_pk', $mappings->pluck('pk'))
+            ->where('active_inactive', 1)
+            ->get(['group_type_master_course_master_map_pk as map_pk', 'student_master_pk']);
+
+        foreach ($memberships as $row) {
+            $house = trim((string) ($houseByMapping[$row->map_pk] ?? ''));
+            if ($house === '' || empty($row->student_master_pk)) {
+                continue;
+            }
+            $studentsByHouse[$house][(int) $row->student_master_pk][(int) ($courseByMapping[$row->map_pk] ?? 0)] = true;
+        }
+
+        return ['houses' => $studentsByHouse, 'course_ids' => $currentCourseIds];
+    }
+
+    /**
+     * House wise Performance in full: every house, its officer trainees, and each
+     * closed deduction against them, with the house total last.
+     *
+     * The page the dashboard panel links to.
+     */
+    public function houseWisePerformanceDetail(Request $request)
+    {
+        // The route carries only `auth`, and the rows are trainees' discipline
+        // deductions. Admit exactly whoever the dashboard shows the panel to,
+        // before any query and for the page and both downloads alike.
+        abort_unless($this->canSeeHousePerformance(), 403);
+
+        $courseFilter = $request->filled('course') ? (int) $request->input('course') : null;
+        $houses = $this->houseWisePerformanceRows($courseFilter);
+
+        $format = is_string($request->get('format')) ? strtolower($request->get('format')) : '';
+        if ($format === 'excel' || $format === 'pdf') {
+            return $this->exportHouseWisePerformance($houses, $format, $courseFilter);
+        }
+
+        return view('admin.dashboard.house_wise_performance', [
+            'houses' => $houses,
+            'generatedOn' => now(),
+            'courses' => $this->houseCourseOptions(),
+            'courseFilter' => $courseFilter,
+        ]);
+    }
+
+    /**
+     * Whether the signed-in user may see House wise Performance: Super Admin, or
+     * a role the House wise Performance dashboard widget is assigned to — the
+     * same role → dashboard_cards mapping dashboard() uses to show the panel.
+     */
+    private function canSeeHousePerformance(): bool
+    {
+        // A trainee login is refused before any role is consulted, as in
+        // canUseOtParticipants(): an OT account carrying a staff role must not read
+        // every trainee's discipline deductions (PR #334 F-034).
+        if (isTraineeLogin()) {
+            return false;
+        }
+
+        if (hasRole('Super Admin')) {
+            return true;
+        }
+
+        $roleIds = (Auth::user()->roles ?? collect())->pluck('id')->all();
+
+        return $roleIds !== []
+            && DashboardCard::where('key', 'widget_house_performance')
+                ->whereHas('roles', fn ($q) => $q->whereIn('roles.id', $roleIds))
+                ->exists();
+    }
+
+    /**
+     * Running courses that actually have a house mapped — the options both the
+     * dashboard card's filter and the page's filter offer. A course with no
+     * house would filter the panel down to nothing, so it is not listed.
+     */
+    private function houseCourseOptions()
+    {
+        $houseTypeIds = DB::table('course_group_type_master')
+            ->where('active_inactive', 1)
+            ->whereRaw('LOWER(type_name) LIKE ?', ['%house%'])
+            ->pluck('pk');
+
+        if ($houseTypeIds->isEmpty()) {
+            return collect();
+        }
+
+        $courseIds = DB::table('group_type_master_course_master_map')
+            ->whereIn('type_name', $houseTypeIds)
+            ->whereIn('course_name', $this->currentCourseIds())
+            ->where('active_inactive', 1)
+            ->whereNotNull('group_name')
+            ->where('group_name', '<>', '')
+            ->distinct()
+            ->pluck('course_name');
+
+        if ($courseIds->isEmpty()) {
+            return collect();
+        }
+
+        return CourseMaster::whereIn('pk', $courseIds)
+            ->orderBy('course_name')
+            ->pluck('course_name', 'pk');
+    }
+
+    /**
+     * House wise Performance rows: every house, the officer trainees who have
+     * actually lost marks, and each closed deduction behind that.
+     *
+     * Only OTs carrying a penalty are listed (UAT): a house roster of 80 where
+     * 3 have deductions was 77 rows of "no deduction on record", which buried
+     * the 3 rows the page exists to show. Deductions are closed-only already —
+     * OtMarksDeductedService never counts an open case, because a mark is only
+     * written at conclusion.
+     */
+    private function houseWisePerformanceRows(?int $courseFilter = null): \Illuminate\Support\Collection
+    {
+        ['houses' => $studentsByHouse, 'course_ids' => $currentCourseIds] = $this->houseMemberships($courseFilter);
+
+        $studentPks = collect($studentsByHouse)->flatMap(fn ($set) => array_keys($set))->unique()->values()->all();
+
+        $courseIdList = $currentCourseIds instanceof \Illuminate\Support\Collection
+            ? $currentCourseIds->all()
+            : (array) $currentCourseIds;
+
+        $service = app(OtMarksDeductedService::class);
+        $rowsByStudent = $service->rowsForStudents($studentPks, $courseIdList);
+
+        $students = empty($studentPks)
+            ? collect()
+            : StudentMaster::whereIn('pk', $studentPks)
+                ->get(['pk', 'display_name', 'first_name', 'last_name', 'generated_OT_code'])
+                ->keyBy('pk');
+
+        // One entry per house: its penalised OTs (each with their deduction rows)
+        // and the house total, which is the sum of those rows.
+        return collect($studentsByHouse)
+            ->map(function (array $memberSet, string $house) use ($rowsByStudent, $students) {
+                $members = collect($memberSet)
+                    ->map(function (array $courses, int $pk) use ($rowsByStudent, $students) {
+                        $student = $students->get($pk);
+                        // Only deductions on this house's course (PR #334 F-052).
+                        $rows = collect($rowsByStudent->get($pk, collect()))
+                            ->filter(fn (array $row) => isset($courses[$row['course_pk']]))
+                            ->values();
+
+                        return [
+                            'name' => $this->studentDisplayName($student),
+                            'ot_code' => $student->generated_OT_code ?? '-',
+                            'rows' => $rows,
+                            'total' => round((float) $rows->sum('marks'), 2),
+                        ];
+                    })
+                    // Only those carrying a final mark against them.
+                    ->filter(fn (array $member) => $member['total'] > 0)
+                    // Heaviest penalty first, then alphabetical — the reason
+                    // someone opens this page is to see who is carrying marks.
+                    ->sortBy([['total', 'desc'], ['name', 'asc']])
+                    ->values();
+
+                return [
+                    'house' => $house,
+                    'members' => $members,
+                    'student_count' => $members->count(),
+                    'total' => round((float) $members->sum('total'), 2),
+                ];
+            })
+            // A house with nobody penalised has nothing to report.
+            ->filter(fn (array $house) => $house['members']->isNotEmpty())
+            ->sortBy('house')
+            ->values();
+    }
+
+    /**
+     * Excel or PDF of House wise Performance — one flat table, each house's rows
+     * followed by its Final Marks line, so the file reads like the page.
+     */
+    private function exportHouseWisePerformance(\Illuminate\Support\Collection $houses, string $format, ?int $courseFilter = null)
+    {
+        $filterLine = $courseFilter
+            ? 'Course: ' . (CourseMaster::where('pk', $courseFilter)->value('course_name') ?: $courseFilter)
+            : '';
+
+        // Same columns and same row order as the page, so a download reads like
+        // the screen it came from: a band per house, one row per deduction, each
+        // trainee's own subtotal, then Final Marks.
+        $headings = ['S. No.', 'Student Name', 'OT Code', 'Discipline Category', 'Marks'];
+        $centreColumns = [0, 2, 4];
+        $today = now()->format('d M Y');
+
+        $data = collect();
+        $sectionRows = [];
+        $totalRows = [];
+
+        foreach ($houses as $house) {
+            $sectionRows[] = $data->count();
+            $data->push([
+                $house['house'] . '  —  ' . $today
+                    . '   (' . $house['student_count'] . ' OT' . ($house['student_count'] == 1 ? '' : 's')
+                    . ', Total Marks Deducted: ' . ($house['total'] + 0) . ')',
+                '', '', '', '',
+            ]);
+
+            foreach ($house['members'] as $index => $member) {
+                foreach ($member['rows'] as $i => $row) {
+                    $data->push([
+                        $i === 0 ? $index + 1 : '',
+                        $i === 0 ? $member['name'] : '',
+                        $i === 0 ? $member['ot_code'] : '',
+                        trim($row['category'] . (empty($row['severity']) ? '' : ' (' . $row['severity'] . ')')),
+                        $row['marks'] + 0,
+                    ]);
+                }
+
+                // Every trainee's own total, as on the page.
+                $totalRows[] = $data->count();
+                $data->push(['', '', '', $member['name'] . ' — Total Marks', $member['total'] + 0]);
+            }
+
+            $totalRows[] = $data->count();
+            $data->push(['', '', '', 'Final Marks — ' . $house['house'], $house['total'] + 0]);
+        }
+
+        $baseName = 'House_Wise_Performance_' . now()->format('Ymd_His');
+        $title = 'House wise Performance';
+
+        if ($format === 'pdf') {
+            @ini_set('memory_limit', '256M');
+            @set_time_limit(120);
+
+            return Pdf::loadView('admin.exports.table_pdf', [
+                'headings' => $headings,
+                'rows' => $data,
+                'reportTitle' => $title,
+                'filterLine' => $filterLine,
+                'centreColumns' => $centreColumns,
+                'sectionRows' => $sectionRows,
+                'totalRows' => $totalRows,
+            ])->setPaper('a4', 'portrait')->download($baseName . '.pdf');
+        }
+
+        return Excel::download(
+            new LbsnaaTableExport($data, $headings, $title, $filterLine, $centreColumns, null, $sectionRows, $totalRows),
+            $baseName . '.xlsx'
+        );
+    }
+
+    /** Display name for a student_master row, falling back to first + last. */
+    private function studentDisplayName($student): string
+    {
+        if (! $student) {
+            return 'Officer Trainee';
+        }
+
+        $display = trim((string) ($student->display_name ?? ''));
+        if ($display !== '') {
+            return $display;
+        }
+
+        return trim(implode(' ', array_filter([
+            $student->first_name ?? '',
+            $student->last_name ?? '',
+        ]))) ?: 'Officer Trainee';
     }
 
     /**
@@ -485,26 +1227,43 @@ class UserController extends Controller
      */
     protected function buildNoticeFeed(?Request $request): array
     {
-        // No year filter: this feed shows live notices only (the base query drops
-        // anything past its expiry_date), so a Year control could never offer more
-        // than the current year or two and would read as a broken archive. If an
-        // archive is wanted later, the expiry predicate has to relax first — the
-        // control on its own would not deliver one.
+        // Scope picks which side of expiry_date the feed reads. Archive is the
+        // whole back catalogue this user was entitled to see — the role predicates
+        // in notice_feed_query_by_role() are the same either way, so "archive"
+        // never widens what someone can read, it only reaches further back.
+        $scope = $request?->query('notice_scope') === 'archive' ? 'archive' : 'live';
+
+        // Year applies to display_date. It only earns its place once the archive
+        // exists: on the live feed the set spans a year or two at most.
+        $rawYear = $request?->query('notice_year');
+        $year = trim(is_scalar($rawYear) ? (string) $rawYear : ''); // ?notice_year[]= is not a year (PR #334 F-025)
+        if ($year !== '' && !preg_match('/^\d{4}$/', $year)) {
+            $year = '';
+        }
+
         $filters = [
-            'type' => trim((string) ($request?->query('notice_type') ?? '')),
-            'dept' => trim((string) ($request?->query('notice_dept') ?? '')),
-            'audience' => trim((string) ($request?->query('notice_audience') ?? '')),
-            'q' => trim((string) ($request?->query('q') ?? '')),
+            'scope'    => $scope,
+            'year'     => $year,
+            // Scalar only: ?notice_type[]= reached the string cast and returned 500
+            // (PR #334 F-037).
+            'type'     => is_scalar($v = $request?->query('notice_type')) ? trim((string) $v) : '',
+            'dept'     => is_scalar($v = $request?->query('notice_dept')) ? trim((string) $v) : '',
+            'audience' => is_scalar($v = $request?->query('notice_audience')) ? trim((string) $v) : '',
+            'q'        => is_scalar($v = $request?->query('q')) ? trim((string) $v) : '',
         ];
 
-        $base = notice_feed_query_by_role();
+        $base = notice_feed_query_by_role($scope);
 
         if (! $base) {
             $empty = new LengthAwarePaginator([], 0, self::NOTICE_FEED_PER_PAGE, 1, [
                 'path' => Paginator::resolveCurrentPath(),
             ]);
 
-            return [$empty, ['types' => collect(), 'depts' => collect(), 'audiences' => collect()], $filters];
+            return [
+                $empty,
+                ['types' => collect(), 'depts' => collect(), 'audiences' => collect(), 'years' => collect(), 'archiveCount' => 0],
+                $filters,
+            ];
         }
 
         // Dropdown options come from the UNFILTERED role-scoped set, so choosing a
@@ -529,11 +1288,34 @@ class UserController extends Controller
             ->sort()
             ->values();
 
+        // Years come from the same unfiltered, scope-applied set, so the dropdown
+        // never offers a year that returns nothing. YEAR() is projected rather than
+        // derived in PHP so the DISTINCT still collapses in SQL.
+        $years = (clone $base)
+            ->reorder()
+            ->select(DB::raw('YEAR(notices_notification.display_date) as notice_year'))
+            ->distinct()
+            ->pluck('notice_year')
+            ->filter()
+            ->sortDesc()
+            ->values();
+
+        // Drives the Archive button's count. Cheap — one COUNT over the same
+        // role-scoped predicates, and it tells the user whether the archive is
+        // worth opening before they switch to it.
+        $archiveCount = notice_feed_query_by_role('archive')->reorder()->count();
+
         $filterOptions = [
-            'types' => $distinctOf('notices_notification.notice_type'),
-            'depts' => $distinctOf('notice_author_dept.department_name'),
-            'audiences' => $distinctOf('notices_notification.target_audience'),
+            'types'        => $distinctOf('notices_notification.notice_type'),
+            'depts'        => $distinctOf('notice_author_dept.department_name'),
+            'audiences'    => $distinctOf('notices_notification.target_audience'),
+            'years'        => $years,
+            'archiveCount' => $archiveCount,
         ];
+
+        if ($filters['year'] !== '') {
+            $base->whereYear('notices_notification.display_date', $filters['year']);
+        }
 
         if ($filters['type'] !== '') {
             $base->where('notices_notification.notice_type', $filters['type']);
@@ -1128,6 +1910,94 @@ class UserController extends Controller
         return (int) $base->count();
     }
 
+    private function getOtPendingFeedbackCount(int $studentPk): int
+    {
+        try {
+            // Match EXACT logic from studentFeedback_url() in CalendarController
+            // Single query with leftJoin - NEW backend format only
+            
+            $pendingQuery = DB::table('timetable as t')
+                ->select(['t.pk as timetable_pk', 'f.pk as faculty_pk'])
+                ->leftJoin('faculty_master as f', function ($join) {
+                    $join->whereRaw("
+                    (
+                        JSON_VALID(t.faculty_master)
+                        AND JSON_CONTAINS(
+                            t.faculty_master,
+                            JSON_QUOTE(CAST(f.pk AS CHAR))
+                        )
+                    )
+                    OR
+                    (
+                        NOT JSON_VALID(t.faculty_master)
+                        AND CAST(t.faculty_master AS CHAR) = CAST(f.pk AS CHAR)
+                    )
+                ");
+                })
+                ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+                ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+                ->join('student_master_course__map as smcm', function ($join) use ($studentPk) {
+                    $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
+                        ->where('smcm.student_master_pk', '=', $studentPk)
+                        ->where('smcm.active_inactive', '=', 1);
+                })
+                ->where('t.feedback_checkbox', 1)
+                ->join('course_student_attendance as csa', function ($join) use ($studentPk) {
+                    $join->on('csa.timetable_pk', '=', 't.pk')
+                        ->where('csa.Student_master_pk', '=', $studentPk)
+                        ->where('csa.status', '1');
+                })
+                ->whereNotExists(function ($sub) use ($studentPk) {
+                    $sub->select(DB::raw(1))
+                        ->from('topic_feedback as tf')
+                        ->whereColumn('tf.timetable_pk', 't.pk')
+                        ->where('tf.student_master_pk', $studentPk)
+                        ->where('tf.faculty_pk', DB::raw('f.pk'))
+                        ->where('tf.is_submitted', 1);
+                })
+                ->whereRaw("
+                    JSON_VALID(t.faculty_details) = 1
+                    AND JSON_CONTAINS(
+                        t.faculty_details,
+                        JSON_OBJECT('faculty_pk', f.pk, 'role', 'Teaching')
+                    ) = 1
+                ")
+                ->whereRaw("
+                    TIMESTAMP(
+                        t.END_DATE,
+                        CASE
+                            WHEN t.class_session LIKE '% - %' THEN
+                                STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' - ', -1)), '%h:%i %p')
+                            WHEN t.class_session LIKE '% to %' THEN
+                                STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' to ', -1)), '%H:%i')
+                            ELSE NULL
+                        END
+                    ) <= NOW()
+                ");
+
+            if (hasRole('Student-OT')) {
+                $pendingQuery
+                    ->join('course_group_timetable_mapping as cgtm', 'cgtm.timetable_pk', '=', 't.pk')
+                    ->join('student_course_group_map as scgm', 'scgm.group_type_master_course_master_map_pk', '=', 'cgtm.group_pk')
+                    ->where('scgm.student_master_pk', $studentPk);
+            }
+
+            $pending = $pendingQuery
+                ->orderBy('t.START_DATE', 'asc')
+                ->get()
+                ->unique(fn($item) => $item->timetable_pk . '_' . $item->faculty_pk)
+                ->count();
+
+            return (int) $pending;
+        } catch (\Throwable $e) {
+            \Log::error('Error counting OT pending feedback: ' . $e->getMessage(), [
+                'student_pk' => $studentPk,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return 0;
+        }
+    }
+
     /**
      * Display student list for CC/ACC faculty
      *
@@ -1446,8 +2316,83 @@ class UserController extends Controller
      * (House Group, Duty Type, the count columns) — letting the shared filter
      * search first would drop every row on a House Group query.
      */
+    /**
+     * ?view=counsellees / ?view=house — opened from the My Counsellees and House
+     * Wise Details cards. The list is then the students of that faculty's groups
+     * on the Course Group Mapping page and nothing else, so each card's number
+     * and its rows agree. Each view drops the filter the other one is about, and
+     * both drop the Active/Archived tabs: the scope spans both.
+     *
+     * @return array{0: ?int, 1: bool, 2: bool}  [facultyPk, isCounselleeView, isHouseView]
+     */
+    private function otParticipantsScopedView(Request $request): array
+    {
+        $requestedView = $request->input('view');
+        $scopeFacultyPk = in_array($requestedView, ['counsellees', 'house'], true)
+            ? get_auth_faculty_master_pk()
+            : null;
+
+        return [
+            $scopeFacultyPk,
+            $scopeFacultyPk !== null && $requestedView === 'counsellees',
+            $scopeFacultyPk !== null && $requestedView === 'house',
+        ];
+    }
+
+    /**
+     * The students of the faculty's own groups for a scoped view — the same scope
+     * the dashboard cards count on, so the list holds exactly their number.
+     */
+    private function otParticipantsScopedStudents(int $facultyPk, bool $isCounselleeView)
+    {
+        return $isCounselleeView
+            ? $this->facultyGroupRows($facultyPk, '%counsel%', 'counsellor_group_name', true)
+            : $this->facultyGroupRows($facultyPk, '%house%', 'house_group_name', true);
+    }
+
+    /**
+     * The Cadre a participant row shows — one label for the grid, its sort, the
+     * search and the export, so all four agree with the Cadre filter (which reads
+     * cadre_name). On the counsellee view the cadre is the counsellor group name.
+     */
+    private function otParticipantCadreLabel($p): string
+    {
+        return (string) (($p->counsellor_group_name ?? null)
+            ?: (($p->cadre_name ?? null) ?: ($p->studentMaster->cadre->cadre_name ?? '')));
+    }
+
+    /**
+     * The House a participant row shows: the House view's own group name, else the
+     * Course Group Mapping house group (what the House Group filter and the export
+     * use). Only the counsellee view, which has no house group, falls back to the
+     * hostel room — see otParticipantsHouseRoomFallback().
+     */
+    private function otParticipantHouseLabel($p, bool $roomFallback): string
+    {
+        $label = ($p->house_group_name ?? null) ?: ($p->house_group ?? null);
+        if (! $label && $roomFallback) {
+            $label = $p->house_name ?? null;
+        }
+
+        return (string) ($label ?? '');
+    }
+
+    private function otParticipantsHouseRoomFallback(Request $request): bool
+    {
+        return $this->otParticipantsScopedView($request)[1];
+    }
+
     private function otParticipantsRowsFor(Request $request, $students)
     {
+        [$scopeFacultyPk, $isCounselleeView, $isHouseView] = $this->otParticipantsScopedView($request);
+
+        // The card views list the faculty's own groups. Every other view lists the
+        // $students the caller built — the viewer's coordinated roster — and must
+        // not rebuild a wider payload here.
+        if ($isCounselleeView || $isHouseView) {
+            $students = $this->otParticipantsScopedStudents($scopeFacultyPk, $isCounselleeView);
+        }
+
         $sessionRows = $this->applyDashboardStudentListFilters($students, $request, false, false);
 
         $byStudent = [];
@@ -1466,6 +2411,10 @@ class UserController extends Controller
                     // course — keeping the set lets those stay course-scoped.
                     'course_pks' => [],
                     'house_name' => $m->house_name ?? null,
+                    // Kept through the collapse so the Cadre and House columns,
+                    // their sorts and the search read the group on those views.
+                    'counsellor_group_name' => $m->counsellor_group_name ?? null,
+                    'house_group_name' => $m->house_group_name ?? null,
                     'cadre_name' => $m->cadre_name ?? null,
                     'counsellor_name' => $m->counsellor_name ?? null,
                     'house_group' => $m->house_group ?? null,
@@ -1501,7 +2450,8 @@ class UserController extends Controller
         // Cadre Counsellor filter (the dependent dropdown beside Cadre). Resolved
         // from the group-map tables rather than the row objects — this page's
         // payload is loaded without group mappings.
-        $counsellorFaculty = (string) $request->input('counsellor_faculty', '');
+        // ?counsellor_faculty[]= is not a faculty (PR #334 F-037: was a 500).
+        $counsellorFaculty = is_scalar($v = $request->input('counsellor_faculty', '')) ? (string) $v : '';
         if ($counsellorFaculty !== '') {
             $counselled = $this->studentPksForCounsellorFaculty(
                 $counsellorFaculty,
@@ -1515,7 +2465,8 @@ class UserController extends Controller
 
         // House Group Faculty — the dependent dropdown beside House Group, resolved
         // the same way off the house-group mapping.
-        $houseFaculty = (string) $request->input('house_faculty', '');
+        // ?house_faculty[]= as counsellor_faculty above (PR #334 F-072: was a 500).
+        $houseFaculty = is_scalar($v = $request->input('house_faculty', '')) ? (string) $v : '';
         if ($houseFaculty !== '') {
             $housed = $this->studentPksForHouseFaculty(
                 $houseFaculty,
@@ -1695,7 +2646,7 @@ class UserController extends Controller
         $availableCourses = $payload['availableCourses'];
 
         $participants = $this->otParticipantsRowsFor($request, $payload['students']);
-        $counsellorFaculty = (string) $request->input('counsellor_faculty', '');
+        $counsellorFaculty = is_scalar($v = $request->input('counsellor_faculty', '')) ? (string) $v : '';
 
         // Show every student of the selected course — no Present/Absent split.
         $rows = $participants;
@@ -1717,9 +2668,36 @@ class UserController extends Controller
             return $this->otParticipantsDataTableResponse($request, $rows, $rowMeta, $totalParticipants, $filterOptions);
         }
 
-        // Filter option lists (mirrors the student list page).
-        $students = $payload['students'];
-        $cadreOptions = $filterOptions['cadre'];
+        // Filter option lists (mirrors the student list page). On the card views
+        // they come off the faculty's own group rows, so the Cadre / House dropdowns
+        // offer only what is mapped to this faculty.
+        [$scopeFacultyPk, $isCounselleeView, $isHouseView] = $this->otParticipantsScopedView($request);
+        $students = ($isCounselleeView || $isHouseView)
+            ? $this->otParticipantsScopedStudents($scopeFacultyPk, $isCounselleeView)
+            : $payload['students'];
+        // In the counsellee view the cadres ARE the counsellor group names off the
+        // Course Group Mapping page — which is where the faculty verifies this list
+        // — not the students' own cadre master, where 70 of them have nothing. The
+        // house view has no Cadre filter at all.
+        $cadreOptions = $isHouseView
+            ? collect()
+            : $students
+                ->map(fn ($m) => $isCounselleeView
+                    ? ($m->counsellor_group_name ?? null)
+                    : ($m->studentMaster->cadre->cadre_name ?? null))
+                ->filter()->unique()->sort()->values();
+
+        // Likewise the houses in the house view are the faculty's House Groups, not
+        // the hostel room each student happens to hold; and the counsellee view has
+        // no House filter.
+        $houseOptions = $isCounselleeView
+            ? collect()
+            : $students
+                ->map(fn ($m) => $isHouseView
+                    ? ($m->house_group_name ?? null)
+                    : ($m->house_name ?? null))
+                ->filter()->unique()->sort()->values();
+
         $houseGroupOptions = $filterOptions['houseGroup'];
         $counsellorsByCadre = $filterOptions['counsellorsByCadre'];
         $facultyByHouseGroup = $filterOptions['facultyByHouseGroup'];
@@ -1745,17 +2723,30 @@ class UserController extends Controller
 
         $status = $request->input('status') === 'archive' ? 'archive' : 'active';
 
+        // ?house[]=x is not a filter value: casting an array is "Array to string
+        // conversion", a 500 (PR #334 F-051, the F-025 family).
+        $in = fn (string $key) => is_scalar($v = $request->input($key, '')) ? (string) $v : '';
+
         $filters = [
-            'from_date' => (string) $request->input('from_date', ''),
-            'to_date' => (string) $request->input('to_date', ''),
-            'session' => (string) $request->input('session', ''),
-            'participant' => (string) $request->input('participant', ''),
-            'course_id' => (string) $request->input('course_id', ''),
-            'cadre' => (string) $request->input('cadre', ''),
+            'from_date' => $in('from_date'),
+            'to_date' => $in('to_date'),
+            'session' => $in('session'),
+            'participant' => $in('participant'),
+            'course_id' => $in('course_id'),
+            'cadre' => $in('cadre'),
+            // House Name: applyDashboardStudentListFilters() has always honoured it,
+            // but the page had no control to set it — the dashboard's House Wise
+            // Details card opens here, so the filter is now on the toolbar.
+            'house' => $in('house'),
             'counsellor_faculty' => $counsellorFaculty,
-            'house_group' => (string) $request->input('house_group', ''),
-            'house_faculty' => (string) $request->input('house_faculty', ''),
+            'house_group' => $in('house_group'),
+            'house_faculty' => $in('house_faculty'),
             'status' => $status,
+            // The House Wise Details view opens the list ordered by house.
+            'sort' => ($isHouseView || $request->input('sort') === 'house') ? 'house' : '',
+            // Carried on every request the grid makes, or the scope would be lost
+            // on the first filter change.
+            'view' => $isCounselleeView ? 'counsellees' : ($isHouseView ? 'house' : ''),
         ];
 
         // Course filter scope: Super Admin / Admin / PA can pick ANY course for the
@@ -1783,7 +2774,8 @@ class UserController extends Controller
         }
 
         return view('admin.dashboard.ot_participants_list', compact(
-            'availableCourses', 'courseOptions', 'filters', 'cadreOptions',
+            'availableCourses', 'courseOptions', 'filters', 'cadreOptions', 'houseOptions',
+            'sessionOptions', 'participantOptions', 'isCounselleeView', 'isHouseView',
             'houseGroupOptions', 'sessionOptions', 'participantOptions',
             'counsellorsByCadre', 'facultyByHouseGroup'
         ));
@@ -2916,8 +3908,12 @@ class UserController extends Controller
             ->get();
 
         $searchInput = $request->input('search');
-        $search = strtolower(trim((string) (is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput)));
+        $searchValue = is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput;
+        // ?search[value][]= is not a search term (PR #334 F-037: was a 500).
+        $search = is_scalar($searchValue) ? strtolower(trim((string) $searchValue)) : '';
         if ($search !== '') {
+            // The comment columns as the table shows them (PR #334 F-019: the merge
+            // 7082e5204 had left the participants-list search body here).
             $rows = $rows->filter(function ($r) use ($search) {
                 $haystack = strtolower(implode(' ', [
                     (string) $r->comment_by_name,
@@ -3127,7 +4123,7 @@ class UserController extends Controller
         // The search box narrows the export exactly as it narrows the table.
         $rows = $this->otParticipantsApplySearch($request, $rows, $rowMeta);
 
-        $exportData = $this->otParticipantsExportData($rows, $rowMeta);
+        $exportData = $this->otParticipantsExportData($rows, $rowMeta, $this->otParticipantsHouseRoomFallback($request));
 
         $timestamp = now()->format('Ymd_His');
         $fileBase = "ot_participants_{$timestamp}";
@@ -3206,7 +4202,7 @@ class UserController extends Controller
      *
      * @return array{headings: array<int, string>, rows: array<int, array<int, string>>, widths: array<int, int>}
      */
-    private function otParticipantsExportData($rows, array $rowMeta): array
+    private function otParticipantsExportData($rows, array $rowMeta, bool $roomFallback = false): array
     {
         // Heading, then the relative width it gets in the PDF. Text columns need
         // the room; the count columns hold two characters and stay narrow.
@@ -3257,10 +4253,10 @@ class UserController extends Controller
                 (string) ($s->email ?: 'N/A'),
                 (string) ($s->contact_no ?: 'N/A'),
                 (string) ($s->user_id ?: 'N/A'),
-                (string) ($p->cadre_name ?: ($s->cadre->cadre_name ?? 'N/A')),
+                (string) ($this->otParticipantCadreLabel($p) ?: 'N/A'),
                 (string) ($p->counsellor_name ?: 'N/A'),
                 (string) ($p->house_faculty_name ?: 'N/A'),
-                (string) ($p->house_group ?: 'N/A'),
+                (string) ($this->otParticipantHouseLabel($p, $roomFallback) ?: 'N/A'),
                 $count($meta['duty_count'] ?? 0),
                 (string) ($meta['duty_type'] ?: '-'),
                 $count($meta['medical'] ?? 0),
@@ -3282,35 +4278,45 @@ class UserController extends Controller
     private function otParticipantsFilterSummary(Request $request): string
     {
         $parts = [];
+        // Every value is concatenated; the list itself already treats an array-valued
+        // parameter as unset (applyDashboardStudentListFilters), so the summary must
+        // too, not throw "Array to string conversion" (PR #334 F-041 family).
+        $in = fn (string $key) => is_scalar($request->input($key)) ? trim((string) $request->input($key)) : '';
 
-        if ($request->filled('course_id')) {
-            $course = CourseMaster::find($request->input('course_id'));
-            $parts[] = 'Course: ' . ($course->course_name ?? $request->input('course_id'));
+        if ($in('course_id') !== '') {
+            $course = CourseMaster::find((int) $in('course_id'));
+            $parts[] = 'Course: ' . ($course->course_name ?? $in('course_id'));
         }
-        if ($request->filled('cadre')) {
-            $parts[] = 'Cadre: ' . $request->input('cadre');
+        if ($in('cadre') !== '') {
+            $parts[] = 'Cadre: ' . $in('cadre');
         }
-        if ($request->filled('counsellor_faculty')) {
-            $name = DB::table('faculty_master')->where('pk', $request->input('counsellor_faculty'))->value('full_name');
-            $parts[] = 'Cadre Counsellor: ' . trim((string) ($name ?: $request->input('counsellor_faculty')));
+        if ($in('counsellor_faculty') !== '') {
+            $name = DB::table('faculty_master')->where('pk', (int) $in('counsellor_faculty'))->value('full_name');
+            $parts[] = 'Cadre Counsellor: ' . trim((string) ($name ?: $in('counsellor_faculty')));
         }
-        if ($request->filled('house_group')) {
-            $parts[] = 'House Group: ' . $request->input('house_group');
+        if ($in('house_group') !== '') {
+            $parts[] = 'House Group: ' . $in('house_group');
         }
-        if ($request->filled('house_faculty')) {
-            $name = DB::table('faculty_master')->where('pk', $request->input('house_faculty'))->value('full_name');
-            $parts[] = 'House Group Faculty: ' . trim((string) ($name ?: $request->input('house_faculty')));
+        if ($in('house_faculty') !== '') {
+            $name = DB::table('faculty_master')->where('pk', (int) $in('house_faculty'))->value('full_name');
+            $parts[] = 'House Group Faculty: ' . trim((string) ($name ?: $in('house_faculty')));
         }
-        if ($request->filled('session')) {
-            $parts[] = 'Session: ' . $request->input('session');
+        // The page's "House" / "Hostel Room" select (#houseFilter) — same label as
+        // the page, which depends on the view (PR #334 F-043).
+        if ($in('house') !== '') {
+            $parts[] = ($this->otParticipantsScopedView($request)[2] ? 'House: ' : 'Hostel Room: ') . $in('house');
         }
-        if ($request->filled('from_date') && $request->filled('to_date')) {
-            $parts[] = 'Time Period: ' . Carbon::parse($request->input('from_date'))->format('d-m-Y')
-                . ' to ' . Carbon::parse($request->input('to_date'))->format('d-m-Y');
+        if ($in('session') !== '') {
+            $parts[] = 'Session: ' . $in('session');
+        }
+        if ($in('from_date') !== '' && $in('to_date') !== '') {
+            $parts[] = 'Time Period: ' . Carbon::parse($in('from_date'))->format('d-m-Y')
+                . ' to ' . Carbon::parse($in('to_date'))->format('d-m-Y');
         }
 
         $searchInput = $request->input('search');
-        $search = trim((string) (is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput));
+        $searchValue = is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput;
+        $search = is_scalar($searchValue) ? trim((string) $searchValue) : '';
         if ($search !== '') {
             $parts[] = 'Search: ' . $search;
         }
@@ -3329,12 +4335,15 @@ class UserController extends Controller
     private function otParticipantsApplySearch(Request $request, $rows, array $rowMeta)
     {
         $searchInput = $request->input('search');
-        $search = strtolower(trim((string) (is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput)));
+        $searchValue = is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput;
+        $search = is_scalar($searchValue) ? strtolower(trim((string) $searchValue)) : '';
         if ($search === '') {
             return collect($rows)->values();
         }
 
-        return collect($rows)->filter(function ($p) use ($search, $rowMeta) {
+        $roomFallback = $this->otParticipantsHouseRoomFallback($request);
+
+        return collect($rows)->filter(function ($p) use ($search, $rowMeta, $roomFallback) {
             $s = $p->studentMaster;
             if (! $s) {
                 return false;
@@ -3359,10 +4368,10 @@ class UserController extends Controller
                 // student_master.user_id IS the login name (it matches
                 // user_credentials.user_name) — no extra lookup needed.
                 $s->user_id ?? '',
-                $p->cadre_name ?? ($s->cadre->cadre_name ?? ''),
+                $this->otParticipantCadreLabel($p),
                 $p->counsellor_name ?? '',
                 $p->house_faculty_name ?? '',
-                $p->house_group ?? '',
+                $this->otParticipantHouseLabel($p, $roomFallback),
                 $p->topic ?? '',
                 $meta['duty_type'] ?? '',
                 implode(' ', $counts),
@@ -3391,8 +4400,9 @@ class UserController extends Controller
         $orderCol = (int) $request->input('order.0.column', 0);
         $orderDir = strtolower((string) $request->input('order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
         $sortKey = $columnMap[$orderCol] ?? null;
+        $roomFallback = $this->otParticipantsHouseRoomFallback($request);
         if ($sortKey !== null) {
-            $rows = $rows->sortBy(function ($p) use ($sortKey) {
+            $rows = $rows->sortBy(function ($p) use ($sortKey, $roomFallback) {
                 $s = $p->studentMaster;
 
                 return match ($sortKey) {
@@ -3401,10 +4411,10 @@ class UserController extends Controller
                     'email' => (string) ($s->email ?? ''),
                     'mobile' => (string) ($s->contact_no ?? ''),
                     'user_name' => (string) ($s->user_id ?? ''),
-                    'cadre' => (string) ($p->cadre_name ?? ($s->cadre->cadre_name ?? '')),
+                    'cadre' => $this->otParticipantCadreLabel($p),
                     'counsellor' => (string) ($p->counsellor_name ?? ''),
                     'house_faculty' => (string) ($p->house_faculty_name ?? ''),
-                    'house' => (string) ($p->house_group ?? ''),
+                    'house' => $this->otParticipantHouseLabel($p, $roomFallback),
                     default => '',
                 };
             }, SORT_NATURAL | SORT_FLAG_CASE, $orderDir === 'desc')->values();
@@ -3452,15 +4462,15 @@ class UserController extends Controller
                 'email' => e($s->email ?? 'N/A'),
                 'mobile' => e($s->contact_no ?: 'N/A'),
                 'user_name' => e($s->user_id ?: 'N/A'),
-                'cadre' => e($p->cadre_name ?: ($s->cadre->cadre_name ?? 'N/A')),
                 // The faculty on the same Course Group Mapping row as the cadre
                 // (counsellor group) — i.e. this participant's cadre counsellor.
                 'counsellor' => e($p->counsellor_name ?: 'N/A'),
                 // The faculty on the same Course Group Mapping row as the house group.
                 'house_faculty' => e($p->house_faculty_name ?: 'N/A'),
-                // House GROUP (Course Group Mapping) — the full group name
-                // ("Nanda Devi"), not the hostel room code ("GANG-116").
-                'house' => e($p->house_group ?: 'N/A'),
+                // Same labels as the Cadre filter, the search and the export —
+                // see otParticipantCadreLabel() / otParticipantHouseLabel().
+                'cadre' => e($this->otParticipantCadreLabel($p) ?: 'N/A'),
+                'house' => e($this->otParticipantHouseLabel($p, $roomFallback) ?: 'N/A'),
                 'duty_count' => $this->otCountCell($meta['duty_count'], $detailUrl.'?section=dutiesSection'.$linkDateQs),
                 'duty_type' => e($meta['duty_type'] ?: '-'),
                 'medical' => $this->otCountCell($meta['medical'], $detailUrl.'?section=medicalExceptionsSection'.$linkDateQs),
@@ -4576,6 +5586,8 @@ class UserController extends Controller
                 $studentMap->session_topic = null;
                 $studentMap->session_faculty_master = null;
                 $studentMap->session_internal_faculty = null;
+                $studentMap->session_timetable_pk = null;
+                $studentMap->session_course_pk = null;
                 $studentMap->has_session_in_range = false;
                 $expanded->push($studentMap);
 
@@ -4592,6 +5604,10 @@ class UserController extends Controller
                 $row->session_topic = $session['session_topic'];
                 $row->session_faculty_master = $session['session_faculty_master'] ?? null;
                 $row->session_internal_faculty = $session['session_internal_faculty'] ?? null;
+                // The session and the course its attendance was marked under: what
+                // dashboardSessionCoverage() asks OtExemptionResolver about.
+                $row->session_timetable_pk = $session['timetable_pk'] ?? null;
+                $row->session_course_pk = $session['course_master_pk'] ?? null;
                 $row->has_session_in_range = true;
                 $expanded->push($row);
                 $emittedByStudent[$studentPk][] = (int) ($session['attendance_pk'] ?? 0);
@@ -4701,23 +5717,29 @@ class UserController extends Controller
 
     private function applyDashboardStudentListFilters($students, Request $request, bool $applySessionDateFilter = true, bool $applySearch = true)
     {
-        $courseId = $request->input('course_id');
-        $roleFilter = $request->input('role_filter');
-        $counsellorFaculty = $request->input('counsellor_faculty');
-        $groupPk = $request->input('group_pk');
-        $cadre = $request->input('cadre');
-        $house = $request->input('house');
-        $houseGroup = (string) $request->input('house_group', '');
-        $session = (string) $request->input('session', '');
-        $topic = (string) $request->input('topic', '');
-        $participant = (string) $request->input('participant', '');
+        // Every filter below is compared as a string, so an array-valued query
+        // parameter (?cadre[]=x) reads as "not set" instead of throwing
+        // "Array to string conversion" (PR #334 F-025 family).
+        $scalar = fn (string $key, $default = null) => is_scalar($v = $request->input($key, $default)) ? $v : $default;
+
+        $courseId = $scalar('course_id');
+        $roleFilter = $scalar('role_filter');
+        $counsellorFaculty = $scalar('counsellor_faculty');
+        $groupPk = $scalar('group_pk');
+        $cadre = $scalar('cadre');
+        $house = $scalar('house');
+        $houseGroup = (string) $scalar('house_group', '');
+        $session = (string) $scalar('session', '');
+        $topic = (string) $scalar('topic', '');
+        $participant = (string) $scalar('participant', '');
         // The DataTables search box. Callers that run their own search over the
         // columns THEY render (e.g. the OT participants page, whose House Group /
         // Duty Type / count columns don't exist here) pass $applySearch = false so
         // this narrower haystack doesn't drop their rows first.
         $searchInput = $applySearch ? $request->input('search', '') : '';
         $searchValue = is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput;
-        $search = strtolower(trim((string) $searchValue));
+        // ?search[value][]= — not a search term.
+        $search = is_scalar($searchValue) ? strtolower(trim((string) $searchValue)) : '';
 
         // Time Period (event date) filter: when a range is selected, only students who
         // have a timetable session/event within that range are kept. If no event exists
@@ -4793,8 +5815,15 @@ class UserController extends Controller
                 }
             }
 
-            if ($house && (string) ($studentMap->house_name ?? '') !== (string) $house) {
-                return false;
+            // House. On the house view the row's house is its House Group off the
+            // Course Group Mapping page (see facultyGroupRows()), which is what the
+            // dropdown offers there; everywhere else it is the hostel room.
+            if ($house) {
+                $rowHouse = $studentMap->house_group_name ?? ($studentMap->house_name ?? '');
+
+                if ((string) $rowHouse !== (string) $house) {
+                    return false;
+                }
             }
 
             if ($roleFilter === 'cc_acc') {
@@ -4865,6 +5894,20 @@ class UserController extends Controller
         $present = collect();
         $absent = collect();
 
+        // Which rows a duty/exemption covers. Resolved for the whole set up front,
+        // with a fixed number of queries, so a session the OT was on duty for lands
+        // in Present rather than being counted as an absence against them, the same
+        // way the badge and AttendanceController::save treat it.
+        $rowList = collect($rows)->values();
+        $coverage = $this->dashboardSessionCoverage($rowList);
+        $dutyCovered = [];
+        foreach ($rowList as $i => $row) {
+            if ($this->dashboardRowIsDutyPresent((int) ($row->attendance_status ?? 0), $coverage[$i] ?? false)) {
+                $dutyCovered[spl_object_id($row)] = true;
+            }
+        }
+        $isAbsentRow = fn ($m) => (int) $m->attendance_status === 3 && ! isset($dutyCovered[spl_object_id($m)]);
+
         foreach ($rows->groupBy('student_master_pk') as $spk => $group) {
             if (empty($spk)) {
                 continue;
@@ -4880,17 +5923,17 @@ class UserController extends Controller
                 continue;
             }
 
-            // Present bucket: EVERY non-absent marked session, so a student marked
-            // present in several sessions of the range shows one row per session
-            // exactly like the All tab.
-            foreach ($marked->filter(fn ($m) => (int) $m->attendance_status !== 3) as $presentRow) {
+            // Present bucket: EVERY non-absent marked session — including an absence
+            // a duty/exemption covers — so a student marked present in several
+            // sessions of the range shows one row per session exactly like the All tab.
+            foreach ($marked->reject($isAbsentRow) as $presentRow) {
                 $presentRow->attendance_present = true;
                 $present->push($presentRow);
             }
 
-            // Absent bucket: EVERY absent (status 3) marked session. Each row keeps
-            // its own session date so the Absent Reason resolves against that day.
-            foreach ($marked->filter(fn ($m) => (int) $m->attendance_status === 3) as $absentRow) {
+            // Absent bucket: EVERY uncovered absent (status 3) marked session. Each row
+            // keeps its own session date so the Absent Reason resolves against that day.
+            foreach ($marked->filter($isAbsentRow) as $absentRow) {
                 $absentRow->attendance_present = false;
                 $absent->push($absentRow);
             }
@@ -4957,6 +6000,8 @@ class UserController extends Controller
             $row->session_topic = null;
             $row->session_faculty_master = null;
             $row->session_internal_faculty = null;
+            $row->session_timetable_pk = null;
+            $row->session_course_pk = null;
             $row->has_session_in_range = true;
             $absentAll->push($row);
         }
@@ -5105,6 +6150,10 @@ class UserController extends Controller
         // cross-reference the source tables here. Batched for the current page.
         $dutyExemptionFlags = $this->dashboardDutyExemptionFlags($pagedStudents);
 
+        // Whether a duty/exemption covers each row's session: the status rule, which
+        // the date-only flags above are not.
+        $sessionCoverage = $this->dashboardSessionCoverage($pagedStudents);
+
         // Carry the Time Period filter into the detail-page section links so the
         // opened section (MDO/Escort duty, Medical exemption) shows the same
         // date-scoped data as the list row.
@@ -5137,6 +6186,7 @@ class UserController extends Controller
             $showEscort = $statusCode === 5 || $flags['escort'];
             $showMedical = $statusCode === 6 || $flags['medical'];
             $showOther = $statusCode === 7 || $flags['other'];
+            $dutyPresent = $this->dashboardRowIsDutyPresent($statusCode, $sessionCoverage[$idx] ?? false);
 
             $data[] = [
                 's_no' => $start + $idx + 1,
@@ -5166,8 +6216,14 @@ class UserController extends Controller
                 // Attendance status; for an absent student the reason (Stationed
                 // Leave / PT Exemption / Medical Exemption, when one covers the day)
                 // is shown right below the "Absent" badge so it's visible in the list.
-                'status' => (function () use ($studentMap, $statusCode, $isAbsent, $absentReasons, $idx) {
+                'status' => (function () use ($studentMap, $statusCode, $isAbsent, $absentReasons, $idx, $dutyPresent) {
                     $present = ($studentMap->attendance_present ?? true);
+                    // A duty/exemption row is Present whatever the saved code says,
+                    // and outranks the Late badge below: the MDO column on this very
+                    // row already says the OT was on duty.
+                    if ($dutyPresent) {
+                        return '<span class="sl-status-badge sl-status-present">Present</span>';
+                    }
                     // "Late" (status 2) is an attended-but-late state — the Present
                     // bucket already keeps it (status !== 3), so it appears in both
                     // the All and Present views. Show a distinct amber "Late" badge
@@ -5365,6 +6421,12 @@ class UserController extends Controller
      * both source tables here, keyed by student pk + date, and OR the result into the
      * columns. Duty type (mdo_duty_type_master.name) decides MDO vs Escort vs Other.
      *
+     * These flags fill the MDO / Escort / Other Exemptions COLUMNS only: they say a
+     * duty or exemption exists that day, in any course and at any time. Whether it
+     * makes the session Present is a stricter question (same course, overlapping
+     * the session) and is answered by dashboardSessionCoverage() — so a row can show
+     * an Escort duty that day and still be Absent for a session the duty missed.
+     *
      * @return array<int, array{mdo: bool, escort: bool, medical: bool, other: bool}>
      */
     private function dashboardDutyExemptionFlags(Collection $pagedStudents): array
@@ -5454,6 +6516,62 @@ class UserController extends Controller
         }
 
         return $flags;
+    }
+
+    /**
+     * Whether this row counts as Present on account of a duty or exemption, however
+     * the attendance row was saved.
+     *
+     * Saved as MDO / Escort / Medical / Other (4–7), or $covered: a duty or exemption
+     * covers the session by OtExemptionResolver's rule. The saved row can still hold
+     * a Late/Absent marked before the duty was assigned, so the listing resolves it
+     * rather than trusting the code.
+     *
+     * $covered comes from dashboardSessionCoverage(), not from the date-only column
+     * flags: a duty on another course, or at a time the session does not overlap,
+     * leaves the absence standing — as it does in AttendanceController::save,
+     * My Counsellees and Student Detail (PR #334 F-062).
+     */
+    private function dashboardRowIsDutyPresent(int $statusCode, bool $covered): bool
+    {
+        return in_array($statusCode, [4, 5, 6, 7], true) || $covered;
+    }
+
+    /**
+     * Per row (by position), whether a duty or exemption covers the row's session.
+     *
+     * Asks OtExemptionResolver::coveredSessions() — the rule isExempt() gives
+     * AttendanceController::save: the same course, and an MDO / Escort / Other duty
+     * or a medical exemption that overlaps the session. A row without a session
+     * (no timetable, e.g. a leave-based absentee) is never covered.
+     *
+     * @return array<int, bool>
+     */
+    private function dashboardSessionCoverage(Collection $rows): array
+    {
+        $rows = $rows->values();
+        $sessions = [];
+        foreach ($rows as $row) {
+            $timetablePk = (int) ($row->session_timetable_pk ?? 0);
+            $coursePk = (int) ($row->session_course_pk ?? 0);
+            $studentPk = (int) ($row->student_master_pk ?? 0);
+            if ($timetablePk && $coursePk && $studentPk) {
+                $sessions[] = ['student' => $studentPk, 'course' => $coursePk, 'timetable' => $timetablePk];
+            }
+        }
+
+        $covered = OtExemptionResolver::coveredSessions($sessions);
+
+        $coverage = [];
+        foreach ($rows as $idx => $row) {
+            $coverage[$idx] = isset($covered[OtExemptionResolver::sessionKey(
+                (int) ($row->student_master_pk ?? 0),
+                (int) ($row->session_course_pk ?? 0),
+                (int) ($row->session_timetable_pk ?? 0)
+            )]);
+        }
+
+        return $coverage;
     }
 
     /**
@@ -5569,6 +6687,7 @@ class UserController extends Controller
         // dashboardStudentListDataTableResponse() logic, keyed by row position.
         $absentReasons = $this->dashboardAbsentReasons($students);
         $dutyExemptionFlags = $this->dashboardDutyExemptionFlags($students);
+        $sessionCoverage = $this->dashboardSessionCoverage($students);
 
         $headings = [
             'S. No.',
@@ -5601,7 +6720,9 @@ class UserController extends Controller
             // Attendance status text: Present / Late / Absent, with the leave-based
             // reason (PT Exemption / Stationed Leave) appended for an absent row —
             // matching the on-screen badge (Late = status 2 attended-but-late).
-            $statusText = $isAbsent ? 'Absent' : ($statusCode === 2 ? 'Late' : 'Present');
+            $statusText = $this->dashboardRowIsDutyPresent($statusCode, $sessionCoverage[$index] ?? false)
+                ? 'Present'
+                : ($isAbsent ? 'Absent' : ($statusCode === 2 ? 'Late' : 'Present'));
             if ($isAbsent) {
                 $reason = $absentReasons[$index] ?? '-';
                 if ($reason !== '-') {
@@ -5742,6 +6863,39 @@ class UserController extends Controller
             }
         }
 
+        // Absences on sessions the OT was actually on MDO/Escort/Other duty or
+        // medically exempt for count as Present, not against them — the rule
+        // AttendanceController::save applies on write. Resolved for every counselee
+        // up front: the loop below runs one aggregate per OT already, and asking
+        // per OT here would multiply that several times over.
+        $absenceRows = CourseStudentAttendance::whereIn('Student_master_pk', array_keys($byStudent))
+            ->where('status', '3')
+            ->whereNotNull('timetable_pk')
+            ->get(['Student_master_pk', 'course_master_pk', 'timetable_pk']);
+
+        $coveredAbsences = OtExemptionResolver::coveredSessions(
+            $absenceRows->map(fn ($r) => [
+                'student' => (int) $r->Student_master_pk,
+                'course' => (int) $r->course_master_pk,
+                'timetable' => (int) $r->timetable_pk,
+            ])->all()
+        );
+
+        // student pk => how many of its absences are duty-covered, per course.
+        $dutyCoveredAbsences = [];
+        foreach ($absenceRows as $r) {
+            $key = OtExemptionResolver::sessionKey(
+                (int) $r->Student_master_pk,
+                (int) $r->course_master_pk,
+                (int) $r->timetable_pk
+            );
+
+            if (isset($coveredAbsences[$key])) {
+                $bucket = (int) $r->Student_master_pk . '|' . (int) $r->course_master_pk;
+                $dutyCoveredAbsences[$bucket] = ($dutyCoveredAbsences[$bucket] ?? 0) + 1;
+            }
+        }
+
         $counselees = [];
         foreach ($byStudent as $studentPk => $row) {
             $student = $row->student;
@@ -5760,12 +6914,21 @@ class UserController extends Controller
                 ->when($coursePk > 0, fn ($q) => $q->where('course_master_pk', $coursePk))
                 ->selectRaw("COUNT(*) as total_sessions,
                     COALESCE(SUM(CASE WHEN status = '1' THEN 1 ELSE 0 END), 0) as present_count,
-                    COALESCE(SUM(CASE WHEN status = '2' THEN 1 ELSE 0 END), 0) as late_count
+                    COALESCE(SUM(CASE WHEN status = '2' THEN 1 ELSE 0 END), 0) as late_count,
+                    COALESCE(SUM(CASE WHEN status IN ('4', '5', '6', '7') THEN 1 ELSE 0 END), 0) as duty_count
                 ")
                 ->first();
             $totalSessions = (int) ($att->total_sessions ?? 0);
             $present = (int) ($att->present_count ?? 0);
             $late = (int) ($att->late_count ?? 0);
+
+            // One presence rule with the student list (dashboardRowIsDutyPresent()):
+            // a session saved as MDO / Escort / Medical / Other (4-7) is Present, and
+            // so is a duty-covered absence. Only the second was counted, so the same
+            // duty gave a different % depending on how it was saved (PR #334 F-038).
+            $present += (int) ($att->duty_count ?? 0);
+            $present += $dutyCoveredAbsences[$studentPk . '|' . $coursePk] ?? 0;
+
             $attendancePct = $totalSessions > 0 ? (int) round((($present + $late) / $totalSessions) * 100) : 0;
 
             $exemptionsCount = StudentMedicalExemption::where('student_master_pk', $studentPk)
@@ -5827,6 +6990,385 @@ class UserController extends Controller
         usort($counselees, fn ($a, $b) => strcmp((string) $a['name'], (string) $b['name']));
 
         return view('admin.dashboard.my_counselee', compact('counselees'));
+    }
+
+    /**
+     * Whether the login is an officer trainee whose user_id is a student_master pk.
+     *
+     * The Student-OT role alone is not enough: the Moodle token login grants it to
+     * whatever account the token names, and for a non-'S' account user_id is an
+     * employee / faculty pk that can equal another trainee's pk (PR #334 F-055,
+     * the F-047 rule).
+     */
+    private function isMyGroupsTrainee(): bool
+    {
+        return hasRole('Student-OT') && (Auth::user()->user_category ?? null) === 'S';
+    }
+    /**
+     * Base query for the groups an OT belongs to, per the Course Group Mapping module.
+     *
+     * One row of group_type_master_course_master_map IS one group — a named group of a
+     * given type within a given course, exactly as the Course Group Mapping listing
+     * shows it. The count is therefore DISTINCT on gmap.pk, not on group_name: a name
+     * like "Group 2" or "A" is reused across group types, so deduplicating by name
+     * would merge, say, "Group 2" of the DM Conference with "Group 2" of the Election
+     * Management Session, which are different groups with different members.
+     *
+     * Deliberately NOT filtered by course active/end date (unlike myCounselee(), which
+     * is about a faculty's CURRENT counselees): this card answers "all the groups I am
+     * mapped to". Every course in the data has already ended, so an end-date filter
+     * would show 0 to every OT.
+     *
+     * @param  int|string  $studentPk  student_master.pk — for a Student-OT this is
+     *                                 auth()->user()->user_id, as used across the
+     *                                 attendance, calendar and exemption screens.
+     */
+
+    private function myGroupsQuery($studentPk)
+    {
+        return DB::table('student_course_group_map as scgm')
+            ->join('group_type_master_course_master_map as gmap', 'gmap.pk', '=', 'scgm.group_type_master_course_master_map_pk')
+            ->where('scgm.student_master_pk', $studentPk)
+            ->where('scgm.active_inactive', 1)
+            ->where('gmap.active_inactive', 1);
+    }
+
+    /**
+     * "My Groups" — the groups the logged-in OT is mapped to.
+     *
+     * Target of the My Groups dashboard card.
+     */
+    public function myGroups()
+    {
+        if (! $this->isMyGroupsTrainee()) {
+            return redirect()->route('admin.dashboard');
+        }
+
+        $studentPk = Auth::user()->user_id;
+
+        $groups = $this->myGroupsQuery($studentPk)
+            // gmap.type_name and gmap.course_name are varchar columns holding the pk of
+            // the type / course, not their names — see CourseGroupTypeMaster and the
+            // Course Group Mapping grid, which resolve them the same way.
+            ->leftJoin('course_group_type_master as gtype', 'gtype.pk', '=', 'gmap.type_name')
+            ->leftJoin('course_master as cm', 'cm.pk', '=', 'gmap.course_name')
+            ->leftJoin('faculty_master as fm', 'fm.pk', '=', 'gmap.facility_id')
+            ->select([
+                'gmap.pk',
+                'gmap.group_name',
+                'gtype.type_name as group_type',
+                'cm.course_name',
+                'fm.full_name as faculty_name',
+            ])
+            // A handful of students have a duplicate student_course_group_map row for
+            // the same group; without this the group would be listed twice.
+            ->distinct()
+            ->orderBy('cm.course_name')
+            ->orderBy('gtype.type_name')
+            ->orderBy('gmap.group_name')
+            ->get();
+
+        // Total members per group, in one query rather than one per row.
+        //
+        // COUNT(DISTINCT student_master_pk), not COUNT(*): the same duplicate rows
+        // the ->distinct() above guards against would otherwise count a student
+        // twice. (The admin Course Group Mapping grid uses a plain withCount, so on
+        // the two affected groups its figure reads one higher than this one.)
+        $memberCounts = $groups->isEmpty()
+            ? collect()
+            : DB::table('student_course_group_map')
+                ->whereIn('group_type_master_course_master_map_pk', $groups->pluck('pk'))
+                ->where('active_inactive', 1)
+                ->selectRaw('group_type_master_course_master_map_pk AS map_pk, COUNT(DISTINCT student_master_pk) AS members')
+                ->groupBy('group_type_master_course_master_map_pk')
+                ->pluck('members', 'map_pk');
+
+        foreach ($groups as $group) {
+            $group->total_members = (int) ($memberCounts[$group->pk] ?? 0);
+        }
+
+        return view('admin.dashboard.my_groups', compact('groups'));
+    }
+
+    /**
+     * The officer trainees mapped to one of the viewer's own groups — what the
+     * view icon on My Groups opens.
+     *
+     * Membership is re-checked rather than trusted: the group pk comes from the
+     * URL, so without this an OT could read the roster of any group in the
+     * Academy by editing it.
+     */
+    public function myGroupStudents($mapPk)
+    {
+        $group = $this->assertOwnGroup($mapPk);
+
+        if (! $group) {
+            return response()->json(['message' => 'You are not a member of this group.'], 403);
+        }
+
+        return response()->json([
+            'group' => [
+                'name' => $group->group_name ?? '—',
+                'type' => $group->group_type ?? '—',
+                'course' => $group->course_name ?? '—',
+            ],
+            // No email or mobile: group mates' personal contact details are not
+            // the viewer's to read or download (PR #334 F-040). Sending resolves
+            // the addresses server-side from the roster.
+            'students' => $this->myGroupRoster((int) $mapPk)->map(fn ($s) => [
+                'pk' => $s['pk'],
+                'name' => $s['name'],
+                'ot_code' => $s['ot_code'],
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * Excel or PDF of one of the viewer's own group rosters.
+     */
+    public function myGroupStudentsExport(Request $request, $mapPk)
+    {
+        $group = $this->assertOwnGroup($mapPk);
+
+        if (! $group) {
+            abort(403, 'You are not a member of this group.');
+        }
+
+        $roster = $this->myGroupRoster((int) $mapPk);
+
+        // Name and OT code only, as on screen (PR #334 F-040).
+        $headings = ['S. No.', 'Student Name', 'OT Code'];
+        $centreColumns = [0, 2];
+
+        $rows = $roster->values()->map(fn ($s, $index) => [
+            $index + 1, $s['name'], $s['ot_code'],
+        ])->values();
+
+        $filterLine = 'Course: ' . ($group->course_name ?? '—')
+            . '  |  Group: ' . ($group->group_name ?? '—')
+            . '  |  Type: ' . ($group->group_type ?? '—');
+        $title = 'Group Members — ' . ($group->group_name ?? 'Group');
+        $baseName = 'Group_Members_' . preg_replace('/[^A-Za-z0-9]+/', '_', (string) ($group->group_name ?? 'group'))
+            . '_' . now()->format('Ymd_His');
+
+        if (is_string($request->get('format')) && strtolower($request->get('format')) === 'pdf') {
+            @ini_set('memory_limit', '256M');
+            @set_time_limit(120);
+
+            return Pdf::loadView('admin.exports.table_pdf', [
+                'headings' => $headings,
+                'rows' => $rows,
+                'reportTitle' => $title,
+                'filterLine' => $filterLine,
+                'centreColumns' => $centreColumns,
+            ])->setPaper('a4', 'portrait')->download($baseName . '.pdf');
+        }
+
+        return Excel::download(
+            new LbsnaaTableExport($rows, $headings, $title, $filterLine, $centreColumns, 'Group Members'),
+            $baseName . '.xlsx'
+        );
+    }
+
+    /**
+     * SMS or email the selected members of one of the viewer's own groups.
+     *
+     * Both the group and every recipient are re-checked against the viewer's own
+     * membership: this endpoint sends real messages, so an OT must not be able to
+     * reach anyone outside a group they are themselves in by editing the request.
+     */
+    public function myGroupSendMessage(Request $request, $mapPk)
+    {
+        // Whether Officer Trainees may send through the Academy's gateway at all is a
+        // Product owner decision that is not on record, so the send stays off until
+        // the environment enables it (PR #334 F-005).
+        if (! config('my_groups.messaging_enabled')) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Sending messages from My Groups is not enabled.',
+            ], 403);
+        }
+
+        $group = $this->assertOwnGroup($mapPk);
+
+        if (! $group) {
+            return response()->json(['status' => 'error', 'message' => 'You are not a member of this group.'], 403);
+        }
+
+        $validated = $request->validate([
+            'channel' => 'required|in:sms,email',
+            'message' => 'required|string|max:1000',
+            'student_ids' => 'required|array|min:1',
+            'student_ids.*' => 'integer',
+        ]);
+
+        $roster = $this->myGroupRoster((int) $mapPk)->keyBy('pk');
+        $selected = collect($validated['student_ids'])->map(fn ($id) => (int) $id)->unique();
+
+        if ($selected->diff($roster->keys())->isNotEmpty()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Some selected officer trainees are not part of this group.',
+            ], 422);
+        }
+
+        $recipients = $roster->only($selected->all());
+
+        // Every message names its sender: it leaves under the Academy's identity, so
+        // without this a recipient could not tell an OT's text from an official one.
+        $text = $this->groupMessageAttribution() . "\n\n" . $validated['message'];
+
+        $isEmail = $validated['channel'] === 'email';
+
+        // De-duplicated here, as both services do, so the counts below count the
+        // addresses actually attempted: two OTs sharing a number are one SMS (F-048).
+        $addresses = $recipients->pluck($isEmail ? 'email' : 'mobile')
+            ->map(fn ($a) => trim((string) $a))
+            ->filter(fn ($a) => $a !== '' && $a !== '-')
+            ->unique()
+            ->values();
+
+        if ($addresses->isEmpty()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $isEmail
+                    ? 'None of the selected officer trainees have an email address on record.'
+                    : 'None of the selected officer trainees have a contact number on record.',
+            ], 422);
+        }
+
+        // Audited before anything leaves: a send that throws still leaves its row
+        // (PR #334 F-048). sent_count is settled once the gateway has answered.
+        $logPk = $this->logGroupMessage((int) $mapPk, $validated['channel'], $addresses->count());
+        $sent = 0;
+
+        try {
+            $failed = app($isEmail ? EmailService::class : SmsService::class)->sendBulk($addresses, $text);
+            $sent = $addresses->diff($failed)->count();
+        } finally {
+            $this->settleGroupMessage($logPk, (int) $mapPk, $validated['channel'], $addresses->count(), $sent);
+        }
+
+        $noun = $isEmail ? 'Email' : 'SMS';
+
+        return response()->json([
+            'status' => $sent > 0 ? 'success' : 'error',
+            'message' => $sent > 0 ? "{$noun} sent to {$sent} OT(s)." : "Unable to send {$noun} to the selected OTs.",
+        ], $sent > 0 ? 200 : 500);
+    }
+
+    /** "Message from <name> (<OT code>), Officer Trainee, via Sargam My Groups:" */
+    private function groupMessageAttribution(): string
+    {
+        $sender = DB::table('student_master')
+            ->where('pk', (int) Auth::user()->user_id)
+            ->first(['display_name', 'first_name', 'last_name', 'generated_OT_code']);
+
+        $name = trim((string) ($sender->display_name ?? ''))
+            ?: trim(implode(' ', array_filter([$sender->first_name ?? '', $sender->last_name ?? ''])));
+        $name = $name !== '' ? $name : 'an Officer Trainee';
+        $code = trim((string) ($sender->generated_OT_code ?? ''));
+
+        return 'Message from ' . $name . ($code !== '' ? ' (' . $code . ')' : '')
+            . ', Officer Trainee, via Sargam My Groups:';
+    }
+
+    /**
+     * Audit for every My Groups send, so a message an OT pushes through the
+     * institutional gateway is attributable (PR #334 F-005): a durable row in
+     * my_group_message_log, plus the log line. The message text is deliberately
+     * NOT recorded: it is request text (a raw line feed would forge extra log
+     * records — trap 35) and it is the sender's private content.
+     *
+     * The row is written before the send with sent_count 0, so a send that throws
+     * is still on record (F-048); settleGroupMessage() records the outcome.
+     *
+     * @return int the audit row's pk
+     */
+    private function logGroupMessage(int $mapPk, string $channel, int $recipients): int
+    {
+        return (int) DB::table('my_group_message_log')->insertGetId([
+            'sender_user_pk' => (int) auth()->id(),
+            'sender_student_pk' => (int) Auth::user()->user_id,
+            'group_map_pk' => $mapPk,
+            'channel' => $channel,
+            'recipient_count' => $recipients,
+            'sent_count' => 0,
+            'ip' => request()->ip(),
+            'created_at' => now(),
+        ], 'pk');
+    }
+
+    /** The outcome of a send logGroupMessage() opened: its count, and the log line. */
+    private function settleGroupMessage(int $logPk, int $mapPk, string $channel, int $recipients, int $sent): void
+    {
+        DB::table('my_group_message_log')->where('pk', $logPk)->update(['sent_count' => $sent]);
+
+        \Illuminate\Support\Facades\Log::info('my_groups.message', [
+            // user_credentials is keyed on `pk`, so auth()->id() is that pk.
+            'user_pk' => auth()->id(),
+            'student_pk' => (int) Auth::user()->user_id,
+            'group_map_pk' => $mapPk,
+            'channel' => $channel,
+            'recipients' => $recipients,
+            'sent' => $sent,
+            'ip' => request()->ip(),
+        ]);
+    }
+
+    /**
+     * The group row, but only if the logged-in officer trainee belongs to it.
+     * Returns null otherwise — the group pk travels in the URL, so every entry
+     * point has to re-check rather than trust it.
+     */
+    private function assertOwnGroup($mapPk)
+    {
+        if (! $this->isMyGroupsTrainee()) {
+            return null;
+        }
+
+        $isMember = $this->myGroupsQuery(Auth::user()->user_id)
+            ->where('gmap.pk', (int) $mapPk)
+            ->exists();
+
+        if (! $isMember) {
+            return null;
+        }
+
+        return DB::table('group_type_master_course_master_map as gmap')
+            ->leftJoin('course_group_type_master as gtype', 'gtype.pk', '=', 'gmap.type_name')
+            ->leftJoin('course_master as cm', 'cm.pk', '=', 'gmap.course_name')
+            ->where('gmap.pk', (int) $mapPk)
+            ->first(['gmap.group_name', 'gtype.type_name as group_type', 'cm.course_name']);
+    }
+
+    /**
+     * Officer trainees mapped to a group, with their contact details. The details
+     * are for server-side sending only; no response or export may carry them
+     * (PR #334 F-040).
+     */
+    private function myGroupRoster(int $mapPk): \Illuminate\Support\Collection
+    {
+        return DB::table('student_course_group_map as scgm')
+            ->join('student_master as sm', 'sm.pk', '=', 'scgm.student_master_pk')
+            ->where('scgm.group_type_master_course_master_map_pk', $mapPk)
+            ->where('scgm.active_inactive', 1)
+            ->select('sm.pk', 'sm.display_name', 'sm.first_name', 'sm.last_name',
+                'sm.generated_OT_code', 'sm.email', 'sm.contact_no')
+            // Same duplicate rows the member count guards against.
+            ->distinct()
+            ->orderBy('sm.display_name')
+            ->get()
+            ->map(fn ($row) => [
+                'pk' => (int) $row->pk,
+                'name' => trim((string) $row->display_name) ?: (trim(implode(' ', array_filter([
+                    $row->first_name ?? '', $row->last_name ?? '',
+                ]))) ?: 'Officer Trainee'),
+                'ot_code' => $row->generated_OT_code ?: '-',
+                'email' => $row->email ?: '-',
+                'mobile' => $row->contact_no ?: '-',
+            ])
+            ->values();
     }
 
     /**
@@ -6034,6 +7576,47 @@ class UserController extends Controller
                 SUM(CASE WHEN status = '0' OR status IS NULL THEN 1 ELSE 0 END) as not_marked_count
             ")
             ->first();
+
+        // A session the OT was on MDO/Escort/Other duty or medically exempt for counts
+        // as Present, not Late or Absent — the same rule AttendanceController::save
+        // applies on write. The saved row can still hold the Late/Absent it was marked
+        // with when the duty was assigned after the fact, so those rows are moved into
+        // the Present bucket here rather than being counted against the OT.
+        if ($attendanceSummary) {
+            $dutyCorrectedRows = CourseStudentAttendance::where('Student_master_pk', $studentPk)
+                ->whereIn('status', ['2', '3'])
+                ->whereNotNull('timetable_pk')
+                ->get(['course_master_pk', 'timetable_pk', 'status']);
+
+            $covered = OtExemptionResolver::coveredSessions(
+                $dutyCorrectedRows->map(fn ($row) => [
+                    'student' => (int) $studentPk,
+                    'course' => (int) $row->course_master_pk,
+                    'timetable' => (int) $row->timetable_pk,
+                ])->all()
+            );
+
+            $movedLate = 0;
+            $movedAbsent = 0;
+
+            foreach ($dutyCorrectedRows as $row) {
+                $key = OtExemptionResolver::sessionKey(
+                    (int) $studentPk,
+                    (int) $row->course_master_pk,
+                    (int) $row->timetable_pk
+                );
+
+                if (!isset($covered[$key])) {
+                    continue;
+                }
+
+                (int) $row->status === 2 ? $movedLate++ : $movedAbsent++;
+            }
+
+            $attendanceSummary->present_count = (int) $attendanceSummary->present_count + $movedLate + $movedAbsent;
+            $attendanceSummary->late_count = (int) $attendanceSummary->late_count - $movedLate;
+            $attendanceSummary->absent_count = (int) $attendanceSummary->absent_count - $movedAbsent;
+        }
 
         // Calculate total expected sessions (timetables) for student's course groups
         $studentGroupPks = StudentCourseGroupMap::where('student_master_pk', $studentPk)

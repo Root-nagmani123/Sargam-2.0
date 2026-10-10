@@ -33,14 +33,12 @@
                             </label>
                             <select name="leave_type" class="form-select" required>
                                 <option value="">Select Leave Type</option>
-                                <option value="PT_EXEMPTION"
-                                    {{ old('leave_type', $leaveNature->leave_type ?? '') === 'PT_EXEMPTION' ? 'selected' : '' }}>
-                                    PT Exemption
-                                </option>
-                                <option value="STATIONED_LEAVE"
-                                    {{ old('leave_type', $leaveNature->leave_type ?? '') === 'STATIONED_LEAVE' ? 'selected' : '' }}>
-                                    Stationed Leave
-                                </option>
+                                @foreach($leaveTypes as $value => $label)
+                                    <option value="{{ $value }}"
+                                        {{ old('leave_type', $leaveNature->leave_type ?? '') === $value ? 'selected' : '' }}>
+                                        {{ $label }}
+                                    </option>
+                                @endforeach
                             </select>
                             @error('leave_type')
                                 <small class="text-danger">{{ $message }}</small>

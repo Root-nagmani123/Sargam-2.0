@@ -112,6 +112,8 @@
                                 <th>Leave Type</th>
                                 <th>From Date</th>
                                 <th>To Date</th>
+                                <th>Time From</th>
+                                <th>Time To</th>
                                 <th>Total Days</th>
                                 <th>Status</th>
                                 <th>Action</th>
@@ -176,6 +178,8 @@ $(function () {
             { data: 'leave_type_label', name: 'leave_type' },
             { data: 'from_date_display', name: 'from_date' },
             { data: 'to_date_display', name: 'to_date' },
+            { data: 'time_from_display', name: 'time_from' },
+            { data: 'time_to_display', name: 'time_to' },
             { data: 'total_days_display', name: 'total_days' },
             { data: 'status_badge', name: 'status', orderable: false, searchable: false },
             { data: 'action', orderable: false, searchable: false },
@@ -290,7 +294,10 @@ $(function () {
     });
 
     /* ---------------- Column show / hide ---------------- */
-    const leaveColStorageKey = 'myLeaveGrid:hiddenColumns:v1';
+    // Hidden columns are stored by index, so inserting a column would shift a
+    // returning user's saved set onto the wrong columns. Bumped with the Time
+    // From / Time To columns; bump again whenever the column order changes.
+    const leaveColStorageKey = 'myLeaveGrid:hiddenColumns:v2';
 
     function leaveGetHiddenCols() {
         try {

@@ -34,12 +34,6 @@
     $toDateValue = $oldToDate
         ? \Illuminate\Support\Carbon::parse($oldToDate)->format('Y-m-d')
         : (isset($application) ? $application->to_date?->format('Y-m-d') : '');
-    $fromTimeValue = $oldFromDate
-        ? \Illuminate\Support\Carbon::parse($oldFromDate)->format('H:i')
-        : (isset($application) ? $application->from_date?->format('H:i') : '');
-    $toTimeValue = $oldToDate
-        ? \Illuminate\Support\Carbon::parse($oldToDate)->format('H:i')
-        : (isset($application) ? $application->to_date?->format('H:i') : '');
     $toDateMin = $fromDateValue ?: ($isPt ? $ptMinDate : $stationedMinDate);
 @endphp
 
@@ -205,13 +199,13 @@
                         @enderror
                     </div>
 
-                    {{-- Time From (Stationed Leave only) --}}
-                    <div class="col-12 col-md-6 leave-stationed-time-field" @if($isPt) style="display:none;" @endif>
-                        <label for="from_time_input" class="leave-grid-label d-block">Time From <span class="text-danger">*</span></label>
-                        <input type="time" id="from_time_input" class="form-control"
-                            value="{{ $fromTimeValue ?: '00:00' }}"
-                            {{ $isReadOnly ? 'readonly' : '' }}>
-                    </div>
+                    {{-- The visible date pickers carry no name; these hidden fields are
+                         what the form posts, filled by syncHiddenFields(). Dates only:
+                         departure / return times post separately as time_from /
+                         time_to, and saveApplication() compares from_date and to_date
+                         as plain dates. --}}
+                    <input type="hidden" name="from_date" id="from_date" value="{{ $fromDateValue }}">
+                    <input type="hidden" name="to_date" id="to_date" value="{{ $toDateValue }}">
 
                     {{-- Date To --}}
                     <div class="col-12 col-md-6">
@@ -231,16 +225,33 @@
                         @enderror
                     </div>
 
-                    {{-- Time To (Stationed Leave only) --}}
-                    <div class="col-12 col-md-6 leave-stationed-time-field" @if($isPt) style="display:none;" @endif>
-                        <label for="to_time_input" class="leave-grid-label d-block">Time To <span class="text-danger">*</span></label>
-                        <input type="time" id="to_time_input" class="form-control"
-                            value="{{ $toTimeValue ?: '00:00' }}"
+                    {{-- Time From / Time To — stationed leave only. PT exemption
+                         runs for whole PT sessions, so it carries no time. --}}
+                    @if(! $isPt)
+                    <div class="col-12 col-md-6">
+                        <label for="time_from" class="leave-grid-label d-block">Time From <span class="text-danger">*</span></label>
+                        <input type="time" name="time_from" id="time_from"
+                            class="form-control @error('time_from') is-invalid @enderror" required
+                            value="{{ old('time_from', isset($application) && $application->time_from ? \Carbon\Carbon::parse($application->time_from)->format('H:i') : '') }}"
                             {{ $isReadOnly ? 'readonly' : '' }}>
+                        @error('time_from')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
+                        @enderror
+                        <div class="form-text">Time you leave the station.</div>
                     </div>
 
-                    <input type="hidden" name="from_date" id="from_date" value="{{ $fromDateValue }}{{ ! $isPt ? 'T' . ($fromTimeValue ?: '00:00') : '' }}">
-                    <input type="hidden" name="to_date" id="to_date" value="{{ $toDateValue }}{{ ! $isPt ? 'T' . ($toTimeValue ?: '00:00') : '' }}">
+                    <div class="col-12 col-md-6">
+                        <label for="time_to" class="leave-grid-label d-block">Time To <span class="text-danger">*</span></label>
+                        <input type="time" name="time_to" id="time_to"
+                            class="form-control @error('time_to') is-invalid @enderror" required
+                            value="{{ old('time_to', isset($application) && $application->time_to ? \Carbon\Carbon::parse($application->time_to)->format('H:i') : '') }}"
+                            {{ $isReadOnly ? 'readonly' : '' }}>
+                        @error('time_to')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
+                        @enderror
+                        <div class="form-text">Time you report back.</div>
+                    </div>
+                    @endif
 
                     {{-- Total Days --}}
                     <div class="col-12 col-md-6">
@@ -477,8 +488,6 @@ $(function () {
     });
 
     /* ── Date sync + total days ── */
-    const isStationedLeave = {{ $isPt ? 'false' : 'true' }};
-
     function syncEndDateMin() {
         const from = $('#from_date_input').val();
         const $toDate = $('#to_date_input');
@@ -491,13 +500,9 @@ $(function () {
     }
 
     function syncHiddenFields() {
-        const fromDate = $('#from_date_input').val();
-        const toDate = $('#to_date_input').val();
-        const fromTime = isStationedLeave ? ($('#from_time_input').val() || '00:00') : '00:00';
-        const toTime = isStationedLeave ? ($('#to_time_input').val() || '00:00') : '00:00';
-
-        $('#from_date').val(fromDate ? fromDate + 'T' + fromTime : '');
-        $('#to_date').val(toDate ? toDate + 'T' + toTime : '');
+        // Dates only — time_from / time_to post from their own named inputs.
+        $('#from_date').val($('#from_date_input').val() || '');
+        $('#to_date').val($('#to_date_input').val() || '');
     }
 
     function updateTotalDays() {
@@ -526,7 +531,6 @@ $(function () {
         updateTotalDays();
         syncHiddenFields();
     });
-    $('#from_time_input, #to_time_input').on('change', syncHiddenFields);
     syncEndDateMin();
     updateTotalDays();
     syncHiddenFields();

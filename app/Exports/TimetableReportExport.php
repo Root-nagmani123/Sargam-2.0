@@ -30,6 +30,7 @@ class TimetableReportExport implements FromView, WithStyles, WithEvents, WithTit
         'faculty_name'     => 20,
         'faculty_code'     => 14,
         'faculty_type'     => 12,
+        'faculty_role'     => 14,
         'class_session'    => 10,
         'start_date'       => 14,
         'end_date'         => 14,

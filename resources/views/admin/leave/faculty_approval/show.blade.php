@@ -254,6 +254,17 @@
                                 @endif
                             </div>
                         </div>
+                        {{-- Stationed leave only; PT exemption carries no time. --}}
+                        @if($application->time_from || $application->time_to)
+                        <div class="fla-tile">
+                            <div class="fla-tile-label"><span class="material-icons material-symbols-rounded">schedule</span>Time From</div>
+                            <div class="fla-tile-value">{{ $application->time_from_display }}</div>
+                        </div>
+                        <div class="fla-tile">
+                            <div class="fla-tile-label"><span class="material-icons material-symbols-rounded">schedule</span>Time To</div>
+                            <div class="fla-tile-value">{{ $application->time_to_display }}</div>
+                        </div>
+                        @endif
                         <div class="fla-tile">
                             <div class="fla-tile-label"><span class="material-icons material-symbols-rounded">call</span>Contact</div>
                             <div class="fla-tile-value">{{ $application->contact_number ?: '-' }}</div>

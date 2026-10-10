@@ -229,24 +229,65 @@ class LeaveApplicationService
             ->first();
     }
 
+    /**
+     * Earliest date any active stationed-leave configuration covers for a course.
+     *
+     * getActiveStationedLeaveConfig() answers "which config applies on date X" and so
+     * returns the latest row effective on or before X. Back-entry needs the opposite:
+     * the floor of the whole configured window, so a training-section operator can
+     * record leave that started under an earlier (since superseded) configuration.
+     */
+    public function earliestStationedLeaveDate(int $coursePk): ?string
+    {
+        $earliest = StationedLeaveMaster::query()
+            ->where('course_master_pk', $coursePk)
+            ->where('active_inactive', 1)
+            ->min('effective_from');
+
+        return $earliest ? Carbon::parse($earliest)->toDateString() : null;
+    }
+
+    /**
+     * Earliest date any active PT exemption configuration covers for a course/gender.
+     * See earliestStationedLeaveDate() for why this differs from the "active" lookup.
+     */
+    public function earliestPtExemptionDate(int $coursePk, ?string $gender): ?string
+    {
+        $genderLabel = $this->normalizeGender($gender);
+        if (! $genderLabel) {
+            return null;
+        }
+
+        $earliest = ExemptionMaster::query()
+            ->where('course_master_pk', $coursePk)
+            ->where('gender', $genderLabel)
+            ->where('active_inactive', 1)
+            ->min('effective_from');
+
+        return $earliest ? Carbon::parse($earliest)->toDateString() : null;
+    }
+
     public function findOverlappingApplication(
         int $studentPk,
         string $fromDate,
         string $toDate,
         ?int $ignoreApplicationPk = null,
-        ?string $leaveType = null
+        ?string $leaveType = null,
+        bool $includeDrafts = true
     ): ?LeaveApplication {
         $query = LeaveApplication::query()
             ->where('student_master_pk', $studentPk)
-            ->whereIn('status', [
-                LeaveApplication::STATUS_DRAFT,
+            // Leave on Behalf passes false: an OT's unsubmitted draft must not block the
+            // operator (PR #334 F-068, Product owner decision 2026-10-09).
+            ->whereIn('status', array_merge($includeDrafts ? [LeaveApplication::STATUS_DRAFT] : [], [
                 LeaveApplication::STATUS_PENDING,
                 LeaveApplication::STATUS_APPROVED,
-            ])
+            ]))
             ->when($leaveType !== null, fn ($q) => $q->where('leave_type', $leaveType))
+            // whereDate in every clause: the columns are DATETIME and legacy stationed rows carry times (F-065).
             ->where(function ($q) use ($fromDate, $toDate) {
-                $q->whereBetween('from_date', [$fromDate, $toDate])
-                    ->orWhereBetween('to_date', [$fromDate, $toDate])
+                $q->where(fn ($in) => $in->whereDate('from_date', '>=', $fromDate)->whereDate('from_date', '<=', $toDate))
+                    ->orWhere(fn ($in) => $in->whereDate('to_date', '>=', $fromDate)->whereDate('to_date', '<=', $toDate))
                     ->orWhere(function ($inner) use ($fromDate, $toDate) {
                         $inner->whereDate('from_date', '<=', $fromDate)
                             ->whereDate('to_date', '>=', $toDate);
@@ -277,9 +318,10 @@ class LeaveApplicationService
         string $fromDate,
         string $toDate,
         ?int $ignoreApplicationPk = null,
-        ?string $leaveType = null
+        ?string $leaveType = null,
+        bool $includeDrafts = true
     ): void {
-        $existing = $this->findOverlappingApplication($studentPk, $fromDate, $toDate, $ignoreApplicationPk, $leaveType);
+        $existing = $this->findOverlappingApplication($studentPk, $fromDate, $toDate, $ignoreApplicationPk, $leaveType, $includeDrafts);
 
         if ($existing) {
             throw new \InvalidArgumentException($this->overlapErrorMessage($existing));

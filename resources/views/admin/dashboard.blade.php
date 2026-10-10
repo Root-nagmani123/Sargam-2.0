@@ -5,7 +5,7 @@
 @section('content')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-calendar.css') }}?v=4">
-<link rel="stylesheet" href="{{ asset('css/dashboard-stat-cards.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('css/dashboard-stat-cards.css') }}?v={{ @filemtime(public_path('css/dashboard-stat-cards.css')) ?: time() }}">
 {{-- filemtime, not a hand-tracked ?v= : this file's manual token has already regressed once
      (v9 -> v7 through a revert), which serves returning users a stale stylesheet. --}}
 <link rel="stylesheet" href="{{ asset('css/dashboard-main.css') }}?v={{ @filemtime(public_path('css/dashboard-main.css')) ?: time() }}">
@@ -203,8 +203,23 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                             </div>
                             <div class="flex-grow-1 min-w-0">
                                 <p class="stat-title">{{ $card['label'] }}</p>
-                                @php $v = (int) $card['count']; @endphp
-                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                                @if($card['show_count'] ?? true)
+                                @php
+                                    // Counts are whole numbers and keep their 0-padding, but a
+                                    // marks total can carry a half mark, and (int) would have
+                                    // shown 13.5 as 13.
+                                    $v = is_numeric($card['count']) ? (float) $card['count'] : 0;
+                                    $statValue = floor($v) == $v
+                                        ? ($v < 10 ? sprintf('%02d', $v) : (string) (int) $v)
+                                        : rtrim(rtrim(number_format($v, 2, '.', ''), '0'), '.');
+                                @endphp
+                                <p class="stat-value">{{ $statValue }}</p>
+                                @else
+                                {{-- Cards that open a page rather than count rows (the
+                                     timetables) carry no number — an "00" would read as
+                                     "nothing there". --}}
+                                <p class="stat-value stat-value-link">Open</p>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -239,7 +254,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     <div class="card-header py-3 px-4">
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 gap-md-3">
                             <h5 class="dashboard-feed-panel__title mb-0">Notices</h5>
-                            @if(hasRole('Admin') || hasRole('Super Admin'))
+                            @if(canAuthorNotices())
                             <a href="{{ route('admin.notice.create') }}"
                                 class="btn btn-sm dashboard-feed-btn-primary d-inline-flex align-items-center gap-2">
                                 <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
@@ -255,7 +270,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                 <i class="bi bi-file-earmark-x"></i>
                             </span>
                             <p class="mb-3 text-body-secondary">No notices available.</p>
-                            @if(hasRole('Admin') || hasRole('Super Admin'))
+                            @if(canAuthorNotices())
                             <a href="{{ route('admin.notice.create') }}"
                                 class="btn dashboard-feed-btn-primary d-inline-flex align-items-center gap-2">
                                 <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
@@ -267,8 +282,13 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                         <ul class="list-unstyled mb-0 ps-0" id="dashboard-notice-list">
                             @foreach($notices as $notice)
                             @php
-                            $noticeCategory = $noticeCategoryLabels[$resolveDashboardNoticeTab($notice->notice_type ??
-                            '')];
+                            // The notice's own type, not the tab's label. Mapping it
+                            // through $noticeCategoryLabels showed "Course notice" as
+                            // "Work Allocations" and lumped Personal / Office notice /
+                            // Service related together as plain "Notice" — the reader
+                            // was told a type the author never chose. The tab grouping
+                            // still uses $resolveDashboardNoticeTab.
+                            $noticeCategory = $notice->notice_type ?: 'Notice';
                             $noticeDate = $notice->created_at ?? $notice->display_date ?? null;
                             $noticeDateLabel = $noticeDate
                             ? \Carbon\Carbon::parse($noticeDate)->format('d/m/Y h:i A')
@@ -285,7 +305,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                 <div class="dashboard-notice-item"
                                     data-notice-pk="{{ $notice->pk }}"
                                     data-notice-title="{{ $notice->notice_title ?? '' }}"
-                                    data-notice-desc='@json($notice->description ?? "")'
+                                    data-notice-desc='@json(notice_safe_html($notice->description ?? ""))'
                                     data-notice-badge="{{ $noticeCategory }}"
                                     data-notice-meta="{{ $noticeMeta }}"
                                     data-notice-doc="{{ $notice->document ? asset('storage/' . $notice->document) : '' }}"
@@ -473,8 +493,69 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
 
             </div>
 
-            @if(in_array('widget_todays_birthdays', $enabledWidgetKeys) || in_array('widget_calendar', $enabledWidgetKeys))
+            @if(in_array('widget_todays_birthdays', $enabledWidgetKeys) || in_array('widget_calendar', $enabledWidgetKeys) || in_array('widget_house_performance', $enabledWidgetKeys))
             <div class="col-auto" style="width: 480px; min-width: 480px;">
+                @if(in_array('widget_house_performance', $enabledWidgetKeys))
+                {{-- House wise Performance: every house on the courses running now,
+                     least against it first. The figure is the marks its officer
+                     trainees have lost on closed memos and discipline memos. --}}
+                <div class="card dashboard-panel dashboard-house-panel border-0 mb-4" id="house-wise-performance">
+                    <div class="card-header bg-white border-0">
+                        <div class="d-flex align-items-center justify-content-between w-100 gap-2 flex-wrap">
+                            {{-- The title opens the full breakdown: the panel can only
+                                 show a total per house, not who it came from. --}}
+                            <a href="{{ route('admin.dashboard.house-wise-performance', array_filter(['course' => $houseCourseFilter ?? null])) }}"
+                                class="dashboard-birthdays-panel__title mb-0 h5 text-decoration-none"
+                                title="Open the full house wise performance breakdown">
+                                House wise Performance
+                            </a>
+                            <div class="d-flex align-items-center gap-1 ms-auto">
+                                @if(($houseCourses ?? collect())->isNotEmpty())
+                                    {{-- Reloads the dashboard with ?house_course=, so the
+                                         panel and the page it links to are computed by the
+                                         same code rather than a second AJAX path. --}}
+                                    <select class="form-select form-select-sm dashboard-house-course" id="housePerformanceCourse"
+                                        aria-label="Filter house wise performance by course"
+                                        onchange="window.location = '{{ route('admin.dashboard') }}' + (this.value ? ('?house_course=' + encodeURIComponent(this.value)) : '') + '#house-wise-performance';">
+                                        <option value="">All Courses</option>
+                                        @foreach($houseCourses as $pk => $name)
+                                            <option value="{{ $pk }}" {{ (string) ($houseCourseFilter ?? '') === (string) $pk ? 'selected' : '' }}>
+                                                {{ $name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                @endif
+                                <a href="{{ route('admin.dashboard.house-wise-performance', array_filter(['course' => $houseCourseFilter ?? null])) }}"
+                                    class="btn btn-sm btn-link text-decoration-none px-1" aria-label="Open house wise performance">
+                                    <i class="material-icons material-symbols-rounded align-middle" style="font-size:20px;">chevron_right</i>
+                                </a>
+                            </div>
+                        </div>
+                        <hr class="dashboard-birthdays-divider mb-0">
+                    </div>
+                    <div class="card-body">
+                        @if(($housePerformance ?? collect())->isEmpty())
+                        <div class="dashboard-empty-state py-4">
+                            <i class="bi bi-house text-primary opacity-50 fs-1 d-block mb-2" aria-hidden="true"></i>
+                            <p class="mb-0 small text-body-secondary">No houses mapped yet.</p>
+                        </div>
+                        @else
+                        <ul class="list-unstyled mb-0 dashboard-house-list">
+                            @foreach($housePerformance as $house)
+                            <li class="dashboard-house-item">
+                                <span class="dashboard-house-rank">{{ $loop->iteration }}</span>
+                                <span class="dashboard-house-name text-truncate" title="{{ $house['house'] }}">{{ $house['house'] }}</span>
+                                <span class="dashboard-house-students">{{ $house['students'] }} OT{{ $house['students'] == 1 ? '' : 's' }}</span>
+                                {{-- Marks deducted, not a record count (UAT 15-09-2026) --}}
+                                <span class="dashboard-house-total" aria-label="{{ $house['total'] }} marks deducted">{{ $house['total'] + 0 }}</span>
+                            </li>
+                            @endforeach
+                        </ul>
+                        @endif
+                    </div>
+                </div>
+                @endif
+
                 @if(in_array('widget_todays_birthdays', $enabledWidgetKeys))
                 <div class="card dashboard-panel dashboard-birthdays-panel border-0 mb-4">
                     <div class="card-header bg-white border-0">

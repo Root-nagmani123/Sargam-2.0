@@ -7,6 +7,12 @@
     <div class="container-fluid" id="main-content">
         <x-breadcrum title="Course Repository"></x-breadcrum>
 
+        {{-- Entry point to the universal search. Kept outside the "any categories?"
+             check below so search is still reachable when the list is empty. --}}
+        @include('admin.course-repository.user.partials.search-launcher', [
+            'inputId' => 'cruIndexSearch',
+        ])
+
         {{-- Filters --}}
 
         @if($repositories->count() > 0)

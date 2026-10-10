@@ -31,6 +31,27 @@ trait ScopesSessionFeedbackReports
         return is_array($ids) ? array_values(array_map('intval', $ids)) : [];
     }
 
+    /**
+     * The faculty whose own report this is, or null on the admin-side reports.
+     *
+     * Course scope alone is not enough for the faculty portal: a faculty's
+     * accessible courses contain every OTHER faculty's sessions too, so a report
+     * filtered only by course showed colleagues' sessions and counted their
+     * feedback. Callers pair this with the course scope to reach one faculty's own
+     * sessions. Read from the request attribute the middleware sets, never from
+     * input.
+     */
+    protected function facultyReportViewerPk(): ?int
+    {
+        if (! $this->isFacultySessionFeedbackReport()) {
+            return null;
+        }
+
+        $pk = (int) request()->attributes->get('faculty_report_faculty_pk', 0);
+
+        return $pk > 0 ? $pk : null;
+    }
+
     protected function applyFeedbackReportCourseScope(QueryBuilder $query, string $column = 'cm.pk'): void
     {
         $scoped = $this->facultyReportCourseIds();

@@ -133,6 +133,22 @@ class StudentAttendanceListDataTable extends DataTable
     }
 
     /**
+     * The status this OT actually counts as for this session.
+     *
+     * A duty or exemption overlapping the session outranks the saved row: the OT
+     * is Present regardless of what is stored, because the duty can be assigned
+     * after attendance was marked, leaving a stale Late/Absent on record.
+     * AttendanceController::save writes Present for the same OTs, so this only
+     * has work to do for rows saved before the duty existed.
+     */
+    protected function effectiveStatus(int $studentId): int
+    {
+        return $this->exemptions()->reasonFor($studentId) !== null
+            ? 1 // Present
+            : $this->getSavedStatus($studentId);
+    }
+
+    /**
      * Which status radio (Present=1 / Late=2 / Absent=3) shows as selected for
      * this OT. Unlocked OTs with no record default to Present — unchanged from the
      * original behaviour.
@@ -196,12 +212,13 @@ class StudentAttendanceListDataTable extends DataTable
     protected function renderStatusBadge($row): string
     {
         $pk = $row->studentsMaster->pk;
-        $status = $this->getSavedStatus($pk);
+        $status = $this->effectiveStatus($pk);
         [$label, $cls] = $this->statusLabelClass($status);
 
-        // Display-only pill of the SAVED status. The editable field (name="student[pk]")
-        // is now owned by the inline "Update Attendance Status" radios so there is no
-        // duplicate form field.
+        // Display-only pill of the EFFECTIVE status, so a duty-locked OT reads Present
+        // here instead of the Late/Absent that may still be on the saved row. The
+        // editable field (name="student[pk]") is owned by the inline "Update Attendance
+        // Status" radios, so there is no duplicate form field.
         return '<span class="att-badge ' . $cls . '" data-ot="' . $pk . '">' . $label . '</span>';
     }
 
@@ -241,7 +258,7 @@ class StudentAttendanceListDataTable extends DataTable
     protected function renderActionCell($row): string
     {
         $pk = $row->studentsMaster->pk;
-        $status = $this->getSavedStatus($pk);
+        $status = $this->effectiveStatus($pk);
         $name = e($row->studentsMaster->display_name ?? '');
 
         return '<button type="button" class="att-action-icon js-mark-ot" '

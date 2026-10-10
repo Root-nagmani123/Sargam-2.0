@@ -11,19 +11,29 @@
     <div class="timetable-report-tabs mb-4">
         <ul class="nav nav-tabs border-0" id="timetableReportTab" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="active-tab-btn" type="button" role="tab"
-                        aria-selected="true" data-mode="active">
+                <button class="nav-link {{ ($initialCourseMode ?? 'active') === 'active' ? 'active' : '' }}" id="active-tab-btn" type="button" role="tab"
+                        aria-selected="{{ ($initialCourseMode ?? 'active') === 'active' ? 'true' : 'false' }}" data-mode="active">
                     <i class="material-icons me-2" aria-hidden="true" style="font-size:18px;vertical-align:middle">check_circle</i>
                     Active Courses
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="archive-tab-btn" type="button" role="tab"
-                        aria-selected="false" data-mode="archive">
+                <button class="nav-link {{ ($initialCourseMode ?? 'active') === 'archive' ? 'active' : '' }}" id="archive-tab-btn" type="button" role="tab"
+                        aria-selected="{{ ($initialCourseMode ?? 'active') === 'archive' ? 'true' : 'false' }}" data-mode="archive">
                     <i class="material-icons me-2" aria-hidden="true" style="font-size:18px;vertical-align:middle">archive</i>
                     Archived Courses
                 </button>
             </li>
+            {{-- Active and archived together — the tab the dashboard's Total Sessions
+                 card lands on, since it counts both. --}}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {{ ($initialCourseMode ?? 'active') === 'all' ? 'active' : '' }}" id="all-tab-btn" type="button" role="tab"
+                        aria-selected="{{ ($initialCourseMode ?? 'active') === 'all' ? 'true' : 'false' }}" data-mode="all">
+                    <i class="material-icons me-2" aria-hidden="true" style="font-size:18px;vertical-align:middle">apps</i>
+                    All Courses
+                </button>
+            </li>
+
         </ul>
     </div>
 
@@ -37,9 +47,19 @@
                     <!-- Course -->
                     <div class="col-12 col-md-4 col-lg-3">
                         <label for="filter_course" class="form-label">Course</label>
+                        {{-- The list follows the tab the page opened on, not always the
+                             active one: landing on All Courses with an Active-only
+                             dropdown would offer courses the grid is not showing. --}}
+                        @php
+                            $initialCourses = match ($initialCourseMode ?? 'active') {
+                                'archive' => $archivedCourses,
+                                'all'     => $allCourses,
+                                default   => $activeCourses,
+                            };
+                        @endphp
                         <select class="form-select select2-filter" id="filter_course" name="course_pk">
                             <option value="">-- All Courses --</option>
-                            @foreach($activeCourses as $course)
+                            @foreach($initialCourses as $course)
                                 <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
                             @endforeach
                         </select>
@@ -48,10 +68,30 @@
                     <!-- Faculty -->
                     <div class="col-12 col-md-4 col-lg-3">
                         <label for="filter_faculty" class="form-label">Faculty</label>
-                        <select class="form-select select2-filter" id="filter_faculty" name="faculty_pk">
-                            <option value="">-- All Faculty --</option>
+                        {{-- A faculty viewer only ever sees their own sessions, so the
+                             control is pinned to them rather than offering a choice that
+                             the server would override anyway. --}}
+                        <select class="form-select select2-filter" id="filter_faculty" name="faculty_pk"
+                            @if(!empty($lockedFacultyPk)) disabled @endif>
+                            @if(empty($lockedFacultyPk))
+                                <option value="">-- All Faculty --</option>
+                            @endif
                             @foreach($faculties as $faculty)
-                                <option value="{{ $faculty->pk }}">{{ $faculty->full_name }} ({{ $faculty->faculty_code }})</option>
+                                <option value="{{ $faculty->pk }}" @selected(!empty($lockedFacultyPk) && (int) $faculty->pk === (int) $lockedFacultyPk)>{{ $faculty->full_name }} ({{ $faculty->faculty_code }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <!-- Faculty Role -->
+                    <div class="col-12 col-md-4 col-lg-3">
+                        <label for="filter_faculty_role" class="form-label">Faculty Role</label>
+                        {{-- Teaching / Sectional / Administration, as stored per faculty
+                             on the session. With a faculty selected it reads "sessions
+                             they hold in that role". --}}
+                        <select class="form-select select2-filter" id="filter_faculty_role" name="faculty_role">
+                            <option value="">-- All Roles --</option>
+                            @foreach($facultyRoles as $role)
+                                <option value="{{ $role }}" @selected(($initialRole ?? null) === $role)>{{ $role }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -160,6 +200,7 @@
                             <th>Start Date</th>
                             <th>End Date</th>
                             <th>Venue</th>
+                            <th>Faculty Role</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -246,7 +287,7 @@ $(document).ready(function() {
     var dataUrl  = "{{ route('timetable-report.data') }}";
     var columnStorageKey = 'timetableReportGrid:columns:v1';
     var inputDebounceTimer = null;
-    var currentMode = 'active';
+    var currentMode = @json($initialCourseMode ?? 'active');
 
     // ── Course data for Active / Archive switching ──
     var activeCourseOptions = '<option value="">-- All Courses --</option>'
@@ -259,6 +300,16 @@ $(document).ready(function() {
             + '<option value="{{ $course->pk }}">{{ addslashes($course->course_name) }}</option>'
         @endforeach
         ;
+    var allCourseOptions = '<option value="">-- All Courses --</option>'
+        @foreach($allCourses as $course)
+            + '<option value="{{ $course->pk }}">{{ addslashes($course->course_name) }}</option>'
+        @endforeach
+        ;
+    function courseOptionsFor(mode) {
+        if (mode === 'archive') return archivedCourseOptions;
+        if (mode === 'all') return allCourseOptions;
+        return activeCourseOptions;
+    }
 
     // ── Active / Archive tab toggle ──
     $('#timetableReportTab .nav-link').on('click', function() {
@@ -275,7 +326,7 @@ $(document).ready(function() {
         if ($courseSelect.hasClass('select2-hidden-accessible')) {
             $courseSelect.select2('destroy');
         }
-        $courseSelect.html(currentMode === 'archive' ? archivedCourseOptions : activeCourseOptions);
+        $courseSelect.html(courseOptionsFor(currentMode));
         $courseSelect.select2({
             placeholder: '-- All Courses --',
             allowClear: true,
@@ -427,6 +478,7 @@ $(document).ready(function() {
         if ($('#filter_course').val()) filterParts.push('Course: ' + courseText);
         var facultyText = $('#filter_faculty option:selected').text().trim();
         if ($('#filter_faculty').val()) filterParts.push('Faculty: ' + facultyText);
+        if ($('#filter_faculty_role').val()) filterParts.push('Faculty Role: ' + $('#filter_faculty_role').val());
         var ftText = $('#filter_faculty_type option:selected').text().trim();
         if ($('#filter_faculty_type').val()) filterParts.push('Faculty Type: ' + ftText);
         var venueText = $('#filter_venue option:selected').text().trim();
@@ -554,7 +606,7 @@ $(document).ready(function() {
 '</div>\n' +
 '\n' +
 '<div class="report-meta">\n' +
-'    <strong>Course Mode:</strong> ' + (currentMode === 'archive' ? 'Archived' : 'Active') + ' &nbsp;&nbsp;|&nbsp;&nbsp; ' +
+'    <strong>Course Mode:</strong> ' + (currentMode === 'archive' ? 'Archived' : (currentMode === 'all' ? 'Active + Archived' : 'Active')) + ' &nbsp;&nbsp;|&nbsp;&nbsp; ' +
 '    <strong>Printed:</strong> ' + new Date().toLocaleDateString('en-IN') + ' ' + new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}) + '\n' +
 '</div>\n' +
 '\n' +
@@ -588,6 +640,7 @@ $(document).ready(function() {
                         d.course_mode   = currentMode;
                         d.faculty_pk    = $('#filter_faculty').val();
                         d.faculty_type  = $('#filter_faculty_type').val();
+                        d.faculty_role  = $('#filter_faculty_role').val();
                         d.venue_id      = $('#filter_venue').val();
                         d.subject_topic = $('#filter_subject_topic').val();
                         d.module_name   = $('#filter_module_name').val();
@@ -595,21 +648,26 @@ $(document).ready(function() {
                         d.date_to       = $('#filter_date_to').val();
                     }
                 },
+                // Faculty, Group and Role are resolved from JSON after the page is
+                // fetched, so the server has no column to sort them by — they are
+                // marked unsortable instead of taking a click that does nothing.
                 columns: [
                     { data: 'sno',              orderable: false, searchable: false },
                     { data: 'course_name' },
                     { data: 'course_group_type' },
-                    { data: 'group_name' },
+                    { data: 'group_name',       orderable: false },
                     { data: 'subject_name' },
                     { data: 'module_name' },
                     { data: 'subject_topic' },
-                    { data: 'faculty_name' },
-                    { data: 'faculty_code' },
-                    { data: 'faculty_type' },
+                    { data: 'faculty_name',     orderable: false },
+                    { data: 'faculty_code',     orderable: false },
+                    { data: 'faculty_type',     orderable: false },
                     { data: 'class_session' },
                     { data: 'start_date' },
                     { data: 'end_date' },
                     { data: 'venue_name' },
+                    // Free text from the timetable form: written as text, never HTML (PR #334 F-024).
+                    { data: 'faculty_role',     orderable: false, render: $.fn.dataTable.render.text() },
                 ],
                 order: [[11, 'desc']],
                 responsive: false,
@@ -643,7 +701,7 @@ $(document).ready(function() {
     // ── Reset ──
     $('#btnReset').on('click', function() {
         // Reset to Active tab
-        if (currentMode !== 'active') {
+        if (currentMode !== 'active') { // reset returns to the Active tab
             $('#timetableReportTab .nav-link').removeClass('active').attr('aria-selected', 'false');
             $('#active-tab-btn').addClass('active').attr('aria-selected', 'true');
             currentMode = 'active';
@@ -701,6 +759,7 @@ $(document).ready(function() {
             course_mode:   currentMode,
             course_pk:     $('#filter_course').val()       || '',
             faculty_pk:    $('#filter_faculty').val()       || '',
+            faculty_role:  $('#filter_faculty_role').val()  || '',
             faculty_type:  $('#filter_faculty_type').val()  || '',
             venue_id:      $('#filter_venue').val()         || '',
             subject_topic: $('#filter_subject_topic').val() || '',

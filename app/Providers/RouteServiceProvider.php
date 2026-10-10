@@ -87,5 +87,14 @@ class RouteServiceProvider extends ServiceProvider
             $limit = (int) env('LOGIN_RATE_LIMIT', 6);
             return Limit::perMinute($limit)->by($identifier.'|'.$request->ip());
         });
+
+        // My Groups SMS / email (PR #334 F-005). A NAMED limiter: its cache key is
+        // md5(name . key), so it keeps its own counter. The unnamed throttle:5,60 it
+        // replaces keyed on the user alone and shared that counter with every other
+        // unnamed throttle in the app, which let interleaved requests reset it.
+        RateLimiter::for('my-groups-message', function (Request $request) {
+            return Limit::perHour(max(1, (int) config('my_groups.messages_per_hour', 5)))
+                ->by('user:' . ($request->user()?->getAuthIdentifier() ?? $request->ip()));
+        });
     }
 }

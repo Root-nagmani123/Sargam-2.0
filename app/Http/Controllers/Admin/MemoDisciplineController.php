@@ -9,6 +9,7 @@ use App\Models\CourseMaster;
 use App\Models\MemoDiscipline;
 use App\Models\DisciplineMaster;
 use App\Models\StudentMaster;
+use App\Services\Discipline\OtMarksDeductedService;
 use App\Services\NotificationService;
 use App\Services\NotificationReceiverService;
 use App\Exports\DisciplineMemoExport;
@@ -176,6 +177,34 @@ class MemoDisciplineController extends Controller
         'sessions',
         'venues'
     ));
+}
+
+/**
+ * Officer Trainee view: every mark deducted from the signed-in OT, from BOTH
+ * registers — Discipline Memos and Memo/Notices — on one page.
+ *
+ * This is what the dashboard's "Total Marks Deducted in Discipline" card opens,
+ * and it reads the same {@see OtMarksDeductedService} the card counts through,
+ * so the tile and the rows cannot disagree.
+ */
+public function otMarksDeducted(OtMarksDeductedService $marks)
+{
+    // user_id is a student_master.pk only for an Officer Trainee login
+    // (user_category 'S'); for staff and faculty it is an employee / faculty pk
+    // that can equal some student's pk. Refuse rather than read that student's
+    // memos.
+    abort_unless((Auth::user()->user_category ?? null) === 'S', 403);
+
+    $studentPk = (int) Auth::user()->user_id;
+
+    $rows = $marks->rowsFor($studentPk);
+
+    return view('admin.memo_discipline.ot_marks_deducted', [
+        'rows' => $rows,
+        'disciplineTotal' => (float) $rows->where('type', 'Discipline Memo')->sum('marks'),
+        'memoNoticeTotal' => (float) $rows->whereIn('type', ['Memo', 'Notice'])->sum('marks'),
+        'total' => (float) $rows->sum('marks'),
+    ]);
 }
 
 /**

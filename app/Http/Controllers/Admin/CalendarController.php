@@ -154,6 +154,54 @@ class CalendarController extends Controller
     /**
      * Limit timetable rows to sessions assigned to the given faculty.
      */
+    /**
+     * Is this the Academic Timetable view — the whole Academy's sessions rather
+     * than the viewer's own?
+     *
+     * The faculty dashboard has two timetable cards: "My Timetable" opens this
+     * page as it has always worked (the faculty's own classes, teaching or
+     * supporting), and "Academic Timetable" opens the same page unscoped, the way
+     * an admin login sees it. The second asks with ?scope=academy, carried by the
+     * page's own AJAX calls.
+     *
+     * Only a faculty-portal viewer may ask: every other role already reaches the
+     * timetable through its own course scope, and this must not widen that. A
+     * trainee login never may, whatever roles it holds: the OT branch here gave
+     * every Officer Trainee every course's sessions (PR #334 F-047).
+     */
+    private function wantsAcademyScope(?Request $request = null): bool
+    {
+        $request ??= request();
+
+        return $request->input('scope') === 'academy'
+            && is_faculty_portal_user()
+            && ! isTraineeLogin();
+    }
+
+    /** Widest range the events feed answers; a month view asks for six weeks. */
+    private const FEED_MAX_RANGE_DAYS = 62;
+
+    /**
+     * The events feed's [start, end] as Y-m-d: the requested range when both ends
+     * are readable dates, clamped to FEED_MAX_RANGE_DAYS, else the current month.
+     * Array or junk input no longer reaches whereDate() (PR #334 F-047).
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function feedRange(Request $request): array
+    {
+        $start = is_string($request->input('start')) ? strtotime($request->input('start')) : false;
+        $end = is_string($request->input('end')) ? strtotime($request->input('end')) : false;
+
+        if ($start === false || $end === false || $end < $start) {
+            return [Carbon::now()->startOfMonth()->toDateString(), Carbon::now()->endOfMonth()->toDateString()];
+        }
+
+        $end = min($end, $start + self::FEED_MAX_RANGE_DAYS * 86400);
+
+        return [date('Y-m-d', $start), date('Y-m-d', $end)];
+    }
+
     private function scopeTimetableForFaculty($query, int $facultyPk)
     {
         return $query->where(function ($q) use ($facultyPk) {
@@ -225,8 +273,10 @@ class CalendarController extends Controller
 
     public function index(Request $request)
     {
-        // OT (Officer Trainee) users get their own dedicated calendar page.
-        if (hasRole('Student-OT')) {
+        // OT (Officer Trainee) users get their own dedicated calendar page — unless
+        // they asked for the Academic Timetable, which is this page showing the
+        // whole Academy rather than the sessions of the groups they belong to.
+        if (hasRole('Student-OT') && ! $this->wantsAcademyScope($request)) {
             return redirect()->route('calendar.ot.index');
         }
 
@@ -245,8 +295,13 @@ class CalendarController extends Controller
         // Training-admin roles manage events and must see courses by role mapping, not timetable.
         $isTrainingAdmin = hasRole('Training') || hasRole('Training-Induction') || hasRole('Training MCTP Admin') || hasRole('Training IST');
 
+        // The Academic Timetable view is the Academy's, so it keeps every active
+        // course in the picker rather than the viewer's own.
+        $academyScope = $this->wantsAcademyScope($request);
+        $calendarScope = $academyScope ? 'academy' : '';
+
         // Faculty see courses from their timetable / coordinator assignments, not role mapping.
-        if (is_faculty_portal_user() && !$isTrainingAdmin) {
+        if (!$academyScope && is_faculty_portal_user() && !$isTrainingAdmin) {
             $facultyPk = get_auth_faculty_master_pk();
             if ($facultyPk) {
                 $facultyCourseIds = app(FacultyFeedbackReportService::class)->getAccessibleCourseIds($facultyPk);
@@ -256,14 +311,14 @@ class CalendarController extends Controller
             } else {
                 $courseBase = $courseBase->whereRaw('1 = 0');
             }
-        } elseif (!hasRole('Student-OT') && !empty($data_course_id)) {
+        } elseif (!$academyScope && !hasRole('Student-OT') && !empty($data_course_id)) {
             // Students are scoped by enrolment (the join below), not by role. Skipping the
             // role-course filter for them avoids get_Role_by_course()'s [-1] (students have
             // no Spatie role), which would otherwise wipe out their course list.
             $courseBase = $courseBase->whereIn('course_master.pk', $data_course_id);
         }
 
-        if (hasRole('Student-OT')) {
+        if (hasRole('Student-OT') && ! $academyScope) {
             $courseBase = $courseBase->leftJoin(
                 'student_master_course__map',
                 'student_master_course__map.course_master_pk',
@@ -332,7 +387,8 @@ class CalendarController extends Controller
             'classSessionMaster',
             'internal_faculty',
             'sectors',
-            'facultyRoles'
+            'facultyRoles',
+            'calendarScope'
         ));
     }
 
@@ -440,6 +496,8 @@ class CalendarController extends Controller
             ->where('student_master_course__map.active_inactive', 1);
 
         $courseMaster = $courseMaster->select('course_master.pk', 'course_name', 'couse_short_name', 'course_year')
+            ->orderBy('course_master.end_date', 'desc')
+            ->orderBy('course_master.pk', 'asc')
             ->get();
 
         $facultyMaster = FacultyMaster::where('active_inactive', 1)
@@ -506,14 +564,16 @@ class CalendarController extends Controller
             ->leftJoin('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id');
 
         $data_course_id = get_Role_by_course();
-        if (is_faculty_portal_user()) {
+        // The Academic Timetable view (?scope=academy) is the whole Academy's, so
+        // the faculty narrowing is skipped for it.
+        if (! $this->wantsAcademyScope($request) && is_faculty_portal_user()) {
             $facultyPk = get_auth_faculty_master_pk();
             if ($facultyPk) {
                 $events = $this->scopeTimetableForFaculty($events, $facultyPk);
             } else {
                 $events = $events->whereRaw('1 = 0');
             }
-        } elseif (!hasRole('Student-OT') && !empty($data_course_id)) {
+        } elseif (! $this->wantsAcademyScope($request) && !hasRole('Student-OT') && !empty($data_course_id)) {
             $events = $events->whereIn('timetable.course_master_pk', $data_course_id);
         }
 
@@ -578,6 +638,8 @@ class CalendarController extends Controller
             'faculty_type' => 'nullable|integer',
             'faculty_row_type' => 'nullable|array',
             'faculty_role' => 'nullable|array',
+            // Stored as posted and shown in the Timetable Session Report (PR #334 F-024).
+            'faculty_role.*' => 'nullable|string|in:' . implode(',', \App\Services\Timetable\FacultySessionScope::FILTER_ROLES),
             'faculty_feedback_remark' => 'nullable|array',
             'faculty_feedback_rating' => 'nullable|array',
             'sector' => 'nullable|integer',
@@ -816,8 +878,9 @@ class CalendarController extends Controller
         $events = DB::table('timetable')
             ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id');
 
-        // Student-OT Role
-        if (hasRole('Student-OT')) {
+        // Student-OT Role — narrowed to the groups they belong to, except on the
+        // Academic Timetable view, which is the whole Academy.
+        if (hasRole('Student-OT') && ! $this->wantsAcademyScope($request)) {
 
             $student_pk = auth()->user()->user_id;
 
@@ -827,8 +890,12 @@ class CalendarController extends Controller
                 ->where('student_course_group_map.student_master_pk', $student_pk);
         }
 
-        // Scope events by user type (faculty assignments vs training-admin course alignment).
-        if (is_faculty_portal_user()) {
+        // Scope events by user type (faculty assignments vs training-admin course
+        // alignment). The Academic Timetable view (?scope=academy) takes neither —
+        // it is the whole Academy's timetable.
+        if ($this->wantsAcademyScope($request)) {
+            // no narrowing
+        } elseif (is_faculty_portal_user()) {
             $facultyPk = get_auth_faculty_master_pk();
             if ($facultyPk) {
                 $events = $this->scopeTimetableForFaculty($events, $facultyPk);
@@ -842,13 +909,7 @@ class CalendarController extends Controller
             }
         }
 
-        $cuurent_month_start_date = Carbon::now()->startOfMonth()->toDateString();
-        $cuurent_month_end_date = Carbon::now()->endOfMonth()->toDateString();
-        if (($request->start) && ($request->end)) {
-        } else {
-            $request->start = $cuurent_month_start_date;
-            $request->end = $cuurent_month_end_date;
-        }
+        [$rangeStart, $rangeEnd] = $this->feedRange($request);
 
 
         // Filter by course if provided
@@ -857,8 +918,8 @@ class CalendarController extends Controller
         }
 
         $events = $events
-            ->whereDate('START_DATE', '>=', $request->start)
-            ->whereDate('END_DATE', '<=', $request->end)
+            ->whereDate('START_DATE', '>=', $rangeStart)
+            ->whereDate('END_DATE', '<=', $rangeEnd)
             ->select(
                 'timetable.*',
                 'venue_master.venue_name as venue_name'
@@ -932,7 +993,7 @@ class CalendarController extends Controller
 
         // Fetch holidays
         $holidays = Holiday::active()
-            ->whereBetween('holiday_date', [$request->start, $request->end])
+            ->whereBetween('holiday_date', [$rangeStart, $rangeEnd])
             ->get()
             ->map(function ($holiday) {
                 $backgroundColor = '';
@@ -1036,7 +1097,10 @@ class CalendarController extends Controller
             ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
             ->where('timetable.pk', $eventId);
 
-        if (is_faculty_portal_user()) {
+        // ?scope=academy — the Academic Timetable view, unscoped (see wantsAcademyScope()).
+        if ($this->wantsAcademyScope($request)) {
+            // no narrowing
+        } elseif (is_faculty_portal_user()) {
             $facultyPk = get_auth_faculty_master_pk();
             if ($facultyPk) {
                 $eventQuery = $this->scopeTimetableForFaculty($eventQuery, $facultyPk);
@@ -1649,7 +1713,11 @@ class CalendarController extends Controller
         $events = DB::table('timetable')
             ->leftJoin('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id');
 
-        $events = $this->scopeTimetableToUser($events);
+        // Academic Timetable view (?scope=academy) — the whole Academy's sessions,
+        // so the PDF holds what the page it was exported from was showing.
+        if (! $this->wantsAcademyScope($request)) {
+            $events = $this->scopeTimetableToUser($events);
+        }
 
         if ($courseId) {
             $events = $events->where('timetable.course_master_pk', $courseId);
@@ -1893,8 +1961,8 @@ class CalendarController extends Controller
     /** Preview page: shows the timetable PDF in-browser with a Download button. */
     public function previewTimetablePdf(Request $request)
     {
-        $streamUrl   = route('calendar.timetable.pdf',   $request->only(['start', 'end', 'course_id']));
-        $downloadUrl = route('calendar.timetable.pdf',   array_merge($request->only(['start', 'end', 'course_id']), ['download' => 1]));
+        $streamUrl   = route('calendar.timetable.pdf',   $request->only(['start', 'end', 'course_id', 'scope']));
+        $downloadUrl = route('calendar.timetable.pdf',   array_merge($request->only(['start', 'end', 'course_id', 'scope']), ['download' => 1]));
         $title = 'Time Table';
         return view('admin.calendar.pdf.preview', compact('streamUrl', 'downloadUrl', 'title'));
     }
@@ -4677,6 +4745,7 @@ class CalendarController extends Controller
             'faculty_type'           => 'nullable|integer',
             'faculty_row_type'       => 'nullable|array',
             'faculty_role'           => 'nullable|array',
+            'faculty_role.*'         => 'nullable|string|in:' . implode(',', \App\Services\Timetable\FacultySessionScope::FILTER_ROLES),
             'faculty_feedback_remark' => 'nullable|array',
             'faculty_feedback_rating' => 'nullable|array',
             'sector'                 => 'nullable|integer',
@@ -4905,6 +4974,11 @@ class CalendarController extends Controller
 
     public function studentFeedback()
     {
+        // user_id is a student_master.pk only for an Officer Trainee login
+        // (user_category 'S'); for staff and faculty it can equal some trainee's
+        // pk. Same rule as studentFacultyFeedback() (PR #334 F-034).
+        abort_unless((auth()->user()->user_category ?? null) === 'S', 403);
+
         try {
             $student_pk = auth()->user()->user_id;
             $sessionEndRaw = "
@@ -5083,28 +5157,36 @@ class CalendarController extends Controller
     public function studentFacultyFeedback(Request $request)
     {
         try {
-            if (!$request->has('token')) {
-                abort(403, 'Missing token');
+            // Allow authenticated users (from dashboard) OR token-based access (from external links)
+            if ($request->has('token')) {
+                // ================= TOKEN AUTH =================
+                $key = config('services.moodle.key');
+                $iv  = config('services.moodle.iv');
+
+                $username = openssl_decrypt(
+                    base64_decode($request->token),
+                    'AES-128-CBC',
+                    $key,
+                    0,
+                    $iv
+                );
+
+                if (!$username) {
+                    abort(403, 'Invalid token');
+                }
+
+                $user = User::where('user_name', trim($username))->firstOrFail();
+                Auth::login($user);
+            } elseif (!Auth::check()) {
+                abort(403, 'Missing token or authentication');
             }
+            // If no token but already authenticated, continue with current user
 
-            // ================= TOKEN AUTH =================
-            $key = config('services.moodle.key');
-            $iv  = config('services.moodle.iv');
-
-            $username = openssl_decrypt(
-                base64_decode($request->token),
-                'AES-128-CBC',
-                $key,
-                0,
-                $iv
-            );
-
-            if (!$username) {
-                abort(403, 'Invalid token');
-            }
-
-            $user = User::where('user_name', trim($username))->firstOrFail();
-            Auth::login($user);
+            // user_id is a student_master.pk only for an Officer Trainee login
+            // (user_category 'S'); for staff and faculty it is an employee /
+            // faculty pk that can equal some trainee's pk. Refuse rather than
+            // show that trainee's submitted feedback.
+            abort_unless((auth()->user()->user_category ?? null) === 'S', 403);
 
             $student_pk = auth()->user()->user_id;
 
@@ -5245,6 +5327,9 @@ class CalendarController extends Controller
                 'admin.feedback.student_feedback',
                 compact('pendingData', 'submittedData', 'authFullName')
             );
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $e) {
+            // A 403 must stay a 403, not become a redirect back.
+            throw $e;
         } catch (\Throwable $e) {
             logger()->error('Error in studentFacultyFeedback: ' . $e->getMessage());
             return back()->with('error', 'Something went wrong');
@@ -5533,6 +5618,10 @@ class CalendarController extends Controller
         $request->validate([
             'timetable_pk' => 'required|array|min:1',
         ]);
+
+        // Same rule as studentFacultyFeedback(): only a trainee's user_id is a
+        // student_master.pk.
+        abort_unless((auth()->user()->user_category ?? null) === 'S', 403);
 
         $studentId = auth()->user()->user_id;
         $now = now();

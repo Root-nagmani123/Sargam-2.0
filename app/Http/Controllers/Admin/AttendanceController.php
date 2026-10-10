@@ -1038,6 +1038,12 @@ $currentPath = $segments[1] ?? null;
 
 
     public function OTmarkAttendanceView(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk){
+        // PR #334 F-044: a trainee may open only their own attendance. Outside the try,
+        // whose catch (\Exception) would swallow the 403.
+        if (hasRole('Student-OT') && ! $this->canViewOtStudentAttendance($student_pk)) {
+            abort(403);
+        }
+
         try {
         // Verify user has Student-OT role
             if (!hasRole('Student-OT')) {
@@ -1051,7 +1057,7 @@ $currentPath = $segments[1] ?? null;
             $course = CourseMaster::where('pk', $course_pk)->firstOrFail();
 
             // Get filter parameters
-            $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : date('Y-m-d');
+            $filterDate = $this->otFilterDate($request);
             $filterCourse = $request->input('filter_course');
             $filterStatus = $request->input('filter_status');
             $archiveMode = $request->input('archive_mode', 'active'); // Default to 'active'
@@ -1122,6 +1128,9 @@ $currentPath = $segments[1] ?? null;
             // Build attendance records array
             $attendanceRecords = [];
             $mdoDutyTypes = MDOEscotDutyMap::getMdoDutyTypes();
+            // Medical and duty coverage for the whole set in two queries — the same
+            // lookups the Excel export uses (PR #334 F-035).
+            [$findMedical, $findDuty] = $this->otAttendanceCoverageLookups($courseGroups, $course_pk, $student_pk, $mdoDutyTypes);
 
             foreach ($courseGroups as $courseGroup) {
                 $timetableDate = optional($courseGroup->timetable)->START_DATE;
@@ -1159,8 +1168,78 @@ $currentPath = $segments[1] ?? null;
                     $record['session_time'] = optional($courseGroup->timetable->classSession)->start_time . ' - ' . optional($courseGroup->timetable->classSession)->end_time;
                 }
 
-                // Determine attendance status
-                if ($attendance) {
+                // A duty or exemption overlapping this session always counts as Present, and
+                // it outranks the saved row: a duty assigned AFTER attendance was marked would
+                // otherwise leave the OT showing the stale Late/Absent it was saved with.
+                // AttendanceController::save applies the same precedence when writing.
+                if ($timetableDate) {
+                    // Check medical exemption — the OtExemptionResolver rule, the one
+                    // save() and the admin grid use (PR #334 F-004).
+                    $medicalExemption = $findMedical($timetableDate, $currentCoursePk, optional($courseGroup->timetable)->class_session);
+
+                    if ($medicalExemption) {
+                        $record['attendance_status'] = 'Present';
+                        $record['exemption_type'] = 'Medical';
+                        $record['exemption_document'] = $medicalExemption->Doc_upload;
+                        $record['exemption_comment'] = $medicalExemption->Description;
+                    } else {
+                        // Check MDO/Escort/Other duties
+                        // Check MDO
+                        if (!empty($mdoDutyTypes['mdo'])) {
+                            $mdoDuty = $findDuty('mdo', $timetableDate, $currentCoursePk, optional($courseGroup->timetable)->class_session);
+
+                            // Get timetable class_session for time overlap checking
+                            $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
+                            
+                            if ($mdoDuty && $this->checkTimeOverlap(
+                                $timetableClassSession,
+                                $mdoDuty->Time_from,
+                                $mdoDuty->Time_to
+                            )) {
+                                $record['attendance_status'] = 'Present';
+                                $record['duty_type'] = 'MDO';
+                            }
+                        }
+
+                        // Check Escort
+                        if (!$record['duty_type'] && !empty($mdoDutyTypes['escort'])) {
+                            $escortDuty = $findDuty('escort', $timetableDate, $currentCoursePk, optional($courseGroup->timetable)->class_session);
+
+                            // Get timetable class_session for time overlap checking
+                            $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
+                            
+                            if ($escortDuty && $this->checkTimeOverlap(
+                                $timetableClassSession,
+                                $escortDuty->Time_from,
+                                $escortDuty->Time_to
+                            )) {
+                                $record['attendance_status'] = 'Present';
+                                $record['duty_type'] = 'Escort';
+                            }
+                        }
+
+                        // Check Other
+                        if (!$record['duty_type'] && !empty($mdoDutyTypes['other'])) {
+                            $otherDuty = $findDuty('other', $timetableDate, $currentCoursePk, optional($courseGroup->timetable)->class_session);
+
+                            // Get timetable class_session for time overlap checking
+                            $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
+                            
+                            if ($otherDuty && $this->checkTimeOverlap(
+                                $timetableClassSession,
+                                $otherDuty->Time_from,
+                                $otherDuty->Time_to
+                            )) {
+                                $record['attendance_status'] = 'Present';
+                                $record['exemption_type'] = 'Other';
+                                $record['exemption_comment'] = $otherDuty->Remark ?? null;
+                            }
+                        }
+                    }
+                }
+
+                // The saved status applies only when no duty or exemption covers the session.
+                if ($attendance && $record['duty_type'] === null && $record['exemption_type'] === null) {
                     $status = $attendance->status;
                     switch ($status) {
                         case 1:
@@ -1191,18 +1270,7 @@ $currentPath = $segments[1] ?? null;
                             $record['exemption_type'] = 'Medical';
                             // Get medical exemption details
                             if ($timetableDate) {
-                                $medicalExemption = StudentMedicalExemption::where([
-                                    ['course_master_pk', '=', $currentCoursePk],
-                                    ['student_master_pk', '=', $student_pk],
-                                    ['active_inactive', '=', 1]
-                                ])
-                                ->where(function($query) use ($timetableDate) {
-                                    $query->where('from_date', '<=', $timetableDate)
-                                          ->where(function($q) use ($timetableDate) {
-                                              $q->whereNull('to_date')
-                                                ->orWhere('to_date', '>=', $timetableDate);
-                                          });
-                                })->first();
+                                $medicalExemption = $findMedical($timetableDate, $currentCoursePk, optional($courseGroup->timetable)->class_session);
 
                                 if ($medicalExemption) {
                                     $record['exemption_document'] = $medicalExemption->Doc_upload;
@@ -1229,95 +1297,6 @@ $currentPath = $segments[1] ?? null;
                                 }
                             }
                             break;
-                    }
-                } else {
-                    // Check if student has exemptions even if attendance not marked
-                    if ($timetableDate) {
-                        // Check medical exemption
-                        $medicalExemption = StudentMedicalExemption::where([
-                            ['course_master_pk', '=', $currentCoursePk],
-                            ['student_master_pk', '=', $student_pk],
-                            ['active_inactive', '=', 1]
-                        ])
-                        ->where(function($query) use ($timetableDate) {
-                            $query->where('from_date', '<=', $timetableDate)
-                                  ->where(function($q) use ($timetableDate) {
-                                      $q->whereNull('to_date')
-                                        ->orWhere('to_date', '>=', $timetableDate);
-                                  });
-                        })->first();
-
-                        if ($medicalExemption) {
-                            $record['attendance_status'] = 'Present';
-                            $record['exemption_type'] = 'Medical';
-                            $record['exemption_document'] = $medicalExemption->Doc_upload;
-                            $record['exemption_comment'] = $medicalExemption->Description;
-                        } else {
-                            // Check MDO/Escort/Other duties
-                            // Check MDO
-                            if (!empty($mdoDutyTypes['mdo'])) {
-                                $mdoDuty = MDOEscotDutyMap::where([
-                                    ['course_master_pk', '=', $currentCoursePk],
-                                    ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['mdo']],
-                                    ['selected_student_list', '=', $student_pk]
-                                ])->whereDate('mdo_date', '=', $timetableDate)->first();
-
-                                // Get timetable class_session for time overlap checking
-                                $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
-                                
-                                if ($mdoDuty && $this->checkTimeOverlap(
-                                    $timetableClassSession,
-                                    $mdoDuty->Time_from,
-                                    $mdoDuty->Time_to
-                                )) {
-                                    $record['attendance_status'] = 'Present';
-                                    $record['duty_type'] = 'MDO';
-                                }
-                            }
-
-                            // Check Escort
-                            if (!$record['duty_type'] && !empty($mdoDutyTypes['escort'])) {
-                                $escortDuty = MDOEscotDutyMap::where([
-                                    ['course_master_pk', '=', $currentCoursePk],
-                                    ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['escort']],
-                                    ['selected_student_list', '=', $student_pk]
-                                ])->whereDate('mdo_date', '=', $timetableDate)->first();
-
-                                // Get timetable class_session for time overlap checking
-                                $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
-                                
-                                if ($escortDuty && $this->checkTimeOverlap(
-                                    $timetableClassSession,
-                                    $escortDuty->Time_from,
-                                    $escortDuty->Time_to
-                                )) {
-                                    $record['attendance_status'] = 'Present';
-                                    $record['duty_type'] = 'Escort';
-                                }
-                            }
-
-                            // Check Other
-                            if (!$record['duty_type'] && !empty($mdoDutyTypes['other'])) {
-                                $otherDuty = MDOEscotDutyMap::where([
-                                    ['course_master_pk', '=', $currentCoursePk],
-                                    ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['other']],
-                                    ['selected_student_list', '=', $student_pk]
-                                ])->whereDate('mdo_date', '=', $timetableDate)->first();
-
-                                // Get timetable class_session for time overlap checking
-                                $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
-                                
-                                if ($otherDuty && $this->checkTimeOverlap(
-                                    $timetableClassSession,
-                                    $otherDuty->Time_from,
-                                    $otherDuty->Time_to
-                                )) {
-                                    $record['attendance_status'] = 'Present';
-                                    $record['exemption_type'] = 'Other';
-                                    $record['exemption_comment'] = $otherDuty->Remark ?? null;
-                                }
-                            }
-                        }
                     }
                 }
 
@@ -1354,6 +1333,80 @@ $currentPath = $segments[1] ?? null;
     }
 
     /**
+     * The medical-exemption and duty lookups behind an OT's per-session attendance
+     * rows: two queries for the whole set, then in-memory closures — so neither the
+     * attendance view nor its Excel export queries per session (F-278-02; PR #334
+     * F-035). Shared by OTmarkAttendanceView() and buildOtStudentAttendanceData()
+     * so the page and the export cannot drift.
+     *
+     * @return array{0: \Closure, 1: \Closure} [findMedical(date, coursePk, classSession), findDuty(dutyKey, date, coursePk)]
+     */
+    private function otAttendanceCoverageLookups($courseGroups, $course_pk, $student_pk, array $mdoDutyTypes): array
+    {
+        $timetableDates = $courseGroups->pluck('timetable')->filter()
+            ->pluck('START_DATE')->filter()
+            ->map(fn($d) => substr($d, 0, 10))
+            ->unique()->values()->all();
+
+        $batchCoursePks = $courseGroups->pluck('Programme_pk')->filter()
+            ->push($course_pk)->unique()->values()->all();
+
+        // Active medical exemptions for the student (1 query; date-range checked in PHP)
+        $medicalExemptions = StudentMedicalExemption::where('student_master_pk', $student_pk)
+            ->where('active_inactive', 1)
+            ->whereIn('course_master_pk', $batchCoursePks)
+            ->get();
+
+        // MDO/escort/other duty entries for the visible session dates (1 query instead of N×3)
+        $allDutyTypeIds = array_values(array_filter($mdoDutyTypes));
+        $mdoDutyMap = collect();
+        if (!empty($allDutyTypeIds) && !empty($timetableDates)) {
+            $mdoDutyMap = MDOEscotDutyMap::where('selected_student_list', $student_pk)
+                ->whereIn('course_master_pk', $batchCoursePks)
+                ->whereIn('mdo_duty_type_master_pk', $allDutyTypeIds)
+                ->where(function ($q) use ($timetableDates) {
+                    // G8: full-day ranges so the index on mdo_date is not defeated.
+                    foreach ($timetableDates as $d) {
+                        $q->orWhereBetween('mdo_date', [$d . ' 00:00:00', $d . ' 23:59:59']);
+                    }
+                })
+                ->get()
+                ->groupBy(fn($r) => $r->mdo_duty_type_master_pk . '|' . $r->course_master_pk . '|' . substr($r->mdo_date, 0, 10));
+        }
+
+        // In-memory helpers — zero DB queries inside the loop.
+        // Coverage by the OtExemptionResolver rule (date span on dates, then the
+        // session's time window), so this export agrees with save() and the admin
+        // grid for timed exemptions (PR #334 F-004). Still zero queries per row.
+        $findMedical = function (?string $date, $cPk, ?string $classSession = null) use ($medicalExemptions): ?object {
+            if ($date === null) {
+                return null;
+            }
+
+            return OtExemptionResolver::coveringMedicalExemption(
+                $medicalExemptions->filter(fn($e) => (string) $e->course_master_pk === (string) $cPk),
+                $date,
+                $classSession
+            );
+        };
+
+        $findDuty = function (?string $dutyKey, ?string $date, $cPk, ?string $classSession = null) use ($mdoDutyMap, $mdoDutyTypes): ?object {
+            if ($date === null || empty($mdoDutyTypes[$dutyKey])) {
+                return null;
+            }
+            $key = $mdoDutyTypes[$dutyKey] . '|' . $cPk . '|' . substr($date, 0, 10);
+            $group = $mdoDutyMap->get($key, collect());
+
+            // One type can have several duties a day: prefer the one that overlaps
+            // the session, as OtExemptionResolver does (PR #334 F-061).
+            return ($classSession === null ? null : $group->first(fn ($d) => $this->checkTimeOverlap($classSession, $d->Time_from, $d->Time_to)))
+                ?? $group->first();
+        };
+
+        return [$findMedical, $findDuty];
+    }
+
+    /**
      * Build the OT student's per-session attendance rows for the given filters.
      * Mirrors the data assembled in {@see OTmarkAttendanceView()} so the Excel
      * export shows exactly what the page shows.
@@ -1365,7 +1418,7 @@ $currentPath = $segments[1] ?? null;
         $student = StudentMaster::where('pk', $student_pk)->firstOrFail();
         $course = CourseMaster::where('pk', $course_pk)->firstOrFail();
 
-        $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : date('Y-m-d');
+        $filterDate = $this->otFilterDate($request);
         $filterCourse = $request->input('filter_course');
         $filterStatus = $request->input('filter_status');
         $archiveMode = $request->input('archive_mode', 'active');
@@ -1414,14 +1467,6 @@ $currentPath = $segments[1] ?? null;
         // --- F-278-02: Batch-load all supporting data before the loop to eliminate N+1 queries ---
         $timetablePks = $courseGroups->pluck('timetable_pk')->filter()->unique()->values()->all();
 
-        $timetableDates = $courseGroups->pluck('timetable')->filter()
-            ->pluck('START_DATE')->filter()
-            ->map(fn($d) => substr($d, 0, 10))
-            ->unique()->values()->all();
-
-        $batchCoursePks = $courseGroups->pluck('Programme_pk')->filter()
-            ->push($course_pk)->unique()->values()->all();
-
         // 1. All attendance records for the visible timetables (1 query instead of N)
         $attendanceMap = empty($timetablePks)
             ? collect()
@@ -1430,50 +1475,8 @@ $currentPath = $segments[1] ?? null;
                 ->get()
                 ->keyBy('timetable_pk');
 
-        // 2. Active medical exemptions for the student (1 query; date-range checked in PHP)
-        $medicalExemptions = StudentMedicalExemption::where('student_master_pk', $student_pk)
-            ->where('active_inactive', 1)
-            ->whereIn('course_master_pk', $batchCoursePks)
-            ->get();
-
-        // 3. MDO/escort/other duty entries for the visible session dates (1 query instead of N×3)
-        $allDutyTypeIds = array_values(array_filter($mdoDutyTypes));
-        $mdoDutyMap = collect();
-        if (!empty($allDutyTypeIds) && !empty($timetableDates)) {
-            $mdoDutyMap = MDOEscotDutyMap::where('selected_student_list', $student_pk)
-                ->whereIn('course_master_pk', $batchCoursePks)
-                ->whereIn('mdo_duty_type_master_pk', $allDutyTypeIds)
-                ->where(function ($q) use ($timetableDates) {
-                    // G8: full-day ranges so the index on mdo_date is not defeated.
-                    foreach ($timetableDates as $d) {
-                        $q->orWhereBetween('mdo_date', [$d . ' 00:00:00', $d . ' 23:59:59']);
-                    }
-                })
-                ->get()
-                ->groupBy(fn($r) => $r->mdo_duty_type_master_pk . '|' . $r->course_master_pk . '|' . substr($r->mdo_date, 0, 10));
-        }
-
-        // In-memory helpers — zero DB queries inside the loop.
-        $findMedical = function (?string $date, $cPk) use ($medicalExemptions): ?object {
-            if ($date === null) {
-                return null;
-            }
-            $d = substr($date, 0, 10);
-            return $medicalExemptions->first(
-                fn($e) => (string) $e->course_master_pk === (string) $cPk
-                    && $e->from_date <= $d
-                    && ($e->to_date === null || $e->to_date >= $d)
-            ) ?: null;
-        };
-
-        $findDuty = function (?string $dutyKey, ?string $date, $cPk) use ($mdoDutyMap, $mdoDutyTypes): ?object {
-            if ($date === null || empty($mdoDutyTypes[$dutyKey])) {
-                return null;
-            }
-            $key = $mdoDutyTypes[$dutyKey] . '|' . $cPk . '|' . substr($date, 0, 10);
-            $group = $mdoDutyMap->get($key);
-            return $group ? $group->first() : null;
-        };
+        // 2–3. Medical exemptions and duties — shared with OTmarkAttendanceView().
+        [$findMedical, $findDuty] = $this->otAttendanceCoverageLookups($courseGroups, $course_pk, $student_pk, $mdoDutyTypes);
         // -----------------------------------------------------------------------------------------
 
         foreach ($courseGroups as $courseGroup) {
@@ -1502,7 +1505,48 @@ $currentPath = $segments[1] ?? null;
                 $record['session_time'] = optional($courseGroup->timetable->classSession)->start_time . ' - ' . optional($courseGroup->timetable->classSession)->end_time;
             }
 
-            if ($attendance) {
+            // A duty or exemption overlapping this session always counts as Present, and
+            // it outranks the saved row: a duty assigned AFTER attendance was marked would
+            // otherwise leave the OT showing the stale Late/Absent it was saved with.
+            // AttendanceController::save applies the same precedence when writing.
+            if ($timetableDate) {
+                $medicalExemption = $findMedical($timetableDate, $currentCoursePk, optional($courseGroup->timetable)->class_session);
+
+                if ($medicalExemption) {
+                    $record['attendance_status'] = 'Present';
+                    $record['exemption_type'] = 'Medical';
+                    $record['exemption_document'] = $medicalExemption->Doc_upload;
+                    $record['exemption_comment'] = $medicalExemption->Description;
+                } else {
+                    $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
+
+                    $mdoDuty = $findDuty('mdo', $timetableDate, $currentCoursePk, optional($courseGroup->timetable)->class_session);
+                    if ($mdoDuty && $this->checkTimeOverlap($timetableClassSession, $mdoDuty->Time_from, $mdoDuty->Time_to)) {
+                        $record['attendance_status'] = 'Present';
+                        $record['duty_type'] = 'MDO';
+                    }
+
+                    if (!$record['duty_type']) {
+                        $escortDuty = $findDuty('escort', $timetableDate, $currentCoursePk, optional($courseGroup->timetable)->class_session);
+                        if ($escortDuty && $this->checkTimeOverlap($timetableClassSession, $escortDuty->Time_from, $escortDuty->Time_to)) {
+                            $record['attendance_status'] = 'Present';
+                            $record['duty_type'] = 'Escort';
+                        }
+                    }
+
+                    if (!$record['duty_type']) {
+                        $otherDuty = $findDuty('other', $timetableDate, $currentCoursePk, optional($courseGroup->timetable)->class_session);
+                        if ($otherDuty && $this->checkTimeOverlap($timetableClassSession, $otherDuty->Time_from, $otherDuty->Time_to)) {
+                            $record['attendance_status'] = 'Present';
+                            $record['exemption_type'] = 'Other';
+                            $record['exemption_comment'] = $otherDuty->Remark ?? null;
+                        }
+                    }
+                }
+            }
+
+            // The saved status applies only when no duty or exemption covers the session.
+            if ($attendance && $record['duty_type'] === null && $record['exemption_type'] === null) {
                 switch ((int) $attendance->status) {
                     case 1:
                         $record['attendance_status'] = 'Present';
@@ -1528,7 +1572,7 @@ $currentPath = $segments[1] ?? null;
                     case 6:
                         $record['attendance_status'] = 'Present';
                         $record['exemption_type'] = 'Medical';
-                        $medicalExemption = $findMedical($timetableDate, $currentCoursePk);
+                        $medicalExemption = $findMedical($timetableDate, $currentCoursePk, optional($courseGroup->timetable)->class_session);
                         if ($medicalExemption) {
                             $record['exemption_document'] = $medicalExemption->Doc_upload;
                             $record['exemption_comment'] = $medicalExemption->Description;
@@ -1542,40 +1586,6 @@ $currentPath = $segments[1] ?? null;
                             $record['exemption_comment'] = $otherExemption->Remark ?? null;
                         }
                         break;
-                }
-            } elseif ($timetableDate) {
-                $medicalExemption = $findMedical($timetableDate, $currentCoursePk);
-
-                if ($medicalExemption) {
-                    $record['attendance_status'] = 'Present';
-                    $record['exemption_type'] = 'Medical';
-                    $record['exemption_document'] = $medicalExemption->Doc_upload;
-                    $record['exemption_comment'] = $medicalExemption->Description;
-                } else {
-                    $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
-
-                    $mdoDuty = $findDuty('mdo', $timetableDate, $currentCoursePk);
-                    if ($mdoDuty && $this->checkTimeOverlap($timetableClassSession, $mdoDuty->Time_from, $mdoDuty->Time_to)) {
-                        $record['attendance_status'] = 'Present';
-                        $record['duty_type'] = 'MDO';
-                    }
-
-                    if (!$record['duty_type']) {
-                        $escortDuty = $findDuty('escort', $timetableDate, $currentCoursePk);
-                        if ($escortDuty && $this->checkTimeOverlap($timetableClassSession, $escortDuty->Time_from, $escortDuty->Time_to)) {
-                            $record['attendance_status'] = 'Present';
-                            $record['duty_type'] = 'Escort';
-                        }
-                    }
-
-                    if (!$record['duty_type']) {
-                        $otherDuty = $findDuty('other', $timetableDate, $currentCoursePk);
-                        if ($otherDuty && $this->checkTimeOverlap($timetableClassSession, $otherDuty->Time_from, $otherDuty->Time_to)) {
-                            $record['attendance_status'] = 'Present';
-                            $record['exemption_type'] = 'Other';
-                            $record['exemption_comment'] = $otherDuty->Remark ?? null;
-                        }
-                    }
                 }
             }
 
@@ -1597,9 +1607,12 @@ $currentPath = $segments[1] ?? null;
      */
     public function exportOtStudentAttendanceExcel(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk)
     {
-        // F-278-01: Prevent IDOR — a Student-OT may only download their own attendance.
-        // Admin/staff users (no Student-OT role) are allowed to export any student's data.
-        if (hasRole('Student-OT') && (string) auth()->user()->user_id !== (string) $student_pk) {
+        // The same rule as the page and its feed, applied to every caller (PR #334
+        // F-031): a trainee only their own record, anyone else only with a Training
+        // Section role. The workbook carries the medical exemption description, and
+        // the old check (Student-OT role only) let every non-trainee login download
+        // any trainee's. Outside the try, whose catch (\Exception) would swallow it.
+        if (! $this->canViewOtStudentAttendance($student_pk)) {
             abort(403);
         }
 
@@ -1626,7 +1639,7 @@ $currentPath = $segments[1] ?? null;
 
         private function getOTAttendanceData(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk) {
             // Get filter parameters from request - Default to today's date if not provided
-            $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : Carbon::today()->format('Y-m-d');
+            $filterDate = $this->otFilterDate($request);
             $filterSessionTime = $request->input('filter_session_time');
             $filterCourse = $request->input('filter_course');
             $archiveMode = $request->input('archive_mode', 'active');
@@ -1761,8 +1774,93 @@ $currentPath = $segments[1] ?? null;
                     $record['session_time'] = optional($courseGroup->timetable->classSession)->start_time . ' - ' . optional($courseGroup->timetable->classSession)->end_time;
                 }
 
-                // Determine attendance status
-                if ($attendance) {
+                // A duty or exemption overlapping this session always counts as Present, and
+                // it outranks the saved row: a duty assigned AFTER attendance was marked would
+                // otherwise leave the OT showing the stale Late/Absent it was saved with.
+                // AttendanceController::save applies the same precedence when writing.
+                if ($timetableDate) {
+                    // Check medical exemption — the OtExemptionResolver rule, the one
+                    // save() and the admin grid use (PR #334 F-004).
+                    $medicalExemption = $this->coveringMedicalExemption($currentCoursePk, $student_pk, $courseGroup->timetable);
+
+                    if ($medicalExemption) {
+                        $record['attendance_status'] = 'Present';
+                        $record['exemption_type'] = 'Medical';
+                        $record['exemption_document'] = $medicalExemption->Doc_upload;
+                        $record['exemption_comment'] = $medicalExemption->Description;
+                    } else {
+                        // Check MDO/Escort/Other duties
+                        // Check MDO
+                        if (!empty($mdoDutyTypes['mdo'])) {
+                            $mdoDuty = MDOEscotDutyMap::where([
+                                ['course_master_pk', '=', $currentCoursePk],
+                                ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['mdo']],
+                                ['selected_student_list', '=', $student_pk]
+                            ])->whereDate('mdo_date', '=', $timetableDate)->get()
+                                ->first(fn ($d) => $this->checkTimeOverlap(optional($courseGroup->timetable)->class_session, $d->Time_from, $d->Time_to));
+
+                            // Get timetable class_session for time overlap checking
+                            $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
+                            
+                            if ($mdoDuty && $this->checkTimeOverlap(
+                                $timetableClassSession,
+                                $mdoDuty->Time_from,
+                                $mdoDuty->Time_to
+                            )) {
+                                $record['attendance_status'] = 'Present';
+                                $record['duty_type'] = 'MDO';
+                            }
+                        }
+
+                        // Check Escort
+                        if (!$record['duty_type'] && !empty($mdoDutyTypes['escort'])) {
+                            $escortDuty = MDOEscotDutyMap::where([
+                                ['course_master_pk', '=', $currentCoursePk],
+                                ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['escort']],
+                                ['selected_student_list', '=', $student_pk]
+                            ])->whereDate('mdo_date', '=', $timetableDate)->get()
+                                ->first(fn ($d) => $this->checkTimeOverlap(optional($courseGroup->timetable)->class_session, $d->Time_from, $d->Time_to));
+
+                            // Get timetable class_session for time overlap checking
+                            $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
+                            
+                            if ($escortDuty && $this->checkTimeOverlap(
+                                $timetableClassSession,
+                                $escortDuty->Time_from,
+                                $escortDuty->Time_to
+                            )) {
+                                $record['attendance_status'] = 'Present';
+                                $record['duty_type'] = 'Escort';
+                            }
+                        }
+
+                        // Check Other
+                        if (!$record['duty_type'] && !empty($mdoDutyTypes['other'])) {
+                            $otherDuty = MDOEscotDutyMap::where([
+                                ['course_master_pk', '=', $currentCoursePk],
+                                ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['other']],
+                                ['selected_student_list', '=', $student_pk]
+                            ])->whereDate('mdo_date', '=', $timetableDate)->get()
+                                ->first(fn ($d) => $this->checkTimeOverlap(optional($courseGroup->timetable)->class_session, $d->Time_from, $d->Time_to));
+
+                            // Get timetable class_session for time overlap checking
+                            $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
+                            
+                            if ($otherDuty && $this->checkTimeOverlap(
+                                $timetableClassSession,
+                                $otherDuty->Time_from,
+                                $otherDuty->Time_to
+                            )) {
+                                $record['attendance_status'] = 'Present';
+                                $record['exemption_type'] = 'Other';
+                                $record['exemption_comment'] = $otherDuty->Remark ?? null;
+                            }
+                        }
+                    }
+                }
+
+                // The saved status applies only when no duty or exemption covers the session.
+                if ($attendance && $record['duty_type'] === null && $record['exemption_type'] === null) {
                     $status = $attendance->status;
                     switch ($status) {
                         case 1:
@@ -1793,18 +1891,7 @@ $currentPath = $segments[1] ?? null;
                             $record['exemption_type'] = 'Medical';
                             // Get medical exemption details
                             if ($timetableDate) {
-                                $medicalExemption = StudentMedicalExemption::where([
-                                    ['course_master_pk', '=', $currentCoursePk],
-                                    ['student_master_pk', '=', $student_pk],
-                                    ['active_inactive', '=', 1]
-                                ])
-                                ->where(function($query) use ($timetableDate) {
-                                    $query->where('from_date', '<=', $timetableDate)
-                                          ->where(function($q) use ($timetableDate) {
-                                              $q->whereNull('to_date')
-                                                ->orWhere('to_date', '>=', $timetableDate);
-                                          });
-                                })->first();
+                                $medicalExemption = $this->coveringMedicalExemption($currentCoursePk, $student_pk, $courseGroup->timetable);
 
                                 if ($medicalExemption) {
                                     $record['exemption_document'] = $medicalExemption->Doc_upload;
@@ -1831,95 +1918,6 @@ $currentPath = $segments[1] ?? null;
                                 }
                             }
                             break;
-                    }
-                } else {
-                    // Check if student has exemptions even if attendance not marked
-                    if ($timetableDate) {
-                        // Check medical exemption
-                        $medicalExemption = StudentMedicalExemption::where([
-                            ['course_master_pk', '=', $currentCoursePk],
-                            ['student_master_pk', '=', $student_pk],
-                            ['active_inactive', '=', 1]
-                        ])
-                        ->where(function($query) use ($timetableDate) {
-                            $query->where('from_date', '<=', $timetableDate)
-                                  ->where(function($q) use ($timetableDate) {
-                                      $q->whereNull('to_date')
-                                        ->orWhere('to_date', '>=', $timetableDate);
-                                  });
-                        })->first();
-
-                        if ($medicalExemption) {
-                            $record['attendance_status'] = 'Present';
-                            $record['exemption_type'] = 'Medical';
-                            $record['exemption_document'] = $medicalExemption->Doc_upload;
-                            $record['exemption_comment'] = $medicalExemption->Description;
-                        } else {
-                            // Check MDO/Escort/Other duties
-                            // Check MDO
-                            if (!empty($mdoDutyTypes['mdo'])) {
-                                $mdoDuty = MDOEscotDutyMap::where([
-                                    ['course_master_pk', '=', $currentCoursePk],
-                                    ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['mdo']],
-                                    ['selected_student_list', '=', $student_pk]
-                                ])->whereDate('mdo_date', '=', $timetableDate)->first();
-
-                                // Get timetable class_session for time overlap checking
-                                $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
-                                
-                                if ($mdoDuty && $this->checkTimeOverlap(
-                                    $timetableClassSession,
-                                    $mdoDuty->Time_from,
-                                    $mdoDuty->Time_to
-                                )) {
-                                    $record['attendance_status'] = 'Present';
-                                    $record['duty_type'] = 'MDO';
-                                }
-                            }
-
-                            // Check Escort
-                            if (!$record['duty_type'] && !empty($mdoDutyTypes['escort'])) {
-                                $escortDuty = MDOEscotDutyMap::where([
-                                    ['course_master_pk', '=', $currentCoursePk],
-                                    ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['escort']],
-                                    ['selected_student_list', '=', $student_pk]
-                                ])->whereDate('mdo_date', '=', $timetableDate)->first();
-
-                                // Get timetable class_session for time overlap checking
-                                $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
-                                
-                                if ($escortDuty && $this->checkTimeOverlap(
-                                    $timetableClassSession,
-                                    $escortDuty->Time_from,
-                                    $escortDuty->Time_to
-                                )) {
-                                    $record['attendance_status'] = 'Present';
-                                    $record['duty_type'] = 'Escort';
-                                }
-                            }
-
-                            // Check Other
-                            if (!$record['duty_type'] && !empty($mdoDutyTypes['other'])) {
-                                $otherDuty = MDOEscotDutyMap::where([
-                                    ['course_master_pk', '=', $currentCoursePk],
-                                    ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['other']],
-                                    ['selected_student_list', '=', $student_pk]
-                                ])->whereDate('mdo_date', '=', $timetableDate)->first();
-
-                                // Get timetable class_session for time overlap checking
-                                $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
-                                
-                                if ($otherDuty && $this->checkTimeOverlap(
-                                    $timetableClassSession,
-                                    $otherDuty->Time_from,
-                                    $otherDuty->Time_to
-                                )) {
-                                    $record['attendance_status'] = 'Present';
-                                    $record['exemption_type'] = 'Other';
-                                    $record['exemption_comment'] = $otherDuty->Remark ?? null;
-                                }
-                            }
-                        }
                     }
                 }
 
@@ -1980,6 +1978,12 @@ $currentPath = $segments[1] ?? null;
 
     public function OTmarkAttendanceData(Request $request)
     {
+        // PR #334 F-044: the student_pk comes from the query string, so check it
+        // belongs to the caller (or that the caller is Training Section staff).
+        if (! $this->canViewOtStudentAttendance($request->input('student_pk'))) {
+            abort(403);
+        }
+
         try {
             $group_pk = $request->input('group_pk');
             $course_pk = $request->input('course_pk');
@@ -2001,6 +2005,40 @@ $currentPath = $segments[1] ?? null;
                 'message' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * The OT attendance page / feed / export date filter as Y-m-d, today when
+     * absent. Strings only: ?filter_date[]= reached strtotime(array), a TypeError
+     * that their catch (\Exception) does not catch, so 500 (PR #334 F-050).
+     */
+    private function otFilterDate(Request $request): string
+    {
+        $value = $request->input('filter_date');
+
+        return is_string($value) && $value !== '' ? date('Y-m-d', strtotime($value)) : date('Y-m-d');
+    }
+
+    /**
+     * Who may read one officer trainee's attendance, medical-exemption details
+     * included (PR #334 F-044). A trainee login (user_category 'S', the only kind
+     * whose user_id is a student_master pk) sees only its own record. Any other
+     * login needs an explicit Training Section role, whatever else it holds: a staff
+     * login that also carries an Officer Trainee role is still staff. The page, its
+     * feed and the Excel export all apply this one rule (F-031).
+     */
+    private function canViewOtStudentAttendance($student_pk): bool
+    {
+        $user = auth()->user();
+        if (! $user || ! is_scalar($student_pk) || (string) $student_pk === '') {
+            return false;
+        }
+
+        if (($user->user_category ?? '') === 'S') {
+            return (string) $user->user_id === (string) $student_pk;
+        }
+
+        return isTrainingSectionUser();
     }
 
     /**
@@ -2213,6 +2251,40 @@ $currentPath = $segments[1] ?? null;
             'logoRight'  => $toDataUri($rightLogo),
             'titleHindi' => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
         ];
+    }
+
+    /**
+     * The OT's medical exemption covering one timetabled session, or null.
+     *
+     * Loads the active exemptions whose dates span the session's DATE (compared
+     * as dates — from_date / to_date are datetimes, and comparing them raw
+     * against a midnight session date kept an exemption that ended earlier that
+     * day and dropped one that started later), then asks OtExemptionResolver
+     * whether one covers the session's time. That is the rule save() and the
+     * admin grid already apply, so the OT's own view and export can no longer
+     * show Present where the saved and admin-visible status is Absent
+     * (PR #334 F-004).
+     */
+    private function coveringMedicalExemption($coursePk, $studentPk, ?CalendarEvent $timetable): ?object
+    {
+        if (! $timetable || empty($timetable->START_DATE)) {
+            return null;
+        }
+
+        $date = substr((string) $timetable->START_DATE, 0, 10);
+
+        $candidates = StudentMedicalExemption::where([
+            ['course_master_pk', '=', $coursePk],
+            ['student_master_pk', '=', $studentPk],
+            ['active_inactive', '=', 1],
+        ])
+            ->whereDate('from_date', '<=', $date)
+            ->where(function ($q) use ($date) {
+                $q->whereNull('to_date')->orWhereDate('to_date', '>=', $date);
+            })
+            ->get();
+
+        return OtExemptionResolver::coveringMedicalExemption($candidates, $date, $timetable->class_session);
     }
 
     private function resolveTimetableFacultyNames(?CalendarEvent $timetable): string

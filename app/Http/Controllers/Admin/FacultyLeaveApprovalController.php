@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Exports\LeaveApprovalExport;
+use App\Exports\LbsnaaTableExport;
 use App\Http\Controllers\Controller;
 use App\Models\CourseMaster;
 use App\Models\LeaveApplication;
 use App\Services\FacultyLeaveApprovalService;
-use App\Traits\StampsPdfPageNumbers;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use App\Traits\StampsPdfPageNumbers;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Maatwebsite\Excel\Facades\Excel;
 use Yajra\DataTables\Facades\DataTables;
@@ -105,7 +105,7 @@ class FacultyLeaveApprovalController extends Controller
     {
         $coursePks = $this->approvalService->getAccessibleCourseIds();
 
-        $query = LeaveApplication::with(['student', 'nature'])
+        $query = LeaveApplication::with(['student', 'nature', 'course'])
             ->where('leave_type', LeaveApplication::TYPE_STATIONED_LEAVE)
             ->whereIn('status', [
                 LeaveApplication::STATUS_PENDING,
@@ -154,17 +154,22 @@ class FacultyLeaveApprovalController extends Controller
                                 ->orWhere('display_name', 'like', "%{$search}%")
                                 ->orWhere('first_name', 'like', "%{$search}%")
                                 ->orWhere('last_name', 'like', "%{$search}%");
+                        })->orWhereHas('course', function ($qc) use ($search) {
+                            $qc->where('course_name', 'like', "%{$search}%");
                         })->orWhere('reason', 'like', "%{$search}%");
                     });
                 }
             })
-            ->addColumn('ot_code', fn ($row) => e($row->student->generated_OT_code ?? '-'))
-            ->addColumn('ot_name', fn ($row) => e($this->approvalService->studentDisplayName($row->student)))
-            ->addColumn('leave_type_label', fn ($row) => e($row->leave_type_label))
+            ->addColumn('ot_code', fn ($row) => (string) ($row->student->generated_OT_code ?? '-'))
+            ->addColumn('ot_name', fn ($row) => (string) ($this->approvalService->studentDisplayName($row->student)))
+            ->addColumn('course_name', fn ($row) => (string) ($row->course->course_name ?? '-'))
+            ->addColumn('leave_type_label', fn ($row) => (string) ($row->leave_type_label))
             ->addColumn('from_date_display', fn ($row) => $row->from_date?->format('d-m-Y') ?? '-')
             ->addColumn('to_date_display', fn ($row) => $row->to_date?->format('d-m-Y') ?? '-')
+            ->addColumn('time_from_display', fn ($row) => (string) ($row->time_from_display))
+            ->addColumn('time_to_display', fn ($row) => (string) ($row->time_to_display))
             ->addColumn('total_days_display', fn ($row) => number_format((float) $row->total_days, 0))
-            ->addColumn('reason_text', fn ($row) => e(\Illuminate\Support\Str::limit($row->reason ?? '-', 80)))
+            ->addColumn('reason_text', fn ($row) => (string) (\Illuminate\Support\Str::limit($row->reason ?? '-', 80)))
             ->addColumn('status_label', function ($row) {
                 $map = [
                     LeaveApplication::STATUS_PENDING => ['Pending', 'pending'],
@@ -175,7 +180,7 @@ class FacultyLeaveApprovalController extends Controller
 
                 return '<span class="badge rounded-1 approval-status approval-status--' . $variant . '">' . $label . '</span>';
             })
-            ->addColumn('approver_name', fn ($row) => e($row->action_by_faculty_name))
+            ->addColumn('approver_name', fn ($row) => (string) ($row->action_by_faculty_name))
             ->addColumn('action', function ($row) {
                 $viewUrl = route('faculty.leave-approval.show', $row->pk);
                 $html = '<div class="d-inline-flex align-items-center gap-2 approval-action">';
@@ -194,16 +199,22 @@ class FacultyLeaveApprovalController extends Controller
             ->make(true);
     }
 
+    /**
+     * Excel (.xlsx) or PDF of the current listing, honouring the same filters
+     * (baseQuery). The PDF renders its own view (export_pdf); the Excel sheet
+     * is built from the heading/row arrays below.
+     */
     public function export(Request $request)
     {
-        $format = strtolower((string) $request->get('format', 'excel'));
+        $format = is_string($request->get('format')) ? strtolower($request->get('format')) : 'excel';
         $filename = 'Leave_Approval_' . now()->format('Ymd_His');
 
         if ($format === 'pdf') {
             @ini_set('memory_limit', '256M');
             @set_time_limit(120);
 
-            $rows = $this->baseQuery($request)->get();
+            // action_by_faculty_name reads both relations per row.
+            $rows = $this->baseQuery($request)->with(['approvedByFaculty', 'appliedByUser'])->get();
 
             $logoPath = public_path('images/lbsnaa_logo.jpg');
             $logo = (is_file($logoPath) && is_readable($logoPath))
@@ -237,18 +248,72 @@ class FacultyLeaveApprovalController extends Controller
             return $pdf->download($filename . '.pdf');
         }
 
-        $rows = $this->baseQuery($request)->get();
+        $rows = $this->baseQuery($request)->with(['approvedByFaculty', 'appliedByUser'])->get();
+
+        // "Approved/Rejected By" is the audit column the pre-PR LeaveApprovalExport
+        // ended with and the PDF still prints — the Excel must carry it too (PR #334 F-042).
+        $headings = ['S. No.', 'OT Code', 'OT Name', 'Course Name', 'Leave Type', 'Date From', 'Date To', 'Time From', 'Time To', 'Total Days', 'Reason', 'Status', 'Approved/Rejected By'];
+
+        $data = $rows->values()->map(fn ($row, $index) => [
+            $index + 1,
+            $row->student->generated_OT_code ?? '-',
+            $this->approvalService->studentDisplayName($row->student),
+            $row->course->course_name ?? '-',
+            $row->leave_type_label,
+            $row->from_date?->format('d-m-Y') ?? '-',
+            $row->to_date?->format('d-m-Y') ?? '-',
+            $row->time_from_display,
+            $row->time_to_display,
+            number_format((float) $row->total_days, 0),
+            $row->reason ?? '-',
+            $row->status_label,
+            // Same value the PDF prints: the faculty approver, the Training Section
+            // operator for an on-behalf leave, or "-".
+            $row->action_by_faculty_name,
+        ])->values();
+
+        $baseName = 'Leave_Approval_' . now()->format('Ymd_His');
+        // Serial, dates, times, day count and status read better centred; the
+        // names, course and reason stay left-aligned.
+        $centreColumns = [0, 5, 6, 7, 8, 9, 11];
+        $filterLine = $this->exportFilterLine($request);
 
         return Excel::download(
-            new LeaveApprovalExport(
-                $rows,
-                $this->approvalService,
-                $this->buildExportFilterLine($request),
-                $this->buildApproverHeaderLine($rows)
-            ),
-            $filename . '.xlsx',
-            ExcelFormat::XLSX
+            new LbsnaaTableExport($data, $headings, 'Leave Approval', $filterLine, $centreColumns),
+            $baseName . '.xlsx'
         );
+    }
+
+    /**
+     * Human-readable summary of the filters in force, printed on the PDF so a
+     * shared copy says what it is a report of.
+     */
+    protected function exportFilterLine(Request $request): string
+    {
+        $parts = [];
+
+        $statusLabels = [
+            LeaveApplication::STATUS_PENDING => 'Pending',
+            LeaveApplication::STATUS_APPROVED => 'Approved',
+            LeaveApplication::STATUS_REJECTED => 'Rejected',
+        ];
+        $status = $request->filled('status') ? (int) $request->input('status') : LeaveApplication::STATUS_PENDING;
+        $parts[] = 'Status: ' . ($statusLabels[$status] ?? 'All');
+
+        if ($request->filled('course_filter')) {
+            $courseName = CourseMaster::where('pk', (int) $request->input('course_filter'))->value('course_name');
+            if ($courseName) {
+                $parts[] = 'Course: ' . $courseName;
+            }
+        }
+
+        $from = is_scalar($request->input('from_date')) ? (string) $request->input('from_date') : '';
+        $to = is_scalar($request->input('to_date')) ? (string) $request->input('to_date') : '';
+        if ($from !== '' || $to !== '') {
+            $parts[] = 'Period: ' . ($from ?: '…') . ' to ' . ($to ?: '…');
+        }
+
+        return implode(' | ', $parts);
     }
 
     private function buildExportFilterLine(Request $request): string
@@ -260,17 +325,22 @@ class FacultyLeaveApprovalController extends Controller
             (string) LeaveApplication::STATUS_APPROVED => 'Approved',
             (string) LeaveApplication::STATUS_REJECTED => 'Rejected',
         ];
-        if ($request->filled('status') && isset($statusMap[(string) $request->status])) {
-            $parts[] = 'Status: ' . $statusMap[(string) $request->status];
+        // Every value below is concatenated, so read each as a scalar: an
+        // array-valued parameter (?from_date[]=) reads as unset rather than
+        // raising "Array to string conversion" (PR #334 F-041).
+        $in = fn (string $key) => is_scalar($request->input($key)) ? (string) $request->input($key) : '';
+
+        if (isset($statusMap[$in('status')])) {
+            $parts[] = 'Status: ' . $statusMap[$in('status')];
         }
 
-        if ($request->filled('course_filter')) {
-            $course = CourseMaster::find($request->course_filter);
-            $parts[] = 'Course: ' . ($course->course_name ?? $request->course_filter);
+        if ($in('course_filter') !== '') {
+            $course = CourseMaster::find((int) $in('course_filter'));
+            $parts[] = 'Course: ' . ($course->course_name ?? $in('course_filter'));
         }
 
-        if ($request->filled('from_date') || $request->filled('to_date')) {
-            $parts[] = 'Period: ' . ($request->from_date ?: '…') . ' to ' . ($request->to_date ?: '…');
+        if ($in('from_date') !== '' || $in('to_date') !== '') {
+            $parts[] = 'Period: ' . ($in('from_date') ?: '…') . ' to ' . ($in('to_date') ?: '…');
         }
 
         return implode('  |  ', $parts);

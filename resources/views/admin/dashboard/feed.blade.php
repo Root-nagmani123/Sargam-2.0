@@ -85,7 +85,40 @@
             <div data-feed-panel="notices" class="{{ $activeTab !== 'notices' ? 'd-none' : '' }}"
                 data-notice-total="{{ $notices->total() }}">
 
-                <h2 class="notices-feed-section-title">Notices</h2>
+                @php $noticeIsArchive = ($noticeFilters['scope'] ?? 'live') === 'archive'; @endphp
+
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <h2 class="notices-feed-section-title mb-0">
+                        {{ $noticeIsArchive ? 'Notice Archive' : 'Notices' }}
+                    </h2>
+
+                    {{-- Live / Archive are two views of the same role-scoped set, so they
+                         are links rather than another filter select: the scope decides
+                         which years the Year dropdown can even offer. Current filters ride
+                         along, minus the page number — page 4 of the live feed is rarely
+                         page 4 of the archive. --}}
+                    <div class="btn-group btn-group-sm notices-feed-scope" role="group" aria-label="Notice scope">
+                        <a href="{{ route('admin.dashboard.feed', array_merge(request()->except(['notice_scope', 'notice_year', 'page']), ['tab' => 'notices'])) }}"
+                            class="btn {{ $noticeIsArchive ? 'btn-outline-secondary' : 'btn-primary' }}"
+                            @if(!$noticeIsArchive) aria-current="page" @endif>
+                            <i class="bi bi-megaphone me-1" aria-hidden="true"></i>Current
+                        </a>
+                        <a href="{{ route('admin.dashboard.feed', array_merge(request()->except(['notice_year', 'page']), ['tab' => 'notices', 'notice_scope' => 'archive'])) }}"
+                            class="btn {{ $noticeIsArchive ? 'btn-primary' : 'btn-outline-secondary' }}"
+                            @if($noticeIsArchive) aria-current="page" @endif>
+                            <i class="bi bi-archive me-1" aria-hidden="true"></i>Archive
+                            @if(($noticeFilterOptions['archiveCount'] ?? 0) > 0)
+                            <span class="badge rounded-pill bg-light text-dark ms-1">{{ number_format($noticeFilterOptions['archiveCount']) }}</span>
+                            @endif
+                        </a>
+                    </div>
+                </div>
+
+                @if($noticeIsArchive)
+                <p class="text-body-secondary small mb-3 mt-2">
+                    <i class="bi bi-info-circle me-1" aria-hidden="true"></i>Notices that have passed their expiry date. Only the ones addressed to you are listed.
+                </p>
+                @endif
 
                 {{-- Filters are applied in SQL, so the toolbar is a plain GET form:
                      changing a select reloads the page with the filter in the URL.
@@ -97,12 +130,21 @@
                     id="notice-filter-form">
                     <input type="hidden" name="tab" value="notices">
                     <input type="hidden" name="q" id="notice-filter-q" value="{{ $noticeFilters['q'] }}">
+                    {{-- Keeps Current/Archive selected when a filter select reloads the page. --}}
+                    @if($noticeIsArchive)
+                    <input type="hidden" name="notice_scope" value="archive">
+                    @endif
 
                     <span class="notices-feed-toolbar__label">Filters</span>
 
-                    {{-- No Year control: the feed lists live notices only (expired ones are
-                         dropped by the base query), so a Year dropdown could never offer more
-                         than the current year or two and would read as a broken archive. --}}
+                    <select class="form-select form-select-sm notices-feed-filter" name="notice_year"
+                        id="notice-filter-year" aria-label="Filter by year">
+                        <option value="">Year</option>
+                        @foreach($noticeFilterOptions['years'] as $ny)
+                        <option value="{{ $ny }}" {{ (string) $noticeFilters['year'] === (string) $ny ? 'selected' : '' }}>{{ $ny }}</option>
+                        @endforeach
+                    </select>
+
                     <select class="form-select form-select-sm notices-feed-filter" name="notice_type"
                         id="notice-filter-type" aria-label="Filter by type">
                         <option value="">Type</option>
@@ -127,13 +169,14 @@
                         @endforeach
                     </select>
 
-                    <a href="{{ route('admin.dashboard.feed', ['tab' => 'notices']) }}"
+                    {{-- Reset clears the filters but stays on the current scope: switching
+                         back to the live feed is what the Current button is for. --}}
+                    <a href="{{ route('admin.dashboard.feed', $noticeIsArchive ? ['tab' => 'notices', 'notice_scope' => 'archive'] : ['tab' => 'notices']) }}"
                         class="btn btn-sm notices-feed-reset-btn" id="notice-filter-reset">Reset Filters</a>
 
-                    {{-- Same gate as the dashboard widget's Add New Notice button
-                         (dashboard.blade.php:240,256). Checking only 'Admin' hid this
-                         from Super Admins, who could still add a notice from the widget. --}}
-                    @if(hasRole('Admin') || hasRole('Super Admin'))
+                    {{-- The notice screens' own gate (PR #334 F-003), so the button shows
+                         for exactly the accounts those routes admit. --}}
+                    @if(canAuthorNotices())
                     <a href="{{ route('admin.notice.create') }}" class="btn btn-sm notices-feed-add-btn ms-auto">
                         <i class="bi bi-plus-square me-1" aria-hidden="true"></i>Add New Notice
                     </a>
@@ -148,18 +191,18 @@
                         $feedNoticeDate      = !empty($feedNotice->display_date) ? \Carbon\Carbon::parse($feedNotice->display_date)->format('d/m/Y h:i A') : '—';
                         $feedNoticeSearch    = strtolower(($feedNotice->notice_title ?? '') . ' ' . ($feedNotice->notice_type ?? '') . ' ' . ($feedNotice->author_name ?? '') . ' ' . ($feedNotice->author_department ?? ''));
 
+                        // The badge shows the notice's OWN type. It used to relabel
+                        // "Course notice" as "Work Allocations", so an OT was told
+                        // a notice was something the author never selected.
+                        // Only the colour is derived from the type now.
+                        $noticeBadgeLabel = $feedNotice->notice_type ?: 'Notice';
+
                         if (str_contains($noticeTypeLower, 'office order')) {
                             $noticeBadgeClass = 'notices-feed-badge--order';
-                            $noticeBadgeLabel = $feedNotice->notice_type;
-                        } elseif (str_contains($noticeTypeLower, 'course notice')) {
+                        } elseif (str_contains($noticeTypeLower, 'course notice') || str_contains($noticeTypeLower, 'work allocation')) {
                             $noticeBadgeClass = 'notices-feed-badge--work';
-                            $noticeBadgeLabel = 'Work Allocations';
-                        } elseif (str_contains($noticeTypeLower, 'work allocation')) {
-                            $noticeBadgeClass = 'notices-feed-badge--work';
-                            $noticeBadgeLabel = $feedNotice->notice_type;
                         } else {
                             $noticeBadgeClass = 'notices-feed-badge--notice';
-                            $noticeBadgeLabel = $feedNotice->notice_type ?? 'Notice';
                         }
                     @endphp
                     {{-- data-notice-year/-type/-dept/-audience used to drive client-side
@@ -180,6 +223,9 @@
                                     <small class="notices-feed-item__meta">
                                         ~by <strong>{{ $feedNotice->author_name ?? 'System' }}@if($feedNotice->author_department ?? '') ({{ $feedNotice->author_department }})@endif</strong>
                                         on {{ $feedNoticeDate }}
+                                        @if($noticeIsArchive && !empty($feedNotice->expiry_date))
+                                        <span class="text-body-secondary">· expired {{ \Carbon\Carbon::parse($feedNotice->expiry_date)->format('d/m/Y') }}</span>
+                                        @endif
                                     </small>
                                 </div>
                                 <span class="notices-feed-badge {{ $noticeBadgeClass }} flex-shrink-0">{{ $noticeBadgeLabel }}</span>
@@ -189,7 +235,8 @@
                             role="region" aria-labelledby="notice-head-{{ $feedNotice->pk }}">
                             <div class="notices-feed-item__panel-inner">
                                 @if(trim(strip_tags((string) ($feedNotice->description ?? ''))) !== '')
-                                <div class="notice-description-content">{!! $feedNotice->description !!}</div>
+                                {{-- Sanitised at render as well as on save: older rows were stored verbatim (PR #334 F-003). --}}
+                                <div class="notice-description-content">{!! notice_safe_html($feedNotice->description) !!}</div>
                                 @else
                                 <p class="text-muted fst-italic mb-0">No description provided.</p>
                                 @endif
@@ -210,8 +257,10 @@
                     </div>
                     @empty
                     <p class="dashboard-feed-empty mb-0">
-                        @if($noticeFilters['q'] !== '' || $noticeFilters['type'] !== '' || $noticeFilters['dept'] !== '' || $noticeFilters['audience'] !== '')
+                        @if($noticeFilters['q'] !== '' || $noticeFilters['type'] !== '' || $noticeFilters['dept'] !== '' || $noticeFilters['audience'] !== '' || $noticeFilters['year'] !== '')
                         No notices match these filters.
+                        @elseif($noticeIsArchive)
+                        No archived notices yet.
                         @else
                         No notices available.
                         @endif
@@ -382,7 +431,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateFeedUrl(tab) {
+        // Carry the current query string over: switching tabs and coming back
+        // used to rewrite the URL to a bare ?tab=notices, so a refresh silently
+        // dropped the scope and filters the page was still displaying.
         const url = new URL(feedBaseUrl, window.location.origin);
+        new URLSearchParams(window.location.search).forEach(function(value, key) {
+            if (key !== 'tab' && key !== 'page') url.searchParams.set(key, value);
+        });
         url.searchParams.set('tab', tab);
         if (window.history && window.history.replaceState) {
             window.history.replaceState({ feedTab: tab }, '', url.pathname + url.search);

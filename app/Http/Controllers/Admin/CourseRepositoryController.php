@@ -14,14 +14,36 @@ use App\Models\SectorMaster;
 use App\Models\MinistryMaster;
 use App\Models\Timetable;
 use App\Rules\SafeUploadedDocument;
+use App\Support\CourseRepositorySearch;
+use App\Support\DataTableSearchHelper;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Exception;
 
- 
+
 class CourseRepositoryController extends Controller
 {
+    /** The sidebar permission of the Central Course Repository admin screen. */
+    public const ADMIN_PERMISSION = 'course_repository';
+
+    public function __construct()
+    {
+        // Every repository write — folders and documents — was open to any login,
+        // officer trainees included (PR #334 F-041). Gated on the same rule the
+        // sidebar uses for the admin screen that offers these actions, so the route
+        // and the menu agree; the read-only user screens are unaffected.
+        $this->middleware(function ($request, $next) {
+            if (! canUseStaffMenu(self::ADMIN_PERMISSION)) {
+                abort(403);
+            }
+
+            return $next($request);
+        })->only(['store', 'update', 'destroy', 'uploadDocument', 'updateDocument', 'deleteDocument']);
+    }
+
     /**
      * Display listing of all course repositories
      * GET /course-repository
@@ -508,6 +530,8 @@ class CourseRepositoryController extends Controller
                 'attachment_titles.*' => 'nullable|string|max:5000',
                 'keywords' => 'nullable|string|max:4000',
                 'video_link' => 'nullable|string|max:2000',
+                // 1 or 0 from a form with the switch; absent when the form has none.
+                'video_download_enabled' => 'nullable|boolean',
             ], [
                 // Default messages name the raw input ("attachments.0"), which tells the
                 // uploader nothing. :position is 1-based and matches the row they filled in.
@@ -545,6 +569,13 @@ class CourseRepositoryController extends Controller
                 'ministry_master_pk' => $validated['ministry_master'] ?? null,
                 'keyword' => $validated['keywords'] ?? null,
                 'videolink' => $validated['video_link'] ?? null,
+                // Whether the user side may download that video. The Course and
+                // Other forms always post 1 or 0; a form without the switch
+                // (Institutional) posts nothing and gets the column default, on —
+                // not off, which hid downloads it never offered to change (PR #334 F-017).
+                'video_download_enabled' => $request->has('video_download_enabled')
+                    ? $request->boolean('video_download_enabled')
+                    : true,
                 'created_date' => now(),
                 'created_by' => auth()->id(),
                 'status' => 1,
@@ -723,6 +754,7 @@ class CourseRepositoryController extends Controller
                         'ministry_resolved' => $ministryResolved,
                         'keyword' => $detail->keyword,
                         'videolink' => $detail->videolink,
+                        'video_download_enabled' => (bool) $detail->video_download_enabled,
                     ] : null,
                 ],
             ]);
@@ -760,6 +792,8 @@ class CourseRepositoryController extends Controller
                 'ministry_master' => 'nullable|numeric',
                 'keywords' => 'nullable|string|max:4000',
                 'video_link' => 'nullable|string|max:2000',
+                // 1 or 0 from a form with the switch; absent when the form has none.
+                'video_download_enabled' => 'nullable|boolean',
             ], [
                 'category.in' => 'Please select a valid category (Course, Other or Institutional).',
                 'document_file.file' => 'The document could not be read. Please select the file again.',
@@ -826,7 +860,17 @@ class CourseRepositoryController extends Controller
                     ? $validated['ministry_master']
                     : $detail->ministry_master_pk;
                 $detail->keyword = $validated['keywords'] ?? $detail->keyword;
-                $detail->videolink = $validated['video_link'] ?? $detail->videolink;
+                // Clearable like Sector / Ministry above: a submitted empty field
+                // (null via ConvertEmptyStringsToNull) removes the link; only an absent
+                // key keeps it (PR #334 F-033).
+                $detail->videolink = array_key_exists('video_link', $validated)
+                    ? $validated['video_link']
+                    : $detail->videolink;
+                // Only an edit form that shows the switch posts it (always 1 or 0);
+                // without it the stored choice stands (PR #334 F-017).
+                if ($request->has('video_download_enabled')) {
+                    $detail->video_download_enabled = $request->boolean('video_download_enabled');
+                }
                 if ($category && isset($typeMap[$category])) {
                     $detail->type = $typeMap[$category];
                 }
@@ -1838,13 +1882,18 @@ class CourseRepositoryController extends Controller
     /**
      * Document view (PDF viewer)
      */
-    public function documentView($documentId)
+    public function documentView(Request $request, $documentId)
     {
         try {
             $document = CourseRepositoryDetail::with(['documents', 'author', 'subject'])
                 ->findOrFail($documentId);
 
-            $pdfDocument = $document->documents->first();
+            // One session can carry several attachments: ?doc= names the one the
+            // caller listed, and only a live attachment of this session is shown.
+            $live = $document->documents->where('del_type', 1)->sortBy('pk');
+            $pdfDocument = $request->filled('doc')
+                ? $live->firstWhere('pk', (int) $request->query('doc'))
+                : $live->first();
             if (!$pdfDocument) {
                 return redirect()->back()->with('error', 'Document not found');
             }
@@ -2162,6 +2211,186 @@ class CourseRepositoryController extends Controller
                         $a->where('full_name', 'like', $term);
                     });
             });
+        }
+    }
+
+    /**
+     * Universal search across the whole Course Repository (user end).
+     *
+     * One page that answers "find me anything in here": documents, video sessions and
+     * category folders, from a single box, with optional refinements. Everything the
+     * query needs lives in App\Support\CourseRepositorySearch — including why it reads
+     * the raw text columns instead of the model relations.
+     *
+     * GET /course-repository-user/search
+     */
+    public function userSearch(Request $request)
+    {
+        try {
+            $criteria = CourseRepositorySearch::criteria($request);
+            $hasQuery = CourseRepositorySearch::hasQuery($criteria);
+
+            $documents = null;
+            $documentTotal = 0;
+            $categories = null;
+            $categoryPreview = collect();
+            $categoryCounts = [];
+            $categoryTotal = 0;
+
+            if ($hasQuery) {
+                if ($criteria['type'] !== CourseRepositorySearch::TYPE_CATEGORIES) {
+                    $documents = CourseRepositorySearch::documentQuery($criteria)
+                        ->paginate($criteria['per_page'])
+                        ->withQueryString();
+
+                    CourseRepositorySearch::decorate($documents);
+                    $documentTotal = $documents->total();
+                }
+
+                if ($criteria['type'] === CourseRepositorySearch::TYPE_CATEGORIES) {
+                    $matches = CourseRepositorySearch::categoryMatches($criteria);
+                    $categoryTotal = $matches->count();
+                    $categories = CourseRepositorySearch::paginateCollection($matches, $criteria['per_page'])
+                        ->withQueryString();
+                    $categoryCounts = CourseRepositorySearch::documentCounts(
+                        collect($categories->items())->pluck('pk')->all()
+                    );
+                } elseif ($criteria['type'] === CourseRepositorySearch::TYPE_ALL) {
+                    // A preview strip only. Document hits are the answer most of the
+                    // time; the Categories tab shows the full list.
+                    $matches = CourseRepositorySearch::categoryMatches($criteria);
+                    $categoryTotal = $matches->count();
+                    $categoryPreview = $matches->take(CourseRepositorySearch::CATEGORY_PREVIEW_LIMIT);
+                    $categoryCounts = CourseRepositorySearch::documentCounts(
+                        $categoryPreview->pluck('pk')->all()
+                    );
+                }
+            }
+
+            return view('admin.course-repository.user.search', [
+                'criteria' => $criteria,
+                'tokens' => $criteria['tokens'],
+                'hasQuery' => $hasQuery,
+                'documents' => $documents,
+                'documentTotal' => $documentTotal,
+                'categories' => $categories,
+                'categoryPreview' => $categoryPreview,
+                'categoryCounts' => $categoryCounts,
+                'categoryTotal' => $categoryTotal,
+                'chips' => CourseRepositorySearch::activeChips($criteria),
+                'facets' => CourseRepositorySearch::facets(),
+                'folderTrail' => $criteria['folder'] !== null
+                    ? CourseRepositorySearch::folderPath($criteria['folder'])
+                    : [],
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error in course repository universal search: ' . $e->getMessage());
+
+            return redirect()
+                ->route('admin.course-repository.user.index')
+                ->with('error', 'Search is unavailable right now. Please try again.');
+        }
+    }
+
+    /**
+     * Type-ahead suggestions for the universal search box.
+     *
+     * Suggests the values people actually search by — topic, subject, author, batch,
+     * document title — rather than whole result rows, so picking one narrows the
+     * search instead of jumping straight to a single file.
+     *
+     * GET /course-repository-user/search/suggest
+     */
+    public function userSearchSuggest(Request $request)
+    {
+        // ?q[] would make the cast below a PHP error, so anything that is not a
+        // plain scalar is treated as no term at all.
+        $raw = $request->query('q', '');
+        $term = is_scalar($raw) ? DataTableSearchHelper::normalizeRaw((string) $raw) : '';
+
+        if (mb_strlen($term) < 2) {
+            return response()->json(['suggestions' => []]);
+        }
+
+        $like = DataTableSearchHelper::likePattern($term);
+        $suggestions = [];
+        $seen = [];
+
+        $push = function ($value, string $type) use (&$suggestions, &$seen) {
+            $value = trim((string) $value);
+
+            // Bare numbers are legacy ids from the imported system; they mean nothing
+            // to a reader and would never be typed as a search.
+            if ($value === '' || ctype_digit($value)) {
+                return;
+            }
+
+            $key = mb_strtolower($type . '|' . $value);
+            if (isset($seen[$key])) {
+                return;
+            }
+            $seen[$key] = true;
+
+            $suggestions[] = [
+                'label' => Str::limit($value, 90),
+                'value' => $value,
+                'type' => $type,
+            ];
+        };
+
+        try {
+            $columns = [
+                ['topic_pk', 'Topic', 5],
+                ['subject_pk', 'Subject', 4],
+                ['author_name', 'Author', 4],
+                ['course_master_pk', 'Course', 3],
+            ];
+
+            // Suggestions follow the same folder rule as the results: nothing filed
+            // in a deleted folder, or beneath one, is offered (PR #334 F-013).
+            foreach ($columns as [$column, $label, $limit]) {
+                CourseRepositorySearch::excludeHiddenFolders(DB::table('course_repository_details'), 'course_repository_master_pk')
+                    ->where($column, 'like', $like)
+                    ->whereRaw("{$column} not regexp '^[0-9]+$'")
+                    ->distinct()
+                    ->orderBy($column)
+                    ->limit($limit)
+                    ->pluck($column)
+                    ->each(fn ($value) => $push($value, $label));
+            }
+
+            CourseRepositorySearch::excludeHiddenFolders(
+                CourseRepositoryDocument::query()
+                    ->from('course_repository_documents as doc')
+                    ->leftJoin('course_repository_details as dt', 'dt.pk', '=', 'doc.course_repository_details_pk'),
+                'coalesce(dt.course_repository_master_pk, doc.course_repository_master_pk)'
+            )
+                ->where('doc.del_type', 1)
+                ->where('doc.file_title', 'like', $like)
+                ->distinct()
+                ->orderBy('doc.file_title')
+                ->limit(5)
+                ->pluck('doc.file_title')
+                ->each(fn ($value) => $push($value, 'Document'));
+
+            $hiddenFolders = array_flip(CourseRepositorySearch::hiddenFolderPks());
+            foreach (CourseRepositorySearch::folderTree() as $pk => $node) {
+                if (count($suggestions) >= 40) {
+                    break;
+                }
+                if (isset($hiddenFolders[$pk])) {
+                    continue;
+                }
+                if (stripos($node['name'], $term) !== false) {
+                    $push($node['name'], 'Category');
+                }
+            }
+
+            return response()->json(['suggestions' => array_slice($suggestions, 0, 12)]);
+        } catch (Exception $e) {
+            Log::error('Error in course repository search suggest: ' . $e->getMessage());
+
+            return response()->json(['suggestions' => []]);
         }
     }
 }
