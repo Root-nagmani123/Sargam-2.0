@@ -26,7 +26,7 @@ class MemoTypeStoreArrayPkTest extends TestCase
         try {
             DB::connection()->getPdo();
         } catch (\Throwable $e) {
-            $this->markTestSkipped('No database connection: ' . $e->getMessage());
+            $this->markTestSkipped('No database connection: '.$e->getMessage());
         }
 
         DB::beginTransaction();
