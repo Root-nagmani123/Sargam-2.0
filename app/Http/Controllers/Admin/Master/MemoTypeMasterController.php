@@ -31,6 +31,9 @@ class MemoTypeMasterController extends Controller
         // The listing's modal posts the raw pk; the standalone edit page posts it encrypted.
         $id = null;
         if ($request->filled('pk')) {
+            if (! is_scalar($request->pk)) {
+                return response()->json(['status' => false, 'message' => 'Invalid record.'], 422);
+            }
             try {
                 $id = is_numeric($request->pk) ? (int) $request->pk : (int) decrypt($request->pk);
             } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
