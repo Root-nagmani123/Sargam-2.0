@@ -217,6 +217,7 @@
                                                 'table'  => 'building_floor_room_mapping',
                                                 'column' => 'active_inactive',
                                                 'id'     => $row->pk,
+                                                'attrs'  => ['data-reload-page' => true],
                                             ],
                                             // destroy() refuses nothing, and this grid never
                                             // guarded Delete — it stays enabled on every row.

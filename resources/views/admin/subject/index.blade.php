@@ -92,6 +92,7 @@
                                                 'table'  => 'subject_master',
                                                 'column' => 'active_inactive',
                                                 'id'     => $subject->pk,
+                                                'attrs'  => ['data-reload-page' => true],
                                             ],
                                             'delete' => $isActive
                                                 ? ['disabled' => true, 'reason' => 'Cannot delete an active subject. Deactivate it first.']
@@ -123,7 +124,7 @@
                         <div class="dataTables_length">
                             <label class="mb-0" for="smPerPage">Showing
                                 <select name="per_page" id="smPerPage"
-                                        class="form-select form-select-sm sm-per-page-select"
+                                        class="form-select form-select-sm"
                                         aria-label="Rows per page" onchange="this.form.submit()">
                                     @foreach ([10, 25, 50, 100, 200] as $pp)
                                         <option value="{{ $pp }}" {{ (int) $subjects->perPage() === $pp ? 'selected' : '' }}>{{ $pp }}</option>

@@ -253,8 +253,10 @@ $(document).on('change', '.status-toggle', function () {
                 // Only a server-side grid has a feed to reload. A table rendered
                 // into the page (e.g. Subject Master) has none: ajax.reload() on it
                 // fetches the page HTML as JSON and raises DataTables' "Invalid
-                // JSON response" alert. Its status badge and Delete button are
-                // drawn by the server, so reload the page to show the new state.
+                // JSON response" alert. Where its status badge and Delete button
+                // are drawn by the server, the toggle opts in to a page reload
+                // with data-reload-page; any other page is not reloaded (it keeps
+                // its unsaved input) and updates its own row.
                 var $feedTables = $('table.dataTable').filter(function () {
                     var s = $.fn.dataTable.isDataTable(this) ? $(this).DataTable().settings()[0] : null;
                     return !!s && (s.ajax != null || s.sAjaxSource != null);
@@ -266,6 +268,8 @@ $(document).on('change', '.status-toggle', function () {
                             $(this).DataTable().ajax.reload();
                         });
                     }, 500);
+                } else if (!$checkbox.is('[data-reload-page]')) {
+                    return;
                 } else if (typeof Swal !== 'undefined' && typeof Swal.fire === 'function') {
                     Swal.fire({
                         icon: 'success',
