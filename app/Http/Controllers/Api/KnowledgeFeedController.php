@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 /**
  * Pull feed for ज्ञानकोश: their server polls Sargam for published notices.
  *
- * GET /api/knowledge/notices is a full snapshot, not a change log. The caller
+ * GET /api/gyankosh/published-notices is a full snapshot, not a change log. The caller
  * compares it with what it holds:
  *   - external_id it does not hold, or a different external_version → fetch
  *     file_url and store it;
@@ -37,7 +37,7 @@ class KnowledgeFeedController extends Controller
                 'file_name' => $filename,
                 'file_size' => filesize($path),
                 'file_sha256' => hash_file('sha256', $path),
-                'file_url' => route('api.knowledge.notices.file', ['notice' => $notice->pk]),
+                'file_url' => route('api.gyankosh.published-notices.download', ['notice' => $notice->pk]),
             ];
         })->values();
 

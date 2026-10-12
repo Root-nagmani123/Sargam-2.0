@@ -10,14 +10,15 @@ Route::name('api.')->group(function() {
     
     Route::get('get-building', [ApiController::class, 'getBuilding'])->name('get.buildings');
 
-    // ज्ञानकोश pull feed — see App\Http\Controllers\Api\KnowledgeFeedController.
+    // ज्ञानकोश (Gyankosh) pull feed — see App\Http\Controllers\Api\KnowledgeFeedController.
     Route::middleware(EnsureKnowledgeFeedKey::class)
-        ->prefix('knowledge')
-        ->name('knowledge.')
+        ->prefix('gyankosh')
+        ->name('gyankosh.')
         ->group(function () {
-            Route::get('notices', [KnowledgeFeedController::class, 'index'])->name('notices');
-            Route::get('notices/{notice}/file', [KnowledgeFeedController::class, 'file'])
+            Route::get('published-notices', [KnowledgeFeedController::class, 'index'])
+                ->name('published-notices');
+            Route::get('published-notices/{notice}/download', [KnowledgeFeedController::class, 'file'])
                 ->whereNumber('notice')
-                ->name('notices.file');
+                ->name('published-notices.download');
         });
 });

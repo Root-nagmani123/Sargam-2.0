@@ -5,8 +5,8 @@
  *
  * ज्ञानकोश polls Sargam for published notices and stores them on its side:
  *
- *   GET /api/knowledge/notices             everything published right now
- *   GET /api/knowledge/notices/{id}/file   the document of one of them
+ *   GET /api/gyankosh/published-notices                  everything published right now
+ *   GET /api/gyankosh/published-notices/{id}/download    the document of one of them
  *
  * See App\Http\Controllers\Api\KnowledgeFeedController.
  */
