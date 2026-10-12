@@ -292,13 +292,6 @@ window.statusToggleUrl = "{{ route('admin.toggleStatus') }}";
         });
     }
 
-    // The badge (Status) and the switch (Action) live in different columns,
-    // and Delete is only offered on inactive rows — reload once custom.js has
-    // saved the new status so all three agree.
-    if (window.MstAdmin) {
-        window.MstAdmin.reloadPageOnStatusToggle();
-    }
-
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initSubjectTable);
     } else {

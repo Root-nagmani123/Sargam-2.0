@@ -392,10 +392,6 @@
 @push('scripts')
 <script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
 <script>
-    // Server-rendered grid: the badge and the switch live in different
-    // columns, so refresh the page once custom.js has saved the new status.
-    MstAdmin.reloadPageOnStatusToggle();
-
     $(document).ready(function () {
         /* ---- Filters auto-apply (jQuery change: also fires from Select2) ---- */
         $('.js-hr-filter').on('change', function () {

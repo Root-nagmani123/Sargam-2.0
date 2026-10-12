@@ -8,7 +8,7 @@
  * public/js/datatable-global-ui.js — nothing here touches it.
  *
  * Public API: window.MstAdmin = { whenTableReady, columnVisibility,
- *                                 reloadPageOnStatusToggle, searchable,
+ *                                 searchable,
  *                                 repeatable, runFormInit, openFormModal }
  */
 (function (window, document, $) {
@@ -170,26 +170,6 @@
             if (typeof opts.onChange === 'function') {
                 opts.onChange(dt);
             }
-        });
-    };
-
-    /* ---------- Status switch on a server-rendered grid ----------
-     * custom.js owns the .status-toggle confirm + AJAX and then reloads
-     * `.dataTable` via ajax.reload(), which does nothing for a Blade-rendered
-     * table. The badge and the switch live in different columns, so reload
-     * the page instead of hand-mirroring them (§3b). */
-    MstAdmin.reloadPageOnStatusToggle = function () {
-        $(document).ajaxSuccess(function (e, xhr, settings) {
-            var url = (settings && settings.url) || '';
-            var toggleUrl = (window.routes && window.routes.toggleStatus) || '';
-            if (url.indexOf('toggle-status') === -1
-                && url.indexOf('toggleStatus') === -1
-                && (toggleUrl === '' || url.indexOf(toggleUrl) === -1)) {
-                return;
-            }
-            setTimeout(function () {
-                window.location.reload();
-            }, 600);
         });
     };
 
