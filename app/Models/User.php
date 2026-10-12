@@ -120,7 +120,7 @@ class User extends Authenticatable
      */
     public static function getEmployeesAndFacultyForComplaint($departmentId = null)
     {
-        $query = static::complaintLoginRows()
+        $query = self::complaintLoginRows()
             ->leftJoin('designation_master as d', 'e.designation_master_pk', '=', 'd.pk')
             ->select(
                 'e.pk as employee_pk',
@@ -151,7 +151,7 @@ class User extends Authenticatable
             return false;
         }
 
-        return static::complaintLoginRows()
+        return self::complaintLoginRows()
             ->where(function ($q) use ($employeeKey) {
                 $q->where('e.pk', $employeeKey);
                 if (Schema::hasColumn('employee_master', 'pk_old')) {
