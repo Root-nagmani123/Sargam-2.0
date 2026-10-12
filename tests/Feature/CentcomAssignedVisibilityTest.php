@@ -7,7 +7,6 @@ use App\Models\IssueCategoryMaster;
 use App\Models\IssueLogManagement;
 use App\Models\IssueLogStatus;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -23,12 +22,40 @@ use Tests\TestCase;
  *
  * Like CentcomGridFeedsTest this runs against the real configured database
  * (phpunit.xml leaves DB_CONNECTION commented out, so RefreshDatabase would drop
- * the development schema). DatabaseTransactions rolls back the one row seeded
- * below.
+ * the development schema). Every write happens inside a transaction that is
+ * always rolled back.
+ *
+ * Skips - never fails - when the database is unreachable, per the suite
+ * convention in phpunit.xml. That is why this does not use DatabaseTransactions:
+ * the trait connects inside parent::setUp(), before any skip could run.
  */
 class CentcomAssignedVisibilityTest extends TestCase
 {
-    use DatabaseTransactions;
+    private bool $inTransaction = false;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        try {
+            DB::connection()->getPdo();
+        } catch (\Throwable $e) {
+            $this->markTestSkipped('CentcomAssignedVisibilityTest needs the application database');
+        }
+
+        DB::beginTransaction();
+        $this->inTransaction = true;
+    }
+
+    protected function tearDown(): void
+    {
+        if ($this->inTransaction) {
+            DB::rollBack();
+            $this->inTransaction = false;
+        }
+
+        parent::tearDown();
+    }
 
     private const COLUMNS = ['id', 'date', 'category', 'description', 'complainant', 'nodal', 'priority', 'status', 'action'];
 
@@ -219,15 +246,27 @@ class CentcomAssignedVisibilityTest extends TestCase
         $missing = $offered->reject(fn ($r) => property_exists($r, 'can_login'));
         $this->assertCount(0, $missing, 'Some dropdown rows are missing can_login.');
 
-        $statuses = DB::table('employee_master')
-            ->whereIn('pk', $offered->pluck('employee_pk'))
-            ->pluck('status', 'pk');
+        // Expected values come from a PHP restatement of LoginController, not
+        // from the SQL under test, so a shared mistake cannot pass both.
+        $employees = DB::table('employee_master')->get()->keyBy(fn ($e) => (string) $e->pk);
+        $loginsByUserId = DB::table('user_credentials')
+            ->where('user_category', '!=', 'S')
+            ->whereNotNull('user_id')
+            ->get(['user_id', 'user_category'])
+            ->groupBy(fn ($c) => (string) $c->user_id);
 
-        $wrong = $offered->filter(
-            fn ($r) => (bool) $r->can_login !== ((int) ($statuses[$r->employee_pk] ?? 0) === 1)
-        );
+        $wrong = $offered->filter(function ($r) use ($employees, $loginsByUserId) {
+            $e = $employees[(string) $r->employee_pk] ?? null;
+            $logins = collect($loginsByUserId[(string) $r->employee_pk] ?? []);
+            if ($e && isset($e->pk_old) && $e->pk_old !== null && (string) $e->pk_old !== (string) $e->pk) {
+                $logins = $logins->merge($loginsByUserId[(string) $e->pk_old] ?? []);
+            }
+            $expected = $logins->contains(fn ($c) => $this->loginControllerAdmits($c, $employees));
 
-        $this->assertCount(0, $wrong, 'can_login disagrees with employee_master.status for some rows.');
+            return (bool) $r->can_login !== $expected;
+        });
+
+        $this->assertCount(0, $wrong, 'can_login disagrees with what LoginController would admit for some rows.');
 
         // The flag is worth nothing if it is true for everyone — this database
         // has ~800 dormant accounts, so the list must actually mark some.
@@ -246,10 +285,10 @@ class CentcomAssignedVisibilityTest extends TestCase
     {
         $actor = $this->employeeActor();
 
-        $blockedPk = DB::table('employee_master')->where('status', '!=', 1)->value('pk');
+        $blockedPk = $this->loginBlockedEmployeePk();
         $category = IssueCategoryMaster::query()->first();
         if (! $blockedPk || ! $category) {
-            $this->markTestSkipped('Need a deactivated employee and an issue category.');
+            $this->markTestSkipped('Need an employee none of whose logins can sign in, and an issue category.');
         }
 
         // Actor is the nodal officer on an unassigned issue, so status_update()
@@ -281,6 +320,122 @@ class CentcomAssignedVisibilityTest extends TestCase
     }
 
     /**
+     * LoginController checks the inactive flag for category 'E' only, so a
+     * faculty login on a status-2 employee still signs in. That employee has
+     * to stay assignable — in the dropdown and on the server.
+     */
+    public function test_a_faculty_login_on_an_inactive_employee_can_be_assigned(): void
+    {
+        $actor = $this->employeeActor();
+
+        $pk = $this->loginBlockedEmployeePk();
+        $category = IssueCategoryMaster::query()->first();
+        if (! $pk || ! $category) {
+            $this->markTestSkipped('Need an employee none of whose logins can sign in, and an issue category.');
+        }
+
+        // Give that employee a faculty login; the test transaction rolls it back.
+        DB::table('user_credentials')->insert([
+            'user_name' => 'pr337-faculty-probe-' . $pk,
+            'user_id' => $pk,
+            'user_category' => 'F',
+        ]);
+        $this->assertTrue($this->employeeAdmitted($pk), 'The fixture login is not one LoginController admits.');
+
+        $row = User::getEmployeesAndFacultyForComplaint()
+            ->first(fn ($r) => (string) $r->employee_pk === (string) $pk);
+        $this->assertNotNull($row, 'The employee is missing from the dropdown.');
+        $this->assertSame(1, (int) $row->can_login, 'A faculty login that can sign in was greyed out.');
+
+        $issue = IssueLogManagement::create([
+            'issue_category_master_pk' => $category->pk,
+            'description' => 'Faculty-login assignee acceptance probe',
+            'issue_status' => IssueLogManagement::STATUS_REPORTED,
+            'created_by' => $actor->user_id,
+            'issue_logger' => $actor->user_id,
+            'employee_master_pk' => $actor->user_id,
+            'assigned_to' => null,
+            'created_date' => now(),
+        ]);
+        IssueManagementController::bumpIndexListCacheEpoch();
+
+        $this->actingAs($actor)
+            ->put(route('admin.issue-management.status_update', $issue->pk), [
+                'issue_status' => IssueLogManagement::STATUS_IN_PROGRESS,
+                'assign_to_type' => (string) $pk,
+                'assigned_to' => (string) $pk,
+            ])
+            ->assertSessionMissing('error');
+
+        $this->assertSame(
+            (string) $pk,
+            (string) $issue->fresh()->assigned_to,
+            'The server refused an assignee whose faculty login can sign in.'
+        );
+    }
+
+    /**
+     * LoginController's inactive-account check, restated in PHP so the SQL rule
+     * in User is tested against an independent copy: only category 'E' is
+     * checked, the employee is found by pk = user_id (never pk_old), and only
+     * status 2 is refused.
+     *
+     * @param  \Illuminate\Support\Collection|null  $employees  employee_master rows keyed by (string) pk
+     */
+    private function loginControllerAdmits(object $credential, $employees = null): bool
+    {
+        if ($credential->user_category === 'E') {
+            $employee = $employees !== null
+                ? ($employees[(string) $credential->user_id] ?? null)
+                : DB::table('employee_master')->where('pk', $credential->user_id)->first();
+            if ($employee && $employee->status == 2) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /** Whether any non-student login belonging to the employee (by pk or pk_old) gets in. */
+    private function employeeAdmitted(int $employeePk): bool
+    {
+        $employee = DB::table('employee_master')->where('pk', $employeePk)->first();
+        if (! $employee) {
+            return false;
+        }
+
+        $keys = array_values(array_filter(
+            [$employee->pk, $employee->pk_old ?? null],
+            fn ($k) => $k !== null && $k !== ''
+        ));
+
+        return DB::table('user_credentials')
+            ->whereIn('user_id', $keys)
+            ->where('user_category', '!=', 'S')
+            ->get(['user_id', 'user_category'])
+            ->contains(fn ($c) => $this->loginControllerAdmits($c));
+    }
+
+    /** An employee with an 'E' login on status 2 and no other login that gets in. */
+    private function loginBlockedEmployeePk(): ?int
+    {
+        $candidates = DB::table('user_credentials as uc')
+            ->join('employee_master as e', 'e.pk', '=', 'uc.user_id')
+            ->where('uc.user_category', 'E')
+            ->where('e.status', 2)
+            ->limit(50)
+            ->pluck('e.pk');
+
+        foreach ($candidates as $pk) {
+            if (! $this->employeeAdmitted((int) $pk)) {
+                return (int) $pk;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Greying an account out must not erase an assignment already made to
      * somebody who has since been deactivated.
      */
@@ -288,9 +443,9 @@ class CentcomAssignedVisibilityTest extends TestCase
     {
         $actor = $this->employeeActor();
 
-        $blockedPk = DB::table('employee_master')->where('status', '!=', 1)->value('pk');
+        $blockedPk = $this->loginBlockedEmployeePk();
         if (! $blockedPk) {
-            $this->markTestSkipped('No deactivated employee to assign to.');
+            $this->markTestSkipped('No employee none of whose logins can sign in.');
         }
 
         $category = IssueCategoryMaster::query()->first();
@@ -453,6 +608,92 @@ class CentcomAssignedVisibilityTest extends TestCase
 
         $this->assertTrue($options['Reported'] ?? false, 'A used status is selectable again without any reopen.');
         $this->assertFalse($options['Completed'] ?? true, 'Completed was never used, so it must stay selectable.');
+    }
+
+    /**
+     * Seed an issue assigned to $actor (somebody else is nodal officer) with the
+     * given status history, oldest first, and the last status as current.
+     *
+     * @param  array<int, int>  $history
+     */
+    private function seedAssignedIssueWithHistory(User $actor, array $history): IssueLogManagement
+    {
+        $category = IssueCategoryMaster::query()->first();
+        if (! $category) {
+            $this->markTestSkipped('No issue_category_master row to hang a test issue off.');
+        }
+
+        $other = (int) DB::table('employee_master')->where('pk', '!=', $actor->user_id)->value('pk');
+        $issue = IssueLogManagement::create([
+            'issue_category_master_pk' => $category->pk,
+            'description' => 'Server-side status-lock probe',
+            'issue_status' => end($history),
+            'created_by' => $other,
+            'issue_logger' => $other,
+            'employee_master_pk' => $other,
+            'assigned_to' => (string) $actor->user_id,
+            'created_date' => now(),
+        ]);
+
+        foreach ($history as $i => $status) {
+            IssueLogStatus::create([
+                'issue_log_management_pk' => $issue->pk,
+                'issue_date' => now()->subMinutes(10)->addSeconds($i),
+                'created_by' => $other,
+                'issue_status' => $status,
+            ]);
+        }
+        IssueManagementController::bumpIndexListCacheEpoch();
+
+        return $issue;
+    }
+
+    /**
+     * The disabled option is only markup: a crafted PUT of a status already
+     * used in this cycle must be refused by the server, with nothing written.
+     */
+    public function test_the_server_refuses_a_used_status_from_the_assignee(): void
+    {
+        $actor = $this->employeeActor();
+        $issue = $this->seedAssignedIssueWithHistory($actor, [
+            IssueLogManagement::STATUS_REPORTED,
+            IssueLogManagement::STATUS_IN_PROGRESS,
+            IssueLogManagement::STATUS_COMPLETED,
+        ]);
+
+        $this->actingAs($actor)
+            ->put(route('admin.issue-management.status_update', $issue->pk), [
+                'issue_status' => IssueLogManagement::STATUS_REPORTED,
+                'remark' => 'crafted move back to Reported',
+            ])
+            ->assertSessionHas('error');
+
+        $this->assertSame(IssueLogManagement::STATUS_COMPLETED, (int) $issue->fresh()->issue_status,
+            'A used status was accepted by the server.');
+        $this->assertSame(3, IssueLogStatus::where('issue_log_management_pk', $issue->pk)->count(),
+            'A refused status change still wrote a history row.');
+    }
+
+    /** After a Reopen the cycle restarts, so the server must accept Completed again. */
+    public function test_the_server_accepts_completing_a_reopened_ticket(): void
+    {
+        $actor = $this->employeeActor();
+        $issue = $this->seedAssignedIssueWithHistory($actor, [
+            IssueLogManagement::STATUS_REPORTED,
+            IssueLogManagement::STATUS_IN_PROGRESS,
+            IssueLogManagement::STATUS_COMPLETED,
+            IssueLogManagement::STATUS_REOPENED,
+        ]);
+
+        $this->actingAs($actor)
+            ->put(route('admin.issue-management.status_update', $issue->pk), [
+                'issue_status' => IssueLogManagement::STATUS_COMPLETED,
+                'remark' => 'done again after reopen',
+            ])
+            ->assertSessionMissing('error');
+
+        $this->assertSame(IssueLogManagement::STATUS_COMPLETED, (int) $issue->fresh()->issue_status,
+            'The assignee could not complete a reopened ticket.');
     }
 
     public function test_an_unrelated_employee_still_cannot_see_the_ticket(): void

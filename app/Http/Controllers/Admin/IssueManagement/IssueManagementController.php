@@ -542,8 +542,9 @@ class IssueManagementController extends Controller
         // keystroke in a typing run — cache it against the scope + toolbar
         // filters rather than counting 65k rows again on each draw.
         $userId = Auth::user()->user_id;
-        // Each grid's own epoch — a centcom count keyed to the index epoch would
-        // outlive a centcom-only invalidation.
+        // Each grid reads the same epoch as its own snapshot cache, so the count
+        // and the rows always expire together. (bumpIndexListCacheEpoch()
+        // currently bumps both epochs at once.)
         $epoch = DataTableRedisCache::readListEpoch(
             $variant === 'centcom' ? self::CENTCOM_LISTING_CACHE_EPOCH_KEY : self::LISTING_CACHE_EPOCH_KEY
         );
@@ -1411,13 +1412,13 @@ class IssueManagementController extends Controller
                         'e.pk as employee_pk',
                         DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),
                         DB::raw("COALESCE(e.mobile, '') as mobile"),
-                        'd.designation_name',
-                        // Same shape as getEmployeesAndFacultyForComplaint() — the
-                        // dropdown reads can_login on every row it renders.
-                        DB::raw('(e.status = 1) as can_login')
+                        'd.designation_name'
                     )
                     ->first();
                 if ($assigned) {
+                    // Same shape as getEmployeesAndFacultyForComplaint() — the
+                    // dropdown reads can_login on every row it renders.
+                    $assigned->can_login = User::employeeCanSignIn($assigned->employee_pk) ? 1 : 0;
                     $employees = $employees->prepend($assigned);
                 }
             }
@@ -2017,6 +2018,17 @@ class IssueManagementController extends Controller
         }
         $request->validate($rules);
 
+        // The modal disables statuses already used since the last Reopen for
+        // everyone but the nodal officer. Disabled options are only markup, so
+        // refuse them here too; keeping the current status (e.g. to add a
+        // remark) stays allowed, as it is on the page.
+        if (! $isNodalOfficer
+            && $requestedStatus !== (int) $issue->issue_status
+            && in_array($requestedStatus, $issue->statusesUsedThisCycle(), true)) {
+            return redirect()->route('admin.issue-management.show', $issue->pk)
+                ->with('error', 'That status has already been used since this complaint was last reopened, so it cannot be set again.');
+        }
+
         DB::beginTransaction();
         try {
             // assigned_to column (VARCHAR): stores employee PK (string) or "Other" person's name
@@ -2066,22 +2078,11 @@ class IssueManagementController extends Controller
                     // is the failure this whole path exists to prevent.
                     $isNewAssignee = $assignedTo !== null
                         && (string) $assignedTo !== (string) $issue->assigned_to;
-                    if ($isNewAssignee && is_numeric($assignedTo)) {
-                        $canSignIn = DB::table('employee_master')
-                            ->where(function ($q) use ($assignedTo) {
-                                $q->where('pk', $assignedTo);
-                                if (Schema::hasColumn('employee_master', 'pk_old')) {
-                                    $q->orWhere('pk_old', $assignedTo);
-                                }
-                            })
-                            ->where('status', 1)
-                            ->exists();
+                    // Same rule as the dropdown's can_login, which follows LoginController.
+                    if ($isNewAssignee && is_numeric($assignedTo) && ! User::employeeCanSignIn($assignedTo)) {
+                        DB::rollBack();
 
-                        if (! $canSignIn) {
-                            DB::rollBack();
-
-                            return back()->with('error', 'That employee’s account is inactive — they cannot sign in, so the complaint would never reach them. Pick an active employee, or use "Other Employee" to record a name and contact number.');
-                        }
+                        return back()->with('error', 'That employee’s account is inactive — they cannot sign in, so the complaint would never reach them. Pick an active employee, or use "Other Employee" to record a name and contact number.');
                     }
                 }
             } else {

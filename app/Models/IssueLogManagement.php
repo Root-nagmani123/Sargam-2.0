@@ -125,6 +125,24 @@ class IssueLogManagement extends Model
     }
 
     /**
+     * Statuses already used since the last Reopen — the ones a non-nodal user
+     * may not pick again (other than the current status). History is newest
+     * first, so counting stops at the most recent Reopen row: a reopened
+     * complaint starts its cycle afresh. Read by the status modal and enforced
+     * by status_update(), so the two cannot drift.
+     *
+     * @return array<int, int>
+     */
+    public function statusesUsedThisCycle(): array
+    {
+        return $this->statusHistory
+            ->takeWhile(fn ($h) => (int) $h->issue_status !== self::STATUS_REOPENED)
+            ->map(fn ($h) => (int) $h->issue_status)
+            ->values()
+            ->all();
+    }
+
+    /**
      * Get the escalation history for this issue.
      */
     public function escalationHistory()

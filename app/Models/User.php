@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Role;
 
 class User extends Authenticatable
@@ -102,11 +103,11 @@ class User extends Authenticatable
      * user_credentials.user_id maps to employee_master.pk and faculty_master.employee_master_pk.
      * Excludes students: user_credentials.user_category != 'S'.
      *
-     * Each row carries `can_login`: LoginController turns away any user_category
-     * 'E' whose employee_master.status is 2 ("Your account is inactive"), and
-     * two thirds of the rows this join reaches are status 2 — dormant accounts,
-     * some unused since 2016. Assigning a complaint to one of those sent it to
-     * somebody who could never open the app, so it surfaced for nobody.
+     * Each row carries `can_login`: whether at least one of the employee's
+     * logins gets past LoginController's inactive-account check — see
+     * LOGIN_ALLOWED_SQL. Assigning a complaint to an employee none of whose
+     * logins can sign in sends it to somebody who can never open the app, so
+     * it surfaces for nobody.
      *
      * The flag rather than a filter, because the two callers want different
      * things: the assignment dropdown must not let a nodal officer hand work to
@@ -119,30 +120,75 @@ class User extends Authenticatable
      */
     public static function getEmployeesAndFacultyForComplaint($departmentId = null)
     {
-        $query = DB::table('user_credentials as uc')
-            ->join('employee_master as e', function ($join) {
-                $join->on('uc.user_id', '=', 'e.pk');
-                if (\Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'pk_old')) {
-                    $join->orOn('uc.user_id', '=', 'e.pk_old');
-                }
-            })
+        $query = static::complaintLoginRows()
             ->leftJoin('designation_master as d', 'e.designation_master_pk', '=', 'd.pk')
-            ->where('uc.user_category', '!=', 'S')
             ->select(
                 'e.pk as employee_pk',
                 DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),
                 DB::raw("COALESCE(e.mobile, '') as mobile"),
                 'd.designation_name',
-                DB::raw('(e.status = 1) as can_login')
+                DB::raw('MAX(' . self::LOGIN_ALLOWED_SQL . ') as can_login')
             )
-            ->orderByDesc(DB::raw('e.status = 1'))
+            ->orderByDesc('can_login')
             ->orderBy('e.first_name')
-            ->groupBy('e.pk', 'e.first_name', 'e.middle_name', 'e.last_name', 'e.mobile', 'd.designation_name', 'e.status');
+            ->groupBy('e.pk', 'e.first_name', 'e.middle_name', 'e.last_name', 'e.mobile', 'd.designation_name');
 
         if ($departmentId) {
             $query->where('e.department_master_pk', $departmentId);
         }
 
         return $query->get();
+    }
+
+    /**
+     * Whether the employee (matched on employee_master.pk or pk_old) has a
+     * non-student login that LoginController would let in. Same rule as the
+     * `can_login` column above, so the dropdown and the server agree.
+     */
+    public static function employeeCanSignIn($employeeKey): bool
+    {
+        if ($employeeKey === null || $employeeKey === '') {
+            return false;
+        }
+
+        return static::complaintLoginRows()
+            ->where(function ($q) use ($employeeKey) {
+                $q->where('e.pk', $employeeKey);
+                if (Schema::hasColumn('employee_master', 'pk_old')) {
+                    $q->orWhere('e.pk_old', $employeeKey);
+                }
+            })
+            ->whereRaw(self::LOGIN_ALLOWED_SQL)
+            ->exists();
+    }
+
+    /**
+     * True for a user_credentials row (alias uc) that passes LoginController's
+     * inactive-account check, which refuses a login only when user_category is
+     * 'E' AND employee_master looked up by pk = user_id (never pk_old) has
+     * status 2. A missing employee row, a NULL or any other status, and every
+     * other category sign in. `lu` is that pk-only lookup. COALESCE keeps the
+     * result 0/1, because a NULL here would read as "cannot sign in".
+     */
+    private const LOGIN_ALLOWED_SQL =
+        "NOT (COALESCE(uc.user_category = 'E', 0) AND COALESCE(lu.status = 2, 0))";
+
+    /**
+     * Non-student logins joined to the employee they belong to (by pk or
+     * pk_old), plus `lu`: the employee LoginController itself would look up.
+     */
+    private static function complaintLoginRows()
+    {
+        $hasPkOld = Schema::hasColumn('employee_master', 'pk_old');
+
+        return DB::table('user_credentials as uc')
+            ->join('employee_master as e', function ($join) use ($hasPkOld) {
+                $join->on('uc.user_id', '=', 'e.pk');
+                if ($hasPkOld) {
+                    $join->orOn('uc.user_id', '=', 'e.pk_old');
+                }
+            })
+            ->leftJoin('employee_master as lu', 'lu.pk', '=', 'uc.user_id')
+            ->where('uc.user_category', '!=', 'S');
     }
 }

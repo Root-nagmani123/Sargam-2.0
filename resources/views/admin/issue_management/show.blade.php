@@ -353,16 +353,12 @@
                 </div>
                 <div class="modal-body">
                     @php
-                        // Statuses already used SINCE the last Reopen — history is newest
-                        // first, so stop counting at the reopen row. A reopened complaint
+                        // Statuses already used SINCE the last Reopen. A reopened complaint
                         // starts its cycle again: counting the whole history left the
                         // assignee unable to mark it Completed, because it had been
-                        // completed once before the reopen.
-                        $usedStatuses = $issue->statusHistory
-                            ->takeWhile(fn ($h) => (int) $h->issue_status !== 6)
-                            ->pluck('issue_status')
-                            ->map(fn ($s) => (int) $s)
-                            ->all();
+                        // completed once before the reopen. status_update() enforces the
+                        // same list, so this is not only markup.
+                        $usedStatuses = $issue->statusesUsedThisCycle();
                         $isAssigned = !empty($issue->assigned_to);
                         $isNodalOfficer = ($issue->employee_master_pk == Auth::user()->user_id);
                         $canReassign = $isNodalOfficer && !$isCompleted; // Re-assign not allowed for closed (Completed) issues
