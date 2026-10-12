@@ -348,7 +348,15 @@ class UserController extends Controller
         $todayDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount(true);
         $fullDuplicatePermIdCardRequests = $this->getTodayDuplicatePermanentIdCardRequestsCount(false);
         $fullDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount(false);
-        $idCardApprovalRoute = route('admin.security.employee_idcard_approval.all');
+        // ID card cards open the approver's own action page; only non-approvers (e.g. Super Admin)
+        // land on the read-only "All ID Card Requests" list, which is also far heavier to load.
+        if (SecurityApproverRoles::isApproverIII() && ! SecurityApproverRoles::isApproverII()) {
+            $idCardApprovalRoute = route('admin.security.employee_idcard_approval.approval3');
+        } elseif (SecurityApproverRoles::isApproverII()) {
+            $idCardApprovalRoute = route('admin.security.employee_idcard_approval.approval2');
+        } else {
+            $idCardApprovalRoute = route('admin.security.employee_idcard_approval.all');
+        }
 
         // Role flags used for card visibility
         $isSecurityRole = SecurityApproverRoles::isApproverII() || SecurityApproverRoles::isApproverIII();

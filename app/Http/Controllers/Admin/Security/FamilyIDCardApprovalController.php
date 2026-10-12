@@ -36,15 +36,21 @@ class FamilyIDCardApprovalController extends Controller
 
         // Base query: ALL family ID card requests (Pending / Approved / Rejected).
         // Keep selected columns minimal to reduce payload and memory pressure.
+        $familyColumns = [
+            'fml_id_apply',
+            'emp_id_apply',
+            'created_by',
+            'created_date',
+            'id_status',
+            'id_card_generate_date',
+        ];
+        // employee_type drives the Permanent/Contractual badge; it was not selected, so every
+        // group showed "Permanent". Not every database has the column.
+        if (Schema::hasColumn('security_family_id_apply', 'employee_type')) {
+            $familyColumns[] = 'employee_type';
+        }
         $baseQuery = SecurityFamilyIdApply::query()
-            ->select([
-                'fml_id_apply',
-                'emp_id_apply',
-                'created_by',
-                'created_date',
-                'id_status',
-                'id_card_generate_date',
-            ])
+            ->select($familyColumns)
             ->orderBy('created_date', 'desc');
 
         // Date filters on created_date
@@ -161,13 +167,31 @@ class FamilyIDCardApprovalController extends Controller
             ];
         })->values();
 
-        // Text search across Submitted By and Employee ID (case-insensitive)
+        // Contract details for requests raised as Contractual Employee (see mapper for detection).
+        $contractDetails = IdCardSecurityMapper::contractDetailsForFamilyEmployeeIds($groupList->pluck('emp_id_apply'));
+        $groupList = $groupList->map(function ($g) use ($contractDetails) {
+            $contract = $contractDetails[trim((string) ($g->emp_id_apply ?? ''))] ?? null;
+            $storedType = $g->employee_type ?? null;
+            if ($storedType === 'Contractual Employee' || ($storedType === null && $contract !== null)) {
+                $g->employee_type = 'Contractual Employee';
+                $g->contract = $contract;
+            } else {
+                $g->employee_type = $storedType ?? 'Permanent Employee';
+                $g->contract = null;
+            }
+
+            return $g;
+        });
+
+        // Text search across Submitted By, Employee ID and the contractual employee's name (case-insensitive)
         if ($search !== '') {
             $searchLower = mb_strtolower($search);
             $groupList = $groupList->filter(function ($g) use ($searchLower) {
                 $submitted = mb_strtolower($g->submitted_by ?? '');
                 $empId = mb_strtolower($g->emp_id_apply ?? '');
-                return str_contains($submitted, $searchLower) || str_contains($empId, $searchLower);
+                $contractName = mb_strtolower($g->contract->employee_name ?? '');
+                return str_contains($submitted, $searchLower) || str_contains($empId, $searchLower)
+                    || ($contractName !== '' && str_contains($contractName, $searchLower));
             })->values();
         }
 
@@ -209,11 +233,13 @@ class FamilyIDCardApprovalController extends Controller
         })->values();
 
         // Issued tab should contain only finally approved records.
+        // Checked once: inside the map it ran an information_schema query per issued group (1,300+).
+        $hasGenerateDateColumn = Schema::hasColumn('security_family_id_apply', 'id_card_generate_date');
         $issuedGroupsList = $groupList->filter(function ($g) {
             return ((int) ($g->status_int ?? 1) === 2) && ((bool) ($g->has_level2 ?? false));
-        })->values()->map(function ($g) {
+        })->values()->map(function ($g) use ($hasGenerateDateColumn) {
             $memberFirst = isset($g->members) ? $g->members->sortBy('fml_id_apply')->first() : null;
-            $g->id_card_physical_print_done = Schema::hasColumn('security_family_id_apply', 'id_card_generate_date')
+            $g->id_card_physical_print_done = $hasGenerateDateColumn
                 && $memberFirst
                 && ! empty($memberFirst->id_card_generate_date);
 
