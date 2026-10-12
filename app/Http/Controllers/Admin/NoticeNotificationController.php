@@ -312,9 +312,13 @@ class NoticeNotificationController extends Controller
         // box, never through an empty (or not yet loaded) course list (PR #334 F-071).
         $courseTargeted = $notice->isOfficerTraineeAudience() && $selectedCourses !== [];
 
+        // The same for a department- or employee-targeted Staff/Faculty notice (F-073).
+        $staffTargeted = $notice->isStaffFacultyAudience() && $selectedDepartments !== [];
+
         return view('admin.NoticeNotification.edit', compact(
             'legacyCourseless',
             'courseTargeted',
+            'staffTargeted',
             'notice',
             'types',
             'target',
@@ -341,6 +345,14 @@ class NoticeNotificationController extends Controller
                 'course_master_pks' => 'This notice is sent to selected courses, and no course was received. '
                     .'Select its courses again (the list may not have finished loading), or tick '
                     .'"Send this notice to every Officer Trainee in every course" to widen it.',
+            ]);
+        }
+
+        if ($this->dropsStoredStaffTargeting($notice, $request)) {
+            throw ValidationException::withMessages([
+                'department_master_pks' => 'This notice is sent to selected departments or staff, and no department '
+                    .'was received. Select its departments again (the list may not have finished loading), or tick '
+                    .'"Send this notice to every staff / faculty member" to widen it.',
             ]);
         }
 
@@ -663,6 +675,27 @@ class NoticeNotificationController extends Controller
             && $this->idsFrom($request, 'course_master_pks') === []
             && ! $request->boolean('all_courses_confirmed')
             && $notice->audienceMaps()->where('audience_type', NoticeAudienceMap::TYPE_COURSE)->exists();
+    }
+
+    /**
+     * F-071's rule for the Staff/Faculty half of the form (PR #334 F-073). The saved
+     * departments, scope and employees are applied by script, so a save before it runs
+     * (or after it fails) posts no department and scope "all", which stored "every
+     * staff member". A notice with department rows keeps them unless the author ticks
+     * the explicit "every staff / faculty member" box; changing the target audience
+     * takes the ordinary path.
+     */
+    private function dropsStoredStaffTargeting(Notice $notice, Request $request): bool
+    {
+        $target = is_string($request->input('target_audience')) ? $request->input('target_audience') : '';
+
+        return $notice->isStaffFacultyAudience()
+            && $this->isStaffFaculty($target)
+            && $this->idsFrom($request, 'department_master_pks') === []
+            && ! $request->boolean('all_staff_confirmed')
+            && $notice->audienceMaps()->whereIn('audience_type', [
+                NoticeAudienceMap::TYPE_DEPARTMENT, NoticeAudienceMap::TYPE_EMPLOYEE,
+            ])->exists();
     }
 
     private function isOfficerTrainee(string $target): bool

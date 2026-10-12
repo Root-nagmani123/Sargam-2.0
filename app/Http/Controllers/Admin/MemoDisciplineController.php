@@ -193,7 +193,7 @@ public function otMarksDeducted(OtMarksDeductedService $marks)
     // (user_category 'S'); for staff and faculty it is an employee / faculty pk
     // that can equal some student's pk. Refuse rather than read that student's
     // memos.
-    abort_unless((Auth::user()->user_category ?? null) === 'S', 403);
+    abort_unless(auth_student_master_pk() !== null, 403); // the one trainee identity rule (PR #334 F-074)
 
     $studentPk = (int) Auth::user()->user_id;
 

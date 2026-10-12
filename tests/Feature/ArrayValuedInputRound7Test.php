@@ -83,6 +83,40 @@ class ArrayValuedInputRound7Test extends TestCase
         );
     }
 
+    public function test_timetable_report_exports_with_array_dates(): void
+    {
+        // The raw values reached strtotime() in the export header (round 8 remainder).
+        $admin = $this->staffWithRole('Super Admin');
+
+        foreach (['date_from', 'date_to'] as $field) {
+            foreach ([['2099-01-01'], '2099-01-01'] as $value) {
+                $label = "{$field}=".json_encode($value);
+                foreach (['excel', 'pdf'] as $format) {
+                    $this->assertNotServerError(
+                        $this->as($admin, ['Super Admin'])->get(route("timetable-report.{$format}", [$field => $value])),
+                        "{$format} {$label}"
+                    );
+                }
+            }
+        }
+    }
+
+    public function test_faculty_leave_approval_grid_with_an_array_search_value(): void
+    {
+        $admin = $this->staffWithRole('Super Admin');
+
+        foreach ([['x'], 'x'] as $value) {
+            $label = 'search[value]='.json_encode($value);
+            $response = $this->as($admin, ['Super Admin'])->getJson(
+                route('faculty.leave-approval.index', ['draw' => 1, 'start' => 0, 'length' => 10, 'search' => ['value' => $value]]),
+                ['X-Requested-With' => 'XMLHttpRequest']
+            );
+            $this->assertNotServerError($response, $label);
+            // Yajra answers 200 with an 'error' key when the query throws.
+            $this->assertNull($response->json('error'), "{$label}: ".(string) $response->json('error'));
+        }
+    }
+
     public function test_faculty_feedback_view_export_and_print_with_an_array_faculty_name(): void
     {
         $admin = $this->staffWithRole('Super Admin');

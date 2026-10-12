@@ -286,8 +286,8 @@ class TimetableReportController extends Controller
             'course_mode'   => $applied['course_mode'],
             'subject_topic' => $this->textInput($request, 'subject_topic'),
             'module_name'   => $this->textInput($request, 'module_name'),
-            'date_from'     => $request->date_from,
-            'date_to'       => $request->date_to,
+            'date_from'     => $this->textInput($request, 'date_from'),
+            'date_to'       => $this->textInput($request, 'date_to'),
         ];
 
         if ($request->filled('course_pk')) {
@@ -375,11 +375,12 @@ class TimetableReportController extends Controller
             $query->where('smm.module_name', 'LIKE', '%' . $module . '%');
         }
 
-        if ($request->filled('date_from')) {
-            $query->where('t.START_DATE', '>=', $request->date_from);
+        // textInput(): ?date_from[]= reached strtotime() in the exports and returned 500 (PR #334 F-072).
+        if (trim($from = $this->textInput($request, 'date_from')) !== '') {
+            $query->where('t.START_DATE', '>=', $from);
         }
-        if ($request->filled('date_to')) {
-            $query->where('t.START_DATE', '<=', $request->date_to);
+        if (trim($to = $this->textInput($request, 'date_to')) !== '') {
+            $query->where('t.START_DATE', '<=', $to);
         }
 
         return ['course_mode' => $courseMode, 'faculty_pk' => $facultyPk, 'role' => $role];

@@ -332,7 +332,7 @@ class UserController extends Controller
          // pages behind both cards refuse it for that reason.
          $disciplineMarksDeducted = 0;
          $pendingFeedbackCount = 0;
-         if (isOfficerTraineeUser() && (Auth::user()->user_category ?? null) === 'S') {
+         if (isOfficerTraineeUser() && auth_student_master_pk() !== null) { // one identity rule (PR #334 F-074)
              $disciplineMarksDeducted = app(OtMarksDeductedService::class)->totalFor((int) $userId);
              $pendingFeedbackCount = $this->getOtPendingFeedbackCount($userId);
          }
@@ -7002,7 +7002,7 @@ class UserController extends Controller
      */
     private function isMyGroupsTrainee(): bool
     {
-        return hasRole('Student-OT') && (Auth::user()->user_category ?? null) === 'S';
+        return hasRole('Student-OT') && auth_student_master_pk() !== null; // one identity rule (PR #334 F-074)
     }
     /**
      * Base query for the groups an OT belongs to, per the Course Group Mapping module.

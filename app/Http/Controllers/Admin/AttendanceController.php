@@ -2021,8 +2021,8 @@ $currentPath = $segments[1] ?? null;
 
     /**
      * Who may read one officer trainee's attendance, medical-exemption details
-     * included (PR #334 F-044). A trainee login (user_category 'S', the only kind
-     * whose user_id is a student_master pk) sees only its own record. Any other
+     * included (PR #334 F-044). A trainee login (auth_student_master_pk(), the one
+     * identity rule, F-074) sees only its own record. Any other
      * login needs an explicit Training Section role, whatever else it holds: a staff
      * login that also carries an Officer Trainee role is still staff. The page, its
      * feed and the Excel export all apply this one rule (F-031).
@@ -2034,8 +2034,9 @@ $currentPath = $segments[1] ?? null;
             return false;
         }
 
-        if (($user->user_category ?? '') === 'S') {
-            return (string) $user->user_id === (string) $student_pk;
+        $ownStudentPk = auth_student_master_pk();
+        if ($ownStudentPk !== null || ($user->user_category ?? '') === 'S') {
+            return $ownStudentPk === (string) $student_pk;
         }
 
         return isTrainingSectionUser();

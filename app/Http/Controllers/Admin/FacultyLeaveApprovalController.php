@@ -146,7 +146,8 @@ class FacultyLeaveApprovalController extends Controller
         return DataTables::of($this->baseQuery($request))
             ->addIndexColumn()
             ->filter(function ($query) use ($request) {
-                $search = $request->input('search.value');
+                // is_scalar: ?search[value][]= reached the string interpolation below (PR #334 F-072).
+                $search = is_scalar($value = $request->input('search.value')) ? (string) $value : '';
                 if (! empty($search)) {
                     $query->where(function ($q) use ($search) {
                         $q->whereHas('student', function ($qs) use ($search) {

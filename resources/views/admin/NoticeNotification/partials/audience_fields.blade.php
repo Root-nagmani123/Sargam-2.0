@@ -135,10 +135,27 @@
                     <option value="{{ $department->pk }}">{{ $department->department_name }}@if(isset($department->active_inactive) && (int) $department->active_inactive !== 1) (inactive)@endif</option>
                     @endforeach
                 </select>
+                @if(!empty($staffTargeted))
+                    {{-- PR #334 F-073: the saved departments are applied by script, so an
+                         empty list here may only mean "not applied yet"; clearing them
+                         widens this notice only with the box. --}}
+                    <div class="form-text text-muted small">
+                        <i class="bi bi-info-circle me-1" aria-hidden="true"></i>This notice is sent only to the
+                        departments selected here. Clearing them does not widen it on its own.
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="all_staff_confirmed" value="1"
+                            id="allStaffConfirmed" @checked(old('all_staff_confirmed'))>
+                        <label class="form-check-label small" for="allStaffConfirmed">
+                            Send this notice to every staff / faculty member
+                        </label>
+                    </div>
+                @else
                 <div class="form-text text-muted small">
                     <i class="bi bi-info-circle me-1" aria-hidden="true"></i>Leave empty to send this notice to
                     <strong>every staff / faculty member</strong>. Pick one or more to narrow it.
                 </div>
+                @endif
             </div>
 
             <div class="col-md-6 d-none" id="staffScopeBox">

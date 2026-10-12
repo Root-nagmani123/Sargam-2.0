@@ -4977,7 +4977,7 @@ class CalendarController extends Controller
         // user_id is a student_master.pk only for an Officer Trainee login
         // (user_category 'S'); for staff and faculty it can equal some trainee's
         // pk. Same rule as studentFacultyFeedback() (PR #334 F-034).
-        abort_unless((auth()->user()->user_category ?? null) === 'S', 403);
+        abort_unless(auth_student_master_pk() !== null, 403); // the one trainee identity rule (PR #334 F-074)
 
         try {
             $student_pk = auth()->user()->user_id;
@@ -5186,7 +5186,7 @@ class CalendarController extends Controller
             // (user_category 'S'); for staff and faculty it is an employee /
             // faculty pk that can equal some trainee's pk. Refuse rather than
             // show that trainee's submitted feedback.
-            abort_unless((auth()->user()->user_category ?? null) === 'S', 403);
+            abort_unless(auth_student_master_pk() !== null, 403); // the one trainee identity rule (PR #334 F-074)
 
             $student_pk = auth()->user()->user_id;
 
@@ -5621,7 +5621,7 @@ class CalendarController extends Controller
 
         // Same rule as studentFacultyFeedback(): only a trainee's user_id is a
         // student_master.pk.
-        abort_unless((auth()->user()->user_category ?? null) === 'S', 403);
+        abort_unless(auth_student_master_pk() !== null, 403); // the one trainee identity rule (PR #334 F-074)
 
         $studentId = auth()->user()->user_id;
         $now = now();

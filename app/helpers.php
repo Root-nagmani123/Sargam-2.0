@@ -924,6 +924,42 @@ function isTraineeLogin(): bool
 }
 
 /**
+ * The student_master pk the signed-in login is provably the trainee of, or null.
+ * The one identity rule for every "a trainee sees only their own" gate and the
+ * notice feed (PR #334 F-069, F-074):
+ * - category S: its user_id is a student pk;
+ * - no category, holding an Officer Trainee role (the Moodle token sets it): only
+ *   when user_id is a student whose email matches the login's and that student has
+ *   no category-S login. Some trainees' only login looks like that. Any other
+ *   category's user_id is an employee / faculty pk that can equal some student's
+ *   pk, so it is never read as one (F-047, F-067).
+ */
+function auth_student_master_pk(): ?string
+{
+    $user = Auth::user();
+    if (! $user || empty($user->user_id)) {
+        return null;
+    }
+
+    $category = (string) ($user->user_category ?? '');
+    if ($category === 'S') {
+        return (string) $user->user_id;
+    }
+
+    $email = strtolower(trim((string) ($user->email_id ?? '')));
+    if ($category !== '' || $email === '' || ! isOfficerTraineeUser()) {
+        return null;
+    }
+
+    $own = DB::table('student_master')->where('pk', $user->user_id)
+        ->whereRaw('LOWER(TRIM(email)) = ?', [$email])->exists()
+        && ! DB::table('user_credentials')->where('user_category', 'S')
+            ->where('user_id', $user->user_id)->exists();
+
+    return $own ? (string) $user->user_id : null;
+}
+
+/**
  * A staff screen gated on the sidebar's own rule (hasMenuPermission(): Super Admin,
  * or holding one of the menu permissions that link to it), with trainee logins
  * refused first, whatever they hold. The route then agrees with the menu by
@@ -1975,20 +2011,10 @@ if (!function_exists('notice_feed_query_by_role')) {
         // row (duplicate cards), and a joined query cannot be counted for
         // pagination without a distinct().
         if ($isStudent) {
-            // Only a category-S login's user_id is a student pk; any other category is
-            // matched by role alone, never as a student (PR #334 F-067, as F-058 for staff).
-            // Exception: a login with no category that is provably the student's own -
-            // same user_id and email, and the student has no category-S login. Some
-            // trainees' only login looks like that (PR #334 F-069).
-            $studentIds = $category === 'S' ? [$user->user_id] : [];
-            $email = strtolower(trim((string) ($user->email_id ?? '')));
-            if ($category === '' && ! empty($user->user_id) && $email !== ''
-                && DB::table('student_master')->where('pk', $user->user_id)
-                    ->whereRaw('LOWER(TRIM(email)) = ?', [$email])->exists()
-                && ! DB::table('user_credentials')->where('user_category', 'S')
-                    ->where('user_id', $user->user_id)->exists()) {
-                $studentIds = [$user->user_id];
-            }
+            // Only a login that is provably the student's own is matched as that
+            // student; any other is matched by role alone (PR #334 F-067, F-069).
+            $studentPk = auth_student_master_pk();
+            $studentIds = $studentPk === null ? [] : [$studentPk];
 
             $courseIds = DB::table('student_master_course__map')
                 ->whereIn('student_master_pk', $studentIds)
