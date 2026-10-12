@@ -490,6 +490,8 @@
         var root = document.importNode(src, true);
         body.innerHTML = '';
         body.appendChild(root);
+        // A fresh form (e.g. re-rendered after a rejected save) can be submitted again.
+        formModal.busy = false;
 
         $('#mstFormModalLabel').text(src.getAttribute('data-mst-form-title') || $('#mstFormModalLabel').text());
         setModalSize(src.getAttribute('data-mst-modal-size'));
