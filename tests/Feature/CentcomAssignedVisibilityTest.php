@@ -252,7 +252,7 @@ class CentcomAssignedVisibilityTest extends TestCase
         $loginsByUserId = DB::table('user_credentials')
             ->whereNotNull('user_id')
             ->get(['user_id', 'user_category'])
-            ->filter(fn ($c) => $c->user_category !== 'S')
+            ->filter(fn ($c) => $this->isEmployeesOwnLogin($c))
             ->groupBy(fn ($c) => (string) $c->user_id);
 
         $wrong = $offered->filter(function ($r) use ($employees, $loginsByUserId) {
@@ -375,12 +375,12 @@ class CentcomAssignedVisibilityTest extends TestCase
     }
 
     /**
-     * A login with a NULL user_category is not a student, and LoginController
-     * only checks the inactive flag for 'E', so it signs in. In SQL
-     * `NULL != 'S'` is NULL, not true, so a plain inequality would silently
-     * drop that login and grey out an employee who can in fact sign in.
+     * A NULL-category login whose user_id happens to equal an inactive
+     * employee's pk belongs to somebody else. LoginController admits it, but
+     * as its own holder, so it must not make the employee assignable: the
+     * ticket would reach nobody, or reach the stranger who holds that login.
      */
-    public function test_a_null_category_login_on_an_inactive_employee_can_be_assigned(): void
+    public function test_a_colliding_null_category_login_does_not_make_an_inactive_employee_assignable(): void
     {
         $actor = $this->employeeActor();
 
@@ -390,23 +390,36 @@ class CentcomAssignedVisibilityTest extends TestCase
             $this->markTestSkipped('Need an employee none of whose logins can sign in, and an issue category.');
         }
 
-        // Status-2 employee with an 'E' login; add a NULL-category login. The
-        // test transaction rolls it back.
+        // Status-2 employee with an 'E' login; add a NULL-category login that
+        // collides on user_id but names a different person. The test
+        // transaction rolls it back.
+        $employeeFirstName = (string) DB::table('employee_master')->where('pk', $pk)->value('first_name');
+        $strangerFirstName = strcasecmp(trim($employeeFirstName), 'Collision') === 0 ? 'Stranger' : 'Collision';
         DB::table('user_credentials')->insert([
-            'user_name' => 'pr337-null-category-probe-' . $pk,
+            'user_name' => 'pr337-null-collision-probe-' . $pk,
             'user_id' => $pk,
             'user_category' => null,
+            'first_name' => $strangerFirstName,
+            'last_name' => 'Probe',
         ]);
-        $this->assertTrue($this->employeeAdmitted($pk), 'The fixture login is not one LoginController admits.');
+        $collision = DB::table('user_credentials')->where('user_name', 'pr337-null-collision-probe-' . $pk)->first();
+
+        // LoginController would let the colliding login in - the reason it does
+        // not count is identity, not sign-in.
+        $this->assertTrue($this->loginControllerAdmits($collision), 'The fixture login is not one LoginController admits.');
+        $this->assertFalse($this->isEmployeesOwnLogin($collision), 'The oracle counts a NULL-category login as the employee\'s own.');
+        $this->assertFalse($this->employeeAdmitted($pk), 'The oracle treats the employee as able to sign in through a stranger\'s login.');
+
+        $this->assertFalse(User::employeeCanSignIn($pk), 'employeeCanSignIn() counted a colliding NULL-category login.');
 
         $row = User::getEmployeesAndFacultyForComplaint()
             ->first(fn ($r) => (string) $r->employee_pk === (string) $pk);
-        $this->assertNotNull($row, 'The employee is missing from the dropdown.');
-        $this->assertSame(1, (int) $row->can_login, 'A NULL-category login that can sign in was greyed out.');
+        $this->assertNotNull($row, 'The employee (listed through their own E login) is missing from the dropdown.');
+        $this->assertSame(0, (int) $row->can_login, 'A colliding NULL-category login made an inactive employee look loginable.');
 
         $issue = IssueLogManagement::create([
             'issue_category_master_pk' => $category->pk,
-            'description' => 'NULL-category assignee acceptance probe',
+            'description' => 'NULL-category collision rejection probe',
             'issue_status' => IssueLogManagement::STATUS_REPORTED,
             'created_by' => $actor->user_id,
             'issue_logger' => $actor->user_id,
@@ -422,12 +435,11 @@ class CentcomAssignedVisibilityTest extends TestCase
                 'assign_to_type' => (string) $pk,
                 'assigned_to' => (string) $pk,
             ])
-            ->assertSessionMissing('error');
+            ->assertSessionHas('error');
 
-        $this->assertSame(
-            (string) $pk,
-            (string) $issue->fresh()->assigned_to,
-            'The server refused an assignee whose NULL-category login can sign in.'
+        $this->assertNull(
+            $issue->fresh()->assigned_to,
+            'The server assigned the complaint to an inactive employee on the strength of a stranger\'s login.'
         );
     }
 
@@ -469,8 +481,22 @@ class CentcomAssignedVisibilityTest extends TestCase
         return DB::table('user_credentials')
             ->whereIn('user_id', $keys)
             ->get(['user_id', 'user_category'])
-            ->filter(fn ($c) => $c->user_category !== 'S')
+            ->filter(fn ($c) => $this->isEmployeesOwnLogin($c))
             ->contains(fn ($c) => $this->loginControllerAdmits($c));
+    }
+
+    /**
+     * The identity rule, stated on its own so neither the oracle nor the SQL
+     * can assume it silently: a user_credentials row whose user_id equals an
+     * employee key is that employee's login only when it has a category and the
+     * category is not 'S'. NULL-category rows are a separate population whose
+     * user_id values collide numerically with employee_master.pk; on the
+     * development copy they share the joined employee's first name in 6 of 331
+     * pairs, against 1,213 of 1,219 for 'E' logins.
+     */
+    private function isEmployeesOwnLogin(object $credential): bool
+    {
+        return $credential->user_category !== null && $credential->user_category !== 'S';
     }
 
     /** An employee with an 'E' login on status 2 and no other login that gets in. */

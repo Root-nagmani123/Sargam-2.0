@@ -101,7 +101,8 @@ class User extends Authenticatable
 /**
      * Employees and faculty for complaint section (complainant / assignment dropdowns).
      * user_credentials.user_id maps to employee_master.pk and faculty_master.employee_master_pk.
-     * Excludes students: user_credentials.user_category != 'S' (a NULL category is kept).
+     * Only logins with a category other than 'S' count: students are excluded, and
+     * so are NULL-category logins (see complaintLoginRows()).
      *
      * Each row carries `can_login`: whether at least one of the employee's
      * logins gets past LoginController's inactive-account check — see
@@ -176,6 +177,15 @@ class User extends Authenticatable
     /**
      * Non-student logins joined to the employee they belong to (by pk or
      * pk_old), plus `lu`: the employee LoginController itself would look up.
+     *
+     * A NULL user_category is excluded on purpose, not by accident of
+     * `NULL != 'S'`. The join is only an identity when user_id carries an
+     * employee key, and for NULL-category logins it does not: their user_id
+     * values merely fall in the same numeric range as employee_master.pk, and
+     * they almost never name the employee they collide with. Counting them
+     * would mark an inactive employee as able to sign in on the strength of
+     * somebody else's account. LoginController does admit those logins, but as
+     * their own holders, not as the employee.
      */
     private static function complaintLoginRows()
     {
@@ -189,6 +199,7 @@ class User extends Authenticatable
                 }
             })
             ->leftJoin('employee_master as lu', 'lu.pk', '=', 'uc.user_id')
-            ->where(fn ($q) => $q->whereNull('uc.user_category')->orWhere('uc.user_category', '!=', 'S'));
+            ->whereNotNull('uc.user_category')
+            ->where('uc.user_category', '!=', 'S');
     }
 }
