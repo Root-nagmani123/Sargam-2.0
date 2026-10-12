@@ -203,6 +203,20 @@ return [
         ],
     ],
 
+    // Security module (App\Services\SecurityRequestNotifier): approvers land on the list for
+    // their stage, applicants on their own request list.
+    'security' => [
+        'IdCardApproval1' => ['route' => 'admin.security.employee_idcard_approval.approval1', 'params' => []],
+        'IdCardApproval2' => ['route' => 'admin.security.employee_idcard_approval.approval2', 'params' => []],
+        'IdCardApproval3' => ['route' => 'admin.security.employee_idcard_approval.approval3', 'params' => []],
+        'FamilyIdCardApproval' => ['route' => 'admin.security.family_idcard_approval.index', 'params' => []],
+        'VehiclePassApproval' => ['route' => 'admin.security.vehicle_pass_approval.index', 'params' => []],
+        'IdCardStatus' => ['route' => 'admin.employee_idcard.index', 'params' => []],
+        'DuplicateIdCardStatus' => ['route' => 'admin.duplicate_idcard.index', 'params' => []],
+        'FamilyIdCardStatus' => ['route' => 'admin.family_idcard.index', 'params' => []],
+        'VehiclePassStatus' => ['route' => 'admin.security.vehicle_pass.index', 'params' => []],
+    ],
+
     // Default fallback route
     'default' => [
         'route' => 'admin.dashboard',

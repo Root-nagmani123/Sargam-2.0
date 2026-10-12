@@ -18,6 +18,52 @@ use stdClass;
 class IdCardSecurityMapper
 {
     /**
+     * Per-request memo for the master/employee lookups the DTO builders repeat for every row
+     * (Approval III ran ~1,000 identical queries for 258 rows). Bounded so a long-lived
+     * process never grows it without limit or serves very old values.
+     *
+     * @var array<string, mixed>
+     */
+    private static array $lookupMemo = [];
+
+    private static function memo(string $key, callable $resolve): mixed
+    {
+        if (! array_key_exists($key, self::$lookupMemo)) {
+            if (count(self::$lookupMemo) >= 5000) {
+                self::$lookupMemo = [];
+            }
+            self::$lookupMemo[$key] = $resolve();
+        }
+
+        return self::$lookupMemo[$key];
+    }
+
+    private static function cardMasterName($pk): ?string
+    {
+        return self::memo('master:' . $pk, fn () => DB::table('sec_id_cardno_master')->where('pk', $pk)->value('sec_card_name'));
+    }
+
+    private static function cardConfigMapRow($pk): ?object
+    {
+        return self::memo('config:' . $pk, fn () => DB::table('sec_id_cardno_config_map')->where('pk', $pk)->first());
+    }
+
+    /** employee_master row whose pk or pk_old equals $pkOrOld. */
+    private static function employeeByPkOrOld($pkOrOld): ?object
+    {
+        return self::memo('emp:' . $pkOrOld, fn () => DB::table('employee_master')
+            ->where(function ($q) use ($pkOrOld) {
+                $q->where('pk', $pkOrOld)->orWhere('pk_old', $pkOrOld);
+            })
+            ->first());
+    }
+
+    private static function departmentName($pk): ?string
+    {
+        return self::memo('dept:' . $pk, fn () => DB::table('department_master')->where('pk', $pk)->value('department_name'));
+    }
+
+    /**
      * Format a date value (Carbon, DateTime, string, or null) to d/m/Y for display.
      */
     public static function formatDateForDisplay($value): ?string
@@ -43,12 +89,7 @@ class IdCardSecurityMapper
         if ($employeePk === null || $employeePk === '') {
             return null;
         }
-        $emp = DB::table('employee_master')
-            ->where(function ($q) use ($employeePk) {
-                $q->where('pk', $employeePk)->orWhere('pk_old', $employeePk);
-            })
-            ->select(['first_name', 'last_name'])
-            ->first();
+        $emp = static::employeeByPkOrOld($employeePk);
         if (! $emp) {
             return null;
         }
@@ -211,7 +252,7 @@ class IdCardSecurityMapper
             if ($cardLookups !== null && isset($cardLookups['masters'][$pt])) {
                 $cardTypeName = $cardLookups['masters'][$pt];
             } else {
-                $master = DB::table('sec_id_cardno_master')->where('pk', $row->permanent_type)->value('sec_card_name');
+                $master = static::cardMasterName($row->permanent_type);
                 if ($master) {
                     $cardTypeName = $master;
                 }
@@ -262,7 +303,7 @@ class IdCardSecurityMapper
             if ($cardLookups !== null && isset($cardLookups['configs'][$pst])) {
                 $subTypeName = $cardLookups['configs'][$pst];
             } else {
-                $configRow = DB::table('sec_id_cardno_config_map')->where('pk', $row->perm_sub_type)->first();
+                $configRow = static::cardConfigMapRow($row->perm_sub_type);
                 if ($configRow && ! empty($configRow->config_name)) {
                     $subTypeName = $configRow->config_name;
                 }
@@ -286,15 +327,11 @@ class IdCardSecurityMapper
             }
         }
         if ($dto->requested_by === null && !empty($row->created_by)) {
-            $creator = DB::table('employee_master')
-                ->where(function ($q) use ($row) {
-                    $q->where('pk', $row->created_by)->orWhere('pk_old', $row->created_by);
-                })
-                ->first();
+            $creator = static::employeeByPkOrOld($row->created_by);
             if ($creator) {
                 $dto->requested_by = trim(($creator->first_name ?? '') . ' ' . ($creator->last_name ?? ''));
                 if (!empty($creator->department_master_pk)) {
-                    $dept = DB::table('department_master')->where('pk', $creator->department_master_pk)->value('department_name');
+                    $dept = static::departmentName($creator->department_master_pk);
                     $dto->requested_section = $dept;
                 }
             }
@@ -402,7 +439,7 @@ class IdCardSecurityMapper
         $dto->created_at = isset($row->created_date) ? \Carbon\Carbon::parse($row->created_date) : null;
         $cardTypeName = '--';
         if (!empty($row->permanent_type)) {
-            $master = DB::table('sec_id_cardno_master')->where('pk', $row->permanent_type)->value('sec_card_name');
+            $master = static::cardMasterName($row->permanent_type);
             if ($master) {
                 $cardTypeName = $master;
             }
@@ -490,7 +527,7 @@ class IdCardSecurityMapper
         $dto->card_valid_to = isset($row->card_valid_to) ? \Carbon\Carbon::parse($row->card_valid_to) : null;
         $subTypeName = null;
         if (!empty($row->perm_sub_type)) {
-            $configRow = DB::table('sec_id_cardno_config_map')->where('pk', $row->perm_sub_type)->first();
+            $configRow = static::cardConfigMapRow($row->perm_sub_type);
             if ($configRow && !empty($configRow->config_name)) {
                 $subTypeName = $configRow->config_name;
             }
@@ -507,23 +544,19 @@ class IdCardSecurityMapper
         $dto->requested_by = null;
         $dto->requested_section = null;
         if (!empty($row->section)) {
-            $deptName = DB::table('department_master')->where('pk', $row->section)->value('department_name');
+            $deptName = static::departmentName($row->section);
             $dto->section = $deptName ?? (string) $row->section;
             $dto->requested_section = $dto->section;
         }
         $dto->created_by_name = null;
         if (!empty($row->created_by)) {
-            $creator = DB::table('employee_master')
-                ->where(function ($q) use ($row) {
-                    $q->where('pk', $row->created_by)->orWhere('pk_old', $row->created_by);
-                })
-                ->first();
+            $creator = static::employeeByPkOrOld($row->created_by);
             if ($creator) {
                 $creatorName = trim(($creator->first_name ?? '') . ' ' . ($creator->last_name ?? ''));
                 $dto->created_by_name = $creatorName !== '' ? $creatorName : null;
                 $dto->requested_by = $creatorName !== '' ? $creatorName : null;
                 if (!empty($creator->department_master_pk)) {
-                    $dto->requested_section = DB::table('department_master')->where('pk', $creator->department_master_pk)->value('department_name');
+                    $dto->requested_section = static::departmentName($creator->department_master_pk);
                 }
             }
         }
@@ -533,13 +566,13 @@ class IdCardSecurityMapper
         $deptApprPk = $row->department_approval_emp_pk ?? null;
         if ($deptApprPk !== null && $deptApprPk !== '') {
             $dto->approval_authority = (int) $deptApprPk;
-            $authEmp = DB::table('employee_master as em')
+            $authEmp = static::memo('auth:' . $deptApprPk, fn () => DB::table('employee_master as em')
                 ->leftJoin('designation_master as dm', 'em.designation_master_pk', '=', 'dm.pk')
                 ->where(function ($q) use ($deptApprPk) {
                     $q->where('em.pk', $deptApprPk)->orWhere('em.pk_old', $deptApprPk);
                 })
                 ->select(['em.first_name', 'em.last_name', 'dm.designation_name'])
-                ->first();
+                ->first());
             if ($authEmp) {
                 $name = trim(($authEmp->first_name ?? '') . ' ' . ($authEmp->last_name ?? ''));
                 $dto->approval_authority_name = $name !== ''
@@ -609,6 +642,61 @@ class IdCardSecurityMapper
         $dto->father_name = $row->father_name ?? null;
 
         return $dto;
+    }
+
+    /**
+     * Contract details behind family ID card requests raised as "Contractual Employee".
+     *
+     * A contractual family request stores the contractual employee's printed ID card number
+     * in emp_id_apply; it names a security_con_oth_id_apply row (employee, designation,
+     * vendor, section, validity, Approval Authority). On current data contractual and
+     * permanent card numbers never overlap, so a match also marks the request contractual
+     * when security_family_id_apply has no employee_type column.
+     *
+     * @param  iterable<string|null>  $empIdApplies
+     * @return array<string, stdClass>  keyed by the trimmed emp_id_apply
+     */
+    public static function contractDetailsForFamilyEmployeeIds(iterable $empIdApplies): array
+    {
+        $ids = collect($empIdApplies)->map(fn ($v) => trim((string) $v))->filter()->unique()->values()->all();
+        if ($ids === []) {
+            return [];
+        }
+
+        $rows = collect();
+        foreach (array_chunk($ids, 1000) as $chunk) {
+            $rows = $rows->concat(
+                DB::table('security_con_oth_id_apply')
+                    ->whereIn('id_card_no', $chunk)
+                    ->get(['pk', 'id_card_no', 'employee_name', 'designation_name', 'vender_name', 'section', 'card_valid_from', 'card_valid_to', 'id_status', 'department_approval_emp_pk'])
+            );
+        }
+
+        $details = [];
+        // Prefer the approved card, then the most recent application.
+        foreach ($rows->sortByDesc(fn ($r) => [(int) ((int) $r->id_status === 2), (int) $r->pk]) as $r) {
+            $key = trim((string) $r->id_card_no);
+            if (isset($details[$key])) {
+                continue;
+            }
+            $authority = null;
+            if (! empty($r->department_approval_emp_pk)) {
+                $auth = static::employeeByPkOrOld($r->department_approval_emp_pk);
+                $authority = $auth ? (trim(($auth->first_name ?? '') . ' ' . ($auth->last_name ?? '')) ?: null) : null;
+            }
+            $details[$key] = (object) [
+                'id_card_no' => $key,
+                'employee_name' => trim((string) ($r->employee_name ?? '')) ?: null,
+                'designation' => trim((string) ($r->designation_name ?? '')) ?: null,
+                'vendor' => trim((string) ($r->vender_name ?? '')) ?: null,
+                'section' => ! empty($r->section) ? static::departmentName($r->section) : null,
+                'valid_from' => static::formatDateForDisplay($r->card_valid_from ?? null),
+                'valid_to' => static::formatDateForDisplay($r->card_valid_to ?? null),
+                'approval_authority' => $authority,
+            ];
+        }
+
+        return $details;
     }
 
     /**

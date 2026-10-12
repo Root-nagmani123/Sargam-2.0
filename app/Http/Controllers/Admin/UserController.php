@@ -67,6 +67,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
+use App\Support\SecurityApproverRoles;
 
 class UserController extends Controller
 {
@@ -347,10 +348,18 @@ class UserController extends Controller
         $todayDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount(true);
         $fullDuplicatePermIdCardRequests = $this->getTodayDuplicatePermanentIdCardRequestsCount(false);
         $fullDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount(false);
-        $idCardApprovalRoute = route('admin.security.employee_idcard_approval.all');
+        // ID card cards open the approver's own action page; only non-approvers (e.g. Super Admin)
+        // land on the read-only "All ID Card Requests" list, which is also far heavier to load.
+        if (SecurityApproverRoles::isApproverIII() && ! SecurityApproverRoles::isApproverII()) {
+            $idCardApprovalRoute = route('admin.security.employee_idcard_approval.approval3');
+        } elseif (SecurityApproverRoles::isApproverII()) {
+            $idCardApprovalRoute = route('admin.security.employee_idcard_approval.approval2');
+        } else {
+            $idCardApprovalRoute = route('admin.security.employee_idcard_approval.all');
+        }
 
         // Role flags used for card visibility
-        $isSecurityRole = hasRole('Security Card') || hasRole('Admin Security');
+        $isSecurityRole = SecurityApproverRoles::isApproverII() || SecurityApproverRoles::isApproverIII();
         $isSuperAdmin = hasRole('Super Admin');
         $isStudentOT = hasRole('Student-OT');
         $isFacultyRole = hasRole('Internal Faculty') || hasRole('Guest Faculty');
@@ -406,7 +415,15 @@ class UserController extends Controller
 
         $issueReportModules = IssueReportController::moduleOptions();
 
-        $cardsToRender = $baseCards->filter(fn ($c) => ! str_starts_with($c->key, 'widget_'))->map(function ($card) use ($cardDefinitions, $cardCounts) {
+        // Approval I cards go to every employee role (any employee can be a contractual
+        // request's Approval Authority), so they honour their `visible` rule: shown only to
+        // an authority who actually has requests waiting.
+        $visibilityGatedCards = ['pending_id_approval1', 'pending_dup_id_approval1'];
+
+        $cardsToRender = $baseCards->filter(fn ($c) => ! str_starts_with($c->key, 'widget_'))
+            ->reject(fn ($c) => in_array($c->key, $visibilityGatedCards, true)
+                && ! ($cardDefinitions[$c->key]['visible'] ?? true))
+            ->map(function ($card) use ($cardDefinitions, $cardCounts) {
             $def = $cardDefinitions[$card->key] ?? null;
 
             return [
@@ -720,15 +737,15 @@ class UserController extends Controller
             return ['perm' => 0, 'cont' => 0];
         }
 
-        if (! (hasRole('Security Card') || hasRole('Admin Security'))) {
+        if (! (SecurityApproverRoles::isApproverII() || SecurityApproverRoles::isApproverIII())) {
             return ['perm' => 0, 'cont' => 0];
         }
 
         $start = Carbon::today()->startOfDay()->toDateTimeString();
         $end = Carbon::today()->endOfDay()->toDateTimeString();
 
-        $isApproval2 = hasRole('Security Card') && ! hasRole('Admin Security');
-        $isApproval3 = hasRole('Admin Security') && ! hasRole('Security Card');
+        $isApproval2 = SecurityApproverRoles::isApproverII() && ! SecurityApproverRoles::isApproverIII();
+        $isApproval3 = SecurityApproverRoles::isApproverIII() && ! SecurityApproverRoles::isApproverII();
 
         // If user has both roles, fall back to Approval II "actionable" definition.
         if (! $isApproval2 && ! $isApproval3) {
@@ -829,8 +846,8 @@ class UserController extends Controller
             return 0;
         }
 
-        $isLevel1 = hasRole('Security Card') && ! hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') && ! hasRole('Security Card');
+        $isLevel1 = SecurityApproverRoles::isApproverII() && ! SecurityApproverRoles::isApproverIII();
+        $isLevel2 = SecurityApproverRoles::isApproverIII() && ! SecurityApproverRoles::isApproverII();
         if (! $isLevel1 && ! $isLevel2) {
             return 0;
         }
@@ -887,8 +904,8 @@ class UserController extends Controller
             return 0;
         }
 
-        $isLevel1 = hasRole('Security Card') && ! hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') && ! hasRole('Security Card');
+        $isLevel1 = SecurityApproverRoles::isApproverII() && ! SecurityApproverRoles::isApproverIII();
+        $isLevel2 = SecurityApproverRoles::isApproverIII() && ! SecurityApproverRoles::isApproverII();
         if (! $isLevel1 && ! $isLevel2) {
             return 0;
         }
@@ -1023,14 +1040,14 @@ class UserController extends Controller
             return 0;
         }
 
-        if (! (hasRole('Security Card') || hasRole('Admin Security'))) {
+        if (! (SecurityApproverRoles::isApproverII() || SecurityApproverRoles::isApproverIII())) {
             return 0;
         }
 
         $start = Carbon::today()->startOfDay()->toDateTimeString();
         $end = Carbon::today()->endOfDay()->toDateTimeString();
-        $isApproval2 = hasRole('Security Card') && ! hasRole('Admin Security');
-        $isApproval3 = hasRole('Admin Security') && ! hasRole('Security Card');
+        $isApproval2 = SecurityApproverRoles::isApproverII() && ! SecurityApproverRoles::isApproverIII();
+        $isApproval3 = SecurityApproverRoles::isApproverIII() && ! SecurityApproverRoles::isApproverII();
 
         // Permanent Duplicate (security_dup_perm_id_apply)
         $base = DB::table('security_dup_perm_id_apply as dup')
@@ -1080,14 +1097,14 @@ class UserController extends Controller
             return 0;
         }
 
-        if (! (hasRole('Security Card') || hasRole('Admin Security'))) {
+        if (! (SecurityApproverRoles::isApproverII() || SecurityApproverRoles::isApproverIII())) {
             return 0;
         }
 
         $start = Carbon::today()->startOfDay()->toDateTimeString();
         $end = Carbon::today()->endOfDay()->toDateTimeString();
-        $isApproval2 = hasRole('Security Card') && ! hasRole('Admin Security');
-        $isApproval3 = hasRole('Admin Security') && ! hasRole('Security Card');
+        $isApproval2 = SecurityApproverRoles::isApproverII() && ! SecurityApproverRoles::isApproverIII();
+        $isApproval3 = SecurityApproverRoles::isApproverIII() && ! SecurityApproverRoles::isApproverII();
 
         // Contractual Duplicate (security_dup_other_id_apply with depart_approval_status = 2)
         $base = DB::table('security_dup_other_id_apply as duo')

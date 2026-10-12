@@ -45,6 +45,30 @@
         </a>
     </div>
 
+    @if(($employeeType ?? null) === 'Contractual Employee')
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body py-3 px-4">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge bg-warning">Contractual</span>
+                    <h6 class="fw-semibold mb-0">Contract details</h6>
+                </div>
+                @if(! empty($contract))
+                    <div class="row g-2 small">
+                        <div class="col-md-3"><span class="text-muted d-block">Contractual employee</span><strong>{{ $contract->employee_name ?? '--' }}</strong></div>
+                        <div class="col-md-3"><span class="text-muted d-block">Designation</span>{{ $contract->designation ?? '--' }}</div>
+                        <div class="col-md-3"><span class="text-muted d-block">Vendor / Organization</span>{{ $contract->vendor ?? '--' }}</div>
+                        <div class="col-md-3"><span class="text-muted d-block">Section</span>{{ $contract->section ?? '--' }}</div>
+                        <div class="col-md-3"><span class="text-muted d-block">Contract ID card no.</span>{{ $contract->id_card_no ?? '--' }}</div>
+                        <div class="col-md-3"><span class="text-muted d-block">Contract card valid</span>{{ $contract->valid_from ?? '--' }} – {{ $contract->valid_to ?? '--' }}</div>
+                        <div class="col-md-3"><span class="text-muted d-block">Approval Authority</span>{{ $contract->approval_authority ?? '--' }}</div>
+                    </div>
+                @else
+                    <p class="small text-danger mb-0">No contractual ID card was found for {{ $parentId ?? '--' }}, so the contract details cannot be shown.</p>
+                @endif
+            </div>
+        </div>
+    @endif
+
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
             <div class="d-flex flex-wrap align-items-center gap-3 px-3 py-2 border-bottom bg-light">

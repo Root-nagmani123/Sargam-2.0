@@ -7,6 +7,7 @@ use App\Exports\FamilyIDCardExport;
 use App\Models\EmployeeMaster;
 use App\Models\SecurityFamilyIdApply;
 use App\Models\SecurityParmIdApply;
+use App\Services\SecurityRequestNotifier;
 use App\Support\DataTableRedisCache;
 use App\Support\IdCardSecurityMapper;
 use Illuminate\Support\Collection;
@@ -236,12 +237,21 @@ class FamilyIDCardRequestController extends Controller
             ->orderBy('fml_id_apply')
             ->get();
         $memberDtos = $members->map(fn ($r) => IdCardSecurityMapper::toFamilyRequestDto($r));
-    //    print_r($memberDtos);
-    //    die;
+
+        // Contractual requests: show the contract the request was raised under (approvers had
+        // no way to see it). Stored employee_type wins where the column exists.
+        $contract = IdCardSecurityMapper::contractDetailsForFamilyEmployeeIds([$row->emp_id_apply])[trim((string) $row->emp_id_apply)] ?? null;
+        $storedType = Schema::hasColumn('security_family_id_apply', 'employee_type') ? ($row->employee_type ?? null) : null;
+        $employeeType = ($storedType === 'Contractual Employee' || ($storedType === null && $contract !== null))
+            ? 'Contractual Employee'
+            : ($storedType ?? 'Permanent Employee');
+
         return view('admin.family_idcard.members', [
             'parentId' => $row->emp_id_apply,
             'requestDate' => $row->created_date,
             'members' => $memberDtos,
+            'employeeType' => $employeeType,
+            'contract' => $employeeType === 'Contractual Employee' ? $contract : null,
         ]);
     }
 
@@ -642,6 +652,18 @@ class FamilyIDCardRequestController extends Controller
             : "{$count} Family ID Card requests created successfully!";
 
         static::bumpIndexListCacheEpoch();
+
+        if ($count > 0) {
+            $notifier = app(SecurityRequestNotifier::class);
+            $notifier->toApproverII(
+                SecurityRequestNotifier::MODULE_FAMILY_APPROVAL,
+                null,
+                'New Family ID Card request',
+                $notifier->actorName() . ' has submitted a Family ID Card request'
+                    . ($count > 1 ? " for {$count} members" : '') . '. Awaiting your approval.'
+            );
+        }
+
         return redirect()->route('admin.family_idcard.index')->with('success', $message);
     }
 

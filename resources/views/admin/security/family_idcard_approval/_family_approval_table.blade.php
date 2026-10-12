@@ -23,7 +23,20 @@
                             <span class="badge bg-info">Permanent</span>
                         @endif
                     </td>
-                    <td><code>{{ $group->emp_id_apply ?? '--' }}</code></td>
+                    <td>
+                        <code>{{ $group->emp_id_apply ?? '--' }}</code>
+                        @if(! empty($group->contract))
+                            @php $contract = $group->contract; @endphp
+                            <div class="small text-muted mt-1 text-wrap" style="min-width: 200px;">
+                                @if($contract->employee_name)<div><strong class="text-dark">{{ $contract->employee_name }}</strong>@if($contract->designation), {{ $contract->designation }}@endif</div>@endif
+                                @if($contract->vendor)<div>Vendor: {{ $contract->vendor }}</div>@endif
+                                @if($contract->valid_to)<div>Contract card valid till: {{ $contract->valid_to }}</div>@endif
+                                @if($contract->approval_authority)<div>Approval Authority: {{ $contract->approval_authority }}</div>@endif
+                            </div>
+                        @elseif(isset($group->employee_type) && $group->employee_type === 'Contractual Employee')
+                            <div class="small text-danger mt-1">No contractual ID card found for this number</div>
+                        @endif
+                    </td>
                     <td>
                         <span class="badge bg-primary">{{ $group->member_count }}</span>
                     </td>
