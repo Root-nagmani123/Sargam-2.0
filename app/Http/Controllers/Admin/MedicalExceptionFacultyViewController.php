@@ -17,6 +17,8 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class MedicalExceptionFacultyViewController extends Controller
 {
+    /** permissions.name of this screen (menus row "Medical Exception Faculty"). */
+    private const ADMIN_PERMISSION = 'medical_exception_faculty';
 
 
     public function index(Request $request)
@@ -33,11 +35,14 @@ class MedicalExceptionFacultyViewController extends Controller
         
             // Faculty Login View - Show only their courses
             return $this->facultyLoginView($request, $facultyPk, $currentDate);
-        }else{
-            // Admin View - Show all faculties with filters (only for admin users)
-            return $this->adminView($request, $currentDate);
         }
-        
+
+        // Admin View lists every faculty's trainees and exemptions, so it needs the
+        // screen's permission (Super Admin always passes); the route itself is
+        // auth-only because the faculty branch above must stay reachable.
+        abort_unless(hasMenuPermission(self::ADMIN_PERMISSION), 403, 'You do not have permission to open this screen.');
+
+        return $this->adminView($request, $currentDate);
     }
 
     /**
