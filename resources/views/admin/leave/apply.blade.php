@@ -531,8 +531,12 @@ $(function () {
         updateTotalDays();
         syncHiddenFields();
     });
-    syncEndDateMin();
-    updateTotalDays();
+    // The read-only View shows the stored dates and total; a leave recorded on a
+    // trainee's behalf can span several days, so the one-day mirror is for applying only.
+    if (!$('#from_date_input').prop('readonly')) {
+        syncEndDateMin();
+        updateTotalDays();
+    }
     syncHiddenFields();
 
     /* ── Block submit on invalid attachment ── */
