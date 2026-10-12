@@ -101,7 +101,7 @@ class User extends Authenticatable
 /**
      * Employees and faculty for complaint section (complainant / assignment dropdowns).
      * user_credentials.user_id maps to employee_master.pk and faculty_master.employee_master_pk.
-     * Excludes students: user_credentials.user_category != 'S'.
+     * Excludes students: user_credentials.user_category != 'S' (a NULL category is kept).
      *
      * Each row carries `can_login`: whether at least one of the employee's
      * logins gets past LoginController's inactive-account check — see
@@ -189,6 +189,6 @@ class User extends Authenticatable
                 }
             })
             ->leftJoin('employee_master as lu', 'lu.pk', '=', 'uc.user_id')
-            ->where('uc.user_category', '!=', 'S');
+            ->where(fn ($q) => $q->whereNull('uc.user_category')->orWhere('uc.user_category', '!=', 'S'));
     }
 }

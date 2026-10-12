@@ -250,9 +250,9 @@ class CentcomAssignedVisibilityTest extends TestCase
         // from the SQL under test, so a shared mistake cannot pass both.
         $employees = DB::table('employee_master')->get()->keyBy(fn ($e) => (string) $e->pk);
         $loginsByUserId = DB::table('user_credentials')
-            ->where('user_category', '!=', 'S')
             ->whereNotNull('user_id')
             ->get(['user_id', 'user_category'])
+            ->filter(fn ($c) => $c->user_category !== 'S')
             ->groupBy(fn ($c) => (string) $c->user_id);
 
         $wrong = $offered->filter(function ($r) use ($employees, $loginsByUserId) {
@@ -375,6 +375,63 @@ class CentcomAssignedVisibilityTest extends TestCase
     }
 
     /**
+     * A login with a NULL user_category is not a student, and LoginController
+     * only checks the inactive flag for 'E', so it signs in. In SQL
+     * `NULL != 'S'` is NULL, not true, so a plain inequality would silently
+     * drop that login and grey out an employee who can in fact sign in.
+     */
+    public function test_a_null_category_login_on_an_inactive_employee_can_be_assigned(): void
+    {
+        $actor = $this->employeeActor();
+
+        $pk = $this->loginBlockedEmployeePk();
+        $category = IssueCategoryMaster::query()->first();
+        if (! $pk || ! $category) {
+            $this->markTestSkipped('Need an employee none of whose logins can sign in, and an issue category.');
+        }
+
+        // Status-2 employee with an 'E' login; add a NULL-category login. The
+        // test transaction rolls it back.
+        DB::table('user_credentials')->insert([
+            'user_name' => 'pr337-null-category-probe-' . $pk,
+            'user_id' => $pk,
+            'user_category' => null,
+        ]);
+        $this->assertTrue($this->employeeAdmitted($pk), 'The fixture login is not one LoginController admits.');
+
+        $row = User::getEmployeesAndFacultyForComplaint()
+            ->first(fn ($r) => (string) $r->employee_pk === (string) $pk);
+        $this->assertNotNull($row, 'The employee is missing from the dropdown.');
+        $this->assertSame(1, (int) $row->can_login, 'A NULL-category login that can sign in was greyed out.');
+
+        $issue = IssueLogManagement::create([
+            'issue_category_master_pk' => $category->pk,
+            'description' => 'NULL-category assignee acceptance probe',
+            'issue_status' => IssueLogManagement::STATUS_REPORTED,
+            'created_by' => $actor->user_id,
+            'issue_logger' => $actor->user_id,
+            'employee_master_pk' => $actor->user_id,
+            'assigned_to' => null,
+            'created_date' => now(),
+        ]);
+        IssueManagementController::bumpIndexListCacheEpoch();
+
+        $this->actingAs($actor)
+            ->put(route('admin.issue-management.status_update', $issue->pk), [
+                'issue_status' => IssueLogManagement::STATUS_IN_PROGRESS,
+                'assign_to_type' => (string) $pk,
+                'assigned_to' => (string) $pk,
+            ])
+            ->assertSessionMissing('error');
+
+        $this->assertSame(
+            (string) $pk,
+            (string) $issue->fresh()->assigned_to,
+            'The server refused an assignee whose NULL-category login can sign in.'
+        );
+    }
+
+    /**
      * LoginController's inactive-account check, restated in PHP so the SQL rule
      * in User is tested against an independent copy: only category 'E' is
      * checked, the employee is found by pk = user_id (never pk_old), and only
@@ -411,8 +468,8 @@ class CentcomAssignedVisibilityTest extends TestCase
 
         return DB::table('user_credentials')
             ->whereIn('user_id', $keys)
-            ->where('user_category', '!=', 'S')
             ->get(['user_id', 'user_category'])
+            ->filter(fn ($c) => $c->user_category !== 'S')
             ->contains(fn ($c) => $this->loginControllerAdmits($c));
     }
 
