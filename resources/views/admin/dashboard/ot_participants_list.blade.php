@@ -81,6 +81,20 @@
     .ot-list-page .programme-dt-table th:nth-child(2), .ot-list-page .programme-dt-table td:nth-child(2) { left: var(--sl-pin-left-1); }
     .ot-list-page .programme-dt-table th:nth-child(3), .ot-list-page .programme-dt-table td:nth-child(3) { left: var(--sl-pin-left-2); }
     .ot-list-page .programme-dt-table th:nth-child(3), .ot-list-page .programme-dt-table td:nth-child(3) { box-shadow: 1px 0 0 #e5e7eb; }
+
+    /* Cadre / House view toggle — same visual weight as the status pills. */
+    .ot-list-page .ot-view-btn {
+        display: inline-flex; align-items: center; gap: 0.45rem;
+        background: #fff; border: 1px solid #d0d5dd; border-radius: 0.25rem;
+        padding: 0.5rem 1.15rem; font-size: 0.875rem; font-weight: 600; color: #475467;
+    }
+    .ot-list-page .ot-view-btn i { font-size: 1rem; }
+    .ot-list-page .ot-view-btn:hover { background: #f9fafb; color: #004a93; }
+    .ot-list-page .ot-view-btn.active {
+        background: #004a93; border-color: #004a93; color: #fff;
+    }
+    .ot-list-page .ot-view-btn.active:hover { background: #003b76; color: #fff; }
+    .ot-list-page .ot-view-btn:focus-visible { outline: 2px solid #004a93; outline-offset: 2px; }
 </style>
 @endpush
 
@@ -88,6 +102,8 @@
 @php
     $filters = $filters ?? [];
     $activeStatus = ($filters['status'] ?? 'active') === 'archive' ? 'archive' : 'active';
+    // Cadre or House. The page shows ONE Course Group Mapping pair at a time.
+    $activeView = ($filters['view'] ?? 'cadre') === 'house' ? 'house' : 'cadre';
 @endphp
 <div class="container-fluid ot-list-page">
     <x-breadcrum title="OT/ Participants List" :showBack="true" :items="[
@@ -126,6 +142,25 @@
                 </ul>
             </div>
         </div>
+    </div>
+
+    {{-- Cadre / House view toggle. The list shows ONE Course Group Mapping pair at
+         a time — Cadre + Cadre Counsellor, or House Group + House Group Faculty —
+         and the filters follow it, so a Cadre view carries no House data and vice
+         versa. The roster itself, the layout and the total participant count are
+         the same in both views; only which mapping is on show changes.
+
+         Switching is a full reload, like the Active/Archived tabs and the Course
+         filter: which filters exist at all is rendered server-side. --}}
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3 ot-view-toggle" role="group" aria-label="Group view">
+        <button type="button" class="btn ot-view-btn {{ $activeView === 'cadre' ? 'active' : '' }}"
+            data-view="cadre" aria-pressed="{{ $activeView === 'cadre' ? 'true' : 'false' }}">
+            <i class="bi bi-geo-alt-fill" aria-hidden="true"></i><span>Cadre</span>
+        </button>
+        <button type="button" class="btn ot-view-btn {{ $activeView === 'house' ? 'active' : '' }}"
+            data-view="house" aria-pressed="{{ $activeView === 'house' ? 'true' : 'false' }}">
+            <i class="bi bi-house-door-fill" aria-hidden="true"></i><span>House</span>
+        </button>
     </div>
 
     <div class="card border-0 shadow-sm overflow-hidden rounded-3">
@@ -369,6 +404,15 @@
         let COUNSELLORS_BY_CADRE = @json($counsellorsByCadre ?? new stdClass);
         let FACULTY_BY_HOUSE_GROUP = @json($facultyByHouseGroup ?? new stdClass);
         const LOCKED_COLUMNS = [0, 1, 2]; // S.No, OT Code, Name — frozen & always visible
+        // Which mapping pair belongs to which view. Indexes track the <thead>
+        // order: 6 Cadre · 7 Cadre Counsellor · 8 House Group Faculty · 9 House Group.
+        const GROUP_VIEW = @json($activeView ?? 'cadre');
+        const VIEW_COLUMNS = { cadre: [6, 7], house: [8, 9] };
+        // Never rendered, never offered in the Columns panel — the server also
+        // sends them blank, so there is nothing to reveal. The ACTIVE pair needs no
+        // constant: it is simply absent from DEFAULT_HIDDEN_COLUMNS, so hiding it by
+        // hand stays a saved choice like any other column's.
+        const OTHER_VIEW_COLUMNS = GROUP_VIEW === 'house' ? VIEW_COLUMNS.cadre : VIEW_COLUMNS.house;
         // Index tracks the <thead> order above — bump it when a column is inserted before it.
         const DUTY_TYPE_COL = 11; // "Duty Type" — only meaningful for a single-day filter
         let dt = null;
@@ -394,6 +438,8 @@
         function getFilterState() {
             return {
                 status: currentStatus,
+                // Decides which mapping pair the server resolves and returns.
+                view: GROUP_VIEW,
                 course_id: $('#courseFilter').val() || '',
                 cadre: $('#cadreFilter').val() || '',
                 // Only meaningful alongside a cadre — cleared with it below.
@@ -494,12 +540,25 @@
           .on('error.dt', function() { setTableLoading(false); })
           .on('draw.dt column-visibility.dt', function() { relayoutPinnedColumns(); });
 
+        /* ── Cadre / House view toggle (full reload — the filters are server-rendered) ── */
+        $('.ot-view-toggle .ot-view-btn[data-view]').on('click', function() {
+            const v = $(this).data('view');
+            if (v === GROUP_VIEW) { return; }
+            const p = new URLSearchParams(window.location.search);
+            p.set('view', v);
+            // The group selections belong to the view being left; carrying them
+            // over would filter the new view by a dropdown it does not show.
+            ['cadre', 'counsellor_faculty', 'house_group', 'house_faculty'].forEach(k => p.delete(k));
+            window.location.href = baseUrl + (p.toString() ? '?' + p.toString() : '');
+        });
+
         /* ── Active / Archived tabs (full reload — course options + data are status-specific) ── */
         $('.programme-status-tabs .programme-status-pill[data-status]').on('click', function() {
             const st = $(this).data('status');
             if (st === currentStatus) { return; }
             const p = new URLSearchParams(window.location.search);
             p.set('status', st);
+            p.set('view', GROUP_VIEW); // stay in the view the viewer is on
             p.delete('course_id'); // the course list differs per status
             window.location.href = baseUrl + (p.toString() ? '?' + p.toString() : '');
         });
@@ -514,6 +573,7 @@
         $('#courseFilter').on('change', function() {
             const p = new URLSearchParams(window.location.search);
             p.set('status', currentStatus);
+            p.set('view', GROUP_VIEW); // a course change does not leave the view
             if (this.value) { p.set('course_id', this.value); } else { p.delete('course_id'); }
             ['cadre', 'counsellor_faculty', 'house_group', 'house_faculty'].forEach(k => p.delete(k));
             window.location.href = baseUrl + (p.toString() ? '?' + p.toString() : '');
@@ -901,14 +961,19 @@
         // past it shifted — a v4 list would hide the wrong columns.
         // v6: the default set below was introduced, so v5 entries (which meant
         // "everything visible") must not survive as a saved preference.
-        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v6';
+        // v7: the Cadre/House view toggle. The active view's pair is now visible by
+        // default (showing it is the point of the view) and the other view's pair is
+        // force-hidden, so a v6 list — which hid all four mapping columns — must not
+        // survive as a saved preference.
+        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v7';
         // What the page opens with: the frozen identity columns plus the counts
         // the list exists for. The contact / mapping columns are one click away in
         // Column Visibility, so a viewer who wants them turns them on — and that
         // choice is then saved and wins over this default for good.
-        //   3 Email · 4 Mobile No · 5 User Name · 6 Cadre
-        //   7 Cadre Counsellor · 8 House Group Faculty · 9 House Group
-        const DEFAULT_HIDDEN_COLUMNS = [3, 4, 5, 6, 7, 8, 9];
+        //   3 Email · 4 Mobile No · 5 User Name
+        // The active view's mapping pair (6/7 for Cadre, 8/9 for House) is NOT in
+        // here — the view exists to show it.
+        const DEFAULT_HIDDEN_COLUMNS = [3, 4, 5];
         function otGetHiddenCols() {
             try {
                 const raw = localStorage.getItem(otColStorageKey);
@@ -924,11 +989,18 @@
         function setupOtColumns() {
             if (!dt) { return; }
             const singleDay = isSingleDayFilter();
-            const hidden = otGetHiddenCols().filter(idx => LOCKED_COLUMNS.indexOf(idx) === -1);
+            // The other view's columns are not a stored preference — they are off
+            // because of the view, so they must not be written back as a choice the
+            // viewer made (switching views would then keep them hidden).
+            const hidden = otGetHiddenCols()
+                .filter(idx => LOCKED_COLUMNS.indexOf(idx) === -1)
+                .filter(idx => OTHER_VIEW_COLUMNS.indexOf(idx) === -1);
             otPersistHiddenCols(hidden);
             dt.columns().every(function() {
                 const idx = this.index();
                 if (LOCKED_COLUMNS.indexOf(idx) !== -1) { this.visible(true, false); return; }
+                // Belongs to the view we are not on — always hidden.
+                if (OTHER_VIEW_COLUMNS.indexOf(idx) !== -1) { this.visible(false, false); return; }
                 // Duty Type is forced hidden unless a single day is filtered.
                 if (idx === DUTY_TYPE_COL) { this.visible(singleDay && hidden.indexOf(idx) === -1, false); return; }
                 this.visible(hidden.indexOf(idx) === -1, false);
@@ -942,6 +1014,8 @@
                 const idx = this.index();
                 const title = $(this.header()).text().replace(/\s+/g, ' ').trim();
                 if (!title) { return; }
+                // The other view's mapping columns are not on offer at all.
+                if (OTHER_VIEW_COLUMNS.indexOf(idx) !== -1) { return; }
                 const isLocked = LOCKED_COLUMNS.indexOf(idx) !== -1;
                 // Duty Type toggle is disabled (and unchecked) unless a single day is filtered.
                 const dutyLocked = (idx === DUTY_TYPE_COL) && !singleDay;

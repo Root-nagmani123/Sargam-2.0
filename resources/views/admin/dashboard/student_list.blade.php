@@ -319,13 +319,21 @@
     <x-breadcrum title="{{ $listTitle ?? 'Student List' }}" :showBack="true" />
     <x-session_message />
 
-    {{-- Summary cards — marked attendance as DISTINCT STUDENTS, resolved
-         server-side ($cardCounts) from the very same Present / Absent collections
-         the tabs below render, so the two can never disagree. They cover the
-         selected Time Period (today when none is set) and are refreshed live from
-         the DataTable response on every filter change. --}}
+    {{-- Summary cards. Absent counts SESSION MARKS — the same unit as the tab
+         counters and the listing it links into, so clicking it can never land on a
+         different number. "OT/ Participants Details" is a headcount, since it opens
+         the participants roster instead. Both are resolved server-side ($cardCounts)
+         from the same collections the tabs below render, cover the selected Time
+         Period (today when none is set) and are refreshed live from the DataTable
+         response on every filter change.
+
+         There is no Present card: the Present tab below carries that number, and
+         $cardCounts still returns present_today for it. --}}
     @php
-        $cardCounts = $cardCounts ?? ['total' => 0, 'present_today' => 0, 'absent_today' => 0];
+        $cardCounts = $cardCounts ?? ['total' => 0, 'cadre_students' => 0, 'house_students' => 0, 'present_today' => 0, 'absent_today' => 0];
+        // Added later than the rest, so read them defensively.
+        $cardCadre = $cardCounts['cadre_students'] ?? 0;
+        $cardHouse = $cardCounts['house_students'] ?? 0;
         // $snapshotDate is [from, to] for the window the cards cover.
         $snapshotWindow = is_array($snapshotDate ?? null) ? $snapshotDate : null;
         $snapshotFrom = $snapshotWindow[0] ?? ($snapshotDate ?: \Carbon\Carbon::today()->toDateString());
@@ -337,7 +345,7 @@
             ? ($snapshotFromC->isToday() ? 'Today' : $snapshotFromC->format('d M Y'))
             : $snapshotFromC->format('d M') . ' – ' . $snapshotToC->format('d M Y');
     @endphp
-    <div class="row row-cols-1 row-cols-sm-3 g-3 mb-3 sl-summary-cards">
+    <div class="row row-cols-1 row-cols-sm-2 g-3 mb-3 sl-summary-cards">
         <div class="col">
             <a href="{{ route('admin.dashboard.ot-participants') }}" class="text-decoration-none d-block h-100">
                 <div class="card stat-card h-100 p-3">
@@ -348,21 +356,17 @@
                         <div class="flex-grow-1 min-w-0">
                             <p class="stat-title">OT/ Participants Details</p>
                             <p class="stat-value sl-card-count" data-card="total">{{ $pad($cardCounts['total']) }}</p>
-                        </div>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col">
-            <a href="{{ route('admin.dashboard.students', ['attendance' => 'present', 'from_date' => $snapshotFrom, 'to_date' => $snapshotTo, 'status' => ($filters['status'] ?? 'active')]) }}" class="text-decoration-none d-block h-100">
-                <div class="card stat-card h-100 p-3">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="stat-icon-wrapper stat-icon-green">
-                            <i class="material-symbols-rounded" aria-hidden="true">groups</i>
-                        </div>
-                        <div class="flex-grow-1 min-w-0">
-                            <p class="stat-title">Present <span class="sl-card-window">{{ $snapshotLabel }}</span></p>
-                            <p class="stat-value sl-card-count" data-card="present_today">{{ $pad($cardCounts['present_today']) }}</p>
+                            {{-- Cadre / House coverage of the same roster, in the card's
+                                 small print. Both carry sl-card-count + data-card so the
+                                 live DataTable refresh updates them with the big number. --}}
+                            <p class="stat-meta mt-1 d-flex flex-wrap column-gap-3 row-gap-1">
+                                <span>In Cadre:
+                                    <span class="sl-card-count fw-semibold" data-card="cadre_students">{{ $pad($cardCadre) }}</span>
+                                </span>
+                                <span>In House:
+                                    <span class="sl-card-count fw-semibold" data-card="house_students">{{ $pad($cardHouse) }}</span>
+                                </span>
+                            </p>
                         </div>
                     </div>
                 </div>

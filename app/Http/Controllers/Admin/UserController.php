@@ -288,15 +288,18 @@ class UserController extends Controller
                     $isCCorACC = true;
                 }
 
-                // "Total Students" is scoped to the viewer's COURSE ACCESS —
-                // get_Role_by_course() maps the user's role(s) to
-                // course_master.user_role_master_pk, the same access basis the
-                // "My Course Participant" card uses. Empty result = no restriction
-                // (Admin / Super Admin / PA see all); [-1] = no access → zero.
-                // Counted as DISTINCT active enrolments so a student in several
-                // accessible courses is not double-counted.
-                $roleCourseIds = get_Role_by_course();
-                $totalStudents = $this->dashboardTotalStudentsCount($roleCourseIds);
+                // "Total Students" / "Student Details" both open the student list,
+                // so their count has to be that list's own roster — see
+                // dashboardCoordinatorStudentsCount(). A CC/ACC is reached through
+                // their faculty pk, which is also what makes the cards visible at
+                // all; counting by get_Role_by_course() instead read a DIFFERENT
+                // scope (role → course_master.user_role_master_pk) and showed a
+                // plain Faculty coordinator 0 while the page they opened listed
+                // their full roster, because that helper returns [-1] for a role
+                // with no mapped courses.
+                $totalStudents = $isCCorACC
+                    ? $this->dashboardCoordinatorStudentsCount($facultyPk)
+                    : $this->dashboardTotalStudentsCount(get_Role_by_course());
             } else {
                 $totalSessions = 0;
             }
@@ -591,6 +594,69 @@ class UserController extends Controller
             })
             ->distinct()
             ->count('student_master_course__map.student_master_pk');
+    }
+
+    /**
+     * Distinct students on a faculty's own PARTICIPANT roster — the headcount behind
+     * the CC/ACC "Total Students" / "Student Details" dashboard cards.
+     *
+     * Deliberately built from the same two sources resolveDashboardStudentListPayload()
+     * uses for a faculty viewer, so the cards agree with the student list they open:
+     *
+     *   1. enrolments of the ACTIVE courses this faculty coordinates (CC or ACC), and
+     *   2. the students of the ACTIVE course groups this faculty owns (facility_id) —
+     *      a House / Counsellor group's OTs are that faculty's own just as much as a
+     *      coordinated course's roster is.
+     *
+     * Sources 3 (merely taught) and 4 (memo-only) are left out on purpose: those
+     * students appear on the list but are nobody's participants, which is the same
+     * line the list's own "OT/ Participants Details" card draws.
+     *
+     * "Active" is course_master.active_inactive = 1 AND end_date >= today, matching
+     * dashboardTotalStudentsCount() and the payload. Students are de-duplicated
+     * across both sources, so one OT in a coordinated course AND in a group this
+     * faculty owns counts once.
+     */
+    private function dashboardCoordinatorStudentsCount(int $facultyPk): int
+    {
+        $today = now()->toDateString();
+        $rosterStudentPks = collect();
+
+        // 1. Coordinated-course enrolments.
+        $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
+        if ($coordinatorCourses->isNotEmpty()) {
+            $activeCoordinatedCourses = CourseMaster::whereIn('pk', $coordinatorCourses)
+                ->where('active_inactive', 1)
+                ->where('end_date', '>=', $today)
+                ->pluck('pk');
+
+            if ($activeCoordinatedCourses->isNotEmpty()) {
+                $rosterStudentPks = $rosterStudentPks->merge(
+                    StudentMasterCourseMap::whereIn('course_master_pk', $activeCoordinatedCourses)
+                        ->where('active_inactive', 1)
+                        ->pluck('student_master_pk')
+                );
+            }
+        }
+
+        // 2. Students of the course groups this faculty owns.
+        $ownedGroupPks = DB::table('group_type_master_course_master_map as g')
+            ->join('course_master as cm', 'cm.pk', '=', 'g.course_name')
+            ->where('g.facility_id', $facultyPk)
+            ->where('g.active_inactive', 1)
+            ->where('cm.active_inactive', 1)
+            ->where('cm.end_date', '>=', $today)
+            ->pluck('g.pk');
+
+        if ($ownedGroupPks->isNotEmpty()) {
+            $rosterStudentPks = $rosterStudentPks->merge(
+                StudentCourseGroupMap::whereIn('group_type_master_course_master_map_pk', $ownedGroupPks)
+                    ->where('active_inactive', 1)
+                    ->pluck('student_master_pk')
+            );
+        }
+
+        return $rosterStudentPks->filter()->unique()->count();
     }
 
     /**
@@ -1571,22 +1637,30 @@ class UserController extends Controller
             $this->participantCourseScope($this->participantCoursePks($forCadre->concat($forHouseGroup)))
         );
 
+        // The view toggle narrows this further: only the ACTIVE view's pair is
+        // offered, so the Cadre view cannot show a House Group dropdown and vice
+        // versa. $typeScope still applies on top — a viewer whose own mapping does
+        // not include the active view's group type gets nothing, exactly as before.
+        $view = $this->otParticipantsGroupView($request);
+        $cadreVisible = $typeScope['cadre'] && $view === 'cadre';
+        $houseVisible = $typeScope['house'] && $view === 'house';
+
         return [
-            'cadre' => $typeScope['cadre']
+            'cadre' => $cadreVisible
                 ? $forCadre->map(fn ($m) => $m->cadre_name ?? null)->filter()->unique()->sort()->values()
                 : collect([]),
             // Every house group in view, not just each student's first — otherwise a
             // group whose members are all also in another group never appears.
-            'houseGroup' => $typeScope['house']
+            'houseGroup' => $houseVisible
                 ? $forHouseGroup->flatMap(fn ($m) => $m->house_groups ?? [])->filter()->unique()->sort()->values()
                 : collect([]),
-            'counsellorsByCadre' => $typeScope['cadre']
+            'counsellorsByCadre' => $cadreVisible
                 ? $this->otParticipantsCounsellorOptions(
                     $forCadre->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all(),
                     $this->participantCoursePks($forCadre)
                 )
                 : [],
-            'facultyByHouseGroup' => $typeScope['house']
+            'facultyByHouseGroup' => $houseVisible
                 ? $this->otParticipantsHouseFacultyOptions(
                     $forHouseGroup->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all(),
                     $this->participantCoursePks($forHouseGroup)
@@ -1666,6 +1740,45 @@ class UserController extends Controller
         ];
     }
 
+    /**
+     * Which group view the OT participants page is in: 'cadre' or 'house'.
+     *
+     * The page shows ONE of the two Course Group Mapping pairs at a time —
+     * Cadre / Cadre Counsellor, or House Group / House Group Faculty — chosen by
+     * the toggle under the Active/Archived tabs. Cadre is the default, so a bare
+     * URL and every link that predates the toggle keep working.
+     */
+    private function otParticipantsGroupView(Request $request): string
+    {
+        return $request->input('view') === 'house' ? 'house' : 'cadre';
+    }
+
+    /**
+     * The request with the INACTIVE view's filters stripped out.
+     *
+     * The two views have to be strictly separate: a Cadre view must reflect cadre
+     * assignments and nothing else. A leftover house_group / house_faculty in the
+     * URL — carried over by the toggle, a bookmark or the browser back button —
+     * would otherwise still narrow the roster while its dropdown is not even on
+     * screen, so the count would silently disagree with the filters shown.
+     *
+     * Everything else (course, dates, session, participant, status, search,
+     * paging) is preserved, so this is safe to use for the whole request.
+     */
+    private function otParticipantsViewScopedRequest(Request $request): Request
+    {
+        $drop = $this->otParticipantsGroupView($request) === 'house'
+            ? ['cadre', 'counsellor_faculty']
+            : ['house_group', 'house_faculty'];
+
+        $params = $request->query();
+        foreach ($drop as $key) {
+            unset($params[$key]);
+        }
+
+        return Request::create($request->url(), 'GET', $params);
+    }
+
     public function otParticipantsList(Request $request)
     {
         if (! $this->canUseOtParticipants()) {
@@ -1690,11 +1803,18 @@ class UserController extends Controller
         // groups they own (House / Counsellor group faculty) — and nothing else: no
         // merely-taught courses, no memo-only students. The "OT/ Participants
         // Details" card on the student list counts the same set, so the two agree.
-        $payload = $this->resolveDashboardStudentListPayload($request, false, true);
+        // Cadre or House view, and the request with the OTHER view's filters
+        // stripped — see otParticipantsViewScopedRequest(). Everything below reads
+        // $viewRequest, never $request, so a stale filter from the view the viewer
+        // is not on can neither narrow the roster nor change the total.
+        $groupView = $this->otParticipantsGroupView($request);
+        $viewRequest = $this->otParticipantsViewScopedRequest($request);
+
+        $payload = $this->resolveDashboardStudentListPayload($viewRequest, false, true);
         $availableCourses = $payload['availableCourses'];
 
-        $participants = $this->otParticipantsRowsFor($request, $payload['students']);
-        $counsellorFaculty = (string) $request->input('counsellor_faculty', '');
+        $participants = $this->otParticipantsRowsFor($viewRequest, $payload['students']);
+        $counsellorFaculty = (string) $viewRequest->input('counsellor_faculty', '');
 
         // Show every student of the selected course — no Present/Absent split.
         $rows = $participants;
@@ -1703,17 +1823,19 @@ class UserController extends Controller
         // Time Period scopes the count columns only (all students stay visible).
         $rowMeta = $this->otParticipantsRowMeta(
             $participants->pluck('student_master_pk')->all(),
-            $request->input('from_date') ?: null,
-            $request->input('to_date') ?: null
+            $viewRequest->input('from_date') ?: null,
+            $viewRequest->input('to_date') ?: null
         );
 
         // Cadre / Cadre Counsellor / House Group options, each scoped to the rows
         // reachable with that dropdown's own filter cleared — so an option can
         // never be offered that would return nothing.
-        $filterOptions = $this->otParticipantsFilterOptions($request, $payload['students']);
+        $filterOptions = $this->otParticipantsFilterOptions($viewRequest, $payload['students']);
 
+        // ajax() reads a header, so that check stays on the original request; the
+        // response itself is built from the scoped one.
         if ($request->ajax() && $request->has('draw')) {
-            return $this->otParticipantsDataTableResponse($request, $rows, $rowMeta, $totalParticipants, $filterOptions);
+            return $this->otParticipantsDataTableResponse($viewRequest, $rows, $rowMeta, $totalParticipants, $filterOptions);
         }
 
         // Filter option lists (mirrors the student list page).
@@ -1742,19 +1864,22 @@ class UserController extends Controller
             })
             ->filter()->unique('pk')->sortBy('label')->values();
 
-        $status = $request->input('status') === 'archive' ? 'archive' : 'active';
+        $status = $viewRequest->input('status') === 'archive' ? 'archive' : 'active';
 
+        // Read from $viewRequest, so the inactive view's two keys come back empty
+        // and the blade cannot preselect a filter that is not on screen.
         $filters = [
-            'from_date' => (string) $request->input('from_date', ''),
-            'to_date' => (string) $request->input('to_date', ''),
-            'session' => (string) $request->input('session', ''),
-            'participant' => (string) $request->input('participant', ''),
-            'course_id' => (string) $request->input('course_id', ''),
-            'cadre' => (string) $request->input('cadre', ''),
+            'from_date' => (string) $viewRequest->input('from_date', ''),
+            'to_date' => (string) $viewRequest->input('to_date', ''),
+            'session' => (string) $viewRequest->input('session', ''),
+            'participant' => (string) $viewRequest->input('participant', ''),
+            'course_id' => (string) $viewRequest->input('course_id', ''),
+            'cadre' => (string) $viewRequest->input('cadre', ''),
             'counsellor_faculty' => $counsellorFaculty,
-            'house_group' => (string) $request->input('house_group', ''),
-            'house_faculty' => (string) $request->input('house_faculty', ''),
+            'house_group' => (string) $viewRequest->input('house_group', ''),
+            'house_faculty' => (string) $viewRequest->input('house_faculty', ''),
             'status' => $status,
+            'view' => $groupView,
         ];
 
         // Course filter scope: Super Admin / Admin / PA can pick ANY course for the
@@ -3114,25 +3239,30 @@ class UserController extends Controller
             'to_date' => ['nullable', 'date'],
         ]);
 
-        $payload = $this->resolveDashboardStudentListPayload($request, false, true);
-        $rows = $this->otParticipantsRowsFor($request, $payload['students']);
+        // The report follows the view the viewer is on, so a Cadre-view download
+        // carries the Cadre pair of columns and no House data at all.
+        $groupView = $this->otParticipantsGroupView($request);
+        $viewRequest = $this->otParticipantsViewScopedRequest($request);
+
+        $payload = $this->resolveDashboardStudentListPayload($viewRequest, false, true);
+        $rows = $this->otParticipantsRowsFor($viewRequest, $payload['students']);
 
         $rowMeta = $this->otParticipantsRowMeta(
             $rows->pluck('student_master_pk')->all(),
-            $request->input('from_date') ?: null,
-            $request->input('to_date') ?: null
+            $viewRequest->input('from_date') ?: null,
+            $viewRequest->input('to_date') ?: null
         );
 
         // The search box narrows the export exactly as it narrows the table.
-        $rows = $this->otParticipantsApplySearch($request, $rows, $rowMeta);
+        $rows = $this->otParticipantsApplySearch($viewRequest, $rows, $rowMeta);
 
-        $exportData = $this->otParticipantsExportData($rows, $rowMeta);
+        $exportData = $this->otParticipantsExportData($rows, $rowMeta, $groupView);
 
         $timestamp = now()->format('Ymd_His');
         $fileBase = "ot_participants_{$timestamp}";
         $reportTitle = 'OT / Participants List';
-        $filterSummary = $this->otParticipantsFilterSummary($request);
-        $header = $this->buildStudentListExportHeaderData($request);
+        $filterSummary = $this->otParticipantsFilterSummary($viewRequest);
+        $header = $this->buildStudentListExportHeaderData($viewRequest);
 
         if ($format === 'print') {
             return view('admin.dashboard.export.student_list_print', array_merge([
@@ -3205,7 +3335,7 @@ class UserController extends Controller
      *
      * @return array{headings: array<int, string>, rows: array<int, array<int, string>>, widths: array<int, int>}
      */
-    private function otParticipantsExportData($rows, array $rowMeta): array
+    private function otParticipantsExportData($rows, array $rowMeta, string $groupView = 'cadre'): array
     {
         // Heading, then the relative width it gets in the PDF. Text columns need
         // the room; the count columns hold two characters and stay narrow.
@@ -3229,6 +3359,16 @@ class UserController extends Controller
             ['Discipline Memo', 5],
             ['Comments/ Feedbacks', 5],
         ];
+        // Keep only the active view's group pair: Cadre / Cadre Counsellor (6, 7)
+        // or House Group Faculty / House Group (8, 9). Headings, widths and every
+        // row cell are dropped through the SAME $strip, so the three stay aligned
+        // — a mismatch here would shift every column after it in the PDF.
+        $dropColumns = $groupView === 'house' ? [6, 7] : [8, 9];
+        $strip = static fn (array $cells) => array_values(
+            array_diff_key($cells, array_flip($dropColumns))
+        );
+
+        $columns = $strip($columns);
         $headings = array_column($columns, 0);
         $widths = array_column($columns, 1);
 
@@ -3249,7 +3389,7 @@ class UserController extends Controller
             $meta = $rowMeta[$p->student_master_pk] ?? [];
             $name = $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''));
 
-            $out[] = [
+            $out[] = $strip([
                 $index + 1,
                 (string) ($s->generated_OT_code ?: 'N/A'),
                 (string) ($name ?: 'N/A'),
@@ -3268,7 +3408,7 @@ class UserController extends Controller
                 $count($meta['notice_memo'] ?? 0),
                 $count($meta['discipline_memo'] ?? 0),
                 $count($commentCounts[(int) $p->student_master_pk] ?? 0),
-            ];
+            ]);
         }
 
         return ['headings' => $headings, 'rows' => $out, 'widths' => $widths];
@@ -3381,6 +3521,12 @@ class UserController extends Controller
         $recordsTotal = $totalParticipants;
         $recordsFiltered = $rows->count();
 
+        // Only the active view's pair of columns carries data. The blade also hides
+        // the other two, but blanking them here is what makes the separation real:
+        // un-hiding a column from the Columns panel, or reading the raw JSON, still
+        // shows no House data in a Cadre view.
+        $isCadreView = $this->otParticipantsGroupView($request) === 'cadre';
+
         // Sorting (S.No / OT Code / Name / Email / Cadre / House).
         // Column indexes must track the <thead> order in ot_participants_list.blade.php.
         $columnMap = [
@@ -3451,15 +3597,17 @@ class UserController extends Controller
                 'email' => e($s->email ?? 'N/A'),
                 'mobile' => e($s->contact_no ?: 'N/A'),
                 'user_name' => e($s->user_id ?: 'N/A'),
-                'cadre' => e($p->cadre_name ?: ($s->cadre->cadre_name ?? 'N/A')),
+                // Cadre view only — see $isCadreView above.
+                'cadre' => $isCadreView ? e($p->cadre_name ?: ($s->cadre->cadre_name ?? 'N/A')) : '',
                 // The faculty on the same Course Group Mapping row as the cadre
                 // (counsellor group) — i.e. this participant's cadre counsellor.
-                'counsellor' => e($p->counsellor_name ?: 'N/A'),
-                // The faculty on the same Course Group Mapping row as the house group.
-                'house_faculty' => e($p->house_faculty_name ?: 'N/A'),
+                'counsellor' => $isCadreView ? e($p->counsellor_name ?: 'N/A') : '',
+                // House view only. The faculty on the same Course Group Mapping row
+                // as the house group.
+                'house_faculty' => $isCadreView ? '' : e($p->house_faculty_name ?: 'N/A'),
                 // House GROUP (Course Group Mapping) — the full group name
                 // ("Nanda Devi"), not the hostel room code ("GANG-116").
-                'house' => e($p->house_group ?: 'N/A'),
+                'house' => $isCadreView ? '' : e($p->house_group ?: 'N/A'),
                 'duty_count' => $this->otCountCell($meta['duty_count'], $detailUrl.'?section=dutiesSection'.$linkDateQs),
                 'duty_type' => e($meta['duty_type'] ?: '-'),
                 'medical' => $this->otCountCell($meta['medical'], $detailUrl.'?section=medicalExceptionsSection'.$linkDateQs),
@@ -3552,6 +3700,14 @@ class UserController extends Controller
         $students = $attendance === 'present'
             ? $presentAll
             : ($attendance === 'absent' ? $absentAll : $filteredAll);
+        // Session-wise order for the report, independent of however the on-screen
+        // grid happened to be sorted — the export URL carries filters and the
+        // active tab but no sort, so without this the rows came out in raw
+        // payload order. Applies to xlsx, pdf and print alike.
+        $students = ($students instanceof Collection ? $students : collect($students))
+            ->sortBy(fn ($studentMap) => $this->dashboardStudentListExportSortKey($studentMap))
+            ->values();
+
         $exportData = $this->dashboardStudentListExportData($students, $attendance);
 
         $timestamp = now()->format('Ymd_His');
@@ -4972,12 +5128,24 @@ class UserController extends Controller
      *                   Details" card links to: the page's filters applied, but NOT
      *                   the session-date drop, since that page lists every
      *                   participant regardless of the Time Period.
-     *   present_today → DISTINCT STUDENTS in the Present tab set
-     *   absent_today  → DISTINCT STUDENTS in the Absent tab set
+     *   cadre_students → of that roster, how many OTs have a cadre
+     *   house_students → of that roster, how many OTs sit in a House Group
+     *   present_today → ROWS in the Present tab set (one per present-marked session)
+     *   absent_today  → ROWS in the Absent tab set (one per absent-marked session)
      *
-     * The tab counters count ROWS (one per marked session), the cards count PEOPLE;
-     * both read the same collections, so a student marked in three sessions adds
-     * three to the tab and one to the card.
+     * The Present / Absent cards count SESSION MARKS, not people — the same unit the
+     * tab counters and the listing use, because each card is a link straight into
+     * that listing. A student present in three sessions of the window adds three to
+     * the card and three to the list, so the two can never read differently.
+     *
+     * This is also why the two cards cannot double-count anybody: a session mark is
+     * either present or absent, never both, so an OT present in one session and
+     * absent in another contributes to each card separately and
+     * present_today + absent_today always equals the All tab's marked total. Counting
+     * distinct PEOPLE here (as this did before) put such an OT in both cards at once.
+     *
+     * "OT/ Participants Details" stays a HEADCOUNT: it links to the participants
+     * roster, which lists each OT once regardless of the Time Period.
      *
      * The window is whatever the Time Period filter holds, falling back to today
      * when no range is set. The cards previously hard-coded today regardless of the
@@ -5008,11 +5176,51 @@ class UserController extends Controller
         // opens lists. Merely-taught and memo-only rows are on the student list below
         // but are nobody's participants, so they are not counted.
         $coordinated = collect($students)->filter(fn ($m) => ($m->is_participant ?? false) === true);
+        $rosterRows = $this->applyDashboardStudentListFilters($coordinated, $request, false);
 
+        // Cadre / House coverage of that same roster, for the card's two small
+        // lines: how many of those OTs have a cadre, and how many sit in a House
+        // Group. Resolved with the SAME helpers the OT participants page uses for
+        // its Cadre and House Group columns, so the card and the page it opens can
+        // never report a different number.
+        //
+        // "Has a cadre" is a counsellor-group name OR student_master.cadre_master_pk
+        // (resolveParticipantCadres() keys a student only when one of the two
+        // resolves). "In a House" is at least one House Group row. Both are
+        // headcounts over the roster, so neither can exceed 'total'.
+        $rosterStudentPks = collect($rosterRows)
+            ->pluck('student_master_pk')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $rosterCadres = $this->resolveParticipantCadres($rosterStudentPks);
+        $rosterHouseRows = $this->resolveParticipantGroupRows($rosterStudentPks, $this->houseGroupTypePks());
+
+        // Counted through participantCadreFor() / participantGroupEntriesFor() —
+        // the same per-ROW resolvers the page's columns call — not the raw
+        // byStudent maps. Those maps also carry a student's groups from OTHER
+        // courses, which the columns deliberately ignore; reading them here made
+        // the card claim 1901 OTs "in cadre" where the page showed 1857 filled
+        // cells. Distinct students, so an OT on two courses still counts once.
         $counts = [
-            'total' => $distinct($this->applyDashboardStudentListFilters($coordinated, $request, false)),
-            'present_today' => $distinct($presentStudents),
-            'absent_today' => $distinct($absentStudents),
+            'total' => $distinct($rosterRows),
+            // Small print on the "OT/ Participants Details" card — see above.
+            'cadre_students' => $distinct(
+                collect($rosterRows)->filter(
+                    fn ($m) => trim((string) $this->participantCadreFor($m, $rosterCadres)) !== ''
+                )
+            ),
+            'house_students' => $distinct(
+                collect($rosterRows)->filter(
+                    fn ($m) => ! empty($this->participantGroupEntriesFor($m, $rosterHouseRows))
+                )
+            ),
+            // Session marks, matching the tab counters and the listing each card
+            // opens — see the note above on why these are not headcounts.
+            'present_today' => collect($presentStudents)->count(),
+            'absent_today' => collect($absentStudents)->count(),
         ];
 
         return [$counts, [$from, $to]];
@@ -5524,6 +5732,77 @@ class UserController extends Controller
         return $cache[$cacheKey];
     }
 
+    /**
+     * A session label's START time as minutes since midnight, for sorting.
+     *
+     * timetable.class_session is free-text varchar and this app holds TWO shapes:
+     * 12-hour "03:30 PM - 04:30 PM" (1054 rows / 210 distinct values on this
+     * install) and 24-hour "13:05 to 14:00" (21 rows / 6 values). Sorting the raw
+     * string — which is what SORT_NATURAL on session_time did — therefore puts
+     * "01:00 PM" before "09:30 AM", so an export "sorted by session" came out in
+     * no useful order at all.
+     *
+     * Only the FIRST time token is read; the end time never changes the ordering.
+     * A blank or unparseable label returns PHP_INT_MAX so those rows sort last
+     * instead of masquerading as midnight.
+     */
+    private function sessionStartMinutes(?string $session): int
+    {
+        $session = trim((string) $session);
+        if ($session === '') {
+            return PHP_INT_MAX;
+        }
+
+        if (! preg_match('/(\d{1,2}):(\d{2})\s*(AM|PM)?/i', $session, $m)) {
+            return PHP_INT_MAX;
+        }
+
+        $hour = (int) $m[1];
+        $minute = (int) $m[2];
+        $meridiem = isset($m[3]) ? strtoupper($m[3]) : '';
+
+        if ($meridiem === 'AM' && $hour === 12) {
+            $hour = 0;            // 12:15 AM is 00:15
+        } elseif ($meridiem === 'PM' && $hour !== 12) {
+            $hour += 12;          // 03:30 PM is 15:30; 12:45 PM stays 12:45
+        }
+
+        if ($hour > 23 || $minute > 59) {
+            return PHP_INT_MAX;
+        }
+
+        return $hour * 60 + $minute;
+    }
+
+    /**
+     * Session-wise order for the student-list exports: Date, then session START
+     * time, then OT name.
+     *
+     * Date leads because the Time Period can span several days — ordering on the
+     * session alone would interleave them, putting every day's 09:30 together.
+     * Within one day that still reads as a plain session sort, which is what the
+     * report is for. Rows with no session in range (the All tab's roster rows)
+     * carry PHP_INT_MAX / an empty date and land at the end.
+     *
+     * Built as one zero-padded string so plain string comparison orders it, with
+     * no dependency on multi-key sortBy behaviour.
+     */
+    private function dashboardStudentListExportSortKey($studentMap): string
+    {
+        $date = $studentMap->session_date ?? null;
+        // Undated rows must sort after every real date, not before 1970.
+        $datePart = $date ? Carbon::parse($date)->format('Y-m-d') : '9999-99-99';
+
+        $minutes = $this->sessionStartMinutes($studentMap->session_time ?? null);
+        $minutesPart = str_pad((string) min($minutes, 9999), 4, '0', STR_PAD_LEFT);
+
+        $student = $studentMap->studentMaster;
+        $name = strtolower(trim((string) (($student->display_name ?? '')
+            ?: trim(($student->first_name ?? '').' '.($student->last_name ?? '')))));
+
+        return $datePart.'|'.$minutesPart.'|'.$name;
+    }
+
     private function dashboardStudentListSortValue($studentMap, string $sortKey)
     {
         $student = $studentMap->studentMaster;
@@ -5537,7 +5816,9 @@ class UserController extends Controller
             'course' => strtolower((string) ($studentMap->course->course_name ?? '')),
             'status' => (int) ($studentMap->attendance_present ?? true),
             'date' => (string) ($studentMap->session_date ?? ''),
-            'session' => (string) ($studentMap->session_time ?? ''),
+            // Minutes, not the raw label — see sessionStartMinutes(). Sorting the
+            // string put "01:00 PM" ahead of "09:30 AM".
+            'session' => $this->sessionStartMinutes($studentMap->session_time ?? null),
             'topic' => strtolower((string) ($studentMap->session_topic ?? '')),
             'faculty' => strtolower((string) $this->dashboardResolveSessionFaculty($studentMap->session_faculty_master ?? null, $studentMap->session_internal_faculty ?? null)),
             'mdo' => (int) ($studentMap->attendance_status ?? 0) === 4 ? 1 : 0,
