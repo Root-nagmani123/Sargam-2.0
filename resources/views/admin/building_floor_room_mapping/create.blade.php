@@ -87,7 +87,7 @@
                         <div class="input-group">
                             <span class="input-group-text floor_room_name" id="basic-addon3">{{ $prefix }}</span>
                             <input type="text" class="form-control mst-control @error('room_name') is-invalid @enderror" id="basic-url"
-                                   aria-describedby="basic-addon3" name="room_name" value="{{ old('room_name', $middleString) }}">
+                                   aria-describedby="basic-addon3" name="room_name" value="{{ old_string('room_name', $middleString) }}">
                         </div>
                         @error('room_name')
                             <span class="mst-field-error">{{ $message }}</span>

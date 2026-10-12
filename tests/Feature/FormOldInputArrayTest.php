@@ -129,6 +129,9 @@ class FormOldInputArrayTest extends TestCase
             'MDO/escort exemption edit' => [route('mdo-escrot-exemption.edit', $id('mdo_escot_duty_map')), ['mdo_duty_type_master_pk' => ['1']]],
             'subject add modal' => [route('subject.index'), ['subject_form' => 'add', 'status' => ['1']]],
             'subject module add modal' => [route('subject-module.index'), ['module_form' => 'add', 'active_inactive' => ['1']]],
+            // F-018: raw {{ old() }} echoes, not casts.
+            'room-map create, room_name' => [route('hostel.building.floor.room.map.create'), ['room_name' => ['x']]],
+            'MDO/escort exemption create, Remark' => [route('mdo-escrot-exemption.create'), ['Remark' => ['x']]],
         ];
     }
 

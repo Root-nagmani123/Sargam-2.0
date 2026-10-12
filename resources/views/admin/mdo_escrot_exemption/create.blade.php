@@ -311,7 +311,7 @@
                 <h2 class="mst-form-section-title h6">Remarks</h2>
                 <label for="textarea" class="mst-form-label d-block">Remarks (If Any)</label>
                 <textarea class="form-control mst-control @error('Remark') is-invalid @enderror" id="textarea" rows="3"
-                    placeholder="Enter remarks..." name="Remark">{{ old('Remark') }}</textarea>
+                    placeholder="Enter remarks..." name="Remark">{{ old_string('Remark') }}</textarea>
                 @error('Remark')
                     <span class="mst-field-error">{{ $message }}</span>
                 @enderror
