@@ -166,6 +166,16 @@
                     <option value="{{ \App\Models\NoticeNotification::MODE_ALL }}">All</option>
                     <option value="{{ \App\Models\NoticeNotification::MODE_INDIVIDUAL }}">Individual</option>
                 </select>
+                @if(!empty($staffIndividual))
+                    {{-- PR #334 F-079: switching this notice from named staff to All widens it only with the box. --}}
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" name="all_department_staff_confirmed" value="1"
+                            id="allDepartmentStaffConfirmed" @checked(old('all_department_staff_confirmed'))>
+                        <label class="form-check-label small" for="allDepartmentStaffConfirmed">
+                            Send this notice to everyone in the selected departments
+                        </label>
+                    </div>
+                @endif
             </div>
 
             <div class="col-12 d-none" id="employeeBox">

@@ -315,10 +315,14 @@ class NoticeNotificationController extends Controller
         // The same for a department- or employee-targeted Staff/Faculty notice (F-073).
         $staffTargeted = $notice->isStaffFacultyAudience() && $selectedDepartments !== [];
 
+        // ...and a notice for named staff widens to whole departments only through one (F-079).
+        $staffIndividual = $notice->isStaffFacultyAudience() && $selectedEmployees !== [];
+
         return view('admin.NoticeNotification.edit', compact(
             'legacyCourseless',
             'courseTargeted',
             'staffTargeted',
+            'staffIndividual',
             'notice',
             'types',
             'target',
@@ -353,6 +357,13 @@ class NoticeNotificationController extends Controller
                 'department_master_pks' => 'This notice is sent to selected departments or staff, and no department '
                     .'was received. Select its departments again (the list may not have finished loading), or tick '
                     .'"Send this notice to every staff / faculty member" to widen it.',
+            ]);
+        }
+
+        if ($this->widensStoredIndividualStaff($notice, $request)) {
+            throw ValidationException::withMessages([
+                'staff_scope' => 'This notice is sent to named staff / faculty members. Choose Individual and select '
+                    .'them, or tick "Send this notice to everyone in the selected departments" to widen it.',
             ]);
         }
 
@@ -696,6 +707,24 @@ class NoticeNotificationController extends Controller
             && $notice->audienceMaps()->whereIn('audience_type', [
                 NoticeAudienceMap::TYPE_DEPARTMENT, NoticeAudienceMap::TYPE_EMPLOYEE,
             ])->exists();
+    }
+
+    /**
+     * A notice for named staff widens to everyone in its departments only through an
+     * explicit box. Changing the departments used to reset Recipients to All, and the
+     * next save sent a personal notice to whole departments (PR #334 F-079). Read from
+     * the stored employee rows, never from what the request says the notice was.
+     */
+    private function widensStoredIndividualStaff(Notice $notice, Request $request): bool
+    {
+        $target = is_string($request->input('target_audience')) ? $request->input('target_audience') : '';
+
+        return $notice->isStaffFacultyAudience()
+            && $this->isStaffFaculty($target)
+            && $this->idsFrom($request, 'department_master_pks') !== []
+            && $request->input('staff_scope') !== Notice::MODE_INDIVIDUAL
+            && ! $request->boolean('all_department_staff_confirmed')
+            && $notice->audienceMaps()->where('audience_type', NoticeAudienceMap::TYPE_EMPLOYEE)->exists();
     }
 
     private function isOfficerTrainee(string $target): bool

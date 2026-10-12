@@ -258,11 +258,14 @@ class CourseRepositorySearch
             });
         }
 
+        // Filter on what decorate() displays, so a legacy row shown as "Law" is
+        // found by Subject = Law (PR #334 F-078).
         if ($c['course'] !== '') {
-            $query->where('dt.course_master_pk', $c['course']);
+            $query->whereRaw(self::displayTextSql('dt.course_master_pk', "substring_index(dt.keyword, ',', 1)") . ' = ?', [$c['course']]);
         }
         if ($c['subject'] !== '') {
-            $query->where('dt.subject_pk', $c['subject']);
+            $segment = "case when dt.keyword like '%,%' then substring_index(substring_index(dt.keyword, ',', 2), ',', -1) end";
+            $query->whereRaw(self::displayTextSql('dt.subject_pk', $segment) . ' = ?', [$c['subject']]);
         }
         if ($c['author'] !== '') {
             $authorLike = DataTableSearchHelper::likePattern($c['author']);
@@ -516,6 +519,13 @@ class CourseRepositorySearch
         $fallback = trim((string) $fallback);
 
         return $fallback !== '' ? $fallback : null;
+    }
+
+    /** pickText() in SQL: the column unless blank or a bare id, else the keyword segment. */
+    private static function displayTextSql(string $column, string $keywordSegment): string
+    {
+        return "(case when trim(coalesce({$column}, '')) <> '' and trim({$column}) not regexp '^[0-9]+$'"
+            . " then trim({$column}) else trim({$keywordSegment}) end)";
     }
 
     // --------------------------------------------------------------- categories

@@ -493,8 +493,9 @@
     });
     $department.on('change', function () {
         refreshCount($department);
-        $staffScope.val(MODE_ALL);
-        applyStaffScope([]);
+        // Keep Recipients and the named staff: resetting to All here turned a
+        // personal notice into one for whole departments on save (PR #334 F-079).
+        applyStaffScope(selectedValues($employee));
     });
     $staffScope.on('change', function () { applyStaffScope([]); });
 
