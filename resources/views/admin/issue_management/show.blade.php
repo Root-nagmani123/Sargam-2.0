@@ -10,16 +10,11 @@
 
 @section('setup_content')
 @php
-    // Every employee id (pk and pk_old) the signed-in user goes by, built the
-    // way status_update() builds it, so the controls shown here are the ones
-    // the server will accept. Comparing with user_id alone hid them from an
-    // officer whose complaint is keyed by their pk_old.
-    $viewerIds = getEmployeeIdsForUser(Auth::user()->user_id ?? null);
-    if (empty($viewerIds)) {
-        $viewerIds = [(string) (Auth::user()->user_id ?? null)];
-    }
-    // An empty id would match every complaint whose field is NULL.
-    $viewerIds = array_values(array_filter($viewerIds, fn ($id) => $id !== ''));
+    // $viewerIds: every employee id (pk and pk_old) the signed-in user goes by,
+    // from show() — the same set status_update() checks — so the controls
+    // shown here are the ones the server will accept. Comparing with user_id
+    // alone hid them from an officer whose complaint is keyed by their pk_old.
+    // Empty for a login with no user_id, so it matches no NULL field.
     $isNodalOfficer = in_array((string) $issue->employee_master_pk, $viewerIds);
     $isNodalOrAssigned = $isNodalOfficer || in_array((string) $issue->assigned_to, $viewerIds);
     $isComplainant = in_array((string) $issue->created_by, $viewerIds);

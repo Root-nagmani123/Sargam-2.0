@@ -1325,6 +1325,30 @@ class IssueManagementController extends Controller
         return array_values(array_unique($ids));
     }
 
+    /**
+     * Every employee id (pk and pk_old) the signed-in user goes by, for the
+     * in_array() ownership checks in show(), edit(), update() and
+     * status_update(). A login that names no employee gets its own user_id.
+     *
+     * Empty for a login whose user_id is NULL or empty. The old fallback,
+     * [(string) $userId], made that [""], and a NULL assigned_to /
+     * employee_master_pk / created_by / issue_logger casts to "" too — so such
+     * a login matched every complaint with one of those fields unset.
+     *
+     * @return array<int, string>
+     */
+    private function signedInEmployeeIds(): array
+    {
+        $userId = Auth::user()->user_id ?? null;
+        if ($userId === null || $userId === '') {
+            return [];
+        }
+
+        $ids = getEmployeeIdsForUser($userId) ?: [(string) $userId];
+
+        return array_values(array_filter(array_map('strval', $ids), fn ($id) => $id !== ''));
+    }
+
     /** An employee id from the query string, or null unless it is all digits. */
     private function employeeIdQuery(Request $request, string $key): ?string
     {
@@ -1544,12 +1568,11 @@ class IssueManagementController extends Controller
             'logger'
         ])->findOrFail($id);
 
+        // Also handed to the view, so the controls it shows follow the same ids.
+        $viewerIds = $this->signedInEmployeeIds();
+
         if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
-            $userId = Auth::user()->user_id;
-            $ids = getEmployeeIdsForUser($userId);
-            if (empty($ids)) {
-                $ids = [(string) $userId];
-            }
+            $ids = $viewerIds;
             $canView = in_array((string) $issue->created_by, $ids) || in_array((string) $issue->issue_logger, $ids)
                 || in_array((string) $issue->employee_master_pk, $ids) || in_array((string) $issue->assigned_to, $ids);
             if (!$canView) {
@@ -1636,7 +1659,7 @@ class IssueManagementController extends Controller
             }
         }
 
-        return view('admin.issue_management.show', compact('issue', 'employees', 'locationFallback'));
+        return view('admin.issue_management.show', compact('issue', 'employees', 'locationFallback', 'viewerIds'));
     }
 
     /**
@@ -1653,10 +1676,7 @@ class IssueManagementController extends Controller
         ])->findOrFail($id);
         
         // Allow complainant (created_by) OR logger (issue_logger) to edit
-        $editIds = getEmployeeIdsForUser(Auth::user()->user_id);
-        if (empty($editIds)) {
-            $editIds = [(string) Auth::user()->user_id];
-        }
+        $editIds = $this->signedInEmployeeIds();
         $canEdit = in_array((string) $issue->issue_logger, $editIds) || in_array((string) $issue->created_by, $editIds);
         if (!$canEdit) {
             return redirect()->route('admin.issue-management.show', $issue->pk)
@@ -1738,10 +1758,7 @@ class IssueManagementController extends Controller
       
         
         // Allow complainant (created_by) OR logger (issue_logger) to update
-        $editIds = getEmployeeIdsForUser(Auth::user()->user_id);
-        if (empty($editIds)) {
-            $editIds = [(string) Auth::user()->user_id];
-        }
+        $editIds = $this->signedInEmployeeIds();
         $canEdit = in_array((string) $issue->issue_logger, $editIds) || in_array((string) $issue->created_by, $editIds);
         if (!$canEdit) {
             return redirect()->route('admin.issue-management.show', $issue->pk)
@@ -2174,11 +2191,7 @@ class IssueManagementController extends Controller
     public function status_update(Request $request, $id)
     {
         $issue = IssueLogManagement::findOrFail($id);
-        $userId = Auth::user()->user_id ?? null;
-        $ids = getEmployeeIdsForUser($userId);
-        if (empty($ids)) {
-            $ids = [(string) $userId];
-        }
+        $ids = $this->signedInEmployeeIds();
 
         $isNodalOrAssigned = in_array((string) $issue->employee_master_pk, $ids) || in_array((string) $issue->assigned_to, $ids);
         $isComplainant = in_array((string) $issue->created_by, $ids);

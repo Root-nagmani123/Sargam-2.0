@@ -369,6 +369,122 @@ class IssueNodalFormAndShowIdentityTest extends TestCase
         $this->assertTrue($this->reopenedOptionDisabled($html));
     }
 
+    // ── A login with no user_id owns nothing ─────────────────────────────────
+    //
+    // The ownership checks fell back to [(string) $userId] when
+    // getEmployeeIdsForUser() found nothing. For a NULL user_id that is [""],
+    // and a NULL assigned_to / employee_master_pk / created_by / issue_logger
+    // casts to "" as well, so such a login passed as that complaint's
+    // assignee, nodal officer, complainant or logger.
+
+    /** A non-admin login, other than the actor, whose user_id is set NULL inside the transaction. */
+    private function loginWithNullUserId(): User
+    {
+        $login = $this->nonAdminLogin(fn ($q) => $q->where('pk', '!=', $this->actor->pk)->orderBy('pk'))
+            ?? $this->skip('Needs a second non-admin login.');
+
+        DB::table('user_credentials')->where('pk', $login->pk)->update(['user_id' => null]);
+        $login = $login->fresh();
+        $this->assertNull($login->user_id, 'fixture: user_id is not NULL');
+
+        return $login;
+    }
+
+    /** @param array<string, mixed> $identity */
+    private function issueWith(array $identity): IssueLogManagement
+    {
+        $issue = IssueLogManagement::create(array_merge([
+            'issue_category_master_pk' => $this->categoryPk,
+            'description' => 'NULL user_id probe',
+            'issue_status' => IssueLogManagement::STATUS_REPORTED,
+            'location' => 'O',
+            'created_date' => now(),
+        ], $identity));
+        IssueLogStatus::create([
+            'issue_log_management_pk' => $issue->pk,
+            'issue_date' => now(),
+            'created_by' => $this->actor->user_id,
+            'issue_status' => IssueLogManagement::STATUS_REPORTED,
+        ]);
+
+        return $issue;
+    }
+
+    private function assertStatusUpdateRefused(User $login, IssueLogManagement $issue): void
+    {
+        $history = IssueLogStatus::where('issue_log_management_pk', $issue->pk)->count();
+        $before = $issue->fresh();
+
+        // A status change plus a first assignment ("Other" flow): what an
+        // assignee or nodal officer may do on an unassigned complaint.
+        $this->actingAs($login)
+            ->put(route('admin.issue-management.status_update', $issue->pk), [
+                'issue_status' => IssueLogManagement::STATUS_IN_PROGRESS,
+                'assign_to_type' => 'other',
+                'other_name' => 'NULL user_id probe',
+                'other_phone' => '9876543210',
+            ])
+            ->assertSessionHas('error');
+
+        $after = $issue->fresh();
+        $this->assertSame((int) $before->issue_status, (int) $after->issue_status, 'a login with no user_id changed the status');
+        $this->assertSame($before->assigned_to, $after->assigned_to, 'a login with no user_id assigned the complaint');
+        $this->assertSame($history, IssueLogStatus::where('issue_log_management_pk', $issue->pk)->count());
+    }
+
+    public function test_login_with_null_user_id_gets_nothing_on_a_complaint_whose_identity_fields_are_all_null(): void
+    {
+        $login = $this->loginWithNullUserId();
+        $issue = $this->issueWith([
+            'created_by' => null,
+            'issue_logger' => null,
+            'employee_master_pk' => null,
+            'assigned_to' => null,
+        ]);
+
+        $this->actingAs($login)
+            ->get(route('admin.issue-management.show', $issue->pk))
+            ->assertRedirect(route('admin.issue-management.index'));
+
+        $this->actingAs($login)
+            ->get(route('admin.issue-management.edit', $issue->pk))
+            ->assertRedirect(route('admin.issue-management.show', $issue->pk))
+            ->assertSessionHas('error');
+
+        $this->actingAs($login)
+            ->put(route('admin.issue-management.update', $issue->pk), [
+                'issue_category_id' => $this->categoryPk,
+                'issue_sub_category_id' => $this->subCategoryPk,
+                'issue_priority_id' => (int) DB::table('issue_priority_master')->value('pk'),
+                'nodal_employee_id' => $this->nodalA,
+                'location' => 'O',
+                'description' => 'Edited by a login with no user_id',
+            ])
+            ->assertRedirect(route('admin.issue-management.show', $issue->pk))
+            ->assertSessionHas('error');
+        $this->assertSame('NULL user_id probe', $issue->fresh()->description);
+
+        $this->assertStatusUpdateRefused($login, $issue);
+    }
+
+    public function test_login_with_null_user_id_is_not_the_assignee_of_an_unassigned_complaint(): void
+    {
+        // The common shape: raised, logged and routed, not yet assigned.
+        $login = $this->loginWithNullUserId();
+        $issue = $this->issueWith([
+            'created_by' => $this->actor->user_id,
+            'issue_logger' => $this->actor->user_id,
+            'employee_master_pk' => $this->nodalA,
+            'assigned_to' => null,
+        ]);
+
+        $this->actingAs($login)
+            ->get(route('admin.issue-management.show', $issue->pk))
+            ->assertRedirect(route('admin.issue-management.index'));
+
+        $this->assertStatusUpdateRefused($login, $issue);
+    }
+
     public function test_unrelated_user_gets_no_access_to_a_pk_old_keyed_complaint(): void
     {
         [$login, $employee] = $this->pkOldOfficer();
