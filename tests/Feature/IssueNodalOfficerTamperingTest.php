@@ -292,6 +292,113 @@ class IssueNodalOfficerTamperingTest extends TestCase
         $this->assertSame((string) $this->nodalA, (string) $stored->employee_master_pk);
     }
 
+    // ── The complainant / logger is the category's only Level 1 officer ──────
+    //
+    // resolveNodalOfficer() used to fall back to the first Level 1 officer when
+    // every one was excluded, which then was the complainant or logger.
+
+    /** Pending was used earlier this cycle; only the nodal officer may set it now. */
+    private function assertUsedStatusRefused(IssueLogManagement $issue): void
+    {
+        IssueLogStatus::create([
+            'issue_log_management_pk' => $issue->pk,
+            'issue_date' => now()->subDay(),
+            'created_by' => $this->nodalA,
+            'issue_status' => IssueLogManagement::STATUS_PENDING,
+        ]);
+        $before = $this->historyCount($issue);
+
+        $this->actingAs($this->actor)
+            ->put(route('admin.issue-management.status_update', $issue->pk), [
+                'issue_status' => IssueLogManagement::STATUS_PENDING,
+                'remark' => 'tamper',
+            ])
+            ->assertSessionHas('error');
+
+        $this->assertSame(IssueLogManagement::STATUS_IN_PROGRESS, (int) $issue->fresh()->issue_status);
+        $this->assertSame($before, $this->historyCount($issue), 'an unauthorised status-history row was written');
+    }
+
+    public function test_category_change_is_refused_when_the_complainant_is_its_only_level_one_officer(): void
+    {
+        $issue = $this->seedIssue(IssueLogManagement::STATUS_IN_PROGRESS);
+
+        $otherCategory = DB::table('issue_sub_category_master')
+            ->where('issue_category_master_pk', '!=', $this->categoryPk)
+            ->select('pk', 'issue_category_master_pk')
+            ->first();
+        if (! $otherCategory) {
+            $this->markTestSkipped('Needs a second category with a sub-category.');
+        }
+        $this->setLevelOne((int) $otherCategory->issue_category_master_pk, [(int) $this->actor->user_id]);
+
+        $this->actingAs($this->actor)
+            ->put(route('admin.issue-management.update', $issue->pk), $this->editPayload([
+                'issue_category_id' => $otherCategory->issue_category_master_pk,
+                'issue_sub_category_id' => $otherCategory->pk,
+                'nodal_employee_id' => $this->actor->user_id,
+            ]))
+            ->assertSessionHasErrors('nodal_employee_id');
+
+        $fresh = $issue->fresh();
+        $this->assertSame((string) $this->nodalA, (string) $fresh->employee_master_pk, 'the complainant became the nodal officer');
+        $this->assertSame($this->categoryPk, (int) $fresh->issue_category_master_pk);
+        $this->assertSame('Nodal tampering regression probe', $fresh->description);
+
+        $this->assertUsedStatusRefused($issue);
+    }
+
+    public function test_same_category_keeps_the_nodal_officer_when_the_complainant_is_the_only_level_one_officer(): void
+    {
+        $issue = $this->seedIssue(IssueLogManagement::STATUS_IN_PROGRESS);
+        $this->setLevelOne($this->categoryPk, [(int) $this->actor->user_id]);
+
+        $this->actingAs($this->actor)
+            ->put(route('admin.issue-management.update', $issue->pk), $this->editPayload([
+                'nodal_employee_id' => $this->actor->user_id,
+            ]));
+
+        $this->assertSame(
+            (string) $this->nodalA,
+            (string) $issue->fresh()->employee_master_pk,
+            'the complainant became the nodal officer'
+        );
+
+        $this->assertUsedStatusRefused($issue);
+    }
+
+    public function test_store_never_makes_the_logger_nodal_when_they_are_the_only_level_one_officer(): void
+    {
+        $building = DB::table('building_master')->value('pk');
+        if (! $building) {
+            $this->markTestSkipped('Needs a building_master row.');
+        }
+        $this->setLevelOne($this->categoryPk, [(int) $this->actor->user_id]);
+        $before = IssueLogManagement::where('created_by', $this->actor->user_id)->max('pk');
+
+        $this->actingAs($this->actor)
+            ->post(route('admin.issue-management.store'), [
+                'description' => 'Store sole-officer probe ' . uniqid(),
+                'issue_category_id' => $this->categoryPk,
+                'issue_sub_category_id' => $this->subCategoryPk,
+                'issue_priority_id' => (int) DB::table('issue_priority_master')->value('pk'),
+                'sub_category_name' => 'probe',
+                'created_by' => $this->actor->user_id,
+                'nodal_employee_id' => $this->actor->user_id,
+                'location' => 'O',
+                'building_master_pk' => $building,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $stored = IssueLogManagement::where('created_by', $this->actor->user_id)->orderByDesc('pk')->first();
+        $this->assertNotNull($stored);
+        $this->assertNotSame($before, $stored->pk, 'no complaint was stored');
+        $this->assertNotSame((string) $this->actor->user_id, (string) $stored->employee_master_pk, 'the logger became the nodal officer');
+        // The existing no-Level-1 path: the complaint is stored without a nodal
+        // officer. Pending module-owner confirmation — see the PR notes.
+        $this->assertNull($stored->employee_master_pk);
+    }
+
     // ── C: completed complaints ───────────────────────────────────────────────
 
     public function test_update_refuses_a_completed_complaint(): void
