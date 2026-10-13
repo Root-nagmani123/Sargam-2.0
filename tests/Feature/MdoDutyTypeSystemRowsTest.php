@@ -137,21 +137,97 @@ class MdoDutyTypeSystemRowsTest extends TestCase
     public function test_a_malformed_pk_is_refused_and_the_system_row_stays_active($pk): void
     {
         $pk = $pk === 'ESCORT[]' ? [(string) $this->types['escort']] : $pk;
+        $before = (array) $this->escortRow();
 
         $this->actingAs($this->admin())->withHeaders(self::XHR)
             ->post(route('master.mdo_duty_type.status'), ['pk' => $pk, 'active_inactive' => 0])
-            ->assertStatus(422);
+            ->assertStatus(422)
+            ->assertJson(['status' => false]);
 
-        $this->assertSame(1, (int) $this->escortRow()->active_inactive);
+        $this->assertSame($before, (array) $this->escortRow());
     }
 
     public static function malformedPks(): array
     {
         return [
             'array pk naming the Escort row' => ['ESCORT[]'],
+            'literal pk[]=2' => [['2']],
+            'nested array' => [[['2']]],
+            'empty array' => [[]],
             'digits with trailing text' => ['2abc'],
             'leading space' => [' 2'],
+            'trailing space' => ['2 '],
+            'SQL expression' => ['2 OR 1=1'],
+            'decimal string' => ['2.0'],
+            'scientific notation' => ['2e0'],
+            'negative integer' => [-2],
+            'boolean' => [true],
+            'floating point number' => [2.0],
+            'empty string' => [''],
+            'null' => [null],
         ];
+    }
+
+    /** @dataProvider scalarPkTypes */
+    public function test_scalar_system_pks_cannot_deactivate_the_system_row(bool $asString): void
+    {
+        $pk = $asString ? (string) $this->types['escort'] : (int) $this->types['escort'];
+        $before = (array) $this->escortRow();
+
+        $this->actingAs($this->admin())->withHeaders(self::XHR)
+            ->post(route('master.mdo_duty_type.status'), ['pk' => $pk, 'active_inactive' => 0])
+            ->assertStatus(422)
+            ->assertJson(['status' => false]);
+
+        $this->assertSame($before, (array) $this->escortRow());
+    }
+
+    /** @dataProvider scalarPkTypes */
+    public function test_a_super_admin_toggles_a_non_system_row_with_a_scalar_pk(bool $asString): void
+    {
+        $pk = DB::table('mdo_duty_type_master')->insertGetId([
+            'mdo_duty_type_name' => 'F009 toggle '.uniqid(), 'active_inactive' => 1,
+        ]);
+        $before = (array) $this->escortRow();
+
+        foreach ([0, 1] as $status) {
+            $this->actingAs($this->admin())->withHeaders(self::XHR)
+                ->post(route('master.mdo_duty_type.status'), [
+                    'pk' => $asString ? (string) $pk : $pk, 'active_inactive' => $status,
+                ])
+                ->assertOk()
+                ->assertJson(['status' => true]);
+
+            $this->assertSame($status, (int) DB::table('mdo_duty_type_master')->where('pk', $pk)->value('active_inactive'));
+            $this->assertSame($before, (array) $this->escortRow());
+        }
+    }
+
+    public static function scalarPkTypes(): array
+    {
+        return ['integer' => [false], 'digit string' => [true]];
+    }
+
+    /** @dataProvider malformedPks */
+    public function test_an_unauthorized_user_is_refused_regardless_of_pk_shape($pk): void
+    {
+        $user = User::find(DB::table('user_credentials')->insertGetId([
+            'user_name' => 'f009.unauthorized.'.uniqid(), 'user_id' => 0, 'user_category' => 'E',
+        ]));
+        $nonSystemPk = DB::table('mdo_duty_type_master')->insertGetId([
+            'mdo_duty_type_name' => 'F009 unauthorized '.uniqid(), 'active_inactive' => 1,
+        ]);
+        $before = (array) $this->escortRow();
+        $pk = $pk === 'ESCORT[]' ? [(string) $this->types['escort']] : $pk;
+
+        foreach ([$pk, (int) $this->types['escort'], (string) $this->types['escort'], $nonSystemPk] as $target) {
+            $this->actingAs($user)->withSession(['user_roles' => ['Employee']])->withHeaders(self::XHR)
+                ->post(route('master.mdo_duty_type.status'), ['pk' => $target, 'active_inactive' => 0])
+                ->assertForbidden();
+        }
+
+        $this->assertSame($before, (array) $this->escortRow());
+        $this->assertSame(1, (int) DB::table('mdo_duty_type_master')->where('pk', $nonSystemPk)->value('active_inactive'));
     }
 
     /** The duty-type routes now need the screen's permission; an Officer Trainee has none. */

@@ -199,7 +199,7 @@ class FacultyMdoEscortExceptionViewTest extends TestCase
         ];
 
         foreach ($actors as $label => $actor) {
-            foreach ([[], ['course_status' => 'archive']] as $tab) {
+            foreach ([['course_status' => 'active'], ['course_status' => 'archive']] as $tab) {
                 $response = $this->asUser($actor, $tab);
                 $response->assertForbidden();
                 $response->assertDontSee('Fme Student One');
@@ -220,7 +220,7 @@ class FacultyMdoEscortExceptionViewTest extends TestCase
         ];
 
         foreach ($actors as $label => $actor) {
-            $active = $this->asUser($actor, ['course_filter' => $this->c['B']]);
+            $active = $this->asUser($actor, ['course_status' => 'active', 'course_filter' => $this->c['B']]);
             $active->assertOk();
             $this->assertSame([$this->f['F2'] => [$this->d['D2']]], $this->cards($active), "$label, Active tab");
 
@@ -297,7 +297,7 @@ class FacultyMdoEscortExceptionViewTest extends TestCase
 
     public function test_faculty_login_gets_course_filter_only_and_can_reach_archived_courses(): void
     {
-        $active = $this->asFaculty();
+        $active = $this->asFaculty(['course_status' => 'active']);
         $active->assertOk();
         $this->assertTrue($active->viewData('isFacultyView'));
         $this->assertArrayNotHasKey($this->c['A'], $active->viewData('courseMaster'));
@@ -514,7 +514,7 @@ class FacultyMdoEscortExceptionViewTest extends TestCase
 
     private function tabQuery(string $tab): array
     {
-        return $tab === 'archive' ? ['course_status' => 'archive'] : [];
+        return ['course_status' => $tab === 'archive' ? 'archive' : 'active'];
     }
 
     private function newCourse(string $name, string $tab): int

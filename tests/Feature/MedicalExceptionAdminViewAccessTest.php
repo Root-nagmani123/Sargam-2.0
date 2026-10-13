@@ -148,6 +148,37 @@ class MedicalExceptionAdminViewAccessTest extends TestCase
         }
     }
 
+    public function test_the_role_screen_displays_both_permissions_without_granting_them(): void
+    {
+        $grantsBefore = $this->screenPermissionGrants();
+        $this->runMenuMigration();
+        $this->assertSame($grantsBefore, $this->screenPermissionGrants(), 'the menu migration must not assign either permission');
+
+        $role = Role::create([
+            'name' => 'Mefv unassigned '.uniqid(),
+            'guard_name' => 'web',
+        ]);
+        $user = User::query()->orderBy('pk')->first();
+        if (! $user) {
+            $this->markTestSkipped('no user_credentials row to display the role screen');
+        }
+
+        $response = $this->actingAs($user)
+            ->withSession(['user_roles' => ['Super Admin']])
+            ->get(route('roles.show', $role->id))
+            ->assertOk()
+            ->assertViewIs('roles-permissions.assign-permission');
+
+        $rows = collect($response->viewData('rows'))->keyBy('permission');
+        foreach (['medical_exception_faculty', 'duty_type'] as $permission) {
+            $this->assertTrue($rows->has($permission), "role screen displays $permission");
+            $this->assertFalse($rows[$permission]['enabled'], "$permission starts disabled for an unassigned role");
+            $response->assertSee('value="'.$permission.'"', false);
+        }
+
+        $this->assertSame($grantsBefore, $this->screenPermissionGrants(), 'viewing the role screen must not grant either permission');
+    }
+
     /** F-022: Training-Induction sees the Academics tab and this link; it is let in once granted, and not shown the link before. */
     public function test_a_role_granted_the_permission_gets_the_admin_view_and_others_lose_the_link(): void
     {
@@ -199,6 +230,19 @@ class MedicalExceptionAdminViewAccessTest extends TestCase
         }
 
         (require base_path('database/migrations/2026_10_12_000001_put_screen_permissions_on_their_menu_rows.php'))->up();
+    }
+
+    private function screenPermissionGrants(): array
+    {
+        return DB::table('role_has_permissions as rp')
+            ->join('roles as r', 'r.id', '=', 'rp.role_id')
+            ->join('permissions as p', 'p.id', '=', 'rp.permission_id')
+            ->whereIn('p.name', [self::PERMISSION, 'duty_type'])
+            ->orderBy('p.name')
+            ->orderBy('r.id')
+            ->get(['p.name as permission', 'r.id as role_id'])
+            ->map(fn ($grant) => $grant->permission.':'.$grant->role_id)
+            ->all();
     }
 
     private function sidebarShowsLink(array $actor): bool

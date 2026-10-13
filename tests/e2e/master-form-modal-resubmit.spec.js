@@ -25,6 +25,25 @@ const SCRIPTS = {
   "/master-admin.js": path.join(ROOT, "public", "js", "master-admin.js"),
 };
 
+function formRootTemplates(dir = path.join(ROOT, "resources", "views")) {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const file = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      return formRootTemplates(file);
+    }
+    if (!entry.name.endsWith(".blade.php")) {
+      return [];
+    }
+
+    const source = fs.readFileSync(file, "utf8");
+    const roots = [...source.matchAll(/<div\b[^>]*\bdata-mst-form-root\b[^>]*>/gs)];
+    return roots.map((match) => ({
+      file: path.relative(path.join(ROOT, "resources", "views"), file),
+      markup: match[0].replace(/\{\{[\s\S]*?\}\}/g, "Fixture Form"),
+    }));
+  });
+}
+
 /** The form page as the City create view renders it, with or without a field error. */
 function formPage(error) {
   return `<!doctype html><html><body>
@@ -39,10 +58,29 @@ function formPage(error) {
 </div></body></html>`;
 }
 
+function sharedRootFormPage(root, action, error) {
+  return `<!doctype html><html><body>
+${root}
+  <form action="${action}" method="POST">
+    <input type="hidden" name="_token" value="t">
+    <input type="text" name="form_value" value="Needs correction"${error ? ' class="is-invalid"' : ""}>
+    ${error ? '<div class="invalid-feedback d-block">The value is invalid.</div>' : ""}
+    <button type="submit">Save</button>
+  </form>
+</div></body></html>`;
+}
+
 const INDEX = `<!doctype html><html><head><meta name="csrf-token" content="t"></head><body>
 <a href="${ORIGIN}/master/city/create" data-mst-modal-form>Add City</a>
 <script src="/vendor.js"></script><script src="/bootstrap.js"></script><script src="/master-admin.js"></script>
 </body></html>`;
+
+function sharedRootIndex(roots) {
+  return `<!doctype html><html><head><meta name="csrf-token" content="t"></head><body>
+${roots.map((root, index) => `<a href="${ORIGIN}/form/${index}" data-mst-modal-form>${root.file}</a>`).join("")}
+<script src="/vendor.js"></script><script src="/bootstrap.js"></script><script src="/master-admin.js"></script>
+</body></html>`;
+}
 
 test("a corrected Save after a server-side rejection sends a second POST", async ({ page }) => {
   const posts = [];
@@ -89,6 +127,73 @@ test("a corrected Save after a server-side rejection sends a second POST", async
   expect(posts[1]).toContain("Agra Cantt");
   // The second answer has no errors, so the modal treats it as saved and reloads the page.
   await reload;
+});
+
+test("every Blade data-mst-form-root form can be corrected and saved in the open modal", async ({ page }) => {
+  const roots = formRootTemplates();
+  expect(roots.length).toBeGreaterThan(0);
+
+  const posts = roots.map(() => []);
+  const saves = new Set();
+  const index = sharedRootIndex(roots);
+
+  await page.route("**/*", (route) => {
+    const req = route.request();
+    const url = new URL(req.url());
+    if (url.origin !== ORIGIN) {
+      return route.abort();
+    }
+    if (SCRIPTS[url.pathname]) {
+      return route.fulfill({ contentType: "application/javascript", body: fs.readFileSync(SCRIPTS[url.pathname]) });
+    }
+    const formMatch = /^\/form\/(\d+)$/.exec(url.pathname);
+    const postMatch = /^\/store\/(\d+)$/.exec(url.pathname);
+    if (postMatch && req.method() === "POST") {
+      const formIndex = Number(postMatch[1]);
+      const body = req.postDataBuffer().toString();
+      posts[formIndex].push(body);
+      if (body.includes(`Corrected value ${formIndex}`)) {
+        saves.add(formIndex);
+      }
+      return route.fulfill({ status: 302, headers: { Location: `${ORIGIN}/form/${formIndex}` } });
+    }
+    if (formMatch && req.method() === "GET") {
+      const formIndex = Number(formMatch[1]);
+      const error = posts[formIndex].length === 1
+        && !posts[formIndex][0].includes(`Corrected value ${formIndex}`);
+      return route.fulfill({
+        contentType: "text/html",
+        body: sharedRootFormPage(roots[formIndex].markup, `${ORIGIN}/store/${formIndex}`, error),
+      });
+    }
+    return route.fulfill({ contentType: "text/html", body: index });
+  });
+
+  await page.goto(`${ORIGIN}/forms`);
+  for (let i = 0; i < roots.length; i += 1) {
+    await page.click(`a[data-mst-modal-form][href="${ORIGIN}/form/${i}"]`);
+    const modal = page.locator("#mstFormModal");
+    const save = modal.locator("button[type=submit]");
+    await expect(save).toBeVisible();
+
+    await save.click();
+    await expect(modal.locator(".invalid-feedback")).toHaveText("The value is invalid.");
+    await expect(modal).toBeVisible();
+    await expect(save).toBeEnabled();
+    expect(posts[i]).toHaveLength(1);
+    expect(posts[i][0]).toContain("Needs correction");
+
+    const reload = page.waitForEvent("load");
+    await modal.locator('input[name="form_value"]').fill(`Corrected value ${i}`);
+    await save.click();
+    await expect.poll(() => posts[i].length).toBe(2);
+    expect(posts[i][1]).toContain(`Corrected value ${i}`);
+    await reload;
+    expect(saves.has(i), `successful save for ${roots[i].file}`).toBe(true);
+    expect(posts[i], `exactly two requests for ${roots[i].file}`).toHaveLength(2);
+  }
+
+  expect(posts.flat()).toHaveLength(roots.length * 2);
 });
 
 // F-023: the re-read form URL answers with an error flash but no form root, so there is no

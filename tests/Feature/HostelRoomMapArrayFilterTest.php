@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\View;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use Tests\TestCase;
 
 /**
@@ -124,7 +126,7 @@ class HostelRoomMapArrayFilterTest extends TestCase
         ];
     }
 
-    public function test_array_filters_are_ignored_not_a_500_in_every_format(): void
+    public function test_array_filters_are_normalized_not_a_500_in_every_format(): void
     {
         $payloads = [
             'room_type[]' => ['room_type' => ['Room']],
@@ -139,7 +141,7 @@ class HostelRoomMapArrayFilterTest extends TestCase
                 $response = $this->actingAs($this->admin())->get($url);
                 $this->bodyOf($response);
 
-                $this->assertSame(200, $response->getStatusCode(), "$label on $format must be ignored, not a 500");
+                $this->assertSame(200, $response->getStatusCode(), "$label on $format must be normalized, not a 500");
             }
         }
     }
@@ -199,5 +201,75 @@ class HostelRoomMapArrayFilterTest extends TestCase
             ->get(route('hostel.building.floor.room.map.print') . '?' . http_build_query(['search' => self::PROBE]))
             ->assertOk();
         $this->assertStringContainsString(self::PROBE, $this->bodyOf($print));
+    }
+
+    /** @dataProvider buildingTenFilters */
+    public function test_building_ten_has_identical_filtered_counts_in_the_grid_and_all_exports($buildingId): void
+    {
+        $expected = DB::table('building_floor_room_mapping')->where('building_master_pk', 10)->count();
+        $total = DB::table('building_floor_room_mapping')->count();
+        $this->assertGreaterThan(0, $expected, 'building 10 must have rooms to verify F-014');
+        $this->assertGreaterThan($expected, $total, 'the fixture must distinguish filtered from unfiltered results');
+        $expectedIds = DB::table('building_floor_room_mapping')->where('building_master_pk', 10)->pluck('pk')->all();
+        $urls = $this->urls(['building_id' => $buildingId, 'per_page' => 2]);
+
+        $grid = $this->actingAs($this->admin())->get($urls['grid'])->assertOk();
+        $mappings = $grid->viewData('mappings');
+        $this->assertSame($expected, $mappings->total());
+        $this->assertSame(min(2, $expected), $mappings->count());
+        foreach ($mappings as $mapping) {
+            $this->assertSame(10, (int) $mapping->building_master_pk);
+        }
+
+        $csv = $this->bodyOf($this->actingAs($this->admin())->get($urls['csv'])->assertOk());
+        $stream = fopen('php://temp', 'w+');
+        fwrite($stream, $csv);
+        rewind($stream);
+        $csvRows = [];
+        while (($row = fgetcsv($stream)) !== false) {
+            $csvRows[] = $row;
+        }
+        fclose($stream);
+        $heading = array_search('S. No.', array_column($csvRows, 0), true);
+        $this->assertNotFalse($heading, 'CSV table headings must be present');
+        $this->assertCount($expected, array_slice($csvRows, $heading + 1));
+
+        $excel = $this->actingAs($this->admin())->get($urls['excel'])->assertOk();
+        $this->assertInstanceOf(\Symfony\Component\HttpFoundation\BinaryFileResponse::class, $excel->baseResponse);
+        $workbook = IOFactory::load($excel->baseResponse->getFile()->getPathname());
+        try {
+            $sheet = $workbook->getActiveSheet();
+            $this->assertSame('S. No.', $sheet->getCell('A6')->getValue());
+            $this->assertSame($expected, $sheet->getHighestDataRow() - 6);
+            $this->assertSame('Total Records: '.$expected, $sheet->getCell('A4')->getValue());
+        } finally {
+            $workbook->disconnectWorksheets();
+        }
+
+        foreach (['print (export)', 'print'] as $format) {
+            $response = $this->actingAs($this->admin())->get($urls[$format])->assertOk();
+            $this->assertEqualsCanonicalizing($expectedIds, $response->viewData('rows')->pluck('pk')->all());
+            $html = $this->bodyOf($response);
+            $this->assertSame(1, preg_match('/<tbody>(.*?)<\/tbody>/s', $html, $matches));
+            $this->assertSame($expected, preg_match_all('/<tr\b/', $matches[1]));
+        }
+
+        $pdfIds = null;
+        View::composer('admin.master.partials.export_pdf', function ($view) use (&$pdfIds) {
+            $pdfIds = $view->getData()['rows']->pluck('pk')->all();
+        });
+        $pdf = $this->actingAs($this->admin())->get($urls['pdf'])->assertOk();
+        $this->assertEqualsCanonicalizing($expectedIds, $pdfIds, 'PDF rendering must receive exactly the filtered rows');
+        $this->assertStringStartsWith('%PDF-', $this->bodyOf($pdf));
+    }
+
+    public static function buildingTenFilters(): array
+    {
+        return [
+            'scalar building_id=10' => ['10'],
+            'array building_id[]=10' => [['10']],
+            'multiple values normalize to the first building' => [['10', '1']],
+            'nested array normalizes to one building' => [[['10']]],
+        ];
     }
 }

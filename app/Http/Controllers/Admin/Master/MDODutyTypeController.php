@@ -50,7 +50,7 @@ class MDODutyTypeController extends Controller
     {
         // The guard and the update must see the same pk: an array binding is
         // flattened to its first element, so pk[]=2 would pass a scalar-only guard.
-        if (! is_scalar($request->pk) || ! ctype_digit((string) $request->pk)) {
+        if ((! is_int($request->pk) && ! is_string($request->pk)) || ! ctype_digit((string) $request->pk)) {
             return $this->refuseSystemType($request, 'Invalid duty type.');
         }
 
