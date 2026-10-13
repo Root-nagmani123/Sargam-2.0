@@ -17,8 +17,8 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class MedicalExceptionFacultyViewController extends Controller
 {
-    /** permissions.name of this screen (menus row "Medical Exception Faculty"). */
-    private const ADMIN_PERMISSION = 'medical_exception_faculty';
+    /** menus.permission_name of this screen (menus row "Medical Exception Faculty"); the sidebar link checks it too. */
+    public const ADMIN_PERMISSION = 'medical_exception_faculty';
 
 
     public function index(Request $request)

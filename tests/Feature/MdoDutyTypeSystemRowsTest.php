@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\MDOEscotDutyMap;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /**
@@ -175,6 +176,24 @@ class MdoDutyTypeSystemRowsTest extends TestCase
 
         $this->assertSame(1, (int) $this->escortRow()->active_inactive);
         $this->assertSame($this->types, MDOEscotDutyMap::getMdoDutyTypes());
+    }
+
+    /** A non-Super-Admin role granted duty_type (grantable once its menus row carries it) opens the screen. */
+    public function test_a_role_holding_the_screen_permission_opens_it(): void
+    {
+        if (! DB::table('permissions')->where('name', 'duty_type')->exists()) {
+            $this->markTestSkipped("no 'duty_type' permission in this database");
+        }
+
+        $role = Role::create(['name' => 'fme duty type probe '.uniqid(), 'guard_name' => 'web']);
+        $role->givePermissionTo('duty_type');
+        $user = User::find(DB::table('user_credentials')->insertGetId([
+            'user_name' => 'fme.duty.holder.'.uniqid(), 'user_id' => 0, 'user_category' => 'E',
+        ]));
+        $user->assignRole($role);
+
+        $this->actingAs($user->fresh())->withSession(['user_roles' => [$role->name]])
+            ->get(route('master.mdo_duty_type.index'))->assertOk();
     }
 
     public function test_a_case_only_rename_of_a_system_row_is_still_allowed(): void
