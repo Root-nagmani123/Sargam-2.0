@@ -1141,25 +1141,7 @@ class IssueManagementController extends Controller
     public function getNodalEmployees($categoryId)
     {
         try {
-            $all = DB::table('issue_category_employee_map as b')
-                ->join('employee_master as d', function ($join) {
-                    $join->on('b.employee_master_pk', '=', 'd.pk');
-                    if (Schema::hasColumn('employee_master', 'pk_old')) {
-                        $join->orOn('b.employee_master_pk', '=', 'd.pk_old');
-                    }
-                })
-                ->where('b.issue_category_master_pk', $categoryId)
-                ->select(
-                    'b.priority',
-                    'b.days_notify',
-                    'd.pk as employee_pk',
-                    'd.first_name',
-                    'd.middle_name',
-                    'd.last_name',
-                    DB::raw("TRIM(CONCAT(COALESCE(d.first_name, ''), ' ', COALESCE(d.middle_name, ''), ' ', COALESCE(d.last_name, ''))) as employee_name")
-                )
-                ->orderBy('b.priority', 'asc')
-                ->get();
+            $all = $this->escalationMatrixRows($categoryId);
 
             $level1 = $all->where('priority', 1)->values();
             $level2 = $all->where('priority', 2)->first();
@@ -1193,6 +1175,82 @@ class IssueManagementController extends Controller
                 'data' => []
             ], 500);
         }
+    }
+
+    /** Escalation matrix rows for a category, Level 1 first. */
+    private function escalationMatrixRows($categoryId): \Illuminate\Support\Collection
+    {
+        return DB::table('issue_category_employee_map as b')
+            ->join('employee_master as d', function ($join) {
+                $join->on('b.employee_master_pk', '=', 'd.pk');
+                if (Schema::hasColumn('employee_master', 'pk_old')) {
+                    $join->orOn('b.employee_master_pk', '=', 'd.pk_old');
+                }
+            })
+            ->where('b.issue_category_master_pk', $categoryId)
+            ->select(
+                'b.priority',
+                'b.days_notify',
+                'd.pk as employee_pk',
+                'd.first_name',
+                'd.middle_name',
+                'd.last_name',
+                DB::raw("TRIM(CONCAT(COALESCE(d.first_name, ''), ' ', COALESCE(d.middle_name, ''), ' ', COALESCE(d.last_name, ''))) as employee_name")
+            )
+            ->orderBy('b.priority', 'asc')
+            ->get();
+    }
+
+    /**
+     * The nodal officer a complaint in this category gets, decided here and
+     * not by the form: the nodal officer can set any status, so a nodal_employee_id
+     * taken from the request let a complainant or logger make themselves nodal
+     * and step around the status lock in status_update().
+     *
+     * The requested officer is honoured only when the matrix lists them at
+     * Level 1 and they are not one of $excludedIds (the complainant / logger).
+     * Otherwise the first such Level 1 officer is used. Only when every Level 1
+     * officer is excluded does the matrix's own default stand — that is the
+     * admin's configuration, not the requester's choice. Null when the category
+     * has no Level 1 officer at all.
+     *
+     * @param  array<int, string>  $excludedIds
+     */
+    private function resolveNodalOfficer($categoryId, $requested, array $excludedIds): ?string
+    {
+        $level1 = $this->escalationMatrixRows($categoryId)
+            ->where('priority', 1)
+            ->pluck('employee_pk')
+            ->map(fn ($pk) => (string) $pk)
+            ->unique()
+            ->values();
+
+        $eligible = $level1->reject(fn ($pk) => in_array($pk, $excludedIds, true))->values();
+
+        $requested = ($requested === null || $requested === '') ? null : (string) $requested;
+        if ($requested !== null && $eligible->contains($requested)) {
+            return $requested;
+        }
+
+        return $eligible->first() ?? $level1->first();
+    }
+
+    /**
+     * Every employee id (pk and pk_old) the given employees go by.
+     *
+     * @return array<int, string>
+     */
+    private function employeeIdsFor(...$employeeIds): array
+    {
+        $ids = [];
+        foreach ($employeeIds as $employeeId) {
+            if ($employeeId === null || $employeeId === '') {
+                continue;
+            }
+            $ids = array_merge($ids, getEmployeeIdsForUser($employeeId) ?: [(string) $employeeId]);
+        }
+
+        return array_values(array_unique($ids));
     }
 
     /**
@@ -1263,13 +1321,22 @@ class IssueManagementController extends Controller
                 'complaint_img_url.*.max' => 'Each attachment must not exceed 5MB.',
             ]);
 
+            // created_by may name someone else (logging on their behalf);
+            // issue_logger is always the signed-in user. Neither may be the
+            // nodal officer by their own choice — see resolveNodalOfficer().
+            $nodalEmployeePk = $this->resolveNodalOfficer(
+                $request->issue_category_id,
+                $request->nodal_employee_id,
+                $this->employeeIdsFor($request->created_by, Auth::user()->user_id ?? null)
+            );
+
             $data = array(
                 'issue_category_master_pk' => $request->issue_category_id,
                 'issue_priority_master_pk' => $request->issue_priority_id,
                 'location' => $request->location,
                 'description' => $request->description,
                 'created_by' => $request->created_by,
-                'employee_master_pk' => $request->nodal_employee_id,
+                'employee_master_pk' => $nodalEmployeePk,
                 'issue_logger' => Auth::user()->user_id ?? $request->created_by,
                 'issue_status' => 0,
                 'created_date' => now()->setTimezone('Asia/Kolkata')->format('Y-m-d H:i:s'),
@@ -1494,7 +1561,11 @@ class IssueManagementController extends Controller
             return redirect()->route('admin.issue-management.show', $issue->pk)
                 ->with('error', 'You can only edit issues you created or logged on behalf.');
         }
-        
+        if ((int) $issue->issue_status === IssueLogManagement::STATUS_COMPLETED) {
+            return redirect()->route('admin.issue-management.show', $issue->pk)
+                ->with('error', 'A completed complaint cannot be edited. Reopen it first.');
+        }
+
         // print_r($issue->toArray()); exit;
 
         $categories = IssueCategoryMaster::active()->get();
@@ -1575,16 +1646,18 @@ class IssueManagementController extends Controller
             return redirect()->route('admin.issue-management.show', $issue->pk)
                 ->with('error', 'You can only edit issues you created or logged on behalf.');
         }
+        // The page hides Edit on a completed complaint; that is only markup.
+        if ((int) $issue->issue_status === IssueLogManagement::STATUS_COMPLETED) {
+            return redirect()->route('admin.issue-management.show', $issue->pk)
+                ->with('error', 'A completed complaint cannot be edited. Reopen it first.');
+        }
 
+        // created_by is not validated or read here: the complainant is fixed
+        // once the complaint is raised.
         $request->validate([
             'issue_category_id' => 'required|integer|exists:issue_category_master,pk',
             'issue_sub_category_id' => 'required|integer|exists:issue_sub_category_master,pk',
             'issue_priority_id' => 'required|integer|exists:issue_priority_master,pk',
-            'created_by' => ['required', 'integer', function ($attr, $v, $fail) {
-                if (!EmployeeMaster::findByIdOrPkOld($v)) {
-                    $fail('The selected complainant is invalid.');
-                }
-            }],
             'mobile_number' => 'nullable|string',
             'nodal_employee_id' => ['required', 'integer', function ($attr, $v, $fail) {
                 if (!EmployeeMaster::findByIdOrPkOld($v)) {
@@ -1600,16 +1673,34 @@ class IssueManagementController extends Controller
             'description' => 'required|string|max:1000',
         ]);
 
+        // The nodal officer is decided server-side (resolveNodalOfficer()).
+        // Same category: a different Level 1 officer may be picked, but never
+        // the complainant / logger; anything else keeps the current officer.
+        // New category: the matrix decides.
+        $excludedIds = $this->employeeIdsFor($issue->created_by, $issue->issue_logger, Auth::user()->user_id ?? null);
+        if ((int) $request->issue_category_id === (int) $issue->issue_category_master_pk) {
+            $resolved = $this->resolveNodalOfficer($request->issue_category_id, $request->nodal_employee_id, $excludedIds);
+            $nodalEmployeePk = ($resolved !== null && (string) $resolved === (string) $request->nodal_employee_id)
+                ? $resolved
+                : $issue->employee_master_pk;
+        } else {
+            $nodalEmployeePk = $this->resolveNodalOfficer($request->issue_category_id, $request->nodal_employee_id, $excludedIds);
+            if ($nodalEmployeePk === null) {
+                throw ValidationException::withMessages([
+                    'nodal_employee_id' => ['No Level 1 nodal officer is configured for the selected category.'],
+                ]);
+            }
+        }
+
         DB::beginTransaction();
         try {
-            // Update main issue record
+            // Update main issue record. created_by is deliberately absent.
             $issue->update([
                 'issue_category_master_pk' => $request->issue_category_id,
                 'issue_priority_master_pk' => $request->issue_priority_id,
-                'created_by' => $request->created_by,
                 'location' => $request->location,
                 'description' => $request->description,
-                'employee_master_pk' => $request->nodal_employee_id,
+                'employee_master_pk' => $nodalEmployeePk,
                 'updated_by' => Auth::id(),
                 'updated_date' => now(),
             ]);

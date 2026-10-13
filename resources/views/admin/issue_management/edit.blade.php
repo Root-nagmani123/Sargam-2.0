@@ -105,16 +105,17 @@
 
                     <div>
                         <label for="complainant" class="ic-field-label">Complainant<span class="ic-req">*</span></label>
-                        <select name="created_by" id="complainant" class="form-select ic-input choices-select" required>
+                        {{-- Fixed once raised: update() ignores created_by, so the field is display-only. --}}
+                        <select id="complainant" class="form-select ic-input choices-select" disabled aria-readonly="true">
                             <option value="">Select Complainant</option>
                             @foreach($employees as $employee)
                                 <option value="{{ $employee->employee_pk }}" data-mobile="{{ $employee->mobile }}"
-                                    {{ old('created_by', $issue->created_by) == $employee->employee_pk ? 'selected' : '' }}>
+                                    {{ $issue->created_by == $employee->employee_pk ? 'selected' : '' }}>
                                     {{ $employee->employee_name }}
                                 </option>
                             @endforeach
                         </select>
-                        <div class="form-text text-muted">Type to search when editing on behalf of others.</div>
+                        <div class="form-text text-muted">The complainant cannot be changed after the complaint is raised.</div>
                         @error('created_by')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
