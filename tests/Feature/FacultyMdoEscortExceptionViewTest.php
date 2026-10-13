@@ -597,6 +597,31 @@ class FacultyMdoEscortExceptionViewTest extends TestCase
         return ['label' => $label, 'course' => $course, 'course_name' => $courseName, 'faculty' => $faculty, 'names' => $names, 'duties' => $duties];
     }
 
+    /** PR #335 F-008 rule 4 covers a Guest Faculty login exactly as it does Internal Faculty. */
+    public function test_guest_faculty_login_gets_the_same_escort_rule(): void
+    {
+        $ex = $this->exampleCourse('active');
+
+        $expected = [
+            'A' => [
+                $ex['duties'][1] => [[$ex['names']['A']]],
+                $ex['duties'][2] => [[$ex['names']['C']]],
+                $ex['duties'][3] => [[$ex['names']['D'], $ex['names']['E']]],
+            ],
+            'C' => [$ex['duties'][2] => [[$ex['names']['C']]]],
+            'F' => [],
+        ];
+
+        foreach ($expected as $key => $rows) {
+            [$user] = $ex['faculty'][$key]['actor'];
+
+            $response = $this->asUser([$user, ['Guest Faculty']], $this->tabQuery('active'));
+            $response->assertOk();
+            $response->assertViewMissing('facultyData');
+            $this->assertSame($rows, $this->facultyRows($response), "Guest Faculty $key");
+        }
+    }
+
     public function test_faculty_role_login_gets_the_faculty_view_not_the_admin_view(): void
     {
         // Faculty accounts hold the Spatie role "Faculty", which also holds this

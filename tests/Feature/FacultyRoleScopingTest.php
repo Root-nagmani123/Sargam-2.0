@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /**
@@ -96,19 +98,21 @@ class FacultyRoleScopingTest extends TestCase
     }
 
     /**
-     * As a Faculty-role login of $category, with the session roles login gives it.
+     * As a login of $category holding $role, with the session roles login gives it.
      * An employee login (E) stores the employee pk in user_id; a faculty login (F)
      * stores faculty_master.pk itself. $userId overrides that, for the denial cases.
+     * A role this database lacks is created inside the test's transaction.
      */
-    private function asFacultyRole(string $category = 'E', ?int $userId = null)
+    private function asFacultyRole(string $category = 'E', ?int $userId = null, string $role = 'Faculty')
     {
         $userId ??= $category === 'F' ? $this->me : $this->employeePk;
-        $user = User::where('user_name', "frs.login.{$category}.{$userId}")->first();
+        $userName = 'frs.login.'.Str::slug($role).".{$category}.{$userId}";
+        $user = User::where('user_name', $userName)->first();
         if (! $user) {
             $user = User::find(DB::table('user_credentials')->insertGetId([
-                'user_name' => "frs.login.{$category}.{$userId}", 'user_id' => $userId, 'user_category' => $category,
+                'user_name' => $userName, 'user_id' => $userId, 'user_category' => $category,
             ]));
-            $user->assignRole('Faculty');
+            $user->assignRole(Role::findOrCreate($role, 'web'));
         }
 
         return $this->actingAs($user->fresh())->withSession(['user_roles' => $user->roles()->pluck('name')->all()]);
@@ -118,6 +122,72 @@ class FacultyRoleScopingTest extends TestCase
     public static function logins(): array
     {
         return ['employee login (E)' => ['E'], 'faculty login (F)' => ['F']];
+    }
+
+    /** PR #335 F-008 decision: the four rules cover a login holding any of these roles. */
+    public static function facultyRoles(): array
+    {
+        return ['Faculty' => ['Faculty'], 'Internal Faculty' => ['Internal Faculty'], 'Guest Faculty' => ['Guest Faculty']];
+    }
+
+    private function medicalExemption(int $course, string $student): void
+    {
+        DB::table('student_medical_exemption')->insert([
+            'course_master_pk' => $course, 'student_master_pk' => $this->student($student),
+            'employee_master_pk' => DB::table('employee_master')->insertGetId(['first_name' => 'Frs Doctor']),
+            'exemption_category_master_pk' => (int) DB::table('exemption_category_master')->value('pk'),
+            'exemption_medical_speciality_pk' => (int) DB::table('exemption_medical_speciality_master')->value('pk'),
+            'from_date' => now()->subDay(), 'to_date' => now()->addDay(), 'active_inactive' => 1,
+        ]);
+    }
+
+    /**
+     * A submitted feedback row for $facultyPk on a session of $course held yesterday.
+     * The course is tagged with $role so get_Role_by_course() lets it through and
+     * the own-feedback filter is the only narrowing.
+     */
+    private function feedback(int $course, int $facultyPk, string $student, string $role = 'Faculty'): void
+    {
+        DB::table('course_master')->where('pk', $course)->update(['user_role_master_pk' => Role::findOrCreate($role, 'web')->id]);
+        [$timetablePk] = $this->timetableSession($course, $facultyPk);
+        DB::table('timetable')->where('pk', $timetablePk)->update([
+            'START_DATE' => now()->subDay(), 'END_DATE' => now()->subDay(), 'subject_topic' => 'Frs topic',
+        ]);
+        DB::table('topic_feedback')->insert([
+            'timetable_pk' => $timetablePk, 'student_master_pk' => $this->student($student), 'topic_name' => 'Frs topic',
+            'faculty_pk' => $facultyPk, 'is_submitted' => 1, 'presentation' => '4', 'content' => '4', 'remark' => 'ok',
+            'created_date' => now(),
+        ]);
+    }
+
+    /** faculty_name values in a /feedback_details JSON response. */
+    private function feedbackFacultyNames($response): array
+    {
+        $names = [];
+        $grouped = $response->json('groupedData') ?? [];
+        array_walk_recursive($grouped, function ($value, $key) use (&$names) {
+            if ($key === 'faculty_name') {
+                $names[] = $value;
+            }
+        });
+
+        return array_values(array_unique($names));
+    }
+
+    /** Course pks on the attendance grid, and offered by its course filter (active + archived). */
+    private function attendanceCourses($login): array
+    {
+        $list = $login->postJson('/attendance/get-attendance-list', [
+            'page_context' => 'attendance', 'draw' => 1, 'start' => 0, 'length' => 100,
+        ])->assertOk();
+        $index = $login->get('/attendance')->assertOk();
+
+        $sorted = fn ($pks) => collect($pks)->map(fn ($pk) => (int) $pk)->unique()->sort()->values()->all();
+
+        return [
+            'grid' => $sorted(array_column($list->json('data'), 'Programme_pk')),
+            'filter' => $sorted(collect($index->viewData('courseMasters'))->merge($index->viewData('archivedCourseMasters'))->pluck('pk')),
+        ];
     }
 
     /**
@@ -152,16 +222,8 @@ class FacultyRoleScopingTest extends TestCase
     /** @dataProvider logins */
     public function test_medical_exception_view_gives_a_faculty_role_login_its_cc_courses_not_the_admin_view(string $category): void
     {
-        $employee = DB::table('employee_master')->insertGetId(['first_name' => 'Frs Doctor']);
-        $exemption = fn (int $course, string $student) => DB::table('student_medical_exemption')->insert([
-            'course_master_pk' => $course, 'student_master_pk' => $this->student($student),
-            'employee_master_pk' => $employee,
-            'exemption_category_master_pk' => (int) DB::table('exemption_category_master')->value('pk'),
-            'exemption_medical_speciality_pk' => (int) DB::table('exemption_medical_speciality_master')->value('pk'),
-            'from_date' => now()->subDay(), 'to_date' => now()->addDay(), 'active_inactive' => 1,
-        ]);
-        $exemption($this->courseX, 'FrsMedMine');
-        $exemption($this->courseY, 'FrsMedOther');
+        $this->medicalExemption($this->courseX, 'FrsMedMine');
+        $this->medicalExemption($this->courseY, 'FrsMedOther');
 
         $response = $this->asFacultyRole($category)->get('/medical-exception-faculty-view');
 
@@ -196,39 +258,87 @@ class FacultyRoleScopingTest extends TestCase
     /** @dataProvider logins */
     public function test_feedback_details_shows_a_faculty_role_login_only_its_own_feedback(string $category): void
     {
-        // Tag both courses with the Faculty role so get_Role_by_course() lets
-        // them through; the own-feedback filter is then the only narrowing.
-        $facultyRoleId = (int) DB::table('roles')->where('name', 'Faculty')->value('id');
-        DB::table('course_master')->whereIn('pk', [$this->courseX, $this->courseY])->update(['user_role_master_pk' => $facultyRoleId]);
-
-        $feedback = function (int $course, int $facultyPk, string $student) {
-            [$timetablePk] = $this->timetableSession($course, $facultyPk);
-            DB::table('timetable')->where('pk', $timetablePk)->update([
-                'START_DATE' => now()->subDay(), 'END_DATE' => now()->subDay(), 'subject_topic' => 'Frs topic',
-            ]);
-            DB::table('topic_feedback')->insert([
-                'timetable_pk' => $timetablePk, 'student_master_pk' => $this->student($student), 'topic_name' => 'Frs topic',
-                'faculty_pk' => $facultyPk, 'is_submitted' => 1, 'presentation' => '4', 'content' => '4', 'remark' => 'ok',
-                'created_date' => now(),
-            ]);
-        };
-        $feedback($this->courseX, $this->me, 'FrsFbMine');
-        $feedback($this->courseX, $this->other, 'FrsFbOther');
-        $feedback($this->courseY, $this->other, 'FrsFbOtherY');
+        $this->feedback($this->courseX, $this->me, 'FrsFbMine');
+        $this->feedback($this->courseX, $this->other, 'FrsFbOther');
+        $this->feedback($this->courseY, $this->other, 'FrsFbOtherY');
 
         $response = $this->asFacultyRole($category)->getJson('/feedback_details?course_type=current');
         $response->assertOk();
 
-        $grouped = $response->json('groupedData') ?? [];
-        $this->assertNotEmpty($grouped, 'the fixture feedback must be listed at all');
+        $this->assertNotEmpty($response->json('groupedData') ?? [], 'the fixture feedback must be listed at all');
+        $this->assertSame(['Frs Mine'], $this->feedbackFacultyNames($response));
+    }
 
-        $names = [];
-        array_walk_recursive($grouped, function ($value, $key) use (&$names) {
-            if ($key === 'faculty_name') {
-                $names[] = $value;
-            }
-        });
-        $this->assertSame(['Frs Mine'], array_values(array_unique($names)));
+    /**
+     * PR #335 F-008 rules 1-3 hold for each of the three faculty roles: Attendance
+     * and Medical Exception show only courses the faculty is CC or ACC of (an ACC
+     * given alone or, on legacy rows, in a comma list), Feedback only its own rows.
+     * Before the fix a Guest Faculty login got every course on the attendance grid,
+     * and Attendance left out a course whose ACC was a comma list.
+     *
+     * @dataProvider facultyRoles
+     */
+    public function test_each_faculty_role_sees_its_cc_and_acc_courses_and_its_own_feedback_only(string $role): void
+    {
+        $today = now()->startOfDay();
+        $course = fn (string $name) => DB::table('course_master')->insertGetId([
+            'course_name' => $name, 'couse_short_name' => $name, 'course_year' => (int) $today->format('Y'),
+            'active_inactive' => 1, 'end_date' => $today->copy()->addDays(30),
+        ]);
+        $acc = $course('FRS Course ACC');
+        $accList = $course('FRS Course ACC list');
+        DB::table('course_coordinator_master')->insert([
+            ['courses_master_pk' => $acc, 'Coordinator_name' => $this->other, 'Assistant_Coordinator_name' => (string) $this->me, 'created_date' => now()],
+            ['courses_master_pk' => $accList, 'Coordinator_name' => $this->other, 'Assistant_Coordinator_name' => "{$this->other},{$this->me}", 'created_date' => now()],
+        ]);
+        $mine = [$this->courseX, $acc, $accList];
+        sort($mine);
+
+        foreach ([...$mine, $this->courseY] as $c) {
+            $this->timetableSession($c, $this->other);
+            $this->medicalExemption($c, "FrsMed{$c}");
+        }
+        $this->feedback($this->courseX, $this->me, 'FrsFbMine', $role);
+        $this->feedback($this->courseX, $this->other, 'FrsFbOther', $role);
+        $this->feedback($this->courseY, $this->other, 'FrsFbOtherY', $role);
+
+        $this->assertSame(['grid' => $mine, 'filter' => $mine], $this->attendanceCourses($this->asFacultyRole('E', null, $role)), "$role: attendance");
+
+        $medical = $this->asFacultyRole('E', null, $role)->get('/medical-exception-faculty-view')->assertOk();
+        $medical->assertViewMissing('facultyData');
+        $this->assertSame($mine, collect($medical->viewData('courses'))->pluck('pk')->map(fn ($pk) => (int) $pk)->sort()->values()->all(), "$role: medical exception courses");
+        $medical->assertDontSee("FrsMed{$this->courseY}");
+
+        $feedback = $this->asFacultyRole('E', null, $role)->getJson('/feedback_details?course_type=current')->assertOk();
+        $this->assertSame(['Frs Mine'], $this->feedbackFacultyNames($feedback), "$role: feedback");
+    }
+
+    /**
+     * PR #335 F-008: a faculty with a faculty_master row but no CC/ACC mapping
+     * sees no course on Attendance or Medical Exception (rules 1, 3) and still
+     * sees its own feedback (rule 2).
+     *
+     * @dataProvider logins
+     */
+    public function test_a_faculty_with_no_cc_or_acc_mapping_sees_no_courses_but_still_its_own_feedback(string $category): void
+    {
+        $lone = $this->faculty('Frs Lone', $this->employeePk + 1);
+
+        $this->timetableSession($this->courseX, $lone);
+        $this->medicalExemption($this->courseX, 'FrsMedLone');
+        $this->feedback($this->courseX, $lone, 'FrsFbLone');
+        $this->feedback($this->courseX, $this->me, 'FrsFbMine');
+
+        $userId = $category === 'F' ? $lone : $this->employeePk + 1;
+
+        $this->assertSame(['grid' => [], 'filter' => []], $this->attendanceCourses($this->asFacultyRole($category, $userId)));
+
+        $medical = $this->asFacultyRole($category, $userId)->get('/medical-exception-faculty-view')->assertOk();
+        $this->assertSame([], collect($medical->viewData('courses'))->all());
+        $this->assertSame([], collect($medical->viewData('data'))->all());
+
+        $feedback = $this->asFacultyRole($category, $userId)->getJson('/feedback_details?course_type=current')->assertOk();
+        $this->assertSame(['Frs Lone'], $this->feedbackFacultyNames($feedback));
     }
 
     /**

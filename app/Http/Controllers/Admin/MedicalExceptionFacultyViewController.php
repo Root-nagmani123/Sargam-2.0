@@ -54,18 +54,9 @@ class MedicalExceptionFacultyViewController extends Controller
   $courseFilter = $request->get('course');
   $dateFromFilter = $request->get('date_from');
 
-  // Get course IDs first to optimize the main query. A login with no
-  // faculty_master row coordinates nothing: without this guard
-  // where('Coordinator_name', null) compiles to IS NULL and matches any course
-  // whose coordinator was never filled in.
-  $courseIds = $facultyPk === null ? [] : DB::table('course_coordinator_master')
-      ->where('Coordinator_name', $facultyPk)
-      ->orWhereRaw('FIND_IN_SET(?, Assistant_Coordinator_name)', [$facultyPk])
-      ->pluck('courses_master_pk')
-      ->unique()
-      ->filter()
-      ->values()
-      ->toArray();
+  // Courses the faculty is CC or ACC of (PR #335 F-008 rule 3). A login with no
+  // faculty_master row coordinates nothing.
+  $courseIds = $facultyPk === null ? [] : CourseCordinatorMaster::courseIdsForFaculty((int) $facultyPk);
 
   if (empty($courseIds)) {
       $data = collect();
