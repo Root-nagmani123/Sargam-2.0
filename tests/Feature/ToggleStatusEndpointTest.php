@@ -6,6 +6,9 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /**
@@ -367,6 +370,63 @@ class ToggleStatusEndpointTest extends TestCase
             ->assertOk();
 
         $this->assertNotSame((int) $row->active_inactive, (int) DB::table($table)->where($idColumn, $row->{$idColumn})->value('active_inactive'));
+    }
+
+    /**
+     * PR #335 F-002 (trap 29), the other half: a non-administrator granted one
+     * screen's permission through a role, as the Roles screen grants it, still
+     * toggles that table, and is still refused on another gated table.
+     *
+     * @dataProvider screenPermissions
+     */
+    public function test_a_holder_of_the_screen_permission_toggles_that_table_and_no_other(string $table, string $idColumn, string $permission, string $otherTable): void
+    {
+        if (! Permission::where('name', $permission)->where('guard_name', 'web')->exists()) {
+            $this->markTestSkipped("no '{$permission}' permission in this database");
+        }
+
+        $holder = User::find(DB::table('user_credentials')->insertGetId([
+            'user_name' => 'zz.toggle.'.$permission, 'user_id' => 0, 'user_category' => 'E',
+        ]));
+        $holder->assignRole(Role::create(['name' => 'Zz toggle '.$permission, 'guard_name' => 'web'])->givePermissionTo($permission));
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->assertFalse($this->isAdministrator($holder->fresh()));
+
+        $post = function (string $table, string $idColumn) use ($holder) {
+            $row = DB::table($table)->orderBy($idColumn)->first([$idColumn, 'active_inactive']);
+            if (! $row) {
+                $this->markTestSkipped("no {$table} row to target");
+            }
+            $response = $this->actingAs($holder->fresh())->withSession(['user_roles' => ['Zz toggle']])
+                ->post('/admin/toggle-status', [
+                    'table' => $table, 'column' => 'active_inactive', 'id_column' => $idColumn,
+                    'id' => $row->{$idColumn}, 'status' => (int) $row->active_inactive === 1 ? 0 : 1,
+                ]);
+
+            return [$response, (int) $row->active_inactive, (int) DB::table($table)->where($idColumn, $row->{$idColumn})->value('active_inactive')];
+        };
+
+        [$response, $before, $after] = $post($table, $idColumn);
+        $response->assertOk();
+        $this->assertNotSame($before, $after, "a holder of '{$permission}' must still toggle {$table}");
+
+        [$response, $before, $after] = $post($otherTable, $otherTable === 'venue_master' ? 'venue_id' : 'pk');
+        $response->assertStatus(403);
+        $this->assertSame($before, $after, "'{$permission}' must not open {$otherTable}");
+    }
+
+    /** table, its key column, the screen permission that gates it, and another gated table it must not open. */
+    public static function screenPermissions(): array
+    {
+        return [
+            'country' => ['country_master', 'pk', 'country', 'venue_master'],
+            'state' => ['state_master', 'pk', 'state', 'country_master'],
+            'district' => ['state_district_mapping', 'pk', 'district', 'country_master'],
+            'city' => ['city_master', 'pk', 'city', 'country_master'],
+            'class session' => ['class_session_master', 'pk', 'class_session_master', 'country_master'],
+            'stream' => ['stream_master', 'pk', 'stream', 'country_master'],
+            'venue' => ['venue_master', 'venue_id', 'venue_master', 'country_master'],
+        ];
     }
 
     public static function screenGatedTables(): array
