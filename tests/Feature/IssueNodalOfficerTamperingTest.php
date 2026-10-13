@@ -54,14 +54,20 @@ class IssueNodalOfficerTamperingTest extends TestCase
 
         $this->actor = $this->employeeActor();
 
-        // Officers with a login, so the nodal officer can act in the last test.
+        // Officers who can sign in: resolveNodalOfficer() passes over anyone
+        // else, and the nodal officer acts in the last test. Having some
+        // user_credentials row is not enough — a NULL-category, student or
+        // inactive login does not count (User::employeeCanSignIn()).
         $others = DB::table('employee_master')
             ->where('pk', '!=', $this->actor->user_id)
             ->whereIn('pk', fn ($q) => $q->select('user_id')->from('user_credentials')->whereNotNull('user_id'))
             ->orderBy('pk')
-            ->limit(2)
+            ->limit(50)
             ->pluck('pk')
+            ->filter(fn ($pk) => User::employeeCanSignIn($pk))
+            ->take(2)
             ->map(fn ($pk) => (int) $pk)
+            ->values()
             ->all();
         if (count($others) < 2) {
             $this->markTestSkipped('Needs two employees besides the actor.');
@@ -528,6 +534,139 @@ class IssueNodalOfficerTamperingTest extends TestCase
             ->assertSessionHasErrors('nodal_employee_id');
 
         $this->assertSame(0, IssueLogManagement::where('description', $description)->count(), 'a complaint nobody can act on was stored');
+    }
+
+    // ── store() never makes nodal an officer who cannot sign in ───────────────
+    //
+    // resolveNodalOfficer() used to accept any officer the matrix listed, so a
+    // Level 2 officer with no usable login became nodal ahead of a Level 3
+    // officer who could act — and nobody could ever change the status.
+
+    /** An employee with no login at all, other than the fixture's officers. */
+    private function officerWithNoLogin(array $except = []): int
+    {
+        $pk = DB::table('employee_master')
+            ->whereNotIn('pk', array_merge([$this->nodalA, $this->nodalB, (int) $this->actor->user_id], $except))
+            ->whereNotIn('pk', fn ($q) => $q->select('user_id')->from('user_credentials')->whereNotNull('user_id'))
+            ->orderBy('pk')
+            ->limit(50)
+            ->pluck('pk')
+            ->first(fn ($pk) => ! User::employeeCanSignIn($pk));
+        if ($pk === null) {
+            $this->markTestSkipped('Needs an employee without a login.');
+        }
+
+        $this->assertFalse(User::employeeCanSignIn($pk), 'fixture: the no-login officer can sign in');
+
+        return (int) $pk;
+    }
+
+    /**
+     * An employee whose own 'E' login LoginController would refuse once they
+     * are inactive (status 2) — set here, inside the rolled-back transaction.
+     */
+    private function deactivatedOfficer(): int
+    {
+        $pk = DB::table('employee_master as e')
+            ->join('user_credentials as uc', 'uc.user_id', '=', 'e.pk')
+            ->where('uc.user_category', 'E')
+            ->whereNotIn('e.pk', [$this->nodalA, $this->nodalB, (int) $this->actor->user_id])
+            ->orderBy('e.pk')
+            ->value('e.pk');
+        if ($pk === null) {
+            $this->markTestSkipped('Needs a third employee with an employee login.');
+        }
+
+        DB::table('employee_master')->where('pk', $pk)->update(['status' => 2]);
+        $this->assertFalse(User::employeeCanSignIn($pk), 'fixture: the deactivated officer can still sign in');
+
+        return (int) $pk;
+    }
+
+    private function assertStoredWithNodal(string $description, int $expected): void
+    {
+        $stored = IssueLogManagement::where('description', $description)->first();
+        $this->assertNotNull($stored, 'no complaint was stored');
+        $this->assertSame((string) $expected, (string) $stored->employee_master_pk);
+    }
+
+    public function test_store_skips_a_level_two_officer_who_cannot_sign_in_and_assigns_level_three(): void
+    {
+        $levelTwo = $this->officerWithNoLogin();
+        $this->assertTrue(User::employeeCanSignIn($this->nodalA), 'fixture: the Level 3 officer cannot sign in');
+        $this->setMatrix($this->categoryPk, [
+            1 => [(int) $this->actor->user_id],
+            2 => [$levelTwo],
+            3 => [$this->nodalA],
+        ]);
+        $description = 'Store no-login level-two probe ' . uniqid();
+
+        $this->actingAs($this->actor)
+            ->post(route('admin.issue-management.store'), $this->storePayload($description))
+            ->assertSessionHasNoErrors();
+
+        $this->assertStoredWithNodal($description, $this->nodalA);
+    }
+
+    public function test_store_skips_a_deactivated_level_two_officer_and_assigns_level_three(): void
+    {
+        $levelTwo = $this->deactivatedOfficer();
+        $this->setMatrix($this->categoryPk, [
+            1 => [(int) $this->actor->user_id],
+            2 => [$levelTwo],
+            3 => [$this->nodalA],
+        ]);
+        $description = 'Store deactivated level-two probe ' . uniqid();
+
+        $this->actingAs($this->actor)
+            ->post(route('admin.issue-management.store'), $this->storePayload($description))
+            ->assertSessionHasNoErrors();
+
+        $this->assertStoredWithNodal($description, $this->nodalA);
+    }
+
+    public function test_store_is_refused_when_no_fallback_officer_can_sign_in(): void
+    {
+        $levelTwo = $this->officerWithNoLogin();
+        $levelThree = $this->deactivatedOfficer();
+        $this->setMatrix($this->categoryPk, [
+            1 => [(int) $this->actor->user_id],
+            2 => [$levelTwo],
+            3 => [$levelThree],
+        ]);
+        $description = 'Store nobody-can-sign-in probe ' . uniqid();
+
+        $this->actingAs($this->actor)
+            ->post(route('admin.issue-management.store'), $this->storePayload($description))
+            ->assertSessionHasErrors('nodal_employee_id');
+
+        $this->assertSame(0, IssueLogManagement::where('description', $description)->count(), 'a complaint nobody can act on was stored');
+    }
+
+    public function test_store_does_not_honour_a_requested_level_one_officer_who_cannot_sign_in(): void
+    {
+        $requested = $this->officerWithNoLogin();
+        $this->setMatrix($this->categoryPk, [1 => [$requested, $this->nodalB]]);
+        $description = 'Store no-login requested probe ' . uniqid();
+
+        $this->actingAs($this->actor)
+            ->post(route('admin.issue-management.store'), array_merge($this->storePayload($description), ['nodal_employee_id' => $requested]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertStoredWithNodal($description, $this->nodalB);
+    }
+
+    public function test_store_skips_a_level_one_officer_who_cannot_sign_in_and_assigns_level_two(): void
+    {
+        $levelOne = $this->officerWithNoLogin();
+        $this->setMatrix($this->categoryPk, [1 => [$levelOne], 2 => [$this->nodalB]]);
+        $description = 'Store no-login level-one probe ' . uniqid();
+
+        $this->actingAs($this->actor)
+            ->post(route('admin.issue-management.store'), array_merge($this->storePayload($description), ['nodal_employee_id' => null]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertStoredWithNodal($description, $this->nodalB);
     }
 
     // ── C: completed complaints ───────────────────────────────────────────────

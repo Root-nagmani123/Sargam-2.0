@@ -1208,9 +1208,9 @@ class IssueManagementController extends Controller
      * and step around the status lock in status_update().
      *
      * The requested officer is honoured only when the matrix lists them at
-     * Level 1 and they are not one of $excludedIds (the complainant / logger).
-     * Otherwise the first eligible officer is used, walking Level 1, then
-     * Level 2, then Level 3. Null when no level has an eligible officer; the
+     * Level 1, they are not one of $excludedIds (the complainant / logger) and
+     * they can sign in. Otherwise the first eligible officer is used, walking
+     * Level 1, then Level 2, then Level 3. Null when no level has an eligible officer; the
      * caller must then refuse the complaint, because status_update() admits
      * nobody to a complaint without a nodal officer or assignee. An excluded
      * person is never returned: falling back to them would hand the
@@ -1238,7 +1238,11 @@ class IssueManagementController extends Controller
     }
 
     /**
-     * Officers the matrix lists at $level, minus $excludedIds.
+     * Officers the matrix lists at $level, minus $excludedIds and minus anyone
+     * who cannot sign in. A nodal officer who never reaches the login screen
+     * leaves the complaint with nobody to act on it — the same reason
+     * status_update() refuses such an employee as a new assignee, and the
+     * same rule (User::employeeCanSignIn()).
      *
      * @param  array<int, string>  $excludedIds
      * @return \Illuminate\Support\Collection<int, string>
@@ -1250,6 +1254,7 @@ class IssueManagementController extends Controller
             ->map(fn ($pk) => (string) $pk)
             ->unique()
             ->reject(fn ($pk) => in_array($pk, $excludedIds, true))
+            ->filter(fn ($pk) => User::employeeCanSignIn($pk))
             ->values();
     }
 
@@ -1260,7 +1265,7 @@ class IssueManagementController extends Controller
 
         return ValidationException::withMessages([
             'nodal_employee_id' => [$configured
-                ? 'The escalation matrix of this category has no Level 1, 2 or 3 officer other than the complainant or issue logger, so ' . $refusal . '. Please contact the administrator.'
+                ? 'The escalation matrix of this category has no Level 1, 2 or 3 officer who can sign in, other than the complainant or issue logger, so ' . $refusal . '. Please contact the administrator.'
                 : 'No nodal officer is configured in the escalation matrix of this category, so ' . $refusal . '. Please contact the administrator.'],
         ]);
     }
@@ -1354,6 +1359,7 @@ class IssueManagementController extends Controller
             // created_by may name someone else (logging on their behalf);
             // issue_logger is always the signed-in user. Neither may be the
             // nodal officer by their own choice — see resolveNodalOfficer().
+            // Nor may anyone who cannot sign in.
             // With no eligible officer at any level the complaint is refused:
             // stored without one, nobody could ever change its status.
             $nodalEmployeePk = $this->resolveNodalOfficer(
