@@ -2018,6 +2018,19 @@ class IssueManagementController extends Controller
         }
         $request->validate($rules);
 
+        // Reopening is the complainant's / logger's action on a Completed
+        // complaint (the branch above), or the nodal officer's. Anyone else
+        // moving to Reopened would restart the cycle below and so reset the
+        // lock they are held to. Keeping Reopened as the current status (e.g.
+        // to add a remark) stays allowed.
+        if (! $isNodalOfficer
+            && $requestedStatus === IssueLogManagement::STATUS_REOPENED
+            && $requestedStatus !== (int) $issue->issue_status
+            && ! (($isComplainant || $isLogger) && $isReopenOnly)) {
+            return redirect()->route('admin.issue-management.show', $issue->pk)
+                ->with('error', 'Only the complainant, the issue logger or the nodal officer can reopen this complaint.');
+        }
+
         // The modal disables statuses already used since the last Reopen for
         // everyone but the nodal officer. Disabled options are only markup, so
         // refuse them here too; keeping the current status (e.g. to add a
