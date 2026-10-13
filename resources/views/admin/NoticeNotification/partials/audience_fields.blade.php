@@ -77,6 +77,16 @@
                     <option value="{{ \App\Models\NoticeNotification::MODE_GROUP }}">Group</option>
                     <option value="{{ \App\Models\NoticeNotification::MODE_INDIVIDUAL }}">Individual</option>
                 </select>
+                @if(!empty($otTargeted))
+                    {{-- PR #334 F-083: switching this notice from named trainees or groups to All widens it only with the box. --}}
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" name="all_course_trainees_confirmed" value="1"
+                            id="allCourseTraineesConfirmed" @checked(old('all_course_trainees_confirmed'))>
+                        <label class="form-check-label small" for="allCourseTraineesConfirmed">
+                            Send this notice to every Officer Trainee in the selected courses
+                        </label>
+                    </div>
+                @endif
             </div>
 
             <div class="col-md-6 d-none" id="otGroupBox">

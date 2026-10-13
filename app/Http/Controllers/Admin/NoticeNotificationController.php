@@ -318,11 +318,15 @@ class NoticeNotificationController extends Controller
         // ...and a notice for named staff widens to whole departments only through one (F-079).
         $staffIndividual = $notice->isStaffFacultyAudience() && $selectedEmployees !== [];
 
+        // ...and a notice for named trainees or groups widens to whole courses only through one (F-083).
+        $otTargeted = $notice->isOfficerTraineeAudience() && ($selectedStudents !== [] || $selectedGroups !== []);
+
         return view('admin.NoticeNotification.edit', compact(
             'legacyCourseless',
             'courseTargeted',
             'staffTargeted',
             'staffIndividual',
+            'otTargeted',
             'notice',
             'types',
             'target',
@@ -364,6 +368,13 @@ class NoticeNotificationController extends Controller
             throw ValidationException::withMessages([
                 'staff_scope' => 'This notice is sent to named staff / faculty members. Choose Individual and select '
                     .'them, or tick "Send this notice to everyone in the selected departments" to widen it.',
+            ]);
+        }
+
+        if ($this->widensStoredTargetedTrainees($notice, $request)) {
+            throw ValidationException::withMessages([
+                'ot_scope' => 'This notice is sent to named Officer Trainees or groups. Choose Individual or Group and '
+                    .'select them, or tick "Send this notice to every Officer Trainee in the selected courses" to widen it.',
             ]);
         }
 
@@ -725,6 +736,25 @@ class NoticeNotificationController extends Controller
             && $request->input('staff_scope') !== Notice::MODE_INDIVIDUAL
             && ! $request->boolean('all_department_staff_confirmed')
             && $notice->audienceMaps()->where('audience_type', NoticeAudienceMap::TYPE_EMPLOYEE)->exists();
+    }
+
+    /**
+     * F-079's rule for the Officer Trainee half (PR #334 F-083): a notice for named
+     * trainees or groups widens to everyone in its courses only through an explicit
+     * box. Read from the stored student and group rows, never from the request.
+     */
+    private function widensStoredTargetedTrainees(Notice $notice, Request $request): bool
+    {
+        $target = is_string($request->input('target_audience')) ? $request->input('target_audience') : '';
+
+        return $notice->isOfficerTraineeAudience()
+            && $this->isOfficerTrainee($target)
+            && $this->idsFrom($request, 'course_master_pks') !== []
+            && ! in_array($request->input('ot_scope'), [Notice::MODE_INDIVIDUAL, Notice::MODE_GROUP], true)
+            && ! $request->boolean('all_course_trainees_confirmed')
+            && $notice->audienceMaps()->whereIn('audience_type', [
+                NoticeAudienceMap::TYPE_STUDENT, NoticeAudienceMap::TYPE_GROUP,
+            ])->exists();
     }
 
     private function isOfficerTrainee(string $target): bool

@@ -19,13 +19,13 @@ use Illuminate\Support\Str;
  *
  * Why this searches raw text columns rather than the model relations:
  * course_repository_details stores the batch, subject, topic and author as TEXT in
- * columns named *_pk (course_master_pk = "Phase-I 2024", subject_pk = "Law", ...).
- * Only a legacy minority hold numeric ids, and those ids come from the system the
- * data was imported from - they resolve to nothing in course_master / subject_master
- * / timetable / faculty_master. So belongsTo('course'), ('subject'), ('topic') and
- * ('author') are null for effectively every row, and anything built on them finds
- * nothing. The `keyword` column ("batch,subject,topic,dd-mm-yyyy,author") is the only
- * readable source for those legacy rows, and is therefore searched and parsed here.
+ * columns named *_pk (course_master_pk = "Phase-I 2024", subject_pk = "Law", ...) for
+ * the imported rows. Numeric values are of two kinds: the current upload form stores
+ * local course_master / subject_master / faculty_master pks, while imported rows hold
+ * ids from the source system that resolve to nothing here. So a numeric value is
+ * resolved through its master table first, and only when that finds nothing does the
+ * `keyword` column ("batch,subject,topic,date,author") stand in (PR #334 F-084).
+ * {@see displayTextSql()} is that rule in SQL, {@see pickText()} the same rule in PHP.
  */
 class CourseRepositorySearch
 {
@@ -235,7 +235,11 @@ class CourseRepositorySearch
                 'dt.session_date as raw_session_date',
                 'dt.videolink as raw_videolink',
                 'm.course_repository_name as folder_name',
+                'cr_cm.course_name as resolved_course',
+                'cr_sm.subject_name as resolved_subject',
+                'cr_fm.full_name as resolved_author',
             ]);
+        self::joinMasters($query);
 
         // Browsing never reaches a deleted folder or anything under it; search
         // must not either (PR #334 F-013).
@@ -261,16 +265,16 @@ class CourseRepositorySearch
         // Filter on what decorate() displays, so a legacy row shown as "Law" is
         // found by Subject = Law (PR #334 F-078).
         if ($c['course'] !== '') {
-            $query->whereRaw(self::displayTextSql('dt.course_master_pk', "substring_index(dt.keyword, ',', 1)") . ' = ?', [$c['course']]);
+            $query->whereRaw(self::courseDisplaySql() . ' = ?', [$c['course']]);
         }
         if ($c['subject'] !== '') {
-            $segment = "case when dt.keyword like '%,%' then substring_index(substring_index(dt.keyword, ',', 2), ',', -1) end";
-            $query->whereRaw(self::displayTextSql('dt.subject_pk', $segment) . ' = ?', [$c['subject']]);
+            $query->whereRaw(self::subjectDisplaySql() . ' = ?', [$c['subject']]);
         }
         if ($c['author'] !== '') {
             $authorLike = DataTableSearchHelper::likePattern($c['author']);
             $query->where(function ($q) use ($authorLike) {
                 $q->where('dt.author_name', 'like', $authorLike)
+                    ->orWhere('cr_fm.full_name', 'like', $authorLike)
                     ->orWhere('dt.keyword', 'like', $authorLike);
             });
         }
@@ -432,10 +436,10 @@ class CourseRepositorySearch
         foreach ($documents as $doc) {
             $keyword = self::parseKeyword((string) ($doc->raw_keyword ?? ''));
 
-            $doc->display_course = self::pickText($doc->raw_course, $keyword['course']);
-            $doc->display_subject = self::pickText($doc->raw_subject, $keyword['subject']);
-            $doc->display_topic = self::pickText($doc->raw_topic, $keyword['topic']);
-            $doc->display_author = self::pickText($doc->raw_author, $keyword['author']);
+            $doc->display_course = self::pickText($doc->raw_course, $doc->resolved_course, $keyword['course']);
+            $doc->display_subject = self::pickText($doc->raw_subject, $doc->resolved_subject, $keyword['subject']);
+            $doc->display_topic = self::pickText($doc->raw_topic, null, $keyword['topic']);
+            $doc->display_author = self::pickText($doc->raw_author, $doc->resolved_author, $keyword['author']);
 
             $title = trim((string) $doc->file_title);
             $doc->display_title = $title !== ''
@@ -456,7 +460,8 @@ class CourseRepositorySearch
     }
 
     /**
-     * Split the legacy "batch,subject,topic,dd-mm-yyyy,author" keyword blob.
+     * Split the "batch,subject,topic,date,author" keyword blob. Imported rows date it
+     * dd-mm-yyyy; the upload form writes yyyy-mm-dd and may append sector and ministry.
      *
      * A plain explode() on the comma gets the topic and author wrong whenever the
      * topic itself contains a comma, which is common ("Balancing Development, Forest
@@ -476,7 +481,7 @@ class CourseRepositorySearch
 
         $dateIndex = null;
         foreach ($parts as $i => $part) {
-            if ($i >= 2 && preg_match('/^\d{1,2}-\d{1,2}-\d{4}$/', $part)) {
+            if ($i >= 2 && preg_match('/^(\d{1,2}-\d{1,2}-\d{4}|\d{4}-\d{1,2}-\d{1,2})$/', $part)) {
                 $dateIndex = $i;
                 break;
             }
@@ -504,11 +509,11 @@ class CourseRepositorySearch
     }
 
     /**
-     * Prefer the stored column, but reject a bare number: those are ids from the
-     * source system that resolve to nothing here, so showing one would put
+     * The stored text; for a bare number, the master record it resolves to; failing
+     * both, the keyword. An unresolved number is never shown: it would put
      * "169438950" on screen where a subject name belongs.
      */
-    private static function pickText($value, ?string $fallback): ?string
+    private static function pickText($value, $resolved, ?string $fallback): ?string
     {
         $value = trim((string) $value);
 
@@ -516,16 +521,65 @@ class CourseRepositorySearch
             return $value;
         }
 
-        $fallback = trim((string) $fallback);
+        foreach ([$resolved, $fallback] as $candidate) {
+            $candidate = trim((string) $candidate);
+            if ($candidate !== '') {
+                return $candidate;
+            }
+        }
 
-        return $fallback !== '' ? $fallback : null;
+        return null;
     }
 
-    /** pickText() in SQL: the column unless blank or a bare id, else the keyword segment. */
-    private static function displayTextSql(string $column, string $keywordSegment): string
+    /**
+     * Resolve a digits-only course / subject / author through its master table, as
+     * the browse page's relations do. Only digits-only values join, so a textual
+     * "Phase-I 2024" is never cast to a number and matched against pk 0.
+     *
+     * @param  Builder|\Illuminate\Database\Query\Builder  $query  aliased `dt`
+     */
+    private static function joinMasters($query): void
     {
+        $masters = [
+            'cr_cm' => ['course_master', 'dt.course_master_pk'],
+            'cr_sm' => ['subject_master', 'dt.subject_pk'],
+            'cr_fm' => ['faculty_master', 'dt.author_name'],
+        ];
+
+        foreach ($masters as $alias => [$table, $column]) {
+            $query->leftJoin("{$table} as {$alias}", function ($join) use ($alias, $column) {
+                $join->whereRaw("trim({$column}) regexp '^[0-9]+$'")
+                    ->whereRaw("{$alias}.pk = cast(trim({$column}) as unsigned)");
+            });
+        }
+    }
+
+    private static function courseDisplaySql(): string
+    {
+        return self::displayTextSql('dt.course_master_pk', 'cr_cm.course_name', "substring_index(dt.keyword, ',', 1)");
+    }
+
+    private static function subjectDisplaySql(): string
+    {
+        return self::displayTextSql(
+            'dt.subject_pk',
+            'cr_sm.subject_name',
+            "case when dt.keyword like '%,%' then substring_index(substring_index(dt.keyword, ',', 2), ',', -1) end"
+        );
+    }
+
+    /**
+     * pickText() in SQL. Each branch is cast to one collation: the repository and the
+     * three master tables do not share one, and MySQL refuses to mix them in a CASE.
+     */
+    private static function displayTextSql(string $column, string $resolved, string $keywordSegment): string
+    {
+        $text = fn (string $sql) => "convert(trim({$sql}) using utf8mb4) collate utf8mb4_unicode_ci";
+
         return "(case when trim(coalesce({$column}, '')) <> '' and trim({$column}) not regexp '^[0-9]+$'"
-            . " then trim({$column}) else trim({$keywordSegment}) end)";
+            . " then {$text($column)}"
+            . " when trim(coalesce({$resolved}, '')) <> '' then {$text($resolved)}"
+            . " else {$text($keywordSegment)} end)";
     }
 
     // --------------------------------------------------------------- categories
@@ -815,17 +869,17 @@ class CourseRepositorySearch
     // ------------------------------------------------------------------ facets
 
     /**
-     * Dropdown values for the refinement controls, read from the repository data
-     * itself. course_master / subject_master are deliberately not used: their pks do
-     * not match what is stored here, so those lists would filter nothing.
+     * Dropdown values for the refinement controls: exactly the labels the result
+     * cards show, built by the same SQL the filters compare, so every option filters
+     * to the documents labelled with it (PR #334 F-078, F-084).
      *
      * @return array{courses:string[],subjects:string[],years:int[]}
      */
     public static function facets(): array
     {
         return [
-            'courses' => self::distinctText('course_master_pk'),
-            'subjects' => self::distinctText('subject_pk'),
+            'courses' => self::distinctText(self::courseDisplaySql()),
+            'subjects' => self::distinctText(self::subjectDisplaySql()),
             'years' => self::excludeHiddenFolders(DB::table('course_repository_details'), 'course_repository_master_pk')
                 ->whereNotNull('session_date')
                 ->selectRaw('distinct year(session_date) as y')
@@ -839,15 +893,15 @@ class CourseRepositorySearch
     }
 
     /** @return string[] */
-    private static function distinctText(string $column): array
+    private static function distinctText(string $displaySql): array
     {
-        return self::excludeHiddenFolders(DB::table('course_repository_details'), 'course_repository_master_pk')
-            ->whereNotNull($column)
-            ->where($column, '!=', '')
-            ->whereRaw("{$column} not regexp '^[0-9]+$'")
-            ->distinct()
-            ->orderBy($column)
-            ->pluck($column)
+        $query = DB::table('course_repository_details as dt');
+        self::joinMasters($query);
+
+        return self::excludeHiddenFolders($query, 'dt.course_repository_master_pk')
+            ->selectRaw("distinct {$displaySql} as v")
+            ->orderBy('v')
+            ->pluck('v')
             ->map(fn ($v) => trim((string) $v))
             ->filter()
             ->unique()

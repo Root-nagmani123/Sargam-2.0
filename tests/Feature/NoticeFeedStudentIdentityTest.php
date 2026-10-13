@@ -163,4 +163,21 @@ class NoticeFeedStudentIdentityTest extends TestCase
             $this->assertNotContains($pk, $feed, "a second login does not get the student's {$kind} notice");
         }
     }
+
+    public function test_a_staff_or_faculty_login_sharing_the_students_id_and_email_gets_none_of_them(): void
+    {
+        // Only a no-category login is ever inferred to be the student; a categorised
+        // non-S login is not, whatever session role it arrives with.
+        [$login, $student, $course, $group] = $this->noCategoryOwnLogin();
+        $notices = $this->noticesFor($student, $course, $group);
+
+        foreach (['E', 'F'] as $category) {
+            DB::table('user_credentials')->where('pk', $login->pk)->update(['user_category' => $category]);
+            $feed = $this->feedFor($login->fresh(), ['Student-OT']);
+
+            foreach ($notices as $kind => $pk) {
+                $this->assertNotContains($pk, $feed, "a category-{$category} login does not get the student's {$kind} notice");
+            }
+        }
+    }
 }

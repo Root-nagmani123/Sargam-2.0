@@ -134,6 +134,10 @@
                             <label for="cruRefineCourse">Course / Batch</label>
                             <select class="form-select form-select-sm" id="cruRefineCourse" name="course">
                                 <option value="">All courses</option>
+                                {{-- A value from a chip or shared link that is not an option must stay selected, or Apply drops it. --}}
+                                @if($criteria['course'] !== '' && ! in_array($criteria['course'], $facets['courses'], true))
+                                    <option value="{{ $criteria['course'] }}" selected>{{ $criteria['course'] }}</option>
+                                @endif
                                 @foreach($facets['courses'] as $course)
                                     <option value="{{ $course }}" @selected($criteria['course'] === $course)>{{ $course }}</option>
                                 @endforeach
@@ -144,6 +148,9 @@
                             <label for="cruRefineSubject">Subject</label>
                             <select class="form-select form-select-sm" id="cruRefineSubject" name="subject">
                                 <option value="">All subjects</option>
+                                @if($criteria['subject'] !== '' && ! in_array($criteria['subject'], $facets['subjects'], true))
+                                    <option value="{{ $criteria['subject'] }}" selected>{{ $criteria['subject'] }}</option>
+                                @endif
                                 @foreach($facets['subjects'] as $subject)
                                     <option value="{{ $subject }}" @selected($criteria['subject'] === $subject)>{{ $subject }}</option>
                                 @endforeach

@@ -374,13 +374,13 @@
         var courseIds = selectedValues($course);
 
         if (!courseIds.length) {
+            // Hide, but keep Recipients and the picked trainees or groups: resetting to
+            // All here meant re-adding the course saved a personal notice for the whole
+            // course (PR #334 F-083).
             $otScopeBox.addClass('d-none');
             $groupBox.addClass('d-none');
             $studentBox.addClass('d-none');
             $previewBox.addClass('d-none');
-            $otScope.val(MODE_ALL);
-            clearMultiSelect($group);
-            clearMultiSelect($student);
             return;
         }
 
@@ -475,7 +475,7 @@
     $target.on('change', applyTargetAudience);
     $course.on('change', function () {
         refreshCount($course);
-        applyCourseSelection(null, [], []);
+        applyCourseSelection(null, selectedValues($group), selectedValues($student));
     });
     $otScope.on('change', function () { applyOtScope([], []); });
     $group.on('change', function () {
