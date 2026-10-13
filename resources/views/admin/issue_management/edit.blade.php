@@ -299,6 +299,8 @@ jQuery(function ($) {
     var CURRENT = {
         subCategory: @json((string) $currentSubCategory),
         nodal: @json((string) ($issue->employee_master_pk ?? '')),
+        complainant: @json((string) ($issue->created_by ?? '')),
+        logger: @json((string) ($issue->issue_logger ?? '')),
         building: @json((string) ($currentBuilding ?? '')),
         floor: @json((string) ($currentFloor ?? '')),
         room: @json((string) ($currentRoom ?? ''))
@@ -425,6 +427,9 @@ jQuery(function ($) {
         $.ajax({
             url: '/admin/issue-management/nodal-employees/' + categoryId,
             type: 'GET',
+            // update() excludes the complainant and logger too, so the list
+            // offers only officers it would accept.
+            data: { complainant: CURRENT.complainant, logger: CURRENT.logger },
             success: function(response) {
                 var level1 = response.level1 || response.data || [];
                 var autoSelect = response.level1_auto_select;
@@ -437,6 +442,11 @@ jQuery(function ($) {
                     var keep = (prefill && CURRENT.nodal) ? pk == CURRENT.nodal : (autoSelect && pk == autoSelect);
                     return new Option(name, pk, keep, keep);
                 });
+                // update() keeps the current officer on a same-category edit
+                // even when they are no longer on offer; keep them selectable.
+                if (prefill && CURRENT.nodal) {
+                    keepUnmatched($('#nodal_employee'), CURRENT.nodal, 'Current nodal officer (not on offer)');
+                }
 
                 if (level1.length) {
                     $('#level2_display').text(response.level2

@@ -1135,36 +1135,73 @@ class IssueManagementController extends Controller
     }
 
     /**
-     * Get nodal employees for a category (Level 1 only - selectable).
-     * Level 2 & 3 returned for display only.
+     * Nodal officers the Create / Edit form may offer for a category.
+     *
+     * Only officers resolveNodalOfficer() would accept are listed, and the
+     * preselected one is the officer it would choose: a Level 1 officer who
+     * cannot sign in, or who is the complainant / logger, used to be offered
+     * and preselected, then silently replaced by the server.
+     *
+     * The signed-in user is always excluded. The optional `complainant` and
+     * `logger` query parameters name the other people store() / update()
+     * exclude. They only narrow what is displayed; the server re-checks.
+     *
+     * With no eligible Level 1 officer, `level1` holds the single Level 2 or 3
+     * officer the complaint will go to, and `assigned_level` says which level.
+     * Level 2 & 3 are otherwise returned for display only.
      */
-    public function getNodalEmployees($categoryId)
+    public function getNodalEmployees(Request $request, $categoryId)
     {
         try {
             $all = $this->escalationMatrixRows($categoryId);
 
-            $level1 = $all->where('priority', 1)->values();
             $level2 = $all->where('priority', 2)->first();
             $level3 = $all->where('priority', 3)->first();
 
-            if ($level1->isEmpty()) {
+            $excludedIds = $this->employeeIdsFor(
+                $this->employeeIdQuery($request, 'complainant'),
+                $this->employeeIdQuery($request, 'logger'),
+                Auth::user()->user_id ?? null
+            );
+
+            $default = $this->resolveNodalOfficer($categoryId, null, $excludedIds);
+            if ($default === null) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No Level 1 nodal employees found for this category',
+                    'message' => $all->isEmpty()
+                        ? 'No Level 1 nodal employees found for this category'
+                        : $this->noNodalOfficerError($categoryId, 'no complaint can be assigned in it')->errors()['nodal_employee_id'][0],
                     'data' => [],
                     'level1' => [],
                     'level1_auto_select' => null,
+                    'assigned_level' => null,
                     'level2' => null,
                     'level3' => null,
                 ], 200);
             }
 
+            $eligibleLevelOne = $this->eligibleNodalOfficers($all, 1, $excludedIds);
+            if ($eligibleLevelOne->isNotEmpty()) {
+                $assignedLevel = 1;
+                $offered = $all->where('priority', 1)
+                    ->filter(fn ($row) => $eligibleLevelOne->contains((string) $row->employee_pk));
+            } else {
+                // resolveNodalOfficer() walked past Level 1; offer only its choice.
+                $assignedLevel = (int) $all->first(fn ($row) => (string) $row->employee_pk === $default)->priority;
+                $offered = $all->where('priority', $assignedLevel)
+                    ->filter(fn ($row) => (string) $row->employee_pk === $default);
+            }
+            $offered = $offered->unique('employee_pk')->values();
+
             return response()->json([
                 'success' => true,
-                'message' => 'Nodal employees fetched successfully',
-                'data' => $level1->toArray(),
-                'level1' => $level1->toArray(),
-                'level1_auto_select' => $level1->first()->employee_pk,
+                'message' => $assignedLevel === 1
+                    ? 'Nodal employees fetched successfully'
+                    : 'No Level 1 officer of this category can take this complaint, so it will go to the Level ' . $assignedLevel . ' officer.',
+                'data' => $offered->toArray(),
+                'level1' => $offered->toArray(),
+                'level1_auto_select' => $default,
+                'assigned_level' => $assignedLevel,
                 'level2' => $level2 ? ['employee_name' => $level2->employee_name, 'days_notify' => $level2->days_notify] : null,
                 'level3' => $level3 ? ['employee_name' => $level3->employee_name, 'days_notify' => $level3->days_notify] : null,
             ], 200);
@@ -1288,6 +1325,14 @@ class IssueManagementController extends Controller
         return array_values(array_unique($ids));
     }
 
+    /** An employee id from the query string, or null unless it is all digits. */
+    private function employeeIdQuery(Request $request, string $key): ?string
+    {
+        $value = $request->query($key);
+
+        return is_string($value) && ctype_digit($value) ? $value : null;
+    }
+
     /**
      * Store a newly created issue in storage.
      */
@@ -1369,6 +1414,21 @@ class IssueManagementController extends Controller
             );
             if ($nodalEmployeePk === null) {
                 throw $this->noNodalOfficerError($request->issue_category_id, 'the complaint cannot be logged');
+            }
+
+            // The form lists only officers the resolver accepts, but it can be
+            // stale (e.g. the complainant changed after it loaded). Say so
+            // rather than file the complaint under someone else silently.
+            $successMessage = 'Complaint submitted successfully!';
+            $requestedNodal = $request->nodal_employee_id;
+            if ($requestedNodal !== null && $requestedNodal !== ''
+                && ! in_array((string) $nodalEmployeePk, $this->employeeIdsFor($requestedNodal), true)) {
+                $assignedOfficer = EmployeeMaster::findByIdOrPkOld($nodalEmployeePk);
+                $assignedName = $assignedOfficer
+                    ? trim(preg_replace('/\s+/', ' ', ($assignedOfficer->first_name ?? '') . ' ' . ($assignedOfficer->middle_name ?? '') . ' ' . ($assignedOfficer->last_name ?? '')))
+                    : '';
+                $successMessage .= ' The nodal officer you picked cannot take this complaint (they cannot sign in, or they are its complainant or logger), so it was assigned to '
+                    . ($assignedName !== '' ? $assignedName : 'the next eligible officer in the escalation matrix') . ' instead.';
             }
 
             $data = array(
@@ -1454,7 +1514,7 @@ class IssueManagementController extends Controller
             static::bumpIndexListCacheEpoch();
 
             return redirect()->route('admin.issue-management.show', $id)
-                ->with('success', 'Complaint submitted successfully!');
+                ->with('success', $successMessage);
             
         } catch (ValidationException $e) {
             return back()->withInput()->withErrors($e->validator);

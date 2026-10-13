@@ -180,12 +180,20 @@ class User extends Authenticatable
      *
      * A NULL user_category is excluded on purpose, not by accident of
      * `NULL != 'S'`. The join is only an identity when user_id carries an
-     * employee key, and for NULL-category logins it does not: their user_id
-     * values merely fall in the same numeric range as employee_master.pk, and
-     * they almost never name the employee they collide with. Counting them
-     * would mark an inactive employee as able to sign in on the strength of
-     * somebody else's account. LoginController does admit those logins, but as
-     * their own holders, not as the employee.
+     * employee key. For NULL-category logins joined on employee_master.pk it
+     * usually does not: their user_id values fall in the same numeric range as
+     * employee_master.pk and mostly name somebody else, so counting them would
+     * mark an inactive employee as able to sign in on the strength of another
+     * person's account. A NULL-category login joined on pk_old may be the
+     * employee's own; whether it counts is an open domain decision, and until
+     * it is taken those logins are excluded too.
+     *
+     * This exclusion applies only here, to "can this employee sign in". It is
+     * not how a signed-in NULL-category login is identified elsewhere:
+     * LoginController admits these logins, and getEmployeeIdsForUser() then
+     * maps their user_id to whichever employee has that pk or pk_old, so
+     * Issue Management access checks (e.g. status_update()) treat the login
+     * as that employee, colliding or not.
      */
     private static function complaintLoginRows()
     {

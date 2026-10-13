@@ -10,9 +10,20 @@
 
 @section('setup_content')
 @php
-    $isNodalOrAssigned = $issue->employee_master_pk == Auth::user()->user_id || $issue->assigned_to == Auth::user()->user_id;
-    $isComplainant = $issue->created_by == Auth::user()->user_id;
-    $isLogger = $issue->issue_logger == Auth::user()->user_id;
+    // Every employee id (pk and pk_old) the signed-in user goes by, built the
+    // way status_update() builds it, so the controls shown here are the ones
+    // the server will accept. Comparing with user_id alone hid them from an
+    // officer whose complaint is keyed by their pk_old.
+    $viewerIds = getEmployeeIdsForUser(Auth::user()->user_id ?? null);
+    if (empty($viewerIds)) {
+        $viewerIds = [(string) (Auth::user()->user_id ?? null)];
+    }
+    // An empty id would match every complaint whose field is NULL.
+    $viewerIds = array_values(array_filter($viewerIds, fn ($id) => $id !== ''));
+    $isNodalOfficer = in_array((string) $issue->employee_master_pk, $viewerIds);
+    $isNodalOrAssigned = $isNodalOfficer || in_array((string) $issue->assigned_to, $viewerIds);
+    $isComplainant = in_array((string) $issue->created_by, $viewerIds);
+    $isLogger = in_array((string) $issue->issue_logger, $viewerIds);
     $isCompleted = (int) $issue->issue_status === 2;
     $canUpdateStatus = $isNodalOrAssigned || ($isComplainant && $isCompleted) || ($isLogger && $isCompleted);
     $showReopenOnly = ($isComplainant || $isLogger) && $isCompleted;
@@ -360,12 +371,11 @@
                         // same list, so this is not only markup.
                         $usedStatuses = $issue->statusesUsedThisCycle();
                         $isAssigned = !empty($issue->assigned_to);
-                        $isNodalOfficer = ($issue->employee_master_pk == Auth::user()->user_id);
                         $canReassign = $isNodalOfficer && !$isCompleted; // Re-assign not allowed for closed (Completed) issues
                         $canOnlyReopen = $isComplainant && $isCompleted;
                     @endphp
 
-                    @if(($issue->created_by == Auth::user()->user_id || $issue->issue_logger == Auth::user()->user_id) && $issue->issue_status === 2)
+                    @if(($isComplainant || $isLogger) && $issue->issue_status === 2)
                     <div class="alert alert-info mb-3">
                         <i class="bi bi-info-circle"></i>
                         <strong>Reopen:</strong> As the complainant, you can reopen this completed issue. Add a remark (optional) and submit.
