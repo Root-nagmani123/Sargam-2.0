@@ -114,19 +114,59 @@ class IssueNodalOfficerTamperingTest extends TestCase
     /** @param array<int, int> $employeePks */
     private function setLevelOne(int $categoryPk, array $employeePks): void
     {
+        $this->setLevel($categoryPk, 1, $employeePks);
+    }
+
+    /** @param array<int, int> $employeePks An empty list leaves the level unconfigured. */
+    private function setLevel(int $categoryPk, int $priority, array $employeePks): void
+    {
         DB::table('issue_category_employee_map')
             ->where('issue_category_master_pk', $categoryPk)
-            ->where('priority', 1)
+            ->where('priority', $priority)
             ->delete();
 
         foreach ($employeePks as $pk) {
             DB::table('issue_category_employee_map')->insert([
                 'issue_category_master_pk' => $categoryPk,
                 'employee_master_pk' => $pk,
-                'priority' => 1,
+                'priority' => $priority,
                 'days_notify' => 1,
             ]);
         }
+    }
+
+    /** @param array<int, array<int, int>> $levels priority => employee pks, for Levels 1 to 3 */
+    private function setMatrix(int $categoryPk, array $levels): void
+    {
+        foreach ([1, 2, 3] as $priority) {
+            $this->setLevel($categoryPk, $priority, $levels[$priority] ?? []);
+        }
+    }
+
+    /** @return array<string, mixed> */
+    private function storePayload(string $description): array
+    {
+        return [
+            'description' => $description,
+            'issue_category_id' => $this->categoryPk,
+            'issue_sub_category_id' => $this->subCategoryPk,
+            'issue_priority_id' => (int) DB::table('issue_priority_master')->value('pk'),
+            'sub_category_name' => 'probe',
+            'created_by' => $this->actor->user_id,
+            'nodal_employee_id' => $this->actor->user_id,
+            'location' => 'O',
+            'building_master_pk' => $this->buildingPk(),
+        ];
+    }
+
+    private function buildingPk(): int
+    {
+        $building = DB::table('building_master')->value('pk');
+        if (! $building) {
+            $this->markTestSkipped('Needs a building_master row.');
+        }
+
+        return (int) $building;
     }
 
     /** A complaint the actor raised and logged; nodalA is its nodal officer. */
@@ -319,10 +359,8 @@ class IssueNodalOfficerTamperingTest extends TestCase
         $this->assertSame($before, $this->historyCount($issue), 'an unauthorised status-history row was written');
     }
 
-    public function test_category_change_is_refused_when_the_complainant_is_its_only_level_one_officer(): void
+    private function otherCategory(): object
     {
-        $issue = $this->seedIssue(IssueLogManagement::STATUS_IN_PROGRESS);
-
         $otherCategory = DB::table('issue_sub_category_master')
             ->where('issue_category_master_pk', '!=', $this->categoryPk)
             ->select('pk', 'issue_category_master_pk')
@@ -330,7 +368,15 @@ class IssueNodalOfficerTamperingTest extends TestCase
         if (! $otherCategory) {
             $this->markTestSkipped('Needs a second category with a sub-category.');
         }
-        $this->setLevelOne((int) $otherCategory->issue_category_master_pk, [(int) $this->actor->user_id]);
+
+        return $otherCategory;
+    }
+
+    public function test_category_change_is_refused_when_the_complainant_is_its_only_officer_at_every_level(): void
+    {
+        $issue = $this->seedIssue(IssueLogManagement::STATUS_IN_PROGRESS);
+        $otherCategory = $this->otherCategory();
+        $this->setMatrix((int) $otherCategory->issue_category_master_pk, [1 => [(int) $this->actor->user_id]]);
 
         $this->actingAs($this->actor)
             ->put(route('admin.issue-management.update', $issue->pk), $this->editPayload([
@@ -346,6 +392,28 @@ class IssueNodalOfficerTamperingTest extends TestCase
         $this->assertSame('Nodal tampering regression probe', $fresh->description);
 
         $this->assertUsedStatusRefused($issue);
+    }
+
+    public function test_category_change_falls_back_to_level_two_when_the_complainant_is_the_only_level_one_officer(): void
+    {
+        $issue = $this->seedIssue(IssueLogManagement::STATUS_IN_PROGRESS);
+        $otherCategory = $this->otherCategory();
+        $this->setMatrix((int) $otherCategory->issue_category_master_pk, [
+            1 => [(int) $this->actor->user_id],
+            2 => [$this->nodalB],
+        ]);
+
+        $this->actingAs($this->actor)
+            ->put(route('admin.issue-management.update', $issue->pk), $this->editPayload([
+                'issue_category_id' => $otherCategory->issue_category_master_pk,
+                'issue_sub_category_id' => $otherCategory->pk,
+                'nodal_employee_id' => $this->actor->user_id,
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $fresh = $issue->fresh();
+        $this->assertSame((int) $otherCategory->issue_category_master_pk, (int) $fresh->issue_category_master_pk);
+        $this->assertSame((string) $this->nodalB, (string) $fresh->employee_master_pk);
     }
 
     public function test_same_category_keeps_the_nodal_officer_when_the_complainant_is_the_only_level_one_officer(): void
@@ -367,36 +435,99 @@ class IssueNodalOfficerTamperingTest extends TestCase
         $this->assertUsedStatusRefused($issue);
     }
 
-    public function test_store_never_makes_the_logger_nodal_when_they_are_the_only_level_one_officer(): void
+    // ── store() never saves a complaint nobody can act on ─────────────────────
+
+    public function test_store_assigns_level_two_when_the_logger_is_the_only_level_one_officer_and_level_two_can_act(): void
     {
-        $building = DB::table('building_master')->value('pk');
-        if (! $building) {
-            $this->markTestSkipped('Needs a building_master row.');
-        }
-        $this->setLevelOne($this->categoryPk, [(int) $this->actor->user_id]);
-        $before = IssueLogManagement::where('created_by', $this->actor->user_id)->max('pk');
+        $this->setMatrix($this->categoryPk, [
+            1 => [(int) $this->actor->user_id],
+            2 => [$this->nodalB],
+            3 => [$this->nodalA],
+        ]);
+        $description = 'Store sole-officer probe ' . uniqid();
 
         $this->actingAs($this->actor)
-            ->post(route('admin.issue-management.store'), [
-                'description' => 'Store sole-officer probe ' . uniqid(),
-                'issue_category_id' => $this->categoryPk,
-                'issue_sub_category_id' => $this->subCategoryPk,
-                'issue_priority_id' => (int) DB::table('issue_priority_master')->value('pk'),
-                'sub_category_name' => 'probe',
-                'created_by' => $this->actor->user_id,
-                'nodal_employee_id' => $this->actor->user_id,
-                'location' => 'O',
-                'building_master_pk' => $building,
-            ])
+            ->post(route('admin.issue-management.store'), $this->storePayload($description))
             ->assertSessionHasNoErrors();
 
-        $stored = IssueLogManagement::where('created_by', $this->actor->user_id)->orderByDesc('pk')->first();
-        $this->assertNotNull($stored);
-        $this->assertNotSame($before, $stored->pk, 'no complaint was stored');
-        $this->assertNotSame((string) $this->actor->user_id, (string) $stored->employee_master_pk, 'the logger became the nodal officer');
-        // The existing no-Level-1 path: the complaint is stored without a nodal
-        // officer. Pending module-owner confirmation — see the PR notes.
-        $this->assertNull($stored->employee_master_pk);
+        $stored = IssueLogManagement::where('description', $description)->first();
+        $this->assertNotNull($stored, 'no complaint was stored');
+        $this->assertSame((string) $this->nodalB, (string) $stored->employee_master_pk);
+
+        $levelTwo = User::where('user_id', $this->nodalB)->first();
+        if (! $levelTwo) {
+            $this->markTestSkipped('The Level 2 employee has no login.');
+        }
+        $before = $this->historyCount($stored);
+
+        $this->actingAs($levelTwo)
+            ->put(route('admin.issue-management.status_update', $stored->pk), [
+                'issue_status' => IssueLogManagement::STATUS_IN_PROGRESS,
+                'assign_to_type' => 'other',
+                'other_name' => 'Level 2 probe handler',
+                'other_phone' => '9876543210',
+            ])
+            ->assertSessionHas('success');
+
+        $this->assertSame(IssueLogManagement::STATUS_IN_PROGRESS, (int) $stored->fresh()->issue_status);
+        $this->assertSame('Level 2 probe handler', $stored->fresh()->assigned_to);
+        $this->assertSame($before + 1, $this->historyCount($stored));
+    }
+
+    public function test_store_assigns_level_three_when_level_two_is_the_logger_too(): void
+    {
+        $this->setMatrix($this->categoryPk, [
+            1 => [(int) $this->actor->user_id],
+            2 => [(int) $this->actor->user_id],
+            3 => [$this->nodalA],
+        ]);
+        $description = 'Store level-three probe ' . uniqid();
+
+        $this->actingAs($this->actor)
+            ->post(route('admin.issue-management.store'), $this->storePayload($description))
+            ->assertSessionHasNoErrors();
+
+        $stored = IssueLogManagement::where('description', $description)->first();
+        $this->assertNotNull($stored, 'no complaint was stored');
+        $this->assertSame((string) $this->nodalA, (string) $stored->employee_master_pk);
+    }
+
+    public function test_store_assigns_level_two_when_the_category_has_no_level_one(): void
+    {
+        $this->setMatrix($this->categoryPk, [2 => [$this->nodalB]]);
+        $description = 'Store no-level-one probe ' . uniqid();
+
+        $this->actingAs($this->actor)
+            ->post(route('admin.issue-management.store'), array_merge($this->storePayload($description), ['nodal_employee_id' => null]))
+            ->assertSessionHasNoErrors();
+
+        $stored = IssueLogManagement::where('description', $description)->first();
+        $this->assertNotNull($stored, 'no complaint was stored');
+        $this->assertSame((string) $this->nodalB, (string) $stored->employee_master_pk);
+    }
+
+    public function test_store_is_refused_when_the_logger_is_the_only_officer_at_every_level(): void
+    {
+        $this->setMatrix($this->categoryPk, [1 => [(int) $this->actor->user_id]]);
+        $description = 'Store refused probe ' . uniqid();
+
+        $this->actingAs($this->actor)
+            ->post(route('admin.issue-management.store'), $this->storePayload($description))
+            ->assertSessionHasErrors('nodal_employee_id');
+
+        $this->assertSame(0, IssueLogManagement::where('description', $description)->count(), 'a complaint nobody can act on was stored');
+    }
+
+    public function test_store_is_refused_when_the_category_has_no_escalation_matrix(): void
+    {
+        $this->setMatrix($this->categoryPk, []);
+        $description = 'Store no-matrix probe ' . uniqid();
+
+        $this->actingAs($this->actor)
+            ->post(route('admin.issue-management.store'), $this->storePayload($description))
+            ->assertSessionHasErrors('nodal_employee_id');
+
+        $this->assertSame(0, IssueLogManagement::where('description', $description)->count(), 'a complaint nobody can act on was stored');
     }
 
     // ── C: completed complaints ───────────────────────────────────────────────

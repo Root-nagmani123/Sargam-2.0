@@ -1209,30 +1209,60 @@ class IssueManagementController extends Controller
      *
      * The requested officer is honoured only when the matrix lists them at
      * Level 1 and they are not one of $excludedIds (the complainant / logger).
-     * Otherwise the first such Level 1 officer is used. Null when no Level 1
-     * officer is eligible — none is configured, or every one is excluded. An
-     * excluded person is never returned: falling back to them would hand the
+     * Otherwise the first eligible officer is used, walking Level 1, then
+     * Level 2, then Level 3. Null when no level has an eligible officer; the
+     * caller must then refuse the complaint, because status_update() admits
+     * nobody to a complaint without a nodal officer or assignee. An excluded
+     * person is never returned: falling back to them would hand the
      * complainant / logger the nodal officer's status rights.
      *
      * @param  array<int, string>  $excludedIds
      */
     private function resolveNodalOfficer($categoryId, $requested, array $excludedIds): ?string
     {
-        $level1 = $this->escalationMatrixRows($categoryId)
-            ->where('priority', 1)
-            ->pluck('employee_pk')
-            ->map(fn ($pk) => (string) $pk)
-            ->unique()
-            ->values();
-
-        $eligible = $level1->reject(fn ($pk) => in_array($pk, $excludedIds, true))->values();
+        $rows = $this->escalationMatrixRows($categoryId);
 
         $requested = ($requested === null || $requested === '') ? null : (string) $requested;
-        if ($requested !== null && $eligible->contains($requested)) {
+        if ($requested !== null && $this->eligibleNodalOfficers($rows, 1, $excludedIds)->contains($requested)) {
             return $requested;
         }
 
-        return $eligible->first();
+        foreach ([1, 2, 3] as $level) {
+            $eligible = $this->eligibleNodalOfficers($rows, $level, $excludedIds);
+            if ($eligible->isNotEmpty()) {
+                return $eligible->first();
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Officers the matrix lists at $level, minus $excludedIds.
+     *
+     * @param  array<int, string>  $excludedIds
+     * @return \Illuminate\Support\Collection<int, string>
+     */
+    private function eligibleNodalOfficers(\Illuminate\Support\Collection $rows, int $level, array $excludedIds): \Illuminate\Support\Collection
+    {
+        return $rows->where('priority', $level)
+            ->pluck('employee_pk')
+            ->map(fn ($pk) => (string) $pk)
+            ->unique()
+            ->reject(fn ($pk) => in_array($pk, $excludedIds, true))
+            ->values();
+    }
+
+    /** The error for a category in which no level has an eligible nodal officer. */
+    private function noNodalOfficerError($categoryId, string $refusal): ValidationException
+    {
+        $configured = $this->escalationMatrixRows($categoryId)->isNotEmpty();
+
+        return ValidationException::withMessages([
+            'nodal_employee_id' => [$configured
+                ? 'The escalation matrix of this category has no Level 1, 2 or 3 officer other than the complainant or issue logger, so ' . $refusal . '. Please contact the administrator.'
+                : 'No nodal officer is configured in the escalation matrix of this category, so ' . $refusal . '. Please contact the administrator.'],
+        ]);
     }
 
     /**
@@ -1324,13 +1354,16 @@ class IssueManagementController extends Controller
             // created_by may name someone else (logging on their behalf);
             // issue_logger is always the signed-in user. Neither may be the
             // nodal officer by their own choice — see resolveNodalOfficer().
-            // Null (no eligible Level 1 officer) is stored as it always was for
-            // a category with none configured: employee_master_pk is nullable.
+            // With no eligible officer at any level the complaint is refused:
+            // stored without one, nobody could ever change its status.
             $nodalEmployeePk = $this->resolveNodalOfficer(
                 $request->issue_category_id,
                 $request->nodal_employee_id,
                 $this->employeeIdsFor($request->created_by, Auth::user()->user_id ?? null)
             );
+            if ($nodalEmployeePk === null) {
+                throw $this->noNodalOfficerError($request->issue_category_id, 'the complaint cannot be logged');
+            }
 
             $data = array(
                 'issue_category_master_pk' => $request->issue_category_id,
@@ -1678,22 +1711,18 @@ class IssueManagementController extends Controller
         // The nodal officer is decided server-side (resolveNodalOfficer()).
         // Same category: a different Level 1 officer may be picked, but never
         // the complainant / logger; anything else keeps the current officer.
-        // New category: the matrix decides.
+        // New category: the matrix decides, as in store().
         $excludedIds = $this->employeeIdsFor($issue->created_by, $issue->issue_logger, Auth::user()->user_id ?? null);
         if ((int) $request->issue_category_id === (int) $issue->issue_category_master_pk) {
-            $resolved = $this->resolveNodalOfficer($request->issue_category_id, $request->nodal_employee_id, $excludedIds);
-            $nodalEmployeePk = ($resolved !== null && (string) $resolved === (string) $request->nodal_employee_id)
-                ? $resolved
+            $requested = (string) $request->nodal_employee_id;
+            $levelOne = $this->eligibleNodalOfficers($this->escalationMatrixRows($request->issue_category_id), 1, $excludedIds);
+            $nodalEmployeePk = ($requested !== '' && $levelOne->contains($requested))
+                ? $requested
                 : $issue->employee_master_pk;
         } else {
             $nodalEmployeePk = $this->resolveNodalOfficer($request->issue_category_id, $request->nodal_employee_id, $excludedIds);
             if ($nodalEmployeePk === null) {
-                $configured = $this->escalationMatrixRows($request->issue_category_id)->where('priority', 1)->isNotEmpty();
-                throw ValidationException::withMessages([
-                    'nodal_employee_id' => [$configured
-                        ? 'The selected category has no Level 1 nodal officer other than the complainant or issue logger of this complaint, so it cannot be moved there. Please contact the administrator.'
-                        : 'No Level 1 nodal officer is configured for the selected category.'],
-                ]);
+                throw $this->noNodalOfficerError($request->issue_category_id, 'the complaint cannot be moved there');
             }
         }
 
