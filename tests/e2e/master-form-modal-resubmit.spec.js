@@ -90,3 +90,50 @@ test("a corrected Save after a server-side rejection sends a second POST", async
   // The second answer has no errors, so the modal treats it as saved and reloads the page.
   await reload;
 });
+
+// F-023: the re-read form URL answers with an error flash but no form root, so there is no
+// form to re-render. The modal kept the old form with Save disabled on "Saving…" and showed nothing.
+test("a rejected Save whose form page has only an error flash re-enables Save and shows the flash", async ({ page }) => {
+  const posts = [];
+  let rejected = false;
+
+  await page.route("**/*", (route) => {
+    const req = route.request();
+    const url = new URL(req.url());
+    if (url.origin !== ORIGIN) {
+      return route.abort();
+    }
+    if (SCRIPTS[url.pathname]) {
+      return route.fulfill({ contentType: "application/javascript", body: fs.readFileSync(SCRIPTS[url.pathname]) });
+    }
+    if (req.method() === "POST" && url.pathname === "/master/city/store") {
+      posts.push(req.postDataBuffer().toString());
+      rejected = true;
+      return route.fulfill({ status: 302, headers: { Location: `${ORIGIN}/master/city/create` } });
+    }
+    if (url.pathname === "/master/city/create") {
+      return route.fulfill({
+        contentType: "text/html",
+        body: rejected
+          ? '<!doctype html><html><body><div class="alert alert-danger">Record could not be saved.<button type="button">x</button></div></body></html>'
+          : formPage(false),
+      });
+    }
+    return route.fulfill({ contentType: "text/html", body: INDEX });
+  });
+
+  await page.goto(`${ORIGIN}/master/city`);
+  await page.click("a[data-mst-modal-form]");
+  const modal = page.locator("#mstFormModal");
+  const save = modal.locator("button[type=submit]");
+  await expect(save).toBeVisible();
+
+  await save.click();
+  await expect(modal.locator(".mst-form-modal-alert")).toHaveText("Record could not be saved.");
+  await expect(save).toBeEnabled();
+  await expect(save).toHaveText("Save");
+  expect(posts).toHaveLength(1);
+
+  await save.click();
+  await expect.poll(() => posts.length).toBe(2);
+});

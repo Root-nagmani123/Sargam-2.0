@@ -573,7 +573,12 @@
                     var failed = (root && serverErrorCount(root) > 0)
                         || flashText(doc, '.alert-danger').length > 0;
                     if (failed) {
-                        renderForm(doc);
+                        if (!renderForm(doc)) {
+                            // Only an error flash, no form to re-render: keep this one, usable again.
+                            setBusy(form, false);
+                            modalAlert(flashText(doc, '.alert-danger').join(' '));
+                            return;
+                        }
                         focusFirstError();
                         return;
                     }
