@@ -3,8 +3,9 @@
 @section('title', 'Leave Applied on Behalf of OT')
 
 @push('styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    integrity="sha384-XGjxtQfXaH2tnPFa9x+ruJTuLE3Aa6LhHSWRr1XeTyhezb4abCG4ccI5AkVDxqC+" crossorigin="anonymous" />
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/daterangepicker/daterangepicker.css') }}" />
 @endpush
 
 @section('setup_content')
@@ -103,8 +104,8 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<script src="{{ asset('admin_assets/js/extra-libs/moment/moment.min.js') }}"></script>
+<script src="{{ asset('admin_assets/libs/daterangepicker/daterangepicker.js') }}"></script>
 <script>
 $(function () {
     const exportUrl = "{{ route('admin.leave-on-behalf.export') }}";
@@ -186,6 +187,7 @@ $(function () {
             course_filter: $('#courseFilter').val() || '',
             from_date: $period.data('from') || '',
             to_date: $period.data('to') || '',
+            search: { value: table.search() },
             format: $(this).data('format'),
         });
         window.location.href = exportUrl + '?' + params;

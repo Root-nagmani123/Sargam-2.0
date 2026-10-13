@@ -46,10 +46,14 @@
 </style>
 
 @php
-    $selectedCourse = old('course_master_pk', '');
-    $selectedStudent = old('student_master_pk', '');
-    $fromDateValue = old('from_date', '');
-    $toDateValue = old('to_date', '');
+    $scalarOld = function (string $key): string {
+        $value = old($key, '');
+        return is_scalar($value) ? (string) $value : '';
+    };
+    $selectedCourse = $scalarOld('course_master_pk');
+    $selectedStudent = $scalarOld('student_master_pk');
+    $fromDateValue = $scalarOld('from_date');
+    $toDateValue = $scalarOld('to_date');
 @endphp
 
 <div class="container-fluid leave-module leave-on-behalf">
@@ -119,7 +123,7 @@
                                     <option value="">Select Nature</option>
                                     @foreach($natures as $nature)
                                         <option value="{{ $nature->pk }}"
-                                            {{ (string) old('leave_nature_master_pk') === (string) $nature->pk ? 'selected' : '' }}>
+                                            {{ $scalarOld('leave_nature_master_pk') === (string) $nature->pk ? 'selected' : '' }}>
                                             {{ $nature->nature_name }}
                                         </option>
                                     @endforeach
@@ -175,7 +179,7 @@
                                 <label for="time_from" class="leave-grid-label d-block">Time From <span class="text-danger">*</span></label>
                                 <input type="time" name="time_from" id="time_from"
                                     class="form-control @error('time_from') is-invalid @enderror" required
-                                    value="{{ old('time_from', '') }}">
+                                    value="{{ $scalarOld('time_from') }}">
                                 @error('time_from')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
@@ -186,7 +190,7 @@
                                 <label for="time_to" class="leave-grid-label d-block">Time To <span class="text-danger">*</span></label>
                                 <input type="time" name="time_to" id="time_to"
                                     class="form-control @error('time_to') is-invalid @enderror" required
-                                    value="{{ old('time_to', '') }}">
+                                    value="{{ $scalarOld('time_to') }}">
                                 @error('time_to')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
@@ -204,7 +208,7 @@
                                 <label for="reason" class="leave-grid-label d-block">Reason <span class="text-danger">*</span></label>
                                 <textarea name="reason" id="reason" rows="3"
                                     class="form-control @error('reason') is-invalid @enderror" required
-                                    placeholder="eg. Enter reason for leave here...">{{ old('reason', '') }}</textarea>
+                                    placeholder="eg. Enter reason for leave here...">{{ $scalarOld('reason') }}</textarea>
                                 @error('reason')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
@@ -217,7 +221,7 @@
                                     class="form-control @error('contact_number') is-invalid @enderror"
                                     maxlength="10" inputmode="numeric" pattern="[6-9][0-9]{9}" required
                                     placeholder="eg. 9876543210"
-                                    value="{{ old('contact_number', '') }}">
+                                    value="{{ $scalarOld('contact_number') }}">
                                 @error('contact_number')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror

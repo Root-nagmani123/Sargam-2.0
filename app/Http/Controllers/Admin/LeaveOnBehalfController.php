@@ -12,6 +12,7 @@ use App\Models\StudentMaster;
 use App\Services\LeaveApplicationService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +43,13 @@ class LeaveOnBehalfController extends Controller
 {
     /** The permission of the "Apply Leave on Behalf of OT" menu (migration 2026_09_17_000002). */
     public const MENU_PERMISSION = 'apply_leave_on_behalf_of_ot';
+
+    /**
+     * Longest single leave this page records. Without it a mistyped year stored
+     * thousands of approved days, and past 9999 overflowed total_days
+     * decimal(5,1) with a 500 (PR #334 F-085).
+     */
+    public const MAX_LEAVE_DAYS = 365;
 
     public function __construct(protected LeaveApplicationService $leaveService)
     {
@@ -110,25 +118,7 @@ class LeaveOnBehalfController extends Controller
             // Universal search: OT code / name, course, nature and reason — every
             // text column the grid actually shows.
             ->filter(function ($query) use ($request) {
-                $search = $request->input('search.value');
-                // ?search[value][]=x would be interpolated into the LIKE patterns
-                // below as "Array to string conversion", a 500 (PR #334 F-051).
-                if (! is_scalar($search) || (string) $search === '') {
-                    return;
-                }
-                $search = (string) $search;
-
-                $query->where(function ($q) use ($search) {
-                    $q->whereHas('student', function ($qs) use ($search) {
-                        $qs->where('generated_OT_code', 'like', "%{$search}%")
-                            ->orWhere('display_name', 'like', "%{$search}%")
-                            ->orWhere('first_name', 'like', "%{$search}%")
-                            ->orWhere('last_name', 'like', "%{$search}%");
-                    })
-                        ->orWhereHas('course', fn ($qc) => $qc->where('course_name', 'like', "%{$search}%"))
-                        ->orWhereHas('nature', fn ($qn) => $qn->where('nature_name', 'like', "%{$search}%"))
-                        ->orWhere('reason', 'like', "%{$search}%");
-                });
+                $this->applyListSearch($query, $request);
             })
             ->addColumn('course_name', fn ($row) => (string) ($row->course->course_name ?? '-'))
             ->addColumn('ot_code', fn ($row) => (string) ($row->student->generated_OT_code ?: '-'))
@@ -145,6 +135,27 @@ class LeaveOnBehalfController extends Controller
                 . e($row->status_label) . '</span>')
             ->rawColumns(['status_badge'])
             ->make(true);
+    }
+
+    protected function applyListSearch(Builder $query, Request $request): void
+    {
+        $search = $request->input('search.value');
+        if (! is_scalar($search) || (string) $search === '') {
+            return;
+        }
+        $search = (string) $search;
+
+        $query->where(function ($q) use ($search) {
+            $q->whereHas('student', function ($qs) use ($search) {
+                $qs->where('generated_OT_code', 'like', "%{$search}%")
+                    ->orWhere('display_name', 'like', "%{$search}%")
+                    ->orWhere('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%");
+            })
+                ->orWhereHas('course', fn ($qc) => $qc->where('course_name', 'like', "%{$search}%"))
+                ->orWhereHas('nature', fn ($qn) => $qn->where('nature_name', 'like', "%{$search}%"))
+                ->orWhere('reason', 'like', "%{$search}%");
+        });
     }
 
     /** Who entered the record — the operator's name, not the faculty approver. */
@@ -188,7 +199,9 @@ class LeaveOnBehalfController extends Controller
      */
     public function export(Request $request)
     {
-        $rows = $this->baseListQuery($request)->get();
+        $query = $this->baseListQuery($request);
+        $this->applyListSearch($query, $request);
+        $rows = $query->get();
 
         $headings = ['S. No.', 'Course Name', 'OT Code', 'OT Name', 'Nature of Leave',
             'Date From', 'Date To', 'Time From', 'Time To', 'Total Days', 'Reason', 'Recorded By', 'Status'];
@@ -347,7 +360,9 @@ class LeaveOnBehalfController extends Controller
             'student_master_pk' => 'required|integer|exists:student_master,pk',
             'leave_nature_master_pk' => 'required|integer|exists:leave_nature_master,pk',
             'from_date' => 'required|date',
-            'to_date' => 'required|date|after_or_equal:from_date',
+            'to_date' => is_scalar($request->input('from_date'))
+                ? 'required|date|after_or_equal:from_date'
+                : 'required|date',
             // When the trainee leaves the station and when they report back.
             'time_from' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/'],
             'time_to' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/'],
@@ -388,9 +403,23 @@ class LeaveOnBehalfController extends Controller
 
         // Same set the form's course dropdown offers (getCourses()): a course that
         // has ended or been deactivated is not offered, so it is not accepted either.
-        if (! $this->getCourses()->contains('pk', $coursePk)) {
+        $course = $this->getCourses()->firstWhere('pk', $coursePk);
+        if (! $course) {
             return back()->withInput()->withErrors([
                 'course_master_pk' => 'This course is not running. Choose a current course.',
+            ]);
+        }
+
+        if ($course->end_date && $validated['to_date'] > Carbon::parse($course->end_date)->toDateString()) {
+            return back()->withInput()->withErrors([
+                'to_date' => 'End date cannot be after the course end date ('
+                    . Carbon::parse($course->end_date)->format('d-m-Y') . ').',
+            ]);
+        }
+
+        if ($this->leaveService->calculateTotalDays($validated['from_date'], $validated['to_date']) > self::MAX_LEAVE_DAYS) {
+            return back()->withInput()->withErrors([
+                'to_date' => 'A single leave cannot be longer than ' . self::MAX_LEAVE_DAYS . ' days.',
             ]);
         }
 
@@ -560,7 +589,7 @@ class LeaveOnBehalfController extends Controller
             $query->whereIn('pk', $courseIds);
         }
 
-        return $query->get(['pk', 'course_name', 'couse_short_name']);
+        return $query->get(['pk', 'course_name', 'couse_short_name', 'end_date']);
     }
 
     /**

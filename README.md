@@ -161,6 +161,18 @@ Visit `http://localhost:8000` in your browser.
 
 ## ⚙️ Configuration
 
+### Notice feed release prerequisite
+
+Follow the [Notice audience release runbook](docs/deploy-notes-notice-audience.md)
+before activating the new notice feed. The audience schema migration and
+backfill must complete on the target database **before code activation**;
+`notice_audience_map` must exist and the migrated dashboard/feed must pass
+authenticated smoke checks. Code-first deployment is not permitted (F-018).
+Notice targeting is **forward-fix only** (F-055): retain its migrations and
+audience data. An exceptional code rollback requires approved notice
+deactivation and visibility/write-freeze gates in the runbook before old code
+is activated; retaining the audience table alone does not make rollback safe.
+
 ### LDAP/Active Directory Setup
 Update `.env` with your LDAP credentials:
 ```env

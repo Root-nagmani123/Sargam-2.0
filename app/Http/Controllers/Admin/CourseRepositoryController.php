@@ -2284,7 +2284,9 @@ class CourseRepositoryController extends Controller
                     : [],
             ]);
         } catch (Exception $e) {
-            Log::error('Error in course repository universal search: ' . $e->getMessage());
+            // Never the message: a QueryException carries the SQL with the user's
+            // search in it, newlines and all, which forged log lines (PR #334 F-080).
+            Log::error('Course repository universal search failed', ['exception' => get_class($e)]);
 
             return redirect()
                 ->route('admin.course-repository.user.index')
@@ -2349,8 +2351,14 @@ class CourseRepositoryController extends Controller
             // Suggestions follow the same folder rule as the results: nothing filed
             // in a deleted folder, or beneath one, is offered (PR #334 F-013).
             foreach ($columns as [$column, $label, $limit]) {
+                if (in_array($column, ['author_name', 'course_master_pk'], true)) {
+                    CourseRepositorySearch::displayLabelSuggestions($column, $like, $limit)
+                        ->each(fn ($value) => $push($value, $label));
+                    continue;
+                }
+
                 CourseRepositorySearch::excludeHiddenFolders(DB::table('course_repository_details'), 'course_repository_master_pk')
-                    ->where($column, 'like', $like)
+                    ->whereRaw(CourseRepositorySearch::likeSql($column), [$like])
                     ->whereRaw("{$column} not regexp '^[0-9]+$'")
                     ->distinct()
                     ->orderBy($column)
@@ -2366,7 +2374,7 @@ class CourseRepositoryController extends Controller
                 'coalesce(dt.course_repository_master_pk, doc.course_repository_master_pk)'
             )
                 ->where('doc.del_type', 1)
-                ->where('doc.file_title', 'like', $like)
+                ->whereRaw(CourseRepositorySearch::likeSql('doc.file_title'), [$like])
                 ->distinct()
                 ->orderBy('doc.file_title')
                 ->limit(5)
@@ -2388,7 +2396,7 @@ class CourseRepositoryController extends Controller
 
             return response()->json(['suggestions' => array_slice($suggestions, 0, 12)]);
         } catch (Exception $e) {
-            Log::error('Error in course repository search suggest: ' . $e->getMessage());
+            Log::error('Course repository search suggest failed', ['exception' => get_class($e)]);
 
             return response()->json(['suggestions' => []]);
         }

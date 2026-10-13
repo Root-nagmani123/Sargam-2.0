@@ -50,21 +50,29 @@ class NoticeOtEditPageFixture extends TestCase
         DB::table('notices_notification')->where('pk', $pk)->update(['active_inactive' => 1]);
 
         if (getenv('E2E_PHASE') === 'render') {
+            // F-087: a course the trainee is not in, to switch the notice to.
+            $other = (int) DB::table('student_master_course__map')
+                ->where('course_master_pk', '!=', $course)
+                ->whereNotIn('course_master_pk', DB::table('student_master_course__map')->where('student_master_pk', $student)->select('course_master_pk'))
+                ->orderBy('course_master_pk')
+                ->value('course_master_pk');
             $editUrl = route('admin.notice.edit', Crypt::encrypt($pk));
             file_put_contents("{$out}/edit.html", $admin->get($editUrl)->assertOk()->getContent());
             $lookup = fn (string $name, array $query) => json_decode($admin->getJson(route($name, $query))->assertOk()->getContent(), true);
             file_put_contents("{$out}/fixture.json", json_encode([
                 'course' => (string) $course,
                 'student' => (string) $student,
+                'otherCourse' => (string) $other,
                 'editUrl' => $editUrl,
                 'paths' => [
                     'courses' => parse_url(route('admin.notice.getCourses'), PHP_URL_PATH),
                     'groupTypes' => parse_url(route('admin.notice.getGroupTypes'), PHP_URL_PATH),
                     'students' => parse_url(route('admin.notice.getStudents'), PHP_URL_PATH),
                 ],
-                'courses' => $lookup('admin.notice.getCourses', ['include' => [$course]]),
+                'courses' => $lookup('admin.notice.getCourses', ['include' => [$course, $other]]),
                 'groupTypes' => $lookup('admin.notice.getGroupTypes', ['course_master_pks' => [$course]]),
                 'students' => $lookup('admin.notice.getStudents', ['course_master_pks' => [$course]]),
+                'otherStudents' => $lookup('admin.notice.getStudents', ['course_master_pks' => [$other]]),
             ]));
 
             return;

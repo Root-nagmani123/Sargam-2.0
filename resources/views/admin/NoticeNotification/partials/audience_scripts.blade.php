@@ -154,11 +154,18 @@
      * department, a deactivated trainee or group) is kept as a placeholder, as
      * loadCourses() does: dropping it removed that recipient from the notice on
      * the next save, even a title-only edit (PR #334 F-044).
+     *
+     * `dropUnlisted` drops them instead: after a course change an unlisted
+     * trainee or group is one from another course (PR #334 F-087).
      */
-    function fillMultiSelect($el, items, selected) {
+    function fillMultiSelect($el, items, selected, dropUnlisted) {
         var picked = asStrings(selected);
         var instance = multiSelect($el);
         var known = items.map(function (item) { return String(item.pk); });
+
+        if (dropUnlisted) {
+            picked = picked.filter(function (pk) { return known.indexOf(pk) !== -1; });
+        }
 
         items = items.concat(picked.filter(function (pk) {
             return known.indexOf(pk) === -1;
@@ -283,7 +290,7 @@
         }));
     }
 
-    function loadGroupTypes(courseIds, selected, done) {
+    function loadGroupTypes(courseIds, selected, dropUnlisted, done) {
         if (!courseIds.length) {
             clearMultiSelect($group);
             if (done) { done(); }
@@ -291,12 +298,12 @@
         }
 
         track($.getJSON(ROUTES.groupTypes, { course_master_pks: courseIds }, function (res) {
-            fillMultiSelect($group, res.data || [], selected);
+            fillMultiSelect($group, res.data || [], selected, dropUnlisted);
             if (done) { done(); }
         }));
     }
 
-    function loadStudents(courseIds, groupIds, selected, mode) {
+    function loadStudents(courseIds, groupIds, selected, mode, dropUnlisted) {
         if (!courseIds.length) {
             return;
         }
@@ -313,7 +320,7 @@
             if (mode === 'preview') {
                 renderPreview(items);
             } else {
-                fillMultiSelect($student, items, selected);
+                fillMultiSelect($student, items, selected, dropUnlisted);
             }
         }));
     }
@@ -330,7 +337,7 @@
 
     /* ---------------- cascade ---------------- */
 
-    function applyOtScope(presetGroups, presetStudents) {
+    function applyOtScope(presetGroups, presetStudents, dropUnlisted) {
         var courseIds = selectedValues($course);
         var scope = String($otScope.val() || MODE_ALL);
 
@@ -348,7 +355,7 @@
             $groupBox.removeClass('d-none');
             clearMultiSelect($student);
 
-            loadGroupTypes(courseIds, presetGroups || [], function () {
+            loadGroupTypes(courseIds, presetGroups || [], dropUnlisted, function () {
                 var groupIds = selectedValues($group);
 
                 if (groupIds.length) {
@@ -363,14 +370,14 @@
 
         if (scope === MODE_INDIVIDUAL) {
             $studentBox.removeClass('d-none');
-            loadStudents(courseIds, null, presetStudents || [], 'individual');
+            loadStudents(courseIds, null, presetStudents || [], 'individual', dropUnlisted);
             return;
         }
 
         clearMultiSelect($student);
     }
 
-    function applyCourseSelection(presetScope, presetGroups, presetStudents) {
+    function applyCourseSelection(presetScope, presetGroups, presetStudents, dropUnlisted) {
         var courseIds = selectedValues($course);
 
         if (!courseIds.length) {
@@ -390,17 +397,18 @@
             $otScope.val(String(presetScope));
         }
 
-        applyOtScope(presetGroups, presetStudents);
+        applyOtScope(presetGroups, presetStudents, dropUnlisted);
     }
 
     function applyStaffScope(selected) {
         var departmentIds = selectedValues($department);
 
         if (!departmentIds.length) {
+            // Hide, but keep Recipients and the named staff, as applyCourseSelection()
+            // does: resetting to All here meant re-adding the department saved a
+            // personal notice for the whole department (PR #334 F-088).
             $staffScopeBox.addClass('d-none');
             $employeeBox.addClass('d-none');
-            $staffScope.val(MODE_ALL);
-            clearMultiSelect($employee);
             return;
         }
 
@@ -424,7 +432,10 @@
             $otBox.removeClass('d-none');
             $staffBox.addClass('d-none');
             setAllOptions($department, false);
-            applyStaffScope([]);
+            $staffScope.val(MODE_ALL);
+            $staffScopeBox.addClass('d-none');
+            $employeeBox.addClass('d-none');
+            clearMultiSelect($employee);
 
             loadCourses(function (items) {
                 fillMultiSelect($course, items, usePreset ? preset.course_master_pks : []);
@@ -475,7 +486,7 @@
     $target.on('change', applyTargetAudience);
     $course.on('change', function () {
         refreshCount($course);
-        applyCourseSelection(null, selectedValues($group), selectedValues($student));
+        applyCourseSelection(null, selectedValues($group), selectedValues($student), true);
     });
     $otScope.on('change', function () { applyOtScope([], []); });
     $group.on('change', function () {

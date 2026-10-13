@@ -59,6 +59,9 @@ async function openEditPage(page, out) {
     if (req.method() === "GET" && u.href === fx.editUrl) {
       return route.fulfill({ body: fs.readFileSync(path.join(out, "edit.html")), contentType: "text/html" });
     }
+    if (u.pathname === fx.paths.students && u.searchParams.getAll("course_master_pks[]").join() === fx.otherCourse) {
+      return route.fulfill({ body: JSON.stringify(fx.otherStudents), contentType: "application/json" });
+    }
     for (const name of ["courses", "groupTypes", "students"]) {
       if (u.pathname === fx.paths[name]) return route.fulfill({ body: JSON.stringify(fx[name]), contentType: "application/json" });
     }
@@ -143,3 +146,25 @@ for (const [title, tick, expected] of [
     expect(stored).toMatchObject(expected(fx));
   });
 }
+
+// PR #334 F-087: switching to a course the trainee is not in kept them as
+// "Saved selection (no longer listed)" and the save stored them under that course.
+test("switching to another course drops the trainee of the old one", async ({ page }) => {
+  const { fx, posts, submit } = await openEditPage(page, out);
+  await expect.poll(() => state(page)).toEqual({ courses: [fx.course], scope: "individual", students: [fx.student] });
+
+  const chips = page.locator('xpath=//select[@id="courseSelect"]/ancestor::div[contains(concat(" ",normalize-space(@class)," ")," choices ")][1]');
+  await chips.locator(`.choices__list--multiple [data-value="${fx.course}"] .choices__button`).click();
+  await chips.locator("input.choices__input--cloned").click();
+  await chips.locator(`.choices__list--dropdown [data-value="${fx.otherCourse}"]`).click();
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#studentBox")).not.toHaveClass(/d-none/);
+  await expect(submit).toBeEnabled();
+
+  await expect.poll(() => state(page)).toEqual({ courses: [fx.otherCourse], scope: "individual", students: [] });
+  expect(await page.locator(`#studentSelect option[value="${fx.student}"]`).count(), "no placeholder for the old trainee").toBe(0);
+
+  const { body, stored } = await saveAndReplay(page, submit, posts, out);
+  expect(body.student_pks).toEqual([]);
+  expect(stored).toMatchObject({ errors: ["student_pks"], audience_mode: "individual", rows: [`C:${fx.course}`, `S:${fx.student}`] });
+});

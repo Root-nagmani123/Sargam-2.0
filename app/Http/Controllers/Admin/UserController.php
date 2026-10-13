@@ -1913,17 +1913,25 @@ class UserController extends Controller
     private function getOtPendingFeedbackCount(int $studentPk): int
     {
         try {
-            // Match EXACT logic from studentFeedback_url() in CalendarController
-            // Single query with leftJoin - NEW backend format only
-            
+            // Expand only listed faculty, then join their primary keys. Keep the
+            // original JSON predicates as residual checks for legacy/irregular shapes.
             $pendingQuery = DB::table('timetable as t')
-                ->select(['t.pk as timetable_pk', 'f.pk as faculty_pk'])
-                ->leftJoin('faculty_master as f', function ($join) {
-                    $join->whereRaw("
+                ->crossJoin(DB::raw("JSON_TABLE(
+                    CASE WHEN JSON_VALID(t.faculty_master)
+                        THEN JSON_ARRAY(CAST(CASE WHEN JSON_VALID(t.faculty_master) THEN t.faculty_master ELSE 'null' END AS JSON))
+                        ELSE JSON_ARRAY(CAST(t.faculty_master AS CHAR))
+                    END,
+                    '\$**[*]' COLUMNS (faculty_txt VARCHAR(64) PATH '\$' NULL ON EMPTY NULL ON ERROR)
+                ) AS listed_faculty"))
+                ->join('faculty_master as f', function ($join) {
+                    $join->whereRaw('f.pk = CAST(listed_faculty.faculty_txt AS UNSIGNED)');
+                })
+                ->whereRaw("
+                    (
                     (
                         JSON_VALID(t.faculty_master)
                         AND JSON_CONTAINS(
-                            t.faculty_master,
+                            CASE WHEN JSON_VALID(t.faculty_master) THEN t.faculty_master ELSE '[]' END,
                             JSON_QUOTE(CAST(f.pk AS CHAR))
                         )
                     )
@@ -1932,8 +1940,8 @@ class UserController extends Controller
                         NOT JSON_VALID(t.faculty_master)
                         AND CAST(t.faculty_master AS CHAR) = CAST(f.pk AS CHAR)
                     )
-                ");
-                })
+                    )
+                ")
                 ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
                 ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
                 ->join('student_master_course__map as smcm', function ($join) use ($studentPk) {
@@ -1958,7 +1966,7 @@ class UserController extends Controller
                 ->whereRaw("
                     JSON_VALID(t.faculty_details) = 1
                     AND JSON_CONTAINS(
-                        t.faculty_details,
+                        CASE WHEN JSON_VALID(t.faculty_details) THEN t.faculty_details ELSE '[]' END,
                         JSON_OBJECT('faculty_pk', f.pk, 'role', 'Teaching')
                     ) = 1
                 ")
@@ -1982,11 +1990,8 @@ class UserController extends Controller
                     ->where('scgm.student_master_pk', $studentPk);
             }
 
-            $pending = $pendingQuery
-                ->orderBy('t.START_DATE', 'asc')
-                ->get()
-                ->unique(fn($item) => $item->timetable_pk . '_' . $item->faculty_pk)
-                ->count();
+            $pending = $pendingQuery->selectRaw('COUNT(DISTINCT t.pk, f.pk) AS pending_count')
+                ->value('pending_count');
 
             return (int) $pending;
         } catch (\Throwable $e) {

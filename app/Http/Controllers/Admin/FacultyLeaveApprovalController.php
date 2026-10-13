@@ -348,10 +348,8 @@ class FacultyLeaveApprovalController extends Controller
     }
 
     /**
-     * "Approved By: <Name>" summary line for the report header — shown only when
-     * every actioned row (approved/rejected) in the export shares the same faculty
-     * approver, so it never misattributes a mixed-approver export to one person.
-     * Pending-only exports (no approver yet) show nothing.
+     * Name one action source only when every actioned row shares it.
+     * Faculty and on-behalf operator IDs belong to separate identity namespaces.
      */
     private function buildApproverHeaderLine($rows): string
     {
@@ -361,18 +359,23 @@ class FacultyLeaveApprovalController extends Controller
             return '';
         }
 
-        $approverPks = $actionedRows->pluck('approved_by_faculty_pk')->unique()->filter();
+        $actors = $actionedRows->map(function (LeaveApplication $row): string {
+            if ($row->approvedByFaculty !== null) {
+                return 'faculty:' . $row->approved_by_faculty_pk;
+            }
 
-        if ($approverPks->count() !== 1) {
-            return $actionedRows->pluck('approved_by_faculty_pk')->unique()->count() > 1
-                ? 'Approved/Rejected By: Multiple Approvers'
-                : '';
+            if ($row->applied_on_behalf) {
+                return 'operator:' . $row->applied_by_user_pk;
+            }
+
+            return 'unknown';
+        })->unique();
+
+        if ($actors->count() > 1) {
+            return 'Approved/Rejected By: Multiple Approvers';
         }
 
-        // Auto-approved rows have no approver, so take the name from a row the approver
-        // actually actioned rather than whichever row happens to sort first.
-        $name = $actionedRows->firstWhere('approved_by_faculty_pk', $approverPks->first())
-            ?->action_by_faculty_name;
+        $name = $actionedRows->first()->action_by_faculty_name;
 
         return $name && $name !== '-' ? 'Approved/Rejected By: ' . $name : '';
     }

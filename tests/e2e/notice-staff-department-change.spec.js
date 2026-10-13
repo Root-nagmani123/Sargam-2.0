@@ -143,3 +143,54 @@ test.describe("Notice edit - changing departments keeps Recipients (F-079)", () 
     expect(body.getAll("employee_pks[]")).toEqual([]);
   });
 });
+
+// PR #334 F-088: emptying the departments reset Recipients to All and cleared the
+// employees, so re-adding the department saved a personal notice for all of it.
+test.describe("Notice - removing and re-adding the department keeps Individual (F-088)", () => {
+  async function clearAndReAdd(page, posted, departments) {
+    await page.selectOption("#departmentSelect", []);
+    await expect(page.locator("#staffScopeBox")).toHaveClass(/d-none/);
+    expect(await page.locator("#staffScopeSelect").inputValue(), "Recipients while no department is selected").toBe("individual");
+
+    await page.selectOption("#departmentSelect", departments);
+    await expect(page.locator("#employeeBox")).not.toHaveClass(/d-none/);
+    await expect(page.locator("#saveBtn")).toBeEnabled();
+    await page.locator("#saveBtn").click();
+    await expect.poll(() => posted.length).toBe(1);
+    return posted[0];
+  }
+
+  test("edit: a personal notice keeps Individual and its employee", async ({ page }) => {
+    const posted = await mount(page, { ...STAFF, department_master_pks: ["5"], staff_scope: "individual", employee_pks: ["901"] });
+    await expect(page.locator("#employeeSelect option:checked")).toHaveCount(1);
+
+    const body = await clearAndReAdd(page, posted, ["5"]);
+
+    expect(body.getAll("department_master_pks[]")).toEqual(["5"]);
+    expect(body.get("staff_scope"), "posted Recipients").toBe("individual");
+    expect(body.getAll("employee_pks[]"), "posted employees").toEqual(["901"]);
+  });
+
+  test("create: the employee picked before the department was removed stays picked", async ({ page }) => {
+    const posted = await mount(page, { ...STAFF, department_master_pks: [], staff_scope: "all", employee_pks: [] });
+    await page.selectOption("#departmentSelect", ["5"]);
+    await page.selectOption("#staffScopeSelect", "individual");
+    await expect(page.locator('#employeeSelect option[value="902"]')).toHaveCount(1);
+    await page.selectOption("#employeeSelect", ["902"]);
+
+    const body = await clearAndReAdd(page, posted, ["5"]);
+
+    expect(body.get("staff_scope"), "posted Recipients").toBe("individual");
+    expect(body.getAll("employee_pks[]"), "posted employees").toEqual(["902"]);
+  });
+
+  test("control: switching the target audience away still resets the staff picks", async ({ page }) => {
+    await mount(page, { ...STAFF, department_master_pks: ["5"], staff_scope: "individual", employee_pks: ["901"] });
+    await expect(page.locator("#employeeSelect option:checked")).toHaveCount(1);
+
+    await page.selectOption("#targetAudience", "Office trainee");
+
+    expect(await page.locator("#staffScopeSelect").inputValue()).toBe("all");
+    await expect(page.locator("#employeeSelect option")).toHaveCount(0);
+  });
+});

@@ -25,6 +25,8 @@ use Illuminate\Support\Str;
  * ids from the source system that resolve to nothing here. So a numeric value is
  * resolved through its master table first, and only when that finds nothing does the
  * `keyword` column ("batch,subject,topic,date,author") stand in (PR #334 F-084).
+ * Stored text that is a truncated prefix uses the complete keyword segment;
+ * a uniquely matched faculty code resolves to its faculty name (F-090).
  * {@see displayTextSql()} is that rule in SQL, {@see pickText()} the same rule in PHP.
  */
 class CourseRepositorySearch
@@ -107,8 +109,8 @@ class CourseRepositorySearch
             'tokens' => $tokens,
             'type' => $type,
             'sort' => $sort,
-            'course' => trim(self::scalar($request, 'course')),
-            'subject' => trim(self::scalar($request, 'subject')),
+            'course' => self::withoutControls(self::scalar($request, 'course')),
+            'subject' => self::withoutControls(self::scalar($request, 'subject')),
             'author' => DataTableSearchHelper::normalizeRaw(self::scalar($request, 'author')),
             'year' => preg_match('/^\d{4}$/', $year) ? $year : '',
             'from' => self::normalizeDate(self::scalar($request, 'from')),
@@ -116,6 +118,23 @@ class CourseRepositorySearch
             'folder' => $folder,
             'per_page' => $perPage,
         ];
+    }
+
+    /** Keep label spacing, replace invalid UTF-8, and remove controls and line separators. */
+    private static function withoutControls(string $value): string
+    {
+        return trim(preg_replace('/[\p{Cc}\p{Zl}\p{Zp}]+/u', '', mb_scrub($value, 'UTF-8'))
+            ?? throw new \RuntimeException('Unable to normalize course repository filter.'));
+    }
+
+    /**
+     * `$sql like ?` in utf8mb4. The detail and folder columns are utf8mb3, and a
+     * 4-byte character such as an emoji cannot be converted to it: MySQL refused the
+     * whole query with error 3988 and search showed "unavailable" (PR #334 F-080).
+     */
+    public static function likeSql(string $sql): string
+    {
+        return "convert({$sql} using utf8mb4) collate utf8mb4_unicode_ci like ?";
     }
 
     /**
@@ -237,7 +256,7 @@ class CourseRepositorySearch
                 'm.course_repository_name as folder_name',
                 'cr_cm.course_name as resolved_course',
                 'cr_sm.subject_name as resolved_subject',
-                'cr_fm.full_name as resolved_author',
+                DB::raw(self::resolvedAuthorSql() . ' as resolved_author'),
             ]);
         self::joinMasters($query);
 
@@ -248,17 +267,13 @@ class CourseRepositorySearch
         foreach ($c['tokens'] as $token) {
             $like = DataTableSearchHelper::likePattern($token);
             $query->where(function ($q) use ($like) {
-                $q->where('doc.file_title', 'like', $like)
-                    ->orWhere('doc.upload_document', 'like', $like)
-                    ->orWhere('dt.keyword', 'like', $like)
-                    ->orWhere('dt.course_master_pk', 'like', $like)
-                    ->orWhere('dt.subject_pk', 'like', $like)
-                    ->orWhere('dt.topic_pk', 'like', $like)
-                    ->orWhere('dt.author_name', 'like', $like)
-                    ->orWhere('m.course_repository_name', 'like', $like)
-                    // Dates are searchable the way they are displayed (18-03-2025),
-                    // not the way they are stored (2025-03-18).
-                    ->orWhereRaw("DATE_FORMAT(dt.session_date, '%d-%m-%Y') like ?", [$like]);
+                foreach (['doc.file_title', 'doc.upload_document', 'dt.keyword', 'dt.course_master_pk', 'dt.subject_pk',
+                    'dt.topic_pk', 'dt.author_name', 'm.course_repository_name', self::resolvedAuthorSql()] as $column) {
+                    $q->orWhereRaw(self::likeSql($column), [$like]);
+                }
+                // Dates are searchable the way they are displayed (18-03-2025),
+                // not the way they are stored (2025-03-18).
+                $q->orWhereRaw(self::likeSql("DATE_FORMAT(dt.session_date, '%d-%m-%Y')"), [$like]);
             });
         }
 
@@ -270,13 +285,10 @@ class CourseRepositorySearch
         if ($c['subject'] !== '') {
             $query->whereRaw(self::subjectDisplaySql() . ' = ?', [$c['subject']]);
         }
+        // The author shown, never the whole keyword: that also holds the course,
+        // subject and topic, so Author = Law found every Law lecture (PR #334 F-086).
         if ($c['author'] !== '') {
-            $authorLike = DataTableSearchHelper::likePattern($c['author']);
-            $query->where(function ($q) use ($authorLike) {
-                $q->where('dt.author_name', 'like', $authorLike)
-                    ->orWhere('cr_fm.full_name', 'like', $authorLike)
-                    ->orWhere('dt.keyword', 'like', $authorLike);
-            });
+            $query->whereRaw(self::authorDisplaySql() . ' like ?', [DataTableSearchHelper::likePattern($c['author'])]);
         }
         if ($c['year'] !== '') {
             $query->whereYear('dt.session_date', $c['year']);
@@ -397,6 +409,7 @@ class CourseRepositorySearch
             'doc.upload_document' => 2,
             'm.course_repository_name' => 1,
             'dt.keyword' => 1,
+            self::resolvedAuthorSql() => 3,
         ];
 
         $parts = [];
@@ -405,7 +418,7 @@ class CourseRepositorySearch
         foreach ($tokens as $token) {
             $like = DataTableSearchHelper::likePattern($token);
             foreach ($weights as $column => $weight) {
-                $parts[] = "(case when {$column} like ? then {$weight} else 0 end)";
+                $parts[] = '(case when ' . self::likeSql($column) . " then {$weight} else 0 end)";
                 $bindings[] = $like;
             }
         }
@@ -413,7 +426,7 @@ class CourseRepositorySearch
         if (count($tokens) > 1 && $phrase !== '') {
             $phraseLike = DataTableSearchHelper::likePattern($phrase);
             foreach (['doc.file_title' => 20, 'dt.topic_pk' => 15] as $column => $weight) {
-                $parts[] = "(case when {$column} like ? then {$weight} else 0 end)";
+                $parts[] = '(case when ' . self::likeSql($column) . " then {$weight} else 0 end)";
                 $bindings[] = $phraseLike;
             }
         }
@@ -509,26 +522,26 @@ class CourseRepositorySearch
     }
 
     /**
-     * The stored text; for a bare number, the master record it resolves to; failing
-     * both, the keyword. An unresolved number is never shown: it would put
-     * "169438950" on screen where a subject name belongs.
+     * Prefer resolved master names, then stored text unless it is a truncated
+     * prefix of the keyword segment. Unresolved numeric IDs use the keyword.
      */
     private static function pickText($value, $resolved, ?string $fallback): ?string
     {
         $value = trim((string) $value);
+        $resolved = trim((string) $resolved);
+        $fallback = trim((string) $fallback);
+
+        if ($resolved !== '') {
+            return $resolved;
+        }
 
         if ($value !== '' && ! ctype_digit($value)) {
-            return $value;
+            return strlen($fallback) > strlen($value) && str_starts_with($fallback, $value)
+                ? $fallback
+                : $value;
         }
 
-        foreach ([$resolved, $fallback] as $candidate) {
-            $candidate = trim((string) $candidate);
-            if ($candidate !== '') {
-                return $candidate;
-            }
-        }
-
-        return null;
+        return $fallback !== '' ? $fallback : null;
     }
 
     /**
@@ -552,6 +565,45 @@ class CourseRepositorySearch
                     ->whereRaw("{$alias}.pk = cast(trim({$column}) as unsigned)");
             });
         }
+
+        // Codes are not constrained unique: an ambiguous code must not choose a
+        // faculty arbitrarily or duplicate every repository result joined to it.
+        $codeSql = 'convert(trim(faculty_code) using utf8mb4) collate utf8mb4_unicode_ci';
+        $codes = DB::table('faculty_master')
+            ->selectRaw($codeSql . ' as code, min(full_name) as full_name')
+            ->whereRaw("trim(coalesce(faculty_code, '')) <> ''")
+            ->groupByRaw($codeSql)
+            ->havingRaw('count(*) = 1');
+
+        $query->leftJoinSub($codes, 'cr_fc', function ($join) {
+            $join->whereRaw("trim(dt.author_name) not regexp '^[0-9]+$'")
+                ->whereRaw('convert(trim(dt.author_name) using utf8mb4) collate utf8mb4_unicode_ci'
+                    . ' = convert(cr_fc.code using utf8mb4) collate utf8mb4_unicode_ci');
+        });
+    }
+
+    private static function resolvedAuthorSql(): string
+    {
+        return "coalesce(nullif(trim(cr_fm.full_name), ''), cr_fc.full_name)";
+    }
+
+    /** Course/author suggestions use the same labels as cards and filters. */
+    public static function displayLabelSuggestions(string $field, string $like, int $limit): Collection
+    {
+        $sql = match ($field) {
+            'course_master_pk' => self::courseDisplaySql(),
+            'author_name' => self::authorDisplaySql(),
+            default => throw new \InvalidArgumentException('Unsupported repository suggestion field.'),
+        };
+        $query = DB::table('course_repository_details as dt');
+        self::joinMasters($query);
+
+        return self::excludeHiddenFolders($query, 'dt.course_repository_master_pk')
+            ->whereRaw(self::likeSql($sql), [$like])
+            ->selectRaw("distinct {$sql} as label")
+            ->orderBy('label')
+            ->limit($limit)
+            ->pluck('label');
     }
 
     private static function courseDisplaySql(): string
@@ -568,6 +620,21 @@ class CourseRepositorySearch
         );
     }
 
+    /** The keyword's author is parseKeyword()'s: everything after the date segment, else the fifth part. */
+    private static function authorDisplaySql(): string
+    {
+        $throughDate = '^(?:[^,]*,){2}(?:[^,]*,)*?[[:space:]]*(?:[0-9]{1,2}-[0-9]{1,2}-[0-9]{4}|[0-9]{4}-[0-9]{1,2}-[0-9]{1,2})[[:space:]]*(?:,|$)';
+
+        return self::displayTextSql(
+            'dt.author_name',
+            self::resolvedAuthorSql(),
+            "case when dt.keyword regexp '{$throughDate}'"
+                . " then regexp_replace(regexp_replace(dt.keyword, '{$throughDate}', ''), '[[:space:]]*,[[:space:]]*', ', ')"
+                . " when dt.keyword regexp '^(?:[^,]*,){4}'"
+                . " then substring_index(substring_index(dt.keyword, ',', 5), ',', -1) end"
+        );
+    }
+
     /**
      * pickText() in SQL. Each branch is cast to one collation: the repository and the
      * three master tables do not share one, and MySQL refuses to mix them in a CASE.
@@ -576,9 +643,14 @@ class CourseRepositorySearch
     {
         $text = fn (string $sql) => "convert(trim({$sql}) using utf8mb4) collate utf8mb4_unicode_ci";
 
-        return "(case when trim(coalesce({$column}, '')) <> '' and trim({$column}) not regexp '^[0-9]+$'"
-            . " then {$text($column)}"
-            . " when trim(coalesce({$resolved}, '')) <> '' then {$text($resolved)}"
+        $stored = $text($column);
+        $keyword = $text($keywordSegment);
+
+        return "(case when trim(coalesce({$resolved}, '')) <> '' then {$text($resolved)}"
+            . " when trim(coalesce({$column}, '')) <> '' and trim({$column}) not regexp '^[0-9]+$'"
+            . " then case when octet_length({$keyword}) > octet_length({$stored})"
+            . " and cast(left({$keyword}, char_length({$stored})) as binary) = cast({$stored} as binary)"
+            . " then {$keyword} else {$stored} end"
             . " else {$text($keywordSegment)} end)";
     }
 

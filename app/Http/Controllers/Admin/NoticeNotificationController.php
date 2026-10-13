@@ -499,23 +499,26 @@ class NoticeNotificationController extends Controller
             $rules['course_master_pks.*'] = 'integer|exists:course_master,pk';
             $messages['course_master_pks.*.exists'] = 'One of the selected courses does not exist.';
 
-            if ($this->idsFrom($request, 'course_master_pks')) {
+            if ($courses = $this->idsFrom($request, 'course_master_pks')) {
                 $scope = is_string($request->input('ot_scope')) ? $request->input('ot_scope') : '';
 
                 $rules['ot_scope'] = ['required', Rule::in([Notice::MODE_ALL, Notice::MODE_GROUP, Notice::MODE_INDIVIDUAL])];
                 $messages['ot_scope.required'] = 'Please choose All, Group or Individual.';
                 $messages['ot_scope.in'] = 'Please choose All, Group or Individual.';
 
+                // Membership only, not active status: a deactivated trainee or group
+                // saved earlier must survive a title-only edit (PR #334 F-044), but one
+                // from another course must not be stored (PR #334 F-087).
                 if ($scope === Notice::MODE_GROUP) {
                     $rules['group_type_map_pks']   = 'required|array|min:1';
-                    $rules['group_type_map_pks.*'] = 'integer|exists:group_type_master_course_master_map,pk';
+                    $rules['group_type_map_pks.*'] = ['integer', Rule::exists('group_type_master_course_master_map', 'pk')->whereIn('course_name', $courses)];
                     $messages['group_type_map_pks.required'] = 'Please select at least one group.';
-                    $messages['group_type_map_pks.*.exists'] = 'One of the selected groups does not exist.';
+                    $messages['group_type_map_pks.*.exists'] = 'One of the selected groups does not belong to the selected courses.';
                 } elseif ($scope === Notice::MODE_INDIVIDUAL) {
                     $rules['student_pks']   = 'required|array|min:1';
-                    $rules['student_pks.*'] = 'integer|exists:student_master,pk';
+                    $rules['student_pks.*'] = ['integer', 'exists:student_master,pk', Rule::exists('student_master_course__map', 'student_master_pk')->whereIn('course_master_pk', $courses)];
                     $messages['student_pks.required'] = 'Please select at least one Officer Trainee.';
-                    $messages['student_pks.*.exists'] = 'One of the selected Officer Trainees does not exist.';
+                    $messages['student_pks.*.exists'] = 'One of the selected Officer Trainees does not belong to the selected courses.';
                 }
             }
         } elseif ($this->isStaffFaculty($target)) {
