@@ -80,9 +80,9 @@ class IssueNodalNullCategoryPkOldIdentityTest extends TestCase
         return $pk;
     }
 
-    private function nullCategoryLogin(int $userId): void
+    private function nullCategoryLogin(int $userId): int
     {
-        DB::table('user_credentials')->insert([
+        return (int) DB::table('user_credentials')->insertGetId([
             'user_name' => 'f017-probe-' . uniqid(),
             'user_id' => $userId,
             'user_category' => null,
@@ -144,6 +144,10 @@ class IssueNodalNullCategoryPkOldIdentityTest extends TestCase
         $this->assertFalse(User::employeeCanSignIn($employee));
     }
 
+    /**
+     * Eligible has to mean able to act: once stored as nodal, the officer
+     * signs in with that NULL-category login and changes the status.
+     */
     public function test_store_makes_the_pk_old_officer_nodal_and_skips_the_pk_joined_one(): void
     {
         $actor = User::query()
@@ -166,7 +170,7 @@ class IssueNodalNullCategoryPkOldIdentityTest extends TestCase
 
         $pkOld = $this->unusedKey();
         $pkOldOfficer = $this->employee($pkOld);
-        $this->nullCategoryLogin($pkOld);
+        $pkOldLogin = User::findOrFail($this->nullCategoryLogin($pkOld));
 
         DB::table('issue_category_employee_map')
             ->where('issue_category_master_pk', $sub->issue_category_master_pk)
@@ -199,5 +203,16 @@ class IssueNodalNullCategoryPkOldIdentityTest extends TestCase
         $stored = IssueLogManagement::where('description', $description)->first();
         $this->assertNotNull($stored, 'no complaint was stored');
         $this->assertSame((string) $pkOldOfficer, (string) $stored->employee_master_pk);
+
+        $this->actingAs($pkOldLogin)
+            ->put(route('admin.issue-management.status_update', $stored->pk), [
+                'issue_status' => IssueLogManagement::STATUS_IN_PROGRESS,
+                'assign_to_type' => 'other',
+                'other_name' => 'F-017 probe handler',
+                'other_phone' => '9876543210',
+            ])
+            ->assertSessionHas('success');
+
+        $this->assertSame(IssueLogManagement::STATUS_IN_PROGRESS, (int) $stored->fresh()->issue_status);
     }
 }

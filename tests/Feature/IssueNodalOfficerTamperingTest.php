@@ -56,8 +56,9 @@ class IssueNodalOfficerTamperingTest extends TestCase
 
         // Officers who can sign in: resolveNodalOfficer() passes over anyone
         // else, and the nodal officer acts in the last test. Having some
-        // user_credentials row is not enough — a NULL-category, student or
-        // inactive login does not count (User::employeeCanSignIn()).
+        // user_credentials row is not enough — a student or inactive login, or
+        // a NULL-category one not keyed by the employee's own pk_old, does not
+        // count (User::employeeCanSignIn()).
         $others = DB::table('employee_master')
             ->where('pk', '!=', $this->actor->user_id)
             ->whereIn('pk', fn ($q) => $q->select('user_id')->from('user_credentials')->whereNotNull('user_id'))
