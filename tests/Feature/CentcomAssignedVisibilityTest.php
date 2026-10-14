@@ -252,7 +252,6 @@ class CentcomAssignedVisibilityTest extends TestCase
         $loginsByUserId = DB::table('user_credentials')
             ->whereNotNull('user_id')
             ->get(['user_id', 'user_category'])
-            ->filter(fn ($c) => $this->isEmployeesOwnLogin($c))
             ->groupBy(fn ($c) => (string) $c->user_id);
 
         $wrong = $offered->filter(function ($r) use ($employees, $loginsByUserId) {
@@ -261,7 +260,9 @@ class CentcomAssignedVisibilityTest extends TestCase
             if ($e && isset($e->pk_old) && $e->pk_old !== null && (string) $e->pk_old !== (string) $e->pk) {
                 $logins = $logins->merge($loginsByUserId[(string) $e->pk_old] ?? []);
             }
-            $expected = $logins->contains(fn ($c) => $this->loginControllerAdmits($c, $employees));
+            $expected = $logins
+                ->filter(fn ($c) => $this->isEmployeesOwnLogin($c, $e))
+                ->contains(fn ($c) => $this->loginControllerAdmits($c, $employees));
 
             return (bool) $r->can_login !== $expected;
         });
@@ -481,7 +482,7 @@ class CentcomAssignedVisibilityTest extends TestCase
         return DB::table('user_credentials')
             ->whereIn('user_id', $keys)
             ->get(['user_id', 'user_category'])
-            ->filter(fn ($c) => $this->isEmployeesOwnLogin($c))
+            ->filter(fn ($c) => $this->isEmployeesOwnLogin($c, $employee))
             ->contains(fn ($c) => $this->loginControllerAdmits($c));
     }
 
@@ -492,11 +493,21 @@ class CentcomAssignedVisibilityTest extends TestCase
      * category is not 'S'. NULL-category rows are a separate population whose
      * user_id values collide numerically with employee_master.pk; on the
      * development copy they share the joined employee's first name in 6 of 331
-     * pairs, against 1,213 of 1,219 for 'E' logins.
+     * pairs, against 1,213 of 1,219 for 'E' logins. The one exception is a
+     * NULL-category row whose user_id is the employee's own pk_old: that is
+     * the employee's login (Engineering Lead decision, PR337-14). Without the
+     * employee, a NULL-category row is never theirs.
      */
-    private function isEmployeesOwnLogin(object $credential): bool
+    private function isEmployeesOwnLogin(object $credential, ?object $employee = null): bool
     {
-        return $credential->user_category !== null && $credential->user_category !== 'S';
+        if ($credential->user_category === null) {
+            return $employee !== null
+                && isset($employee->pk_old)
+                && $employee->pk_old !== null
+                && (string) $employee->pk_old === (string) $credential->user_id;
+        }
+
+        return $credential->user_category !== 'S';
     }
 
     /** An employee with an 'E' login on status 2 and no other login that gets in. */

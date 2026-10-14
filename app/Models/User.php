@@ -102,7 +102,8 @@ class User extends Authenticatable
      * Employees and faculty for complaint section (complainant / assignment dropdowns).
      * user_credentials.user_id maps to employee_master.pk and faculty_master.employee_master_pk.
      * Only logins with a category other than 'S' count: students are excluded, and
-     * so are NULL-category logins (see complaintLoginRows()).
+     * so are NULL-category logins unless their user_id is the employee's own
+     * pk_old (see complaintLoginRows()).
      *
      * Each row carries `can_login`: whether at least one of the employee's
      * logins gets past LoginController's inactive-account check — see
@@ -178,15 +179,13 @@ class User extends Authenticatable
      * Non-student logins joined to the employee they belong to (by pk or
      * pk_old), plus `lu`: the employee LoginController itself would look up.
      *
-     * A NULL user_category is excluded on purpose, not by accident of
-     * `NULL != 'S'`. The join is only an identity when user_id carries an
-     * employee key. For NULL-category logins joined on employee_master.pk it
-     * usually does not: their user_id values fall in the same numeric range as
-     * employee_master.pk and mostly name somebody else, so counting them would
-     * mark an inactive employee as able to sign in on the strength of another
-     * person's account. A NULL-category login joined on pk_old may be the
-     * employee's own; whether it counts is an open domain decision, and until
-     * it is taken those logins are excluded too.
+     * A NULL user_category counts only when user_id is the employee's pk_old
+     * (Engineering Lead decision, PR337-14). The join is only an identity when
+     * user_id carries an employee key. For NULL-category logins joined on
+     * employee_master.pk it usually does not: their user_id values fall in the
+     * same numeric range as employee_master.pk and mostly name somebody else,
+     * so counting them would mark an inactive employee as able to sign in on
+     * the strength of another person's account. Those stay excluded.
      *
      * This exclusion applies only here, to "can this employee sign in". It is
      * not how a signed-in NULL-category login is identified elsewhere:
@@ -207,7 +206,17 @@ class User extends Authenticatable
                 }
             })
             ->leftJoin('employee_master as lu', 'lu.pk', '=', 'uc.user_id')
-            ->whereNotNull('uc.user_category')
-            ->where('uc.user_category', '!=', 'S');
+            ->where(function ($q) use ($hasPkOld) {
+                $q->where(function ($c) {
+                    $c->whereNotNull('uc.user_category')
+                        ->where('uc.user_category', '!=', 'S');
+                });
+                if ($hasPkOld) {
+                    $q->orWhere(function ($c) {
+                        $c->whereNull('uc.user_category')
+                            ->whereColumn('uc.user_id', 'e.pk_old');
+                    });
+                }
+            });
     }
 }
