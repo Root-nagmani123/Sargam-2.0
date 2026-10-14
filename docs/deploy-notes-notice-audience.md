@@ -14,6 +14,28 @@ prevent it from showing targeted/Personal notices to unintended staff.
 Any exceptional code rollback requires renewed Product/release approval and
 every safety gate in section 5a **before the old code runs**.
 
+### F-055 approval record
+
+For release candidate
+`5a2d06ae0fcd0818d2ceb4ce93ea775b6668db28`, the operator supplied an approval
+from Nibhash Mishra for forward-fix-only recovery at 10:12 on 2026-10-14.
+Routine rollback to audience-unaware code is not permitted; retain notice
+audience data and recover by deploying an audience-aware forward fix. This
+records the recovery-policy decision only; it is not evidence that release
+activation or the exceptional rollback procedure has been executed.
+
+### F-069 no-category trainee notice policy
+
+A no-category Officer Trainee login without a verified trainee identity receives
+only notices addressed to `All`; it does not receive course-, group- or
+individually-targeted Office trainee notices. The Product Owner supplied this
+policy decision for F-069.
+
+The operator-provided production count result for `testsargam2` on server
+`b79f809f3072` showed 6 email matches (6 logins, 6 students); the returned
+result contained no nonmatch group. This is a count snapshot, not a substitute
+for repeating the query against the target database when required.
+
 ## Mandatory release gate
 
 **Do not activate or serve the new notice feed code until the target database
@@ -329,3 +351,22 @@ F-055 policy is documented, but release execution remains pending. The local
 `Staff/Faculty`, without map membership. This source inspection motivates the
 deactivation gate; it is not executed compatibility/visibility evidence for a
 future rollback artifact.
+
+## Release-owner confirmation - 2026-10-14
+
+For candidate `5a2d06ae0fcd0818d2ceb4ce93ea775b6668db28`, Release Owner Nibhash
+Mishra supplied confirmation at **10:15 +05:30**, after the candidate commit at
+10:12:15 +05:30. The Release Owner reports PASS for the production-like
+rehearsal, target schema/migration checks, backfill/data-integrity checks,
+authenticated QA smoke tests and release readiness, and approved activation of
+this exact candidate. This records the owner attestation; it does not claim
+that production activation has already occurred.
+
+## Supplemental development-database check - 2026-10-14
+
+On `testsargam6` (MySQL `8.0.46`), the `NoticeDeploymentReadinessTest` selector
+ran 4 tests with 57 assertions and 1 failure. The faculty dashboard fixture
+returned HTTP 500 because `timetable.faculty_master` contains a value that is
+not valid JSON, causing `JSON_CONTAINS` to fail. This is development-database
+evidence only and is separate from the Release Owner's reported
+production-like PASS; it does not establish a production failure or pass.
