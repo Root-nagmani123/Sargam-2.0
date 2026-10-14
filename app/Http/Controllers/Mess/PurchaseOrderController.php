@@ -121,6 +121,7 @@ class PurchaseOrderController extends Controller
             'for_print' => $request->boolean('for_print'),
             'can_delete' => function_exists('hasRole') && (hasRole('Admin') || hasRole('Mess-Admin')),
             'can_approve' => $this->canApprovePurchaseOrders(),
+            'can_edit' => $this->canEditPurchaseOrders(),
         ];
     }
 
@@ -219,9 +220,10 @@ class PurchaseOrderController extends Controller
         $forPrint = $request->boolean('for_print');
         $canDeletePurchaseOrder = function_exists('hasRole') && (hasRole('Admin') || hasRole('Mess-Admin'));
         $canApprove = $this->canApprovePurchaseOrders();
+        $canEdit = $this->canEditPurchaseOrders();
         $rowStart = $start + 1;
 
-        $data = $purchaseOrders->map(function ($po, $index) use ($canDeletePurchaseOrder, $canApprove, $rowStart, $forPrint) {
+        $data = $purchaseOrders->map(function ($po, $index) use ($canDeletePurchaseOrder, $canApprove, $canEdit, $rowStart, $forPrint) {
             $statusBadgeClass = $po->status === 'approved'
                 ? 'text-bg-success'
                 : ($po->status === 'rejected' ? 'text-bg-danger' : ($po->status === 'completed' ? 'text-bg-primary' : 'text-bg-warning'));
@@ -238,7 +240,8 @@ class PurchaseOrderController extends Controller
                 $viewBtn = '<button type="button" class="btn btn-sm btn-outline-primary btn-view-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="View">'
                     . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">visibility</i>'
                     . '</button>';
-                $editBtn = $po->status === 'rejected' ? '' : '<button type="button" class="btn btn-sm btn-outline-info btn-edit-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="' . ($po->status === 'approved' ? 'Edit bill details' : 'Edit') . '">'
+                // Only users update() lets save see Edit, so nobody fills the form just to be refused.
+                $editBtn = (! $canEdit || $po->status === 'rejected') ? '' : '<button type="button" class="btn btn-sm btn-outline-info btn-edit-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="' . ($po->status === 'approved' ? 'Edit bill details' : 'Edit') . '">'
                     . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">edit</i>'
                     . '</button>';
                 $deleteForm = '';

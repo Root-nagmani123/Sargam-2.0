@@ -14,7 +14,7 @@ use Tests\TestCase;
  * The rules pinned here:
  *   - only Mess Admin / Super Admin approve or reject, and only a pending PO,
  *   - a pending PO is not stock; it becomes stock when approved,
- *   - only Mess Admin, Super Admin or Mess Billing can save an edit,
+ *   - only Mess Admin, Super Admin or Mess Billing can save an edit, and only they see Edit,
  *   - an approved PO keeps its vendor and lines; only bill details change,
  *   - a rejected PO cannot be edited,
  *   - purchase orders cannot be deleted (the DELETE route is disabled),
@@ -207,6 +207,24 @@ class MessPurchaseOrderApprovalTest extends TestCase
 
         $this->assertSame([25.0], $this->lineQuantities($poId));
         $this->assertSame('BILL-TEST-1', $this->po($poId)->bill_no);
+    }
+
+    public function test_the_edit_button_is_shown_only_to_users_who_can_save_the_edit(): void
+    {
+        $this->purchaseOrder('pending');
+        $listActions = function (): string {
+            $response = $this->getJson(route('admin.mess.purchaseorders.index', [
+                'draw' => 1, 'start' => 0, 'length' => 10, 'store_id' => [$this->storeId],
+            ]), ['X-Requested-With' => 'XMLHttpRequest'])->assertOk();
+
+            return json_encode($response->json('data'));
+        };
+
+        $this->actAs(['Faculty']);
+        $this->assertStringNotContainsString('btn-edit-po', $listActions());
+
+        $this->actAs(['Mess Billing']);
+        $this->assertStringContainsString('btn-edit-po', $listActions());
     }
 
     public function test_editing_an_approved_po_saves_bill_details_only(): void
