@@ -1705,6 +1705,8 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     Route::get('purchaseorders/{id}/edit', [PurchaseOrderController::class, 'edit'])->name('purchaseorders.edit');
     Route::put('purchaseorders/{id}', [PurchaseOrderController::class, 'update'])->name('purchaseorders.update');
     // Delete disabled for now.
+    // To turn delete back on, uncomment all three together: this route, and the delete button and
+    // destroy() in Mess\PurchaseOrderController.
     // Route::delete('purchaseorders/{id}', [PurchaseOrderController::class, 'destroy'])->name('purchaseorders.destroy');
     Route::post('purchaseorders/{id}/approve', [PurchaseOrderController::class, 'approve'])->name('purchaseorders.approve');
     Route::post('purchaseorders/{id}/reject', [PurchaseOrderController::class, 'reject'])->name('purchaseorders.reject');

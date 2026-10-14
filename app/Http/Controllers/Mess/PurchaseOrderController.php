@@ -262,6 +262,9 @@ class PurchaseOrderController extends Controller
                 }
 
                 // Delete button disabled for now.
+                // To turn delete back on, uncomment all three together: this button, destroy() below,
+                // and the purchaseorders.destroy route in routes/web.php. The button alone breaks the list,
+                // because route('admin.mess.purchaseorders.destroy') does not exist without the route.
                 // An approved PO is in stock and may already be sold, so it cannot be deleted.
                 // if ($canDeletePurchaseOrder && $po->status !== 'approved') {
                 //     $deleteUrl = route('admin.mess.purchaseorders.destroy', $po->id);
@@ -704,6 +707,8 @@ class PurchaseOrderController extends Controller
     }
 
     // Delete disabled for now.
+    // To turn delete back on, uncomment all three together: this method, the delete button in the
+    // list rows above, and the purchaseorders.destroy route in routes/web.php.
     // public function destroy($id)
     // {
     //     $purchaseOrder = PurchaseOrder::findOrFail($id);
