@@ -252,18 +252,19 @@ class PurchaseOrderController extends Controller
                         . '</form>';
                 }
 
+                // Delete button disabled for now.
                 // An approved PO is in stock and may already be sold, so it cannot be deleted.
-                if ($canDeletePurchaseOrder && $po->status !== 'approved') {
-                    $deleteUrl = route('admin.mess.purchaseorders.destroy', $po->id);
-                    $csrf = csrf_token();
-                    $deleteForm = '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this purchase order?\');">'
-                        . '<input type="hidden" name="_token" value="' . e($csrf) . '">'
-                        . '<input type="hidden" name="_method" value="DELETE">'
-                        . '<button type="submit" class="btn btn-sm btn-outline-danger rounded-2 po-action-btn" title="Delete">'
-                        . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">delete</i>'
-                        . '</button>'
-                        . '</form>';
-                }
+                // if ($canDeletePurchaseOrder && $po->status !== 'approved') {
+                //     $deleteUrl = route('admin.mess.purchaseorders.destroy', $po->id);
+                //     $csrf = csrf_token();
+                //     $deleteForm = '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this purchase order?\');">'
+                //         . '<input type="hidden" name="_token" value="' . e($csrf) . '">'
+                //         . '<input type="hidden" name="_method" value="DELETE">'
+                //         . '<button type="submit" class="btn btn-sm btn-outline-danger rounded-2 po-action-btn" title="Delete">'
+                //         . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">delete</i>'
+                //         . '</button>'
+                //         . '</form>';
+                // }
 
                 $row[] = '<div class="po-actions-cell d-inline-flex align-items-center justify-content-end gap-1">' . $viewBtn . $editBtn . $approvalForms . $deleteForm . '</div>';
             }
@@ -688,31 +689,32 @@ class PurchaseOrderController extends Controller
         $purchaseOrder->update(['bill_path' => $path]);
     }
 
-    public function destroy($id)
-    {
-        $purchaseOrder = PurchaseOrder::findOrFail($id);
-        if ($purchaseOrder->status === 'approved') {
-            return redirect()->route('admin.mess.purchaseorders.index')
-                ->with('po_edit_error', 'Purchase order ' . $purchaseOrder->po_number . ' is approved and in stock, so it cannot be deleted.');
-        }
-        // Re-check under a row lock: the PO may have been approved after it was read above.
-        $deleted = DB::transaction(function () use ($purchaseOrder) {
-            if (PurchaseOrder::whereKey($purchaseOrder->id)->lockForUpdate()->value('status') === 'approved') {
-                return false;
-            }
-            $purchaseOrder->items()->delete();
-            $purchaseOrder->delete();
-
-            return true;
-        });
-        if (! $deleted) {
-            return redirect()->route('admin.mess.purchaseorders.index')
-                ->with('po_edit_error', 'Purchase order ' . $purchaseOrder->po_number . ' is approved and in stock, so it cannot be deleted.');
-        }
-        self::bumpPurchaseOrderListingCacheEpoch();
-
-        return redirect()->route('admin.mess.purchaseorders.index')->with('success', 'Purchase order deleted successfully');
-    }
+    // Delete disabled for now.
+    // public function destroy($id)
+    // {
+    //     $purchaseOrder = PurchaseOrder::findOrFail($id);
+    //     if ($purchaseOrder->status === 'approved') {
+    //         return redirect()->route('admin.mess.purchaseorders.index')
+    //             ->with('po_edit_error', 'Purchase order ' . $purchaseOrder->po_number . ' is approved and in stock, so it cannot be deleted.');
+    //     }
+    //     // Re-check under a row lock: the PO may have been approved after it was read above.
+    //     $deleted = DB::transaction(function () use ($purchaseOrder) {
+    //         if (PurchaseOrder::whereKey($purchaseOrder->id)->lockForUpdate()->value('status') === 'approved') {
+    //             return false;
+    //         }
+    //         $purchaseOrder->items()->delete();
+    //         $purchaseOrder->delete();
+    //
+    //         return true;
+    //     });
+    //     if (! $deleted) {
+    //         return redirect()->route('admin.mess.purchaseorders.index')
+    //             ->with('po_edit_error', 'Purchase order ' . $purchaseOrder->po_number . ' is approved and in stock, so it cannot be deleted.');
+    //     }
+    //     self::bumpPurchaseOrderListingCacheEpoch();
+    //
+    //     return redirect()->route('admin.mess.purchaseorders.index')->with('success', 'Purchase order deleted successfully');
+    // }
 
     public function approve($id)
     {
