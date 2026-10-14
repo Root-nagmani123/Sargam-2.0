@@ -2237,7 +2237,7 @@ class CourseRepositoryController extends Controller
             $categoryCounts = [];
             $categoryTotal = 0;
 
-            if ($hasQuery) {
+            if ($hasQuery && ! $criteria['token_limit_exceeded']) {
                 if ($criteria['type'] !== CourseRepositorySearch::TYPE_CATEGORIES) {
                     $documents = CourseRepositorySearch::documentQuery($criteria)
                         ->paginate($criteria['per_page'])

@@ -441,7 +441,8 @@ class LeaveOnBehalfController extends Controller
         // Only meaningful on a single-day leave — across days the return time is
         // naturally earlier in the day than the departure time.
         if ($validated['from_date'] === $validated['to_date']
-            && $validated['time_to'] <= $validated['time_from']) {
+            && $this->leaveService->normalizeTime($validated['time_to'])
+                <= $this->leaveService->normalizeTime($validated['time_from'])) {
             return back()->withInput()->withErrors([
                 'time_to' => 'On a single-day leave, time to must be later than time from.',
             ]);
@@ -522,7 +523,7 @@ class LeaveOnBehalfController extends Controller
                 LeaveApplicationAttachment::create([
                     'leave_application_pk' => $application->pk,
                     'attachment_title' => $request->input("attachments.$index.title") ?: 'Attachment',
-                    'file_path' => $file->store('uploads/leave-applications', 'public'),
+                    'file_path' => $file->store('uploads/leave-applications', 'private'),
                     'original_file_name' => $file->getClientOriginalName(),
                     'created_date' => $now,
                 ]);

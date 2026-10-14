@@ -152,6 +152,9 @@ Trainee accounts to verify:
   normal empty state.
 - `/dashboard/feed?tab=notices&notice_scope=archive` also returns HTTP 200.
 - Known targeted notices reach intended recipients and not outsiders.
+- A no-category Officer Trainee login without a verified trainee identity receives
+  only notices addressed to `All`, not course-, group- or individually-targeted
+  Office trainee notices.
 - No missing-table exception appears in the application log.
 
 A redirect to login, HTTP 403, or a successful health endpoint that does not

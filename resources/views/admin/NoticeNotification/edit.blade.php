@@ -205,7 +205,7 @@
                         @if($notice->document)
                         <div class="notice-form-current-doc mt-2">
                             <i class="bi bi-paperclip me-1 text-primary" aria-hidden="true"></i>
-                            <a href="{{ asset('storage/'.$notice->document) }}" target="_blank" rel="noopener noreferrer" class="link-primary">
+                            <a href="{{ route('admin.notice.attachment', $notice->pk) }}" target="_blank" rel="noopener noreferrer" class="link-primary">
                                 View current document
                             </a>
                         </div>

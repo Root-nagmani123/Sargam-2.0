@@ -290,7 +290,7 @@
                                 @foreach($application->attachments as $attachment)
                                     <div class="d-flex align-items-center gap-2 mb-1 leave-existing-attach-row">
                                         <i class="material-icons material-symbols-rounded text-secondary" style="font-size:18px;">attach_file</i>
-                                        <a href="{{ asset('storage/' . $attachment->file_path) }}" target="_blank" class="leave-existing-attach-link">
+                                        <a href="{{ route('leave.attachments.show', [$application->pk, $attachment->pk]) }}" target="_blank" class="leave-existing-attach-link">
                                             {{ $attachment->attachment_title ? $attachment->attachment_title . ' — ' : '' }}{{ $attachment->original_file_name }}
                                         </a>
                                         @if(! $isReadOnly)

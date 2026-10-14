@@ -56,6 +56,21 @@ class NoticeFeedStudentIdentityTest extends TestCase
         return $pk;
     }
 
+    private function allNotice(): int
+    {
+        $title = 'F-069 all-notice probe '.random_int(100000, 999999);
+        $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])->post(route('admin.notice.store'), [
+            'notice_title' => $title, 'description' => 'probe', 'notice_type' => 'Personal',
+            'display_date' => now()->toDateString(), 'expiry_date' => now()->addDays(10)->toDateString(),
+            'target_audience' => 'All',
+        ])->assertSessionHasNoErrors();
+        $pk = (int) DB::table('notices_notification')->where('notice_title', $title)->value('pk');
+        $this->assertGreaterThan(0, $pk, 'all-audience notice was stored');
+        DB::table('notices_notification')->where('pk', $pk)->update(['active_inactive' => 1]);
+
+        return $pk;
+    }
+
     private function feedFor(User $user, array $roles): array
     {
         $this->actingAs($user);
@@ -132,16 +147,33 @@ class NoticeFeedStudentIdentityTest extends TestCase
         }
     }
 
-    public function test_a_no_category_login_with_another_email_still_gets_none_of_them(): void
+    public function test_a_no_category_login_with_another_email_gets_all_notices_only(): void
     {
         [$login, $student, $course, $group] = $this->noCategoryOwnLogin();
         $notices = $this->noticesFor($student, $course, $group);
+        $allNotice = $this->allNotice();
         DB::table('user_credentials')->where('pk', $login->pk)->update(['email_id' => 'someone.else@probe.test']);
 
         $feed = $this->feedFor($login->fresh(), ['Student-OT']);
 
+        $this->assertContains($allNotice, $feed, 'the login receives notices addressed to everyone');
         foreach ($notices as $kind => $pk) {
-            $this->assertNotContains($pk, $feed, "a login that only shares the user_id does not get the {$kind} notice");
+            $this->assertNotContains($pk, $feed, "a login without a matching trainee email does not get the {$kind} notice");
+        }
+    }
+
+    public function test_a_no_category_login_with_no_email_gets_all_notices_only(): void
+    {
+        [$login, $student, $course, $group] = $this->noCategoryOwnLogin();
+        $notices = $this->noticesFor($student, $course, $group);
+        $allNotice = $this->allNotice();
+        DB::table('user_credentials')->where('pk', $login->pk)->update(['email_id' => null]);
+
+        $feed = $this->feedFor($login->fresh(), ['Student-OT']);
+
+        $this->assertContains($allNotice, $feed, 'the login receives notices addressed to everyone');
+        foreach ($notices as $kind => $pk) {
+            $this->assertNotContains($pk, $feed, "a login without an email does not get the {$kind} notice");
         }
     }
 

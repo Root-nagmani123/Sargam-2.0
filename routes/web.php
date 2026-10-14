@@ -36,6 +36,7 @@ use App\Http\Controllers\Admin\IssueManagement\IssuePriorityController;
 use App\Http\Controllers\Admin\IssueManagement\IssueSubCategoryController;
 use App\Http\Controllers\Admin\IssueReportController;
 use App\Http\Controllers\Admin\LeaveApplicationController;
+use App\Http\Controllers\Admin\LeaveApplicationAttachmentController;
 use App\Http\Controllers\Admin\LeaveOnBehalfController;
 use App\Http\Controllers\Admin\Master\AppellationMasterController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
@@ -651,6 +652,10 @@ Route::middleware(['auth'])->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
 
+        Route::get('/notice/{id}/attachment', [NoticeNotificationController::class, 'attachment'])
+            ->whereNumber('id')
+            ->name('notice.attachment');
+
         Route::resource('notice', NoticeNotificationController::class)
             ->except(['show'])
             ->parameters(['notice' => 'encId']);
@@ -1096,6 +1101,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/faculty-leave-approval/{id}/approve', 'approve')->name('faculty.leave-approval.approve');
         Route::post('/faculty-leave-approval/{id}/reject', 'reject')->name('faculty.leave-approval.reject');
     });
+
+    Route::get('/leave-applications/{applicationId}/attachments/{attachmentId}', [
+        LeaveApplicationAttachmentController::class,
+        'show',
+    ])->whereNumber('applicationId')->whereNumber('attachmentId')->name('leave.attachments.show');
 
     // Officer Trainee — Leave Application (User Side)
     Route::prefix('leave')->name('leave.')->controller(LeaveApplicationController::class)->group(function () {

@@ -98,6 +98,7 @@
 
                         <ul class="cru-suggest-list" id="cruSuggestList" role="listbox" hidden></ul>
                     </div>
+                    <p class="form-text mb-0 mt-2">Searches support up to {{ CourseRepositorySearch::MAX_TOKENS }} words.</p>
 
                     @unless($hasQuery)
                         <div class="cru-search-examples">
@@ -215,6 +216,12 @@
                 </div>
             </div>
         </form>
+
+        @if($criteria['token_limit_exceeded'])
+            <div class="alert alert-warning" role="alert">
+                Your search has more than {{ CourseRepositorySearch::MAX_TOKENS }} words. Shorten it and search again; no partial search was run.
+            </div>
+        @endif
 
         @if(! $hasQuery)
             {{-- ── Nothing asked for yet ───────────────────────────────────── --}}

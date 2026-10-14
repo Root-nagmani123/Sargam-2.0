@@ -324,7 +324,7 @@
                                     <td class="text-center">
                                         @if($leave->attachments->isNotEmpty())
                                             @foreach($leave->attachments as $attachment)
-                                                <a href="{{ asset('storage/' . $attachment->file_path) }}" target="_blank"
+                                                <a href="{{ route('leave.attachments.show', [$leave->pk, $attachment->pk]) }}" target="_blank"
                                                     class="btn btn-sm btn-info mb-1" title="View Document">
                                                     <i class="fas fa-file-pdf"></i> View
                                                 </a>
@@ -393,7 +393,7 @@
                                     <td class="text-center">
                                         @if($leave->attachments->isNotEmpty())
                                             @foreach($leave->attachments as $attachment)
-                                                <a href="{{ asset('storage/' . $attachment->file_path) }}" target="_blank"
+                                                <a href="{{ route('leave.attachments.show', [$leave->pk, $attachment->pk]) }}" target="_blank"
                                                     class="btn btn-sm btn-info mb-1" title="View Document">
                                                     <i class="fas fa-file-pdf"></i> View
                                                 </a>
@@ -900,4 +900,3 @@
 @endpush
 
 @endsection
-

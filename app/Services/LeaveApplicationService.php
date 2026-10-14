@@ -13,6 +13,11 @@ use Illuminate\Support\Facades\DB;
 
 class LeaveApplicationService
 {
+    public function normalizeTime(string $time): string
+    {
+        return Carbon::parse($time)->format('H:i:s');
+    }
+
     public function resolveStudentContext(int $userPk): array
     {
         $user = DB::table('user_credentials')->where('pk', $userPk)->first();

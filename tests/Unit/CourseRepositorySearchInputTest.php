@@ -37,6 +37,17 @@ class CourseRepositorySearchInputTest extends TestCase
         $this->assertTrue(mb_check_encoding($criteria['subject'], 'UTF-8'));
     }
 
+    public function test_search_beyond_six_words_is_marked_instead_of_silently_truncated(): void
+    {
+        $criteria = CourseRepositorySearch::criteria(Request::create('/', 'GET', [
+            'q' => 'one two three four five six distinguishing',
+        ]));
+
+        $this->assertTrue($criteria['token_limit_exceeded']);
+        $this->assertCount(CourseRepositorySearch::MAX_TOKENS, $criteria['tokens']);
+        $this->assertSame('one two three four five six distinguishing', $criteria['q']);
+    }
+
     public static function searchFailures(): array
     {
         return [

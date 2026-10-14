@@ -2011,9 +2011,14 @@ if (!function_exists('notice_feed_query_by_role')) {
         // row (duplicate cards), and a joined query cannot be counted for
         // pagination without a distinct().
         if ($isStudent) {
-            // Only a login that is provably the student's own is matched as that
-            // student; any other is matched by role alone (PR #334 F-067, F-069).
             $studentPk = auth_student_master_pk();
+
+            // A no-category trainee without a verified student identity gets only
+            // notices explicitly addressed to everyone (PR #334 F-069).
+            if ($category === '' && $studentPk === null) {
+                return $query->where('notices_notification.target_audience', 'All');
+            }
+
             $studentIds = $studentPk === null ? [] : [$studentPk];
 
             $courseIds = DB::table('student_master_course__map')

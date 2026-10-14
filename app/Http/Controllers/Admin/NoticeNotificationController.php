@@ -12,6 +12,7 @@ use App\Models\CourseMaster;
 use App\Models\DepartmentMaster;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Auth;
@@ -41,7 +42,7 @@ class NoticeNotificationController extends Controller
             }
 
             return $next($request);
-        });
+        })->except(['attachment']);
     }
 
     /**
@@ -172,6 +173,27 @@ class NoticeNotificationController extends Controller
         ));
     }
 
+    public function attachment(int $id)
+    {
+        $notice = Notice::findOrFail($id);
+
+        $isAuthor = canAuthorNotices()
+            && (isSidebarPrivilegedUser() || (int) $notice->created_by === (int) Auth::id());
+        $isAudienceMember = notice_feed_query_by_role('all')
+            ->where('notices_notification.pk', $notice->pk)
+            ->exists();
+
+        if (! $isAuthor && ! $isAudienceMember) {
+            abort(404);
+        }
+
+        if (! $notice->document || ! Storage::disk('private')->exists($notice->document)) {
+            abort(404);
+        }
+
+        return Storage::disk('private')->response($notice->document);
+    }
+
     /**
      * Whitelist for the "Year of" selector. Keys are what the form posts; values
      * are interpolated into SQL, so they may only ever come from this map.
@@ -247,7 +269,7 @@ class NoticeNotificationController extends Controller
 
         if ($request->hasFile('document')) {
             $data['document'] = $request->file('document')
-                ->store('notice_docs', 'public');
+                ->store('notice_docs', 'private');
         }
 
         // One transaction: a notice committed without its audience rows reads as
@@ -389,7 +411,7 @@ class NoticeNotificationController extends Controller
         $data['description'] = notice_safe_html($data['description'] ?? '');
 
         if ($request->hasFile('document')) {
-            $data['document'] = $request->file('document')->store('notice_docs', 'public');
+            $data['document'] = $request->file('document')->store('notice_docs', 'private');
         }
 
         if ($this->keepsLegacyCourselessAudience($notice, $request)) {

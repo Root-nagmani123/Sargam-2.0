@@ -76,7 +76,8 @@ class CourseRepositorySearch
     public static function criteria(Request $request): array
     {
         $q = DataTableSearchHelper::normalizeRaw(self::scalar($request, 'q'));
-        $tokens = array_slice(DataTableSearchHelper::tokens($q), 0, self::MAX_TOKENS);
+        $allTokens = DataTableSearchHelper::tokens($q);
+        $tokens = array_slice($allTokens, 0, self::MAX_TOKENS);
 
         $type = self::scalar($request, 'type', self::TYPE_ALL);
         if (! array_key_exists($type, self::TYPES)) {
@@ -107,6 +108,7 @@ class CourseRepositorySearch
         return [
             'q' => $q,
             'tokens' => $tokens,
+            'token_limit_exceeded' => count($allTokens) > self::MAX_TOKENS,
             'type' => $type,
             'sort' => $sort,
             'course' => self::withoutControls(self::scalar($request, 'course')),

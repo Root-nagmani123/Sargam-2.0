@@ -323,7 +323,8 @@ $(function () {
 
         list.forEach(function (s, i) {
             html += '<tr>'
-                + '<td><input type="checkbox" class="form-check-input mg-pick" value="' + Number(s.pk) + '"></td>'
+                + '<td><input type="checkbox" class="form-check-input mg-pick" value="' + Number(s.pk)
+                + '" aria-label="' + escapeHtml('Select ' + (s.name || 'officer trainee')) + '"></td>'
                 + '<td class="mg-col-no">' + (i + 1) + '</td>'
                 + '<td class="fw-semibold">' + escapeHtml(s.name) + '</td>'
                 + '<td>' + escapeHtml(s.ot_code) + '</td>'

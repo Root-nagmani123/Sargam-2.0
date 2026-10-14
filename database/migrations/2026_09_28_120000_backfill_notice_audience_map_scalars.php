@@ -51,7 +51,7 @@ return new class extends Migration
 
             DB::table(self::TABLE)
                 ->whereNotNull($column)
-                ->where($column, '>', 0)
+                ->where($column, '>=', 0)
                 ->orderBy('pk')
                 ->select('pk', $column)
                 ->chunk(500, function ($notices) use ($column, $type) {

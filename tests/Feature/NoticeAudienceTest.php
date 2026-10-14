@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\Feature\Concerns\RollsBackAgainstAppDatabase;
 use Tests\TestCase;
@@ -89,6 +90,67 @@ class NoticeAudienceTest extends TestCase
 
         $niarStaff = $this->employeeLogin(self::NIAR);
         $this->assertContains((int) $notice->pk, $this->feedFor($niarStaff), 'NIAR staff must see their notice');
+    }
+
+    public function test_scalar_audience_backfill_includes_department_zero(): void
+    {
+        if (! DB::table('department_master')->where('pk', self::NIAR)->exists()) {
+            $this->markTestSkipped('department_master has no pk 0 row');
+        }
+
+        $author = $this->staffWithRole('Super Admin');
+        $noticePk = DB::table('notices_notification')->insertGetId([
+            'notice_title' => 'NIAR scalar backfill ' . Str::random(8),
+            'description' => 'legacy scalar audience',
+            'notice_type' => 'Office notice',
+            'display_date' => now()->toDateString(),
+            'expiry_date' => now()->addDays(10)->toDateString(),
+            'target_audience' => 'Staff/Faculty',
+            'department_master_pk' => self::NIAR,
+            'active_inactive' => 1,
+            'created_by' => $author->pk,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $migration = require database_path('migrations/2026_09_28_120000_backfill_notice_audience_map_scalars.php');
+        $migration->up();
+        $migration->up();
+
+        $this->assertSame(1, DB::table('notice_audience_map')
+            ->where('notices_notification_pk', $noticePk)
+            ->where('audience_type', 'D')
+            ->where('reference_pk', self::NIAR)
+            ->count());
+    }
+
+    public function test_notice_attachment_is_available_to_audience_members_but_not_other_categories(): void
+    {
+        $recipient = $this->employeeLogin();
+        $department = (int) DB::table('employee_master')
+            ->join('user_credentials', 'user_credentials.user_id', '=', 'employee_master.pk')
+            ->where('user_credentials.pk', $recipient->pk)
+            ->value('employee_master.department_master_pk');
+        if ($department < 0) {
+            $this->markTestSkipped('recipient has no valid department');
+        }
+
+        $title = 'Private notice attachment ' . Str::random(8);
+        $this->postStaffNotice([(string) $department], $title)->assertSessionHasNoErrors();
+        $notice = DB::table('notices_notification')->where('notice_title', $title)->first();
+        $this->assertNotNull($notice);
+
+        $path = 'notice_docs/' . Str::random(24) . '.pdf';
+        DB::table('notices_notification')->where('pk', $notice->pk)->update(['document' => $path]);
+        Storage::fake('private');
+        Storage::disk('private')->put($path, '%PDF-private-notice');
+
+        $this->as($recipient, [])->get(route('admin.notice.attachment', $notice->pk))->assertOk();
+
+        $trainee = $this->officerTrainee();
+        $this->as($trainee, ['Student-OT'])
+            ->get(route('admin.notice.attachment', $notice->pk))
+            ->assertNotFound();
     }
 
     public function test_a_failed_audience_insert_leaves_no_notice_behind(): void

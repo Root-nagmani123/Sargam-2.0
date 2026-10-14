@@ -217,7 +217,8 @@ class LeaveApplicationController extends Controller
         if ($isStationed
             && $validated['from_date'] === $validated['to_date']
             && ! empty($validated['time_from']) && ! empty($validated['time_to'])
-            && $validated['time_to'] <= $validated['time_from']) {
+            && $this->leaveService->normalizeTime($validated['time_to'])
+                <= $this->leaveService->normalizeTime($validated['time_from'])) {
             return back()->withInput()->withErrors([
                 'time_to' => 'On a single-day leave, time to must be later than time from.',
             ]);
@@ -457,7 +458,7 @@ class LeaveApplicationController extends Controller
                     continue;
                 }
 
-                $path = $file->store('uploads/leave-applications', 'public');
+                $path = $file->store('uploads/leave-applications', 'private');
 
                 LeaveApplicationAttachment::create([
                     'leave_application_pk' => $application->pk,

@@ -281,7 +281,7 @@
                         <div class="fla-block-label">Attachments ({{ $application->attachments->count() }})</div>
                         <div class="fla-attach-grid">
                             @foreach($application->attachments as $attachment)
-                                <a href="{{ asset('storage/' . $attachment->file_path) }}" target="_blank" rel="noopener" class="fla-attach">
+                                <a href="{{ route('leave.attachments.show', [$application->pk, $attachment->pk]) }}" target="_blank" rel="noopener" class="fla-attach">
                                     <span class="fla-attach-ic"><span class="material-icons material-symbols-rounded">description</span></span>
                                     <span class="fla-attach-meta">
                                         <span class="fla-attach-name">{{ $attachment->attachment_title ?: ($attachment->original_file_name ?? 'Attachment') }}</span>

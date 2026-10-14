@@ -245,7 +245,7 @@
                                     {{-- `notices-feed-item__attachment` carries no CSS — it is the hook the
                                          accordion click handler uses to let this link through instead of
                                          collapsing the panel. Do not remove it as an "unused" class. --}}
-                                    <a href="{{ asset('storage/' . $feedNotice->document) }}" target="_blank"
+                                    <a href="{{ route('admin.notice.attachment', $feedNotice->pk) }}" target="_blank"
                                         rel="noopener noreferrer"
                                         class="notices-feed-item__attachment small text-danger text-decoration-none d-inline-flex align-items-center gap-1">
                                         <i class="bi bi-paperclip" aria-hidden="true"></i> View Attachment

@@ -13,17 +13,24 @@ use Tests\TestCase;
 
 class CourseRepositorySearchRobustnessTest extends TestCase
 {
-    use RollsBackAgainstAppDatabase;
+    use RollsBackAgainstAppDatabase {
+        setUp as rollbackSetUp;
+    }
 
     protected function setUp(): void
     {
-        parent::setUp();
+        $this->rollbackSetUp();
 
         foreach (['folderTree', 'folderChildren', 'hiddenFolderPks'] as $property) {
             $cache = new \ReflectionProperty(CourseRepositorySearch::class, $property);
             $cache->setAccessible(true);
             $cache->setValue(null, null);
         }
+    }
+
+    public function test_database_fixtures_run_inside_the_rollback_transaction(): void
+    {
+        $this->assertGreaterThan(0, DB::transactionLevel());
     }
 
     private function document(): int
