@@ -282,8 +282,6 @@ class LeaveApplicationService
     ): ?LeaveApplication {
         $query = LeaveApplication::query()
             ->where('student_master_pk', $studentPk)
-            // Leave on Behalf passes false: an OT's unsubmitted draft must not block the
-            // operator (PR #334 F-068, Product owner decision 2026-10-09).
             ->whereIn('status', array_merge($includeDrafts ? [LeaveApplication::STATUS_DRAFT] : [], [
                 LeaveApplication::STATUS_PENDING,
                 LeaveApplication::STATUS_APPROVED,

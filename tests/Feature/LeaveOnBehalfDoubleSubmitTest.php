@@ -94,12 +94,7 @@ class LeaveOnBehalfDoubleSubmitTest extends TestCase
             ->count());
     }
 
-    /**
-     * PR #334 F-068, Product owner decision 2026-10-09: an OT's unsubmitted DRAFT must not
-     * block the operator's regularisation. The draft is left as it is, and a Pending or
-     * Approved leave still blocks.
-     */
-    public function test_an_ots_draft_does_not_block_the_operator_but_a_pending_leave_does(): void
+    public function test_an_ots_draft_and_pending_leave_block_operator_regularisation(): void
     {
         $payload = $this->payload();
         $onDay = fn (string $day) => DB::table('leave_application')
@@ -110,12 +105,18 @@ class LeaveOnBehalfDoubleSubmitTest extends TestCase
         $draft = $onDay($payload['from_date'])->value('pk');
         DB::table('leave_application')->where('pk', $draft)->update(['status' => LeaveApplication::STATUS_DRAFT]);
 
-        // The OT's own path still counts the draft.
+        // The overlap query used by the operator counts a same-type draft.
         $this->assertNotNull(app(LeaveApplicationService::class)
-            ->findOverlappingApplication((int) $payload['student_master_pk'], $payload['from_date'], $payload['to_date']));
+            ->findOverlappingApplication(
+                (int) $payload['student_master_pk'],
+                $payload['from_date'],
+                $payload['to_date'],
+                null,
+                LeaveApplication::TYPE_STATIONED_LEAVE
+            ));
 
-        $this->submit($payload)->assertSessionHasNoErrors()->assertRedirect();
-        $this->assertSame(2, $onDay($payload['from_date'])->count(), 'the operator records the leave over the draft');
+        $this->submit($payload)->assertSessionHasErrors('from_date');
+        $this->assertSame(1, $onDay($payload['from_date'])->count(), 'the draft prevents operator regularisation');
         $this->assertSame(LeaveApplication::STATUS_DRAFT, (int) DB::table('leave_application')->where('pk', $draft)->value('status'), 'the draft is left as it is');
 
         // Control: a Pending leave on another day still blocks.
