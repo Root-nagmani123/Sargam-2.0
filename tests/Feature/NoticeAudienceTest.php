@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\Feature\Concerns\RollsBackAgainstAppDatabase;
@@ -144,6 +145,9 @@ class NoticeAudienceTest extends TestCase
         DB::table('notices_notification')->where('pk', $notice->pk)->update(['document' => $path]);
         Storage::fake('private');
         Storage::disk('private')->put($path, '%PDF-private-notice');
+
+        Auth::logout();
+        $this->get(route('admin.notice.attachment', $notice->pk))->assertRedirect();
 
         $this->as($recipient, [])->get(route('admin.notice.attachment', $notice->pk))->assertOk();
 

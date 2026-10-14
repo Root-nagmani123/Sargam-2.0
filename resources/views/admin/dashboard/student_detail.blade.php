@@ -322,7 +322,7 @@
                                     </td>
                                     <td>{{ $leave->reason ?? 'N/A' }}</td>
                                     <td class="text-center">
-                                        @if($leave->attachments->isNotEmpty())
+                                        @if($leave->attachments->isNotEmpty() && isset($leaveAttachmentAccess[$leave->pk]))
                                             @foreach($leave->attachments as $attachment)
                                                 <a href="{{ route('leave.attachments.show', [$leave->pk, $attachment->pk]) }}" target="_blank"
                                                     class="btn btn-sm btn-info mb-1" title="View Document">
@@ -391,7 +391,7 @@
                                     <td>{{ $leave->action_by_faculty_name }}</td>
                                     <td>{{ $leave->reason ?? 'N/A' }}</td>
                                     <td class="text-center">
-                                        @if($leave->attachments->isNotEmpty())
+                                        @if($leave->attachments->isNotEmpty() && isset($leaveAttachmentAccess[$leave->pk]))
                                             @foreach($leave->attachments as $attachment)
                                                 <a href="{{ route('leave.attachments.show', [$leave->pk, $attachment->pk]) }}" target="_blank"
                                                     class="btn btn-sm btn-info mb-1" title="View Document">

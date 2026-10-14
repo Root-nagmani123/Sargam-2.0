@@ -3,6 +3,12 @@
 Leave application attachments and notice documents are served from the `private`
 filesystem disk. Before routing traffic to a release with this change:
 
+PT-exemption attachment downloads are for the record owner, Training/Estate
+authorities, and faculty who are authorized to view that trainee through an
+active course coordinator or group assignment. The student-detail page only
+renders a download link for those same viewers; the endpoint enforces the policy
+independently.
+
 1. Put the application in maintenance mode and back up the public files and the
    `leave_application_attachment.file_path` / `notices_notification.document`
    references.

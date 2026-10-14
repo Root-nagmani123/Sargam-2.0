@@ -7669,11 +7669,20 @@ class UserController extends Controller
             ? app(RegistrationService::class)->joiningDocumentChecklistForDisplay((int) $fcRegUsername)
             : collect();
 
+        $viewerStudentPk = auth_student_master_pk();
+        $leaveApprovalService = app(\App\Services\FacultyLeaveApprovalService::class);
+        $leaveAttachmentAccess = $ptExemptions->concat($stationedLeaves)
+            ->filter(fn ($leave) => ($viewerStudentPk !== null && (int) $viewerStudentPk === (int) $leave->student_master_pk)
+                || $leaveApprovalService->canUserAccessLeave($leave))
+            ->mapWithKeys(fn ($leave) => [(int) $leave->pk => true])
+            ->all();
+
         return view('admin.dashboard.student_detail', compact(
             'student',
             'medicalExemptions',
             'ptExemptions',
             'stationedLeaves',
+            'leaveAttachmentAccess',
             'duties',
             'notices',
             'memos',
@@ -9079,64 +9088,11 @@ class UserController extends Controller
     }
 
     /**
-     * Active course IDs where the faculty is CC or ACC.
-     */
-    private function getActiveCoordinatorCourseIds(int $facultyPk)
-    {
-        $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
-        if ($coordinatorCourses->isEmpty()) {
-            return collect([]);
-        }
-
-        return CourseMaster::whereIn('pk', $coordinatorCourses)
-            ->where('active_inactive', 1)
-            ->where('end_date', '>=', now()->toDateString())
-            ->pluck('pk');
-    }
-
-    /**
      * Whether a faculty user may view a student's detail page.
      */
     private function canFacultyViewStudent(int $facultyPk, int $studentPk): bool
     {
-        $activeCoordinatorCourses = $this->getActiveCoordinatorCourseIds($facultyPk);
-        if ($activeCoordinatorCourses->isNotEmpty()) {
-            $enrolled = StudentMasterCourseMap::where('student_master_pk', $studentPk)
-                ->whereIn('course_master_pk', $activeCoordinatorCourses)
-                ->where('active_inactive', 1)
-                ->exists();
-
-            if ($enrolled) {
-                return true;
-            }
-        }
-
-        $groupMappings = DB::table('group_type_master_course_master_map')
-            ->where('facility_id', $facultyPk)
-            ->where('active_inactive', 1)
-            ->get();
-
-        if ($groupMappings->isEmpty()) {
-            return false;
-        }
-
-        $activeCourseIds = CourseMaster::whereIn('pk', $groupMappings->pluck('course_name')->unique())
-            ->where('active_inactive', 1)
-            ->where('end_date', '>=', now()->toDateString())
-            ->pluck('pk');
-
-        if ($activeCourseIds->isEmpty()) {
-            return false;
-        }
-
-        $activeGroupMappingPks = $groupMappings
-            ->whereIn('course_name', $activeCourseIds)
-            ->pluck('pk')
-            ->unique();
-
-        return StudentCourseGroupMap::where('student_master_pk', $studentPk)
-            ->whereIn('group_type_master_course_master_map_pk', $activeGroupMappingPks)
-            ->where('active_inactive', 1)
-            ->exists();
+        return app(\App\Services\StudentDetailAccessService::class)
+            ->canFacultyViewStudent($facultyPk, $studentPk);
     }
 }
