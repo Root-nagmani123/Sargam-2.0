@@ -91,6 +91,15 @@ class PurchaseOrderController extends Controller
         return function_exists('hasRole') && (hasRole('Mess Admin') || hasRole('Super Admin'));
     }
 
+    /**
+     * Who may edit a PO (pending lines, or bill details of an approved one): Mess Admin,
+     * Super Admin or Mess Billing.
+     */
+    private function canEditPurchaseOrders(): bool
+    {
+        return function_exists('hasRole') && (hasRole('Mess Admin') || hasRole('Super Admin') || hasRole('Mess Billing'));
+    }
+
     private function purchaseOrderStatusFilter(Request $request): string
     {
         $status = (string) $request->input('status', '');
@@ -474,6 +483,11 @@ class PurchaseOrderController extends Controller
 
     public function update(Request $request, $id)
     {
+        if (! $this->canEditPurchaseOrders()) {
+            return redirect()->route('admin.mess.purchaseorders.index')
+                ->with('po_edit_error', 'Only Mess Admin, Super Admin or Mess Billing can edit purchase orders.');
+        }
+
         $purchaseOrder = PurchaseOrder::findOrFail($id);
 
         if ($purchaseOrder->status === 'approved') {
