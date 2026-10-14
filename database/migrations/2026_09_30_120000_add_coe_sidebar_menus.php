@@ -57,12 +57,24 @@ return new class extends Migration
             'Laptop Management' => ['laptop_mac', 'coe_laptop_management', [
                 ['OT Laptop Status', 'admin/coe/ot-laptop-status', 'laptop_chromebook', 'coe_ot_laptop_status'],
             ]],
+            'Examination Management' => ['assignment', 'coe_examination_management', [
+                ['Examination Drive Configuration', 'admin/coe/examination-drive', 'drive_file_rename_outline', 'coe_examination_drive'],
+                ['Examination Drive (Faculty)', 'admin/coe/faculty-examination-drive', 'drive_file_rename_outline', 'coe_faculty_examination_drive'],
+                ['Roll Numbers', 'admin/coe/roll-number', 'pin', 'coe_roll_number'],
+                ['Venue Allocation', 'admin/coe/venue-allocation', 'meeting_room', 'coe_venue_allocation'],
+                ['Evaluation & Marks', 'admin/coe/evaluation-marks', 'grading', 'coe_evaluation_marks'],
+                ['Evaluation & Marks (Faculty)', 'admin/coe/faculty-evaluation-marks', 'grading', 'coe_faculty_evaluation_marks'],
+                ['Result Calculation', 'admin/coe/result-calculation', 'calculate', 'coe_result_calculation'],
+            ]],
             'Master Data' => ['dataset', 'coe_master_data', [
                 ['Examination Type Master', 'admin/coe/examination-type', 'category', 'coe_examination_type_master'],
                 ['Examination Term Master', 'admin/coe/examination-term', 'date_range', 'coe_examination_term_master'],
                 ['Building Master', 'admin/coe/building', 'apartment', 'coe_building_master'],
                 ['Floor Master', 'admin/coe/floor', 'stacks', 'coe_floor_master'],
                 ['Room Master', 'admin/coe/room', 'meeting_room', 'coe_room_master'],
+                ['Grade Master', 'admin/coe/grade-master', 'grade', 'coe_grade_master'],
+                ['Unique Participant Code', 'admin/coe/unique-participant-code', 'pin', 'coe_unique_participant_code'],
+                ['Laptop & Scriber Seats', 'admin/coe/laptop-scriber-seats', 'event_seat', 'coe_laptop_scriber_seats'],
             ]],
         ];
     }

@@ -2009,6 +2009,35 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->name('floor.index');
     Route::get('room', [\App\Http\Controllers\Admin\COE\RoomController::class, 'index'])
         ->name('room.index');
+    Route::get('grade-master', [\App\Http\Controllers\Admin\COE\GradeMasterController::class, 'index'])
+        ->name('grade-master.index');
+    Route::get('unique-participant-code', [\App\Http\Controllers\Admin\COE\UniqueParticipantCodeController::class, 'index'])
+        ->name('unique-participant-code.index');
+    Route::get('laptop-scriber-seats', [\App\Http\Controllers\Admin\COE\LaptopScriberSeatsController::class, 'index'])
+        ->name('laptop-scriber-seats.index');
+    // COE -> Examination Management
+    Route::get('roll-number', [\App\Http\Controllers\Admin\COE\RollNumberController::class, 'index'])
+        ->name('roll-number.index');
+    Route::get('venue-allocation', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'index'])
+        ->name('venue-allocation.index');
+    Route::get('evaluation-marks', [\App\Http\Controllers\Admin\COE\EvaluationMarksController::class, 'index'])
+        ->name('evaluation-marks.index');
+    Route::get('faculty-evaluation-marks', [\App\Http\Controllers\Admin\COE\EvaluationMarksController::class, 'facultyIndex'])
+        ->name('faculty-evaluation-marks.index');
+    Route::get('result-calculation', [\App\Http\Controllers\Admin\COE\ResultCalculationController::class, 'index'])
+        ->name('result-calculation.index');
+    Route::get('venue-allocation/{id}/edit', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'edit'])
+        ->whereNumber('id')->name('venue-allocation.edit');
+    Route::get('examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'index'])
+        ->name('examination-drive.index');
+    Route::get('examination-drive/{id}', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'show'])
+        ->whereNumber('id')->name('examination-drive.show');
+    Route::get('examination-drive/{id}/coordinates', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'coordinates'])
+        ->whereNumber('id')->name('examination-drive.coordinates');
+    Route::get('faculty-examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'facultyIndex'])
+        ->name('faculty-examination-drive.index');
+    Route::get('faculty-examination-drive/{id}/setup', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'facultySetup'])
+        ->whereNumber('id')->name('faculty-examination-drive.setup');
     // COE -> Laptop Management
     Route::get('ot-laptop-status', [\App\Http\Controllers\Admin\COE\OtLaptopStatusController::class, 'index'])
         ->name('ot-laptop-status.index');

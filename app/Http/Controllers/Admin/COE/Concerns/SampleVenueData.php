@@ -43,4 +43,35 @@ trait SampleVenueData
     {
         return array_map(fn (array $floors) => array_column($floors, 0), $this->sampleFloors());
     }
+
+    /**
+     * Rooms per building+floor: ["Building||Floor" => [room name => [capacity, laptop_available]]].
+     *
+     * @return array<string, array<string, array{capacity:int, laptop:int}>>
+     */
+    protected function sampleRoomsByBuildingFloor(): array
+    {
+        return [
+            'Adhar Shila||Ground Floor' => [
+                'Room 101 – GF-AS-R1' => ['capacity' => 40, 'laptop' => 20],
+                'Room 102 – GF-AS-R2' => ['capacity' => 30, 'laptop' => 15],
+            ],
+            'Adhar Shila||1st Floor' => [
+                'Exam Hall – 1F-AS-EH1' => ['capacity' => 80, 'laptop' => 40],
+                'Room 201 – 1F-AS-R1'   => ['capacity' => 35, 'laptop' => 18],
+            ],
+            'Adhar Shila||2nd Floor' => [
+                'First Room – AS-SF02-R1' => ['capacity' => 100, 'laptop' => 22],
+                'Exam Hall – AS-SF02-EH'  => ['capacity' =>  60, 'laptop' => 30],
+            ],
+            'Academic Block||Ground Floor' => [
+                'Lecture Hall – AB-GF-LH1' => ['capacity' => 120, 'laptop' => 60],
+                'Seminar Room – AB-GF-SR1' => ['capacity' =>  50, 'laptop' => 25],
+            ],
+            'Main Campus||Ground Floor' => [
+                'Auditorium – MC-GF-AU' => ['capacity' => 200, 'laptop' => 0],
+                'Conference Room – MC-GF-CR1' => ['capacity' => 30, 'laptop' => 30],
+            ],
+        ];
+    }
 }
