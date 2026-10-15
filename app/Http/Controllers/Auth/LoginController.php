@@ -117,15 +117,24 @@ class LoginController extends Controller
 
             if ($user->user_category === 'S') {
 
-                if ($password !== 'm2WZjg7iyfqbrPWO3aqDHVQL2PO8ZI6GHxxtVhypINY=') {
+                // Students authenticate against their own stored jbp_password
+                // (no LDAP). A hard-coded literal shared by every student
+                // account used to stand in for this check (security incident
+                // F-001) — removed in favour of verifying this account's own
+                // credential.
+                if (!$user->checkStoredPassword($password)) {
                     $this->recordFailedLoginAttempt($username);
                     return redirect()->back()->with('error', 'Invalid username or password.');
                 }
 
             } else {
 
-                // bypass password (NO LDAP)
-                if ($password !== 'm2WZjg7iyfqbrPWO') {
+                // Try this account's own stored password first; fall back to
+                // LDAP only when it does not match (e.g. no local password
+                // set). A hard-coded literal shared by every non-student
+                // account used to skip LDAP entirely (security incident
+                // F-001) — removed in favour of this per-account check.
+                if (!$user->checkStoredPassword($password)) {
 
                     try {
                         // 🔴 LDAP TRY BLOCK

@@ -99,6 +99,27 @@ class User extends Authenticatable
 // }
 
 /**
+     * Whether $plainPassword matches this user's own stored jbp_password.
+     * Supports bcrypt (current format, set via Hash::make() on password
+     * change) and legacy 32-character MD5 hashes from older imports; neither
+     * format is accepted as a literal match against any other value, so
+     * this never grants access on a value that is not that user's own.
+     */
+    public function checkStoredPassword(string $plainPassword): bool
+    {
+        $hash = (string) ($this->jbp_password ?? '');
+        if ($hash === '') {
+            return false;
+        }
+
+        if (\Illuminate\Support\Facades\Hash::check($plainPassword, $hash)) {
+            return true;
+        }
+
+        return strlen($hash) === 32 && hash_equals($hash, md5($plainPassword));
+    }
+
+    /**
      * Employees and faculty for complaint section (complainant / assignment dropdowns).
      * user_credentials.user_id maps to employee_master.pk and faculty_master.employee_master_pk.
      * Only logins with a category other than 'S' count: students are excluded, and
