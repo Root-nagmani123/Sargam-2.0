@@ -103,7 +103,8 @@ class User extends Authenticatable
      * user_credentials.user_id maps to employee_master.pk and faculty_master.employee_master_pk.
      * Only logins with a category other than 'S' count: students are excluded, and
      * so are NULL-category logins unless their user_id is the employee's own
-     * pk_old (see complaintLoginRows()).
+     * pk_old. A login reached through pk_old counts only when that key names
+     * no other employee (see complaintLoginRows()).
      *
      * Each row carries `can_login`: whether at least one of the employee's
      * logins gets past LoginController's inactive-account check — see
@@ -143,25 +144,50 @@ class User extends Authenticatable
     }
 
     /**
-     * Whether the employee (matched on employee_master.pk or pk_old) has a
-     * non-student login that LoginController would let in. Same rule as the
-     * `can_login` column above, so the dropdown and the server agree.
+     * Whether the employee named by $employeeKey has a non-student login that
+     * LoginController would let in. Same rule as the `can_login` column above,
+     * so the dropdown and the server agree.
+     *
+     * The key is resolved to one employee first (see resolveEmployeePk()).
+     * Matching `e.pk = key OR e.pk_old = key` directly would let one employee's
+     * logins answer for another whose pk_old happens to equal the key.
      */
     public static function employeeCanSignIn($employeeKey): bool
     {
-        if ($employeeKey === null || $employeeKey === '') {
+        $employeePk = self::resolveEmployeePk($employeeKey);
+        if ($employeePk === null) {
             return false;
         }
 
         return self::complaintLoginRows()
-            ->where(function ($q) use ($employeeKey) {
-                $q->where('e.pk', $employeeKey);
-                if (Schema::hasColumn('employee_master', 'pk_old')) {
-                    $q->orWhere('e.pk_old', $employeeKey);
-                }
-            })
+            ->where('e.pk', $employeePk)
             ->whereRaw(self::LOGIN_ALLOWED_SQL)
             ->exists();
+    }
+
+    /**
+     * The employee_master.pk an employee key (pk or pk_old) names: the
+     * employee whose pk it is, otherwise the one employee whose pk_old it is.
+     * Null when it names nobody, or when several employees share it as pk_old
+     * and nothing says which one is meant.
+     */
+    public static function resolveEmployeePk($employeeKey): ?string
+    {
+        if ($employeeKey === null || $employeeKey === '') {
+            return null;
+        }
+
+        $pk = DB::table('employee_master')->where('pk', $employeeKey)->value('pk');
+        if ($pk !== null) {
+            return (string) $pk;
+        }
+        if (! Schema::hasColumn('employee_master', 'pk_old')) {
+            return null;
+        }
+
+        $byPkOld = DB::table('employee_master')->where('pk_old', $employeeKey)->limit(2)->pluck('pk');
+
+        return $byPkOld->count() === 1 ? (string) $byPkOld->first() : null;
     }
 
     /**
@@ -187,12 +213,21 @@ class User extends Authenticatable
      * so counting them would mark an inactive employee as able to sign in on
      * the strength of another person's account. Those stay excluded.
      *
-     * This exclusion applies only here, to "can this employee sign in". It is
-     * not how a signed-in NULL-category login is identified elsewhere:
-     * LoginController admits these logins, and getEmployeeIdsForUser() then
-     * maps their user_id to whichever employee has that pk or pk_old, so
-     * Issue Management access checks (e.g. status_update()) treat the login
-     * as that employee, colliding or not.
+     * A login reached through pk_old counts only when that key is
+     * unambiguous: no employee has it as pk (`lu` is empty) and no other
+     * employee has it as pk_old. Once signed in, getEmployeeIdsForUser() maps
+     * the login to ONE employee with that pk or pk_old (->first(), no order).
+     * When the key is shared, that may be someone else, whose ids do not
+     * include this employee's pk, so a complaint stored under this employee
+     * would reach a login that cannot act on it. A login joined on the
+     * employee's own pk has no such problem: whichever employee it resolves
+     * to, the ids include user_id, which is that pk.
+     *
+     * These exclusions apply only here, to "can this employee sign in". They
+     * are not how a signed-in login is identified elsewhere: LoginController
+     * admits these logins, and getEmployeeIdsForUser() then maps their user_id
+     * to whichever employee has that pk or pk_old, so Issue Management access
+     * checks (e.g. status_update()) treat the login as that employee.
      */
     private static function complaintLoginRows()
     {
@@ -207,14 +242,28 @@ class User extends Authenticatable
             })
             ->leftJoin('employee_master as lu', 'lu.pk', '=', 'uc.user_id')
             ->where(function ($q) use ($hasPkOld) {
+                // On the employee's own pk: any category but 'S' and NULL.
                 $q->where(function ($c) {
-                    $c->whereNotNull('uc.user_category')
+                    $c->whereColumn('uc.user_id', 'e.pk')
+                        ->whereNotNull('uc.user_category')
                         ->where('uc.user_category', '!=', 'S');
                 });
                 if ($hasPkOld) {
+                    // On the employee's pk_old: any category but 'S' (NULL
+                    // included), and only when the key names this employee alone.
                     $q->orWhere(function ($c) {
-                        $c->whereNull('uc.user_category')
-                            ->whereColumn('uc.user_id', 'e.pk_old');
+                        $c->whereColumn('uc.user_id', 'e.pk_old')
+                            ->where(function ($cat) {
+                                $cat->whereNull('uc.user_category')
+                                    ->orWhere('uc.user_category', '!=', 'S');
+                            })
+                            ->whereNull('lu.pk')
+                            ->whereNotExists(function ($other) {
+                                $other->select(DB::raw(1))
+                                    ->from('employee_master as other')
+                                    ->whereColumn('other.pk_old', 'uc.user_id')
+                                    ->whereColumn('other.pk', '!=', 'e.pk');
+                            });
                     });
                 }
             });

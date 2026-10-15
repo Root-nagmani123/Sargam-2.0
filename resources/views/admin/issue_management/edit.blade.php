@@ -298,7 +298,9 @@ jQuery(function ($) {
     // user touches a control, their choice wins over the stored value.
     var CURRENT = {
         subCategory: @json((string) $currentSubCategory),
-        nodal: @json((string) ($issue->employee_master_pk ?? '')),
+        // The officer's employee_master.pk, which is what the nodal-employees
+        // endpoint offers, even when the ticket stores their pk_old (edit()).
+        nodal: @json((string) ($currentNodalPk ?? $issue->employee_master_pk ?? '')),
         complainant: @json((string) ($issue->created_by ?? '')),
         logger: @json((string) ($issue->issue_logger ?? '')),
         building: @json((string) ($currentBuilding ?? '')),

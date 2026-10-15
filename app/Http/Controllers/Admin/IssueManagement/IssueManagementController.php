@@ -1695,7 +1695,14 @@ class IssueManagementController extends Controller
         
         // Complaint section: employees + faculty only (user_credentials.user_category != 'S')
         $employees = User::getEmployeesAndFacultyForComplaint();
-        
+
+        // The nodal-employees endpoint offers officers by employee_master.pk,
+        // but older tickets store the officer's pk_old. Prefill with the pk so
+        // the form selects the officer's own option rather than adding a
+        // second "not on offer" entry for the same person.
+        $currentNodalPk = User::resolveEmployeePk($issue->employee_master_pk)
+            ?? (string) ($issue->employee_master_pk ?? '');
+
         // Determine current building, floor, and room
         $currentBuilding = null;
         $currentFloor = null;
@@ -1743,6 +1750,7 @@ class IssueManagementController extends Controller
             'buildings',
             'hostels',
             'employees',
+            'currentNodalPk',
             'currentBuilding',
             'currentFloor',
             'currentRoom'
@@ -1799,9 +1807,15 @@ class IssueManagementController extends Controller
         if ((int) $request->issue_category_id === (int) $issue->issue_category_master_pk) {
             $requested = (string) $request->nodal_employee_id;
             $levelOne = $this->eligibleNodalOfficers($this->escalationMatrixRows($request->issue_category_id), 1, $excludedIds);
-            $nodalEmployeePk = ($requested !== '' && $levelOne->contains($requested))
-                ? $requested
-                : $issue->employee_master_pk;
+            if ($requested !== '' && $requested === User::resolveEmployeePk($issue->employee_master_pk)) {
+                // The form offers the current officer under their pk (edit());
+                // picking them again keeps the stored key, pk_old or not.
+                $nodalEmployeePk = $issue->employee_master_pk;
+            } else {
+                $nodalEmployeePk = ($requested !== '' && $levelOne->contains($requested))
+                    ? $requested
+                    : $issue->employee_master_pk;
+            }
         } else {
             $nodalEmployeePk = $this->resolveNodalOfficer($request->issue_category_id, $request->nodal_employee_id, $excludedIds);
             if ($nodalEmployeePk === null) {

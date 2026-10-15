@@ -261,7 +261,7 @@ class CentcomAssignedVisibilityTest extends TestCase
                 $logins = $logins->merge($loginsByUserId[(string) $e->pk_old] ?? []);
             }
             $expected = $logins
-                ->filter(fn ($c) => $this->isEmployeesOwnLogin($c, $e))
+                ->filter(fn ($c) => $this->isEmployeesOwnLogin($c, $e, $employees))
                 ->contains(fn ($c) => $this->loginControllerAdmits($c, $employees));
 
             return (bool) $r->can_login !== $expected;
@@ -497,17 +497,45 @@ class CentcomAssignedVisibilityTest extends TestCase
      * NULL-category row whose user_id is the employee's own pk_old: that is
      * the employee's login (Engineering Lead decision, PR337-14). Without the
      * employee, a NULL-category row is never theirs.
+     *
+     * A row reached through the employee's pk_old (any category but 'S')
+     * counts only when that key names this employee alone: nobody has it as
+     * pk, and nobody else has it as pk_old. Otherwise the signed-in login may
+     * resolve to the other employee (PR #337 F-021).
+     *
+     * @param  \Illuminate\Support\Collection|null  $employees  employee_master rows keyed by (string) pk
      */
-    private function isEmployeesOwnLogin(object $credential, ?object $employee = null): bool
+    private function isEmployeesOwnLogin(object $credential, ?object $employee = null, $employees = null): bool
     {
-        if ($credential->user_category === null) {
-            return $employee !== null
-                && isset($employee->pk_old)
-                && $employee->pk_old !== null
-                && (string) $employee->pk_old === (string) $credential->user_id;
+        if ($credential->user_category === 'S') {
+            return false;
+        }
+        if ($employee === null) {
+            return $credential->user_category !== null;
         }
 
-        return $credential->user_category !== 'S';
+        $key = (string) $credential->user_id;
+        if ($key === (string) $employee->pk) {
+            return $credential->user_category !== null;
+        }
+
+        $viaPkOld = isset($employee->pk_old)
+            && $employee->pk_old !== null
+            && (string) $employee->pk_old === $key;
+
+        return $viaPkOld && $this->pkOldKeyNamesOnlyThisEmployee($key, $employees);
+    }
+
+    /** No employee has $key as pk, and exactly one has it as pk_old. */
+    private function pkOldKeyNamesOnlyThisEmployee(string $key, $employees = null): bool
+    {
+        if ($employees !== null) {
+            return ! isset($employees[$key])
+                && $employees->filter(fn ($e) => isset($e->pk_old) && (string) $e->pk_old === $key)->count() === 1;
+        }
+
+        return ! DB::table('employee_master')->where('pk', $key)->exists()
+            && DB::table('employee_master')->where('pk_old', $key)->count() === 1;
     }
 
     /** An employee with an 'E' login on status 2 and no other login that gets in. */
