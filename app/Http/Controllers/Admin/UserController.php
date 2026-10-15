@@ -74,6 +74,7 @@ use App\Models\VehiclePassFWApply;
 use App\Models\VehiclePassTWApply;
 use App\Services\OTNoticeMemoService;
 use App\Support\DataTableRedisCache;
+use App\Support\FeedbackReportCache;
 use App\Support\LogSafe;
 use App\Support\PdfPageNumbers;
 use App\Models\OtParticipantComment;
@@ -1990,10 +1991,12 @@ class UserController extends Controller
                     ->where('scgm.student_master_pk', $studentPk);
             }
 
-            $pending = $pendingQuery->selectRaw('COUNT(DISTINCT t.pk, f.pk) AS pending_count')
-                ->value('pending_count');
-
-            return (int) $pending;
+            return (int) FeedbackReportCache::remember(
+                'ot_pending_feedback_count_' . $studentPk,
+                FeedbackReportCache::TTL_STATS,
+                fn () => $pendingQuery->selectRaw('COUNT(DISTINCT t.pk, f.pk) AS pending_count')
+                    ->value('pending_count') ?? 0
+            );
         } catch (\Throwable $e) {
             \Log::error('Error counting OT pending feedback: ' . $e->getMessage(), [
                 'student_pk' => $studentPk,
